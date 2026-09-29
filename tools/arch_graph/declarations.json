@@ -1,0 +1,84 @@
+{
+  "schema_version": "arch-graph-declarations/1",
+  "_comment": "需求 × 代码 关系图的唯一人工输入：哪个功能域由哪些文件/符号实现。其余节点与关系由 tools/gen_arch_graph.py 从仓库真实文件中读出。代码锚点写成 [相对路径, 符号名或 null]，符号名会被重放校验。",
+  "_out_dir_comment": "产物目录（相对仓库根）。文档路径只在本文件里出现，工具代码不写死任何文档位置。",
+  "out_dir": "dev_docs/DEV_TEST/设计方案与报告",
+  "scopes": [
+    {
+      "id": "login",
+      "name": "登录模块",
+      "granularity": "需求 → 模块 / 文件",
+      "prd": "dev_docs/ARCH_PRD/PRD-00-登录模块.md",
+      "routes": {
+        "urls": "apps/accounts/urls.py",
+        "prefix": "/api/auth/",
+        "views": "apps/accounts/views.py"
+      },
+      "domains": {
+        "登录": [
+          ["apps/accounts/views.py", "LoginView"],
+          ["apps/accounts/serializers.py", "LoginSerializer"],
+          ["shared/auth/jwt_auth.py", "create_token_pair"],
+          ["frontend/src/views/components/LoginCard.vue", null],
+          ["frontend/src/views/LoginView.logic.ts", null],
+          ["frontend/src/shared/api/auth.ts", null],
+          ["frontend/src/shared/composables/useLoginForm.ts", null]
+        ],
+        "注册": [
+          ["apps/accounts/views.py", "RegisterView"],
+          ["apps/accounts/serializers.py", "RegisterSerializer"],
+          ["apps/accounts/api.py", "create_user"],
+          ["frontend/src/views/components/RegisterCard.vue", null],
+          ["frontend/src/views/composables/useAuthFlow.ts", null],
+          ["frontend/src/shared/api/auth.ts", null]
+        ],
+        "刷新令牌": [
+          ["apps/accounts/views.py", "RefreshView"],
+          ["shared/auth/jwt_auth.py", "verify_token"],
+          ["frontend/src/shared/api-client.ts", null]
+        ],
+        "登出": [
+          ["apps/accounts/views.py", "LogoutView"],
+          ["shared/auth/jwt_auth.py", "revoke_session"],
+          ["frontend/src/shared/auth/token-storage.ts", null],
+          ["frontend/src/shared/components/AppSidebar.vue", null]
+        ],
+        "查看当前身份": [
+          ["apps/accounts/views.py", "MeView"],
+          ["frontend/src/shared/composables/useAuthUser.ts", null]
+        ],
+        "会话与账号管理": [
+          ["frontend/src/router.ts", null],
+          ["frontend/src/shared/auth/token-storage.ts", null],
+          ["frontend/src/shared/api-auth-interceptors.ts", null],
+          ["gateway/middleware.py", "JWTAuthenticationMiddleware"]
+        ]
+      },
+      "spec_domains": {
+        "auth-session": ["会话与账号管理", "登出", "刷新令牌"],
+        "auth-registration": ["注册"],
+        "auth-form-validation": ["登录", "注册"],
+        "auth-response-shape": ["登录", "注册", "刷新令牌", "查看当前身份"],
+        "api-path-convention": [],
+        "frontend-login-hand-drawn-hero": []
+      },
+      "tables": [
+        {
+          "name": "auth_user",
+          "note": "Django 内置 User 表（accounts 无 models.py）",
+          "writes": [["apps/accounts/api.py", "create_user"]],
+          "reads": [["apps/accounts/views.py", "LoginView"]]
+        }
+      ],
+      "tests": {
+        "dirs": ["tests/api", "tests/graybox/unit", "tests/e2e", "frontend/tests/login"],
+        "name_pattern": "auth|login|register|logout|session|token"
+      },
+      "outputs": {
+        "json": "arch-graph-login.json",
+        "workbench": "设计方案-需求与代码关系图工作台.html",
+        "doc": "设计方案-需求与代码关系图（登录模块Demo）.html"
+      }
+    }
+  ]
+}

@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>需求 × 代码 关系图 — 工作台 Demo（登录模块）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --primary:#19c8b9; --primary-hover:#3dd4c6; --primary-active:#11a89b; --primary-bg:#e6f9f6;
+  --text:#794f27; --text-body:#725d42; --text-secondary:#9f927d; --text-muted:#8a7b66; --text-disabled:#c4b89e;
+  --bg:#f8f8f0; --bg-content:rgb(247,243,223); --bg-disabled:#f0ece2;
+  --border:#c4b89e; --border-hover:#a89878; --border-strong:#9f927d;
+  --success:#6fba2c; --warning:#f5c31c; --error:#e05a5a;
+  --focus-yellow:#ffcc00; --shadow-btn:#bdaea0; --shadow-input:#d4c9b4;
+  --r-sm:12px; --r-base:18px; --r-lg:24px; --r-pill:50px;
+  --ease:cubic-bezier(0.4,0,0.2,1); --d-fast:.15s; --d-base:.25s; --d-slow:.35s;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:Nunito,'Noto Sans SC',-apple-system,'PingFang SC',sans-serif;
+  font-weight:500;letter-spacing:.01em;background:var(--bg);color:var(--text-body);line-height:1.6;
+}
+.wrap{max-width:1240px;margin:0 auto;padding:40px 32px 64px}
+h1,h2,h3,h4{color:var(--text);font-weight:800;letter-spacing:.02em;line-height:1.3}
+code,.mono{font-family:'SF Mono','Fira Code','Cascadia Code',Consolas,monospace;font-weight:600}
+
+/* ── heraldic ribbon title（骨架照抄仓内已验证报告：报告-Django设计系统分层D0-D5检查.html） ── */
+.ribbon{--rb:#40a880;--rk:#186048;display:inline-flex;align-items:center;position:relative;height:2em;padding:0 1.6em;
+  background:#82d5bb;color:#fff;font-weight:900;font-size:26px;line-height:1;letter-spacing:.03em;
+  filter:drop-shadow(0 .08em .12em rgba(0,0,0,.05))}
+.ribbon-back{position:absolute;bottom:-.4em;width:1.7em;height:1.7em;background:var(--rb);z-index:1}
+.ribbon-back.left{right:100%;clip-path:polygon(100% 0%,100% 100%,0% 100%,30% 50%,0% 0%)}
+.ribbon-back.right{left:100%;clip-path:polygon(0% 0%,100% 0%,70% 50%,100% 100%,0% 100%)}
+.ribbon-fold{position:absolute;top:calc(100% - .04em);width:0;height:0;z-index:2}
+.ribbon-fold.left{left:0;border-width:0 .95em .45em 0;border-style:solid;border-color:transparent var(--rk) transparent transparent}
+.ribbon-fold.right{right:0;border-width:.45em 0 0 .95em;border-style:solid;border-color:var(--rk) transparent transparent transparent}
+.ribbon-text{position:relative;z-index:5;font-weight:900;padding-top:.05em}
+
+.lede{margin:22px 0 6px;font-size:15px;color:var(--text-muted);max-width:900px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:29px;padding:0 12px;border-radius:999px;border:1.5px solid var(--border);
+  background:var(--bg-content);font-size:13px;font-weight:600;color:var(--text-body)}
+.chip.teal{border-color:#82d5bb;background:#e6f9f6;color:#186048}
+.chip.blue{border-color:#889df0;background:#eaeeff;color:#2b3a8f}
+.chip.red{border-color:#fc736d;background:#ffe9e8;color:#a02020}
+
+/* ── sections ── */
+section{margin-top:44px}
+.sec-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.sec-head .idx{width:30px;height:30px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;
+  justify-content:center;font-weight:800;font-size:15px;box-shadow:0 2px 4px rgba(25,200,185,.3)}
+.sec-head h2{font-size:22px}
+.sec-head .hint{font-size:13px;color:var(--text-secondary);font-weight:500}
+
+.card{background:var(--bg-content);border-radius:20px;padding:20px 24px;border:1.5px solid transparent;transition:transform var(--d-base) var(--ease)}
+.card.pattern{background:
+  radial-gradient(circle,rgba(130,213,187,.18) 1.5px,transparent 1.5px) 0 0/28px 28px,
+  radial-gradient(circle,rgba(160,225,205,.12) 1px,transparent 1px) 7px 7px/14px 14px,#eef8f4;
+  border-color:#82d5bb;color:#2f6a55}
+.card+h4,.card+.card{margin-top:14px}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.kpi{background:var(--bg-content);border-radius:18px;padding:16px 18px;border-left:5px solid var(--primary);position:relative}
+.kpi .dot{position:absolute;top:14px;right:16px;width:10px;height:10px;border-radius:50%;background:var(--primary);opacity:.7}
+.kpi .n{font-size:30px;font-weight:900;color:var(--text);line-height:1.15}
+.kpi .l{font-size:13px;color:var(--text-muted);font-weight:600}
+.kpi .s{font-size:12px;color:var(--text-secondary);margin-top:4px}
+.kpi.warn{border-left-color:var(--warning)} .kpi.warn .dot{background:var(--warning)}
+.kpi.err{border-left-color:var(--error)} .kpi.err .dot{background:var(--error)}
+.kpi.ok{border-left-color:var(--success)} .kpi.ok .dot{background:var(--success)}
+
+/* ── workbench ── */
+.wb{background:var(--bg-content);border:2px solid var(--border-strong);border-radius:24px;overflow:hidden;
+  position:relative;left:50%;transform:translateX(-50%);width:min(1560px,calc(100vw - 24px))}
+.wb-bar{display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(255,255,255,.6);border-bottom:2px solid var(--border);flex-wrap:wrap}
+.tabs{display:flex;gap:6px;background:var(--bg);border-radius:var(--r-pill);padding:4px}
+.tab{padding:7px 16px;border-radius:var(--r-pill);font-size:13px;font-weight:600;color:var(--text-body);cursor:pointer;border:0;background:transparent;transition:all var(--d-base) var(--ease);font-family:inherit}
+.tab:hover{background:rgba(25,200,185,.1)}
+.tab.on{background:#0CC0B5;color:#FFF9E3}
+.spacer{flex:1}
+.toggle{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--text-body);cursor:pointer;user-select:none}
+.toggle input{appearance:none;width:18px;height:18px;border-radius:6px;border:2.5px solid var(--border);background:var(--bg-content);cursor:pointer;position:relative;transition:all var(--d-fast) var(--ease)}
+.toggle input:checked{background:var(--primary);border-color:var(--primary-active)}
+.toggle input:checked::after{content:"";position:absolute;left:4.5px;top:1px;width:5px;height:10px;border:2.5px solid #fff;border-top:0;border-left:0;transform:rotate(42deg)}
+
+.wb-body{display:grid;grid-template-columns:250px 1fr 300px;min-height:620px}
+.pane{overflow:auto;max-height:660px;min-width:0}
+.pane.tree{border-right:2px solid var(--border);padding:12px 10px;background:rgba(255,255,255,.35)}
+.pane.canvas{background:
+  radial-gradient(circle,rgba(196,184,158,.28) 1px,transparent 1px) 0 0/22px 22px,#fbfaf4;position:relative}
+.pane.detail{border-left:2px solid var(--border);padding:14px 16px;background:rgba(255,255,255,.35)}
+
+.tree h5{font-size:12px;font-weight:800;color:var(--text-secondary);letter-spacing:.06em;text-transform:uppercase;margin:12px 6px 6px}
+.tree h5:first-child{margin-top:2px}
+.tnode{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:12px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-body);transition:background var(--d-fast) var(--ease)}
+.tnode:hover{background:rgba(25,200,185,.12)}
+.tnode.on{background:#0CC0B5;color:#FFF9E3}
+.tnode.dim{opacity:.55}
+.tnode .sw{width:9px;height:9px;border-radius:3px;flex:none}
+.tnode .cnt{margin-left:auto;font-size:11px;color:var(--text-secondary);font-weight:700}
+.tnode.on .cnt{color:#FFF9E3}
+.tnode.sub{padding-left:18px;font-size:12.5px}
+.tnode.sub2{padding-left:30px;font-size:12.5px;font-weight:500}
+.tnode.bad{color:#a02020}
+
+svg{display:block}
+.nbox{cursor:pointer}
+.nbox rect{stroke-width:2;transition:all var(--d-fast) var(--ease)}
+.nbox:hover rect{stroke:var(--primary-active)}
+.nbox.on rect{stroke:var(--primary-active);stroke-width:3.5}
+.nbox text{font-family:Nunito,'Noto Sans SC',sans-serif;font-weight:700;pointer-events:none}
+.nbox .lbl{font-size:12px}
+.nbox .sub{font-size:10px;font-weight:600;fill:#8a7b66}
+.edge{fill:none;stroke-width:1.6;transition:opacity var(--d-fast) var(--ease)}
+.edge.declared{stroke-width:2.4}
+.dimmed{opacity:.13}
+.badge{font-size:10px;font-weight:700}
+
+.dt h4{font-size:16px;margin-bottom:2px}
+.dt .kind{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;border:1.5px solid var(--border);background:var(--bg);color:var(--text-muted);margin-bottom:10px}
+.dt .blk{border-top:1px dashed #d8d0c3;margin-top:12px;padding-top:10px}
+.dt .blk h6{font-size:11px;font-weight:800;color:var(--text-secondary);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.dt .row{font-size:12.5px;margin-bottom:5px;display:flex;gap:6px;align-items:flex-start}
+.dt .row .k{color:var(--text-secondary);flex:none;min-width:52px;font-weight:600}
+.dt .row .v{word-break:break-all}
+.pill{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;border:1.5px solid transparent}
+.pill.ok{background:#eaf7dc;border-color:#8ac68a;color:#3f6b16}
+.pill.bad{background:#ffe9e8;border-color:#fc736d;color:#a02020}
+.pill.warn{background:#fff5d6;border-color:#f5c31c;color:#7a5c00}
+.pill.info{background:#eaeeff;border-color:#889df0;color:#2b3a8f}
+.pill.mute{background:var(--bg-disabled);border-color:var(--border);color:var(--text-muted)}
+.rel{font-size:12.5px;padding:5px 8px;border-radius:12px;background:var(--bg);margin-bottom:4px;cursor:pointer;display:flex;gap:6px;align-items:center}
+.rel:hover{background:rgba(25,200,185,.14)}
+.rel .et{font-family:'SF Mono',Consolas,monospace;font-size:11px;font-weight:700;color:var(--text)}
+.rel .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── tables ── */
+.tblwrap{overflow-x:auto;border-radius:20px}
+.tbl{width:100%;border-collapse:collapse;background:var(--bg-content);border-radius:20px;overflow:hidden;font-size:14px}
+.tbl th{text-align:left;padding:14px 18px;font-weight:700;color:var(--text);letter-spacing:.02em;
+  background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(247,243,223,.2));border-bottom:2px solid var(--border)}
+.tbl td{padding:12px 18px;border-bottom:1px dashed #e8e0d0;vertical-align:top}
+.tbl tr:last-child td{border-bottom:0}
+.tbl tbody tr:nth-child(even){background:rgba(248,248,240,.6)}
+.tbl td .mono{font-size:12.5px;color:var(--text)}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;border:1.5px solid transparent;margin-right:5px}
+.tag.solid{background:#82d5bb;border-color:#40a880;color:#fff}
+.tag.out{background:transparent;border-color:#889df0;color:#2b3a8f}
+.tag.dash{background:transparent;border:1.5px dashed #b77dee;color:#6a3a9a}
+
+.callout{border-left:5px solid var(--primary);background:var(--bg-content);border-radius:14px;padding:14px 20px;margin:14px 0}
+.callout.blue{border-left-color:#889df0}
+.callout.yellow{border-left-color:var(--warning)}
+.callout.red{border-left-color:var(--error)}
+.callout h4{font-size:15px;margin-bottom:6px}
+.callout p,.callout li{font-size:14px}
+.callout ul{margin:6px 0 0 20px}
+
+pre.code{background:#2b2118;border:1px solid #3d3028;border-radius:20px;padding:18px 22px;overflow:auto;max-height:420px;
+  font-family:'SF Mono','Fira Code',Consolas,monospace;font-weight:600;font-size:13px;line-height:1.7;color:#e8d5bc;white-space:pre;tab-size:2}
+pre.code .k{color:#d4a0e0} pre.code .s{color:#a8d4a0} pre.code .n{color:#e8c87a} pre.code .c{color:#6b5e50}
+.legend{display:flex;flex-wrap:wrap;gap:10px 18px;margin:10px 0 0;font-size:13px}
+.legend span{display:inline-flex;align-items:center;gap:7px;font-weight:600;color:var(--text-body)}
+.legend i{width:14px;height:14px;border-radius:4px;display:inline-block}
+.legend .ln{width:26px;height:0;border-top:2.5px solid var(--primary);display:inline-block}
+.legend .ln.dash{border-top-style:dashed;border-color:#889df0}
+.checks{list-style:none;margin:10px 0 0}
+.checks li{position:relative;padding-left:26px;margin-bottom:7px;font-size:14px}
+.checks li::before{content:"";position:absolute;left:0;top:6px;width:14px;height:8px;border-left:2.5px solid var(--success);border-bottom:2.5px solid var(--success);transform:rotate(-45deg)}
+.checks li.no::before{border-color:var(--error)}
+.checks li.mid::before{border-color:var(--warning)}
+footer{margin-top:52px;padding-top:18px;border-top:2px dashed #d8d0c3;font-size:13px;color:var(--text-secondary)}
+
+@media (max-width:1100px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .wb-body{grid-template-columns:1fr}
+  .pane{border:0!important}
+  .pane.tree,.pane.detail{max-height:none}
+  .pane.canvas{max-height:520px;order:-1}
+}
+@media (max-width:768px){.ribbon{font-size:16px;height:auto;padding:10px 1.1em}.ribbon-back,.ribbon-fold{display:none}}
+@media (max-width:640px){ .wrap{padding:24px 16px 48px} .ribbon{font-size:20px} .kpis{grid-template-columns:1fr}
+  .tbl{font-size:13px} .tbl th,.tbl td{padding:10px 12px} pre.code{font-size:12px;padding:14px 16px}
+  .callout{overflow-x:auto} .tbl{min-width:440px} }
+@media print{ body{background:#fff} .wb-body{max-height:none} .pane{max-height:none;overflow:visible} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="ribbon">
+    <span class="ribbon-back left"></span><span class="ribbon-back right"></span>
+    <span class="ribbon-fold left"></span><span class="ribbon-fold right"></span>
+    <span class="ribbon-text">需求 × 代码 关系图</span>
+  </span>
+
+  <p class="lede">
+    参照「页面流工作台」的做法，把需求与代码的关系存成一份 JSON，再用一个工作台把它看明白。
+    本页是<b>以登录模块为切入点的实盘 demo</b>：下面每一个数字、每一条关系都由扫描器从仓库真实文件里读出来，不是手绘示意图。
+  </p>
+
+  <div class="meta">
+    <span class="chip">存储形态 <b>A1</b> · 仓库内 JSON 编译产物</span>
+    <span class="chip">粒度 <b>B1</b> · 需求 → 模块 / 文件</span>
+    <span class="chip teal" id="chip-scope">范围 …</span>
+    <span class="chip blue" id="chip-rev">rev …</span>
+    <span class="chip" id="chip-time">…</span>
+    <span class="chip red">不改任何业务代码</span>
+  </div>
+
+  <!-- ══ 1. KPI ══ -->
+  <section>
+    <div class="sec-head"><span class="idx">1</span><h2>这张图一眼看到什么</h2></div>
+    <div class="kpis" id="kpis"></div>
+    <div class="callout yellow" style="margin-top:16px">
+      <h4>最有价值的一条，不是覆盖率，是「锚点对不齐」</h4>
+      <p>
+        登录模块有 <b id="k-test-files">20</b> 个测试文件、<b id="k-test-cases">112</b> 条用例，但只有
+        <b>5</b> 个文件在文件头写了"我守的是哪条规格"，而且写法有 <b>3 种</b>：一种写规格路径、一种写变更单号、还有一种是归档变更里的 delta 路径。
+        其中 <b>1</b> 处锚点已经指向一个不存在的规格了 —— 这类断裂平时没有任何工具会告诉你，图一画出来就摆在眼前。
+      </p>
+    </div>
+  </section>
+
+  <!-- ══ 2. 工作台 ══ -->
+  <section>
+    <div class="sec-head">
+      <span class="idx">2</span><h2>工作台（点一下试试）</h2>
+      <span class="hint">左树选节点 · 中间看关系 · 右侧看锚点</span>
+    </div>
+
+    <div class="wb">
+      <div class="wb-bar">
+        <div class="tabs" id="views">
+          <button class="tab on" data-view="req">需求视角</button>
+          <button class="tab" data-view="code">代码视角</button>
+          <button class="tab" data-view="health">状态视角</button>
+        </div>
+        <div class="spacer"></div>
+        <label class="toggle"><input type="checkbox" id="show-agg" checked> 测试聚合</label>
+        <label class="toggle"><input type="checkbox" id="show-sym"> 显示符号级</label>
+        <label class="toggle"><input type="checkbox" id="show-scn"> 显示场景</label>
+        <div class="tabs" style="gap:2px">
+          <button class="tab" id="zoom-out" title="缩小">−</button>
+          <button class="tab" id="zoom-fit" title="适应宽度">适应宽度</button>
+          <button class="tab" id="zoom-in" title="放大">+</button>
+        </div>
+        <span class="chip" id="zoom-val" style="min-width:52px;justify-content:center">100%</span>
+        <button class="tab" id="btn-reset" style="border:2px solid var(--border-strong);background:var(--bg)">回到全景</button>
+      </div>
+
+      <div class="wb-body">
+        <div class="pane tree" id="tree"></div>
+        <div class="pane canvas" id="canvas"></div>
+        <div class="pane detail dt" id="detail"></div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><i style="background:#e59266"></i>PRD</span>
+      <span><i style="background:#f7cd67"></i>功能域</span>
+      <span><i style="background:#889df0"></i>规格</span>
+      <span><i style="background:#b77dee"></i>需求</span>
+      <span><i style="background:#f8a6b2"></i>场景</span>
+      <span><i style="background:#82d5bb"></i>代码文件</span>
+      <span><i style="background:#8ac68a"></i>端点</span>
+      <span><i style="background:#9a835a"></i>数据表</span>
+      <span><i style="background:#d1da49"></i>测试</span>
+      <span><i style="background:#fc736d"></i>断锚</span>
+      <span><span class="ln"></span>人声明（declared）</span>
+      <span><span class="ln dash"></span>机器推断（derived）</span>
+    </div>
+  </section>
+
+  <!-- ══ 3. 健康度 ══ -->
+  <section>
+    <div class="sec-head"><span class="idx">3</span><h2>健康度报告（本 demo 实测）</h2><span class="hint">同一套规则接进门禁后，每次提交都会重放一遍</span></div>
+    <div id="health"></div>
+  </section>
+
+  <!-- ══ 4. 格式 ══ -->
+  <section>
+    <div class="sec-head"><span class="idx">4</span><h2>存成什么（arch-graph/1）</h2><span class="hint">照抄页面流的思路：容器 + 一段 JSON + 强类型连线</span></div>
+
+    <div class="callout blue">
+      <h4>关键类比：页面流的元素带 xpath，关系图的节点必须带 anchor</h4>
+      <p>
+        页面流能长期不腐，靠的是每个跳转都挂在机器能重新定位的 xpath 上。<br>
+        关系图同理：<b>每个节点必须带一个能被程序重新解析的锚点</b>（文件路径 / 标题 / 符号名 / 路由字面量 / 表名）。
+        有锚点，图随时能被重新扫描校正；没有锚点，就只能靠人维护，必烂。
+      </p>
+    </div>
+
+    <div class="tblwrap" style="margin-top:14px">
+    <table class="tbl">
+      <thead><tr><th style="width:130px">节点类型</th><th>含义</th><th style="width:300px">锚点怎么落</th><th style="width:90px">本 demo</th></tr></thead>
+      <tbody id="kinds-tbl"></tbody>
+    </table>
+    </div>
+
+    <div class="tblwrap" style="margin-top:20px">
+    <table class="tbl">
+      <thead><tr><th style="width:160px">连线类型</th><th>语义</th><th style="width:120px">谁来定</th></tr></thead>
+      <tbody id="edges-tbl"></tbody>
+    </table>
+    </div>
+
+    <h3 style="margin:26px 0 10px;font-size:17px">真实片段（本 demo 产出，非示意）</h3>
+    <pre class="code" id="json-snippet"></pre>
+  </section>
+
+  <!-- ══ 5. 落地 ══ -->
+  <section>
+    <div class="sec-head"><span class="idx">5</span><h2>接下来怎么落地</h2></div>
+    <div class="card pattern">
+      <h4 style="margin-bottom:8px">本次 demo 已经证明的三件事</h4>
+      <ul class="checks">
+        <li>需求侧节点可以全自动抽出来 —— 规格文件里的 Requirement / Scenario 标题就是天然锚点</li>
+        <li>代码侧节点可以全自动抽出来 —— 文件、符号、路由、表名都能源码解析</li>
+        <li>"需求 → 实现"这一段<b>必须人声明</b>，而且声明量很小：登录模块 6 个功能域、21 条需求，只用了 30 行声明</li>
+      </ul>
+    </div>
+
+    <div class="tblwrap" style="margin-top:18px">
+    <table class="tbl">
+      <thead><tr><th style="width:90px">阶段</th><th>交付</th><th style="width:210px">是否动业务代码</th></tr></thead>
+      <tbody>
+        <tr><td><b>P0 地基</b></td><td>把本 demo 的扫描器变成正式工具：一份 JSON + 断锚 / 孤儿 / 未验收报告，声明层从生成器下沉到规格文件里</td><td>不改，纯工具产物</td></tr>
+        <tr><td><b>P1 工作台</b></td><td>把本页从 demo 变成平台里的只读页面：四视角、点节点看锚点状态</td><td>加一个只读视图</td></tr>
+        <tr><td><b>P2 门禁 + AI 出口</b></td><td>四项健康指标接进门禁；给 AI 两个只读工具：列需求节点 / 取节点关系</td><td>小</td></tr>
+        <tr><td><b>P3 可选编辑</b></td><td>在画布上人工登记"需求 → 实现"</td><td>此时才需要决定要不要入库建表</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="callout red" style="margin-top:18px">
+      <h4>本次 demo 有意没做的事（避免误读）</h4>
+      <ul>
+        <li>只覆盖登录模块，不是全仓；全仓的规模是 11 个后端模块 / 26 张表 / 82 个端点 / 18 个 AI 工具 / 8 个前端模块 / 76 条规格</li>
+        <li>声明层暂时写在生成器的数据块里（临时工具），P0 应下沉到规格文件中，避免出现第二份真相源</li>
+        <li>没有接门禁、没有落库、没有接 AI —— 这三件都在 P1/P2</li>
+        <li>"未验收需求"只按测试文件头的锚点判定，不含人工确认，口径偏严（宁严不松）</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    需求 × 代码 关系图 · 工作台 Demo（登录模块） · 生成物 <code>arch-graph-login.json</code> · schema <code>arch-graph/1</code> ·
+    本页数据由 <code>tools/gen_arch_graph.py</code> 扫描仓库生成，可随时重跑
+  </footer>
+</div>
+
+<script>
+const GRAPH = __GRAPH_JSON__;
+</script>
+<script>
+// ─── 索引 ───
+const N = {}; GRAPH.nodes.forEach(n => N[n.id] = n);
+const OUT = {}, IN = {};
+GRAPH.edges.forEach(e => {
+  (OUT[e.from] = OUT[e.from] || []).push(e);
+  (IN[e.to] = IN[e.to] || []).push(e);
+});
+const KIND = {
+  prd:{c:'#e59266',t:'PRD 文档'}, domain:{c:'#f7cd67',t:'功能域'},
+  spec:{c:'#889df0',t:'规格'}, requirement:{c:'#b77dee',t:'需求'},
+  scenario:{c:'#f8a6b2',t:'场景'}, file:{c:'#82d5bb',t:'代码文件'},
+  symbol:{c:'#5bc0a8',t:'代码符号'}, endpoint:{c:'#8ac68a',t:'接口端点'},
+  table:{c:'#9a835a',t:'数据表'}, test:{c:'#d1da49',t:'测试'}
+};
+const EDGE_COLOR = {
+  belongs_to:'#b08a4a', specified_by:'#889df0', contains:'#b77dee',
+  implemented_by:'#19c8b9', declares:'#82d5bb', exposes:'#8ac68a',
+  serves:'#8ac68a', writes:'#9a835a', reads:'#9a835a', verifies:'#d1da49'
+};
+const EDGE_LABEL = {
+  belongs_to:'属于', specified_by:'由…规定', contains:'包含',
+  implemented_by:'由…实现', declares:'定义', exposes:'暴露',
+  serves:'服务', writes:'写入', reads:'读取', verifies:'由…守护'
+};
+const EDGE_OWNER = {
+  belongs_to:'人声明', specified_by:'人声明', implemented_by:'人声明（可继承）',
+  verifies:'人声明', writes:'人声明', reads:'人声明',
+  contains:'机器推断', declares:'机器推断', exposes:'机器推断', serves:'机器推断'
+};
+const isBroken = id => {
+  const n = N[id]; if (!n) return false;
+  if (n.anchor_ok === false) return true;
+  // 测试文件本身在，但文件头声明的规格锚点失效 —— 同样是断锚
+  return n.kind === 'test' && !!n.anchor_target && !n.anchor_resolved;
+};
+const colorOf = n => isBroken(n.id) ? '#fc736d' : (KIND[n.kind] ? KIND[n.kind].c : '#c4b89e');
+
+// ─── 头部 ───
+const H = GRAPH.health;
+document.getElementById('chip-scope').innerHTML = '范围 <b>' + GRAPH.scope.name + '</b> · ' + GRAPH.scope.granularity;
+document.getElementById('chip-rev').innerHTML = '代码版本 <b>' + GRAPH.source_rev + '</b>';
+document.getElementById('chip-time').textContent = '生成于 ' + GRAPH.generated_at.replace('T',' ').slice(0,19);
+document.getElementById('k-test-files').textContent = H.test_files;
+document.getElementById('k-test-cases').textContent = H.test_cases;
+
+// ─── KPI ───
+const kpis = [
+  {n:H.requirement_total, l:'需求节点', s:'来自 6 条规格的 Requirement', c:''},
+  {n:H.requirement_implemented, l:'已声明实现', s:'有代码归属 · 孤儿 ' + H.orphan_requirements.length + ' 条', c:H.orphan_requirements.length ? 'warn' : 'ok'},
+  {n:H.requirement_verified_by_spec, l:'有测试锚点守护', s:'未验收 ' + H.unverified_requirements.length + ' 条', c:H.unverified_requirements.length ? 'warn' : 'ok'},
+  {n:H.broken_anchors.length, l:'断锚', s:'锚点已失效 · 必须修', c:H.broken_anchors.length ? 'err' : 'ok'}
+];
+document.getElementById('kpis').innerHTML = kpis.map(k =>
+  `<div class="kpi ${k.c}"><span class="dot"></span><div class="n">${k.n}</div>
+   <div class="l">${k.l}</div><div class="s">${k.s}</div></div>`).join('');
+
+// ─── 画布布局 ───
+const STEP = 178, COLW = 166, ROWH = 46, PADY = 30;
+let showSym = false, showScn = false, testAgg = true, selected = null, view = 'req';
+let userZoom = 1, lastH = 600;
+const AGG = {id:'AGG:tests', kind:'test', virtual:true, anchor:{type:'aggregate'}, anchor_ok:true,
+  anchor_detail:'聚合节点 —— 取消「测试聚合」可展开 20 个测试文件',
+  title:'测试（' + H.test_files + ' 文件 / ' + H.test_cases + ' 用例）'};
+N[AGG.id] = AGG;
+
+function visibleNodes(){
+  const out = GRAPH.nodes.filter(n => {
+    if (n.kind === 'symbol' && !showSym) return false;
+    if (n.kind === 'scenario' && !showScn) return false;
+    if (n.kind === 'test' && testAgg) return false;
+    return true;
+  });
+  if (testAgg) out.push(AGG);
+  return out;
+}
+function tiers(){
+  const t = [['prd'], ['domain'], ['spec'], ['requirement', 'scenario']];
+  if (testAgg) t.push(['file', 'symbol', 'endpoint', 'table', 'test']);
+  else { t.push(['file', 'symbol', 'endpoint', 'table']); t.push(['test']); }
+  return t;
+}
+function tierLabels(){
+  const base = ['需求来源', '功能域', '规格', '需求'];
+  return testAgg ? base.concat(['代码 / 测试']) : base.concat(['代码', '测试']);
+}
+function colIndex(kind){ return tiers().findIndex(t => t.includes(kind)); }
+function colX(i){ return 10 + i * STEP; }
+function svgWidth(){ return colX(tiers().length - 1) + COLW + 10; }
+function degree(id){ return (OUT[id]||[]).length + (IN[id]||[]).length; }
+
+function layout(){
+  const T = tiers();
+  const cols = T.map(() => []);
+  visibleNodes().forEach(n => { const i = colIndex(n.kind); if (i >= 0) cols[i].push(n); });
+  cols.forEach(c => c.sort((a, b) => {
+    if (a.virtual) return -1; if (b.virtual) return 1;
+    return degree(b.id) - degree(a.id);
+  }));
+  const maxRows = Math.max(...cols.map(c => c.length), 1);
+  const H_ = maxRows * ROWH + PADY * 2;
+  const pos = {};
+  cols.forEach((c, ci) => {
+    const total = c.length * ROWH;
+    c.forEach((n, ri) => {
+      pos[n.id] = { x: colX(ci), y: PADY + (H_ - PADY*2 - total)/2 + ri*ROWH + ROWH/2, col: ci };
+    });
+  });
+  return {pos, height: H_, cols};
+}
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+function drawCanvas(){
+  const L = layout(), pos = L.pos;
+  const backbone = new Set(['belongs_to','specified_by','verifies','implemented_by']);
+
+  let svg = `<svg viewBox="0 0 ${svgWidth()} ${L.height}" preserveAspectRatio="xMidYMin meet">`;
+  svg += `<defs><marker id="ah" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+    <path d="M0,0 L6,3 L0,6 Z" fill="#a89878"/></marker></defs>`;
+
+  // 列标题
+  tierLabels().forEach((t, i) => {
+    svg += `<text x="${colX(i)+COLW/2}" y="16" text-anchor="middle" font-size="11" font-weight="800"
+      fill="#9f927d" letter-spacing="0.08em">${t}</text>`;
+  });
+
+  const edgesToDraw = [];
+  const seen = new Set();
+  const neighbors = new Set();
+  if (selected) neighbors.add(selected);
+  GRAPH.edges.forEach(e => {
+    let from = e.from, to = e.to;
+    if (testAgg){
+      if (N[from] && N[from].kind === 'test') from = AGG.id;
+      if (N[to] && N[to].kind === 'test') to = AGG.id;
+    }
+    if (from === to) return;
+    if (pos[from] === undefined || pos[to] === undefined) return;
+    if (selected){
+      const hit = (selected === e.from || selected === e.to || selected === from || selected === to);
+      if (!hit) return;
+    } else if (!(backbone.has(e.type) && N[e.from].kind !== 'scenario')) return;
+    const key = from + '|' + to + '|' + e.type;
+    if (seen.has(key)) return;
+    seen.add(key);
+    edgesToDraw.push({from, to, type:e.type, confidence:e.confidence});
+  });
+
+  edgesToDraw.forEach(e => {
+    const a = pos[e.from], b = pos[e.to];
+    neighbors.add(e.from); neighbors.add(e.to);
+    if (a.col === b.col){
+      const x = a.x + COLW, y1 = a.y, y2 = b.y;
+      const r = Math.max(18, Math.abs(y2-y1)/2);
+      const d = y2 > y1
+        ? `M${x} ${y1} C${x+r} ${y1} ${x+r} ${y2} ${x} ${y2}`
+        : `M${x} ${y1} C${x+r} ${y1} ${x+r} ${y2} ${x} ${y2}`;
+      svg += `<path class="edge ${e.confidence}" d="${d}" stroke="${EDGE_COLOR[e.type]||'#c4b89e'}"
+        marker-end="url(#ah)" opacity="${e.confidence==='derived'?0.5:0.85}"
+        ${e.confidence==='derived'?'stroke-dasharray="5 4"':''}></path>`;
+    } else {
+      const x1 = a.x + COLW, y1 = a.y, x2 = b.x, y2 = b.y, mx = (x1+x2)/2;
+      svg += `<path class="edge ${e.confidence}" d="M${x1} ${y1} C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}"
+        stroke="${EDGE_COLOR[e.type]||'#c4b89e'}" marker-end="url(#ah)"
+        opacity="${e.confidence==='derived'?0.45:0.8}"
+        ${e.confidence==='derived'?'stroke-dasharray="5 4"':''}></path>`;
+    }
+  });
+
+  visibleNodes().forEach(n => {
+    const p = pos[n.id]; if (!p) return;
+    const dim = selected && !neighbors.has(n.id);
+    const on = selected === n.id;
+    const c = colorOf(n);
+    const label = n.title.length > 24 ? n.title.slice(0,23) + '…' : n.title;
+    const sub = n.kind === 'test' ? (n.case_count + ' 用例')
+      : n.kind === 'spec' ? n.subtitle
+      : n.kind === 'requirement' ? n.subtitle
+      : n.kind === 'endpoint' ? n.subtitle
+      : (n.kind === 'file' ? n.subtitle : (n.kind === 'table' ? '' : ''));
+    const cnt = (OUT[n.id]||[]).length;
+    svg += `<g class="nbox ${on?'on':''} ${dim?'dimmed':''}" data-id="${esc(n.id)}">
+      <rect x="${p.x}" y="${p.y-16}" width="${COLW}" height="32" rx="12"
+        fill="${isBroken(n.id)?'#ffe9e8':'rgb(247,243,223)'}" stroke="${c}"/>
+      <rect x="${p.x}" y="${p.y-16}" width="5" height="32" rx="2.5" fill="${c}"/>
+      <text class="lbl" x="${p.x+13}" y="${p.y+(sub?-1:4)}" fill="#725d42">${esc(label)}</text>
+      ${sub?`<text class="sub" x="${p.x+13}" y="${p.y+11}">${esc(sub)}</text>`:''}
+      ${isBroken(n.id)?`<text x="${p.x+COLW-10}" y="${p.y+4}" text-anchor="end" font-size="12" fill="#e05a5a" font-weight="800">!</text>`:''}
+    </g>`;
+  });
+  svg += `</svg>`;
+  const cv = document.getElementById('canvas');
+  cv.innerHTML = svg;
+  cv.querySelectorAll('.nbox').forEach(el => el.addEventListener('click', () => select(el.dataset.id)));
+  applyScale();
+}
+
+// ─── 缩放（默认适应宽度，可手动放大看细节） ───
+function fitScale(){
+  const cv = document.getElementById('canvas');
+  const avail = Math.max(320, cv.clientWidth - 22);
+  return Math.min(1, Math.max(0.5, avail / svgWidth()));
+}
+function applyScale(){
+  const cv = document.getElementById('canvas');
+  const svg = cv.querySelector('svg'); if (!svg) return;
+  const s = fitScale() * userZoom;
+  svg.setAttribute('width', Math.round(svgWidth() * s));
+  svg.setAttribute('height', Math.round(lastH * s));
+  const bad = document.getElementById('zoom-val');
+  if (bad) bad.textContent = Math.round(s * 100) + '%';
+}
+
+// ─── 左树 ───
+function treeItem(n, cls){
+  const c = colorOf(n);
+  const cnt = (OUT[n.id]||[]).length;
+  return `<div class="tnode ${cls||''} ${selected===n.id?'on':''} ${isBroken(n.id)?'bad':''}" data-id="${esc(n.id)}">
+    <span class="sw" style="background:${c}"></span><span>${esc(n.title)}</span>
+    ${cnt?`<span class="cnt">${cnt}</span>`:''}</div>`;
+}
+function nodeTitle(id){ return N[id] ? N[id].title : id; }
+function buildTree(){
+  let h = '';
+  if (view === 'req'){
+    const prd = GRAPH.nodes.find(n => n.kind === 'prd');
+    h += `<h5>需求来源</h5>` + treeItem(prd);
+    h += `<h5>功能域 → 规格</h5>`;
+    GRAPH.nodes.filter(n => n.kind === 'domain').forEach(d => {
+      h += treeItem(d, 'sub');
+      (OUT[d.id]||[]).filter(e => e.type === 'specified_by').forEach(e => {
+        h += treeItem(N[e.to], 'sub2');
+        (OUT[e.to]||[]).filter(x => x.type === 'contains' && N[x.to].kind === 'requirement').forEach(x => {
+          h += treeItem(N[x.to], 'sub2');
+        });
+      });
+    });
+    const orphan = GRAPH.nodes.filter(n => n.kind === 'spec' && !(IN[n.id]||[]).some(e => e.type === 'specified_by'));
+    if (orphan.length){
+      h += `<h5>未挂到任何功能域的规格</h5>`;
+      orphan.forEach(s => { h += treeItem(s, 'sub'); });
+    }
+  } else if (view === 'code'){
+    h += `<h5>代码文件</h5>`;
+    GRAPH.nodes.filter(n => n.kind === 'file').forEach(f => { h += treeItem(f); });
+    h += `<h5>接口端点</h5>`;
+    GRAPH.nodes.filter(n => n.kind === 'endpoint').forEach(f => { h += treeItem(f); });
+    h += `<h5>数据表</h5>`;
+    GRAPH.nodes.filter(n => n.kind === 'table').forEach(f => { h += treeItem(f); });
+    h += `<h5>测试</h5>`;
+    GRAPH.nodes.filter(n => n.kind === 'test').forEach(f => { h += treeItem(f); });
+  } else {
+    const groups = [
+      ['断锚（锚点已失效）', H.broken_anchors.map(x => x.node)],
+      ['孤儿规格（PRD 未登记）', GRAPH.nodes.filter(n => n.kind==='spec' && !(IN[n.id]||[]).some(e=>e.type==='specified_by')).map(n=>n.id)],
+      ['孤儿需求（无实现声明）', H.orphan_requirements.map(x => x.node)],
+      ['未验收需求（无测试锚点）', H.unverified_requirements.map(x => x.node)],
+      ['未归锚测试', H.unanchored_tests.map(x => GRAPH.nodes.find(n => n.anchor && n.anchor.path === x.path).id).filter(Boolean)]
+    ];
+    groups.forEach(([label, ids]) => {
+      if (!ids.length) return;
+      h += `<h5>${label} · ${ids.length}</h5>`;
+      ids.forEach(id => { if (N[id]) h += treeItem(N[id], 'sub'); });
+    });
+    if (!h) h = '<h5>全部干净</h5>';
+  }
+  const t = document.getElementById('tree');
+  t.innerHTML = h;
+  t.querySelectorAll('.tnode').forEach(el => el.addEventListener('click', () => select(el.dataset.id)));
+}
+
+// ─── 详情 ───
+function relList(title, edges){
+  if (!edges.length) return '';
+  return `<div class="blk"><h6>${title}</h6>` + edges.map(e => {
+    const other = e.from === selected ? e.to : e.from;
+    return `<div class="rel" data-id="${esc(other)}">
+      <span class="et" style="color:${EDGE_COLOR[e.type]||'#725d42'}">${e.type}</span>
+      <span class="nm">${esc(nodeTitle(other))}</span>
+      <span class="pill ${e.confidence==='declared'?'info':'mute'}" style="margin-left:auto">${e.confidence==='declared'?'声明':'推断'}</span>
+    </div>`;
+  }).join('') + `</div>`;
+}
+function renderDetail(){
+  const d = document.getElementById('detail');
+  if (!selected){
+    d.innerHTML = `<h4>全景</h4><span class="kind">未选中</span>
+      <p style="font-size:13px">点左侧树或画布任意节点，这里显示它的锚点与全部关系。</p>
+      <div class="blk"><h6>怎么看这张图</h6>
+      <div class="row"><span class="k">实线</span><span class="v">人声明的边（需求归谁实现、测试守谁）</span></div>
+      <div class="row"><span class="k">虚线</span><span class="v">机器推断的边（目录包含、路由暴露、符号定义）</span></div>
+      <div class="row"><span class="k">红色节点</span><span class="v">锚点重放失败 —— 代码或文档已经变了</span></div>
+      <div class="row"><span class="k">默认只画骨架</span><span class="v">选中后画它的全部一度关系，避免 262 条边糊成一团</span></div>
+      </div>`;
+    return;
+  }
+  const n = N[selected];
+  const k = KIND[n.kind] || {t:n.kind};
+  const a = n.anchor || {};
+  const anchorLine = a.type + ' → ' + (a.path || a.name || '') + (a.heading ? ' · ' + a.heading : '');
+  let h = `<h4>${esc(n.title)}</h4><span class="kind">${k.t}</span>`;
+  h += `<div class="blk"><h6>锚点</h6>
+    <div class="row"><span class="k">类型</span><span class="v mono">${esc(a.type)}</span></div>
+    ${a.path?`<div class="row"><span class="k">路径</span><span class="v mono">${esc(a.path)}</span></div>`:''}
+    ${a.heading?`<div class="row"><span class="k">标题</span><span class="v mono">${esc(a.heading)}</span></div>`:''}
+    ${a.name?`<div class="row"><span class="k">符号</span><span class="v mono">${esc(a.name)}</span></div>`:''}
+    ${a.literal?`<div class="row"><span class="k">路由</span><span class="v mono">${esc(a.literal)}</span></div>`:''}
+    <div class="row"><span class="k">重放</span><span class="v"><span class="pill ${n.anchor_ok===false?'bad':'ok'}">${n.anchor_ok===false?'失效':'有效'}</span> ${esc(n.anchor_detail||'')}</span></div>
+  </div>`;
+
+  if (n.kind === 'spec'){
+    const reqs = (OUT[n.id]||[]).filter(e => e.type === 'contains' && N[e.to].kind === 'requirement').map(e => N[e.to]);
+    const hasVer = (OUT[n.id]||[]).concat(IN[n.id]||[]).some(e => e.type === 'verifies');
+    h += `<div class="blk"><h6>本规格的需求 · ${reqs.length} 条</h6>` + reqs.map(r => {
+      const impl = (OUT[r.id]||[]).some(e => e.type === 'implemented_by');
+      return `<div class="rel" data-id="${esc(r.id)}">
+        <span class="nm">${esc(r.title)}</span>
+        <span class="pill ${impl?'ok':'warn'}" style="margin-left:auto">${impl?'有实现':'孤儿'}</span>
+        <span class="pill ${hasVer?'ok':'bad'}">${hasVer?'有测试':'无测试'}</span></div>`;
+    }).join('') + `</div>`;
+  }
+  if (n.id === AGG.id){
+    const list = GRAPH.nodes.filter(x => x.kind === 'test');
+    h += `<div class="blk"><h6>测试文件 · ${list.length} 个 / ${H.test_cases} 条用例</h6>` + list.map(t =>
+      `<div class="rel" data-id="${esc(t.id)}">
+        <span class="nm">${esc(t.title)}</span>
+        <span class="pill mute">${t.case_count}</span>
+        <span class="pill ${t.anchor_resolved ? 'ok' : 'bad'}" style="margin-left:auto">${t.anchor_resolved ? '已归锚' : '未归锚'}</span>
+      </div>`).join('') + `</div>`;
+  }
+  if (n.kind === 'test' && n.id !== AGG.id){
+    h += `<div class="blk"><h6>锚点声明</h6>
+      <div class="row"><span class="k">用例数</span><span class="v">${n.case_count}</span></div>
+      <div class="row"><span class="k">写法</span><span class="v mono">${esc(n.anchor_style||'（未声明）')}</span></div>
+      <div class="row"><span class="k">指向</span><span class="v mono">${esc(n.anchor_target||'—')}</span></div>
+      <div class="row"><span class="k">结论</span><span class="v"><span class="pill ${n.anchor_resolved?'ok':'bad'}">${n.anchor_resolved?'已归到规格':'未归锚'}</span></span></div>
+    </div>`;
+  }
+  h += relList('出边 · 它指向谁', OUT[n.id] || []);
+  h += relList('入边 · 谁指向它', IN[n.id] || []);
+  d.innerHTML = h;
+  d.querySelectorAll('.rel').forEach(el => el.addEventListener('click', () => select(el.dataset.id)));
+  d.scrollTop = 0;
+}
+
+function select(id){
+  selected = (selected === id) ? null : id;
+  drawCanvas(); buildTree(); renderDetail();
+}
+
+// ─── 健康度 ───
+function healthBlock(title, rows, render, tone){
+  if (!rows.length) return `<div class="callout" style="border-left-color:var(--success)">
+    <h4>${title} · 0</h4><p>干净。</p></div>`;
+  return `<div class="callout ${tone}"><h4>${title} · ${rows.length}</h4>
+    <div class="tblwrap" style="margin-top:8px"><table class="tbl"><tbody>${rows.map(render).join('')}</tbody></table></div></div>`;
+}
+document.getElementById('health').innerHTML =
+  healthBlock('断锚（节点锚点重放失败）', H.broken_anchors,
+    r => `<tr><td style="width:260px"><b>${esc(r.title)}</b></td><td class="mono">${esc(r.detail)}</td>
+          <td style="width:80px"><span class="pill bad">失效</span></td></tr>`, 'red')
++ healthBlock('孤儿规格（PRD 未登记它的存在）', H.orphan_specs,
+    r => `<tr><td style="width:340px"><b>${esc(r.title)}</b></td><td>${
+      r.registered_in_prd ? 'PRD 规格真相源已登记' : '登录模块 PRD 的「规格真相源」一行里没有它 —— 这是声明缺口，不是代码缺口'
+    }</td></tr>`, 'yellow')
++ healthBlock('孤儿需求（没有任何代码归属）', H.orphan_requirements,
+    r => `<tr><td style="width:340px"><b>${esc(r.title)}</b></td><td class="mono">${esc(r.spec)}</td>
+          <td style="width:110px"><span class="pill warn">无实现声明</span></td></tr>`, 'yellow')
++ healthBlock('未验收需求（没有任何测试锚点守护）', H.unverified_requirements,
+    r => `<tr><td style="width:340px"><b>${esc(r.title)}</b></td><td class="mono">${esc(r.spec)}</td>
+          <td style="width:110px"><span class="pill warn">无测试锚点</span></td></tr>`, 'yellow')
++ healthBlock('未归锚测试（文件头没写守护哪条规格）', H.unanchored_tests,
+    r => `<tr><td style="width:300px"><b>${esc(r.title)}</b></td><td class="mono">${esc(r.path)}</td>
+          <td style="width:90px">${r.case_count} 用例</td>
+          <td style="width:220px"><span class="pill bad">${esc(r.reason)}</span></td></tr>`, 'yellow')
++ `<div class="callout blue"><h4>锚点写法分布（这就是要治的病）</h4>
+    <div class="tblwrap" style="margin-top:8px"><table class="tbl"><thead><tr><th>写法</th><th>文件数</th><th>能否机器解析</th></tr></thead><tbody>
+    ${Object.entries(H.anchor_styles).map(([k,v]) => `<tr><td class="mono">${esc(k)}</td><td>${v}</td>
+      <td>${k==='无锚点'?'<span class="pill bad">不能</span>':(k==='openspec_change_id'?'<span class="pill warn">能，但指向的是变更单不是规格</span>':'<span class="pill ok">能</span>')}</td></tr>`).join('')}
+    </tbody></table></div>
+    <p style="margin-top:8px;font-size:13px">同一件事三种写法 ⇒ 图要么猜、要么漏。P0 要做的第一件事就是把它收敛成一种。</p>
+   </div>`;
+
+// ─── 格式表 ───
+const KIND_DESC = {
+  prd:['模块需求文档（PRD）','文件路径'],
+  domain:['PRD 里的功能域小节','文件路径 + 小节标题'],
+  spec:['openspec 规格（capability）','规格文件路径'],
+  requirement:['规格里的一条 Requirement','文件路径 + "### Requirement: 标题"'],
+  scenario:['规格里的一条 Scenario','文件路径 + "#### Scenario: 标题"'],
+  file:['代码文件','文件路径'],
+  symbol:['代码符号（类 / 函数）','文件路径 + 符号名'],
+  endpoint:['接口端点','urls.py 路径 + 路由字面量'],
+  table:['数据表','db_table 名'],
+  test:['测试文件','文件路径 + 文件头规格锚点']
+};
+document.getElementById('kinds-tbl').innerHTML = Object.entries(KIND_DESC).map(([k,[d,a]]) =>
+  `<tr><td><span class="tag" style="background:${KIND[k].c};border-color:${KIND[k].c};color:#fff">${KIND[k].t}</span></td>
+   <td>${d}</td><td class="mono">${a}</td>
+   <td><b>${H.node_kinds[k]||0}</b></td></tr>`).join('');
+
+document.getElementById('edges-tbl').innerHTML = Object.entries(EDGE_LABEL).map(([k,label]) => {
+  const cnt = GRAPH.edges.filter(e => e.type === k).length;
+  return `<tr><td class="mono" style="color:${EDGE_COLOR[k]}"><b>${k}</b></td>
+    <td>${label} <span class="pill mute">${cnt} 条</span></td>
+    <td>${EDGE_OWNER[k]}</td></tr>`;
+}).join('');
+
+// ─── JSON 片段（真实取样） ───
+const sampleReq = GRAPH.nodes.find(n => n.kind === 'requirement');
+const sampleImpl = GRAPH.edges.find(e => e.type === 'implemented_by');
+const sampleTest = GRAPH.nodes.find(n => n.kind === 'test' && n.anchor_resolved);
+const sampleBroken = GRAPH.nodes.find(n => n.kind === 'test' && n.anchor_target && !n.anchor_resolved);
+const snippet = {
+  schema_version: GRAPH.schema_version,
+  scope: GRAPH.scope,
+  source_rev: GRAPH.source_rev,
+  nodes: [sampleReq, sampleTest].filter(Boolean),
+  edges: sampleImpl ? [sampleImpl] : [],
+  health: {broken_anchors: sampleBroken ? [sampleBroken.anchor_target] : [], note: '完整报告见本页第 3 节'}
+};
+document.getElementById('json-snippet').innerHTML = esc(JSON.stringify(snippet, null, 2));
+
+// ─── 视图切换 ───
+document.querySelectorAll('#views .tab').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('#views .tab').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); view = b.dataset.view; buildTree();
+}));
+document.getElementById('show-agg').addEventListener('change', e => { testAgg = e.target.checked; if (selected === AGG.id) selected = null; drawCanvas(); renderDetail(); });
+document.getElementById('show-sym').addEventListener('change', e => { showSym = e.target.checked; if (!showSym && selected && N[selected].kind==='symbol') selected=null; drawCanvas(); renderDetail(); });
+document.getElementById('show-scn').addEventListener('change', e => { showScn = e.target.checked; if (!showScn && selected && N[selected].kind==='scenario') selected=null; drawCanvas(); renderDetail(); });
+document.getElementById('btn-reset').addEventListener('click', () => { selected = null; userZoom = 1; drawCanvas(); buildTree(); renderDetail(); });
+document.getElementById('zoom-in').addEventListener('click', () => { userZoom = Math.min(3, userZoom * 1.2); applyScale(); });
+document.getElementById('zoom-out').addEventListener('click', () => { userZoom = Math.max(0.5, userZoom / 1.2); applyScale(); });
+document.getElementById('zoom-fit').addEventListener('click', () => { userZoom = 1; applyScale(); });
+window.addEventListener('resize', () => { if (userZoom === 1) applyScale(); });
+
+buildTree(); drawCanvas(); renderDetail();
+</script>
+</body>
+</html>

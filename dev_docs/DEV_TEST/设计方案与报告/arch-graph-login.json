@@ -1,0 +1,4724 @@
+{
+  "schema_version": "arch-graph/1",
+  "scope": {
+    "name": "登录模块",
+    "id": "login",
+    "entry": "dev_docs/ARCH_PRD/PRD-00-登录模块.md",
+    "granularity": "需求 → 模块 / 文件"
+  },
+  "generated_at": "2026-09-29T14:34:26+08:00",
+  "source_rev": "84c50bc6",
+  "nodes": [
+    {
+      "id": "PRD:login",
+      "kind": "prd",
+      "title": "登录模块 业务功能需求（PRD-login）",
+      "anchor": {
+        "type": "file",
+        "path": "dev_docs/ARCH_PRD/PRD-00-登录模块.md"
+      },
+      "layer": "requirement",
+      "subtitle": "登录模块",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "DOM:登录",
+      "kind": "domain",
+      "title": "登录",
+      "anchor": {
+        "type": "md_heading",
+        "path": "dev_docs/ARCH_PRD/PRD-00-登录模块.md",
+        "heading": "### 登录"
+      },
+      "layer": "requirement",
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "DOM:注册",
+      "kind": "domain",
+      "title": "注册",
+      "anchor": {
+        "type": "md_heading",
+        "path": "dev_docs/ARCH_PRD/PRD-00-登录模块.md",
+        "heading": "### 注册"
+      },
+      "layer": "requirement",
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "DOM:刷新令牌",
+      "kind": "domain",
+      "title": "刷新令牌",
+      "anchor": {
+        "type": "md_heading",
+        "path": "dev_docs/ARCH_PRD/PRD-00-登录模块.md",
+        "heading": "### 刷新令牌"
+      },
+      "layer": "requirement",
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "DOM:登出",
+      "kind": "domain",
+      "title": "登出",
+      "anchor": {
+        "type": "md_heading",
+        "path": "dev_docs/ARCH_PRD/PRD-00-登录模块.md",
+        "heading": "### 登出"
+      },
+      "layer": "requirement",
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "DOM:查看当前身份",
+      "kind": "domain",
+      "title": "查看当前身份",
+      "anchor": {
+        "type": "md_heading",
+        "path": "dev_docs/ARCH_PRD/PRD-00-登录模块.md",
+        "heading": "### 查看当前身份"
+      },
+      "layer": "requirement",
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "DOM:会话与账号管理",
+      "kind": "domain",
+      "title": "会话与账号管理",
+      "anchor": {
+        "type": "md_heading",
+        "path": "dev_docs/ARCH_PRD/PRD-00-登录模块.md",
+        "heading": "### 会话与账号管理"
+      },
+      "layer": "requirement",
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "FILE:apps/accounts/views.py",
+      "kind": "file",
+      "title": "views.py",
+      "anchor": {
+        "type": "file",
+        "path": "apps/accounts/views.py"
+      },
+      "layer": "code",
+      "subtitle": "apps/accounts/views.py",
+      "lang": "py",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "SYM:apps/accounts/views.py#LoginView",
+      "kind": "symbol",
+      "title": "LoginView",
+      "anchor": {
+        "type": "symbol",
+        "path": "apps/accounts/views.py",
+        "name": "LoginView"
+      },
+      "layer": "code",
+      "subtitle": "apps/accounts/views.py",
+      "anchor_ok": true,
+      "anchor_detail": "符号存在"
+    },
+    {
+      "id": "FILE:apps/accounts/serializers.py",
+      "kind": "file",
+      "title": "serializers.py",
+      "anchor": {
+        "type": "file",
+        "path": "apps/accounts/serializers.py"
+      },
+      "layer": "code",
+      "subtitle": "apps/accounts/serializers.py",
+      "lang": "py",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "SYM:apps/accounts/serializers.py#LoginSerializer",
+      "kind": "symbol",
+      "title": "LoginSerializer",
+      "anchor": {
+        "type": "symbol",
+        "path": "apps/accounts/serializers.py",
+        "name": "LoginSerializer"
+      },
+      "layer": "code",
+      "subtitle": "apps/accounts/serializers.py",
+      "anchor_ok": true,
+      "anchor_detail": "符号存在"
+    },
+    {
+      "id": "FILE:shared/auth/jwt_auth.py",
+      "kind": "file",
+      "title": "jwt_auth.py",
+      "anchor": {
+        "type": "file",
+        "path": "shared/auth/jwt_auth.py"
+      },
+      "layer": "code",
+      "subtitle": "shared/auth/jwt_auth.py",
+      "lang": "py",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "SYM:shared/auth/jwt_auth.py#create_token_pair",
+      "kind": "symbol",
+      "title": "create_token_pair",
+      "anchor": {
+        "type": "symbol",
+        "path": "shared/auth/jwt_auth.py",
+        "name": "create_token_pair"
+      },
+      "layer": "code",
+      "subtitle": "shared/auth/jwt_auth.py",
+      "anchor_ok": true,
+      "anchor_detail": "符号存在"
+    },
+    {
+      "id": "FILE:frontend/src/views/components/LoginCard.vue",
+      "kind": "file",
+      "title": "LoginCard.vue",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/src/views/components/LoginCard.vue"
+      },
+      "layer": "code",
+      "subtitle": "frontend/src/views/components/LoginCard.vue",
+      "lang": "vue",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "FILE:frontend/src/views/LoginView.logic.ts",
+      "kind": "file",
+      "title": "LoginView.logic.ts",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/src/views/LoginView.logic.ts"
+      },
+      "layer": "code",
+      "subtitle": "frontend/src/views/LoginView.logic.ts",
+      "lang": "ts",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "FILE:frontend/src/shared/api/auth.ts",
+      "kind": "file",
+      "title": "auth.ts",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/src/shared/api/auth.ts"
+      },
+      "layer": "code",
+      "subtitle": "frontend/src/shared/api/auth.ts",
+      "lang": "ts",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "FILE:frontend/src/shared/composables/useLoginForm.ts",
+      "kind": "file",
+      "title": "useLoginForm.ts",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/src/shared/composables/useLoginForm.ts"
+      },
+      "layer": "code",
+      "subtitle": "frontend/src/shared/composables/useLoginForm.ts",
+      "lang": "ts",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "SYM:apps/accounts/views.py#RegisterView",
+      "kind": "symbol",
+      "title": "RegisterView",
+      "anchor": {
+        "type": "symbol",
+        "path": "apps/accounts/views.py",
+        "name": "RegisterView"
+      },
+      "layer": "code",
+      "subtitle": "apps/accounts/views.py",
+      "anchor_ok": true,
+      "anchor_detail": "符号存在"
+    },
+    {
+      "id": "SYM:apps/accounts/serializers.py#RegisterSerializer",
+      "kind": "symbol",
+      "title": "RegisterSerializer",
+      "anchor": {
+        "type": "symbol",
+        "path": "apps/accounts/serializers.py",
+        "name": "RegisterSerializer"
+      },
+      "layer": "code",
+      "subtitle": "apps/accounts/serializers.py",
+      "anchor_ok": true,
+      "anchor_detail": "符号存在"
+    },
+    {
+      "id": "FILE:apps/accounts/api.py",
+      "kind": "file",
+      "title": "api.py",
+      "anchor": {
+        "type": "file",
+        "path": "apps/accounts/api.py"
+      },
+      "layer": "code",
+      "subtitle": "apps/accounts/api.py",
+      "lang": "py",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "SYM:apps/accounts/api.py#create_user",
+      "kind": "symbol",
+      "title": "create_user",
+      "anchor": {
+        "type": "symbol",
+        "path": "apps/accounts/api.py",
+        "name": "create_user"
+      },
+      "layer": "code",
+      "subtitle": "apps/accounts/api.py",
+      "anchor_ok": true,
+      "anchor_detail": "符号存在"
+    },
+    {
+      "id": "FILE:frontend/src/views/components/RegisterCard.vue",
+      "kind": "file",
+      "title": "RegisterCard.vue",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/src/views/components/RegisterCard.vue"
+      },
+      "layer": "code",
+      "subtitle": "frontend/src/views/components/RegisterCard.vue",
+      "lang": "vue",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "FILE:frontend/src/views/composables/useAuthFlow.ts",
+      "kind": "file",
+      "title": "useAuthFlow.ts",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/src/views/composables/useAuthFlow.ts"
+      },
+      "layer": "code",
+      "subtitle": "frontend/src/views/composables/useAuthFlow.ts",
+      "lang": "ts",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "SYM:apps/accounts/views.py#RefreshView",
+      "kind": "symbol",
+      "title": "RefreshView",
+      "anchor": {
+        "type": "symbol",
+        "path": "apps/accounts/views.py",
+        "name": "RefreshView"
+      },
+      "layer": "code",
+      "subtitle": "apps/accounts/views.py",
+      "anchor_ok": true,
+      "anchor_detail": "符号存在"
+    },
+    {
+      "id": "SYM:shared/auth/jwt_auth.py#verify_token",
+      "kind": "symbol",
+      "title": "verify_token",
+      "anchor": {
+        "type": "symbol",
+        "path": "shared/auth/jwt_auth.py",
+        "name": "verify_token"
+      },
+      "layer": "code",
+      "subtitle": "shared/auth/jwt_auth.py",
+      "anchor_ok": true,
+      "anchor_detail": "符号存在"
+    },
+    {
+      "id": "FILE:frontend/src/shared/api-client.ts",
+      "kind": "file",
+      "title": "api-client.ts",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/src/shared/api-client.ts"
+      },
+      "layer": "code",
+      "subtitle": "frontend/src/shared/api-client.ts",
+      "lang": "ts",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "SYM:apps/accounts/views.py#LogoutView",
+      "kind": "symbol",
+      "title": "LogoutView",
+      "anchor": {
+        "type": "symbol",
+        "path": "apps/accounts/views.py",
+        "name": "LogoutView"
+      },
+      "layer": "code",
+      "subtitle": "apps/accounts/views.py",
+      "anchor_ok": true,
+      "anchor_detail": "符号存在"
+    },
+    {
+      "id": "SYM:shared/auth/jwt_auth.py#revoke_session",
+      "kind": "symbol",
+      "title": "revoke_session",
+      "anchor": {
+        "type": "symbol",
+        "path": "shared/auth/jwt_auth.py",
+        "name": "revoke_session"
+      },
+      "layer": "code",
+      "subtitle": "shared/auth/jwt_auth.py",
+      "anchor_ok": true,
+      "anchor_detail": "符号存在"
+    },
+    {
+      "id": "FILE:frontend/src/shared/auth/token-storage.ts",
+      "kind": "file",
+      "title": "token-storage.ts",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/src/shared/auth/token-storage.ts"
+      },
+      "layer": "code",
+      "subtitle": "frontend/src/shared/auth/token-storage.ts",
+      "lang": "ts",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "FILE:frontend/src/shared/components/AppSidebar.vue",
+      "kind": "file",
+      "title": "AppSidebar.vue",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/src/shared/components/AppSidebar.vue"
+      },
+      "layer": "code",
+      "subtitle": "frontend/src/shared/components/AppSidebar.vue",
+      "lang": "vue",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "SYM:apps/accounts/views.py#MeView",
+      "kind": "symbol",
+      "title": "MeView",
+      "anchor": {
+        "type": "symbol",
+        "path": "apps/accounts/views.py",
+        "name": "MeView"
+      },
+      "layer": "code",
+      "subtitle": "apps/accounts/views.py",
+      "anchor_ok": true,
+      "anchor_detail": "符号存在"
+    },
+    {
+      "id": "FILE:frontend/src/shared/composables/useAuthUser.ts",
+      "kind": "file",
+      "title": "useAuthUser.ts",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/src/shared/composables/useAuthUser.ts"
+      },
+      "layer": "code",
+      "subtitle": "frontend/src/shared/composables/useAuthUser.ts",
+      "lang": "ts",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "FILE:frontend/src/router.ts",
+      "kind": "file",
+      "title": "router.ts",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/src/router.ts"
+      },
+      "layer": "code",
+      "subtitle": "frontend/src/router.ts",
+      "lang": "ts",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "FILE:frontend/src/shared/api-auth-interceptors.ts",
+      "kind": "file",
+      "title": "api-auth-interceptors.ts",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/src/shared/api-auth-interceptors.ts"
+      },
+      "layer": "code",
+      "subtitle": "frontend/src/shared/api-auth-interceptors.ts",
+      "lang": "ts",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "FILE:gateway/middleware.py",
+      "kind": "file",
+      "title": "middleware.py",
+      "anchor": {
+        "type": "file",
+        "path": "gateway/middleware.py"
+      },
+      "layer": "code",
+      "subtitle": "gateway/middleware.py",
+      "lang": "py",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "SYM:gateway/middleware.py#JWTAuthenticationMiddleware",
+      "kind": "symbol",
+      "title": "JWTAuthenticationMiddleware",
+      "anchor": {
+        "type": "symbol",
+        "path": "gateway/middleware.py",
+        "name": "JWTAuthenticationMiddleware"
+      },
+      "layer": "code",
+      "subtitle": "gateway/middleware.py",
+      "anchor_ok": true,
+      "anchor_detail": "符号存在"
+    },
+    {
+      "id": "SPEC:auth-session",
+      "kind": "spec",
+      "title": "auth-session",
+      "anchor": {
+        "type": "file",
+        "path": "openspec/specs/auth-session/spec.md"
+      },
+      "layer": "requirement",
+      "subtitle": "8 条 Requirement",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "REQ:auth-session#登出作废整个会话",
+      "kind": "requirement",
+      "title": "登出作废整个会话",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "### Requirement: 登出作废整个会话"
+      },
+      "layer": "requirement",
+      "subtitle": "6 个 Scenario",
+      "line": 8,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#登出作废整个会话#登出后刷新令牌失效",
+      "kind": "scenario",
+      "title": "登出后刷新令牌失效",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 登出后刷新令牌失效"
+      },
+      "layer": "requirement",
+      "line": 15,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#登出作废整个会话#登出后原 access 失效",
+      "kind": "scenario",
+      "title": "登出后原 access 失效",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 登出后原 access 失效"
+      },
+      "layer": "requirement",
+      "line": 20,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#登出作废整个会话#续期保持会话归属",
+      "kind": "scenario",
+      "title": "续期保持会话归属",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 续期保持会话归属"
+      },
+      "layer": "requirement",
+      "line": 25,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#登出作废整个会话#其他会话不受影响",
+      "kind": "scenario",
+      "title": "其他会话不受影响",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 其他会话不受影响"
+      },
+      "layer": "requirement",
+      "line": 31,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#登出作废整个会话#Redis 不可用时拒绝登出",
+      "kind": "scenario",
+      "title": "Redis 不可用时拒绝登出",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: Redis 不可用时拒绝登出"
+      },
+      "layer": "requirement",
+      "line": 36,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#登出作废整个会话#缺少会话标识的旧令牌",
+      "kind": "scenario",
+      "title": "缺少会话标识的旧令牌",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 缺少会话标识的旧令牌"
+      },
+      "layer": "requirement",
+      "line": 42,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "REQ:auth-session#认证端点显式声明鉴权姿态",
+      "kind": "requirement",
+      "title": "认证端点显式声明鉴权姿态",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "### Requirement: 认证端点显式声明鉴权姿态"
+      },
+      "layer": "requirement",
+      "subtitle": "3 个 Scenario",
+      "line": 48,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#认证端点显式声明鉴权姿态#公开端点两者成对",
+      "kind": "scenario",
+      "title": "公开端点两者成对",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 公开端点两者成对"
+      },
+      "layer": "requirement",
+      "line": 56,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#认证端点显式声明鉴权姿态#受保护端点两者成对",
+      "kind": "scenario",
+      "title": "受保护端点两者成对",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 受保护端点两者成对"
+      },
+      "layer": "requirement",
+      "line": 62,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#认证端点显式声明鉴权姿态#覆盖认证模块全部端点",
+      "kind": "scenario",
+      "title": "覆盖认证模块全部端点",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 覆盖认证模块全部端点"
+      },
+      "layer": "requirement",
+      "line": 68,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "REQ:auth-session#公开认证端点的 401 不触发令牌刷新",
+      "kind": "requirement",
+      "title": "公开认证端点的 401 不触发令牌刷新",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "### Requirement: 公开认证端点的 401 不触发令牌刷新"
+      },
+      "layer": "requirement",
+      "subtitle": "4 个 Scenario",
+      "line": 73,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#公开认证端点的 401 不触发令牌刷新#登录返回 401 时不刷新",
+      "kind": "scenario",
+      "title": "登录返回 401 时不刷新",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 登录返回 401 时不刷新"
+      },
+      "layer": "requirement",
+      "line": 83,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#公开认证端点的 401 不触发令牌刷新#需要令牌的端点 401 仍会刷新",
+      "kind": "scenario",
+      "title": "需要令牌的端点 401 仍会刷新",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 需要令牌的端点 401 仍会刷新"
+      },
+      "layer": "requirement",
+      "line": 88,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#公开认证端点的 401 不触发令牌刷新#刷新请求自身不被再次刷新",
+      "kind": "scenario",
+      "title": "刷新请求自身不被再次刷新",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 刷新请求自身不被再次刷新"
+      },
+      "layer": "requirement",
+      "line": 93,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#公开认证端点的 401 不触发令牌刷新#公开端点清单与网关一致",
+      "kind": "scenario",
+      "title": "公开端点清单与网关一致",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 公开端点清单与网关一致"
+      },
+      "layer": "requirement",
+      "line": 98,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "REQ:auth-session#前端会话为单账号",
+      "kind": "requirement",
+      "title": "前端会话为单账号",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "### Requirement: 前端会话为单账号"
+      },
+      "layer": "requirement",
+      "subtitle": "2 个 Scenario",
+      "line": 103,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#前端会话为单账号#登录成功后本地只有一个账号",
+      "kind": "scenario",
+      "title": "登录成功后本地只有一个账号",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 登录成功后本地只有一个账号"
+      },
+      "layer": "requirement",
+      "line": 109,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#前端会话为单账号#刷新页面后仍是同一账号",
+      "kind": "scenario",
+      "title": "刷新页面后仍是同一账号",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 刷新页面后仍是同一账号"
+      },
+      "layer": "requirement",
+      "line": 115,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "REQ:auth-session#登出即清空本地会话并回登录页",
+      "kind": "requirement",
+      "title": "登出即清空本地会话并回登录页",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "### Requirement: 登出即清空本地会话并回登录页"
+      },
+      "layer": "requirement",
+      "subtitle": "2 个 Scenario",
+      "line": 121,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#登出即清空本地会话并回登录页#登出后回到登录页且本地无凭证",
+      "kind": "scenario",
+      "title": "登出后回到登录页且本地无凭证",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 登出后回到登录页且本地无凭证"
+      },
+      "layer": "requirement",
+      "line": 126,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#登出即清空本地会话并回登录页#登出接口不可用时保留登录态",
+      "kind": "scenario",
+      "title": "登出接口不可用时保留登录态",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 登出接口不可用时保留登录态"
+      },
+      "layer": "requirement",
+      "line": 132,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "REQ:auth-session#路由守卫对已登录用户一律跳转工作台",
+      "kind": "requirement",
+      "title": "路由守卫对已登录用户一律跳转工作台",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "### Requirement: 路由守卫对已登录用户一律跳转工作台"
+      },
+      "layer": "requirement",
+      "subtitle": "3 个 Scenario",
+      "line": 138,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#路由守卫对已登录用户一律跳转工作台#已登录访问登录页被送回工作台",
+      "kind": "scenario",
+      "title": "已登录访问登录页被送回工作台",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 已登录访问登录页被送回工作台"
+      },
+      "layer": "requirement",
+      "line": 144,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#路由守卫对已登录用户一律跳转工作台#携带旧的添加账号参数仍被送回工作台",
+      "kind": "scenario",
+      "title": "携带旧的添加账号参数仍被送回工作台",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 携带旧的添加账号参数仍被送回工作台"
+      },
+      "layer": "requirement",
+      "line": 149,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#路由守卫对已登录用户一律跳转工作台#未登录访问工作台被送回登录页",
+      "kind": "scenario",
+      "title": "未登录访问工作台被送回登录页",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 未登录访问工作台被送回登录页"
+      },
+      "layer": "requirement",
+      "line": 155,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "REQ:auth-session#续期失败无条件清空会话并跳转登录页",
+      "kind": "requirement",
+      "title": "续期失败无条件清空会话并跳转登录页",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "### Requirement: 续期失败无条件清空会话并跳转登录页"
+      },
+      "layer": "requirement",
+      "subtitle": "2 个 Scenario",
+      "line": 160,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#续期失败无条件清空会话并跳转登录页#续期失败清空凭证并跳转登录页",
+      "kind": "scenario",
+      "title": "续期失败清空凭证并跳转登录页",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 续期失败清空凭证并跳转登录页"
+      },
+      "layer": "requirement",
+      "line": 166,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#续期失败无条件清空会话并跳转登录页#续期成功时不跳转",
+      "kind": "scenario",
+      "title": "续期成功时不跳转",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 续期成功时不跳转"
+      },
+      "layer": "requirement",
+      "line": 173,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "REQ:auth-session#设备页当前用户取自单账号会话",
+      "kind": "requirement",
+      "title": "设备页当前用户取自单账号会话",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "### Requirement: 设备页当前用户取自单账号会话"
+      },
+      "layer": "requirement",
+      "subtitle": "1 个 Scenario",
+      "line": 179,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-session#设备页当前用户取自单账号会话#当前用户即登录账号",
+      "kind": "scenario",
+      "title": "当前用户即登录账号",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-session/spec.md",
+        "heading": "#### Scenario: 当前用户即登录账号"
+      },
+      "layer": "requirement",
+      "line": 183,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SPEC:auth-registration",
+      "kind": "spec",
+      "title": "auth-registration",
+      "anchor": {
+        "type": "file",
+        "path": "openspec/specs/auth-registration/spec.md"
+      },
+      "layer": "requirement",
+      "subtitle": "1 条 Requirement",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "REQ:auth-registration#用户名唯一性由写口保证",
+      "kind": "requirement",
+      "title": "用户名唯一性由写口保证",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-registration/spec.md",
+        "heading": "### Requirement: 用户名唯一性由写口保证"
+      },
+      "layer": "requirement",
+      "subtitle": "4 个 Scenario",
+      "line": 8,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-registration#用户名唯一性由写口保证#顺序重名注册",
+      "kind": "scenario",
+      "title": "顺序重名注册",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-registration/spec.md",
+        "heading": "#### Scenario: 顺序重名注册"
+      },
+      "layer": "requirement",
+      "line": 16,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-registration#用户名唯一性由写口保证#并发重名注册",
+      "kind": "scenario",
+      "title": "并发重名注册",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-registration/spec.md",
+        "heading": "#### Scenario: 并发重名注册"
+      },
+      "layer": "requirement",
+      "line": 21,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-registration#用户名唯一性由写口保证#写口不泄漏底层异常",
+      "kind": "scenario",
+      "title": "写口不泄漏底层异常",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-registration/spec.md",
+        "heading": "#### Scenario: 写口不泄漏底层异常"
+      },
+      "layer": "requirement",
+      "line": 27,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-registration#用户名唯一性由写口保证#冲突不破坏调用方事务",
+      "kind": "scenario",
+      "title": "冲突不破坏调用方事务",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-registration/spec.md",
+        "heading": "#### Scenario: 冲突不破坏调用方事务"
+      },
+      "layer": "requirement",
+      "line": 33,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SPEC:auth-form-validation",
+      "kind": "spec",
+      "title": "auth-form-validation",
+      "anchor": {
+        "type": "file",
+        "path": "openspec/specs/auth-form-validation/spec.md"
+      },
+      "layer": "requirement",
+      "subtitle": "2 条 Requirement",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "REQ:auth-form-validation#表单校验文案与数值阈值在两侧一致",
+      "kind": "requirement",
+      "title": "表单校验文案与数值阈值在两侧一致",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-form-validation/spec.md",
+        "heading": "### Requirement: 表单校验文案与数值阈值在两侧一致"
+      },
+      "layer": "requirement",
+      "subtitle": "4 个 Scenario",
+      "line": 10,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-form-validation#表单校验文案与数值阈值在两侧一致#文案差异恰好等于已声明的例外",
+      "kind": "scenario",
+      "title": "文案差异恰好等于已声明的例外",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-form-validation/spec.md",
+        "heading": "#### Scenario: 文案差异恰好等于已声明的例外"
+      },
+      "layer": "requirement",
+      "line": 19,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-form-validation#表单校验文案与数值阈值在两侧一致#数值阈值集合相同",
+      "kind": "scenario",
+      "title": "数值阈值集合相同",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-form-validation/spec.md",
+        "heading": "#### Scenario: 数值阈值集合相同"
+      },
+      "layer": "requirement",
+      "line": 25,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-form-validation#表单校验文案与数值阈值在两侧一致#新增或改动的差异必须失败",
+      "kind": "scenario",
+      "title": "新增或改动的差异必须失败",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-form-validation/spec.md",
+        "heading": "#### Scenario: 新增或改动的差异必须失败"
+      },
+      "layer": "requirement",
+      "line": 30,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-form-validation#表单校验文案与数值阈值在两侧一致#守护测试不依赖运行中的服务",
+      "kind": "scenario",
+      "title": "守护测试不依赖运行中的服务",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-form-validation/spec.md",
+        "heading": "#### Scenario: 守护测试不依赖运行中的服务"
+      },
+      "layer": "requirement",
+      "line": 35,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "kind": "requirement",
+      "title": "密码首尾空白的归一化口径在两侧一致",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-form-validation/spec.md",
+        "heading": "### Requirement: 密码首尾空白的归一化口径在两侧一致"
+      },
+      "layer": "requirement",
+      "subtitle": "6 个 Scenario",
+      "line": 40,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-form-validation#密码首尾空白的归一化口径在两侧一致#密码首尾空白在两侧都被去掉",
+      "kind": "scenario",
+      "title": "密码首尾空白在两侧都被去掉",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-form-validation/spec.md",
+        "heading": "#### Scenario: 密码首尾空白在两侧都被去掉"
+      },
+      "layer": "requirement",
+      "line": 51,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-form-validation#密码首尾空白的归一化口径在两侧一致#密码内部的空白保留",
+      "kind": "scenario",
+      "title": "密码内部的空白保留",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-form-validation/spec.md",
+        "heading": "#### Scenario: 密码内部的空白保留"
+      },
+      "layer": "requirement",
+      "line": 57,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-form-validation#密码首尾空白的归一化口径在两侧一致#账号的空白口径有意不同",
+      "kind": "scenario",
+      "title": "账号的空白口径有意不同",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-form-validation/spec.md",
+        "heading": "#### Scenario: 账号的空白口径有意不同"
+      },
+      "layer": "requirement",
+      "line": 62,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-form-validation#密码首尾空白的归一化口径在两侧一致#口径漂移必须失败",
+      "kind": "scenario",
+      "title": "口径漂移必须失败",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-form-validation/spec.md",
+        "heading": "#### Scenario: 口径漂移必须失败"
+      },
+      "layer": "requirement",
+      "line": 67,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-form-validation#密码首尾空白的归一化口径在两侧一致#守护测试不依赖运行中的服务",
+      "kind": "scenario",
+      "title": "守护测试不依赖运行中的服务",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-form-validation/spec.md",
+        "heading": "#### Scenario: 守护测试不依赖运行中的服务"
+      },
+      "layer": "requirement",
+      "line": 72,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-form-validation#密码首尾空白的归一化口径在两侧一致#该口径对外只表现为成功与失败",
+      "kind": "scenario",
+      "title": "该口径对外只表现为成功与失败",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-form-validation/spec.md",
+        "heading": "#### Scenario: 该口径对外只表现为成功与失败"
+      },
+      "layer": "requirement",
+      "line": 77,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SPEC:auth-response-shape",
+      "kind": "spec",
+      "title": "auth-response-shape",
+      "anchor": {
+        "type": "file",
+        "path": "openspec/specs/auth-response-shape/spec.md"
+      },
+      "layer": "requirement",
+      "subtitle": "1 条 Requirement",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "kind": "requirement",
+      "title": "前端认证 DTO 不声明后端不返回的字段",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-response-shape/spec.md",
+        "heading": "### Requirement: 前端认证 DTO 不声明后端不返回的字段"
+      },
+      "layer": "requirement",
+      "subtitle": "3 个 Scenario",
+      "line": 10,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-response-shape#前端认证 DTO 不声明后端不返回的字段#登录与注册响应 DTO 的字段都在响应里",
+      "kind": "scenario",
+      "title": "登录与注册响应 DTO 的字段都在响应里",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-response-shape/spec.md",
+        "heading": "#### Scenario: 登录与注册响应 DTO 的字段都在响应里"
+      },
+      "layer": "requirement",
+      "line": 17,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-response-shape#前端认证 DTO 不声明后端不返回的字段#刷新响应 DTO 的字段都在响应里",
+      "kind": "scenario",
+      "title": "刷新响应 DTO 的字段都在响应里",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-response-shape/spec.md",
+        "heading": "#### Scenario: 刷新响应 DTO 的字段都在响应里"
+      },
+      "layer": "requirement",
+      "line": 22,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:auth-response-shape#前端认证 DTO 不声明后端不返回的字段#身份接口 DTO 与响应一致",
+      "kind": "scenario",
+      "title": "身份接口 DTO 与响应一致",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/auth-response-shape/spec.md",
+        "heading": "#### Scenario: 身份接口 DTO 与响应一致"
+      },
+      "layer": "requirement",
+      "line": 27,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SPEC:api-path-convention",
+      "kind": "spec",
+      "title": "api-path-convention",
+      "anchor": {
+        "type": "file",
+        "path": "openspec/specs/api-path-convention/spec.md"
+      },
+      "layer": "requirement",
+      "subtitle": "5 条 Requirement",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "REQ:api-path-convention#API 路径统一带尾斜杠",
+      "kind": "requirement",
+      "title": "API 路径统一带尾斜杠",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "### Requirement: API 路径统一带尾斜杠"
+      },
+      "layer": "requirement",
+      "subtitle": "4 个 Scenario",
+      "line": 11,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:api-path-convention#API 路径统一带尾斜杠#带尾斜杠命中",
+      "kind": "scenario",
+      "title": "带尾斜杠命中",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "#### Scenario: 带尾斜杠命中"
+      },
+      "layer": "requirement",
+      "line": 17,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:api-path-convention#API 路径统一带尾斜杠#缺失尾斜杠返回 404",
+      "kind": "scenario",
+      "title": "缺失尾斜杠返回 404",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "#### Scenario: 缺失尾斜杠返回 404"
+      },
+      "layer": "requirement",
+      "line": 22,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:api-path-convention#API 路径统一带尾斜杠#不存在 301 重定向",
+      "kind": "scenario",
+      "title": "不存在 301 重定向",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "#### Scenario: 不存在 301 重定向"
+      },
+      "layer": "requirement",
+      "line": 27,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:api-path-convention#API 路径统一带尾斜杠#路由表内不存在无斜杠路由",
+      "kind": "scenario",
+      "title": "路由表内不存在无斜杠路由",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "#### Scenario: 路由表内不存在无斜杠路由"
+      },
+      "layer": "requirement",
+      "line": 32,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "REQ:api-path-convention#前端与测试调用面遵循唯一写法",
+      "kind": "requirement",
+      "title": "前端与测试调用面遵循唯一写法",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "### Requirement: 前端与测试调用面遵循唯一写法"
+      },
+      "layer": "requirement",
+      "subtitle": "3 个 Scenario",
+      "line": 37,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:api-path-convention#前端与测试调用面遵循唯一写法#前端 API 层",
+      "kind": "scenario",
+      "title": "前端 API 层",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "#### Scenario: 前端 API 层"
+      },
+      "layer": "requirement",
+      "line": 49,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:api-path-convention#前端与测试调用面遵循唯一写法#接口测试用例",
+      "kind": "scenario",
+      "title": "接口测试用例",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "#### Scenario: 接口测试用例"
+      },
+      "layer": "requirement",
+      "line": 54,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:api-path-convention#前端与测试调用面遵循唯一写法#负向用例显式登记",
+      "kind": "scenario",
+      "title": "负向用例显式登记",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "#### Scenario: 负向用例显式登记"
+      },
+      "layer": "requirement",
+      "line": 60,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "REQ:api-path-convention#前端调用面与路由表的一致性由默认测试守护",
+      "kind": "requirement",
+      "title": "前端调用面与路由表的一致性由默认测试守护",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "### Requirement: 前端调用面与路由表的一致性由默认测试守护"
+      },
+      "layer": "requirement",
+      "subtitle": "5 个 Scenario",
+      "line": 65,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:api-path-convention#前端调用面与路由表的一致性由默认测试守护#前端路径字面量全部带尾斜杠",
+      "kind": "scenario",
+      "title": "前端路径字面量全部带尾斜杠",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "#### Scenario: 前端路径字面量全部带尾斜杠"
+      },
+      "layer": "requirement",
+      "line": 74,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:api-path-convention#前端调用面与路由表的一致性由默认测试守护#每条字面量都能命中后端路由",
+      "kind": "scenario",
+      "title": "每条字面量都能命中后端路由",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "#### Scenario: 每条字面量都能命中后端路由"
+      },
+      "layer": "requirement",
+      "line": 79,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:api-path-convention#前端调用面与路由表的一致性由默认测试守护#认证链路五个调用全部命中",
+      "kind": "scenario",
+      "title": "认证链路五个调用全部命中",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "#### Scenario: 认证链路五个调用全部命中"
+      },
+      "layer": "requirement",
+      "line": 84,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:api-path-convention#前端调用面与路由表的一致性由默认测试守护#前端自身路由不参与断言",
+      "kind": "scenario",
+      "title": "前端自身路由不参与断言",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "#### Scenario: 前端自身路由不参与断言"
+      },
+      "layer": "requirement",
+      "line": 90,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:api-path-convention#前端调用面与路由表的一致性由默认测试守护#守护测试不依赖运行中的服务",
+      "kind": "scenario",
+      "title": "守护测试不依赖运行中的服务",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "#### Scenario: 守护测试不依赖运行中的服务"
+      },
+      "layer": "requirement",
+      "line": 95,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "REQ:api-path-convention#调用面扫描的完整性与显式例外",
+      "kind": "requirement",
+      "title": "调用面扫描的完整性与显式例外",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "### Requirement: 调用面扫描的完整性与显式例外"
+      },
+      "layer": "requirement",
+      "subtitle": "3 个 Scenario",
+      "line": 100,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:api-path-convention#调用面扫描的完整性与显式例外#跨行书写的调用被扫到",
+      "kind": "scenario",
+      "title": "跨行书写的调用被扫到",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "#### Scenario: 跨行书写的调用被扫到"
+      },
+      "layer": "requirement",
+      "line": 108,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:api-path-convention#调用面扫描的完整性与显式例外#识别规则失效不静默通过",
+      "kind": "scenario",
+      "title": "识别规则失效不静默通过",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "#### Scenario: 识别规则失效不静默通过"
+      },
+      "layer": "requirement",
+      "line": 113,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:api-path-convention#调用面扫描的完整性与显式例外#例外清单之外的违规必须失败",
+      "kind": "scenario",
+      "title": "例外清单之外的违规必须失败",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "#### Scenario: 例外清单之外的违规必须失败"
+      },
+      "layer": "requirement",
+      "line": 118,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "REQ:api-path-convention#调用面的方法必须被命中视图接受",
+      "kind": "requirement",
+      "title": "调用面的方法必须被命中视图接受",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "### Requirement: 调用面的方法必须被命中视图接受"
+      },
+      "layer": "requirement",
+      "subtitle": "3 个 Scenario",
+      "line": 123,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:api-path-convention#调用面的方法必须被命中视图接受#router 详情路由不接受 write 方法即失败",
+      "kind": "scenario",
+      "title": "router 详情路由不接受 write 方法即失败",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "#### Scenario: router 详情路由不接受 write 方法即失败"
+      },
+      "layer": "requirement",
+      "line": 131,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:api-path-convention#调用面的方法必须被命中视图接受#方法被接受时通过",
+      "kind": "scenario",
+      "title": "方法被接受时通过",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "#### Scenario: 方法被接受时通过"
+      },
+      "layer": "requirement",
+      "line": 136,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:api-path-convention#调用面的方法必须被命中视图接受#函数视图不被误判",
+      "kind": "scenario",
+      "title": "函数视图不被误判",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/api-path-convention/spec.md",
+        "heading": "#### Scenario: 函数视图不被误判"
+      },
+      "layer": "requirement",
+      "line": 141,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SPEC:frontend-login-hand-drawn-hero",
+      "kind": "spec",
+      "title": "frontend-login-hand-drawn-hero",
+      "anchor": {
+        "type": "file",
+        "path": "openspec/specs/frontend-login-hand-drawn-hero/spec.md"
+      },
+      "layer": "requirement",
+      "subtitle": "4 条 Requirement",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "REQ:frontend-login-hand-drawn-hero#Login page uses ruled notebook paper background",
+      "kind": "requirement",
+      "title": "Login page uses ruled notebook paper background",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/frontend-login-hand-drawn-hero/spec.md",
+        "heading": "### Requirement: Login page uses ruled notebook paper background"
+      },
+      "layer": "requirement",
+      "subtitle": "2 个 Scenario",
+      "line": 9,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:frontend-login-hand-drawn-hero#Login page uses ruled notebook paper background#Login shell shows ruled paper",
+      "kind": "scenario",
+      "title": "Login shell shows ruled paper",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/frontend-login-hand-drawn-hero/spec.md",
+        "heading": "#### Scenario: Login shell shows ruled paper"
+      },
+      "layer": "requirement",
+      "line": 12,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:frontend-login-hand-drawn-hero#Login page uses ruled notebook paper background#Non-login pages keep existing paper treatment",
+      "kind": "scenario",
+      "title": "Non-login pages keep existing paper treatment",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/frontend-login-hand-drawn-hero/spec.md",
+        "heading": "#### Scenario: Non-login pages keep existing paper treatment"
+      },
+      "layer": "requirement",
+      "line": 17,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "REQ:frontend-login-hand-drawn-hero#Hero is a two-column hand-drawn composition",
+      "kind": "requirement",
+      "title": "Hero is a two-column hand-drawn composition",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/frontend-login-hand-drawn-hero/spec.md",
+        "heading": "### Requirement: Hero is a two-column hand-drawn composition"
+      },
+      "layer": "requirement",
+      "subtitle": "4 个 Scenario",
+      "line": 21,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:frontend-login-hand-drawn-hero#Hero is a two-column hand-drawn composition#Left column shows brand copy and mode CTAs",
+      "kind": "scenario",
+      "title": "Left column shows brand copy and mode CTAs",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/frontend-login-hand-drawn-hero/spec.md",
+        "heading": "#### Scenario: Left column shows brand copy and mode CTAs"
+      },
+      "layer": "requirement",
+      "line": 24,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:frontend-login-hand-drawn-hero#Hero is a two-column hand-drawn composition#Version badge shows v3.0",
+      "kind": "scenario",
+      "title": "Version badge shows v3.0",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/frontend-login-hand-drawn-hero/spec.md",
+        "heading": "#### Scenario: Version badge shows v3.0"
+      },
+      "layer": "requirement",
+      "line": 30,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:frontend-login-hand-drawn-hero#Hero is a two-column hand-drawn composition#Eyebrow copy is removed",
+      "kind": "scenario",
+      "title": "Eyebrow copy is removed",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/frontend-login-hand-drawn-hero/spec.md",
+        "heading": "#### Scenario: Eyebrow copy is removed"
+      },
+      "layer": "requirement",
+      "line": 34,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:frontend-login-hand-drawn-hero#Hero is a two-column hand-drawn composition#Animal sticker board is removed",
+      "kind": "scenario",
+      "title": "Animal sticker board is removed",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/frontend-login-hand-drawn-hero/spec.md",
+        "heading": "#### Scenario: Animal sticker board is removed"
+      },
+      "layer": "requirement",
+      "line": 38,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "REQ:frontend-login-hand-drawn-hero#Meeting doodle hosts auth forms with mode title",
+      "kind": "requirement",
+      "title": "Meeting doodle hosts auth forms with mode title",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/frontend-login-hand-drawn-hero/spec.md",
+        "heading": "### Requirement: Meeting doodle hosts auth forms with mode title"
+      },
+      "layer": "requirement",
+      "subtitle": "4 个 Scenario",
+      "line": 42,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:frontend-login-hand-drawn-hero#Meeting doodle hosts auth forms with mode title#Login CTA reveals login form in Meeting doodle",
+      "kind": "scenario",
+      "title": "Login CTA reveals login form in Meeting doodle",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/frontend-login-hand-drawn-hero/spec.md",
+        "heading": "#### Scenario: Login CTA reveals login form in Meeting doodle"
+      },
+      "layer": "requirement",
+      "line": 45,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:frontend-login-hand-drawn-hero#Meeting doodle hosts auth forms with mode title#Register CTA reveals register form in Meeting doodle",
+      "kind": "scenario",
+      "title": "Register CTA reveals register form in Meeting doodle",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/frontend-login-hand-drawn-hero/spec.md",
+        "heading": "#### Scenario: Register CTA reveals register form in Meeting doodle"
+      },
+      "layer": "requirement",
+      "line": 50,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:frontend-login-hand-drawn-hero#Meeting doodle hosts auth forms with mode title#Auth form is flat inside Meeting doodle",
+      "kind": "scenario",
+      "title": "Auth form is flat inside Meeting doodle",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/frontend-login-hand-drawn-hero/spec.md",
+        "heading": "#### Scenario: Auth form is flat inside Meeting doodle"
+      },
+      "layer": "requirement",
+      "line": 55,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:frontend-login-hand-drawn-hero#Meeting doodle hosts auth forms with mode title#Auth business flow remains unchanged",
+      "kind": "scenario",
+      "title": "Auth business flow remains unchanged",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/frontend-login-hand-drawn-hero/spec.md",
+        "heading": "#### Scenario: Auth business flow remains unchanged"
+      },
+      "layer": "requirement",
+      "line": 60,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "REQ:frontend-login-hand-drawn-hero#Login page has only login and register modes",
+      "kind": "requirement",
+      "title": "Login page has only login and register modes",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/frontend-login-hand-drawn-hero/spec.md",
+        "heading": "### Requirement: Login page has only login and register modes"
+      },
+      "layer": "requirement",
+      "subtitle": "2 个 Scenario",
+      "line": 64,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:frontend-login-hand-drawn-hero#Login page has only login and register modes#Existing account does not trigger a switch prompt",
+      "kind": "scenario",
+      "title": "Existing account does not trigger a switch prompt",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/frontend-login-hand-drawn-hero/spec.md",
+        "heading": "#### Scenario: Existing account does not trigger a switch prompt"
+      },
+      "layer": "requirement",
+      "line": 68,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "SCN:frontend-login-hand-drawn-hero#Login page has only login and register modes#Mode CTA is always visible",
+      "kind": "scenario",
+      "title": "Mode CTA is always visible",
+      "anchor": {
+        "type": "md_heading",
+        "path": "openspec/specs/frontend-login-hand-drawn-hero/spec.md",
+        "heading": "#### Scenario: Mode CTA is always visible"
+      },
+      "layer": "requirement",
+      "line": 74,
+      "anchor_ok": true,
+      "anchor_detail": "标题命中"
+    },
+    {
+      "id": "FILE:apps/accounts/urls.py",
+      "kind": "file",
+      "title": "urls.py",
+      "anchor": {
+        "type": "file",
+        "path": "apps/accounts/urls.py"
+      },
+      "layer": "code",
+      "subtitle": "apps/accounts/urls.py",
+      "lang": "py",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "API:/api/auth/login/",
+      "kind": "endpoint",
+      "title": "/api/auth/login/",
+      "anchor": {
+        "type": "route",
+        "path": "apps/accounts/urls.py",
+        "literal": "login/"
+      },
+      "layer": "code",
+      "subtitle": "→ LoginView",
+      "anchor_ok": true,
+      "anchor_detail": "路由字面量命中"
+    },
+    {
+      "id": "API:/api/auth/register/",
+      "kind": "endpoint",
+      "title": "/api/auth/register/",
+      "anchor": {
+        "type": "route",
+        "path": "apps/accounts/urls.py",
+        "literal": "register/"
+      },
+      "layer": "code",
+      "subtitle": "→ RegisterView",
+      "anchor_ok": true,
+      "anchor_detail": "路由字面量命中"
+    },
+    {
+      "id": "API:/api/auth/refresh/",
+      "kind": "endpoint",
+      "title": "/api/auth/refresh/",
+      "anchor": {
+        "type": "route",
+        "path": "apps/accounts/urls.py",
+        "literal": "refresh/"
+      },
+      "layer": "code",
+      "subtitle": "→ RefreshView",
+      "anchor_ok": true,
+      "anchor_detail": "路由字面量命中"
+    },
+    {
+      "id": "API:/api/auth/logout/",
+      "kind": "endpoint",
+      "title": "/api/auth/logout/",
+      "anchor": {
+        "type": "route",
+        "path": "apps/accounts/urls.py",
+        "literal": "logout/"
+      },
+      "layer": "code",
+      "subtitle": "→ LogoutView",
+      "anchor_ok": true,
+      "anchor_detail": "路由字面量命中"
+    },
+    {
+      "id": "API:/api/auth/me/",
+      "kind": "endpoint",
+      "title": "/api/auth/me/",
+      "anchor": {
+        "type": "route",
+        "path": "apps/accounts/urls.py",
+        "literal": "me/"
+      },
+      "layer": "code",
+      "subtitle": "→ MeView",
+      "anchor_ok": true,
+      "anchor_detail": "路由字面量命中"
+    },
+    {
+      "id": "TBL:auth_user",
+      "kind": "table",
+      "title": "auth_user",
+      "anchor": {
+        "type": "db_table",
+        "name": "auth_user"
+      },
+      "layer": "code",
+      "subtitle": "Django 内置 User 表（accounts 无 models.py）",
+      "anchor_ok": true,
+      "anchor_detail": "内置表（Django auth.User 决定，不随本仓迁移变化）"
+    },
+    {
+      "id": "TEST:tests/api/test_auth_register_concurrency.py",
+      "kind": "test",
+      "title": "test_auth_register_concurrency.py",
+      "anchor": {
+        "type": "file",
+        "path": "tests/api/test_auth_register_concurrency.py"
+      },
+      "layer": "test",
+      "subtitle": "1 个用例",
+      "case_count": 1,
+      "anchor_target": "",
+      "anchor_style": "",
+      "anchor_resolved": false,
+      "header_change": "",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:tests/api/test_auth_session_flow.py",
+      "kind": "test",
+      "title": "test_auth_session_flow.py",
+      "anchor": {
+        "type": "file",
+        "path": "tests/api/test_auth_session_flow.py"
+      },
+      "layer": "test",
+      "subtitle": "1 个用例",
+      "case_count": 1,
+      "anchor_target": "",
+      "anchor_style": "",
+      "anchor_resolved": false,
+      "header_change": "",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:tests/api/test_auth_tokens.py",
+      "kind": "test",
+      "title": "test_auth_tokens.py",
+      "anchor": {
+        "type": "file",
+        "path": "tests/api/test_auth_tokens.py"
+      },
+      "layer": "test",
+      "subtitle": "2 个用例",
+      "case_count": 2,
+      "anchor_target": "",
+      "anchor_style": "",
+      "anchor_resolved": false,
+      "header_change": "",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:tests/api/test_login_page.py",
+      "kind": "test",
+      "title": "test_login_page.py",
+      "anchor": {
+        "type": "file",
+        "path": "tests/api/test_login_page.py"
+      },
+      "layer": "test",
+      "subtitle": "1 个用例",
+      "case_count": 1,
+      "anchor_target": "",
+      "anchor_style": "",
+      "anchor_resolved": false,
+      "header_change": "",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:tests/graybox/unit/test_ai_tool_gateway_auth.py",
+      "kind": "test",
+      "title": "test_ai_tool_gateway_auth.py",
+      "anchor": {
+        "type": "file",
+        "path": "tests/graybox/unit/test_ai_tool_gateway_auth.py"
+      },
+      "layer": "test",
+      "subtitle": "7 个用例",
+      "case_count": 7,
+      "anchor_target": "",
+      "anchor_style": "",
+      "anchor_resolved": false,
+      "header_change": "",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:tests/graybox/unit/test_auth_endpoint_declaration.py",
+      "kind": "test",
+      "title": "test_auth_endpoint_declaration.py",
+      "anchor": {
+        "type": "file",
+        "path": "tests/graybox/unit/test_auth_endpoint_declaration.py"
+      },
+      "layer": "test",
+      "subtitle": "4 个用例",
+      "case_count": 4,
+      "anchor_target": "auth-session",
+      "anchor_style": "openspec_specs_path",
+      "anchor_resolved": true,
+      "header_change": "",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:tests/graybox/unit/test_auth_frontend_contract.py",
+      "kind": "test",
+      "title": "test_auth_frontend_contract.py",
+      "anchor": {
+        "type": "file",
+        "path": "tests/graybox/unit/test_auth_frontend_contract.py"
+      },
+      "layer": "test",
+      "subtitle": "5 个用例",
+      "case_count": 5,
+      "anchor_target": "auth-response-shape",
+      "anchor_style": "openspec_specs_path",
+      "anchor_resolved": true,
+      "header_change": "",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:tests/graybox/unit/test_auth_validation_parity.py",
+      "kind": "test",
+      "title": "test_auth_validation_parity.py",
+      "anchor": {
+        "type": "file",
+        "path": "tests/graybox/unit/test_auth_validation_parity.py"
+      },
+      "layer": "test",
+      "subtitle": "11 个用例",
+      "case_count": 11,
+      "anchor_target": "auth-form-validation",
+      "anchor_style": "openspec_specs_path",
+      "anchor_resolved": true,
+      "header_change": "",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:tests/graybox/unit/test_logout_session_revocation.py",
+      "kind": "test",
+      "title": "test_logout_session_revocation.py",
+      "anchor": {
+        "type": "file",
+        "path": "tests/graybox/unit/test_logout_session_revocation.py"
+      },
+      "layer": "test",
+      "subtitle": "9 个用例",
+      "case_count": 9,
+      "anchor_target": "auth-session",
+      "anchor_style": "change_delta_path",
+      "anchor_resolved": true,
+      "header_change": "revoke-session-on-logout",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:tests/graybox/unit/test_register_uniqueness.py",
+      "kind": "test",
+      "title": "test_register_uniqueness.py",
+      "anchor": {
+        "type": "file",
+        "path": "tests/graybox/unit/test_register_uniqueness.py"
+      },
+      "layer": "test",
+      "subtitle": "5 个用例",
+      "case_count": 5,
+      "anchor_target": "fix-register-duplicate-race",
+      "anchor_style": "openspec_change_id",
+      "anchor_resolved": false,
+      "header_change": "fix-register-duplicate-race",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:tests/e2e/test_login_e2e.py",
+      "kind": "test",
+      "title": "test_login_e2e.py",
+      "anchor": {
+        "type": "file",
+        "path": "tests/e2e/test_login_e2e.py"
+      },
+      "layer": "test",
+      "subtitle": "15 个用例",
+      "case_count": 15,
+      "anchor_target": "",
+      "anchor_style": "",
+      "anchor_resolved": false,
+      "header_change": "",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:frontend/tests/login/p0/apiAuthInterceptors.spec.ts",
+      "kind": "test",
+      "title": "apiAuthInterceptors.spec.ts",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/tests/login/p0/apiAuthInterceptors.spec.ts"
+      },
+      "layer": "test",
+      "subtitle": "7 个用例",
+      "case_count": 7,
+      "anchor_target": "",
+      "anchor_style": "",
+      "anchor_resolved": false,
+      "header_change": "",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:frontend/tests/login/p0/LoginCard.spec.ts",
+      "kind": "test",
+      "title": "LoginCard.spec.ts",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/tests/login/p0/LoginCard.spec.ts"
+      },
+      "layer": "test",
+      "subtitle": "5 个用例",
+      "case_count": 5,
+      "anchor_target": "",
+      "anchor_style": "",
+      "anchor_resolved": false,
+      "header_change": "",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:frontend/tests/login/p0/LoginView.hero.spec.ts",
+      "kind": "test",
+      "title": "LoginView.hero.spec.ts",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/tests/login/p0/LoginView.hero.spec.ts"
+      },
+      "layer": "test",
+      "subtitle": "6 个用例",
+      "case_count": 6,
+      "anchor_target": "",
+      "anchor_style": "",
+      "anchor_resolved": false,
+      "header_change": "",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:frontend/tests/login/p0/RegisterCard.spec.ts",
+      "kind": "test",
+      "title": "RegisterCard.spec.ts",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/tests/login/p0/RegisterCard.spec.ts"
+      },
+      "layer": "test",
+      "subtitle": "4 个用例",
+      "case_count": 4,
+      "anchor_target": "",
+      "anchor_style": "",
+      "anchor_resolved": false,
+      "header_change": "",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:frontend/tests/login/p0/token-storage.spec.ts",
+      "kind": "test",
+      "title": "token-storage.spec.ts",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/tests/login/p0/token-storage.spec.ts"
+      },
+      "layer": "test",
+      "subtitle": "4 个用例",
+      "case_count": 4,
+      "anchor_target": "",
+      "anchor_style": "",
+      "anchor_resolved": false,
+      "header_change": "",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:frontend/tests/login/p0/useAuthFlow.spec.ts",
+      "kind": "test",
+      "title": "useAuthFlow.spec.ts",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/tests/login/p0/useAuthFlow.spec.ts"
+      },
+      "layer": "test",
+      "subtitle": "5 个用例",
+      "case_count": 5,
+      "anchor_target": "",
+      "anchor_style": "",
+      "anchor_resolved": false,
+      "header_change": "",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:frontend/tests/login/p0/useLoginForm.spec.ts",
+      "kind": "test",
+      "title": "useLoginForm.spec.ts",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/tests/login/p0/useLoginForm.spec.ts"
+      },
+      "layer": "test",
+      "subtitle": "10 个用例",
+      "case_count": 10,
+      "anchor_target": "",
+      "anchor_style": "",
+      "anchor_resolved": false,
+      "header_change": "",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:frontend/tests/login/p1/LoginErrorOverlay.spec.ts",
+      "kind": "test",
+      "title": "LoginErrorOverlay.spec.ts",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/tests/login/p1/LoginErrorOverlay.spec.ts"
+      },
+      "layer": "test",
+      "subtitle": "7 个用例",
+      "case_count": 7,
+      "anchor_target": "",
+      "anchor_style": "",
+      "anchor_resolved": false,
+      "header_change": "",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    },
+    {
+      "id": "TEST:frontend/tests/login/p1/LoginView.logic.spec.ts",
+      "kind": "test",
+      "title": "LoginView.logic.spec.ts",
+      "anchor": {
+        "type": "file",
+        "path": "frontend/tests/login/p1/LoginView.logic.spec.ts"
+      },
+      "layer": "test",
+      "subtitle": "3 个用例",
+      "case_count": 3,
+      "anchor_target": "",
+      "anchor_style": "",
+      "anchor_resolved": false,
+      "header_change": "",
+      "anchor_ok": true,
+      "anchor_detail": "文件存在"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "PRD:login",
+      "to": "DOM:登录",
+      "type": "belongs_to",
+      "confidence": "declared",
+      "evidence": "dev_docs/ARCH_PRD/PRD-00-登录模块.md:12 功能域小节"
+    },
+    {
+      "id": "e2",
+      "from": "PRD:login",
+      "to": "DOM:注册",
+      "type": "belongs_to",
+      "confidence": "declared",
+      "evidence": "dev_docs/ARCH_PRD/PRD-00-登录模块.md:108 功能域小节"
+    },
+    {
+      "id": "e3",
+      "from": "PRD:login",
+      "to": "DOM:刷新令牌",
+      "type": "belongs_to",
+      "confidence": "declared",
+      "evidence": "dev_docs/ARCH_PRD/PRD-00-登录模块.md:189 功能域小节"
+    },
+    {
+      "id": "e4",
+      "from": "PRD:login",
+      "to": "DOM:登出",
+      "type": "belongs_to",
+      "confidence": "declared",
+      "evidence": "dev_docs/ARCH_PRD/PRD-00-登录模块.md:243 功能域小节"
+    },
+    {
+      "id": "e5",
+      "from": "PRD:login",
+      "to": "DOM:查看当前身份",
+      "type": "belongs_to",
+      "confidence": "declared",
+      "evidence": "dev_docs/ARCH_PRD/PRD-00-登录模块.md:297 功能域小节"
+    },
+    {
+      "id": "e6",
+      "from": "PRD:login",
+      "to": "DOM:会话与账号管理",
+      "type": "belongs_to",
+      "confidence": "declared",
+      "evidence": "dev_docs/ARCH_PRD/PRD-00-登录模块.md:336 功能域小节"
+    },
+    {
+      "id": "e7",
+      "from": "FILE:apps/accounts/views.py",
+      "to": "SYM:apps/accounts/views.py#LoginView",
+      "type": "declares",
+      "confidence": "derived",
+      "evidence": "apps/accounts/views.py 定义 LoginView"
+    },
+    {
+      "id": "e8",
+      "from": "FILE:apps/accounts/serializers.py",
+      "to": "SYM:apps/accounts/serializers.py#LoginSerializer",
+      "type": "declares",
+      "confidence": "derived",
+      "evidence": "apps/accounts/serializers.py 定义 LoginSerializer"
+    },
+    {
+      "id": "e9",
+      "from": "FILE:shared/auth/jwt_auth.py",
+      "to": "SYM:shared/auth/jwt_auth.py#create_token_pair",
+      "type": "declares",
+      "confidence": "derived",
+      "evidence": "shared/auth/jwt_auth.py 定义 create_token_pair"
+    },
+    {
+      "id": "e10",
+      "from": "FILE:apps/accounts/views.py",
+      "to": "SYM:apps/accounts/views.py#RegisterView",
+      "type": "declares",
+      "confidence": "derived",
+      "evidence": "apps/accounts/views.py 定义 RegisterView"
+    },
+    {
+      "id": "e11",
+      "from": "FILE:apps/accounts/serializers.py",
+      "to": "SYM:apps/accounts/serializers.py#RegisterSerializer",
+      "type": "declares",
+      "confidence": "derived",
+      "evidence": "apps/accounts/serializers.py 定义 RegisterSerializer"
+    },
+    {
+      "id": "e12",
+      "from": "FILE:apps/accounts/api.py",
+      "to": "SYM:apps/accounts/api.py#create_user",
+      "type": "declares",
+      "confidence": "derived",
+      "evidence": "apps/accounts/api.py 定义 create_user"
+    },
+    {
+      "id": "e13",
+      "from": "FILE:apps/accounts/views.py",
+      "to": "SYM:apps/accounts/views.py#RefreshView",
+      "type": "declares",
+      "confidence": "derived",
+      "evidence": "apps/accounts/views.py 定义 RefreshView"
+    },
+    {
+      "id": "e14",
+      "from": "FILE:shared/auth/jwt_auth.py",
+      "to": "SYM:shared/auth/jwt_auth.py#verify_token",
+      "type": "declares",
+      "confidence": "derived",
+      "evidence": "shared/auth/jwt_auth.py 定义 verify_token"
+    },
+    {
+      "id": "e15",
+      "from": "FILE:apps/accounts/views.py",
+      "to": "SYM:apps/accounts/views.py#LogoutView",
+      "type": "declares",
+      "confidence": "derived",
+      "evidence": "apps/accounts/views.py 定义 LogoutView"
+    },
+    {
+      "id": "e16",
+      "from": "FILE:shared/auth/jwt_auth.py",
+      "to": "SYM:shared/auth/jwt_auth.py#revoke_session",
+      "type": "declares",
+      "confidence": "derived",
+      "evidence": "shared/auth/jwt_auth.py 定义 revoke_session"
+    },
+    {
+      "id": "e17",
+      "from": "FILE:apps/accounts/views.py",
+      "to": "SYM:apps/accounts/views.py#MeView",
+      "type": "declares",
+      "confidence": "derived",
+      "evidence": "apps/accounts/views.py 定义 MeView"
+    },
+    {
+      "id": "e18",
+      "from": "FILE:gateway/middleware.py",
+      "to": "SYM:gateway/middleware.py#JWTAuthenticationMiddleware",
+      "type": "declares",
+      "confidence": "derived",
+      "evidence": "gateway/middleware.py 定义 JWTAuthenticationMiddleware"
+    },
+    {
+      "id": "e19",
+      "from": "DOM:会话与账号管理",
+      "to": "SPEC:auth-session",
+      "type": "specified_by",
+      "confidence": "declared",
+      "evidence": "声明「auth-session」服务「会话与账号管理」"
+    },
+    {
+      "id": "e20",
+      "from": "DOM:登出",
+      "to": "SPEC:auth-session",
+      "type": "specified_by",
+      "confidence": "declared",
+      "evidence": "声明「auth-session」服务「登出」"
+    },
+    {
+      "id": "e21",
+      "from": "DOM:刷新令牌",
+      "to": "SPEC:auth-session",
+      "type": "specified_by",
+      "confidence": "declared",
+      "evidence": "声明「auth-session」服务「刷新令牌」"
+    },
+    {
+      "id": "e22",
+      "from": "SPEC:auth-session",
+      "to": "REQ:auth-session#登出作废整个会话",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:8"
+    },
+    {
+      "id": "e23",
+      "from": "REQ:auth-session#登出作废整个会话",
+      "to": "SCN:auth-session#登出作废整个会话#登出后刷新令牌失效",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:15"
+    },
+    {
+      "id": "e24",
+      "from": "REQ:auth-session#登出作废整个会话",
+      "to": "SCN:auth-session#登出作废整个会话#登出后原 access 失效",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:20"
+    },
+    {
+      "id": "e25",
+      "from": "REQ:auth-session#登出作废整个会话",
+      "to": "SCN:auth-session#登出作废整个会话#续期保持会话归属",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:25"
+    },
+    {
+      "id": "e26",
+      "from": "REQ:auth-session#登出作废整个会话",
+      "to": "SCN:auth-session#登出作废整个会话#其他会话不受影响",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:31"
+    },
+    {
+      "id": "e27",
+      "from": "REQ:auth-session#登出作废整个会话",
+      "to": "SCN:auth-session#登出作废整个会话#Redis 不可用时拒绝登出",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:36"
+    },
+    {
+      "id": "e28",
+      "from": "REQ:auth-session#登出作废整个会话",
+      "to": "SCN:auth-session#登出作废整个会话#缺少会话标识的旧令牌",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:42"
+    },
+    {
+      "id": "e29",
+      "from": "REQ:auth-session#登出作废整个会话",
+      "to": "FILE:frontend/src/router.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e30",
+      "from": "REQ:auth-session#登出作废整个会话",
+      "to": "FILE:frontend/src/shared/auth/token-storage.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e31",
+      "from": "REQ:auth-session#登出作废整个会话",
+      "to": "FILE:frontend/src/shared/api-auth-interceptors.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e32",
+      "from": "REQ:auth-session#登出作废整个会话",
+      "to": "SYM:gateway/middleware.py#JWTAuthenticationMiddleware",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e33",
+      "from": "REQ:auth-session#登出作废整个会话",
+      "to": "SYM:apps/accounts/views.py#LogoutView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e34",
+      "from": "REQ:auth-session#登出作废整个会话",
+      "to": "SYM:shared/auth/jwt_auth.py#revoke_session",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e35",
+      "from": "REQ:auth-session#登出作废整个会话",
+      "to": "FILE:frontend/src/shared/components/AppSidebar.vue",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e36",
+      "from": "REQ:auth-session#登出作废整个会话",
+      "to": "SYM:apps/accounts/views.py#RefreshView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e37",
+      "from": "REQ:auth-session#登出作废整个会话",
+      "to": "SYM:shared/auth/jwt_auth.py#verify_token",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e38",
+      "from": "REQ:auth-session#登出作废整个会话",
+      "to": "FILE:frontend/src/shared/api-client.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e39",
+      "from": "SPEC:auth-session",
+      "to": "REQ:auth-session#认证端点显式声明鉴权姿态",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:48"
+    },
+    {
+      "id": "e40",
+      "from": "REQ:auth-session#认证端点显式声明鉴权姿态",
+      "to": "SCN:auth-session#认证端点显式声明鉴权姿态#公开端点两者成对",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:56"
+    },
+    {
+      "id": "e41",
+      "from": "REQ:auth-session#认证端点显式声明鉴权姿态",
+      "to": "SCN:auth-session#认证端点显式声明鉴权姿态#受保护端点两者成对",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:62"
+    },
+    {
+      "id": "e42",
+      "from": "REQ:auth-session#认证端点显式声明鉴权姿态",
+      "to": "SCN:auth-session#认证端点显式声明鉴权姿态#覆盖认证模块全部端点",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:68"
+    },
+    {
+      "id": "e43",
+      "from": "REQ:auth-session#认证端点显式声明鉴权姿态",
+      "to": "FILE:frontend/src/router.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e44",
+      "from": "REQ:auth-session#认证端点显式声明鉴权姿态",
+      "to": "FILE:frontend/src/shared/auth/token-storage.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e45",
+      "from": "REQ:auth-session#认证端点显式声明鉴权姿态",
+      "to": "FILE:frontend/src/shared/api-auth-interceptors.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e46",
+      "from": "REQ:auth-session#认证端点显式声明鉴权姿态",
+      "to": "SYM:gateway/middleware.py#JWTAuthenticationMiddleware",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e47",
+      "from": "REQ:auth-session#认证端点显式声明鉴权姿态",
+      "to": "SYM:apps/accounts/views.py#LogoutView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e48",
+      "from": "REQ:auth-session#认证端点显式声明鉴权姿态",
+      "to": "SYM:shared/auth/jwt_auth.py#revoke_session",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e49",
+      "from": "REQ:auth-session#认证端点显式声明鉴权姿态",
+      "to": "FILE:frontend/src/shared/components/AppSidebar.vue",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e50",
+      "from": "REQ:auth-session#认证端点显式声明鉴权姿态",
+      "to": "SYM:apps/accounts/views.py#RefreshView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e51",
+      "from": "REQ:auth-session#认证端点显式声明鉴权姿态",
+      "to": "SYM:shared/auth/jwt_auth.py#verify_token",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e52",
+      "from": "REQ:auth-session#认证端点显式声明鉴权姿态",
+      "to": "FILE:frontend/src/shared/api-client.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e53",
+      "from": "SPEC:auth-session",
+      "to": "REQ:auth-session#公开认证端点的 401 不触发令牌刷新",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:73"
+    },
+    {
+      "id": "e54",
+      "from": "REQ:auth-session#公开认证端点的 401 不触发令牌刷新",
+      "to": "SCN:auth-session#公开认证端点的 401 不触发令牌刷新#登录返回 401 时不刷新",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:83"
+    },
+    {
+      "id": "e55",
+      "from": "REQ:auth-session#公开认证端点的 401 不触发令牌刷新",
+      "to": "SCN:auth-session#公开认证端点的 401 不触发令牌刷新#需要令牌的端点 401 仍会刷新",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:88"
+    },
+    {
+      "id": "e56",
+      "from": "REQ:auth-session#公开认证端点的 401 不触发令牌刷新",
+      "to": "SCN:auth-session#公开认证端点的 401 不触发令牌刷新#刷新请求自身不被再次刷新",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:93"
+    },
+    {
+      "id": "e57",
+      "from": "REQ:auth-session#公开认证端点的 401 不触发令牌刷新",
+      "to": "SCN:auth-session#公开认证端点的 401 不触发令牌刷新#公开端点清单与网关一致",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:98"
+    },
+    {
+      "id": "e58",
+      "from": "REQ:auth-session#公开认证端点的 401 不触发令牌刷新",
+      "to": "FILE:frontend/src/router.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e59",
+      "from": "REQ:auth-session#公开认证端点的 401 不触发令牌刷新",
+      "to": "FILE:frontend/src/shared/auth/token-storage.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e60",
+      "from": "REQ:auth-session#公开认证端点的 401 不触发令牌刷新",
+      "to": "FILE:frontend/src/shared/api-auth-interceptors.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e61",
+      "from": "REQ:auth-session#公开认证端点的 401 不触发令牌刷新",
+      "to": "SYM:gateway/middleware.py#JWTAuthenticationMiddleware",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e62",
+      "from": "REQ:auth-session#公开认证端点的 401 不触发令牌刷新",
+      "to": "SYM:apps/accounts/views.py#LogoutView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e63",
+      "from": "REQ:auth-session#公开认证端点的 401 不触发令牌刷新",
+      "to": "SYM:shared/auth/jwt_auth.py#revoke_session",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e64",
+      "from": "REQ:auth-session#公开认证端点的 401 不触发令牌刷新",
+      "to": "FILE:frontend/src/shared/components/AppSidebar.vue",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e65",
+      "from": "REQ:auth-session#公开认证端点的 401 不触发令牌刷新",
+      "to": "SYM:apps/accounts/views.py#RefreshView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e66",
+      "from": "REQ:auth-session#公开认证端点的 401 不触发令牌刷新",
+      "to": "SYM:shared/auth/jwt_auth.py#verify_token",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e67",
+      "from": "REQ:auth-session#公开认证端点的 401 不触发令牌刷新",
+      "to": "FILE:frontend/src/shared/api-client.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e68",
+      "from": "SPEC:auth-session",
+      "to": "REQ:auth-session#前端会话为单账号",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:103"
+    },
+    {
+      "id": "e69",
+      "from": "REQ:auth-session#前端会话为单账号",
+      "to": "SCN:auth-session#前端会话为单账号#登录成功后本地只有一个账号",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:109"
+    },
+    {
+      "id": "e70",
+      "from": "REQ:auth-session#前端会话为单账号",
+      "to": "SCN:auth-session#前端会话为单账号#刷新页面后仍是同一账号",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:115"
+    },
+    {
+      "id": "e71",
+      "from": "REQ:auth-session#前端会话为单账号",
+      "to": "FILE:frontend/src/router.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e72",
+      "from": "REQ:auth-session#前端会话为单账号",
+      "to": "FILE:frontend/src/shared/auth/token-storage.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e73",
+      "from": "REQ:auth-session#前端会话为单账号",
+      "to": "FILE:frontend/src/shared/api-auth-interceptors.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e74",
+      "from": "REQ:auth-session#前端会话为单账号",
+      "to": "SYM:gateway/middleware.py#JWTAuthenticationMiddleware",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e75",
+      "from": "REQ:auth-session#前端会话为单账号",
+      "to": "SYM:apps/accounts/views.py#LogoutView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e76",
+      "from": "REQ:auth-session#前端会话为单账号",
+      "to": "SYM:shared/auth/jwt_auth.py#revoke_session",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e77",
+      "from": "REQ:auth-session#前端会话为单账号",
+      "to": "FILE:frontend/src/shared/components/AppSidebar.vue",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e78",
+      "from": "REQ:auth-session#前端会话为单账号",
+      "to": "SYM:apps/accounts/views.py#RefreshView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e79",
+      "from": "REQ:auth-session#前端会话为单账号",
+      "to": "SYM:shared/auth/jwt_auth.py#verify_token",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e80",
+      "from": "REQ:auth-session#前端会话为单账号",
+      "to": "FILE:frontend/src/shared/api-client.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e81",
+      "from": "SPEC:auth-session",
+      "to": "REQ:auth-session#登出即清空本地会话并回登录页",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:121"
+    },
+    {
+      "id": "e82",
+      "from": "REQ:auth-session#登出即清空本地会话并回登录页",
+      "to": "SCN:auth-session#登出即清空本地会话并回登录页#登出后回到登录页且本地无凭证",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:126"
+    },
+    {
+      "id": "e83",
+      "from": "REQ:auth-session#登出即清空本地会话并回登录页",
+      "to": "SCN:auth-session#登出即清空本地会话并回登录页#登出接口不可用时保留登录态",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:132"
+    },
+    {
+      "id": "e84",
+      "from": "REQ:auth-session#登出即清空本地会话并回登录页",
+      "to": "FILE:frontend/src/router.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e85",
+      "from": "REQ:auth-session#登出即清空本地会话并回登录页",
+      "to": "FILE:frontend/src/shared/auth/token-storage.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e86",
+      "from": "REQ:auth-session#登出即清空本地会话并回登录页",
+      "to": "FILE:frontend/src/shared/api-auth-interceptors.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e87",
+      "from": "REQ:auth-session#登出即清空本地会话并回登录页",
+      "to": "SYM:gateway/middleware.py#JWTAuthenticationMiddleware",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e88",
+      "from": "REQ:auth-session#登出即清空本地会话并回登录页",
+      "to": "SYM:apps/accounts/views.py#LogoutView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e89",
+      "from": "REQ:auth-session#登出即清空本地会话并回登录页",
+      "to": "SYM:shared/auth/jwt_auth.py#revoke_session",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e90",
+      "from": "REQ:auth-session#登出即清空本地会话并回登录页",
+      "to": "FILE:frontend/src/shared/components/AppSidebar.vue",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e91",
+      "from": "REQ:auth-session#登出即清空本地会话并回登录页",
+      "to": "SYM:apps/accounts/views.py#RefreshView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e92",
+      "from": "REQ:auth-session#登出即清空本地会话并回登录页",
+      "to": "SYM:shared/auth/jwt_auth.py#verify_token",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e93",
+      "from": "REQ:auth-session#登出即清空本地会话并回登录页",
+      "to": "FILE:frontend/src/shared/api-client.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e94",
+      "from": "SPEC:auth-session",
+      "to": "REQ:auth-session#路由守卫对已登录用户一律跳转工作台",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:138"
+    },
+    {
+      "id": "e95",
+      "from": "REQ:auth-session#路由守卫对已登录用户一律跳转工作台",
+      "to": "SCN:auth-session#路由守卫对已登录用户一律跳转工作台#已登录访问登录页被送回工作台",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:144"
+    },
+    {
+      "id": "e96",
+      "from": "REQ:auth-session#路由守卫对已登录用户一律跳转工作台",
+      "to": "SCN:auth-session#路由守卫对已登录用户一律跳转工作台#携带旧的添加账号参数仍被送回工作台",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:149"
+    },
+    {
+      "id": "e97",
+      "from": "REQ:auth-session#路由守卫对已登录用户一律跳转工作台",
+      "to": "SCN:auth-session#路由守卫对已登录用户一律跳转工作台#未登录访问工作台被送回登录页",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:155"
+    },
+    {
+      "id": "e98",
+      "from": "REQ:auth-session#路由守卫对已登录用户一律跳转工作台",
+      "to": "FILE:frontend/src/router.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e99",
+      "from": "REQ:auth-session#路由守卫对已登录用户一律跳转工作台",
+      "to": "FILE:frontend/src/shared/auth/token-storage.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e100",
+      "from": "REQ:auth-session#路由守卫对已登录用户一律跳转工作台",
+      "to": "FILE:frontend/src/shared/api-auth-interceptors.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e101",
+      "from": "REQ:auth-session#路由守卫对已登录用户一律跳转工作台",
+      "to": "SYM:gateway/middleware.py#JWTAuthenticationMiddleware",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e102",
+      "from": "REQ:auth-session#路由守卫对已登录用户一律跳转工作台",
+      "to": "SYM:apps/accounts/views.py#LogoutView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e103",
+      "from": "REQ:auth-session#路由守卫对已登录用户一律跳转工作台",
+      "to": "SYM:shared/auth/jwt_auth.py#revoke_session",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e104",
+      "from": "REQ:auth-session#路由守卫对已登录用户一律跳转工作台",
+      "to": "FILE:frontend/src/shared/components/AppSidebar.vue",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e105",
+      "from": "REQ:auth-session#路由守卫对已登录用户一律跳转工作台",
+      "to": "SYM:apps/accounts/views.py#RefreshView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e106",
+      "from": "REQ:auth-session#路由守卫对已登录用户一律跳转工作台",
+      "to": "SYM:shared/auth/jwt_auth.py#verify_token",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e107",
+      "from": "REQ:auth-session#路由守卫对已登录用户一律跳转工作台",
+      "to": "FILE:frontend/src/shared/api-client.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e108",
+      "from": "SPEC:auth-session",
+      "to": "REQ:auth-session#续期失败无条件清空会话并跳转登录页",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:160"
+    },
+    {
+      "id": "e109",
+      "from": "REQ:auth-session#续期失败无条件清空会话并跳转登录页",
+      "to": "SCN:auth-session#续期失败无条件清空会话并跳转登录页#续期失败清空凭证并跳转登录页",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:166"
+    },
+    {
+      "id": "e110",
+      "from": "REQ:auth-session#续期失败无条件清空会话并跳转登录页",
+      "to": "SCN:auth-session#续期失败无条件清空会话并跳转登录页#续期成功时不跳转",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:173"
+    },
+    {
+      "id": "e111",
+      "from": "REQ:auth-session#续期失败无条件清空会话并跳转登录页",
+      "to": "FILE:frontend/src/router.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e112",
+      "from": "REQ:auth-session#续期失败无条件清空会话并跳转登录页",
+      "to": "FILE:frontend/src/shared/auth/token-storage.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e113",
+      "from": "REQ:auth-session#续期失败无条件清空会话并跳转登录页",
+      "to": "FILE:frontend/src/shared/api-auth-interceptors.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e114",
+      "from": "REQ:auth-session#续期失败无条件清空会话并跳转登录页",
+      "to": "SYM:gateway/middleware.py#JWTAuthenticationMiddleware",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e115",
+      "from": "REQ:auth-session#续期失败无条件清空会话并跳转登录页",
+      "to": "SYM:apps/accounts/views.py#LogoutView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e116",
+      "from": "REQ:auth-session#续期失败无条件清空会话并跳转登录页",
+      "to": "SYM:shared/auth/jwt_auth.py#revoke_session",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e117",
+      "from": "REQ:auth-session#续期失败无条件清空会话并跳转登录页",
+      "to": "FILE:frontend/src/shared/components/AppSidebar.vue",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e118",
+      "from": "REQ:auth-session#续期失败无条件清空会话并跳转登录页",
+      "to": "SYM:apps/accounts/views.py#RefreshView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e119",
+      "from": "REQ:auth-session#续期失败无条件清空会话并跳转登录页",
+      "to": "SYM:shared/auth/jwt_auth.py#verify_token",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e120",
+      "from": "REQ:auth-session#续期失败无条件清空会话并跳转登录页",
+      "to": "FILE:frontend/src/shared/api-client.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e121",
+      "from": "SPEC:auth-session",
+      "to": "REQ:auth-session#设备页当前用户取自单账号会话",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:179"
+    },
+    {
+      "id": "e122",
+      "from": "REQ:auth-session#设备页当前用户取自单账号会话",
+      "to": "SCN:auth-session#设备页当前用户取自单账号会话#当前用户即登录账号",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-session/spec.md:183"
+    },
+    {
+      "id": "e123",
+      "from": "REQ:auth-session#设备页当前用户取自单账号会话",
+      "to": "FILE:frontend/src/router.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e124",
+      "from": "REQ:auth-session#设备页当前用户取自单账号会话",
+      "to": "FILE:frontend/src/shared/auth/token-storage.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e125",
+      "from": "REQ:auth-session#设备页当前用户取自单账号会话",
+      "to": "FILE:frontend/src/shared/api-auth-interceptors.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e126",
+      "from": "REQ:auth-session#设备页当前用户取自单账号会话",
+      "to": "SYM:gateway/middleware.py#JWTAuthenticationMiddleware",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「会话与账号管理」的实现声明"
+    },
+    {
+      "id": "e127",
+      "from": "REQ:auth-session#设备页当前用户取自单账号会话",
+      "to": "SYM:apps/accounts/views.py#LogoutView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e128",
+      "from": "REQ:auth-session#设备页当前用户取自单账号会话",
+      "to": "SYM:shared/auth/jwt_auth.py#revoke_session",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e129",
+      "from": "REQ:auth-session#设备页当前用户取自单账号会话",
+      "to": "FILE:frontend/src/shared/components/AppSidebar.vue",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登出」的实现声明"
+    },
+    {
+      "id": "e130",
+      "from": "REQ:auth-session#设备页当前用户取自单账号会话",
+      "to": "SYM:apps/accounts/views.py#RefreshView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e131",
+      "from": "REQ:auth-session#设备页当前用户取自单账号会话",
+      "to": "SYM:shared/auth/jwt_auth.py#verify_token",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e132",
+      "from": "REQ:auth-session#设备页当前用户取自单账号会话",
+      "to": "FILE:frontend/src/shared/api-client.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e133",
+      "from": "DOM:注册",
+      "to": "SPEC:auth-registration",
+      "type": "specified_by",
+      "confidence": "declared",
+      "evidence": "声明「auth-registration」服务「注册」"
+    },
+    {
+      "id": "e134",
+      "from": "SPEC:auth-registration",
+      "to": "REQ:auth-registration#用户名唯一性由写口保证",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-registration/spec.md:8"
+    },
+    {
+      "id": "e135",
+      "from": "REQ:auth-registration#用户名唯一性由写口保证",
+      "to": "SCN:auth-registration#用户名唯一性由写口保证#顺序重名注册",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-registration/spec.md:16"
+    },
+    {
+      "id": "e136",
+      "from": "REQ:auth-registration#用户名唯一性由写口保证",
+      "to": "SCN:auth-registration#用户名唯一性由写口保证#并发重名注册",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-registration/spec.md:21"
+    },
+    {
+      "id": "e137",
+      "from": "REQ:auth-registration#用户名唯一性由写口保证",
+      "to": "SCN:auth-registration#用户名唯一性由写口保证#写口不泄漏底层异常",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-registration/spec.md:27"
+    },
+    {
+      "id": "e138",
+      "from": "REQ:auth-registration#用户名唯一性由写口保证",
+      "to": "SCN:auth-registration#用户名唯一性由写口保证#冲突不破坏调用方事务",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-registration/spec.md:33"
+    },
+    {
+      "id": "e139",
+      "from": "REQ:auth-registration#用户名唯一性由写口保证",
+      "to": "SYM:apps/accounts/views.py#RegisterView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e140",
+      "from": "REQ:auth-registration#用户名唯一性由写口保证",
+      "to": "SYM:apps/accounts/serializers.py#RegisterSerializer",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e141",
+      "from": "REQ:auth-registration#用户名唯一性由写口保证",
+      "to": "SYM:apps/accounts/api.py#create_user",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e142",
+      "from": "REQ:auth-registration#用户名唯一性由写口保证",
+      "to": "FILE:frontend/src/views/components/RegisterCard.vue",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e143",
+      "from": "REQ:auth-registration#用户名唯一性由写口保证",
+      "to": "FILE:frontend/src/views/composables/useAuthFlow.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e144",
+      "from": "REQ:auth-registration#用户名唯一性由写口保证",
+      "to": "FILE:frontend/src/shared/api/auth.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e145",
+      "from": "DOM:登录",
+      "to": "SPEC:auth-form-validation",
+      "type": "specified_by",
+      "confidence": "declared",
+      "evidence": "声明「auth-form-validation」服务「登录」"
+    },
+    {
+      "id": "e146",
+      "from": "DOM:注册",
+      "to": "SPEC:auth-form-validation",
+      "type": "specified_by",
+      "confidence": "declared",
+      "evidence": "声明「auth-form-validation」服务「注册」"
+    },
+    {
+      "id": "e147",
+      "from": "SPEC:auth-form-validation",
+      "to": "REQ:auth-form-validation#表单校验文案与数值阈值在两侧一致",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-form-validation/spec.md:10"
+    },
+    {
+      "id": "e148",
+      "from": "REQ:auth-form-validation#表单校验文案与数值阈值在两侧一致",
+      "to": "SCN:auth-form-validation#表单校验文案与数值阈值在两侧一致#文案差异恰好等于已声明的例外",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-form-validation/spec.md:19"
+    },
+    {
+      "id": "e149",
+      "from": "REQ:auth-form-validation#表单校验文案与数值阈值在两侧一致",
+      "to": "SCN:auth-form-validation#表单校验文案与数值阈值在两侧一致#数值阈值集合相同",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-form-validation/spec.md:25"
+    },
+    {
+      "id": "e150",
+      "from": "REQ:auth-form-validation#表单校验文案与数值阈值在两侧一致",
+      "to": "SCN:auth-form-validation#表单校验文案与数值阈值在两侧一致#新增或改动的差异必须失败",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-form-validation/spec.md:30"
+    },
+    {
+      "id": "e151",
+      "from": "REQ:auth-form-validation#表单校验文案与数值阈值在两侧一致",
+      "to": "SCN:auth-form-validation#表单校验文案与数值阈值在两侧一致#守护测试不依赖运行中的服务",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-form-validation/spec.md:35"
+    },
+    {
+      "id": "e152",
+      "from": "REQ:auth-form-validation#表单校验文案与数值阈值在两侧一致",
+      "to": "SYM:apps/accounts/views.py#LoginView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e153",
+      "from": "REQ:auth-form-validation#表单校验文案与数值阈值在两侧一致",
+      "to": "SYM:apps/accounts/serializers.py#LoginSerializer",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e154",
+      "from": "REQ:auth-form-validation#表单校验文案与数值阈值在两侧一致",
+      "to": "SYM:shared/auth/jwt_auth.py#create_token_pair",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e155",
+      "from": "REQ:auth-form-validation#表单校验文案与数值阈值在两侧一致",
+      "to": "FILE:frontend/src/views/components/LoginCard.vue",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e156",
+      "from": "REQ:auth-form-validation#表单校验文案与数值阈值在两侧一致",
+      "to": "FILE:frontend/src/views/LoginView.logic.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e157",
+      "from": "REQ:auth-form-validation#表单校验文案与数值阈值在两侧一致",
+      "to": "FILE:frontend/src/shared/api/auth.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e158",
+      "from": "REQ:auth-form-validation#表单校验文案与数值阈值在两侧一致",
+      "to": "FILE:frontend/src/shared/composables/useLoginForm.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e159",
+      "from": "REQ:auth-form-validation#表单校验文案与数值阈值在两侧一致",
+      "to": "SYM:apps/accounts/views.py#RegisterView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e160",
+      "from": "REQ:auth-form-validation#表单校验文案与数值阈值在两侧一致",
+      "to": "SYM:apps/accounts/serializers.py#RegisterSerializer",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e161",
+      "from": "REQ:auth-form-validation#表单校验文案与数值阈值在两侧一致",
+      "to": "SYM:apps/accounts/api.py#create_user",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e162",
+      "from": "REQ:auth-form-validation#表单校验文案与数值阈值在两侧一致",
+      "to": "FILE:frontend/src/views/components/RegisterCard.vue",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e163",
+      "from": "REQ:auth-form-validation#表单校验文案与数值阈值在两侧一致",
+      "to": "FILE:frontend/src/views/composables/useAuthFlow.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e164",
+      "from": "SPEC:auth-form-validation",
+      "to": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-form-validation/spec.md:40"
+    },
+    {
+      "id": "e165",
+      "from": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "to": "SCN:auth-form-validation#密码首尾空白的归一化口径在两侧一致#密码首尾空白在两侧都被去掉",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-form-validation/spec.md:51"
+    },
+    {
+      "id": "e166",
+      "from": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "to": "SCN:auth-form-validation#密码首尾空白的归一化口径在两侧一致#密码内部的空白保留",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-form-validation/spec.md:57"
+    },
+    {
+      "id": "e167",
+      "from": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "to": "SCN:auth-form-validation#密码首尾空白的归一化口径在两侧一致#账号的空白口径有意不同",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-form-validation/spec.md:62"
+    },
+    {
+      "id": "e168",
+      "from": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "to": "SCN:auth-form-validation#密码首尾空白的归一化口径在两侧一致#口径漂移必须失败",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-form-validation/spec.md:67"
+    },
+    {
+      "id": "e169",
+      "from": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "to": "SCN:auth-form-validation#密码首尾空白的归一化口径在两侧一致#守护测试不依赖运行中的服务",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-form-validation/spec.md:72"
+    },
+    {
+      "id": "e170",
+      "from": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "to": "SCN:auth-form-validation#密码首尾空白的归一化口径在两侧一致#该口径对外只表现为成功与失败",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-form-validation/spec.md:77"
+    },
+    {
+      "id": "e171",
+      "from": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "to": "SYM:apps/accounts/views.py#LoginView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e172",
+      "from": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "to": "SYM:apps/accounts/serializers.py#LoginSerializer",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e173",
+      "from": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "to": "SYM:shared/auth/jwt_auth.py#create_token_pair",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e174",
+      "from": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "to": "FILE:frontend/src/views/components/LoginCard.vue",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e175",
+      "from": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "to": "FILE:frontend/src/views/LoginView.logic.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e176",
+      "from": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "to": "FILE:frontend/src/shared/api/auth.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e177",
+      "from": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "to": "FILE:frontend/src/shared/composables/useLoginForm.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e178",
+      "from": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "to": "SYM:apps/accounts/views.py#RegisterView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e179",
+      "from": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "to": "SYM:apps/accounts/serializers.py#RegisterSerializer",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e180",
+      "from": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "to": "SYM:apps/accounts/api.py#create_user",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e181",
+      "from": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "to": "FILE:frontend/src/views/components/RegisterCard.vue",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e182",
+      "from": "REQ:auth-form-validation#密码首尾空白的归一化口径在两侧一致",
+      "to": "FILE:frontend/src/views/composables/useAuthFlow.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e183",
+      "from": "DOM:登录",
+      "to": "SPEC:auth-response-shape",
+      "type": "specified_by",
+      "confidence": "declared",
+      "evidence": "声明「auth-response-shape」服务「登录」"
+    },
+    {
+      "id": "e184",
+      "from": "DOM:注册",
+      "to": "SPEC:auth-response-shape",
+      "type": "specified_by",
+      "confidence": "declared",
+      "evidence": "声明「auth-response-shape」服务「注册」"
+    },
+    {
+      "id": "e185",
+      "from": "DOM:刷新令牌",
+      "to": "SPEC:auth-response-shape",
+      "type": "specified_by",
+      "confidence": "declared",
+      "evidence": "声明「auth-response-shape」服务「刷新令牌」"
+    },
+    {
+      "id": "e186",
+      "from": "DOM:查看当前身份",
+      "to": "SPEC:auth-response-shape",
+      "type": "specified_by",
+      "confidence": "declared",
+      "evidence": "声明「auth-response-shape」服务「查看当前身份」"
+    },
+    {
+      "id": "e187",
+      "from": "SPEC:auth-response-shape",
+      "to": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-response-shape/spec.md:10"
+    },
+    {
+      "id": "e188",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "SCN:auth-response-shape#前端认证 DTO 不声明后端不返回的字段#登录与注册响应 DTO 的字段都在响应里",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-response-shape/spec.md:17"
+    },
+    {
+      "id": "e189",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "SCN:auth-response-shape#前端认证 DTO 不声明后端不返回的字段#刷新响应 DTO 的字段都在响应里",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-response-shape/spec.md:22"
+    },
+    {
+      "id": "e190",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "SCN:auth-response-shape#前端认证 DTO 不声明后端不返回的字段#身份接口 DTO 与响应一致",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/auth-response-shape/spec.md:27"
+    },
+    {
+      "id": "e191",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "SYM:apps/accounts/views.py#LoginView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e192",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "SYM:apps/accounts/serializers.py#LoginSerializer",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e193",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "SYM:shared/auth/jwt_auth.py#create_token_pair",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e194",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "FILE:frontend/src/views/components/LoginCard.vue",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e195",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "FILE:frontend/src/views/LoginView.logic.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e196",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "FILE:frontend/src/shared/api/auth.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e197",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "FILE:frontend/src/shared/composables/useLoginForm.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「登录」的实现声明"
+    },
+    {
+      "id": "e198",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "SYM:apps/accounts/views.py#RegisterView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e199",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "SYM:apps/accounts/serializers.py#RegisterSerializer",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e200",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "SYM:apps/accounts/api.py#create_user",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e201",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "FILE:frontend/src/views/components/RegisterCard.vue",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e202",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "FILE:frontend/src/views/composables/useAuthFlow.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「注册」的实现声明"
+    },
+    {
+      "id": "e203",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "SYM:apps/accounts/views.py#RefreshView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e204",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "SYM:shared/auth/jwt_auth.py#verify_token",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e205",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "FILE:frontend/src/shared/api-client.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「刷新令牌」的实现声明"
+    },
+    {
+      "id": "e206",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "SYM:apps/accounts/views.py#MeView",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「查看当前身份」的实现声明"
+    },
+    {
+      "id": "e207",
+      "from": "REQ:auth-response-shape#前端认证 DTO 不声明后端不返回的字段",
+      "to": "FILE:frontend/src/shared/composables/useAuthUser.ts",
+      "type": "implemented_by",
+      "confidence": "derived",
+      "evidence": "继承「查看当前身份」的实现声明"
+    },
+    {
+      "id": "e208",
+      "from": "SPEC:api-path-convention",
+      "to": "REQ:api-path-convention#API 路径统一带尾斜杠",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:11"
+    },
+    {
+      "id": "e209",
+      "from": "REQ:api-path-convention#API 路径统一带尾斜杠",
+      "to": "SCN:api-path-convention#API 路径统一带尾斜杠#带尾斜杠命中",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:17"
+    },
+    {
+      "id": "e210",
+      "from": "REQ:api-path-convention#API 路径统一带尾斜杠",
+      "to": "SCN:api-path-convention#API 路径统一带尾斜杠#缺失尾斜杠返回 404",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:22"
+    },
+    {
+      "id": "e211",
+      "from": "REQ:api-path-convention#API 路径统一带尾斜杠",
+      "to": "SCN:api-path-convention#API 路径统一带尾斜杠#不存在 301 重定向",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:27"
+    },
+    {
+      "id": "e212",
+      "from": "REQ:api-path-convention#API 路径统一带尾斜杠",
+      "to": "SCN:api-path-convention#API 路径统一带尾斜杠#路由表内不存在无斜杠路由",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:32"
+    },
+    {
+      "id": "e213",
+      "from": "SPEC:api-path-convention",
+      "to": "REQ:api-path-convention#前端与测试调用面遵循唯一写法",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:37"
+    },
+    {
+      "id": "e214",
+      "from": "REQ:api-path-convention#前端与测试调用面遵循唯一写法",
+      "to": "SCN:api-path-convention#前端与测试调用面遵循唯一写法#前端 API 层",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:49"
+    },
+    {
+      "id": "e215",
+      "from": "REQ:api-path-convention#前端与测试调用面遵循唯一写法",
+      "to": "SCN:api-path-convention#前端与测试调用面遵循唯一写法#接口测试用例",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:54"
+    },
+    {
+      "id": "e216",
+      "from": "REQ:api-path-convention#前端与测试调用面遵循唯一写法",
+      "to": "SCN:api-path-convention#前端与测试调用面遵循唯一写法#负向用例显式登记",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:60"
+    },
+    {
+      "id": "e217",
+      "from": "SPEC:api-path-convention",
+      "to": "REQ:api-path-convention#前端调用面与路由表的一致性由默认测试守护",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:65"
+    },
+    {
+      "id": "e218",
+      "from": "REQ:api-path-convention#前端调用面与路由表的一致性由默认测试守护",
+      "to": "SCN:api-path-convention#前端调用面与路由表的一致性由默认测试守护#前端路径字面量全部带尾斜杠",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:74"
+    },
+    {
+      "id": "e219",
+      "from": "REQ:api-path-convention#前端调用面与路由表的一致性由默认测试守护",
+      "to": "SCN:api-path-convention#前端调用面与路由表的一致性由默认测试守护#每条字面量都能命中后端路由",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:79"
+    },
+    {
+      "id": "e220",
+      "from": "REQ:api-path-convention#前端调用面与路由表的一致性由默认测试守护",
+      "to": "SCN:api-path-convention#前端调用面与路由表的一致性由默认测试守护#认证链路五个调用全部命中",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:84"
+    },
+    {
+      "id": "e221",
+      "from": "REQ:api-path-convention#前端调用面与路由表的一致性由默认测试守护",
+      "to": "SCN:api-path-convention#前端调用面与路由表的一致性由默认测试守护#前端自身路由不参与断言",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:90"
+    },
+    {
+      "id": "e222",
+      "from": "REQ:api-path-convention#前端调用面与路由表的一致性由默认测试守护",
+      "to": "SCN:api-path-convention#前端调用面与路由表的一致性由默认测试守护#守护测试不依赖运行中的服务",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:95"
+    },
+    {
+      "id": "e223",
+      "from": "SPEC:api-path-convention",
+      "to": "REQ:api-path-convention#调用面扫描的完整性与显式例外",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:100"
+    },
+    {
+      "id": "e224",
+      "from": "REQ:api-path-convention#调用面扫描的完整性与显式例外",
+      "to": "SCN:api-path-convention#调用面扫描的完整性与显式例外#跨行书写的调用被扫到",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:108"
+    },
+    {
+      "id": "e225",
+      "from": "REQ:api-path-convention#调用面扫描的完整性与显式例外",
+      "to": "SCN:api-path-convention#调用面扫描的完整性与显式例外#识别规则失效不静默通过",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:113"
+    },
+    {
+      "id": "e226",
+      "from": "REQ:api-path-convention#调用面扫描的完整性与显式例外",
+      "to": "SCN:api-path-convention#调用面扫描的完整性与显式例外#例外清单之外的违规必须失败",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:118"
+    },
+    {
+      "id": "e227",
+      "from": "SPEC:api-path-convention",
+      "to": "REQ:api-path-convention#调用面的方法必须被命中视图接受",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:123"
+    },
+    {
+      "id": "e228",
+      "from": "REQ:api-path-convention#调用面的方法必须被命中视图接受",
+      "to": "SCN:api-path-convention#调用面的方法必须被命中视图接受#router 详情路由不接受 write 方法即失败",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:131"
+    },
+    {
+      "id": "e229",
+      "from": "REQ:api-path-convention#调用面的方法必须被命中视图接受",
+      "to": "SCN:api-path-convention#调用面的方法必须被命中视图接受#方法被接受时通过",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:136"
+    },
+    {
+      "id": "e230",
+      "from": "REQ:api-path-convention#调用面的方法必须被命中视图接受",
+      "to": "SCN:api-path-convention#调用面的方法必须被命中视图接受#函数视图不被误判",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/api-path-convention/spec.md:141"
+    },
+    {
+      "id": "e231",
+      "from": "SPEC:frontend-login-hand-drawn-hero",
+      "to": "REQ:frontend-login-hand-drawn-hero#Login page uses ruled notebook paper background",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/frontend-login-hand-drawn-hero/spec.md:9"
+    },
+    {
+      "id": "e232",
+      "from": "REQ:frontend-login-hand-drawn-hero#Login page uses ruled notebook paper background",
+      "to": "SCN:frontend-login-hand-drawn-hero#Login page uses ruled notebook paper background#Login shell shows ruled paper",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/frontend-login-hand-drawn-hero/spec.md:12"
+    },
+    {
+      "id": "e233",
+      "from": "REQ:frontend-login-hand-drawn-hero#Login page uses ruled notebook paper background",
+      "to": "SCN:frontend-login-hand-drawn-hero#Login page uses ruled notebook paper background#Non-login pages keep existing paper treatment",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/frontend-login-hand-drawn-hero/spec.md:17"
+    },
+    {
+      "id": "e234",
+      "from": "SPEC:frontend-login-hand-drawn-hero",
+      "to": "REQ:frontend-login-hand-drawn-hero#Hero is a two-column hand-drawn composition",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/frontend-login-hand-drawn-hero/spec.md:21"
+    },
+    {
+      "id": "e235",
+      "from": "REQ:frontend-login-hand-drawn-hero#Hero is a two-column hand-drawn composition",
+      "to": "SCN:frontend-login-hand-drawn-hero#Hero is a two-column hand-drawn composition#Left column shows brand copy and mode CTAs",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/frontend-login-hand-drawn-hero/spec.md:24"
+    },
+    {
+      "id": "e236",
+      "from": "REQ:frontend-login-hand-drawn-hero#Hero is a two-column hand-drawn composition",
+      "to": "SCN:frontend-login-hand-drawn-hero#Hero is a two-column hand-drawn composition#Version badge shows v3.0",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/frontend-login-hand-drawn-hero/spec.md:30"
+    },
+    {
+      "id": "e237",
+      "from": "REQ:frontend-login-hand-drawn-hero#Hero is a two-column hand-drawn composition",
+      "to": "SCN:frontend-login-hand-drawn-hero#Hero is a two-column hand-drawn composition#Eyebrow copy is removed",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/frontend-login-hand-drawn-hero/spec.md:34"
+    },
+    {
+      "id": "e238",
+      "from": "REQ:frontend-login-hand-drawn-hero#Hero is a two-column hand-drawn composition",
+      "to": "SCN:frontend-login-hand-drawn-hero#Hero is a two-column hand-drawn composition#Animal sticker board is removed",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/frontend-login-hand-drawn-hero/spec.md:38"
+    },
+    {
+      "id": "e239",
+      "from": "SPEC:frontend-login-hand-drawn-hero",
+      "to": "REQ:frontend-login-hand-drawn-hero#Meeting doodle hosts auth forms with mode title",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/frontend-login-hand-drawn-hero/spec.md:42"
+    },
+    {
+      "id": "e240",
+      "from": "REQ:frontend-login-hand-drawn-hero#Meeting doodle hosts auth forms with mode title",
+      "to": "SCN:frontend-login-hand-drawn-hero#Meeting doodle hosts auth forms with mode title#Login CTA reveals login form in Meeting doodle",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/frontend-login-hand-drawn-hero/spec.md:45"
+    },
+    {
+      "id": "e241",
+      "from": "REQ:frontend-login-hand-drawn-hero#Meeting doodle hosts auth forms with mode title",
+      "to": "SCN:frontend-login-hand-drawn-hero#Meeting doodle hosts auth forms with mode title#Register CTA reveals register form in Meeting doodle",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/frontend-login-hand-drawn-hero/spec.md:50"
+    },
+    {
+      "id": "e242",
+      "from": "REQ:frontend-login-hand-drawn-hero#Meeting doodle hosts auth forms with mode title",
+      "to": "SCN:frontend-login-hand-drawn-hero#Meeting doodle hosts auth forms with mode title#Auth form is flat inside Meeting doodle",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/frontend-login-hand-drawn-hero/spec.md:55"
+    },
+    {
+      "id": "e243",
+      "from": "REQ:frontend-login-hand-drawn-hero#Meeting doodle hosts auth forms with mode title",
+      "to": "SCN:frontend-login-hand-drawn-hero#Meeting doodle hosts auth forms with mode title#Auth business flow remains unchanged",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/frontend-login-hand-drawn-hero/spec.md:60"
+    },
+    {
+      "id": "e244",
+      "from": "SPEC:frontend-login-hand-drawn-hero",
+      "to": "REQ:frontend-login-hand-drawn-hero#Login page has only login and register modes",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/frontend-login-hand-drawn-hero/spec.md:64"
+    },
+    {
+      "id": "e245",
+      "from": "REQ:frontend-login-hand-drawn-hero#Login page has only login and register modes",
+      "to": "SCN:frontend-login-hand-drawn-hero#Login page has only login and register modes#Existing account does not trigger a switch prompt",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/frontend-login-hand-drawn-hero/spec.md:68"
+    },
+    {
+      "id": "e246",
+      "from": "REQ:frontend-login-hand-drawn-hero#Login page has only login and register modes",
+      "to": "SCN:frontend-login-hand-drawn-hero#Login page has only login and register modes#Mode CTA is always visible",
+      "type": "contains",
+      "confidence": "derived",
+      "evidence": "openspec/specs/frontend-login-hand-drawn-hero/spec.md:74"
+    },
+    {
+      "id": "e247",
+      "from": "FILE:apps/accounts/urls.py",
+      "to": "API:/api/auth/login/",
+      "type": "exposes",
+      "confidence": "derived",
+      "evidence": "urls.py 路由表"
+    },
+    {
+      "id": "e248",
+      "from": "SYM:apps/accounts/views.py#LoginView",
+      "to": "API:/api/auth/login/",
+      "type": "serves",
+      "confidence": "derived",
+      "evidence": "apps/accounts/views.py 的 LoginView"
+    },
+    {
+      "id": "e249",
+      "from": "FILE:apps/accounts/urls.py",
+      "to": "API:/api/auth/register/",
+      "type": "exposes",
+      "confidence": "derived",
+      "evidence": "urls.py 路由表"
+    },
+    {
+      "id": "e250",
+      "from": "SYM:apps/accounts/views.py#RegisterView",
+      "to": "API:/api/auth/register/",
+      "type": "serves",
+      "confidence": "derived",
+      "evidence": "apps/accounts/views.py 的 RegisterView"
+    },
+    {
+      "id": "e251",
+      "from": "FILE:apps/accounts/urls.py",
+      "to": "API:/api/auth/refresh/",
+      "type": "exposes",
+      "confidence": "derived",
+      "evidence": "urls.py 路由表"
+    },
+    {
+      "id": "e252",
+      "from": "SYM:apps/accounts/views.py#RefreshView",
+      "to": "API:/api/auth/refresh/",
+      "type": "serves",
+      "confidence": "derived",
+      "evidence": "apps/accounts/views.py 的 RefreshView"
+    },
+    {
+      "id": "e253",
+      "from": "FILE:apps/accounts/urls.py",
+      "to": "API:/api/auth/logout/",
+      "type": "exposes",
+      "confidence": "derived",
+      "evidence": "urls.py 路由表"
+    },
+    {
+      "id": "e254",
+      "from": "SYM:apps/accounts/views.py#LogoutView",
+      "to": "API:/api/auth/logout/",
+      "type": "serves",
+      "confidence": "derived",
+      "evidence": "apps/accounts/views.py 的 LogoutView"
+    },
+    {
+      "id": "e255",
+      "from": "FILE:apps/accounts/urls.py",
+      "to": "API:/api/auth/me/",
+      "type": "exposes",
+      "confidence": "derived",
+      "evidence": "urls.py 路由表"
+    },
+    {
+      "id": "e256",
+      "from": "SYM:apps/accounts/views.py#MeView",
+      "to": "API:/api/auth/me/",
+      "type": "serves",
+      "confidence": "derived",
+      "evidence": "apps/accounts/views.py 的 MeView"
+    },
+    {
+      "id": "e257",
+      "from": "SYM:apps/accounts/api.py#create_user",
+      "to": "TBL:auth_user",
+      "type": "writes",
+      "confidence": "declared",
+      "evidence": "声明为唯一写口"
+    },
+    {
+      "id": "e258",
+      "from": "SYM:apps/accounts/views.py#LoginView",
+      "to": "TBL:auth_user",
+      "type": "reads",
+      "confidence": "declared",
+      "evidence": "声明为读取方"
+    },
+    {
+      "id": "e259",
+      "from": "TEST:tests/graybox/unit/test_auth_endpoint_declaration.py",
+      "to": "SPEC:auth-session",
+      "type": "verifies",
+      "confidence": "declared",
+      "evidence": "文件头声明 auth-session"
+    },
+    {
+      "id": "e260",
+      "from": "TEST:tests/graybox/unit/test_auth_frontend_contract.py",
+      "to": "SPEC:auth-response-shape",
+      "type": "verifies",
+      "confidence": "declared",
+      "evidence": "文件头声明 auth-response-shape"
+    },
+    {
+      "id": "e261",
+      "from": "TEST:tests/graybox/unit/test_auth_validation_parity.py",
+      "to": "SPEC:auth-form-validation",
+      "type": "verifies",
+      "confidence": "declared",
+      "evidence": "文件头声明 auth-form-validation"
+    },
+    {
+      "id": "e262",
+      "from": "TEST:tests/graybox/unit/test_logout_session_revocation.py",
+      "to": "SPEC:auth-session",
+      "type": "verifies",
+      "confidence": "declared",
+      "evidence": "文件头声明 auth-session"
+    }
+  ],
+  "health": {
+    "node_kinds": {
+      "prd": 1,
+      "domain": 6,
+      "file": 18,
+      "symbol": 12,
+      "spec": 6,
+      "requirement": 21,
+      "scenario": 70,
+      "endpoint": 5,
+      "table": 1,
+      "test": 20
+    },
+    "requirement_total": 21,
+    "requirement_implemented": 12,
+    "requirement_verified_by_spec": 11,
+    "broken_anchors": [
+      {
+        "node": "TEST:tests/graybox/unit/test_register_uniqueness.py",
+        "title": "test_register_uniqueness.py",
+        "detail": "文件头锚点指向不存在的规格: fix-register-duplicate-race（写法 openspec_change_id）"
+      }
+    ],
+    "orphan_requirements": [
+      {
+        "node": "REQ:api-path-convention#API 路径统一带尾斜杠",
+        "title": "API 路径统一带尾斜杠",
+        "spec": "api-path-convention"
+      },
+      {
+        "node": "REQ:api-path-convention#前端与测试调用面遵循唯一写法",
+        "title": "前端与测试调用面遵循唯一写法",
+        "spec": "api-path-convention"
+      },
+      {
+        "node": "REQ:api-path-convention#前端调用面与路由表的一致性由默认测试守护",
+        "title": "前端调用面与路由表的一致性由默认测试守护",
+        "spec": "api-path-convention"
+      },
+      {
+        "node": "REQ:api-path-convention#调用面扫描的完整性与显式例外",
+        "title": "调用面扫描的完整性与显式例外",
+        "spec": "api-path-convention"
+      },
+      {
+        "node": "REQ:api-path-convention#调用面的方法必须被命中视图接受",
+        "title": "调用面的方法必须被命中视图接受",
+        "spec": "api-path-convention"
+      },
+      {
+        "node": "REQ:frontend-login-hand-drawn-hero#Login page uses ruled notebook paper background",
+        "title": "Login page uses ruled notebook paper background",
+        "spec": "frontend-login-hand-drawn-hero"
+      },
+      {
+        "node": "REQ:frontend-login-hand-drawn-hero#Hero is a two-column hand-drawn composition",
+        "title": "Hero is a two-column hand-drawn composition",
+        "spec": "frontend-login-hand-drawn-hero"
+      },
+      {
+        "node": "REQ:frontend-login-hand-drawn-hero#Meeting doodle hosts auth forms with mode title",
+        "title": "Meeting doodle hosts auth forms with mode title",
+        "spec": "frontend-login-hand-drawn-hero"
+      },
+      {
+        "node": "REQ:frontend-login-hand-drawn-hero#Login page has only login and register modes",
+        "title": "Login page has only login and register modes",
+        "spec": "frontend-login-hand-drawn-hero"
+      }
+    ],
+    "unverified_requirements": [
+      {
+        "node": "REQ:auth-registration#用户名唯一性由写口保证",
+        "title": "用户名唯一性由写口保证",
+        "spec": "auth-registration"
+      },
+      {
+        "node": "REQ:api-path-convention#API 路径统一带尾斜杠",
+        "title": "API 路径统一带尾斜杠",
+        "spec": "api-path-convention"
+      },
+      {
+        "node": "REQ:api-path-convention#前端与测试调用面遵循唯一写法",
+        "title": "前端与测试调用面遵循唯一写法",
+        "spec": "api-path-convention"
+      },
+      {
+        "node": "REQ:api-path-convention#前端调用面与路由表的一致性由默认测试守护",
+        "title": "前端调用面与路由表的一致性由默认测试守护",
+        "spec": "api-path-convention"
+      },
+      {
+        "node": "REQ:api-path-convention#调用面扫描的完整性与显式例外",
+        "title": "调用面扫描的完整性与显式例外",
+        "spec": "api-path-convention"
+      },
+      {
+        "node": "REQ:api-path-convention#调用面的方法必须被命中视图接受",
+        "title": "调用面的方法必须被命中视图接受",
+        "spec": "api-path-convention"
+      },
+      {
+        "node": "REQ:frontend-login-hand-drawn-hero#Login page uses ruled notebook paper background",
+        "title": "Login page uses ruled notebook paper background",
+        "spec": "frontend-login-hand-drawn-hero"
+      },
+      {
+        "node": "REQ:frontend-login-hand-drawn-hero#Hero is a two-column hand-drawn composition",
+        "title": "Hero is a two-column hand-drawn composition",
+        "spec": "frontend-login-hand-drawn-hero"
+      },
+      {
+        "node": "REQ:frontend-login-hand-drawn-hero#Meeting doodle hosts auth forms with mode title",
+        "title": "Meeting doodle hosts auth forms with mode title",
+        "spec": "frontend-login-hand-drawn-hero"
+      },
+      {
+        "node": "REQ:frontend-login-hand-drawn-hero#Login page has only login and register modes",
+        "title": "Login page has only login and register modes",
+        "spec": "frontend-login-hand-drawn-hero"
+      }
+    ],
+    "orphan_specs": [
+      {
+        "title": "api-path-convention",
+        "registered_in_prd": false
+      },
+      {
+        "title": "frontend-login-hand-drawn-hero",
+        "registered_in_prd": false
+      }
+    ],
+    "unanchored_tests": [
+      {
+        "title": "test_auth_register_concurrency.py",
+        "path": "tests/api/test_auth_register_concurrency.py",
+        "case_count": 1,
+        "anchor_target": "",
+        "anchor_style": "",
+        "reason": "未声明规格锚点"
+      },
+      {
+        "title": "test_auth_session_flow.py",
+        "path": "tests/api/test_auth_session_flow.py",
+        "case_count": 1,
+        "anchor_target": "",
+        "anchor_style": "",
+        "reason": "未声明规格锚点"
+      },
+      {
+        "title": "test_auth_tokens.py",
+        "path": "tests/api/test_auth_tokens.py",
+        "case_count": 2,
+        "anchor_target": "",
+        "anchor_style": "",
+        "reason": "未声明规格锚点"
+      },
+      {
+        "title": "test_login_page.py",
+        "path": "tests/api/test_login_page.py",
+        "case_count": 1,
+        "anchor_target": "",
+        "anchor_style": "",
+        "reason": "未声明规格锚点"
+      },
+      {
+        "title": "test_ai_tool_gateway_auth.py",
+        "path": "tests/graybox/unit/test_ai_tool_gateway_auth.py",
+        "case_count": 7,
+        "anchor_target": "",
+        "anchor_style": "",
+        "reason": "未声明规格锚点"
+      },
+      {
+        "title": "test_register_uniqueness.py",
+        "path": "tests/graybox/unit/test_register_uniqueness.py",
+        "case_count": 5,
+        "anchor_target": "fix-register-duplicate-race",
+        "anchor_style": "openspec_change_id",
+        "reason": "锚点指向不存在的规格: fix-register-duplicate-race"
+      },
+      {
+        "title": "test_login_e2e.py",
+        "path": "tests/e2e/test_login_e2e.py",
+        "case_count": 15,
+        "anchor_target": "",
+        "anchor_style": "",
+        "reason": "未声明规格锚点"
+      },
+      {
+        "title": "apiAuthInterceptors.spec.ts",
+        "path": "frontend/tests/login/p0/apiAuthInterceptors.spec.ts",
+        "case_count": 7,
+        "anchor_target": "",
+        "anchor_style": "",
+        "reason": "未声明规格锚点"
+      },
+      {
+        "title": "LoginCard.spec.ts",
+        "path": "frontend/tests/login/p0/LoginCard.spec.ts",
+        "case_count": 5,
+        "anchor_target": "",
+        "anchor_style": "",
+        "reason": "未声明规格锚点"
+      },
+      {
+        "title": "LoginView.hero.spec.ts",
+        "path": "frontend/tests/login/p0/LoginView.hero.spec.ts",
+        "case_count": 6,
+        "anchor_target": "",
+        "anchor_style": "",
+        "reason": "未声明规格锚点"
+      },
+      {
+        "title": "RegisterCard.spec.ts",
+        "path": "frontend/tests/login/p0/RegisterCard.spec.ts",
+        "case_count": 4,
+        "anchor_target": "",
+        "anchor_style": "",
+        "reason": "未声明规格锚点"
+      },
+      {
+        "title": "token-storage.spec.ts",
+        "path": "frontend/tests/login/p0/token-storage.spec.ts",
+        "case_count": 4,
+        "anchor_target": "",
+        "anchor_style": "",
+        "reason": "未声明规格锚点"
+      },
+      {
+        "title": "useAuthFlow.spec.ts",
+        "path": "frontend/tests/login/p0/useAuthFlow.spec.ts",
+        "case_count": 5,
+        "anchor_target": "",
+        "anchor_style": "",
+        "reason": "未声明规格锚点"
+      },
+      {
+        "title": "useLoginForm.spec.ts",
+        "path": "frontend/tests/login/p0/useLoginForm.spec.ts",
+        "case_count": 10,
+        "anchor_target": "",
+        "anchor_style": "",
+        "reason": "未声明规格锚点"
+      },
+      {
+        "title": "LoginErrorOverlay.spec.ts",
+        "path": "frontend/tests/login/p1/LoginErrorOverlay.spec.ts",
+        "case_count": 7,
+        "anchor_target": "",
+        "anchor_style": "",
+        "reason": "未声明规格锚点"
+      },
+      {
+        "title": "LoginView.logic.spec.ts",
+        "path": "frontend/tests/login/p1/LoginView.logic.spec.ts",
+        "case_count": 3,
+        "anchor_target": "",
+        "anchor_style": "",
+        "reason": "未声明规格锚点"
+      }
+    ],
+    "anchor_styles": {
+      "无锚点": 15,
+      "openspec_specs_path": 3,
+      "change_delta_path": 1,
+      "openspec_change_id": 1
+    },
+    "stale_header_anchors": [
+      {
+        "title": "test_logout_session_revocation.py",
+        "change": "revoke-session-on-logout",
+        "resolved_spec": "auth-session",
+        "detail": "文件头写 OpenSpec: revoke-session-on-logout（变更单），实际守护规格 auth-session"
+      },
+      {
+        "title": "test_register_uniqueness.py",
+        "change": "fix-register-duplicate-race",
+        "resolved_spec": "fix-register-duplicate-race",
+        "detail": "文件头写 OpenSpec: fix-register-duplicate-race（变更单），实际守护规格 fix-register-duplicate-race"
+      }
+    ],
+    "test_files": 20,
+    "test_cases": 112,
+    "unanchored_test_cases": 83
+  }
+}

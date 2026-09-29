@@ -25,6 +25,12 @@ export interface TaskStepAttempt {
   /** 点击后截图的可展示 URL（无落盘路径为空串） */
   executorScreenshotUrl?: string
   verifierResult: string
+  /** 检测到日志关键词的时间戳（新验收契约；未检测到 / 旧记录为空串） */
+  verifierLogTimer?: string
+  /** 本轮检查的日志关键词（新验收契约；平台按工具调用自动填） */
+  verifierLogInfo?: string
+  /** 验证截图的相对路径文本（新验收契约；旧记录为空串） */
+  verifierScreenshotPath?: string
   actual: string
   /** 验收证据截图 URL（媒体相对路径经共享登记处拼接），无图为空 */
   screenshotUrl: string
@@ -200,6 +206,9 @@ function toAttempt(entry: TaskRunLogEntry): TaskStepAttempt {
     executorScreenshotPath: execShot,
     executorScreenshotUrl: attemptScreenshotUrl(execShot),
     verifierResult: normalizeResult(ver.result),
+    verifierLogTimer: String(ver.logAssertionTimer || "").trim(),
+    verifierLogInfo: String(ver.logAssertionInfo || "").trim(),
+    verifierScreenshotPath: String(ver.screenshot || "").trim(),
     actual: ver.actual || ver.summary || "",
     screenshotUrl: attemptScreenshotUrl(entry.screenshot),
     logEvidence: entry.log_evidence,

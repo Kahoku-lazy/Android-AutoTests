@@ -21,19 +21,19 @@ from engines.ai.base import LogEvidenceProvider
 
 from .config import DeviceExecutionConfig
 from .evidence import save_verify_screenshot
-from .logcheck import build_executor_log_check, extract_action_time
+from .logcheck import (
+    build_executor_log_check,
+    checked_log_keywords,
+    detected_log_timestamp,
+    extract_action_time,
+)
+from .logcheck import (
+    render_log_evidence as _render_log_evidence,
+)
 from .model import ExecutorRole, PlannerRole, RoleResult, VerifierRole
 from .usage import UsageAccumulator
 
 logger = logging.getLogger("ai_assistant.workflow")
-
-# 日志证据等级（与 engines.device.logbus 的常量口径一致，此处只做展示）
-_GRADE_LABEL = {
-    "strong": "强证据",
-    "periodic": "疑似周期",
-    "before_action": "动作前",
-    "out_of_window": "超窗",
-}
 
 
 # ── 数据契约（节点间交互的数据类型，模型自由文本 → 强类型）──
@@ -88,13 +88,29 @@ class ExecutionOutput(BaseModel):
 
 
 class VerificationOutput(BaseModel):
-    """verifier 输出：验收结论（断言 vs 实际 + 是否通过）。"""
+    """verifier 输出：验收结论（PASS/FAIL + 两条时间坐标 + 关键词 + 验证截图 + 实际结果）。
+
+    契约只有这六个字段（模型 MUST NOT 再输出 action / assert）：`result` 为 PASS/FAIL；
+    `click_timer` / `logAssertionTimer` 由模型照抄平台下发的输入（执行侧点击时刻、日志检查
+    工具返回的命中时间戳）；`logAssertionInfo` 由平台按检查工具的调用自动填；`screenshot`
+    抄本次截图工具返回的路径；取不到一律留空串。
+    """
 
     model_config = ConfigDict(populate_by_name=True)
-    action: str = Field(description="被验证的操作")
-    assertion: str = Field(alias="assert", description="断言（期望结果）")
-    actual: str = Field(description="实际结果（截图里真实看到了什么）")
-    result: bool = Field(description="最终结论：true=通过 false=未通过")
+    result: Literal["PASS", "FAIL"] = Field(description="验收结论：PASS=符合断言 FAIL=未达成")
+    click_timer: str = Field(default="", description="点击前的时间戳（本步无点击时为空串）")
+    log_assertion_timer: str = Field(
+        default="",
+        alias="logAssertionTimer",
+        description="检测到日志关键词的时间戳（未检测到 / 未采集日志时为空串）",
+    )
+    screenshot: str = Field(default="", description="验证截图的相对路径（未取到路径时为空串）")
+    log_assertion_info: str = Field(
+        default="",
+        alias="logAssertionInfo",
+        description="本轮检查的日志关键词（平台按检查工具调用自动填；未检查时为空串）",
+    )
+    actual: str = Field(default="", description="实际结果（截图里真实看到了什么）")
 
 
 class WorkflowResult(BaseModel):
@@ -322,58 +338,22 @@ def _first_action_time(result: RoleResult | None, skip_results: int = 0) -> str:
     return stamps[0] if stamps else ""
 
 
-def _render_log_evidence(evidence: dict | None, action_time: str = "") -> str:
-    """把日志证据块渲染成给验收模型看的文本（无证据时明确标注，便于降级判定）。"""
-    if not evidence:
-        return "日志证据：无（本次未采集到设备日志证据，请只依据截图判断）。"
-    source = str(evidence.get("channel") or "").strip()
-    origin = f"来源 {source}，" if source and source != "*" else ""
-    stamps = [str(item) for item in (evidence.get("action_times") or []) if item]
-    if not stamps and evidence.get("action_time"):
-        stamps = [str(evidence["action_time"])]
-    action_text = "、".join(stamps) if stamps else (action_time or "-")
-    lines: list[str] = [
-        "设备日志证据（北京时间，基准=本步动作发出时刻，取证阈值 "
-        f"{evidence.get('threshold_seconds')}s，动作前基线 {evidence.get('baseline_seconds')}s）：",
-        f"- {origin}本步动作发出时间（{len(stamps)} 次）：{action_text}",
-        f"- 窗口内日志行数：{evidence.get('window_line_count')}，结论：{evidence.get('conclusion')}",
-    ]
-    hits = evidence.get("hits") or []
-    if hits:
-        lines.append("- 窗口内命中：")
-        for hit in hits:
-            features = "、".join(
-                f"#{item.get('id')} {item.get('module')}-{item.get('feature')}"
-                for item in hit.get("features") or []
-            )
-            grade = _GRADE_LABEL.get(str(hit.get("grade")), str(hit.get("grade")))
-            stamps = "、".join(hit.get("timestamps") or [])
-            lines.append(
-                f"  · [{grade}] 关键词 {hit.get('keyword')} → 功能点 {features}"
-                f"（出现 {hit.get('count')} 次；{stamps}）"
-            )
-            if hit.get("baseline_occurrences"):
-                before = "、".join(
-                    f"{item.get('timestamp')} {item.get('text')}"
-                    for item in hit["baseline_occurrences"]
-                )
-                lines.append(f"    动作前已出现过同名日志：{before}")
-    else:
-        lines.append("- 窗口内无关键词命中。")
-    if evidence.get("out_of_window"):
-        out = "、".join(
-            f"{item.get('keyword')}@{item.get('timestamp')}(+{item.get('delta_seconds')}s)"
-            for item in evidence["out_of_window"]
-        )
-        lines.append(f"- 超出取证阈值、不作为本次证据：{out}")
-    raw_lines = evidence.get("lines") or []
-    if raw_lines:
-        lines.append("- 窗口内原始日志：")
-        lines.extend(f"  | {item.get('timestamp')} {item.get('text')}" for item in raw_lines)
-    lines.append(
-        "采信口径（从严）：疑似周期证据不得单独作为通过依据；只有截图证据同时成立才可判通过。"
-    )
-    return "\n".join(lines)
+def _fill_log_assertion(verdict: VerificationOutput, result: RoleResult) -> VerificationOutput:
+    """平台按日志检查工具的实际调用回填验收结论的两个日志字段。
+
+    - `logAssertionInfo`：本轮查过的关键词（按调用顺序去重、以「、」连接）——模型没写会填、
+      写错以工具调用为准（工具调用是事实，模型自述可能漏抄）。
+    - `logAssertionTimer`：模型留空而工具**确实检测到**时，用最早的命中时间戳补上；
+      模型已写值 MUST NOT 覆盖，工具没检测到就保持空串（不编造）。
+    """
+    keywords = checked_log_keywords(result)
+    if keywords:
+        verdict.log_assertion_info = "、".join(keywords)
+    if not verdict.log_assertion_timer.strip():
+        stamp = detected_log_timestamp(result)
+        if stamp:
+            verdict.log_assertion_timer = stamp
+    return verdict
 
 
 def _exec_evidence_text(exec_out: ExecutionOutput) -> str:
@@ -452,6 +432,7 @@ class DeviceExecutionWorkflow:
         task_id: int = 0,
         media_root: str = "",
         log_evidence: LogEvidenceProvider | None = None,
+        log_keywords: str = "",
     ):
         """Args:
         planner/executor/verifier: 三个角色对象（由 build_device_models 创建）。
@@ -471,6 +452,7 @@ class DeviceExecutionWorkflow:
         self._task_id = task_id
         self._media_root = media_root
         self._log_evidence = log_evidence
+        self._log_keywords = log_keywords
         self._usage = UsageAccumulator()
 
     # ── 设备日志证据（动作前开窗 → 动作后读窗）──
@@ -646,15 +628,21 @@ class DeviceExecutionWorkflow:
             _exec_evidence_text(exec_out),
             screenshot,
             _render_log_evidence(log_evidence),
+            self._log_keywords,
         )
         out = self._ingest(result)
         verdict = _coerce(VerificationOutput, out) or VerificationOutput(
-            action=step.action,
-            assertion=step.assertion,
+            result="FAIL",
             actual="验收模型输出无效",
-            result=False,
         )
-        logger.info("【verifier 输出】result=%s actual=%s", verdict.result, verdict.actual)
+        verdict = _fill_log_assertion(verdict, result)
+        logger.info(
+            "【verifier 输出】result=%s 关键词=%s 日志时间=%s actual=%s",
+            verdict.result,
+            verdict.log_assertion_info or "-",
+            verdict.log_assertion_timer or "-",
+            verdict.actual,
+        )
         return verdict, result.screenshot, result
 
     # ── 进度 / 结果辅助 ──
@@ -839,13 +827,13 @@ class DeviceExecutionWorkflow:
                 )
             )
             self._report(f"步骤 {idx}/{total} 验收 {verdict.result}", plan, log, done)
-            if verdict.result is True:
-                logger.info("【② 步骤 %d】验收 true → 勾选完成，进入下一步", idx)
+            if verdict.result == "PASS":
+                logger.info("【② 步骤 %d】验收 PASS → 勾选完成，进入下一步", idx)
                 return verdict
-            # 验收失败 → 把 actual 回灌给 executor 重试本步
+            # 验收未通过 → 把 actual 回灌给 executor 重试本步
             retry_hint = verdict.actual
             logger.warning(
-                "【② 步骤 %d 重试 %d】验收 false → 回灌 actual=%s 重试该步",
+                "【② 步骤 %d 重试 %d】验收 FAIL → 回灌 actual=%s 重试该步",
                 idx,
                 loop + 1,
                 verdict.actual,
@@ -889,7 +877,7 @@ class DeviceExecutionWorkflow:
             before = self._usage.as_dict()
             verdict = await self._run_step(step, idx, len(plan.steps), plan, log, done)
             self._log_step_usage(idx, len(plan.steps), before)
-            if verdict is None or verdict.result is not True:
+            if verdict is None or verdict.result != "PASS":
                 logger.error("【② 步骤 %d】未通过 → 任务失败", idx)
                 self._log_final_usage()
                 return self._fail(

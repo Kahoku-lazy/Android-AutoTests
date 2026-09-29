@@ -1,15 +1,21 @@
-"""灰盒·单元测试 — 调试台的点击证据与 5 秒日志检查（spec: ai-model-debug）。
+"""灰盒·单元测试 — 调试台的点击证据、5 秒日志检查与验收角色的日志证据（spec: ai-model-debug）。
 
-断言四件事：
+断言六件事：
 1. 本轮有点击 → 响应带 `log_check`（点击前时间点 + 点击后截图路径 + 同一份窗口证据）；
 2. 开窗发生在把内容交给角色**之前**，读窗用同一个 window_id 与各点击时刻；
 3. 本轮没有点击 → 不产出该键（不渲染空壳）；
-4. 没有端口在监听（提供者为 None）→ 点击证据照旧、日志为空，且不打开任何端口。
+4. 没有端口在监听（提供者为 None）→ 点击证据照旧、日志为空，且不打开任何端口；
+5. **验收角色**的输入由平台附上「设备日志证据 · 调试回溯」（基准取消息里第一个毫秒时间戳；
+   没有则退回最近窗并标明来源），响应带 `log_evidence` 与 `log_basis`；
+6. 执行角色不受影响，且端口监听关着时验收对话如实说明没有日志、不打开端口。
 """
 
 from __future__ import annotations
 
+import json
 import types
+
+from pathlib import Path
 
 import pytest
 
@@ -17,6 +23,7 @@ from django.contrib.auth import get_user_model
 
 from apps.ai_assistant import model_debug
 from apps.ai_assistant.api import encrypt_key
+from apps.ai_assistant.log_history import NOTE_NO_LISTEN
 from apps.ai_assistant.models import AIAgent
 from engines.ai.agentscope.config import ModelConfig
 from engines.ai.agentscope.model import RoleResult
@@ -93,6 +100,21 @@ class _FakeRole:
         )
 
 
+class _PromptRole:
+    """桩角色：记录收到的输入文本（验收角色要断言平台有没有喂日志证据）。"""
+
+    def __init__(self, prompts: list[str], order: list[str]):
+        self._prompts = prompts
+        self._order = order
+
+    async def ask(self, content: str) -> RoleResult:
+        self._order.append("ask")
+        self._prompts.append(str(content))
+        return RoleResult(
+            role="verifier", model_name="stub-model", output='{"result": "PASS"}', tool_usage=[]
+        )
+
+
 def _headers(user) -> dict:
     return {"HTTP_AUTHORIZATION": f"Bearer {create_access_token(str(user.id))}"}
 
@@ -121,7 +143,9 @@ def agent(admin):
     )
 
 
-def _patch_layer(monkeypatch, order: list[str], rows: list[dict]) -> None:
+def _patch_layer(
+    monkeypatch, order: list[str], rows: list[dict], prompts: list[str] | None = None
+) -> None:
     cfg = ModelConfig(provider="deepseek", model_name="stub", api_key="k", base_url="http://stub")
     monkeypatch.setattr(
         model_debug,
@@ -133,11 +157,12 @@ def _patch_layer(monkeypatch, order: list[str], rows: list[dict]) -> None:
             None,
         ),
     )
-    monkeypatch.setattr(
-        model_debug,
-        "build_debug_role",
-        lambda agent, role, model_cfg, user_id="": _FakeRole(rows, order),
+    role_factory = (
+        (lambda agent, role, model_cfg, user_id="": _PromptRole(prompts, order))
+        if prompts is not None
+        else (lambda agent, role, model_cfg, user_id="": _FakeRole(rows, order))
     )
+    monkeypatch.setattr(model_debug, "build_debug_role", role_factory)
     monkeypatch.setattr(
         model_debug,
         "available_device_options",
@@ -216,3 +241,157 @@ def test_chat_endpoint_passes_log_check_through(client, admin, agent, monkeypatc
     data = resp.json()["data"]
     assert data["log_check"]["clicks"][0]["action_time"] == CLICK_TIME
     assert data["log_check"]["log"]["conclusion"] == "hit"
+
+
+# ── 验收角色的「设备日志证据 · 调试回溯」──
+
+BASIS = "2026-09-29 11:47:04.326"
+
+
+@pytest.fixture
+def log_env(tmp_path: Path, settings):
+    """临时日志目录 + 关键词表 + 单个端口来源（H6810/7005）。"""
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+    (log_dir / "H6810_7005.log").write_text(
+        "2026-09-29 11:47:04.687 [tcp] [light_switch][I]: switch_on\n", encoding="utf-8"
+    )
+    keyword_file = tmp_path / "keywords.json"
+    keyword_file.write_text(
+        json.dumps(
+            {
+                "keywords": {
+                    "switch_on": [{"id": 0, "module": "设备开关", "feature": "打开设备成功"}]
+                }
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    settings.DEVICE_LOG_LOG_DIR = str(log_dir)
+    settings.DEVICE_LOG_KEYWORD_FILE = str(keyword_file)
+    settings.DEVICE_LOG_SOURCES = json.dumps({"7005": {"sku": "H6810"}})
+    settings.DEVICE_LOG_WINDOW_SECONDS = 5.0
+    settings.DEVICE_LOG_BASELINE_SECONDS = 30.0
+    return log_dir
+
+
+def test_verifier_chat_input_carries_log_evidence(agent, monkeypatch, log_env):
+    """验收对话：平台按消息里的时刻取日志证据喂进模型输入，并回传证据与基准。"""
+    order: list[str] = []
+    prompts: list[str] = []
+    _patch_layer(monkeypatch, order, [], prompts=prompts)
+    monkeypatch.setattr(model_debug, "ensure_log_evidence", lambda: None)
+
+    payload = model_debug.run_role_chat(
+        agent, "verifier", f"验证：设备已打开\n点击时刻 {BASIS}", serial="DEV-1"
+    )
+
+    prompt = prompts[0]
+    assert "【设备日志证据 · 调试回溯】" in prompt
+    assert BASIS in prompt
+    assert "switch_on" in prompt
+    assert "logAssertionTimer" in prompt  # 取值指引也在输入里
+    assert payload["log_basis"]["from_message"] is True
+    assert payload["log_basis"]["basis_time"] == BASIS
+    assert payload["log_basis"]["files"][0].endswith("H6810_7005.log")
+    assert payload["log_evidence"]["hits"][0]["keyword"] == "switch_on"
+    # 该角色自己没有日志工具，因此不产生点击证据块
+    assert "log_check" not in payload
+
+
+def test_verifier_chat_without_time_falls_back_to_recent_window(agent, monkeypatch, log_env):
+    """消息里没有时刻：退回最近一个取证窗，并标明基准不是来自消息。"""
+    order: list[str] = []
+    prompts: list[str] = []
+    _patch_layer(monkeypatch, order, [], prompts=prompts)
+    monkeypatch.setattr(model_debug, "ensure_log_evidence", lambda: None)
+
+    payload = model_debug.run_role_chat(agent, "verifier", "验证：设备已打开", serial="DEV-1")
+
+    assert payload["log_basis"]["from_message"] is False
+    assert payload["log_basis"]["basis_time"]
+    assert "来源：最近一个取证窗" in prompts[0]
+
+
+def test_verifier_chat_without_listening_port_says_so(agent, monkeypatch, log_env):
+    """监听开关关着：不取证据、不打开端口，输入里如实说明没有日志。"""
+    from apps.ai_assistant import api
+
+    order: list[str] = []
+    prompts: list[str] = []
+    _patch_layer(monkeypatch, order, [], prompts=prompts)
+    monkeypatch.setattr(model_debug, "ensure_log_evidence", lambda: None)
+    monkeypatch.setattr(api, "get_log_port_enabled_map", lambda: {7005: False})
+
+    payload = model_debug.run_role_chat(agent, "verifier", f"验证 {BASIS}", serial="DEV-1")
+
+    assert payload["log_basis"]["note"] == NOTE_NO_LISTEN
+    assert "log_evidence" not in payload
+    assert NOTE_NO_LISTEN in prompts[0]
+
+
+def test_executor_chat_has_no_log_evidence_block(agent, monkeypatch, log_env):
+    """执行角色不受影响：输入里没有该证据块，响应也没有这两个键。"""
+    order: list[str] = []
+    prompts: list[str] = []
+    _patch_layer(monkeypatch, order, [], prompts=prompts)
+    monkeypatch.setattr(model_debug, "ensure_log_evidence", lambda: None)
+
+    payload = model_debug.run_role_chat(agent, "executor", f"点一下开关 {BASIS}", serial="DEV-1")
+
+    assert "【设备日志证据 · 调试回溯】" not in prompts[0]
+    assert "log_evidence" not in payload
+    assert "log_basis" not in payload
+
+
+class _ToolRole:
+    """桩角色：ask() 时返回带指定工具轨迹的结果（本轮检查过哪些关键词）。"""
+
+    def __init__(self, rows: list[dict], order: list[str]):
+        self._rows = rows
+        self._order = order
+
+    async def ask(self, content: str) -> RoleResult:
+        self._order.append("ask")
+        return RoleResult(
+            role="verifier",
+            model_name="stub-model",
+            output='{"result": "PASS"}',
+            tool_usage=self._rows,
+        )
+
+
+def test_verifier_chat_input_carries_keyword_catalog_and_rule(agent, monkeypatch, log_env):
+    """验收对话的输入带当前关键词表与「两条件」口径（模型据此报关键词、判 PASS/FAIL）。"""
+    order: list[str] = []
+    prompts: list[str] = []
+    _patch_layer(monkeypatch, order, [], prompts=prompts)
+    monkeypatch.setattr(model_debug, "ensure_log_evidence", lambda: None)
+
+    model_debug.run_role_chat(agent, "verifier", f"验证 {BASIS}", serial="DEV-1")
+
+    prompt = prompts[0]
+    assert "check_device_log" in prompt
+    assert "switch_on" in prompt  # 关键词表里的词（取自运行时索引）
+    assert "日志检测到 + 截图确认两个条件都满足才可判 PASS" in prompt
+
+
+def test_verifier_chat_payload_carries_checked_keywords(agent, monkeypatch, log_env):
+    """响应带本轮的 log_assertion_info（平台按模型对检查工具的调用自动填）。"""
+    order: list[str] = []
+    rows = [
+        {"type": "call", "name": "check_device_log", "input": {"keyword": "switch_on"}},
+        {"type": "result", "name": "check_device_log", "output": '{"detected": true}'},
+    ]
+    _patch_layer(monkeypatch, order, [], prompts=[])
+    monkeypatch.setattr(model_debug, "ensure_log_evidence", lambda: None)
+    monkeypatch.setattr(
+        model_debug,
+        "build_debug_role",
+        lambda agent, role, model_cfg, user_id="": _ToolRole(rows, order),
+    )
+
+    payload = model_debug.run_role_chat(agent, "verifier", f"验证 {BASIS}", serial="DEV-1")
+
+    assert payload["log_assertion_info"] == "switch_on"

@@ -146,11 +146,22 @@ export interface TaskRunExecutorOut {
 }
 
 export interface TaskRunVerifierOut {
-  action?: string
-  assert?: string
-  actual?: string
-  /** 新协议为 boolean；旧协议为 pass/fail 字符串 */
+  /** 验收结论：新契约为 PASS/FAIL 字符串，存量旧记录为 boolean */
   result?: boolean | string
+  /** 点击前的时间戳（新验收契约；存量旧记录没有该键） */
+  click_timer?: string
+  /** 检测到日志关键词的时间戳（新验收契约；未检测到为空串） */
+  logAssertionTimer?: string
+  /** 本轮检查的日志关键词（新验收契约；平台按检查工具调用自动填） */
+  logAssertionInfo?: string
+  /** 验证截图的相对路径（新验收契约；未取到路径为空串） */
+  screenshot?: string
+  /** 实际结果说明（截图里真实看到了什么） */
+  actual?: string
+  /** 存量旧记录：被验证的操作 */
+  action?: string
+  /** 存量旧记录：断言 */
+  assert?: string
   summary?: string
   completed?: string[]
   failed?: TaskFailedItem[]
@@ -214,6 +225,18 @@ export interface TaskLogEvidence {
   }>
   /** 窗口原始日志（服务端已按「同毫秒合并 + 最新在上」排好，前端 MUST NOT 再排序） */
   lines?: TaskLogLine[]
+}
+
+/** 模型调试：本轮日志证据的取证基准（平台从消息里识别，或退回「最近一个取证窗」） */
+export interface ModelDebugLogBasis {
+  /** 实际使用的取证基准时刻（北京时间毫秒） */
+  basis_time?: string
+  /** true = 基准取自消息里的时间戳；false = 退回最近一个取证窗 */
+  from_message?: boolean
+  /** 实际读取的日志文件路径文本 */
+  files?: string[]
+  /** 取不到窗口内日志时的如实原因；取到则为空串 */
+  note?: string
 }
 
 /** 执行侧点击证据：一次副作用点击（点击前时间点 + 点击后截图路径，未截图时为空串） */

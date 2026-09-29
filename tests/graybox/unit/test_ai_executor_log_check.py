@@ -132,7 +132,7 @@ def _step_entry(block: dict | None) -> dict:
         1,
         ExecutionOutput(result="PASS", click_timer=CLICK_1, screenshot=SHOT_1),
         VerificationOutput(
-            action="点击开关", assertion="设备上报 switch_off", actual="日志命中", result=True
+            result="PASS", click_timer=CLICK_1, screenshot=SHOT_1, actual="日志命中"
         ),
         executor_log_check=block,
     )

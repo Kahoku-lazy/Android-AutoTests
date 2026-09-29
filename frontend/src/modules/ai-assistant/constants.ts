@@ -1,5 +1,7 @@
 /** Shared constants for the AI Assistant module. */
 
+import type { ModelDebugLogBasis } from "@/shared/types/ai"
+
 // ── Avatar / Image ──
 
 export const DATA_IMAGE_PREFIX = "data:image/"
@@ -174,6 +176,23 @@ export const STEP_LOG_CHECK_NO_SHOT_TEXT = "该次点击后未截图"
 
 /** 任务详情：执行结果段里本步没有截图时如实标注（新执行契约的 screenshot 为空串） */
 export const STEP_EXEC_NO_SHOT_TEXT = "该步未截图"
+
+/** 模型调试：验收对话的日志证据区块（调试回溯，不改变生产的 5 秒取证窗口径） */
+export const MODEL_DEBUG_LOG_BASIS_LABEL = "日志证据 · 调试回溯"
+
+/** 本轮检查的日志关键词（平台按检查工具调用自动填） */
+export const MODEL_DEBUG_LOG_ASSERTION_LABEL = "本轮检查的日志关键词"
+
+export const MODEL_DEBUG_LOG_BASIS_NOTE =
+  "平台按取证基准从日志文件回溯取出，判定口径与任务链路一致；这是调试回溯，不是生产步骤的取证窗"
+
+/** 调试日志证据的基准说明（基准时刻 + 来源 + 读取的文件 + 取不到时的原因） */
+export function modelDebugLogBasisText(basis: ModelDebugLogBasis): string {
+  const origin = basis.from_message ? "消息里的时刻" : "最近一个取证窗"
+  const files = basis.files?.length ? ` · 读取 ${basis.files.length} 个日志文件` : ""
+  const note = basis.note ? ` · ${basis.note}` : ""
+  return `取证基准 ${basis.basis_time || "—"}（来源：${origin}）${files}${note} · ${MODEL_DEBUG_LOG_BASIS_NOTE}`
+}
 
 /** 工具箱「日志关键词」来源（只读表格）文案 */
 export const LOG_KEYWORD_SEARCH_PLACEHOLDER = "搜索关键词 / 功能模块 / 功能点…"

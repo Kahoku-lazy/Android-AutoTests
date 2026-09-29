@@ -10,6 +10,8 @@ from __future__ import annotations
 from engines.ai.base import ModelSpec, TaskRequest, ToolSpec
 
 from . import api
+from .log_evidence import ensure_log_evidence
+from .log_history import keyword_catalog_text
 from .provider_registry import VALID_PROVIDERS, get_provider_config
 from .skills_catalog import list_enabled_skill_dirs
 from .tools import AUTO_ALLOW_TOOLS, TOOLS
@@ -126,4 +128,8 @@ def build_request(task, agent) -> TaskRequest:
         media_root=str(getattr(settings, "MEDIA_ROOT", "") or ""),
         skill_dirs=list_enabled_skill_dirs() if agent.enable_skills else [],
         system_prompts=_system_prompts(agent),
+        # 设备日志证据：按需启动常驻采集并注入；开关关闭 / 启动失败时为 None（验收降级为只看截图）
+        log_evidence=ensure_log_evidence(),
+        # 当前关键词表（关键词 → 功能点）：验收模型据此报出要检查的关键词
+        log_keywords=keyword_catalog_text(),
     )

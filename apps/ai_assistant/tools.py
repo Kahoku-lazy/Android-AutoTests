@@ -9,8 +9,14 @@ from __future__ import annotations
 
 import inspect
 import json
+import logging
+import re
+import time
 
 from contextlib import contextmanager
+from datetime import datetime, timezone
+
+logger = logging.getLogger("ai_assistant")
 
 # ═══════════════════════════════════════════════════════════════════
 # 结果序列化辅助
@@ -36,6 +42,25 @@ def _jsonable(obj) -> str:
     if isinstance(obj, (dict, str, int, float, bool)):
         return obj if isinstance(obj, str) else json.dumps(obj, ensure_ascii=False, default=str)
     return json.dumps(obj, ensure_ascii=False, default=str)
+
+
+def _action_stamp() -> str:
+    """动作发出时刻（北京时间毫秒）—— 在真正调设备之前取，供验收前筛选日志证据。"""
+    from engines.device.logbus import now_stamp
+
+    return now_stamp()
+
+
+def _with_action_time(payload: str, action_time: str) -> str:
+    """把动作发出时刻并进工具结果的 JSON（结果不是 JSON 对象时原样返回）。"""
+    try:
+        data = json.loads(payload)
+    except (TypeError, ValueError):
+        return payload
+    if not isinstance(data, dict):
+        return payload
+    data["action_time"] = action_time
+    return json.dumps(data, ensure_ascii=False, default=str)
 
 
 @contextmanager
@@ -109,6 +134,7 @@ def app_control(
         action: start_app 启动 / stop_app 停止
         package: 目标 App 包名
     """
+    action_time = _action_stamp()
     with _device_engine(serial) as engine:
         if action == "start_app":
             if not package:
@@ -120,7 +146,7 @@ def app_control(
             engine.stop_app(package)
         else:
             raise ValueError(f"不支持的 App 动作: {action}")
-        return _jsonable(engine.app_current())
+        return _with_action_time(_jsonable(engine.app_current()), action_time)
 
 
 def tap_screen(
@@ -137,6 +163,7 @@ def tap_screen(
         x: 坐标 x（像素）
         y: 坐标 y（像素）
     """
+    action_time = _action_stamp()
     with _device_engine(serial) as engine:
         if mode == "click":
             if not x or not y:
@@ -148,7 +175,7 @@ def tap_screen(
             engine.long_click(x, y)
         else:
             raise ValueError(f"不支持的点击方式: {mode}")
-        return _jsonable(engine.app_current())
+        return _with_action_time(_jsonable(engine.app_current()), action_time)
 
 
 def swipe_screen(
@@ -163,9 +190,10 @@ def swipe_screen(
         direction: 滑动方向 up/down/left/right，默认 up
         distance: 滑动距离，默认 500
     """
+    action_time = _action_stamp()
     with _device_engine(serial) as engine:
         engine.swipe_direction(direction or "up", int(distance or 500))
-        return _jsonable(engine.app_current())
+        return _with_action_time(_jsonable(engine.app_current()), action_time)
 
 
 def press_key(serial: str, user_id: str = "") -> str:
@@ -173,9 +201,10 @@ def press_key(serial: str, user_id: str = "") -> str:
     Args:
         serial: 设备序列号（先 list_devices 查询）
     """
+    action_time = _action_stamp()
     with _device_engine(serial) as engine:
         engine.press_key("back")
-        return _jsonable(engine.app_current())
+        return _with_action_time(_jsonable(engine.app_current()), action_time)
 
 
 def input_text(
@@ -190,9 +219,10 @@ def input_text(
         text: 要输入的文本
         clear_first: 输入前是否清空输入框，默认 True
     """
+    action_time = _action_stamp()
     with _device_engine(serial) as engine:
         engine.input_text(text or "", clear_first=bool(clear_first))
-        return _jsonable(engine.app_current())
+        return _with_action_time(_jsonable(engine.app_current()), action_time)
 
 
 def current_app(serial: str, user_id: str = "") -> str:
@@ -218,9 +248,10 @@ def click_ratio(serial: str, nx: float, ny: float, user_id: str = "") -> str:
     use_device(serial)
     dev = Device.objects.get(serial=serial)
     engine = open_engine(serial, dev.connection_addr or serial)
+    action_time = _action_stamp()
     try:
         engine.click_ratio(nx, ny)
-        return _jsonable(engine.app_current())
+        return _with_action_time(_jsonable(engine.app_current()), action_time)
     finally:
         close_engine(engine)
 
@@ -248,9 +279,10 @@ def drag_ratio(
     use_device(serial)
     dev = Device.objects.get(serial=serial)
     engine = open_engine(serial, dev.connection_addr or serial)
+    action_time = _action_stamp()
     try:
         engine.drag_ratio(nx1, ny1, nx2, ny2)
-        return _jsonable(engine.app_current())
+        return _with_action_time(_jsonable(engine.app_current()), action_time)
     finally:
         close_engine(engine)
 
@@ -284,11 +316,17 @@ def xpath_action(
         if action == "get_text":
             return _jsonable({"text": engine.get_text(xpath)})
         if action == "click":
+            action_time = _action_stamp()
             ok = engine.click_xpath(xpath, index=index)
-            return _jsonable({"clicked": ok, "current": engine.app_current()})
+            return _with_action_time(
+                _jsonable({"clicked": ok, "current": engine.app_current()}), action_time
+            )
         if action == "long_click":
+            action_time = _action_stamp()
             ok = engine.long_click_xpath(xpath, index=index)
-            return _jsonable({"clicked": ok, "current": engine.app_current()})
+            return _with_action_time(
+                _jsonable({"clicked": ok, "current": engine.app_current()}), action_time
+            )
         raise ValueError(f"不支持的 xpath 动作: {action}")
     finally:
         close_engine(engine)
@@ -395,6 +433,305 @@ def ocr_page(serial: str, texts: str = "", user_id: str = "") -> str:
 
 
 # ═══════════════════════════════════════════════════════════════════
+# 设备日志（只读查询）
+# ═══════════════════════════════════════════════════════════════════
+
+LOG_SPAN_DEFAULT_SECONDS = 30.0
+LOG_SPAN_MAX_SECONDS = 300.0
+LOG_AT_FORMATS = ("%Y-%m-%d %H:%M:%S.%f", "%H:%M:%S.%f")
+
+
+def _parse_log_at(value: str):
+    """解析查询时间点：支持完整时间与只给时刻（按当天北京时间）。非法值抛可读错误。"""
+    from engines.device.logbus import BEIJING_TZ
+
+    text = (value or "").strip()
+    for fmt in LOG_AT_FORMATS:
+        try:
+            moment = datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+        if fmt.startswith("%H"):
+            today = datetime.now(BEIJING_TZ).date()
+            moment = datetime.combine(today, moment.time())
+        return moment.replace(tzinfo=BEIJING_TZ)
+
+    raise ValueError(
+        f"时间点无法解析: {value!r}；期望 `YYYY-MM-DD HH:MM:SS.mmm` 或 `HH:MM:SS.mmm`（北京时间）"
+    )
+
+
+def _clamp_log_span(seconds: float) -> float:
+    span = float(seconds or 0) or LOG_SPAN_DEFAULT_SECONDS
+    return max(1.0, min(span, LOG_SPAN_MAX_SECONDS))
+
+
+def read_device_log(
+    at: str = "",
+    seconds: float = 0,
+    port: int = 0,
+    keyword: str = "",
+    user_id: str = "",
+) -> str:
+    """查询平台已采集的设备日志（只读，不连设备、不改设备状态）。
+    排查「设备到底响应了没有」「某个功能点打印了没有」时用；不要每一步都调用。
+    取数是**内存缓冲 + 已落盘的日志文件**：缓冲覆盖不到的更早时段会从日志文件回溯，
+    因此查一个几分钟前的时刻同样查得到（不再受缓冲保留时长限制）。
+    同一时间戳的日志会合并成一条（text 内保留换行），且**最新的时间排在最上面**。
+
+    Args:
+        at: 时间点（北京时间）。可写 `2026-09-28 13:05:37.500`，也可只写 `13:05:37.500`（按今天）。
+            给了就返回**该时刻之后**一个跨度的日志；不传则返回**最近**一个跨度
+        seconds: 跨度秒数，默认 30，最大 300
+        port: 日志来源端口，默认平台配置的端口（现场 7005）；传未配置的端口不报错，返回「端口 X 未配置为日志来源」的结论
+        keyword: 可选，只看包含该关键词的日志行（忽略大小写），并还原命中的功能模块 / 功能点
+    """
+    from engines.device.logbus import LogSourceUnknown, get_log_bus, merge_lines_by_timestamp
+
+    from . import log_port_service
+
+    bus = get_log_bus()
+    if bus is None:
+        raise ValueError("设备日志采集未启动：平台未开启日志采集（DEVICE_LOG_ENABLED）或无可用来源")
+
+    span = _clamp_log_span(seconds)
+    if at:
+        start = _parse_log_at(at)
+        start_epoch = start.timestamp()
+        end_epoch = start_epoch + span
+        start_stamp, end_stamp = _log_stamp(start_epoch), _log_stamp(end_epoch)
+    else:
+        end_epoch = time.time()
+        start_epoch = end_epoch - span
+        start_stamp, end_stamp = _log_stamp(start_epoch), _log_stamp(end_epoch)
+
+    wanted = (keyword or "").strip()
+    query = {
+        "port": int(port) if port else 0,
+        "channel": "",
+        "from": start_stamp,
+        "to": end_stamp,
+        "span_seconds": span,
+        "keyword": wanted,
+    }
+
+    # 已登记但开关关闭的端口：给可读结论（不报错、不去连端口、也不打开监听）
+    disabled_port = log_port_service.disabled_port_note(int(port) if port else 0)
+    if disabled_port:
+        query["port"] = int(port)
+        return json.dumps(
+            {
+                "query": query,
+                "line_count": 0,
+                "conclusion": "port_disabled",
+                "note": disabled_port,
+                "lines": [],
+                "keyword_hits": [],
+            },
+            ensure_ascii=False,
+        )
+
+    try:
+        found = bus.read_range(
+            start_epoch=start_epoch,
+            end_epoch=end_epoch,
+            port=int(port) if port else None,
+        )
+    except LogSourceUnknown as exc:
+        # 未配置的端口不是调用错误：返回可读结论（HTTP 200），由调用方/AI 自行改端口
+        return json.dumps(
+            {
+                "query": query,
+                "line_count": 0,
+                "conclusion": "port_not_configured",
+                "note": str(exc),
+                "lines": [],
+                "keyword_hits": [],
+            },
+            ensure_ascii=False,
+        )
+
+    rows = found["lines"]
+    query["port"] = int(found["port"])
+    query["channel"] = found["channel"]
+    hits: list[dict] = []
+    if wanted:
+        matched = [line for line in rows if wanted.lower() in line.text.lower()]
+        for line in matched:
+            for name, features in bus.keywords.match(line.text):
+                hits.append({"keyword": name, "timestamp": line.timestamp, "features": features})
+        rows = matched
+
+    if not rows:
+        conclusion = "no_keyword_hit" if wanted else "no_log"
+        note = (
+            f"该时间范围内没有包含 {wanted!r} 的日志"
+            if wanted
+            else "该时间范围内无日志（已查内存缓冲与已落盘的日志文件）"
+        )
+    else:
+        conclusion = "ok"
+        note = ""
+
+    raw_line_count = len(rows)
+    merged = merge_lines_by_timestamp(rows)
+    payload = {
+        "query": query,
+        "line_count": len(merged),
+        "raw_line_count": raw_line_count,
+        # 取数来源：缓冲 / 已落盘文件各取到多少行（排查「为什么以前查不到」用）
+        "sources": {
+            "buffer_lines": int(found.get("buffer_lines") or 0),
+            "file_lines": int(found.get("file_lines") or 0),
+        },
+        "conclusion": conclusion,
+        "note": note,
+        "lines": merged,
+        "keyword_hits": hits,
+    }
+    return json.dumps(payload, ensure_ascii=False, default=str)
+
+
+def _catalog_features(bus, keyword: str) -> tuple[list[dict], bool]:
+    """关键词表里该词的登记功能点（大小写不敏感）；未登记返回空表与 False。"""
+    mapping = getattr(getattr(bus, "keywords", None), "mapping", {}) or {}
+    if keyword in mapping:
+        return list(mapping[keyword]), True
+    lowered = keyword.lower()
+    for name, features in mapping.items():
+        if name.lower() == lowered:
+            return list(features), True
+    return [], False
+
+
+def check_device_log(
+    keyword: str,
+    at: str = "",
+    seconds: float = 0,
+    port: int = 0,
+    user_id: str = "",
+) -> str:
+    """按规则检查一个日志关键词在指定窗口内**有没有出现**（只读，不连设备、不改状态）。
+    验收断言要看设备日志时用它：**只需报出要检查的关键词**（例如开关类 `switch_on`、
+    关闭类 `switch_off`），由平台按与日志证据同一套规则判定「检测到 / 未检测到」，
+    并给出出现的时间戳与功能点。不要自己翻原始日志行下结论。
+    判定口径：**检测到 + 截图确认两个条件都满足才可判 PASS；未检测到必须判 FAIL**。
+
+    Args:
+        keyword: 要检查的日志关键词（必填，忽略大小写；可从输入给的关键词表里选）
+        at: 取证基准时间点（北京时间）。给了就检查该时刻之后一个窗口；不传则检查最近一个窗口
+        seconds: 窗口秒数，默认取平台取证阈值（5 秒），最大 300
+        port: 日志来源端口，默认平台配置的端口（现场 7005）
+    """
+    from django.conf import settings
+
+    from engines.device.logbus import LogSourceUnknown, get_log_bus, merge_lines_by_timestamp
+
+    from . import log_port_service
+
+    wanted = str(keyword or "").strip()
+    span = float(seconds or 0) or float(
+        getattr(settings, "DEVICE_LOG_WINDOW_SECONDS", LOG_SPAN_DEFAULT_SECONDS)
+    )
+    span = max(1.0, min(span, LOG_SPAN_MAX_SECONDS))
+    if at:
+        start = _parse_log_at(at)
+        start_epoch = start.timestamp()
+    else:
+        start_epoch = time.time()
+    end_epoch = start_epoch + span
+    query = {
+        "port": int(port) if port else 0,
+        "channel": "",
+        "from": _log_stamp(start_epoch),
+        "to": _log_stamp(end_epoch),
+        "span_seconds": span,
+        "keyword": wanted,
+    }
+
+    def _payload(**extra) -> str:
+        base = {
+            "query": query,
+            "detected": False,
+            "conclusion": "",
+            "timestamps": [],
+            "hit_count": 0,
+            "features": [],
+            "keyword_known": False,
+            "sources": {"buffer_lines": 0, "file_lines": 0},
+            "lines": [],
+            "note": "",
+        }
+        base.update(extra)
+        return json.dumps(base, ensure_ascii=False, default=str)
+
+    if not wanted:
+        return _payload(
+            conclusion="keyword_missing",
+            note="需要给出要检查的日志关键词（例如开关类 switch_on / switch_off）",
+        )
+
+    disabled_port = log_port_service.disabled_port_note(int(port) if port else 0)
+    if disabled_port:
+        query["port"] = int(port)
+        return _payload(conclusion="port_disabled", note=disabled_port)
+
+    bus = get_log_bus()
+    if bus is None:
+        raise ValueError("设备日志采集未启动：平台未开启日志采集（DEVICE_LOG_ENABLED）或无可用来源")
+
+    try:
+        found = bus.read_range(
+            start_epoch=start_epoch,
+            end_epoch=end_epoch,
+            port=int(port) if port else None,
+        )
+    except LogSourceUnknown as exc:
+        return _payload(conclusion="port_not_configured", note=str(exc))
+
+    query["port"] = int(found["port"])
+    query["channel"] = found["channel"]
+    rows = found["lines"]
+    matched = [line for line in rows if wanted.lower() in line.text.lower()]
+    features, known = _catalog_features(bus, wanted)
+    timestamps = [line.timestamp for line in matched]
+
+    if timestamps:
+        conclusion = "hit"
+        note = "" if known else f"已检测到，但 {wanted!r} 不在平台关键词表内（功能点无法标注）"
+    elif not rows:
+        conclusion = "no_log"
+        note = "该窗口内没有任何日志（缓冲与已落盘的日志文件都没有）"
+    else:
+        conclusion = "no_hit"
+        note = f"该窗口内有日志，但没有出现 {wanted!r}"
+        if not known:
+            note += "；该关键词不在平台关键词表内"
+
+    return _payload(
+        detected=bool(timestamps),
+        conclusion=conclusion,
+        timestamps=timestamps,
+        hit_count=len(timestamps),
+        features=features,
+        keyword_known=known,
+        sources={
+            "buffer_lines": int(found.get("buffer_lines") or 0),
+            "file_lines": int(found.get("file_lines") or 0),
+        },
+        lines=merge_lines_by_timestamp(matched),
+        note=note,
+    )
+
+
+def _log_stamp(epoch: float) -> str:
+    """epoch → 北京时间毫秒字符串（与采集层同一口径）。"""
+    from engines.device.logbus import format_stamp
+
+    return format_stamp(datetime.fromtimestamp(epoch, tz=timezone.utc))
+
+
+# ═══════════════════════════════════════════════════════════════════
 # 页面流工具
 # ═══════════════════════════════════════════════════════════════════
 
@@ -466,6 +803,10 @@ TOOLS: dict[str, tuple] = {
     # 页面流工具（获取页面流信息）
     "list_page_flows": (list_page_flows, True),
     "get_page_flow": (get_page_flow, True),
+    # 设备日志（只读查询）
+    "read_device_log": (read_device_log, True),
+    # 设备日志（只读：按关键词规则检查是否出现，验收侧用）
+    "check_device_log": (check_device_log, True),
 }
 
 
@@ -482,6 +823,7 @@ TOOL_CATEGORIES = [
     {"key": "设备检查器", "icon": "📸", "color": "#FFB5A7"},
     {"key": "视觉识别工具", "icon": "🔍", "color": "#A78BFA"},
     {"key": "页面流工具", "icon": "🧭", "color": "#38BDF8"},
+    {"key": "设备日志", "icon": "📜", "color": "#94A3B8"},
 ]
 
 _CATEGORY_ICON = {c["key"]: c["icon"] for c in TOOL_CATEGORIES}
@@ -508,6 +850,10 @@ TOOL_META: dict[str, tuple[str, str, str]] = {
     "ocr_page": ("视觉识别工具", "inspector", "ocr"),
     "list_page_flows": ("页面流工具", "workflow", "list_page_flows"),
     "get_page_flow": ("页面流工具", "workflow", "get_page_flow"),
+    # 设备日志：只读查询已采集的日志（不连设备、不改状态）
+    "read_device_log": ("设备日志", "log", "read"),
+    # 设备日志：只读按规则检查关键词是否出现（验收侧用）
+    "check_device_log": ("设备日志", "log", "check"),
 }
 
 
@@ -619,6 +965,96 @@ DEBUG_PARAM_OPTIONS: dict[tuple[str, str], str] = {
     ("xpath_action", "serial"): "devices:available",
 }
 
+# ═══════════════════════════════════════════════════════════════════
+# 参数中文名（调试表单标签唯一真相源）
+# ═══════════════════════════════════════════════════════════════════
+
+# 参数名 → 中文短名（跨工具复用）；未登记的参数回退英文名本身。
+PARAM_LABELS: dict[str, str] = {
+    "serial": "设备序列号",
+    "timeout": "超时秒数",
+    "reason": "释放原因",
+    "package": "应用包名",
+    "mode": "点击方式",
+    "x": "横坐标",
+    "y": "纵坐标",
+    "direction": "滑动方向",
+    "distance": "滑动距离",
+    "text": "输入文本",
+    "clear_first": "输入前清空",
+    "nx": "横向相对位置",
+    "ny": "纵向相对位置",
+    "nx1": "起点横向位置",
+    "ny1": "起点纵向位置",
+    "nx2": "终点横向位置",
+    "ny2": "终点纵向位置",
+    "xpath": "元素 xpath",
+    "index": "匹配序号",
+    "keep_local": "保留本地截图",
+    "texts": "要查找的文本",
+    "doc_id": "页面流文档 ID",
+    "at": "时间点",
+    "seconds": "查询跨度（秒）",
+    "port": "日志端口",
+    "keyword": "日志关键词搜索",
+}
+
+# 工具级覆盖：同名参数在不同工具下语义不同时用这里（优先于 PARAM_LABELS）。
+TOOL_PARAM_LABELS: dict[tuple[str, str], str] = {
+    ("app_control", "action"): "应用动作类型",
+    ("xpath_action", "action"): "元素动作类型",
+    ("list_apps", "query"): "包名关键词",
+    ("list_page_flows", "query"): "文档关键词",
+    ("read_device_log", "keyword"): "日志关键词搜索",
+    ("read_device_log", "at"): "日志时间点",
+    ("read_device_log", "seconds"): "查询跨度（秒）",
+    ("read_device_log", "port"): "日志端口",
+    ("check_device_log", "keyword"): "要检查的日志关键词",
+    ("check_device_log", "at"): "取证基准时间点",
+    ("check_device_log", "seconds"): "窗口秒数（默认 5）",
+    ("check_device_log", "port"): "日志端口",
+}
+
+
+def param_label(name: str, tool_name: str = "") -> str:
+    """参数中文名：工具级覆盖 → 通用表 → 回退英文名（绝不返回空串）。"""
+    return TOOL_PARAM_LABELS.get((tool_name, name)) or PARAM_LABELS.get(name) or name
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 工具 docstring 的 Args 段 → 参数中文说明
+# ═══════════════════════════════════════════════════════════════════
+
+_ARGS_SECTION = re.compile(r"^\s*Args\s*:\s*$")
+
+
+def param_hints(func) -> dict[str, str]:
+    """解析 docstring 的 `Args` 段：参数名 → 说明（续行并入）。取不到返回空表。"""
+    doc = inspect.getdoc(func) or ""
+    hints: dict[str, str] = {}
+    current = ""
+    in_args = False
+    for line in doc.splitlines():
+        if _ARGS_SECTION.match(line):
+            in_args = True
+            continue
+        if not in_args:
+            continue
+        stripped = line.strip()
+        if not stripped:
+            continue
+        match = re.match(r"^([a-z_][a-z0-9_]*)\s*:\s*(.*)$", stripped)
+        if match:
+            current = match.group(1)
+            hints[current] = match.group(2).strip()
+        elif current and line.startswith((" ", "\t")):
+            hints[current] = f"{hints[current]} {stripped}".strip()
+        else:
+            # 缩进回到 Args 段之外（例如新的段落/小节）→ 结束解析
+            break
+    return hints
+
+
 # 候选来源标识：可用设备。平台工具调试页（HTTP schema）与模型调试页（真机操作前校验）
 # 共用下面的实现，避免两份过滤口径漂移。
 _DEVICE_OPTIONS_SOURCE = "devices:available"
@@ -652,10 +1088,15 @@ def resolve_param_options(source: str, user_id: str) -> list[dict]:
 
 
 def get_tool_debug_schema(name: str) -> dict:
-    """按工具名返回调试用入参 schema（不含 user_id）。未注册则 ToolNotFoundError。"""
+    """按工具名返回调试用入参 schema（不含 user_id）。未注册则 ToolNotFoundError。
+
+    每个参数含 `label`（中文名，未登记回退英文名）与 `hint`（docstring Args 段说明，缺失为空串），
+    供调试页渲染「中文名（english_name）+ 必填/可选」。
+    """
     if name not in TOOLS:
         raise ToolNotFoundError(name)
     func, read_only = TOOLS[name]
+    hints = param_hints(func)
     parameters = []
     for pname, param in inspect.signature(func).parameters.items():
         if pname == "user_id":
@@ -663,6 +1104,8 @@ def get_tool_debug_schema(name: str) -> dict:
         has_default = param.default is not inspect.Parameter.empty
         entry = {
             "name": pname,
+            "label": param_label(pname, name),
+            "hint": hints.get(pname, ""),
             "type": _annotation_type_name(param.annotation),
             "required": not has_default,
         }

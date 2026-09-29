@@ -8,6 +8,10 @@
   对话内容**不落库**。
 - 本轮产生设备副作用点击时，响应带一份平台装配的「日志检查」：点击前时间点 + 点击后截图路径
   + 该时间点后 5 秒窗口内的日志（与任务步骤证据同源；配对与切片共用 `logcheck` 的纯函数）。
+- **验收角色**的调试对话另带一份「设备日志证据 · 调试回溯」：平台从消息里识别取证基准
+  （第一个北京时间毫秒时间戳；没有则退回最近一个取证窗），从日志文件回溯该基准后 5 秒窗口的
+  日志与命中关键词，按任务链路同一份渲染交给模型（验收模型自己没有日志工具，生产链路也是
+  平台喂证据）。响应带 `log_evidence` 与 `log_basis`；取不到时如实给原因，不打开端口。
 """
 
 from __future__ import annotations
@@ -24,10 +28,19 @@ from apps.ai_assistant.api import (
 )
 from apps.ai_assistant.engine_adapter import build_tool_specs
 from apps.ai_assistant.log_evidence import ensure_log_evidence
+from apps.ai_assistant.log_history import (
+    extract_basis_time,
+    history_evidence,
+    keyword_catalog_text,
+)
 from apps.ai_assistant.skills_catalog import list_enabled_skill_dirs
 from apps.ai_assistant.tools import TOOL_META, TOOLS, available_device_options
 from engines.ai.agentscope.config import DeviceExecutionConfig, ModelConfig
-from engines.ai.agentscope.logcheck import build_executor_log_check
+from engines.ai.agentscope.logcheck import (
+    build_executor_log_check,
+    checked_log_keywords,
+    render_log_evidence,
+)
 from engines.ai.agentscope.model import (
     AgentRole,
     ExecutorRole,
@@ -279,6 +292,11 @@ def run_role_chat(agent, role: str, text: str, user_id: str = "", serial: str = 
 
     role_obj = build_debug_role(agent, role, model_cfg, user_id=user_id)
     prompt = f"当前设备 serial：{device}\n{content}" if device else content
+    # 验收角色自己没有日志工具：由平台按取证基准把日志证据喂进输入（与生产同口径）
+    log_basis = _debug_log_basis(role, device, content)
+    if log_basis is not None:
+        prompt += _log_evidence_input(log_basis)
+        prompt += _keyword_catalog_input()
     # 证据窗必须在任何设备动作之前开启（与生产链路同口径）；没有端口在监听时如实不带日志
     provider = ensure_log_evidence() if device else None
     window_id = _open_debug_window(provider, device)
@@ -296,7 +314,58 @@ def run_role_chat(agent, role: str, text: str, user_id: str = "", serial: str = 
     }
     if log_check["clicks"]:
         payload["log_check"] = log_check
+    if log_basis is not None:
+        payload["log_basis"] = {
+            key: log_basis[key] for key in ("basis_time", "from_message", "files", "note")
+        }
+        if log_basis["evidence"] is not None:
+            payload["log_evidence"] = log_basis["evidence"]
+        # logAssertionInfo：模型查询（检查）的日志关键词，平台按工具调用自动填
+        keywords = checked_log_keywords(result)
+        if keywords:
+            payload["log_assertion_info"] = "、".join(keywords)
     return payload
+
+
+def _keyword_catalog_input() -> str:
+    """把当前关键词表与「两条件」判定口径拼进验收角色的输入（表取运行时索引，不写死）。"""
+    catalog = keyword_catalog_text()
+    rule = (
+        "判定口径（必须遵守）：调用 check_device_log 检查断言涉及的日志关键词，"
+        "**日志检测到 + 截图确认两个条件都满足才可判 PASS**；未检测到该关键词时必须判 FAIL，"
+        "并在 actual 里写明日志未检测到。"
+    )
+    return f"\n\n{catalog}\n{rule}" if catalog else f"\n\n{rule}"
+
+
+def _debug_log_basis(role: str, device: str, content: str) -> dict | None:
+    """验收角色才取日志证据（规划模型无设备；执行模型自己有只读日志工具）。"""
+    if not device or ROLE_CLASSES[role] is not VerifierRole:
+        return None
+    basis = extract_basis_time(content)
+    return history_evidence(basis)
+
+
+def _log_evidence_input(log_basis: dict) -> str:
+    """把取证结果拼进验收角色的输入：同一份渲染文本 + 调试回溯的口径说明。"""
+    origin = "消息里的时刻" if log_basis["from_message"] else "最近一个取证窗"
+    lines = [
+        "",
+        "",
+        "【设备日志证据 · 调试回溯】"
+        f"取证基准 {log_basis['basis_time']}（来源：{origin}）。"
+        "平台按该基准之后的 5 秒窗口从设备日志文件中取出，判定口径与任务链路一致；"
+        "注意这是调试回溯，不是生产步骤的取证窗。",
+        render_log_evidence(log_basis["evidence"]),
+    ]
+    evidence = log_basis["evidence"]
+    if not evidence or not evidence.get("window_line_count"):
+        lines.append(f"说明：本轮没有取到窗口内日志（{log_basis['note'] or '窗口内无日志'}）。")
+    lines.append(
+        "输出时：logAssertionTimer 取上面「窗口内命中」里那个关键词出现的日志时间戳"
+        "（原文照抄；没有命中或没有日志就留空字符串）。"
+    )
+    return "\n".join(lines)
 
 
 def _open_debug_window(provider, device: str) -> str:

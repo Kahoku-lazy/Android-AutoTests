@@ -44,6 +44,6 @@ def test_planner_role_selects_both_page_flow_tools_from_registry():
 
 
 def test_other_role_subsets_unchanged():
-    """executor 不含页面流工具；verifier 仍只有 screenshot_page。"""
+    """executor 不含页面流工具；verifier 为截图 + 按关键词规则检查日志的工具。"""
     assert not (set(VISION_TOOLS) & _PAGE_FLOW_TOOLS)
-    assert VERIFIER_TOOLS == ["screenshot_page"]
+    assert VERIFIER_TOOLS == ["screenshot_page", "check_device_log"]

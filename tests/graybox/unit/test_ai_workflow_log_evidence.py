@@ -117,10 +117,11 @@ def _stub_steps(wf: DeviceExecutionWorkflow, record: list[tuple], verifier_input
         verifier_input["evidence"] = log_evidence
         return (
             VerificationOutput(
-                action=step.action,
-                assertion=step.assertion,
+                result="PASS",
+                click_timer=ACTION_TIME,
+                log_assertion_timer="2026-09-28 17:01:14.000",
+                screenshot="verify.jpg",
                 actual="页面已切换到目标页",
-                result=True,
             ),
             None,
             SimpleNamespace(screenshot_path="verify.jpg", tool_usage=[], thinking=[], output="{}"),
@@ -144,7 +145,7 @@ async def test_step_opens_window_before_action_and_reads_after() -> None:
     log: list[dict] = []
     verdict = await wf._run_step(step, 1, 1, plan, log, [])
 
-    assert verdict is not None and verdict.result is True
+    assert verdict is not None and verdict.result == "PASS"
     assert [item[0] for item in provider.calls] == ["open", "read"]
     assert record[0][0] == "execute"
     assert verifier_input["evidence"]["conclusion"] == "hit"
@@ -166,7 +167,7 @@ async def test_missing_provider_degrades_without_breaking_task() -> None:
     log: list[dict] = []
     verdict = await wf._run_step(step, 1, 1, plan, log, [])
 
-    assert verdict is not None and verdict.result is True
+    assert verdict is not None and verdict.result == "PASS"
     assert verifier_input["evidence"] is None
     assert "log_evidence" not in log[0]
     assert "无（本次未采集到设备日志证据" in _render_log_evidence(None)

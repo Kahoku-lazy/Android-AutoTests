@@ -404,6 +404,15 @@ class AgentRole:
             tool_usage.extend(u)
         return thinking, tool_usage
 
+    def tool_results_seen(self) -> int:
+        """当前上下文里已有的工具返回条数。
+
+        上下文是**整个任务累积**的，工作流用这个数字切出「本步新增」的工具返回，
+        否则本步的动作发出时刻会取到上一步的值（真机验证时踩到过）。
+        """
+        _, rows = self._collect_trace_from_context()
+        return sum(1 for row in rows if row.get("type") == "result")
+
     def _collect_trace_from_blocks(self, blocks) -> tuple[list[str], list[dict]]:
         """从一组消息内容块收集思考 + 工具（脱敏）。"""
         thinking: list[str] = []
@@ -586,7 +595,7 @@ class ExecutorRole(AgentRole):
             retry_hint: 上次验收失败回灌的修正提示（空串 = 首次执行）。
 
         Returns:
-            RoleResult（output 为 {"action","result","message"} JSON；screenshot 为操作结果截图）。
+            RoleResult（output 为 {"result","click_timer","screenshot"} JSON；screenshot 为操作结果截图）。
         """
         prompt = f"当前设备 serial：{serial}\n请执行以下操作（第 {idx}/{total} 步）：\n{action}"
         if retry_hint:
@@ -641,10 +650,12 @@ class VerifierRole(AgentRole):
         idx: int,
         total: int,
         exec_result: str,
-        exec_message: str,
+        exec_evidence: str,
         screenshot=None,
+        log_evidence: str = "",
+        keyword_catalog: str = "",
     ) -> RoleResult:
-        """接受任务：对比断言与执行截图，判断操作是否成功。
+        """接受任务：对比断言 + 截图 + 日志检查结论，判断操作是否成功。
 
         Args:
             serial: 目标设备 serial。
@@ -652,17 +663,38 @@ class VerifierRole(AgentRole):
             idx: 当前步骤序号（1 起）。
             total: 总步骤数。
             exec_result: 执行模型的 result（PASS/FAIL）。
-            exec_message: 执行模型的 message。
+            exec_evidence: 平台按执行契约拼装的证据文本（点击前时间戳 + 点击后截图路径；
+                无点击 / 未截图时已如实标注）——执行模型不再输出说明文字。
             screenshot: 执行模型产出的操作结果截图（DataBlock，可空）。
+            log_evidence: 本步的日志证据文本（可空 = 无日志证据，只看截图）。
+            keyword_catalog: 当前日志关键词表文本（关键词 → 功能点；空 = 不附）。
 
         Returns:
-            RoleResult（output 为 {"action","assert","actual","result"} JSON）。
+            RoleResult（output 为 {"result","click_timer","logAssertionTimer",
+            "logAssertionInfo","screenshot","actual"} JSON）。
         """
         text = (
             f"当前设备 serial：{serial}\n"
             f"断言 assert：{assertion}\n"
-            f"执行结果：result={exec_result}，message={exec_message}\n"
-            f"请截图确认，对比断言与实际结果，判断操作是否成功（第 {idx}/{total} 步）。"
+            f"执行结果：result={exec_result}；{exec_evidence}\n"
+        )
+        if log_evidence:
+            text += f"\n{log_evidence}\n"
+        text += f"请截图确认，对比断言与实际结果（并结合日志证据与日志检查工具的结论），判断操作是否成功（第 {idx}/{total} 步）。"
+        # 判定口径：日志与截图两个条件缺一不可（检查工具未检测到就必须判 FAIL）
+        text += (
+            "\n判定口径（必须遵守）：**日志检测到 + 截图确认两个条件都满足才可判 PASS**；"
+            "调用 check_device_log 检查断言涉及的日志关键词，**未检测到该关键词时必须判 FAIL**"
+            "（并在 actual 里写明日志未检测到），MUST NOT 只凭截图判 PASS。"
+        )
+        if keyword_catalog:
+            text += f"\n\n{keyword_catalog}\n"
+        # 各字段的取值来源写清楚让模型照抄（取不到就留空串）
+        text += (
+            "\n输出时：click_timer 抄上面的点击前时间戳（本步没有点击就留空字符串）；"
+            "logAssertionTimer 抄 check_device_log 返回的命中时间戳（未检测到就留空字符串）；"
+            "logAssertionInfo 由平台按你的检查调用自动填；"
+            "screenshot 抄本次截图工具返回的 screenshot_path。"
         )
         content: list = [TextBlock(text=text)]
         if screenshot is not None:

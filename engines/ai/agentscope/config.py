@@ -23,6 +23,8 @@ class DeviceExecutionConfig:
     executor: ModelConfig = field(default_factory=ModelConfig)  # 执行模型连接（多模态）
     verifier: ModelConfig = field(default_factory=ModelConfig)  # 验收模型连接（多模态）
     max_loops: int = 3  # 每步「执行↔验收」最大重试次数
+    # 读日志证据前等多久（秒）：等到「动作发出 + 取证阈值」再读，慢一点的日志也能收进来
+    log_wait_seconds: float = 0.0
 
 
 # ── 智能体提示词（运行时由 Django 从 ai_agents.prompt_* 注入；此处留空不做回退）──
@@ -55,6 +57,12 @@ VISION_TOOLS = [
     "xpath_action",
     "list_apps",
     "screenshot_page",
+    # 只读日志查询：执行/排查阶段可主动查「设备到底响应了没有」
+    "read_device_log",
 ]
 
-VERIFIER_TOOLS = ["screenshot_page"]
+VERIFIER_TOOLS = [
+    "screenshot_page",
+    # 只读：按关键词规则检查日志是否出现（模型只报关键词，规则由平台判定）
+    "check_device_log",
+]

@@ -59,7 +59,7 @@ description: |
 
 ## 二、链路归属
 
-- **设备控制链路**：planner 用 DEVICE_PLANNER_TOOLS（list_page_flows / get_page_flow）读页面流；executor 用 VISION_TOOLS（14 个：设备管理 3 + 设备控制 8 + 设备信息 2 + screenshot_page）控制设备；verifier 用 VERIFIER_TOOLS（screenshot_page）截图验收。
+- **设备控制链路**：planner 用 DEVICE_PLANNER_TOOLS（list_page_flows / get_page_flow）读页面流；executor 用 VISION_TOOLS（15 个：设备管理 3 + 设备控制 8 + 设备信息 2 + screenshot_page + read_device_log）控制设备与查日志；verifier 用 VERIFIER_TOOLS（screenshot_page + check_device_log）截图验收，并**只报关键词**由平台按规则检查日志是否出现（日志检测到 + 截图确认两个条件都满足才可判 PASS）。
 - 平台任务链路已弃用（业务工具删减后无可用工具）。
 
 ## 三、按目标的推荐工具序列
@@ -67,7 +67,7 @@ description: |
 - ① 选设备：list_devices 查设备，取 status=ONLINE 设备的 serial；必要时 acquire_device 锁定、release_device 释放。
 - ② 读页面流：list_page_flows 一次列出全部文档（`query` 可按标题/ID 收窄；每条含 `directory_path` 与 `directory_depth`，未归类文档路径为空串）→ get_page_flow 读语义摘要（节点/页面/跳转关系/元素 xpath），识别测试点（目标页面/节点）。
 - ③ 设备控制：app_control 启停 App、press_key 返回上一页、swipe_screen 滑动、input_text 输入文本、current_app 只读当前前台（不动设备）；点击优先 xpath_action(action=click, xpath=...)（页面流给了 xpath 时），否则用 click_ratio 视觉归一化坐标点击。
-- ④ 检查/验收：xpath_action(action=exists/get_text) 断言元素存在 / 读文本；screenshot_page 截图看当前画面二次确认。
+- ④ 检查/验收：xpath_action(action=exists/get_text) 断言元素存在 / 读文本；screenshot_page 截图看当前画面二次确认；断言涉及设备日志时用 check_device_log 报出关键词（例如开关类 switch_on），由平台判定「检测到 / 未检测到」。
 
 ## 四、关键工具入参与返回约定
 

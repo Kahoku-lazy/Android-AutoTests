@@ -1,6 +1,12 @@
 /** Toolbox + MCP + Skills API — TypeScript */
 import djangoClient from "@/shared/api-client"
-import type { ToolboxListResponse, AgentOpResponse, TaskLogCheck } from "@/shared/types/ai"
+import type {
+  ToolboxListResponse,
+  AgentOpResponse,
+  ModelDebugLogBasis,
+  TaskLogCheck,
+  TaskLogEvidence,
+} from "@/shared/types/ai"
 
 // ── 共享工具箱项 DTO（类型跟着实现走，消费方从此处 import） ──
 export interface SharedToolItem {
@@ -279,6 +285,12 @@ export interface ModelDebugReply {
   tool_usage?: ModelDebugToolCall[]
   /** 本轮设备点击证据（平台装配；无副作用点击时缺省） */
   log_check?: TaskLogCheck
+  /** 验收角色的调试日志证据（平台按取证基准从日志文件回溯取出；取不到时缺省） */
+  log_evidence?: TaskLogEvidence
+  /** 该证据的取证基准（基准时刻 / 来源 / 读取的文件 / 无日志时的原因） */
+  log_basis?: ModelDebugLogBasis
+  /** 本轮检查的日志关键词（平台按 check_device_log 的调用自动填；没检查过则缺省） */
+  log_assertion_info?: string
   usage?: Record<string, number>
   cost?: number
 }

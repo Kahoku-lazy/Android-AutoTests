@@ -71,6 +71,8 @@ class AgentScopeEngine:
             on_progress=req.on_progress,
             task_id=req.task_id,
             media_root=req.media_root,
+            log_evidence=req.log_evidence,
+            log_keywords=req.log_keywords,
         )
         result = asyncio.run(wf.run(req.goal))
         return _workflow_result_to_task_result(result)

@@ -190,6 +190,50 @@ describe("taskStepBlocks", () => {
     expect(blocks[0].attempts[1].screenshotUrl).toBe("/media/ai_tasks/5/s1_l2.jpg")
   })
 
+  it("验收结果按新五字段映射（日志断言时间 + 验证截图；旧记录两件为空）", () => {
+    const detail: TaskDetail = {
+      id: 8,
+      title: "t",
+      goal: "点开关",
+      status: "completed",
+      run: {
+        plans: [{ goal: "点开关", steps: [{ action: "点击开关", assert: "灯亮" }] }],
+        log: [
+          {
+            action: "点击开关",
+            assert: "灯亮",
+            loop: 1,
+            verifier: {
+              result: "PASS",
+              click_timer: "2026-09-28 17:01:12.645",
+              logAssertionTimer: "2026-09-28 17:01:13.100",
+              logAssertionInfo: "switch_on",
+              screenshot: "ai_tasks/8/s1_verify.jpg",
+              actual: "截图显示灯已亮",
+            },
+          },
+          {
+            action: "点击开关",
+            assert: "灯亮",
+            loop: 2,
+            verifier: { result: true, actual: "旧记录说明" },
+          },
+        ],
+      },
+    }
+    const blocks = taskStepBlocks(detail)
+    expect(blocks[0].attempts[0].verifierResult).toBe("pass")
+    expect(blocks[0].attempts[0].verifierLogTimer).toBe("2026-09-28 17:01:13.100")
+    expect(blocks[0].attempts[0].verifierLogInfo).toBe("switch_on")
+    expect(blocks[0].attempts[0].verifierScreenshotPath).toBe("ai_tasks/8/s1_verify.jpg")
+    expect(blocks[0].attempts[0].actual).toBe("截图显示灯已亮")
+    // 存量旧记录：布尔结果仍归一化为 pass，新两件为空串
+    expect(blocks[0].attempts[1].verifierResult).toBe("pass")
+    expect(blocks[0].attempts[1].verifierLogTimer).toBe("")
+    expect(blocks[0].attempts[1].verifierScreenshotPath).toBe("")
+    expect(blocks[0].attempts[1].actual).toBe("旧记录说明")
+  })
+
   it("执行结果按新三字段映射（点击前时间戳 + 点击后截图；旧记录两件为空）", () => {
     const detail: TaskDetail = {
       id: 7,

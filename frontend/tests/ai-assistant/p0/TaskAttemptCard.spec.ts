@@ -131,6 +131,52 @@ describe("[P0] TaskAttemptCard", () => {
     expect(result.findAll("input").length).toBe(0)
   })
 
+  it("新验收契约：日志断言（关键词 + 时间）与验证截图路径可见", () => {
+    const wrapper = mountCard({
+      verifierLogInfo: "switch_on",
+      verifierLogTimer: "2026-09-28 17:01:13.100",
+      verifierScreenshotPath: "ai_tasks/9/s1_verify.jpg",
+    })
+    const result = wrapper.find('[data-testid="attempt-result"]')
+    expect(result.find('[data-testid="attempt-verifier-log-info"]').text()).toBe("switch_on")
+    expect(result.text()).toContain("日志断言时间")
+    expect(result.text()).toContain("2026-09-28 17:01:13.100")
+    expect(result.text()).toContain("验证截图")
+    expect(result.text()).toContain("ai_tasks/9/s1_verify.jpg")
+  })
+
+  it("未检查日志时不渲染日志断言行", () => {
+    const wrapper = mountCard({ verifierLogInfo: "" })
+    const result = wrapper.find('[data-testid="attempt-result"]')
+    expect(result.find('[data-testid="attempt-verifier-log-info"]').exists()).toBe(false)
+  })
+
+  it("未检测到日志关键词时不渲染日志断言时间行", () => {
+    const wrapper = mountCard({ verifierLogTimer: "" })
+    const result = wrapper.find('[data-testid="attempt-result"]')
+    expect(result.find('[data-testid="attempt-verifier-log-timer"]').exists()).toBe(false)
+    expect(result.text()).not.toContain("日志断言时间")
+  })
+
+  it("只有模型回报的路径、没有落盘图时仍显示路径文本，不渲染图片", () => {
+    const wrapper = mountCard({
+      screenshotUrl: "",
+      verifierScreenshotPath: "ai_tasks/9/s1_verify.jpg",
+    })
+    const path = wrapper.find('[data-testid="attempt-verifier-shot-path"]')
+    expect(path.exists()).toBe(true)
+    expect(path.text()).toBe("ai_tasks/9/s1_verify.jpg")
+    expect(wrapper.find('[data-testid="attempt-screenshot"]').exists()).toBe(false)
+  })
+
+  it("存量旧验收记录：没有新坐标行，实际结果照旧显示", () => {
+    const wrapper = mountCard()
+    const result = wrapper.find('[data-testid="attempt-result"]')
+    expect(result.text()).toContain("页面已跳转")
+    expect(result.find('[data-testid="attempt-verifier-log-timer"]').exists()).toBe(false)
+    expect(result.find('[data-testid="attempt-verifier-shot-path"]').exists()).toBe(false)
+  })
+
   it("Agent 折叠默认未展开", () => {
     const wrapper = mountCard()
     const collapse = wrapper.find('[data-testid="agent-collapse"]')

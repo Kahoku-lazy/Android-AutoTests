@@ -16,6 +16,7 @@ ProgressCallback = Callable[[dict], None]
 
 __all__ = [
     "AiEngine",
+    "LogEvidenceProvider",
     "ModelSpec",
     "ProgressCallback",
     "TaskRequest",
@@ -44,6 +45,32 @@ class ToolSpec:
     auto_allow: bool = False
 
 
+class LogEvidenceProvider(Protocol):
+    """设备日志证据提供者 —— Django 侧注入，引擎只经协议调用。
+
+    与 `on_progress` 同构：只含标准库类型，引擎不直接碰串口 / TCP 句柄，也不 import `engines.device`。
+    工作流在把步骤交给执行模型**之前**开窗，在验收之前读窗。
+    """
+
+    def open_window(self, device: str, label: str = "") -> str:
+        """开一个日志证据窗口，返回窗口标识（必须早于动作发出）。"""
+        ...
+
+    def read_window(
+        self,
+        device: str,
+        window_id: str = "",
+        action_times: list[str] | None = None,
+        wait_seconds: float = 0.0,
+    ) -> dict:
+        """读窗口并返回日志证据（含等级标注）；未开窗时应抛错，不得用历史日志顶替。
+
+        `action_times` 是本步骤**全部**副作用动作的发出时刻（一步可能有多次点击）：
+        取证窗取「每次动作 + 阈值」的并集，只有首次动作会把后面的响应误判成超窗。
+        """
+        ...
+
+
 @dataclass
 class TaskRequest:
     """任务表单 + 模型 + 工具 —— Django 传给引擎的唯一入参。"""
@@ -58,6 +85,10 @@ class TaskRequest:
     media_root: str = ""  # 绝对路径；空则跳过截图落盘
     on_progress: ProgressCallback | None = None  # 规划/每轮/每目标检查点；引擎不写库
     skill_dirs: list[str] = field(default_factory=list)  # enable_skills 打开时注入的 skill 目录
+    # 设备日志证据提供者（Django 注入；空 = 无日志证据，验收阶段标注后照常执行）
+    log_evidence: LogEvidenceProvider | None = None
+    # 当前日志关键词表文本（关键词 → 功能点；Django 从运行时索引渲染后注入，空 = 不附）
+    log_keywords: str = ""
     # 三角色系统提示词（Django 从库读取后注入；引擎常量留空，不做回退）
     system_prompts: dict[str, str] = field(default_factory=dict)
 

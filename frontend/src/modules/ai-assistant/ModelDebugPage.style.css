@@ -238,12 +238,6 @@
   background: color-mix(in srgb, var(--c-ai) 18%, var(--app-bg-card));
 }
 
-.md-badge.warn {
-  white-space: normal;
-  color: var(--app-status-danger);
-  background: color-mix(in srgb, var(--app-status-danger) 14%, var(--app-bg-card));
-}
-
 /* 组头徽标靠右，与折叠头的字数标识同侧 */
 .md-group-head .md-badge {
   margin-left: auto;
@@ -393,6 +387,34 @@
   font-weight: 800;
   letter-spacing: 0.04em;
   color: var(--app-text-secondary);
+}
+
+/* ── 验收对话的日志证据基准（调试回溯）── */
+.md-log-basis {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+  margin-top: var(--app-space-xs);
+  padding: var(--app-space-sm);
+  background: var(--app-bg-subtle);
+  border-left: 3px solid var(--dot);
+  border-radius: 0 var(--app-radius-sm) var(--app-radius-sm) 0;
+}
+
+.md-log-basis__head {
+  margin: 0;
+  font-size: var(--app-size-xs);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--app-text-secondary);
+}
+
+.md-log-basis__text {
+  margin: 0;
+  font-size: var(--app-size-xs);
+  line-height: 1.5;
+  color: var(--app-text-muted);
+  word-break: break-word;
 }
 
 .md-think {

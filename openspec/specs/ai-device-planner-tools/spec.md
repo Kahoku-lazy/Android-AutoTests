@@ -23,7 +23,7 @@
 #### Scenario: 其它角色子集不受影响
 
 - **WHEN** 检查 executor 与 verifier 的工具子集
-- **THEN** executor 仍为原设备控制工具集，verifier 仍仅为 `screenshot_page`
+- **THEN** executor 仍为原设备控制工具集（含通用日志查询）；verifier 仍为「截图工具」加它按另有要求装配的只读日志检查工具（见 `device-log-read-tool`），本要求 MUST NOT 改变其中任何一项
 
 ### Requirement: planner 默认提示词含页面流阅读指引
 

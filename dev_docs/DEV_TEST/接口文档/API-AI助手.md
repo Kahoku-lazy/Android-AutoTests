@@ -1122,7 +1122,7 @@
         "assert": "前台应用为 govee 首页",
         "loop": 1,
         "executor": { "result": "PASS", "click_timer": "2026-09-28 17:01:12.645", "screenshot": "ai_tasks/1/s1_l1.jpg" },
-        "verifier": { "action": "启动 govee", "assert": "前台应用为 govee 首页", "actual": "已在首页", "result": true }
+        "verifier": { "result": "PASS", "click_timer": "2026-09-28 17:01:12.645", "logAssertionTimer": "2026-09-28 17:01:13.100", "logAssertionInfo": "switch_on", "screenshot": "ai_tasks/1/s1_verify.jpg", "actual": "已在首页" }
       }],
       "usage": {},
       "models": { "planner": "…", "executor": "…", "verifier": "…", "max_loops": 3 }
@@ -1132,8 +1132,9 @@
 ```
 
 > 运行中即可读到增量 `run.plans` / `run.log` / `run.summary`（如「已规划 N 个步骤」）；`data.status` 仍为 `running`，`run.status` 为 `running`。终态把全量过程写入 `ai_tasks.result`。
-> 新协议：`plans[].steps` 为 `{action, assert}`；`log[]` 按步骤重试记录 `executor` / `verifier`（`verifier.result` 为 boolean）。旧任务可能仍是字符串 steps + goal 级 log，前端详情页兼容折叠展示。
+> 新协议：`plans[].steps` 为 `{action, assert}`；`log[]` 按步骤重试记录 `executor` / `verifier`。旧任务可能仍是字符串 steps + goal 级 log，前端详情页兼容折叠展示。
 > `log[].executor` 为**执行模型输出契约**的三个字段：`result`（`PASS`/`FAIL`）、`click_timer`（**点击前的时间戳**，北京时间毫秒；本步无点击时为空串）、`screenshot`（**点击后截图的相对路径**，MEDIA 相对路径；本步未截图时为空串）。该契约不含 `action` / `message` —— **存量旧记录**里仍是 `{action, result, message}`，前端详情页按旧字段如实兼容展示、不报错。
+> `log[].verifier` 为**验收模型输出契约**的六个字段：`result`（`PASS`/`FAIL`，不再是布尔）、`click_timer`（**点击前的时间戳**，抄平台下发的执行侧证据；本步无点击时为空串）、`logAssertionTimer`（**检测到日志关键词的时间戳**，取 `check_device_log` 返回的命中时间戳；未检测到为空串）、`logAssertionInfo`（**本轮检查的日志关键词**，平台按模型对检查工具的调用自动填）、`screenshot`（**验证截图的相对路径**，抄本次截图返回的路径；未取到为空串）、`actual`（截图里实际看到了什么，也是失败重试时回灌给执行模型的原因）。判定口径：**日志检测到 + 截图确认两个条件都满足才判 PASS**。该契约不含 `action` / `assert` —— **存量旧记录**里仍是 `{action, assert, actual, result}` 且 `result` 为布尔，前端详情页按旧字段如实兼容展示、不报错。
 > `deepseek_cost` 为 DeepSeek 官方价目（命中/未命中输入 + 输出，高峰 ×2）估算费用（元，4 位小数）。无分模型用量时按 `deepseek-v4-flash` 对任务总量计费；非 DeepSeek 模型不计。
 
 #### 错误码与文案
@@ -1819,9 +1820,12 @@
 
 | 字段 | 说明 |
 |---|---|
-| reply | 模型回复原文（平台不改写）。**执行模型**（`role=executor`）的回复即其输出契约：`{"result": "PASS|FAIL", "click_timer": "点击前时间戳", "screenshot": "点击后截图相对路径"}`（本步无点击 / 未截图时对应值为空串）；规划模型为 `{"plan": {…}}`，验收模型为 `{"action","assert","actual","result"}` |
+| reply | 模型回复原文（平台不改写）。**执行模型**（`role=executor`）的回复即其输出契约：`{"result": "PASS|FAIL", "click_timer": "点击前时间戳", "screenshot": "点击后截图相对路径"}`（本步无点击 / 未截图时对应值为空串）；**验收模型**（`role=verifier`）为 `{"result": "PASS|FAIL", "click_timer": "点击前时间戳", "logAssertionTimer": "检测到日志关键词的时间戳", "logAssertionInfo": "本轮检查的日志关键词", "screenshot": "验证截图相对路径", "actual": "实际结果说明"}`（未检测到日志关键词 / 未取到路径时对应值为空串；`logAssertionInfo` 由平台按检查工具调用自动填）；规划模型为 `{"plan": {…}}` |
 | tool_usage | 本轮工具调用轨迹（引擎从上下文回溯，脱敏无 base64）：`type=call` 带 `input`，`type=result` 带 `state` / `output` |
 | log_check | 本轮**设备点击证据**（平台装配，不依赖模型抄写；本轮没有任何副作用点击时该键不出现）：`clicks[]` 为每次点击的**点击前时间点**（北京时间毫秒）与**点击后截图路径**（该次点击后未截图时为空串）；`log` 为该时间点后 5 秒窗口内的日志证据（原始日志 + 命中标注，与任务步骤证据同源）。窗口在对话**之前**开启；日志端口全部处于关闭监听 / 采集未启用时 `log` 为 `null`（平台**不会**为了调试打开端口） |
+| log_evidence | **验收角色**（`role=verifier`）专有：平台按取证基准从**日志文件回溯**取出的设备日志证据块（形状与任务详情 `log_evidence` 同源：`conclusion` / `window_line_count` / `hits[]`（含关键词与时间戳）/ `lines[]` 等），用于让验收模型自己读出 `logAssertionTimer`。取不到窗口内日志时该键不出现（原因见 `log_basis.note`） |
+| log_basis | 该证据的**取证基准**：`basis_time`（实际使用的基准时刻，北京时间毫秒）、`from_message`（`true`=取自消息里第一个毫秒时间戳；`false`=消息里没有时刻，退回「最近一个取证窗」）、`files[]`（实际读取的日志文件）、`note`（取不到时的如实原因，如「窗口内无日志」「日志端口都未开启监听」）。取证窗 = 基准后 5 秒（阈值同生产）；**从日志文件回溯**是为了覆盖「点击到验收已超过内存缓冲保留时长」的情形，口径与任务链路一致但**不是生产步骤的取证窗**；端口监听关着时平台不取证据也不打开端口 |
+| log_assertion_info | 本轮验收**实际检查的日志关键词**（平台按模型对只读工具 `check_device_log` 的调用自动填，多个按调用顺序以「、」连接）；模型没检查过日志时该键不出现。关键词表（关键词 → 功能点）随验收输入一并下发，模型只报关键词、由平台按规则判定「检测到 / 未检测到」；判定口径为「日志检测到 + 截图确认两个条件都满足才判 PASS」 |
 
 #### 错误码与文案
 

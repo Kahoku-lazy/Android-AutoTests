@@ -7,6 +7,7 @@ import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import WorkbenchCrumbs from "@/shared/components/WorkbenchCrumbs.vue"
 import StepLogCheck from "./components/StepLogCheck.vue"
+import StepLogEvidence from "./components/StepLogEvidence.vue"
 import { renderSkillMarkdown } from "./helpers/skill-markdown"
 import { groupToolsByCategory } from "./helpers/model-debug-groups"
 import { hasLogCheck } from "./helpers/task-detail"
@@ -15,6 +16,8 @@ import {
   MODEL_DEBUG_ANSWER_ERROR_LABEL,
   MODEL_DEBUG_ANSWER_LABEL,
   MODEL_DEBUG_DEVICE_CONFIRM_TITLE,
+  MODEL_DEBUG_LOG_ASSERTION_LABEL,
+  MODEL_DEBUG_LOG_BASIS_LABEL,
   MODEL_DEBUG_ROLE_TABS,
   MODEL_DEBUG_SCOPE_NOTE,
   MODEL_DEBUG_THINKING_LABEL,
@@ -22,6 +25,7 @@ import {
   MODEL_DEBUG_TRACE_LABEL,
   SKILL_SHARED_NOTE,
   modelDebugDeviceConfirmText,
+  modelDebugLogBasisText,
   modelDebugRoute,
 } from "./constants"
 import type { ModelDebugToolCall } from "./api/toolbox"
@@ -333,6 +337,22 @@ function traceDetail(call: ModelDebugToolCall): string {
 
                 <!-- 设备点击证据：点击前时间点 + 点击后截图路径（+ 该时间点后 5 秒日志） -->
                 <StepLogCheck v-if="hasLogCheck(item.log_check)" :check="item.log_check" />
+
+                <!-- 验收角色的日志证据（调试回溯）：基准说明 + 与任务详情同一份证据组件 -->
+                <section
+                  v-if="item.log_basis"
+                  class="md-log-basis"
+                  data-testid="model-debug-log-basis"
+                >
+                  <p class="md-log-basis__head">{{ MODEL_DEBUG_LOG_BASIS_LABEL }}</p>
+                  <p class="md-log-basis__text">{{ modelDebugLogBasisText(item.log_basis) }}</p>
+                  <p v-if="item.log_assertion_info" class="md-log-basis__text">
+                    <span data-testid="model-debug-log-assertion-info">
+                      {{ MODEL_DEBUG_LOG_ASSERTION_LABEL }}：{{ item.log_assertion_info }}
+                    </span>
+                  </p>
+                </section>
+                <StepLogEvidence v-if="item.log_evidence" :evidence="item.log_evidence" />
 
                 <!-- 思考过程：默认展开，逐条可收起 -->
                 <div v-if="thinkingOf(item)" class="md-think">

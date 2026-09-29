@@ -97,9 +97,30 @@ const hasExecEvidence = computed(
         </span>
         <span v-if="attempt.actual" class="tac-result__msg"> · {{ attempt.actual }} </span>
       </p>
-      <div v-if="attempt.screenshotUrl" class="tac-result__shot">
+      <!-- 新验收契约的坐标：本轮检查的日志关键词 + 检测到的时间戳（没有就不显示该行） -->
+      <p v-if="attempt.verifierLogInfo" class="tac-result__row">
+        <span class="tac-result__label">日志断言</span>
+        <span class="tac-result__msg" data-testid="attempt-verifier-log-info">
+          {{ attempt.verifierLogInfo }}
+        </span>
+      </p>
+      <p v-if="attempt.verifierLogTimer" class="tac-result__row">
+        <span class="tac-result__label">日志断言时间</span>
+        <span class="tac-result__msg" data-testid="attempt-verifier-log-timer">
+          {{ attempt.verifierLogTimer }}
+        </span>
+      </p>
+      <div v-if="attempt.screenshotUrl || attempt.verifierScreenshotPath" class="tac-result__shot">
         <span class="tac-result__shot-label">验证截图</span>
+        <span
+          v-if="attempt.verifierScreenshotPath"
+          class="tac-result__msg"
+          data-testid="attempt-verifier-shot-path"
+        >
+          {{ attempt.verifierScreenshotPath }}
+        </span>
         <el-image
+          v-if="attempt.screenshotUrl"
           :src="attempt.screenshotUrl"
           :preview-src-list="[attempt.screenshotUrl]"
           fit="contain"

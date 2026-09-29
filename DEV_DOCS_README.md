@@ -129,6 +129,7 @@
 | 路由守卫 / 重定向规则 | PRD「会话与账号管理」· `功能测试用例-登录.md`（E2E 映射）· `tests/e2e/test_login_e2e.py` |
 | 测试加减（spec 数 / 用例数变化） | `单元测试-登录.md` 文首「规模」+ 文末「实测」+ 用例文件清单 · PRD §测试 的覆盖清单与规模行 · `frontend/tests/README.md` |
 | 任何**行为**变化 | 先走 OpenSpec change；归档时 delta 合并进 `openspec/specs/`（**不要手改主 spec**） |
+| 登录模块的**实现归属**变化（新增/删除实现文件、换写口） | `tools/arch_graph/declarations.json` 的 `domains` 声明 · 重跑 `python tools/gen_arch_graph.py` 刷新关系图产物 |
 
 ### 命令速查
 
@@ -152,6 +153,10 @@ cd frontend && npm run lint && npm run lint:styles && npm run typecheck
 # 架构红线 / 文档漂移
 python tools/gen_arch_stats.py --check-boundaries
 python tools/gen_arch_stats.py --check-md --doc <架构文档路径>
+
+# 需求 × 代码 关系图（登录模块）：重建 JSON + 工作台页 + 文档页
+python tools/gen_arch_graph.py
+python tools/gen_arch_graph.py --only workbench      # 只出 JSON + 工作台页
 ```
 
 ---
@@ -165,5 +170,17 @@ python tools/gen_arch_stats.py --check-md --doc <架构文档路径>
 | 3 | `frontend/tests/PLAN-module-classification.md` | 同一张注册表且整份为**历史规划**（还写着 devices/inspector/elements/cases 等旧模块名） | 建议标注为历史或删除，单改一行无意义 |
 | 4 | `tools/generate_report.py:80` | 文案仍写「导航到 `/login?add=1`，跳过已登录账号切换提示」，该例外已随多账号移除 | 文字与**冻结截图**配对，只改文案会图文打架 |
 | 5 | `frontend/tests/reports/` · `tests/reports/` | gitignore 的可再生产物，可能停留在旧数字（如 59 用例） | 重跑对应命令即刷新，不作为依据 |
+| 6 | `tests/graybox/unit/test_auth_validation_parity.py` | 前端文案提取正则只认单引号（`errs.<字段> = '文案'`），而 `frontend/src/shared/composables/useLoginForm.ts` 已统一为双引号 → 前端侧提取到 **0 条**，两条用例报「提取失效」 | 「登录/注册校验文案前后端一致」这条守卫实测是瞎的：两侧文案再怎么漂移都不会被它发现（2026-09-29 实测 2 条失败，11 条里 9 条过）。与 AI 助手线无关，未擅自修改 |
+| 7 | `tools/gen_device_log_keywords.py:23` | 关键词表源表路径硬编码 `dev_docs/1.txt`（文件名无意义），且**代码文件引用 dev_docs 路径**，与根 AGENTS.md「代码不得引用 dev_docs 路径」冲突 | 关键词表的唯一真相源是一个叫 `1.txt` 的文件；改名需同步改脚本。2026-09-29 随设备日志改动入库，未擅自改名 |
 
 > 发现新的不一致：请**登记到本表**并说明原因，不要静默改掉相邻文档（根 AGENTS.md 行为规范 3）。
+
+---
+
+## 六、待办事项（2026-09-29 登记，未收尾）
+
+| # | 事项 | 现状 | 下一步 |
+|---|---|---|---|
+| 1 | **页面目视验收未完成** | 执行模型调试台「日志检查」块 · 任务详情步骤「日志检查」块 · AI 工具箱「日志关键词」表 · 工具箱来源文案，四项均未经需求方目视确认；对应四份变更已归档（归档时按需求方指示继续了最后一条验收任务） | 需求方验收；发现问题按现象另立变更修正 |
+| 2 | **架构图工具产物未入库** | `tools/arch_graph/` · `tools/gen_arch_graph.py` · `dev_docs/DEV_TEST/设计方案与报告/` 的关系图产物 · 变更单 `2026-09-29-promote-arch-graph-tool` 属另一路在途工作（2026-09-29 14:31 仍在生成文件） | 该路会话收尾后自行提交；2026-09-29 的两次提交已显式避开这些文件 |
+| 3 | **§五 第 6 / 7 条** | 既有问题，已登记未处理 | 需求方决定：顺手修（引号正则两种都认 / 源表改名）或另立变更 |

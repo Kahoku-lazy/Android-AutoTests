@@ -158,6 +158,8 @@ export interface ModelDebugTool {
   read_only: boolean
   category: string
   enabled: boolean
+  /** 是否进调试对话：false = 只属于角色生产子集（设备池记账工具），调试对话不装配 */
+  debug_mounted: boolean
 }
 
 export interface ModelDebugModelSummary {
@@ -226,16 +228,19 @@ export async function fetchModelDebugConfig(
   return data
 }
 
-/** 单角色调试对话：挂该角色真实工具，可能真机操作，故不设等待上限（serial 条件必填） */
+/** 单角色调试对话：挂该角色真实工具（可能真机操作），故显式不设等待上限（serial 条件必填） */
 export async function chatWithModelDebug(
   role: ModelDebugRole | string,
   text: string,
   serial = "",
 ): Promise<{ status: boolean; data?: ModelDebugReply; message?: string }> {
-  const { data } = await djangoClient.post(`/ai/model-debug/${encodeURIComponent(role)}/chat/`, {
-    text,
-    serial,
-  })
+  const { data } = await djangoClient.post(
+    `/ai/model-debug/${encodeURIComponent(role)}/chat/`,
+    { text, serial },
+    // timeout: 0 = 不设上限（axios 语义）。MUST NOT 依赖"不传超时参数"：
+    // 共享客户端自带默认上限，不显式取消等于仍受它约束。
+    { timeout: 0 },
+  )
   return data
 }
 

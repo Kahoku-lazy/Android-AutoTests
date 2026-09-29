@@ -367,6 +367,14 @@
   color: var(--app-text-secondary);
 }
 
+/* 助手消息内的本轮费用（只读展示） */
+.md-cost {
+  margin: 0;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--app-text-secondary);
+}
+
 /* ── 验收对话的日志证据基准（调试回溯）── */
 .md-log-basis {
   display: flex;

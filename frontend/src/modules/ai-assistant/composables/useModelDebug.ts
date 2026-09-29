@@ -59,6 +59,16 @@ export function useModelDebug(role: Ref<string>) {
       (!needsDevice.value || Boolean(serial.value)),
   )
 
+  /** 本次会话累计费用：仅内存态，清空对话与切角色后归零；某轮未返回费用时不计入 */
+  const sessionCost = computed(() =>
+    messages.value.reduce((sum, item) => sum + (typeof item.cost === "number" ? item.cost : 0), 0),
+  )
+
+  /** 会话里是否至少有一轮返回了费用：决定累计是否展示（MUST NOT 以 0 冒充） */
+  const hasSessionCost = computed(() =>
+    messages.value.some((item) => typeof item.cost === "number"),
+  )
+
   async function load(): Promise<void> {
     loading.value = true
     error.value = ""
@@ -158,6 +168,8 @@ export function useModelDebug(role: Ref<string>) {
     serial,
     needsDevice,
     canSend,
+    sessionCost,
+    hasSessionCost,
     load,
     loadDevices,
     send,

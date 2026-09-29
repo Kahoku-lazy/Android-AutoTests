@@ -61,13 +61,17 @@ import {
   MODEL_DEBUG_ANSWER_ERROR_LABEL,
   MODEL_DEBUG_ANSWER_LABEL,
   MODEL_DEBUG_ASSEMBLY_NOTE,
+  MODEL_DEBUG_COST_LABEL,
   MODEL_DEBUG_DEVICE_NOT_NEEDED_NOTE,
   MODEL_DEBUG_LAYER_TITLES,
   MODEL_DEBUG_SCOPE_NOTE,
+  MODEL_DEBUG_SESSION_COST_LABEL,
   MODEL_DEBUG_THINKING_LABEL,
+  MODEL_DEBUG_TOOL_UNMOUNTED_NOTE,
   MODEL_DEBUG_TRACE_LABEL,
   SKILL_SHARED_NOTE,
 } from '@/modules/ai-assistant/constants'
+import { formatTaskCost } from '@/modules/ai-assistant/helpers/task-detail'
 import { useModelDebug } from '@/modules/ai-assistant/composables/useModelDebug'
 import ModelDebugPage from '@/modules/ai-assistant/ModelDebugPage.vue'
 
@@ -100,12 +104,39 @@ const CONFIG = {
         configured: true,
       },
       tools: [
-        { name: 'tap_screen', read_only: false, category: '设备控制', enabled: true },
-        { name: 'input_text', read_only: false, category: '设备控制', enabled: true },
-        { name: 'screenshot_page', read_only: true, category: '设备检查器', enabled: false },
+        { name: 'tap_screen', read_only: false, category: '设备控制', enabled: true, debug_mounted: true },
+        { name: 'input_text', read_only: false, category: '设备控制', enabled: true, debug_mounted: true },
+        {
+          name: 'screenshot_page',
+          read_only: true,
+          category: '设备检查器',
+          enabled: false,
+          debug_mounted: true,
+        },
       ],
     },
     skills: { gate_on: true, shared_by_roles: true, items: [{ name: 'skill-a', path: '/p/a' }] },
+  },
+}
+
+/** 执行角色夹具（多一名设备池记账工具）：它只属于生产子集，调试对话不装配 */
+const CONFIG_WITH_UNMOUNTED = {
+  status: true,
+  data: {
+    ...CONFIG.data,
+    role: {
+      ...CONFIG.data.role,
+      tools: [
+        ...CONFIG.data.role.tools,
+        {
+          name: 'acquire_device',
+          read_only: false,
+          category: '设备管理',
+          enabled: true,
+          debug_mounted: false,
+        },
+      ],
+    },
   },
 }
 
@@ -126,7 +157,7 @@ const PLANNER_CONFIG = {
         has_api_key: true,
         configured: true,
       },
-      tools: [{ name: 'list_page_flows', read_only: true, category: '页面流', enabled: true }],
+      tools: [{ name: 'list_page_flows', read_only: true, category: '页面流', enabled: true, debug_mounted: true }],
     },
     skills: { gate_on: true, shared_by_roles: true, items: [{ name: 'skill-a', path: '/p/a' }] },
   },
@@ -147,12 +178,17 @@ describe('模型调试接口契约', () => {
 
     await real.chatWithModelDebug('executor', '你好', 'ONLINE-1')
 
-    // 只有两个实参：不传 timeout 配置 = 前端不设等待上限
-    expect(post).toHaveBeenCalledWith('/ai/model-debug/executor/chat/', {
-      text: '你好',
-      serial: 'ONLINE-1',
-    })
-    expect(post.mock.calls[0]).toHaveLength(2)
+    // 第三个参数显式声明不设等待上限（timeout: 0）。
+    // MUST NOT 只看"不传超时参数"：共享客户端自带默认上限，不显式取消即仍受它约束。
+    expect(post).toHaveBeenCalledWith(
+      '/ai/model-debug/executor/chat/',
+      {
+        text: '你好',
+        serial: 'ONLINE-1',
+      },
+      { timeout: 0 },
+    )
+    expect(post.mock.calls[0]).toHaveLength(3)
 
     get.mockResolvedValueOnce({ data: { status: true, data: {} } })
     await real.fetchModelDebugConfig('planner')
@@ -645,6 +681,98 @@ describe('ModelDebugPage', () => {
       MODEL_DEBUG_DEVICE_NOT_NEEDED_NOTE,
     )
     expect(band.find('[data-testid="model-debug-ref-skills"]').text()).toContain('/p/a')
+  })
+
+  it('助手消息显示本轮费用，对话栏显示会话累计', async () => {
+    chat.mockResolvedValue({
+      status: true,
+      data: {
+        role: 'executor',
+        label: '执行模型',
+        model_name: 'deepseek-chat',
+        reply: 'OK',
+        cost: 0.1234,
+      },
+    })
+    const wrapper = await mountLoaded()
+
+    await sendText(wrapper, '第一次', 2)
+
+    const first = wrapper.findAll('.md-msg')[1]
+    expect(first.find('[data-testid="model-debug-msg-cost"]').text()).toBe(
+      `${MODEL_DEBUG_COST_LABEL}：${formatTaskCost(0.1234)}`,
+    )
+    expect(wrapper.find('[data-testid="model-debug-session-cost"]').text()).toContain(
+      `${MODEL_DEBUG_SESSION_COST_LABEL}：${formatTaskCost(0.1234)}`,
+    )
+
+    chat.mockResolvedValue({
+      status: true,
+      data: {
+        role: 'executor',
+        label: '执行模型',
+        model_name: 'deepseek-chat',
+        reply: 'OK2',
+        cost: 0.2,
+      },
+    })
+    await sendText(wrapper, '第二次', 4)
+
+    // 会话累计 = 两轮之和
+    expect(wrapper.find('[data-testid="model-debug-session-cost"]').text()).toContain(
+      formatTaskCost(0.1234 + 0.2),
+    )
+  })
+
+  it('无费用返回时不显示费用数字，清空对话后累计消失', async () => {
+    chat.mockResolvedValue({
+      status: true,
+      data: { role: 'executor', label: '执行模型', model_name: 'deepseek-chat', reply: 'FREE' },
+    })
+    const wrapper = await mountLoaded()
+
+    await sendText(wrapper, '没有费用', 2)
+
+    // 不以 0 冒充：该轮不显示费用，会话累计也不出现
+    expect(wrapper.find('[data-testid="model-debug-msg-cost"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="model-debug-session-cost"]').exists()).toBe(false)
+
+    chat.mockResolvedValue({
+      status: true,
+      data: {
+        role: 'executor',
+        label: '执行模型',
+        model_name: 'deepseek-chat',
+        reply: 'PAID',
+        cost: 0.5,
+      },
+    })
+    await sendText(wrapper, '有费用', 4)
+    expect(wrapper.find('[data-testid="model-debug-session-cost"]').exists()).toBe(true)
+
+    await wrapper.find('.md-chat-actions .md-btn').trigger('click')
+    await nextTick()
+
+    expect(wrapper.findAll('.md-msg')).toHaveLength(0)
+    expect(wrapper.find('[data-testid="model-debug-session-cost"]').exists()).toBe(false)
+  })
+
+  it('设备池记账工具标「调试不挂载」，且不计入二次确认的写工具数', async () => {
+    fetchConfig.mockResolvedValue(CONFIG_WITH_UNMOUNTED)
+    const wrapper = await mountLoaded()
+
+    const group = wrapper.findAll('.md-group-sub').find((node) => node.text().includes('设备管理'))
+    expect(group).toBeTruthy()
+    await group?.trigger('click')
+    await nextTick()
+
+    const row = wrapper.findAll('.md-tool').find((node) => node.text().includes('acquire_device'))
+    expect(row?.text()).toContain(MODEL_DEBUG_TOOL_UNMOUNTED_NOTE)
+
+    // 确认框只数实际挂载的写工具（tap_screen / input_text），不含被排除的记账工具
+    chat.mockResolvedValue(replyWithThinking('OK'))
+    await sendText(wrapper, '跑一下', 2)
+    expect(String(confirmMock.mock.calls[0][0])).toContain('2 个写工具')
   })
 })
 

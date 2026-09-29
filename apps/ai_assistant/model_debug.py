@@ -6,6 +6,8 @@
 - 三模型装配与命令行 model_test **共用同一个构造**（build_device_models_for_agent），避免漂移。
 - 调试对话**挂该角色真实工具**（需要设备的角色在选定设备后**会真实操作该设备**）、不挂 Skill，
   对话内容**不落库**。
+- 调试对话**不装配设备池记账工具**（`acquire_device` / `release_device`）：它们改变设备池占用，
+  与「调试对话不得改变设备池的占用状态」相抵；生产装配（`build_device_models`）不受影响。
 - 本轮产生设备副作用点击时，响应带一份平台装配的「日志检查」：点击前时间点 + 点击后截图路径
   + 该时间点后 5 秒窗口内的日志（与任务步骤证据同源；配对与切片共用 `logcheck` 的纯函数）。
 - **验收角色**的调试对话另带一份「设备日志证据 · 调试回溯」：平台从消息里识别取证基准
@@ -65,6 +67,22 @@ ROLE_LABELS: dict[str, str] = {
     "executor": "执行模型 Executor",
     "verifier": "验收模型 Verifier",
 }
+
+# 设备池记账工具：调用即改变设备池占用，与「调试对话不得改变设备池的占用状态」相抵，
+# 故调试对话不装配它们（生产角色规格保留，见 engines/ai/agents/config.py 的 VISION_TOOLS）。
+DEVICE_POOL_ACCOUNTING_TOOLS: tuple[str, ...] = ("acquire_device", "release_device")
+
+
+def debug_tool_names(role: str) -> tuple[str, ...]:
+    """该角色在**调试对话**里实际挂载的工具名：角色规格去掉设备池记账工具。
+
+    与角色规格同源，只减不增；「需要设备」「写工具计数」等口径都以本函数为准。
+    """
+    return tuple(
+        name
+        for name in ROLE_CLASSES[role].spec.tool_names
+        if name not in DEVICE_POOL_ACCOUNTING_TOOLS
+    )
 
 
 def normalize_role(role: str) -> str:
@@ -153,7 +171,11 @@ def _model_summary(agent, role: str) -> dict:
 
 
 def _role_tools(role: str) -> list[dict]:
-    """该角色的工具子集（名字取自角色类，附只读/分类/是否被平台停用）。"""
+    """该角色的工具子集（名字取自角色类，附只读/分类/是否被平台停用/是否进调试对话）。
+
+    `debug_mounted` 为假表示该工具只属于角色的生产子集、调试对话不装配它
+    （目前只有设备池记账工具，见 `DEVICE_POOL_ACCOUNTING_TOOLS`）。
+    """
     enabled_map = get_platform_tool_enabled_map()
     items: list[dict] = []
     for name in ROLE_CLASSES[role].spec.tool_names:
@@ -165,6 +187,7 @@ def _role_tools(role: str) -> list[dict]:
                 "read_only": bool(entry[1]) if entry else False,
                 "category": meta[0],
                 "enabled": bool(enabled_map.get(name, True)),
+                "debug_mounted": name not in DEVICE_POOL_ACCOUNTING_TOOLS,
             }
         )
     return items
@@ -208,12 +231,14 @@ def build_role_debug_configs(agent) -> dict:
 
 
 def role_needs_device(role: str) -> bool:
-    """该角色的工具子集里是否有工具需要设备（声明了 serial 参数）。
+    """该角色在**调试对话**里是否有工具需要设备（声明了 `serial` 参数）。
 
     按工具函数签名判定而不是硬编码角色名，也不依赖 DEBUG_PARAM_OPTIONS
     （后者只登记了设备管理类工具，screenshot_page 等会被漏掉）。
+    判定范围取调试实际挂载的子集（见 `debug_tool_names`）：被排除的设备池记账
+    工具本身也声明了 serial，但它们不装配，不应据此要求选设备。
     """
-    for name in ROLE_CLASSES[role].spec.tool_names:
+    for name in debug_tool_names(role):
         entry = TOOLS.get(name)
         if entry and "serial" in inspect.signature(entry[0]).parameters:
             return True
@@ -239,14 +264,15 @@ def build_debug_role(agent, role: str, model_cfg: ModelConfig, user_id: str = ""
     """构造只带该角色模型/提示词/工具子集的调试角色（Skill 不挂）。
 
     工具子集直接取角色规格，与生产装配（build_device_models）同源，不另抄一份；
-    因此调试对话会真实调用工具、真实操作设备。
+    因此调试对话会真实调用工具、真实操作设备。唯一例外是设备池记账工具
+    （见 `DEVICE_POOL_ACCOUNTING_TOOLS`）：它们改变设备池占用，不装配进调试对话。
     """
     base = ROLE_CLASSES[role].spec
     spec = RoleSpec(
         role=base.role,
         # 提示词随角色走：与生产同源，不从库读
         prompt=base.prompt,
-        tool_names=base.tool_names,
+        tool_names=debug_tool_names(role),
         vision=base.vision,
         context_config=base.context_config,
         react_config=base.react_config,

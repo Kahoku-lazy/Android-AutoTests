@@ -9,13 +9,15 @@ import WorkbenchCrumbs from "@/shared/components/WorkbenchCrumbs.vue"
 import StepLogCheck from "./components/StepLogCheck.vue"
 import StepLogEvidence from "./components/StepLogEvidence.vue"
 import { groupToolsByCategory } from "./helpers/model-debug-groups"
-import { hasLogCheck } from "./helpers/task-detail"
+import { readOnlyByName, toolReadOnly, traceDetail } from "./helpers/model-debug-trace"
+import { formatTaskCost, hasLogCheck } from "./helpers/task-detail"
 import { useModelDebug } from "./composables/useModelDebug"
 import { useModelDebugFolding } from "./composables/useModelDebugFolding"
 import {
   MODEL_DEBUG_ANSWER_ERROR_LABEL,
   MODEL_DEBUG_ANSWER_LABEL,
   MODEL_DEBUG_ASSEMBLY_NOTE,
+  MODEL_DEBUG_COST_LABEL,
   MODEL_DEBUG_DEVICE_CONFIRM_TITLE,
   MODEL_DEBUG_DEVICE_EMPTY_NOTE,
   MODEL_DEBUG_DEVICE_LOADING_NOTE,
@@ -27,10 +29,12 @@ import {
   MODEL_DEBUG_LOG_BASIS_LABEL,
   MODEL_DEBUG_ROLE_TABS,
   MODEL_DEBUG_SCOPE_NOTE,
+  MODEL_DEBUG_SESSION_COST_LABEL,
   MODEL_DEBUG_SKILL_DIR_EMPTY_NOTE,
   MODEL_DEBUG_SKILL_DIR_TITLE,
   MODEL_DEBUG_SKILL_GATE_OFF_NOTE,
   MODEL_DEBUG_THINKING_LABEL,
+  MODEL_DEBUG_TOOL_UNMOUNTED_NOTE,
   MODEL_DEBUG_TRACE_DETAIL_MAX,
   MODEL_DEBUG_TRACE_LABEL,
   SKILL_SHARED_NOTE,
@@ -38,7 +42,6 @@ import {
   modelDebugLogBasisText,
   modelDebugRoute,
 } from "./constants"
-import type { ModelDebugToolCall } from "./api/toolbox"
 
 const route = useRoute()
 const router = useRouter()
@@ -56,6 +59,8 @@ const {
   serial,
   needsDevice,
   canSend,
+  sessionCost,
+  hasSessionCost,
   load,
   send,
   clearMessages,
@@ -89,8 +94,10 @@ function clearConversation(): void {
   clearMessages()
 }
 
+/** 写工具计数：只数调试对话**实际挂载**的（设备池记账工具被排除，见后端 debug_mounted） */
 const writeToolCount = computed(
-  () => (config.value?.role.tools || []).filter((item) => !item.read_only).length,
+  () =>
+    (config.value?.role.tools || []).filter((item) => item.debug_mounted && !item.read_only).length,
 )
 
 const selectedDeviceLabel = computed(
@@ -113,23 +120,8 @@ async function onSend(): Promise<void> {
   await send()
 }
 
-/** 工具名 → 只读标记；轨迹里出现未知工具时不贴徽标（不猜） */
-const readOnlyByName = computed(() => {
-  const map = new Map<string, boolean>()
-  for (const tool of config.value?.role.tools || []) map.set(tool.name, tool.read_only)
-  return map
-})
-
-function toolReadOnly(name: string): boolean | undefined {
-  return readOnlyByName.value.get(name)
-}
-
-function traceDetail(call: ModelDebugToolCall): string {
-  const raw = call.type === "call" ? JSON.stringify(call.input ?? {}) : call.output || ""
-  return raw.length > MODEL_DEBUG_TRACE_DETAIL_MAX
-    ? raw.slice(0, MODEL_DEBUG_TRACE_DETAIL_MAX) + "…"
-    : raw
-}
+/** 工具名 → 只读标记；轨迹里出现未知工具时不贴徽标（不猜）——派生实现见 helpers/model-debug-trace */
+const readOnlyMap = computed(() => readOnlyByName(config.value?.role.tools || []))
 </script>
 
 <template>
@@ -244,6 +236,9 @@ function traceDetail(call: ModelDebugToolCall): string {
                       <span class="md-badge" :class="item.enabled ? 'on' : 'off'">
                         {{ item.enabled ? "已启用" : "已停用" }}
                       </span>
+                      <span v-if="!item.debug_mounted" class="md-badge off">
+                        {{ MODEL_DEBUG_TOOL_UNMOUNTED_NOTE }}
+                      </span>
                     </li>
                   </ul>
                 </div>
@@ -334,6 +329,10 @@ function traceDetail(call: ModelDebugToolCall): string {
           <aside class="md-panel md-chat">
             <h3 class="md-section-title">{{ MODEL_DEBUG_LAYER_TITLES.chat }}</h3>
             <p class="md-note">{{ MODEL_DEBUG_SCOPE_NOTE }}</p>
+            <!-- 会话累计费用：本次会话内各轮之和（仅内存态），无任何一轮返回费用时不显示 -->
+            <p v-if="hasSessionCost" class="md-note" data-testid="model-debug-session-cost">
+              {{ MODEL_DEBUG_SESSION_COST_LABEL }}：{{ formatTaskCost(sessionCost) }}
+            </p>
 
             <ul v-if="messages.length" class="md-msgs md-chat-body">
               <li v-for="item in messages" :key="item.id" class="md-msg" :class="item.role">
@@ -347,6 +346,14 @@ function traceDetail(call: ModelDebugToolCall): string {
                     {{ item.error ? MODEL_DEBUG_ANSWER_ERROR_LABEL : MODEL_DEBUG_ANSWER_LABEL }}
                   </p>
                   <p class="md-msg-text" :class="{ err: item.error }">{{ item.content }}</p>
+                  <!-- 本轮费用：取响应里的实际费用，未返回时不显示（不以 0 冒充） -->
+                  <p
+                    v-if="typeof item.cost === 'number'"
+                    class="md-cost"
+                    data-testid="model-debug-msg-cost"
+                  >
+                    {{ MODEL_DEBUG_COST_LABEL }}：{{ formatTaskCost(item.cost) }}
+                  </p>
                 </div>
 
                 <!-- 设备点击证据：点击前时间点 + 点击后截图路径（+ 该时间点后 5 秒日志） -->
@@ -398,13 +405,15 @@ function traceDetail(call: ModelDebugToolCall): string {
                       }}</span>
                       <span class="md-trace-name">{{ call.name }}</span>
                       <span
-                        v-if="toolReadOnly(call.name) !== undefined"
+                        v-if="toolReadOnly(readOnlyMap, call.name) !== undefined"
                         class="md-badge"
-                        :class="toolReadOnly(call.name) ? 'ro' : 'wr'"
-                        >{{ toolReadOnly(call.name) ? "只读" : "写" }}</span
+                        :class="toolReadOnly(readOnlyMap, call.name) ? 'ro' : 'wr'"
+                        >{{ toolReadOnly(readOnlyMap, call.name) ? "只读" : "写" }}</span
                       >
                       <span v-if="call.state" class="md-trace-state">{{ call.state }}</span>
-                      <span class="md-trace-detail">{{ traceDetail(call) }}</span>
+                      <span class="md-trace-detail">{{
+                        traceDetail(call, MODEL_DEBUG_TRACE_DETAIL_MAX)
+                      }}</span>
                     </li>
                   </ul>
                 </div>

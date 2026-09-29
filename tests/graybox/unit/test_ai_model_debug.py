@@ -280,8 +280,12 @@ def test_debug_role_mounts_role_tool_subset(agent):
     cfg = _stub_cfg()
     role = model_debug.build_debug_role(agent, "executor", cfg, user_id="1")
 
-    # 与生产装配同源：工具名取自角色规格，不再以空工具集运行
-    assert role.spec.tool_names == tuple(VISION_TOOLS)
+    # 与生产装配同源：工具名取自角色规格，不再以空工具集运行；
+    # 唯一例外是设备池记账工具（改变占用，调试不装配）
+    expected_executor = tuple(
+        n for n in VISION_TOOLS if n not in model_debug.DEVICE_POOL_ACCOUNTING_TOOLS
+    )
+    assert role.spec.tool_names == expected_executor
     assert role.spec.vision is True
     # 提示词唯一真相源：角色 spec 直接取 config.py 常量
     assert role.system_prompt == VISION_PROMPT
@@ -292,6 +296,32 @@ def test_debug_role_mounts_role_tool_subset(agent):
     assert model_debug.build_debug_role(agent, "verifier", cfg).spec.tool_names == tuple(
         VERIFIER_TOOLS
     )
+
+
+def test_debug_subset_excludes_device_pool_accounting_tools(agent):
+    """设备池记账工具不进调试对话：它们改变设备池占用，与验收标准相抵。"""
+    role = model_debug.build_debug_role(agent, "executor", _stub_cfg(), user_id="1")
+
+    for name in model_debug.DEVICE_POOL_ACCOUNTING_TOOLS:
+        assert name in VISION_TOOLS, "被排除的名字必须确实是执行角色的生产工具"
+        assert name not in role.spec.tool_names
+    # 其余工具一个不少
+    assert len(role.spec.tool_names) == len(VISION_TOOLS) - len(
+        model_debug.DEVICE_POOL_ACCOUNTING_TOOLS
+    )
+
+
+def test_config_marks_debug_mounted_tools(agent):
+    """只读配置逐工具标记是否进调试对话；计数口径据此而非生产子集。"""
+    tools = {t["name"]: t for t in _role_cfg(agent, "executor")["tools"]}
+
+    for name in model_debug.DEVICE_POOL_ACCOUNTING_TOOLS:
+        assert tools[name]["debug_mounted"] is False
+        assert tools[name]["read_only"] is False, "它们本就是写工具，故写工具计数会相应减少"
+    assert tools["tap_screen"]["debug_mounted"] is True
+    assert tools["screenshot_page"]["debug_mounted"] is True
+    # 工具清单本身仍与生产角色规格逐名一致（展示该角色的生效配置）
+    assert [t["name"] for t in _role_cfg(agent, "executor")["tools"]] == list(VISION_TOOLS)
 
 
 def test_debug_role_mounts_real_tools_but_no_skill(agent, monkeypatch):
@@ -308,7 +338,8 @@ def test_debug_role_mounts_real_tools_but_no_skill(agent, monkeypatch):
     monkeypatch.setattr(engine_model, "build_toolkit", _spy)
     model_debug.build_debug_role(agent, "executor", _stub_cfg(), user_id="1")
 
-    assert seen["names"] == list(VISION_TOOLS)
+    expected = [n for n in VISION_TOOLS if n not in model_debug.DEVICE_POOL_ACCOUNTING_TOOLS]
+    assert seen["names"] == expected
     assert seen["skill_dirs"] == []
 
 

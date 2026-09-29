@@ -109,7 +109,18 @@ export const MODEL_DEBUG_LAYER_TITLES = {
 
 /** 调试对话实际挂载该角色工具子集，故不得再写「不挂工具 / 不碰真机」 */
 export const MODEL_DEBUG_ASSEMBLY_NOTE =
-  "调试对话挂载上述工具：会真实调用该角色工具子集，需要设备的角色会真实操作所选设备；对话不落库"
+  "调试对话挂载上述工具（标「调试不挂载」的除外）：会真实调用该角色工具子集，需要设备的角色会真实操作所选设备；对话不落库"
+
+/** 只属于角色生产子集、调试对话不装配的工具（目前为设备池记账工具） */
+export const MODEL_DEBUG_TOOL_UNMOUNTED_NOTE = "调试不挂载"
+
+// ── 模型调试：费用展示（取本轮响应的实际费用，前端不估算、不落库）──
+
+/** 助手消息内本轮费用的标题 */
+export const MODEL_DEBUG_COST_LABEL = "本轮费用"
+
+/** 对话栏内会话累计费用的标题（清空对话或切角色后不显示） */
+export const MODEL_DEBUG_SESSION_COST_LABEL = "本次会话累计费用"
 
 // ── 模型调试：参考数据区（设备与 Skill 目录，整区只读）──
 
@@ -155,9 +166,9 @@ export const MODEL_DEBUG_TRACE_LABEL = "工具调用"
 /** 轨迹里单条入参/返回的最大展示字符数（action_time / screenshot_path 这类尾部字段必须看得到，故留足余量） */
 export const MODEL_DEBUG_TRACE_DETAIL_MAX = 600
 
-/** 调试范围说明：如实描述当前行为（挂真实工具、会真机操作） */
+/** 调试范围说明：如实描述当前行为（挂真实工具、会真机操作、不设上限且不提供中止） */
 export const MODEL_DEBUG_SCOPE_NOTE =
-  "只发这一个角色 · 挂载该角色真实工具 · 会真实操作所选设备 · 对话不落库"
+  "只发这一个角色 · 挂载该角色真实工具 · 会真实操作所选设备 · 对话不落库 · 不设等待上限，也不提供中止（跑飞的调试只能刷新页面，刷新不会中止后端本轮执行）"
 
 /** 需要设备的角色未选设备时的提示 */
 export const MODEL_DEBUG_DEVICE_REQUIRED_HINT = "请先选择调试设备（需可见 + 在线 + 未被占用）"

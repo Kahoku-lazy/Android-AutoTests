@@ -107,6 +107,9 @@ docs/
 .superpowers/
 .workbuddy/
 
+# ── 本地 AI 客户端 MCP 工具清单（个人环境配置，含本机绝对路径，不入库） ──
+.mcp.json
+
 # ── Legacy frontend (pre-Vue migration, contains hardcoded device IDs) ──
 frontend/_legacy/
 

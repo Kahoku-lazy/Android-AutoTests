@@ -369,7 +369,7 @@ _PHONE_CONTROL_TOOLS = {
 
 
 def test_tool_categories_group_tools_by_nature():
-    """6 个分类按工具性质分组；分类是整类启停单位，控制类必须能单独关闭。"""
+    """7 个分类按工具性质分组；分类是整类启停单位，控制类必须能单独关闭。"""
     from apps.ai_assistant.tools import TOOL_CATEGORIES, TOOL_META, TOOLS
 
     keys = [c["key"] for c in TOOL_CATEGORIES]
@@ -380,6 +380,7 @@ def test_tool_categories_group_tools_by_nature():
         "设备检查器",
         "视觉识别工具",
         "页面流工具",
+        "设备日志",
     ]
     colors = [c["color"] for c in TOOL_CATEGORIES]
     assert len(set(colors)) == len(colors)
@@ -393,6 +394,7 @@ def test_tool_categories_group_tools_by_nature():
     assert in_category("设备检查器") == {"screenshot_page"}
     assert in_category("视觉识别工具") == {"ocr_page"}
     assert in_category("页面流工具") == {"list_page_flows", "get_page_flow"}
+    assert in_category("设备日志") == {"read_device_log", "check_device_log"}
 
     # 每个工具恰属一个已登记分类，无孤儿
     covered: set[str] = set()
@@ -403,7 +405,14 @@ def test_tool_categories_group_tools_by_nature():
     assert covered == set(TOOLS)
 
     # 控制类之外不得再出现「会在手机上产生副作用」的工具
-    for cat in ("设备管理", "设备信息", "设备检查器", "视觉识别工具", "页面流工具"):
+    for cat in (
+        "设备管理",
+        "设备信息",
+        "设备检查器",
+        "视觉识别工具",
+        "页面流工具",
+        "设备日志",
+    ):
         assert not (in_category(cat) & _PHONE_CONTROL_TOOLS), cat
 
 

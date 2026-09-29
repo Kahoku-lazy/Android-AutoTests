@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 import pytest
+
 from django.contrib.auth import get_user_model
 from django.test import Client
 from django.utils import timezone

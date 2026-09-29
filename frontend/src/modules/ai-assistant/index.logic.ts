@@ -16,7 +16,7 @@ import { agentDetailRoute, HEALTH_CHECK_INTERVAL_MS } from "./constants"
 
 export const PAGE_HEADER = {
   title: "AI 助手",
-  subtitle: "智能体看板贴便签，工具箱与知识库一站管理",
+  subtitle: "智能体看板贴便签，工具箱一站管理",
   icon: "bot" as const,
   iconGradient: "linear-gradient(135deg, var(--ai-teal), var(--ai-teal-hover))",
 }

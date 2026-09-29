@@ -923,7 +923,7 @@ class TaskSubmitAPIView(APIView):
         attachment_filename = ""
         uploaded = data.get("attachment")
         if uploaded is not None:
-            from .kb_files import KbFileError, parse_task_attachment_bytes
+            from .attachments import AttachmentError, parse_task_attachment_bytes
 
             raw = uploaded.read()
             try:
@@ -931,7 +931,7 @@ class TaskSubmitAPIView(APIView):
                     getattr(uploaded, "name", "") or "attachment",
                     raw,
                 )
-            except KbFileError as exc:
+            except AttachmentError as exc:
                 raise ValidationError(str(exc)) from exc
 
         task = api.create_task(

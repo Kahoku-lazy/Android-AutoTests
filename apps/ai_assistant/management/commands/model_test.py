@@ -190,8 +190,17 @@ class Command(BaseCommand):
             )
             self.stdout.write(f"已新建任务 id={task.id}")
 
-            # 跑完整工作流：规划 → 执行 ↔ 验收
-            workflow = DeviceExecutionWorkflow(planner, executor, verifier, config, serial=serial)
+            # 跑完整工作流：规划 → 执行 ↔ 验收（与生产同口径：注入设备日志证据）
+            from apps.ai_assistant.log_evidence import ensure_log_evidence
+
+            workflow = DeviceExecutionWorkflow(
+                planner,
+                executor,
+                verifier,
+                config,
+                serial=serial,
+                log_evidence=ensure_log_evidence(),
+            )
             result = asyncio.run(workflow.run(text))
             logger.info("【full 阶段】最终结果 status=%s", result.get("status"))
 

@@ -141,6 +141,7 @@ def test_threshold_sets_are_identical():
         + f"  仅后端：{sorted(backend - frontend)}"
     )
 
+
 # ── 空白归一化口径：密码两侧一致（都去掉首尾空白），账号两侧有意不同 ──
 #
 # 规格：openspec/specs/auth-form-validation ›「密码首尾空白的归一化口径在两侧一致」
@@ -228,4 +229,3 @@ def test_frontend_register_export_trims_password():
         assert args[1] == "password.trim()"
         assert args[2] == "password2!.trim()"
         assert args[3] == "email!.trim()"
-

@@ -12,6 +12,14 @@ import sys
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
+# autoreload 的父进程只做文件监控、不真正对外服务：标记出来，避免它在服务子进程之前
+# 占住设备日志端口（日志端口同一时刻只能有一个监听者）。子进程必须把这个标记摘掉，
+# 否则标记会随环境继承下去，服务进程反而也不采集。
+if os.environ.get("RUN_MAIN") != "true":
+    os.environ.setdefault("DJANGO_AUTORELOAD_PARENT", "1")
+else:
+    os.environ.pop("DJANGO_AUTORELOAD_PARENT", None)
+
 import django
 
 django.setup()

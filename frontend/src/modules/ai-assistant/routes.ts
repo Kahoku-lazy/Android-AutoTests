@@ -15,12 +15,6 @@ const routes: RouteRecordRaw[] = [
     meta: { title: "AI工具箱" },
   },
   {
-    path: "/ai-assistant/knowledge",
-    name: "ai-assistant-knowledge",
-    component: () => import("@/modules/ai-assistant/index.vue"),
-    meta: { title: "知识库" },
-  },
-  {
     path: "/ai-assistant/toolbox/skills/:skillName",
     name: "ai-skill-viewer",
     component: () => import("@/modules/ai-assistant/SkillViewerPage.vue"),

@@ -7,6 +7,7 @@ import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import WorkbenchCrumbs from "@/shared/components/WorkbenchCrumbs.vue"
 import { useAuthUser } from "@/shared/composables/useAuthUser"
 import { useToolDebug } from "./composables/useToolDebug"
+import { paramLabel } from "./helpers/tool-debug-label"
 
 const route = useRoute()
 const toolName = computed(() => String(route.params.toolName || ""))
@@ -72,9 +73,14 @@ const {
                 icon="∅"
                 text="无需额外参数，可直接执行"
               />
-              <label v-for="p in schema.parameters" :key="p.name" class="td-field">
+              <label
+                v-for="p in schema.parameters"
+                :key="p.name"
+                class="td-field"
+                :title="p.hint || undefined"
+              >
                 <span class="td-field-label">
-                  {{ p.name }}
+                  {{ paramLabel(p) }}
                   <em v-if="p.required">必填</em>
                   <em v-else>可选</em>
                   <span class="td-type">{{ p.type }}</span>

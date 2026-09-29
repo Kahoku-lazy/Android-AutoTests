@@ -33,7 +33,6 @@ data/*.db-*
 data/*.db.*
 data/screenshots/
 data/avatars/
-data/chromadb/
 data/uploads/
 data/sop_*.json
 data

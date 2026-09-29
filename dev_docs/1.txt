@@ -1,0 +1,71 @@
+功能点	功能模块	串口日志功能点关键字
+打开设备成功	设备开关	switch_on
+关闭设备成功	设备开关	switch_off
+设置颜色成功	灯效库	color_configs_set_success
+设置预约定时成功	定时功能	timer_configs_set_success
+设置唤醒定时成功	定时功能	awaken_configs_set_success
+设置睡眠定时成功	定时功能	sleep_configs_set_success
+成功设置相对亮度	亮度	lumi_set_success
+成功切换到音乐模式	音乐模式	music_mode_start
+设置为设备拾音	音乐模式	music_mode_start
+设置为手机拾音	音乐模式	phone_music_start
+成功设置灵敏度	音乐模式	music_mode_agile_sensitivity
+音乐模式场景设置成功	音乐模式	music_configs_set_success
+成功切换到颜色模式	颜色模式	color_mode_start
+设置为分段	颜色模式	color_mode_start
+分段-渐变开启	颜色模式	color_gradient_open_success
+分段-渐变关闭	颜色模式	color_gradient_close_success
+分段-相对亮度设置成功	颜色模式	set_color_segment_lumi_success
+分段-颜色设置成功	颜色模式	color_configs_set_success
+设置为高阶	颜色模式	gra_mode_start
+高阶模式下-颜色设置成功	颜色模式	graffiti_configs_set_success
+成功切换至场景模式	场景模式	abstract_mode_start
+灯效场景设置成功	场景模式	scene_configs_set_success
+成功切换至DIY模式	DIY模式	diy_mode_start
+DIY灯效设置成功	DIY模式	diy_configs_set_success
+成功切换至视频模式	视频模式	video_mode_start
+视频模式设置成功	视频模式	video_config_success
+相对亮度	视频模式	set_color_video_lumi_success
+颜色校准	视频模式	set_video_color_calibration_success
+游戏/戏剧	视频模式	set_video_game_success
+set_video_drama_success
+分段/整段	视频模式	set_video_segment_success
+set_video_all_segment_success
+声音效果	视频模式	video_sound_effect_open
+video_sound_effect_close
+黑边消除	视频模式	video_black_edge_elimination_open
+video_black_edge_elimination_close
+黑屏设置	视频模式	video_black_screen_setting_open
+video_black_screen_setting_close
+切换到音乐盛宴：	音乐盛宴	music_dreamview_mode_start
+音乐盛宴设置成功：	音乐盛宴	music_dreamview_configs_success
+音乐盛宴开关	音乐盛宴	music_dreamview_open
+music_dreamview_close
+亮度统一	音乐盛宴	music_dreamview_lumi_unify_open
+music_dreamview_lumi_unify_close
+亮度	音乐盛宴	set_music_dreamview_lumi_success
+灵敏度	音乐盛宴	set_music_dreamview_sensitivity_success
+场景选择	音乐盛宴	set_music_dreamview_scene_success
+动感/柔和	音乐盛宴	set_music_dreamview_model_dongan
+set_music_dreamview_model_ronghe
+切换到观影盛宴	观影盛宴	viewing_dreamview_mode_start
+观影盛宴设置成功	观影盛宴	viewing_dreamview_configs_success
+观影盛宴开关	观影盛宴	viewing_dreamview_open
+viewing_dreamview_close
+亮度统一	观影盛宴	viewing_dreamview_lumi_unify_open
+viewing_dreamview_lumi_unify_close
+亮度	观影盛宴	set_viewing_dreamview_lumi_success
+饱和度	观影盛宴	set_viewing_dreamview_saturability_success
+游戏/戏剧	观影盛宴	set_viewing_dreamview_game_success
+set_viewing_dreamview_drama_success
+分段/整段	观影盛宴	set_viewing_dreamview_segment_success
+set_viewing_dreamview_all_segment_success
+声音效果	观影盛宴	viewing_dreamview_video_sound_effect_open
+viewing_dreamview_video_sound_effect_close
+切换到场景盛宴	场景盛宴	abstract_dreamview_mode_start
+场景盛宴设置成功	场景盛宴	abstract_dreamview_configs_success
+亮度统一	场景盛宴	abstract_dreamview_lumi_unify_open
+abstract_dreamview_lumi_unify_close
+亮度	场景盛宴	set_abstract_dreamview_lumi_success
+声音播放-手机	场景盛宴	set_abstract_dreamview_sound_phone_success
+场景选择	场景盛宴	set_abstract_dreamview_scene_success

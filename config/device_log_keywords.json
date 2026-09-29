@@ -1,0 +1,492 @@
+{
+  "source": "dev_docs/1.txt",
+  "description": "串口日志关键词 → 功能模块 / 功能点 对照表；由 tools/gen_device_log_keywords.py 生成，请勿手改",
+  "feature_count": 56,
+  "keyword_count": 67,
+  "keywords": {
+    "switch_on": [
+      {
+        "id": 0,
+        "module": "设备开关",
+        "feature": "打开设备成功"
+      }
+    ],
+    "switch_off": [
+      {
+        "id": 1,
+        "module": "设备开关",
+        "feature": "关闭设备成功"
+      }
+    ],
+    "color_configs_set_success": [
+      {
+        "id": 2,
+        "module": "灯效库",
+        "feature": "设置颜色成功"
+      },
+      {
+        "id": 17,
+        "module": "颜色模式",
+        "feature": "分段-颜色设置成功"
+      }
+    ],
+    "timer_configs_set_success": [
+      {
+        "id": 3,
+        "module": "定时功能",
+        "feature": "设置预约定时成功"
+      }
+    ],
+    "awaken_configs_set_success": [
+      {
+        "id": 4,
+        "module": "定时功能",
+        "feature": "设置唤醒定时成功"
+      }
+    ],
+    "sleep_configs_set_success": [
+      {
+        "id": 5,
+        "module": "定时功能",
+        "feature": "设置睡眠定时成功"
+      }
+    ],
+    "lumi_set_success": [
+      {
+        "id": 6,
+        "module": "亮度",
+        "feature": "成功设置相对亮度"
+      }
+    ],
+    "music_mode_start": [
+      {
+        "id": 7,
+        "module": "音乐模式",
+        "feature": "成功切换到音乐模式"
+      },
+      {
+        "id": 8,
+        "module": "音乐模式",
+        "feature": "设置为设备拾音"
+      }
+    ],
+    "phone_music_start": [
+      {
+        "id": 9,
+        "module": "音乐模式",
+        "feature": "设置为手机拾音"
+      }
+    ],
+    "music_mode_agile_sensitivity": [
+      {
+        "id": 10,
+        "module": "音乐模式",
+        "feature": "成功设置灵敏度"
+      }
+    ],
+    "music_configs_set_success": [
+      {
+        "id": 11,
+        "module": "音乐模式",
+        "feature": "音乐模式场景设置成功"
+      }
+    ],
+    "color_mode_start": [
+      {
+        "id": 12,
+        "module": "颜色模式",
+        "feature": "成功切换到颜色模式"
+      },
+      {
+        "id": 13,
+        "module": "颜色模式",
+        "feature": "设置为分段"
+      }
+    ],
+    "color_gradient_open_success": [
+      {
+        "id": 14,
+        "module": "颜色模式",
+        "feature": "分段-渐变开启"
+      }
+    ],
+    "color_gradient_close_success": [
+      {
+        "id": 15,
+        "module": "颜色模式",
+        "feature": "分段-渐变关闭"
+      }
+    ],
+    "set_color_segment_lumi_success": [
+      {
+        "id": 16,
+        "module": "颜色模式",
+        "feature": "分段-相对亮度设置成功"
+      }
+    ],
+    "gra_mode_start": [
+      {
+        "id": 18,
+        "module": "颜色模式",
+        "feature": "设置为高阶"
+      }
+    ],
+    "graffiti_configs_set_success": [
+      {
+        "id": 19,
+        "module": "颜色模式",
+        "feature": "高阶模式下-颜色设置成功"
+      }
+    ],
+    "abstract_mode_start": [
+      {
+        "id": 20,
+        "module": "场景模式",
+        "feature": "成功切换至场景模式"
+      }
+    ],
+    "scene_configs_set_success": [
+      {
+        "id": 21,
+        "module": "场景模式",
+        "feature": "灯效场景设置成功"
+      }
+    ],
+    "diy_mode_start": [
+      {
+        "id": 22,
+        "module": "DIY模式",
+        "feature": "成功切换至DIY模式"
+      }
+    ],
+    "diy_configs_set_success": [
+      {
+        "id": 23,
+        "module": "DIY模式",
+        "feature": "DIY灯效设置成功"
+      }
+    ],
+    "video_mode_start": [
+      {
+        "id": 24,
+        "module": "视频模式",
+        "feature": "成功切换至视频模式"
+      }
+    ],
+    "video_config_success": [
+      {
+        "id": 25,
+        "module": "视频模式",
+        "feature": "视频模式设置成功"
+      }
+    ],
+    "set_color_video_lumi_success": [
+      {
+        "id": 26,
+        "module": "视频模式",
+        "feature": "相对亮度"
+      }
+    ],
+    "set_video_color_calibration_success": [
+      {
+        "id": 27,
+        "module": "视频模式",
+        "feature": "颜色校准"
+      }
+    ],
+    "set_video_game_success": [
+      {
+        "id": 28,
+        "module": "视频模式",
+        "feature": "游戏/戏剧"
+      }
+    ],
+    "set_video_drama_success": [
+      {
+        "id": 28,
+        "module": "视频模式",
+        "feature": "游戏/戏剧"
+      }
+    ],
+    "set_video_segment_success": [
+      {
+        "id": 29,
+        "module": "视频模式",
+        "feature": "分段/整段"
+      }
+    ],
+    "set_video_all_segment_success": [
+      {
+        "id": 29,
+        "module": "视频模式",
+        "feature": "分段/整段"
+      }
+    ],
+    "video_sound_effect_open": [
+      {
+        "id": 30,
+        "module": "视频模式",
+        "feature": "声音效果"
+      }
+    ],
+    "video_sound_effect_close": [
+      {
+        "id": 30,
+        "module": "视频模式",
+        "feature": "声音效果"
+      }
+    ],
+    "video_black_edge_elimination_open": [
+      {
+        "id": 31,
+        "module": "视频模式",
+        "feature": "黑边消除"
+      }
+    ],
+    "video_black_edge_elimination_close": [
+      {
+        "id": 31,
+        "module": "视频模式",
+        "feature": "黑边消除"
+      }
+    ],
+    "video_black_screen_setting_open": [
+      {
+        "id": 32,
+        "module": "视频模式",
+        "feature": "黑屏设置"
+      }
+    ],
+    "video_black_screen_setting_close": [
+      {
+        "id": 32,
+        "module": "视频模式",
+        "feature": "黑屏设置"
+      }
+    ],
+    "music_dreamview_mode_start": [
+      {
+        "id": 33,
+        "module": "音乐盛宴",
+        "feature": "切换到音乐盛宴"
+      }
+    ],
+    "music_dreamview_configs_success": [
+      {
+        "id": 34,
+        "module": "音乐盛宴",
+        "feature": "音乐盛宴设置成功"
+      }
+    ],
+    "music_dreamview_open": [
+      {
+        "id": 35,
+        "module": "音乐盛宴",
+        "feature": "音乐盛宴开关"
+      }
+    ],
+    "music_dreamview_close": [
+      {
+        "id": 35,
+        "module": "音乐盛宴",
+        "feature": "音乐盛宴开关"
+      }
+    ],
+    "music_dreamview_lumi_unify_open": [
+      {
+        "id": 36,
+        "module": "音乐盛宴",
+        "feature": "亮度统一"
+      }
+    ],
+    "music_dreamview_lumi_unify_close": [
+      {
+        "id": 36,
+        "module": "音乐盛宴",
+        "feature": "亮度统一"
+      }
+    ],
+    "set_music_dreamview_lumi_success": [
+      {
+        "id": 37,
+        "module": "音乐盛宴",
+        "feature": "亮度"
+      }
+    ],
+    "set_music_dreamview_sensitivity_success": [
+      {
+        "id": 38,
+        "module": "音乐盛宴",
+        "feature": "灵敏度"
+      }
+    ],
+    "set_music_dreamview_scene_success": [
+      {
+        "id": 39,
+        "module": "音乐盛宴",
+        "feature": "场景选择"
+      }
+    ],
+    "set_music_dreamview_model_dongan": [
+      {
+        "id": 40,
+        "module": "音乐盛宴",
+        "feature": "动感/柔和"
+      }
+    ],
+    "set_music_dreamview_model_ronghe": [
+      {
+        "id": 40,
+        "module": "音乐盛宴",
+        "feature": "动感/柔和"
+      }
+    ],
+    "viewing_dreamview_mode_start": [
+      {
+        "id": 41,
+        "module": "观影盛宴",
+        "feature": "切换到观影盛宴"
+      }
+    ],
+    "viewing_dreamview_configs_success": [
+      {
+        "id": 42,
+        "module": "观影盛宴",
+        "feature": "观影盛宴设置成功"
+      }
+    ],
+    "viewing_dreamview_open": [
+      {
+        "id": 43,
+        "module": "观影盛宴",
+        "feature": "观影盛宴开关"
+      }
+    ],
+    "viewing_dreamview_close": [
+      {
+        "id": 43,
+        "module": "观影盛宴",
+        "feature": "观影盛宴开关"
+      }
+    ],
+    "viewing_dreamview_lumi_unify_open": [
+      {
+        "id": 44,
+        "module": "观影盛宴",
+        "feature": "亮度统一"
+      }
+    ],
+    "viewing_dreamview_lumi_unify_close": [
+      {
+        "id": 44,
+        "module": "观影盛宴",
+        "feature": "亮度统一"
+      }
+    ],
+    "set_viewing_dreamview_lumi_success": [
+      {
+        "id": 45,
+        "module": "观影盛宴",
+        "feature": "亮度"
+      }
+    ],
+    "set_viewing_dreamview_saturability_success": [
+      {
+        "id": 46,
+        "module": "观影盛宴",
+        "feature": "饱和度"
+      }
+    ],
+    "set_viewing_dreamview_game_success": [
+      {
+        "id": 47,
+        "module": "观影盛宴",
+        "feature": "游戏/戏剧"
+      }
+    ],
+    "set_viewing_dreamview_drama_success": [
+      {
+        "id": 47,
+        "module": "观影盛宴",
+        "feature": "游戏/戏剧"
+      }
+    ],
+    "set_viewing_dreamview_segment_success": [
+      {
+        "id": 48,
+        "module": "观影盛宴",
+        "feature": "分段/整段"
+      }
+    ],
+    "set_viewing_dreamview_all_segment_success": [
+      {
+        "id": 48,
+        "module": "观影盛宴",
+        "feature": "分段/整段"
+      }
+    ],
+    "viewing_dreamview_video_sound_effect_open": [
+      {
+        "id": 49,
+        "module": "观影盛宴",
+        "feature": "声音效果"
+      }
+    ],
+    "viewing_dreamview_video_sound_effect_close": [
+      {
+        "id": 49,
+        "module": "观影盛宴",
+        "feature": "声音效果"
+      }
+    ],
+    "abstract_dreamview_mode_start": [
+      {
+        "id": 50,
+        "module": "场景盛宴",
+        "feature": "切换到场景盛宴"
+      }
+    ],
+    "abstract_dreamview_configs_success": [
+      {
+        "id": 51,
+        "module": "场景盛宴",
+        "feature": "场景盛宴设置成功"
+      }
+    ],
+    "abstract_dreamview_lumi_unify_open": [
+      {
+        "id": 52,
+        "module": "场景盛宴",
+        "feature": "亮度统一"
+      }
+    ],
+    "abstract_dreamview_lumi_unify_close": [
+      {
+        "id": 52,
+        "module": "场景盛宴",
+        "feature": "亮度统一"
+      }
+    ],
+    "set_abstract_dreamview_lumi_success": [
+      {
+        "id": 53,
+        "module": "场景盛宴",
+        "feature": "亮度"
+      }
+    ],
+    "set_abstract_dreamview_sound_phone_success": [
+      {
+        "id": 54,
+        "module": "场景盛宴",
+        "feature": "声音播放-手机"
+      }
+    ],
+    "set_abstract_dreamview_scene_success": [
+      {
+        "id": 55,
+        "module": "场景盛宴",
+        "feature": "场景选择"
+      }
+    ]
+  }
+}

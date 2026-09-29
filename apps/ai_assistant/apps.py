@@ -48,3 +48,27 @@ class AiAssistantConfig(AppConfig):
                 _log.info("Startup recovery: %d orphaned running task(s) → failed", recovered)
         except Exception as e:
             _log.exception("Startup recovery failed: %s", e)
+
+        self._restore_log_ports()
+
+    def _restore_log_ports(self) -> None:
+        """按持久化的开关状态恢复日志端口监听（关闭着的端口不会被打开）。
+
+        平台重启后无需任何人打开页面即恢复监听；autoreload 的父进程只做文件监控，
+        必须跳过——否则它会先占住日志端口，真正服务的子进程反而一条日志都收不到。
+        """
+        import os
+
+        if (
+            os.environ.get("DJANGO_AUTORELOAD_PARENT") == "1"
+            and os.environ.get("RUN_MAIN") != "true"
+        ):
+            _log.info("Skip device log port restore in autoreload parent process")
+            return
+        try:
+            from . import log_port_service
+
+            enabled = log_port_service.reconcile()
+            _log.info("Device log ports enabled after startup: %s", enabled)
+        except Exception as e:
+            _log.exception("Device log port restore failed: %s", e)

@@ -1,0 +1,241 @@
+/* WifiPortPanel — 无线端口管理（Doodle Craft 令牌；类名 lp-* 为本面板私有）
+ *
+ * 前两段（目录头 / 通用按键）是从 ToolboxPanel.style.css 镜像来的同名壳样式：
+ * 本组件与装配台同级渲染（多根节点），父级 scoped 样式到不了这里，需自带一份；
+ * 数值只引用令牌，保持两侧同值。第三段起为本面板专属样式。
+ */
+
+/* ── 右侧目录头（镜像 ToolboxPanel.style.css）── */
+.tb-cat-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--app-space-md);
+  padding: var(--app-space-md) var(--app-space-lg);
+  border-bottom: 2px solid var(--ink);
+  background: var(--app-bg-subtle);
+  flex-wrap: wrap;
+}
+.tb-cat-title {
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+  color: var(--ink);
+}
+.tb-cat-sub {
+  margin: var(--app-space-xs) 0 0;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+.tb-cat-actions {
+  display: flex;
+  gap: var(--app-space-sm);
+  /* 说明文案较长时头部会换行，这里把操作按钮顶到右侧 */
+  margin-left: auto;
+}
+.tb-cat-body {
+  padding: var(--app-space-md) var(--app-space-lg) var(--app-space-lg);
+  min-height: 200px;
+}
+
+/* ── 通用按键（镜像 ToolboxPanel.style.css）── */
+.tb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+  padding: 6px 12px;
+  border-radius: var(--app-radius-sm);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  border: 2px solid var(--ink);
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 2px 2px 0 var(--ink);
+  background: var(--app-bg-card);
+  color: var(--ink);
+  transition:
+    transform var(--app-duration-fast),
+    background var(--app-duration-fast);
+}
+.tb-btn:hover {
+  background: var(--app-highlight);
+  transform: translateY(-1px);
+}
+.tb-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.lp-port {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  font-family: var(--app-font-mono);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.lp-dot {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.lp-dot.on {
+  background: var(--c-device);
+}
+.lp-dot.off {
+  background: var(--app-bg-subtle);
+}
+
+.lp-mono {
+  font-family: var(--app-font-mono);
+  color: var(--ink);
+}
+
+.lp-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+}
+
+.lp-switch-text {
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+}
+.lp-switch-text.on {
+  color: var(--app-status-success-text);
+}
+.lp-switch-text.off {
+  color: var(--app-text-muted);
+}
+
+.lp-hint,
+.lp-hint-dim,
+.lp-warn,
+.lp-note {
+  margin: var(--app-space-sm) 0 0;
+  font-size: var(--app-size-xs);
+  line-height: 1.5;
+}
+.lp-hint {
+  color: var(--app-text-secondary);
+  font-weight: 600;
+}
+.lp-hint-dim {
+  color: var(--app-text-muted);
+}
+.lp-warn {
+  color: var(--app-status-danger-text);
+  font-weight: 700;
+}
+.lp-note {
+  color: var(--app-text-secondary);
+}
+
+/* ── 日志抽屉 ── */
+
+.lp-log {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+  height: 100%;
+  min-height: 0;
+}
+
+.lp-log-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-md);
+  flex-wrap: wrap;
+  padding-bottom: var(--app-space-sm);
+  border-bottom: 1.5px dashed var(--dot);
+}
+
+.lp-tail {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--ink);
+}
+.lp-tail-select {
+  width: 120px;
+}
+
+.lp-auto {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.lp-count {
+  margin-left: auto;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+.lp-log-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.lp-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+}
+
+.lp-line {
+  display: grid;
+  grid-template-columns: 96px 64px minmax(0, 1fr);
+  gap: var(--app-space-sm);
+  align-items: start;
+  padding: var(--app-space-xs) var(--app-space-sm);
+  background: var(--app-bg-card);
+  border: 1.5px solid var(--app-border-light);
+  border-radius: var(--app-radius-sm);
+}
+
+.lp-time {
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.lp-src {
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  text-align: center;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--el-border-radius-small);
+  background: var(--app-bg-subtle);
+  color: var(--app-text-secondary);
+}
+
+.lp-text {
+  /* 合并条（同一毫秒多行）要按发生顺序换行展示 */
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  color: var(--ink);
+}
+
+/* 减少动效：关闭位移 / 旋转 / 缩放（颜色过渡不受影响） */
+@media (prefers-reduced-motion: reduce) {
+  .tb-btn {
+    transition: none;
+  }
+}

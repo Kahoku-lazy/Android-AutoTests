@@ -12,7 +12,7 @@ import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.ai_assistant import api, engine_adapter
-from apps.ai_assistant.kb_files import KbFileError, parse_task_attachment_bytes
+from apps.ai_assistant.attachments import AttachmentError, parse_task_attachment_bytes
 from apps.ai_assistant.models import AIAgent
 from apps.ai_assistant.serializers import TaskSubmitInputSerializer
 from models.constants import AgentStatus, TaskStatus
@@ -111,7 +111,7 @@ def test_submit_serializer_rejects_bad_ext():
 
 
 def test_parse_task_attachment_rejects_ext():
-    with pytest.raises(KbFileError, match="docx"):
+    with pytest.raises(AttachmentError, match="docx"):
         parse_task_attachment_bytes("a.txt", b"hello")
 
 

@@ -42,14 +42,12 @@ const form = ref({
   strong_enabled: false,
   api_key: "",
   base_url: "",
-  enable_knowledge_base: false,
   enable_workspace_tools: false,
   enable_business_tools: false,
   enable_mcp_tools: false,
   enable_skills: false,
   tools: [],
   skills_config: {},
-  knowledge_sources: {},
   max_loops: 3,
   route_configs: {
     device_control: { name: "", avatar: "📱", planner: {}, executor: {}, verifier: {} },
@@ -139,16 +137,14 @@ async function save() {
       : payload.route_configs?.device_control?.name
     payload.name = (routeName || "").trim() || "平台小助手"
   }
-  // 工具/知识库配置已移到 AI 工具箱 / 知识库页（platform-config），此处不随智能体提交
+  // 工具配置已移到 AI 工具箱页（platform-config），此处不随智能体提交
   for (const k of [
     "tools",
     "enable_workspace_tools",
     "enable_business_tools",
     "enable_mcp_tools",
     "enable_skills",
-    "enable_knowledge_base",
     "skills_config",
-    "knowledge_sources",
   ]) {
     delete payload[k]
   }

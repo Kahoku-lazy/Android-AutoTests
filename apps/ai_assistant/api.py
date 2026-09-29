@@ -23,6 +23,7 @@ from apps.ai_assistant.models import (
     AIConversation,
     AIDevicePromptArchive,
     AIExecutionLog,
+    AILogPort,
     AIMessage,
     AIPlatformTool,
     AISharedTool,
@@ -74,6 +75,10 @@ __all__ = [
     # 平台业务工具全局开关
     "get_platform_tool_enabled_map",
     "set_platform_tool_enabled",
+    "ensure_log_ports",
+    "get_log_port_enabled_map",
+    "is_log_port_enabled",
+    "set_log_port_enabled",
     # 消息操作
     "save_message",
     # 任务操作
@@ -104,9 +109,7 @@ __all__ = [
     "mask_route_configs",
     "get_route_model_config",
     # 跨模块接口
-    "get_kb_doc_count",
     "get_provider_config",
-    "search_knowledge",
     # 跨模块只读助手（供 dashboard 等使用，fix-cross-app-firewall）
     "filter_agents_for_user",
 ]
@@ -183,13 +186,11 @@ def create_agent(user_id: int, data: dict) -> AIAgent:
         strong_enabled=data.get("strong_enabled", False),
         api_key=encrypt_key(data.get("api_key", "")),
         base_url=data.get("base_url", ""),
-        enable_knowledge_base=data.get("enable_knowledge_base", False),
         enable_workspace_tools=data.get("enable_workspace_tools", False),
         enable_business_tools=data.get("enable_business_tools", False),
         enable_mcp_tools=data.get("enable_mcp_tools", False),
         enable_skills=data.get("enable_skills", False),
         skills_config=data.get("skills_config", {}),
-        knowledge_sources=data.get("knowledge_sources", {}),
         route_configs=encrypt_route_configs(data.get("route_configs", {})),
         max_loops=data.get("max_loops", 3),
         key_revealed=False,
@@ -224,14 +225,12 @@ def update_agent(agent: AIAgent, data: dict) -> AIAgent:
         "strong_enabled",
         "api_key",
         "base_url",
-        "enable_knowledge_base",
         "enable_workspace_tools",
         "enable_business_tools",
         "enable_mcp_tools",
         "enable_skills",
         "status",
         "skills_config",
-        "knowledge_sources",
         "route_configs",
         "max_loops",
     ]:
@@ -347,23 +346,21 @@ _PLATFORM_CONFIG_FIELDS = (
     "enable_business_tools",
     "enable_mcp_tools",
     "enable_skills",
-    "enable_knowledge_base",
 )
 
 
 def get_platform_config(agent: AIAgent) -> dict:
-    """读取平台唯一智能体的工具/知识库配置（供 AI 工具箱 / 知识库页）。"""
+    """读取平台唯一智能体的工具配置（供 AI 工具箱）。"""
     return {
         "agent_id": agent.id,
         "agent_name": agent.name,
         **{f: getattr(agent, f) for f in _PLATFORM_CONFIG_FIELDS},
         "skills_config": agent.skills_config or {},
-        "knowledge_sources": agent.knowledge_sources or {},
     }
 
 
 def update_platform_config(agent: AIAgent, data: dict) -> None:
-    """更新平台唯一智能体的能力开关 / 工作区 Skills / 知识库文档范围。"""
+    """更新平台唯一智能体的能力开关 / 工作区 Skills。"""
     fields: list[str] = []
     for f in _PLATFORM_CONFIG_FIELDS:
         if f in data:
@@ -372,9 +369,6 @@ def update_platform_config(agent: AIAgent, data: dict) -> None:
     if "skills_config" in data:
         agent.skills_config = data["skills_config"] or {}
         fields.append("skills_config")
-    if "knowledge_sources" in data:
-        agent.knowledge_sources = data["knowledge_sources"] or {}
-        fields.append("knowledge_sources")
     if fields:
         agent.save(update_fields=fields + ["updated_at"])
 
@@ -553,6 +547,48 @@ def set_platform_tool_enabled(name: str, enabled: bool) -> None:
         AIPlatformTool.objects.filter(name=name).delete()
     else:
         AIPlatformTool.objects.update_or_create(name=name, defaults={"enabled": False})
+
+
+# ── 日志端口监听开关（ai_log_ports）──
+# 三列（端口 / SKU / 波特率）的真相源是平台配置，本表只存「要不要持续监听」。
+
+
+def ensure_log_ports(specs) -> list[AILogPort]:
+    """按配置登记刷新端口 / SKU / 波特率三列，返回按端口排序的开关行。
+
+    只刷三列，**不动** `enabled`（开关状态归用户，配置变更不得悄悄改回默认）。
+    """
+    stored = {row.port: row for row in AILogPort.objects.all()}
+    rows: list[AILogPort] = []
+    for spec in specs:
+        port = int(spec.port)
+        channel = str(spec.channel)
+        baud = int(spec.baud)
+        row = stored.get(port)
+        if row is None:
+            row = AILogPort.objects.create(port=port, sku=channel, baud=baud)
+        elif row.sku != channel or row.baud != baud:
+            row.sku = channel
+            row.baud = baud
+            row.save(update_fields=["sku", "baud", "updated_at"])
+        rows.append(row)
+    return sorted(rows, key=lambda item: item.port)
+
+
+def get_log_port_enabled_map() -> dict[int, bool]:
+    """端口 → 是否开启监听；无记录＝开启（与平台工具开关同一口径）。"""
+    return {row.port: bool(row.enabled) for row in AILogPort.objects.all()}
+
+
+def is_log_port_enabled(port: int) -> bool:
+    """该端口是否开启监听；无记录＝开启。"""
+    row = AILogPort.objects.filter(port=int(port)).first()
+    return True if row is None else bool(row.enabled)
+
+
+def set_log_port_enabled(port: int, enabled: bool) -> None:
+    """写单个端口的监听开关（upsert；三列由 `ensure_log_ports` 负责）。"""
+    AILogPort.objects.update_or_create(port=int(port), defaults={"enabled": bool(enabled)})
 
 
 # ── 对话操作 ──
@@ -1121,31 +1157,3 @@ def get_provider_config(provider: str, base_url: str = "", model_name: str = "")
     from apps.ai_assistant.provider_registry import get_provider_config as _get
 
     return _get(provider, base_url)
-
-
-def search_knowledge(query: str, top_k: int = 5, sources: list[str] | None = None) -> list[dict]:
-    """搜索知识库（AgentScope RAG + chromadb 向量检索）。"""
-    from . import rag_service
-
-    return rag_service.search(query, top_k)
-
-
-def get_kb_doc_count() -> int:
-    """获取知识库文档总数。"""
-    from . import rag_service
-
-    return rag_service.kb_doc_count()
-
-
-def list_kb_documents() -> list[dict]:
-    """列出 data/rag_datas 下的文档（磁盘层级，非向量库 UUID）。"""
-    from . import kb_files
-
-    return kb_files.list_rag_files()
-
-
-def reindex_knowledge() -> dict:
-    """重新索引 data/rag_datas 下的文档。"""
-    from . import rag_service
-
-    return rag_service.index_rag_directory()

@@ -352,7 +352,9 @@ def test_e2e_012_logout_returns_to_login(login_page, e2e_account, steps):
     )
     leftover = {name: value for name, value in session if value is not None}
     assert leftover == {}, f"登出后本地仍残留会话键：{leftover}"
-    assert login_page.evaluate("localStorage.getItem('auth_accounts')") is None, "登出后仍存在账号池键"
+    assert login_page.evaluate("localStorage.getItem('auth_accounts')") is None, (
+        "登出后仍存在账号池键"
+    )
 
 
 @pytest.mark.e2e

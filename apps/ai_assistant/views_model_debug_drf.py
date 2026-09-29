@@ -36,7 +36,7 @@ def _platform_agent_or_404():
 
 
 class ModelDebugConfigAPIView(APIView):
-    """GET /api/ai/model-debug/<role>/ — 该角色只读配置 + 技能/知识库归属（仅超管）。"""
+    """GET /api/ai/model-debug/<role>/ — 该角色只读配置 + 技能归属（仅超管）。"""
 
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request, role):
@@ -52,7 +52,6 @@ class ModelDebugConfigAPIView(APIView):
                 "agent_name": configs["agent_name"],
                 "role": next(item for item in configs["roles"] if item["role"] == name),
                 "skills": configs["skills"],
-                "knowledge": configs["knowledge"],
             }
         )
 

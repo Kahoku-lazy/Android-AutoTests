@@ -114,11 +114,9 @@ def test_tools_carry_read_only_and_enabled_flags(agent):
     assert tools["tap_screen"]["category"] == "设备控制"
 
 
-def test_skills_and_knowledge_declare_ownership(agent):
+def test_skills_declare_ownership(agent):
     payload = _configs(agent)
     assert payload["skills"]["shared_by_roles"] is True
-    assert payload["knowledge"]["wired_to_runtime"] is False
-    assert "file_count" in payload["knowledge"]
 
 
 # ── HTTP：权限与参数 ──
@@ -143,7 +141,6 @@ def test_config_endpoint_returns_role_and_shared_blocks(client, admin, agent):
     assert data["role"]["role"] == "executor"
     assert data["role"]["label"] == "执行模型 Executor"
     assert data["skills"]["shared_by_roles"] is True
-    assert data["knowledge"]["wired_to_runtime"] is False
 
 
 def test_unknown_role_returns_400(client, admin, agent):

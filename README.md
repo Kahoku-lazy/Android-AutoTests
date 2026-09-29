@@ -52,7 +52,7 @@ Vue 前端 :5173  ──HTTP/WS──→  Django :8766  ──ORM──→  SQLi
        │                           │
        └──SSE──→  AgentScope（进程内运行于 Django）
                       │
-                      └── 同进程调用 Django ORM（17 平台 Tool + ChromaDB RAG）
+                      └── 同进程调用 Django ORM（17 平台 Tool）
 
 Django ──uiautomator2──→  Android 设备
 ```
@@ -61,7 +61,7 @@ Django ──uiautomator2──→  Android 设备
 |----|------|------|
 | 前端 | Vue 3.4 + Vite + Element Plus | 10 个前端模块，Doodle Craft 手绘主题 |
 | 后端 | Django 4.2 + Daphne + Channels | 11 个 App，纯 API，JWT 鉴权 |
-| AI 引擎 | AgentScope 2.0（Django 进程内）+ Redis | 17 平台 Tool，ReAct 智能体编排，ChromaDB 知识库 |
+| AI 引擎 | AgentScope 2.0（Django 进程内）+ Redis | 17 平台 Tool，ReAct 智能体编排 |
 | 设备控制 | uiautomator2 + ADB | UI dump、8 种 XPath、OCR、2fps 截图流 |
 | 数据 | SQLite (开发) / MySQL (生产) + Redis | 32 张业务表，9 组前缀 |
 
@@ -75,7 +75,7 @@ Django ──uiautomator2──→  Android 设备
 | **用例管理** | `cm_` (2表) | 29 种步骤 · 拖拽编排 · 目录树 · YAML 导入导出 |
 | **执行引擎** | `tr_` (4表) | asyncio 异步 · TREP v1.0 监控 · 循环压测 · 中途停止 |
 | **测试报告** | `rg_` (2表) | CSV/Markdown/JSON · 步骤级诊断 · HTML 在线预览 |
-| **AI 助手** | `ai_` (7表) | SSE 流式对话 · 17 平台 Tool · HITL 确认 · 共享工具箱 · ChromaDB RAG |
+| **AI 助手** | `ai_` (7表) | SSE 流式对话 · 17 平台 Tool · HITL 确认 · 共享工具箱 |
 | **仪表盘** | 无（聚合） | ECharts 趋势图 · KPI 卡片 · 实时统计 |
 | **工作流工作台** | `wf_` (2表) | JSON 持久化 · 目录管理 · VueFlow 页面流编排 |
 
@@ -111,9 +111,6 @@ from django.contrib.auth.models import User;
 User.objects.create_superuser('admin','admin@local','admin123')
 if not User.objects.filter(username='admin').exists() else None
 "
-
-# 知识库初始化（AI 助手 RAG，首次运行）
-python manage.py init_knowledge_base
 ```
 
 ### 启动
@@ -157,20 +154,18 @@ python run.py logs       # 查看日志
    python manage.py migrate
    python manage.py shell -c "from django.contrib.auth.models import User; User.objects.create_superuser('admin','admin@local','admin123') if not User.objects.filter(username='admin').exists() else None"
 
-5. 初始化知识库：python manage.py init_knowledge_base
+5. 检查 Redis 是否运行，如果未运行则启动：redis-server --daemonize yes
 
-6. 检查 Redis 是否运行，如果未运行则启动：redis-server --daemonize yes
+6. 启动全部服务：python run.py start
 
-7. 启动全部服务：python run.py start
-
-8. 验证服务状态：python run.py status
+7. 验证服务状态：python run.py status
    期望 3 个服务全部 ONLINE：Redis / Django backend / Vue frontend
 
-9. 健康检查：
+8. 健康检查：
    curl -s http://localhost:8766/api/ | python -m json.tool
    curl -s -o /dev/null -w "%{http_code}" http://localhost:5173
 
-10. 如果任何步骤失败，分析日志并修复：
+9. 如果任何步骤失败，分析日志并修复：
     tail -20 logs/backend.log
     tail -20 logs/frontend.log
 
@@ -193,4 +188,3 @@ python run.py logs       # 查看日志
 |------|------|------|
 | AgentScope 2.0 | https://docs.agentscope.io/versions/2.0.3/zh/ | AI 引擎框架 |
 | animejs | https://animejs.com/documentation/ | 动画引擎 |
-| TestHub Platform | https://github.com/chenjigang4167/testhub_platform | 架构参考 |

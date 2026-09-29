@@ -6,7 +6,6 @@ import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import WbLoader from "./components/WbLoader.vue"
 import AgentRouteCard from "./components/AgentRouteCard.vue"
-import KnowledgeBase from "./KnowledgeBase.vue"
 import ToolboxPanel from "./components/ToolboxPanel.vue"
 import TaskBoard from "./components/TaskBoard.vue"
 import { useAgentBoard } from "./index.logic"
@@ -47,11 +46,10 @@ const routeCards = computed(() => {
   ]
 })
 
-// ── 视图（侧边栏子项路由驱动，/ai-assistant/agents|toolbox|knowledge）──
+// ── 视图（侧边栏子项路由驱动，/ai-assistant/agents|toolbox）──
 const VIEW_BY_PATH: Record<string, ViewMode> = {
   "/ai-assistant/agents": "agents",
   "/ai-assistant/toolbox": "toolbox",
-  "/ai-assistant/knowledge": "knowledge",
 }
 const viewMode = computed<ViewMode>(() => VIEW_BY_PATH[route.path] || "agents")
 
@@ -64,10 +62,6 @@ const VIEW_META: Record<ViewMode, { title: string; subtitle: string }> = {
   toolbox: {
     title: "AI工具箱",
     subtitle: "先看助手此刻能用什么，再按来源开关目录 · 两条线路共用同一套装配",
-  },
-  knowledge: {
-    title: "知识库",
-    subtitle: "ChromaDB 向量库状态与可索引文档，支持重建索引",
   },
 }
 const pageMeta = computed(() => VIEW_META[viewMode.value])
@@ -120,7 +114,6 @@ const pageMeta = computed(() => VIEW_META[viewMode.value])
       </template>
 
       <ToolboxPanel v-if="viewMode === 'toolbox'" class="tb-host" :can-manage="isAdmin" />
-      <KnowledgeBase v-if="viewMode === 'knowledge'" class="kb-host" :can-manage="isAdmin" />
     </div>
   </div>
 </template>

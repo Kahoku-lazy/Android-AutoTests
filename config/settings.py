@@ -265,13 +265,6 @@ def _channel_layers_config():
 
 CHANNEL_LAYERS = _channel_layers_config()
 
-# ── 知识库 RAG 嵌入模型（ollama 本地 / openai 兼容 API）──
-EMBEDDING_PROVIDER = os.environ.get("EMBEDDING_PROVIDER", "ollama")
-EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "nomic-embed-text")
-EMBEDDING_API_KEY = os.environ.get("EMBEDDING_API_KEY", "")
-EMBEDDING_BASE_URL = os.environ.get("EMBEDDING_BASE_URL", "")
-EMBEDDING_DIMENSIONS = os.environ.get("EMBEDDING_DIMENSIONS", "")
-
 # ── JWT ──
 JWT_ACCESS_TTL = int(os.environ.get("JWT_ACCESS_TTL", "3600"))  # 1 hour
 JWT_REFRESH_TTL = int(os.environ.get("JWT_REFRESH_TTL", "604800"))  # 7 days
@@ -280,6 +273,44 @@ JWT_REFRESH_TTL = int(os.environ.get("JWT_REFRESH_TTL", "604800"))  # 7 days
 # 工具网关 `/api/ai/tools/` 免 JWT（服务间调用），改由 `X-Internal-Token` 校验；
 # 留空 = 该前缀一律 401（fail-closed），不要在未配置时放开。
 AI_TOOL_GATEWAY_TOKEN = os.environ.get("AI_TOOL_GATEWAY_TOKEN", "")
+
+# ── 设备日志证据（设备动作 → 日志证据窗口 → 验收模型）──
+# 采集常驻，不随动作开关；时间戳一律北京时间毫秒（固定 UTC+8，不依赖 tzdata）。
+DEVICE_LOG_ENABLED = os.environ.get("DEVICE_LOG_ENABLED", "1") not in ("0", "false", "False", "")
+DEVICE_LOG_TCP_HOST = os.environ.get("DEVICE_LOG_TCP_HOST", "0.0.0.0")
+DEVICE_LOG_TCP_PORT = int(os.environ.get("DEVICE_LOG_TCP_PORT", "7005"))  # 0 = 不监听网络来源
+# 该日志来源对应的被测设备 SKU（APP 里显示的型号，如 H6810）：日志按此名分通道，
+# 验收证据里也会标出来源，便于判断「这条日志是不是当前在测的设备打的」。
+DEVICE_LOG_SOURCE_SKU = os.environ.get("DEVICE_LOG_SOURCE_SKU", "H6810")
+# 无线串口盒串口侧的波特率：**仅作端口管理页展示**，不参与采集（采集走 TCP 监听）。
+DEVICE_LOG_SOURCE_BAUD = int(os.environ.get("DEVICE_LOG_SOURCE_BAUD", "921600"))
+# 日志来源登记（JSON：端口 → 通道）：只读查询工具按端口反查通道；留空则按上面两项
+# 组成单端口单通道（现场即 {"7005": "H6810"}）。多台灯 / 多端口时在此登记。
+DEVICE_LOG_SOURCES = os.environ.get("DEVICE_LOG_SOURCES", "")
+DEVICE_LOG_SERIAL_PORT = os.environ.get("DEVICE_LOG_SERIAL_PORT", "")  # 空 = 不采集串口
+DEVICE_LOG_SERIAL_BAUD = int(os.environ.get("DEVICE_LOG_SERIAL_BAUD", "115200"))
+DEVICE_LOG_BUFFER_SECONDS = int(
+    os.environ.get("DEVICE_LOG_BUFFER_SECONDS", "600")
+)  # 缓冲保留 10 分钟
+DEVICE_LOG_BUFFER_MAX_LINES = int(
+    os.environ.get("DEVICE_LOG_BUFFER_MAX_LINES", "20000")
+)  # 单设备上限
+DEVICE_LOG_WINDOW_SECONDS = float(
+    os.environ.get("DEVICE_LOG_WINDOW_SECONDS", "5")
+)  # 动作后取证阈值
+DEVICE_LOG_BASELINE_SECONDS = float(
+    os.environ.get("DEVICE_LOG_BASELINE_SECONDS", "30")
+)  # 动作前基线窗口
+DEVICE_LOG_KEYWORD_FILE = os.environ.get(
+    "DEVICE_LOG_KEYWORD_FILE", str(BASE_DIR / "config" / "device_log_keywords.json")
+)
+# ── 无线串口日志文件（不写库，只落本地文件，见 device-log-file-archive）──
+# 目录默认项目根目录 logs/；单文件上限 50MB，写满改名存档为 `{SKU}_{端口}_{YYYYMMDD}.log`。
+DEVICE_LOG_LOG_DIR = os.environ.get("DEVICE_LOG_LOG_DIR", str(BASE_DIR / "logs"))
+DEVICE_LOG_FILE_MAX_BYTES = int(os.environ.get("DEVICE_LOG_FILE_MAX_BYTES", str(50 * 1024 * 1024)))
+# 端口管理页日志窗口默认读取的尾部行数与允许的上限。
+DEVICE_LOG_TAIL_LINES = int(os.environ.get("DEVICE_LOG_TAIL_LINES", "2000"))
+DEVICE_LOG_TAIL_LINES_MAX = int(os.environ.get("DEVICE_LOG_TAIL_LINES_MAX", "20000"))
 
 # ── Django REST Framework ──
 REST_FRAMEWORK = {

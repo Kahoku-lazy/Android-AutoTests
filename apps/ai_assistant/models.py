@@ -37,7 +37,6 @@ class AIAgent(models.Model):
     prompt_verifier = models.TextField(default="", blank=True)
     api_key = models.CharField(max_length=500, default="", blank=True)
     base_url = models.CharField(max_length=500, default="", blank=True)
-    enable_knowledge_base = models.BooleanField(default=False)
     # Per-agent workspace skill toggles.
     # JSON object: {"Bash": true, "Read": true, "Write": false, ...}
     # Missing keys default to true (enabled).
@@ -50,10 +49,6 @@ class AIAgent(models.Model):
     )  # 23 platform tools (device/case/test/elements)
     enable_mcp_tools = models.BooleanField(default=False)  # User-configured MCP servers
     enable_skills = models.BooleanField(default=False)  # User-uploaded skill folders
-    # Per-agent knowledge base document filter.
-    # Dict: {"doc:id": true/false}.  Key presence = imported, value = enabled.
-    # Empty dict = no documents imported.
-    knowledge_sources = models.JSONField(default=dict, blank=True)
     status = models.CharField(max_length=20, default="active")
     # Health check fields
     last_checked_at = models.DateTimeField(null=True, blank=True)
@@ -118,6 +113,31 @@ class AIPlatformTool(models.Model):
 
     def __str__(self):
         return f"{self.name} [{'启用' if self.enabled else '停用'}]"
+
+
+class AILogPort(models.Model):
+    """日志端口监听开关 → ai_log_ports。
+
+    端口 / SKU / 波特率三列的真相源是平台配置（`DEVICE_LOG_SOURCES`），本表只持久化
+    「这个端口要不要持续监听」：**无记录 = 开启**（与 `AIPlatformTool` 的默认口径一致），
+    `enabled=False` 表示用户关掉了监听。写库一律经 `api.py`。
+    日志正文不进数据库，只落本地文件（见 `engines/device/logfiles.py`）。
+    """
+
+    port = models.PositiveIntegerField(unique=True)
+    sku = models.CharField(max_length=100, default="", blank=True)
+    baud = models.PositiveIntegerField(default=0)
+    enabled = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "ai_log_ports"
+        ordering = ["port"]
+        verbose_name = "日志端口监听开关"
+        verbose_name_plural = "日志端口监听开关"
+
+    def __str__(self):
+        return f"{self.port} [{'监听' if self.enabled else '停止'}]"
 
 
 class AIConversation(models.Model):

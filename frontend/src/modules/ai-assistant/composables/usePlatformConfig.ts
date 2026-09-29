@@ -2,7 +2,6 @@
  *
  * 数据源：GET /api/ai/platform-config（enable_* 开关）。
  * 写：POST /api/ai/platform-config/update（仅超级管理员）。
- * 知识库开关与文档范围由知识库页（KnowledgeBase.vue）管理，此处只读不写。
  */
 import { ref, onMounted } from "vue"
 import { ElMessage } from "element-plus"
@@ -14,9 +13,7 @@ export function usePlatformConfig() {
     enable_business_tools: false,
     enable_mcp_tools: false,
     enable_skills: false,
-    enable_knowledge_base: false,
     skills_config: {},
-    knowledge_sources: {},
   })
   const loading = ref(false)
 

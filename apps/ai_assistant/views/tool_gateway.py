@@ -52,7 +52,6 @@ def agent_config(request, agent_id: str):
     Returns:
       - enabled_tools: list of tool names the agent can use
       - disabled_skills: list of workspace skill names to hide
-      - knowledge_sources: list of document IDs for RAG filtering
       - capability_flags: dict of enable_* boolean toggles
     """
     from apps.ai_assistant.models import AIAgent
@@ -88,32 +87,17 @@ def agent_config(request, agent_id: str):
     if not agent.enable_workspace_tools:
         disabled_skills = []
 
-    # Resolve enabled knowledge sources (dict → list of enabled IDs)
-    sources_raw = agent.knowledge_sources or {}
-    if isinstance(sources_raw, dict):
-        enabled_sources = [k for k, v in sources_raw.items() if v is True]
-    elif isinstance(sources_raw, list):
-        # Legacy list format: [] = all, ["__none__"] = none
-        if not sources_raw or sources_raw == ["__none__"]:
-            enabled_sources = []
-        else:
-            enabled_sources = [s for s in sources_raw if s != "__none__"]
-    else:
-        enabled_sources = []
-
     return JsonResponse(
         {
             "status": True,
             "data": {
                 "enabled_tools": enabled_tools,
                 "disabled_skills": disabled_skills,
-                "knowledge_sources": enabled_sources,
                 "capability_flags": {
                     "enable_workspace_tools": agent.enable_workspace_tools,
                     "enable_business_tools": agent.enable_business_tools,
                     "enable_mcp_tools": agent.enable_mcp_tools,
                     "enable_skills": agent.enable_skills,
-                    "enable_knowledge_base": agent.enable_knowledge_base,
                 },
             },
         }

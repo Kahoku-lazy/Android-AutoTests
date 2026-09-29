@@ -56,9 +56,9 @@ def test_offset_skips_board_page(client, visible_agent):
         AITask.objects.create(agent=agent, title=f"page-{i}", status="completed")
 
     first = client.get(ACTIVITIES_URL, **_auth_headers(user)).json()["data"]
-    second = client.get(
-        ACTIVITIES_URL, {"offset": 10, "limit": 50}, **_auth_headers(user)
-    ).json()["data"]
+    second = client.get(ACTIVITIES_URL, {"offset": 10, "limit": 50}, **_auth_headers(user)).json()[
+        "data"
+    ]
 
     assert len(first) == 10
     assert isinstance(second, list)
@@ -76,7 +76,9 @@ def test_invalid_limit_rejected(client, visible_agent):
         resp = client.get(ACTIVITIES_URL, {"limit": bad}, **headers)
         assert resp.status_code == 400
         body = resp.json()
-        assert body.get("message") or (isinstance(body.get("data"), dict) and body["data"].get("message"))
+        assert body.get("message") or (
+            isinstance(body.get("data"), dict) and body["data"].get("message")
+        )
 
 
 @pytest.mark.unit

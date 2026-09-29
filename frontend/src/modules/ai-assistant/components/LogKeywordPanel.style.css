@@ -1,0 +1,58 @@
+/* LogKeywordPanel — 日志关键词只读表格（Doodle Craft 令牌；类名 lk-* 为本组件私有） */
+
+.lk-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--app-space-sm);
+  margin-bottom: var(--app-space-xs);
+}
+.lk-search {
+  flex: 1 1 240px;
+  min-width: 0;
+  padding: var(--app-space-xs) var(--app-space-sm);
+  border: 1.5px solid var(--ai-warm-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-card);
+  color: var(--ink);
+  font-size: var(--app-size-sm);
+}
+.lk-count {
+  font-size: var(--app-size-xs);
+  font-weight: 800;
+  color: var(--ai-ink-soft, var(--app-text-secondary));
+}
+
+.lk-origin {
+  margin: 0 0 var(--app-space-sm);
+  font-size: var(--app-size-xs);
+  color: var(--ai-ink-soft, var(--app-text-secondary));
+  line-height: 1.5;
+}
+.lk-origin-dim {
+  color: var(--ai-ink-muted, var(--app-text-muted));
+}
+
+/* 单元格：关键词等宽、功能点编号弱化、名称加粗 */
+.lk-keyword {
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  color: var(--ink);
+  word-break: break-all;
+}
+.lk-module {
+  font-size: var(--app-size-xs);
+  color: var(--ai-ink-soft, var(--app-text-secondary));
+}
+.lk-feature-id {
+  margin-right: var(--app-space-xs);
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--ai-ink-muted, var(--app-text-muted));
+}
+.lk-feature-name {
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--ink);
+}

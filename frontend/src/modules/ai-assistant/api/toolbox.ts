@@ -1,12 +1,8 @@
-/** Toolbox + MCP + Skills + Knowledge Base API — TypeScript */
+/** Toolbox + MCP + Skills API — TypeScript */
 import djangoClient from "@/shared/api-client"
-import type {
-  ToolboxListResponse,
-  AgentOpResponse,
-  KnowledgeStatusResponse,
-} from "@/shared/types/ai"
+import type { ToolboxListResponse, AgentOpResponse, TaskLogCheck } from "@/shared/types/ai"
 
-// ── 共享工具箱项 / 知识库文档 DTO（类型跟着实现走，消费方从此处 import） ──
+// ── 共享工具箱项 DTO（类型跟着实现走，消费方从此处 import） ──
 export interface SharedToolItem {
   id: number
   name: string
@@ -31,23 +27,6 @@ export interface SkillFilePayload {
   name: string
   kind: "markdown" | "text" | "unsupported" | "too_large"
   content: string
-}
-
-export interface KnowledgeDoc {
-  id: number | string
-  name?: string
-  source?: string
-  type?: string
-  size?: number
-  ext?: string
-}
-
-export interface KnowledgePreviewPayload {
-  path: string
-  name: string
-  kind: "markdown" | "text"
-  content: string
-  converted?: boolean
 }
 
 // ── Toolbox (shared tools / skills / extensions) ──
@@ -136,7 +115,7 @@ export async function fetchSharedSkillFile(
   return data
 }
 
-// ── 平台配置（平台唯一智能体的工具/知识库配置，AI 工具箱 / 知识库页读写） ──
+// ── 平台配置（平台唯一智能体的工具配置，AI 工具箱读写） ──
 
 export interface PlatformConfig {
   agent_id?: number
@@ -145,9 +124,7 @@ export interface PlatformConfig {
   enable_business_tools: boolean
   enable_mcp_tools: boolean
   enable_skills: boolean
-  enable_knowledge_base: boolean
   skills_config: Record<string, boolean>
-  knowledge_sources: Record<string, boolean>
 }
 
 export async function fetchPlatformConfig(): Promise<{
@@ -276,20 +253,11 @@ export interface ModelDebugSkills {
   items: { name: string; path: string }[]
 }
 
-export interface ModelDebugKnowledge {
-  gate_on: boolean
-  enabled_source_ids: string[]
-  file_count: number
-  files: { id: string; name: string; type: string }[]
-  wired_to_runtime: boolean
-}
-
 export interface ModelDebugConfig {
   agent_id: number
   agent_name: string
   role: ModelDebugRoleConfig
   skills: ModelDebugSkills
-  knowledge: ModelDebugKnowledge
 }
 
 /** 引擎回溯出的工具调用/返回记录（type=call 带 input，type=result 带 output/state） */
@@ -309,6 +277,8 @@ export interface ModelDebugReply {
   thinking?: string[]
   /** 本轮工具调用轨迹（调试对话挂真实工具，故会非空） */
   tool_usage?: ModelDebugToolCall[]
+  /** 本轮设备点击证据（平台装配；无副作用点击时缺省） */
+  log_check?: TaskLogCheck
   usage?: Record<string, number>
   cost?: number
 }
@@ -379,6 +349,10 @@ export interface PlatformToolOption {
 
 export interface PlatformToolParamSchema {
   name: string
+  /** 参数中文名（服务端集中维护；未登记时回退为英文参数名） */
+  label: string
+  /** 参数中文说明（取自工具 docstring 的 Args 段；无则为空串） */
+  hint: string
   type: "str" | "int" | "float" | "bool" | string
   required: boolean
   default?: unknown
@@ -420,43 +394,98 @@ export async function fetchAvailableSkills(): Promise<{
   return data
 }
 
-// ── Knowledge Base ──
+// ── 无线端口管理（监听开关 + 当前日志文件读取；见 openspec device-log-port-console）──
 
-export async function getKnowledgeStatus(): Promise<KnowledgeStatusResponse> {
-  const { data } = await djangoClient.get<KnowledgeStatusResponse>("/ai/knowledge/status/")
-  return data
+export interface LogPortRow {
+  port: number
+  /** SKU名称（被测设备型号，如 H6810） */
+  sku: string
+  /** 无线串口盒串口侧波特率（仅展示，不参与采集） */
+  baud: number
+  /** 监听开关：平台是否持续监听该端口 */
+  enabled: boolean
+  /** 运行时状态：端口此刻是否真的在监听 */
+  listening: boolean
+  log_file: string
+  size_bytes: number
+  note: string
 }
 
-export async function getKnowledgeDocuments(): Promise<{
+export interface LogPortLine {
+  timestamp: string
+  source: string
+  text: string
+}
+
+export interface LogPortLinesPayload {
+  port: number
+  sku: string
+  log_file: string
+  tail: number
+  line_count: number
+  raw_line_count: number
+  /** 服务端已按「同毫秒合并、最新在上」排好：前端 MUST NOT 再排序 */
+  lines: LogPortLine[]
+  conclusion: "ok" | "no_log" | "port_not_configured" | "port_disabled" | string
+  note: string
+}
+
+export async function fetchLogPorts(): Promise<{
   status: boolean
-  data?: { documents?: KnowledgeDoc[]; total?: number }
+  data?: { ports?: LogPortRow[] }
   message?: string
 }> {
-  const { data } = await djangoClient.get("/ai/knowledge/documents/")
+  const { data } = await djangoClient.get("/ai/log-ports/")
   return data
 }
 
-export async function reindexKnowledge(): Promise<AgentOpResponse> {
-  const { data } = await djangoClient.post<AgentOpResponse>("/ai/knowledge/reindex/")
+export async function toggleLogPort(
+  port: number,
+  enabled: boolean,
+): Promise<{ status: boolean; data?: LogPortRow; message?: string }> {
+  const { data } = await djangoClient.post("/ai/log-ports/toggle/", { port, enabled })
   return data
 }
 
-export async function addKnowledgeDocument(
-  file: File,
-  subdir = "",
-): Promise<{ status: boolean; data?: KnowledgeDoc; message?: string }> {
-  const formData = new FormData()
-  formData.append("file", file)
-  if (subdir) formData.append("subdir", subdir)
-  const { data } = await djangoClient.post("/ai/knowledge/documents/add/", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  })
+export async function fetchLogPortLines(
+  port: number,
+  tail: number,
+): Promise<{ status: boolean; data?: LogPortLinesPayload; message?: string }> {
+  const { data } = await djangoClient.get(`/ai/log-ports/${port}/lines/`, { params: { tail } })
   return data
 }
 
-export async function previewKnowledgeDocument(
-  path: string,
-): Promise<{ status: boolean; data?: KnowledgePreviewPayload; message?: string }> {
-  const { data } = await djangoClient.get("/ai/knowledge/documents/preview/", { params: { path } })
+// ── 日志关键词目录（工具箱「日志关键词」来源，只读）──
+
+/** 关键词命中的功能点（编号 + 模块 + 名称） */
+export interface LogKeywordFeature {
+  id?: number
+  module?: string
+  feature?: string
+}
+
+export interface LogKeywordEntry {
+  keyword: string
+  /** 一个关键词可对应多个功能点，全部带出 */
+  features: LogKeywordFeature[]
+}
+
+export interface LogKeywordCatalog {
+  keywords: LogKeywordEntry[]
+  keyword_count: number
+  feature_count: number
+  /** 取值来源：运行中的采集索引 / 配置文件 / 都取不到 */
+  origin: "runtime" | "file" | "none" | string
+  keyword_file: string
+  updated_at: string
+  note: string
+}
+
+export async function fetchLogKeywords(): Promise<{
+  status: boolean
+  data?: LogKeywordCatalog
+  message?: string
+}> {
+  const { data } = await djangoClient.get("/ai/log-keywords/")
   return data
 }

@@ -3,8 +3,16 @@
  * 单轮尝试卡片：执行结果常显；Agent 过程可折叠（默认收起）。
  */
 import { computed } from "vue"
+import StepLogCheck from "./StepLogCheck.vue"
+import StepLogEvidence from "./StepLogEvidence.vue"
 import type { TaskStepAttempt } from "../helpers/task-detail"
-import { attemptTraceSides, toolScreenshotUrl, toolTraceLine } from "../helpers/task-detail"
+import {
+  attemptTraceSides,
+  hasLogCheck,
+  toolScreenshotUrl,
+  toolTraceLine,
+} from "../helpers/task-detail"
+import { STEP_EXEC_NO_SHOT_TEXT } from "../constants"
 
 const props = defineProps<{
   attempt: TaskStepAttempt
@@ -12,6 +20,11 @@ const props = defineProps<{
 }>()
 
 const sides = computed(() => attemptTraceSides(props.attempt))
+const showLogCheck = computed(() => hasLogCheck(props.attempt.logCheck))
+/** 新执行契约的点击证据（点击前时间戳 / 点击后截图路径）是否有内容可显示 */
+const hasExecEvidence = computed(
+  () => Boolean(props.attempt.executorClickTimer) || Boolean(props.attempt.executorScreenshotPath),
+)
 </script>
 
 <template>
@@ -44,6 +57,36 @@ const sides = computed(() => attemptTraceSides(props.attempt))
           · {{ attempt.executorMessage }}
         </span>
       </p>
+      <!-- 新执行契约的两件证据：点击前时间戳 + 点击后截图（没有就不显示该行，不留空壳） -->
+      <p v-if="attempt.executorClickTimer" class="tac-result__row">
+        <span class="tac-result__label">点击前时间</span>
+        <span class="tac-result__msg" data-testid="attempt-executor-click-timer">
+          {{ attempt.executorClickTimer }}
+        </span>
+      </p>
+      <p v-if="hasExecEvidence" class="tac-result__row">
+        <span class="tac-result__label">点击后截图</span>
+        <span
+          v-if="attempt.executorScreenshotPath"
+          class="tac-result__msg"
+          data-testid="attempt-executor-shot-path"
+        >
+          {{ attempt.executorScreenshotPath }}
+        </span>
+        <span v-else class="tac-result__msg" data-testid="attempt-executor-shot-none">
+          {{ STEP_EXEC_NO_SHOT_TEXT }}
+        </span>
+      </p>
+      <div v-if="attempt.executorScreenshotUrl" class="tac-result__shot">
+        <el-image
+          :src="attempt.executorScreenshotUrl"
+          :preview-src-list="[attempt.executorScreenshotUrl]"
+          fit="contain"
+          class="tac__img"
+          preview-teleported
+          data-testid="attempt-executor-screenshot"
+        />
+      </div>
       <p class="tac-result__row">
         <span class="tac-result__label">验收</span>
         <span
@@ -66,6 +109,12 @@ const sides = computed(() => attemptTraceSides(props.attempt))
         />
       </div>
     </section>
+
+    <!-- 执行侧点击证据：点击前时间点 + 点击后截图路径（+ 需日志核对时的 5 秒窗口日志） -->
+    <StepLogCheck v-if="showLogCheck" :check="attempt.logCheck" />
+
+    <!-- 验收依据：设备日志证据（摘要常显 + 详情折叠） -->
+    <StepLogEvidence :evidence="attempt.logEvidence" />
 
     <!-- Agent 过程：默认全部收起 -->
     <el-collapse v-if="sides.length" class="tac-trace">

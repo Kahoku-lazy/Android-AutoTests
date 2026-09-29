@@ -90,6 +90,10 @@
       <section class="tb-catalog panel">
         <DevicePromptPanel v-if="activeSource === 'prompt'" :can-manage="props.canManage" />
 
+        <WifiPortPanel v-else-if="activeSource === 'port'" :can-manage="props.canManage" />
+
+        <LogKeywordPanel v-else-if="activeSource === 'keywords'" />
+
         <template v-else>
           <div class="tb-cat-head">
             <div>
@@ -288,6 +292,8 @@ import { computed, watch } from "vue"
 import { useRouter } from "vue-router"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import DevicePromptPanel from "./DevicePromptPanel.vue"
+import LogKeywordPanel from "./LogKeywordPanel.vue"
+import WifiPortPanel from "./WifiPortPanel.vue"
 import { useToolbox } from "../composables/useToolbox"
 import { usePlatformTools } from "../composables/usePlatformTools"
 import { usePlatformConfig } from "../composables/usePlatformConfig"

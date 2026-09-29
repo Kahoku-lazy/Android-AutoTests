@@ -4,7 +4,10 @@
 - 三角色的**工具子集与视觉标记直接取自角色类**（PlannerRole / ExecutorRole / VerifierRole
   的 RoleSpec），页面展示与实际装配同源，不另抄一份常量。
 - 三模型装配与命令行 model_test **共用同一个构造**（build_device_models_for_agent），避免漂移。
-- 调试对话**不挂任何工具、不挂 Skill、不触碰真机**，也不落库。
+- 调试对话**挂该角色真实工具**（需要设备的角色在选定设备后**会真实操作该设备**）、不挂 Skill，
+  对话内容**不落库**。
+- 本轮产生设备副作用点击时，响应带一份平台装配的「日志检查」：点击前时间点 + 点击后截图路径
+  + 该时间点后 5 秒窗口内的日志（与任务步骤证据同源；配对与切片共用 `logcheck` 的纯函数）。
 """
 
 from __future__ import annotations
@@ -20,9 +23,11 @@ from apps.ai_assistant.api import (
     get_provider_config,
 )
 from apps.ai_assistant.engine_adapter import build_tool_specs
+from apps.ai_assistant.log_evidence import ensure_log_evidence
 from apps.ai_assistant.skills_catalog import list_enabled_skill_dirs
 from apps.ai_assistant.tools import TOOL_META, TOOLS, available_device_options
 from engines.ai.agentscope.config import DeviceExecutionConfig, ModelConfig
+from engines.ai.agentscope.logcheck import build_executor_log_check
 from engines.ai.agentscope.model import (
     AgentRole,
     ExecutorRole,
@@ -48,8 +53,6 @@ ROLE_LABELS: dict[str, str] = {
     "executor": "执行模型 Executor",
     "verifier": "验收模型 Verifier",
 }
-
-_KNOWLEDGE_FILE_LIMIT = 50
 
 
 def normalize_role(role: str) -> str:
@@ -171,27 +174,8 @@ def _skills(agent) -> dict:
     }
 
 
-def _knowledge(agent) -> dict:
-    """知识库来源（配置层）。设备执行链路当前未挂载 RAG，故 wired_to_runtime=False。"""
-    from apps.ai_assistant.kb_files import list_rag_files
-
-    sources = agent.knowledge_sources or {}
-    enabled_ids = [str(k) for k, v in sources.items() if v]
-    files = list_rag_files()
-    return {
-        "gate_on": bool(agent.enable_knowledge_base),
-        "enabled_source_ids": enabled_ids,
-        "file_count": len(files),
-        "files": [
-            {"id": f.get("id", ""), "name": f.get("name", ""), "type": f.get("type", "")}
-            for f in files[:_KNOWLEDGE_FILE_LIMIT]
-        ],
-        "wired_to_runtime": False,
-    }
-
-
 def build_role_debug_configs(agent) -> dict:
-    """三角色只读调试配置（提示词 / 模型连接 / 工具子集 + 技能与知识库归属）。"""
+    """三角色只读调试配置（提示词 / 模型连接 / 工具子集 + 技能归属）。"""
     return {
         "agent_id": agent.id,
         "agent_name": agent.name,
@@ -209,7 +193,6 @@ def build_role_debug_configs(agent) -> dict:
             for role in ROLES
         ],
         "skills": _skills(agent),
-        "knowledge": _knowledge(agent),
     }
 
 
@@ -296,8 +279,12 @@ def run_role_chat(agent, role: str, text: str, user_id: str = "", serial: str = 
 
     role_obj = build_debug_role(agent, role, model_cfg, user_id=user_id)
     prompt = f"当前设备 serial：{device}\n{content}" if device else content
+    # 证据窗必须在任何设备动作之前开启（与生产链路同口径）；没有端口在监听时如实不带日志
+    provider = ensure_log_evidence() if device else None
+    window_id = _open_debug_window(provider, device)
     result = asyncio.run(role_obj.ask(prompt))
-    return {
+    log_check = _debug_log_check(result, provider, device, window_id)
+    payload = {
         "role": role,
         "label": ROLE_LABELS[role],
         "model_name": result.model_name or model_cfg.model_name,
@@ -307,3 +294,38 @@ def run_role_chat(agent, role: str, text: str, user_id: str = "", serial: str = 
         "usage": result.usage,
         "cost": result.cost,
     }
+    if log_check["clicks"]:
+        payload["log_check"] = log_check
+    return payload
+
+
+def _open_debug_window(provider, device: str) -> str:
+    """动作前开窗；无提供者（端口未监听 / 采集未启用）或开窗失败时返回空串。"""
+    if provider is None or not device:
+        return ""
+    try:
+        window_id = provider.open_window(device, "model-debug")
+    except Exception:
+        logger.exception("模型调试开窗失败，本次点击证据不带日志")
+        return ""
+    return str(window_id or "")
+
+
+def _debug_log_check(result, provider, device: str, window_id: str) -> dict:
+    """本轮点击证据：点击前时间点 + 点击后截图路径（+ 有端口在监听时的 5 秒窗口日志）。
+
+    配对与切片口径与任务步骤链路共用 `build_executor_log_check`；一轮对话就是一轮，
+    因此不需要跳过任何遗留返回（`skip_results=0`）。
+    """
+    clicks = build_executor_log_check(result)["clicks"]
+    log_evidence = None
+    if clicks and provider is not None and window_id:
+        try:
+            log_evidence = provider.read_window(
+                device,
+                window_id=window_id,
+                action_times=[str(item["action_time"]) for item in clicks],
+            )
+        except Exception:
+            logger.exception("模型调试读窗失败，本次点击证据不带日志")
+    return {"clicks": clicks, "log": log_evidence}

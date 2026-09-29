@@ -1,0 +1,81 @@
+/* StepLogCheck — 单步执行侧点击证据（Doodle Craft 令牌；类名 slc-* 为本组件私有） */
+
+.slc {
+  margin-top: var(--app-space-sm);
+  padding: var(--app-space-sm);
+  border: 1.5px dashed var(--ai-warm-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-subtle, var(--paper));
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+}
+
+.slc-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--app-space-sm);
+}
+.slc-title {
+  margin: 0;
+  font-size: var(--app-size-sm);
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.slc-hint {
+  font-size: var(--app-size-xs);
+  color: var(--ai-ink-muted, var(--app-text-muted));
+}
+
+.slc-clicks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+}
+.slc-click {
+  padding-left: var(--app-space-sm);
+  border-left: 2px solid var(--ai-warm-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+}
+.slc-row {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--app-space-xs);
+  font-size: var(--app-size-xs);
+  line-height: 1.5;
+}
+.slc-label {
+  font-weight: 700;
+  color: var(--ai-ink-muted, var(--app-text-muted));
+  min-width: 5em;
+}
+.slc-time {
+  font-family: var(--app-font-mono);
+  font-weight: 700;
+  color: var(--ink);
+}
+.slc-path {
+  font-family: var(--app-font-mono);
+  color: var(--ai-ink-soft, var(--app-text-secondary));
+  word-break: break-all;
+}
+.slc-none {
+  color: var(--ai-ink-soft, var(--app-text-secondary));
+}
+.slc-img {
+  width: 100%;
+  max-height: 160px;
+  border: 1.5px solid var(--ai-warm-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-card);
+  cursor: zoom-in;
+}

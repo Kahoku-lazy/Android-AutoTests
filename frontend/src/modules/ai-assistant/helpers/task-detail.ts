@@ -1,5 +1,7 @@
 import type {
   TaskDetail,
+  TaskLogCheck,
+  TaskLogEvidence,
   TaskRunLogEntry,
   TaskRunPlan,
   TaskRunRoleTrace,
@@ -16,10 +18,20 @@ export interface TaskStepAttempt {
   loop: number
   executorResult: string
   executorMessage: string
+  /** 点击前的时间戳（新执行契约；存量旧记录为空串） */
+  executorClickTimer?: string
+  /** 点击后截图的相对路径文本（新执行契约；无截图 / 旧记录为空串） */
+  executorScreenshotPath?: string
+  /** 点击后截图的可展示 URL（无落盘路径为空串） */
+  executorScreenshotUrl?: string
   verifierResult: string
   actual: string
   /** 验收证据截图 URL（媒体相对路径经共享登记处拼接），无图为空 */
   screenshotUrl: string
+  /** 本步的验收设备日志证据（老任务 / 未采集时缺省） */
+  logEvidence?: TaskLogEvidence
+  /** 本步执行侧的点击证据（老任务 / 本步无点击且不需日志时缺省） */
+  logCheck?: TaskLogCheck
   executorTrace: TaskRunRoleTrace
   verifierTrace: TaskRunRoleTrace
 }
@@ -178,14 +190,20 @@ function verifierOut(raw: TaskRunLogEntry["verifier"]): TaskRunVerifierOut {
 function toAttempt(entry: TaskRunLogEntry): TaskStepAttempt {
   const exec = executorOut(entry.executor)
   const ver = verifierOut(entry.verifier)
+  const execShot = String(exec.screenshot || "").trim()
   return {
     loop: entry.loop,
     executorResult: normalizeResult(exec.result || entry.result),
     executorMessage:
       exec.message || (typeof entry.executor === "string" ? entry.executor : "") || "",
+    executorClickTimer: String(exec.click_timer || "").trim(),
+    executorScreenshotPath: execShot,
+    executorScreenshotUrl: attemptScreenshotUrl(execShot),
     verifierResult: normalizeResult(ver.result),
     actual: ver.actual || ver.summary || "",
     screenshotUrl: attemptScreenshotUrl(entry.screenshot),
+    logEvidence: entry.log_evidence,
+    logCheck: entry.executor_log_check,
     executorTrace: entry.executor_trace || {},
     verifierTrace: entry.verifier_trace || {},
   }
@@ -234,6 +252,12 @@ export function attemptScreenshotUrl(rel?: string): string {
   if (!path) return ""
   if (path.startsWith("http") || path.startsWith("data:") || path.startsWith("/")) return path
   return mediaUrl(path)
+}
+
+/** 执行侧点击证据是否有内容可展示（无点击且无日志时不渲染该区块，不留空壳） */
+export function hasLogCheck(check?: TaskLogCheck | null): boolean {
+  if (!check) return false
+  return Boolean(check.clicks?.length) || Boolean(check.log)
 }
 
 function lastAttemptPassed(attempts: TaskStepAttempt[]): boolean {

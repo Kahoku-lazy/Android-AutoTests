@@ -50,14 +50,13 @@ export function useToolboxAssembly(deps: {
 
   const unarmedSources = computed(() => gatedSources().filter((s) => !isGateOn(s.gateKey)))
 
+  /** 生效计数只服务参与装配的（有总闸）来源；无总闸来源一律用自己的 meta 文案 */
   function sourceLiveCount(src: AssemblySourceDef): number {
-    if (src.key === "prompt") return 3
     if (!isGateOn(src.gateKey)) return 0
     return liveChips.value.filter((c) => c.source === src.key).length
   }
 
   function sourceCatalogTotal(src: AssemblySourceDef): number {
-    if (src.key === "prompt") return 3
     if (src.key === "biz") {
       return deps.platformCategories.value.reduce((n, c) => n + c.tools.length, 0)
     }
@@ -65,7 +64,7 @@ export function useToolboxAssembly(deps: {
   }
 
   function sourceMeta(src: AssemblySourceDef): string {
-    if (src.key === "prompt") return "规划 / 执行 / 验收 · 始终交给助手"
+    if (!src.gateKey) return src.meta || ""
     if (!isGateOn(src.gateKey)) return "总闸关闭 · 目录启停不会进入运行时"
     return `${sourceLiveCount(src)}/${sourceCatalogTotal(src)} 生效`
   }

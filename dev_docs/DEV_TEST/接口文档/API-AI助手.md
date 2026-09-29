@@ -1,8 +1,10 @@
 # API-AI助手 — /api/ai/*
 
-> AI 助手模块（`apps/ai_assistant`）接口全集。Batch 1-3 已迁移到 DRF（Agent / 对话 / 工具箱 / 知识库 / 上传 / 平台配置 / 任务），
+> AI 助手模块（`apps/ai_assistant`）接口全集。Batch 1-3 已迁移到 DRF（Agent / 对话 / 工具箱 / 上传 / 平台配置 / 任务），
 > 豁免工具网关（legacy 函数视图）。SSE 主对话（`chat_stream`）与 HITL（`hitl_views`）已随「主对话移除」删除。
-> 真相源：`apps/ai_assistant/urls.py` + `views_drf.py` + `views_toolbox_drf.py` + `views_knowledge_drf.py` + `views_upload_drf.py` + `views/tool_gateway.py` + `serializers.py` + `models.py` + `api.py`。
+> 知识库（RAG）能力已整体下线：`/api/ai/knowledge/*` 全部端点已删除（统一 404），
+> `views_knowledge_drf.py` / `rag_service.py` 已删除，`kb_files.py` 更名为 `attachments.py`（仅保留任务附件解析）。
+> 真相源：`apps/ai_assistant/urls.py` + `views_drf.py` + `views_toolbox_drf.py` + `views_upload_drf.py` + `views/tool_gateway.py` + `serializers.py` + `models.py` + `api.py`。
 
 ## 1. 总览
 
@@ -46,12 +48,6 @@
 | 工具箱删除 | POST /api/ai/toolbox/{id}/delete | 需登录(Bearer) | 删除（skill 清目录） |
 | 工具箱启停 | POST /api/ai/toolbox/{id}/toggle | 需登录(Bearer) | 启停共享项 |
 | 上传共享 Skill | POST /api/ai/toolbox/upload-skill/ | 需登录(Bearer) | multipart 上传 skill 文件夹 |
-| **knowledge 组** | | | |
-| 知识库状态 | GET /api/ai/knowledge/status/ | 需登录(Bearer) | 已索引文档数（向量库） |
-| 知识库文档列表 | GET /api/ai/knowledge/documents/ | 需登录(Bearer) | 扫描 data/rag_datas |
-| 知识库文档预览 | GET /api/ai/knowledge/documents/preview/ | 需登录(Bearer) | md/txt 原文；docx/pdf 旁路转 md |
-| 知识库重建索引 | POST /api/ai/knowledge/reindex/ | 需登录(Bearer) | 索引 data/rag_datas/**/*.md |
-| 知识库添加文档 | POST /api/ai/knowledge/documents/add/ | 需登录(Bearer) | multipart 上传到 data/rag_datas |
 | **uploads 组** | | | |
 | 头像上传 | POST /api/ai/upload-avatar/ | 需登录(Bearer) | base64 → data URI |
 | 文件上传 | POST /api/ai/upload-file/ | 需登录(Bearer) | multipart 上传并解析 |
@@ -64,22 +60,23 @@
 | 提示词历史详情 | GET /api/ai/device-prompt-archives/{id}/ | 需登录(Bearer)，仅超级管理员 | 单份存档全文 |
 | 提示词覆盖当前 | POST /api/ai/device-prompt-archives/{id}/restore/ | 需登录(Bearer)，仅超级管理员 | 用该存档覆盖当前提示词（覆盖前先留自动档） |
 | 提示词永久档删除 | POST /api/ai/device-prompt-archives/{id}/delete/ | 需登录(Bearer)，仅超级管理员 | 仅永久档可删，自动档由滚动淘汰 |
-| 模型调试配置 | GET /api/ai/model-debug/{role}/ | 需登录(Bearer)，仅超级管理员 | 单角色生效配置（提示词 / 模型 / 工具 / Skill / 知识库） |
-| 模型调试对话 | POST /api/ai/model-debug/{role}/chat | 需登录(Bearer)，仅超级管理员 | 单角色对话（挂该角色真实工具、会真机操作、不落库；不设前端等待上限） |
+| 模型调试配置 | GET /api/ai/model-debug/{role}/ | 需登录(Bearer)，仅超级管理员 | 单角色生效配置（提示词 / 模型 / 工具 / Skill） |
+| 模型调试对话 | POST /api/ai/model-debug/{role}/chat | 需登录(Bearer)，仅超级管理员 | 单角色对话（挂该角色真实工具、会真机操作、不落库；不设前端等待上限；有设备点击时返回日志检查块） |
+| 日志关键词目录 | GET /api/ai/log-keywords/ | 需登录(Bearer) | 关键词 → 功能模块 / 功能点对照表（只读；含取值来源与更新时间） |
 | 平台工具启停 | POST /api/ai/platform-tools/toggle/ | 需登录(Bearer) | 全局启停（仅超管） |
 | 平台工具调试 schema | GET /api/ai/platform-tools/{name} | 需登录(Bearer) | 入参 schema（剥 user_id；设备参数附候选） |
 | 平台工具调试调用 | POST /api/ai/platform-tools/{name}/invoke | 需登录(Bearer) | 真实调用；写工具仅超管 |
 | **legacy tool gateway** | | | |
 | 工具 schema | GET /api/ai/tools/schemas/ | 内部令牌 | 全部工具定义（服务间） |
-| Agent 工具配置 | GET /api/ai/tools/agent-config/{agent_id} | 内部令牌 | per-agent 工具/技能/知识配置 |
+| Agent 工具配置 | GET /api/ai/tools/agent-config/{agent_id} | 内部令牌 | per-agent 工具/技能配置 |
 | 工具执行 | POST /api/ai/tools/{module}/{action} | 内部令牌 | 执行业务工具（服务间） |
 
 ## 2. 通用约定
 
 - **无尾斜杠**：所有路径均无尾斜杠（`trailing_slash=False`）。
 - **信封分两类**：
-  - **DRF 迁移端点**（§3~§9，ViewSet / APIView 返回 `Response`）：经全局 `EnvelopeJSONRenderer` 包裹，成功 `{status: true, data: {...}}`，失败（4xx/5xx）`{status: false, message: "..."}`。
-  - **legacy 工具网关**（§10，函数视图返回 `JsonResponse`）：不走 `EnvelopeJSONRenderer`，视图内手动返回 `{status: true, data}` / `{status: false, message}`（外层形状相同，但 `data` 已是最终结果，不再二次包裹）。
+  - **DRF 迁移端点**（§3~§8，ViewSet / APIView 返回 `Response`）：经全局 `EnvelopeJSONRenderer` 包裹，成功 `{status: true, data: {...}}`，失败（4xx/5xx）`{status: false, message: "..."}`。
+  - **legacy 工具网关**（§9，函数视图返回 `JsonResponse`）：不走 `EnvelopeJSONRenderer`，视图内手动返回 `{status: true, data}` / `{status: false, message}`（外层形状相同，但 `data` 已是最终结果，不再二次包裹）。
 - **鉴权**：全部需 `Authorization: Bearer <access_token>`，**唯一例外**是 `/api/ai/tools/*` 工具网关 —— 该前缀免 JWT（服务间调用不持有用户令牌），改由 `gateway.internal_token.InternalToolTokenMiddleware` 校验请求头 `X-Internal-Token`（= `settings.AI_TOOL_GATEWAY_TOKEN`）；令牌未配置时该前缀一律 `401`。JWT 中间件先行校验并注入 `request.user_id`，DRF 全局 `IsAuthenticated` 兜底。
 - **对象级权限**：Agent 写操作仅超管；读操作「权限检查先于存在性检查 → 不存在资源返回 403」（`Forbidden`）。对话访问按 owner。
 - **错误响应**：DRF 端点错误由 `EnvelopeJSONRenderer` 从 `detail`/字段错误抽取成 `{status: false, message}`。字段级校验错误取第一个字段的第一个错误文案。
@@ -166,14 +163,12 @@
 | strong_enabled | boolean | 否 | 强模型短路开关 |
 | api_key | string | 否 | API Key（落库加密） |
 | base_url | string | 否 | 自定义 base_url（校验协议/主机白名单） |
-| enable_knowledge_base | boolean | 否 | 知识库开关 |
 | enable_workspace_tools | boolean | 否 | workspace 工具开关 |
 | enable_business_tools | boolean | 否 | 业务工具开关 |
 | enable_mcp_tools | boolean | 否 | MCP 工具开关 |
 | enable_skills | boolean | 否 | 技能开关 |
 | status | string | 否 | 状态，缺省 active |
 | skills_config | object | 否 | 技能启停配置 {"Bash": true, ...} |
-| knowledge_sources | object | 否 | 知识库文档过滤 {"doc:id": true/false} |
 | route_configs | object | 否 | 多线路模型配置（api_key 会加密） |
 | max_loops | integer | 否 | 工作流内层循环次数，缺省 3 |
 
@@ -230,13 +225,11 @@
       "strong_enabled": false,          # 强模型开关
       "api_key": "sk-***abcd",          # 脱敏 Key（仅超管可见，其余为空串）
       "base_url": "",                   # base_url（仅超管可见）
-      "enable_knowledge_base": false,
       "enable_workspace_tools": false,
       "enable_business_tools": false,
       "enable_mcp_tools": false,
       "enable_skills": false,
       "skills_config": {},              # 技能启停配置
-      "knowledge_sources": {},          # 知识库文档过滤
       "route_configs": {},              # 线路配置（仅超管返回脱敏+解密视图）
       "max_loops": 3,
       "status": "active",
@@ -1128,7 +1121,7 @@
         "action": "启动 govee",
         "assert": "前台应用为 govee 首页",
         "loop": 1,
-        "executor": { "action": "启动 govee", "result": "PASS", "message": "已启动" },
+        "executor": { "result": "PASS", "click_timer": "2026-09-28 17:01:12.645", "screenshot": "ai_tasks/1/s1_l1.jpg" },
         "verifier": { "action": "启动 govee", "assert": "前台应用为 govee 首页", "actual": "已在首页", "result": true }
       }],
       "usage": {},
@@ -1140,6 +1133,7 @@
 
 > 运行中即可读到增量 `run.plans` / `run.log` / `run.summary`（如「已规划 N 个步骤」）；`data.status` 仍为 `running`，`run.status` 为 `running`。终态把全量过程写入 `ai_tasks.result`。
 > 新协议：`plans[].steps` 为 `{action, assert}`；`log[]` 按步骤重试记录 `executor` / `verifier`（`verifier.result` 为 boolean）。旧任务可能仍是字符串 steps + goal 级 log，前端详情页兼容折叠展示。
+> `log[].executor` 为**执行模型输出契约**的三个字段：`result`（`PASS`/`FAIL`）、`click_timer`（**点击前的时间戳**，北京时间毫秒；本步无点击时为空串）、`screenshot`（**点击后截图的相对路径**，MEDIA 相对路径；本步未截图时为空串）。该契约不含 `action` / `message` —— **存量旧记录**里仍是 `{action, result, message}`，前端详情页按旧字段如实兼容展示、不报错。
 > `deepseek_cost` 为 DeepSeek 官方价目（命中/未命中输入 + 输出，高峰 ×2）估算费用（元，4 位小数）。无分模型用量时按 `deepseek-v4-flash` 对任务总量计费；非 DeepSeek 模型不计。
 
 #### 错误码与文案
@@ -1400,178 +1394,9 @@
 
 ---
 
-## 7. knowledge 组
+## 7. uploads 组
 
-> 文档根目录：`data/rag_datas`。列表/上传走磁盘；检索与重建索引走向量库（仅 `*.md`）。
-
-### 7.1 知识库状态接口：GET /api/ai/knowledge/status/
-
-| 项 | 值 |
-|---|---|
-| 鉴权 | 需登录(Bearer) |
-
-#### 成功响应（200）
-
-```json
-{
-  "status": true,
-  "data": {
-    "doc_count": 3,
-    "db_size_bytes": 0,
-    "db_size_mb": 0.0,
-    "collection_name": "project_knowledge",
-    "reindex": {
-      "running": false,
-      "last_indexed": null,
-      "message": ""
-    }
-  }
-}
-```
-
-#### 错误码与文案
-
-| HTTP | message | 触发条件 |
-|---|---|---|
-| 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
-
----
-
-### 7.2 知识库文档列表接口：GET /api/ai/knowledge/documents/
-
-| 项 | 值 |
-|---|---|
-| 鉴权 | 需登录(Bearer) |
-
-#### 成功响应（200）
-
-```json
-{
-  "status": true,
-  "data": {
-    "documents": [
-      {
-        "id": "项目文档/a.md",
-        "name": "a.md",
-        "source": "项目文档/a.md",
-        "type": "project_doc",
-        "size": 12,
-        "ext": "md"
-      }
-    ],
-    "total": 1
-  }
-}
-```
-
-`type`：一级目录 `项目文档` → `project_doc`，`参考` → `reference`，`手动` → `manual`，其余为空字符串。
-
-#### 错误码与文案
-
-| HTTP | message | 触发条件 |
-|---|---|---|
-| 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
-
----
-
-### 7.3 知识库文档预览接口：GET /api/ai/knowledge/documents/preview/
-
-| 项 | 值 |
-|---|---|
-| 鉴权 | 需登录(Bearer) |
-| Query | `path` 相对 `data/rag_datas` 的路径（禁止 `..`） |
-
-#### 成功响应（200）
-
-```json
-{
-  "status": true,
-  "data": {
-    "path": "说明.md",
-    "name": "说明.md",
-    "kind": "markdown",
-    "content": "# 说明正文",
-    "converted": true
-  }
-}
-```
-
-Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再返回 Markdown；已有同名 `.md` 则直接读取。
-
-#### 错误码与文案
-
-| HTTP | message | 触发条件 |
-|---|---|---|
-| 400 | 缺少文件路径 / 非法文件路径 / 不支持预览该类型 / 文档转换失败 | 参数或转换错误 |
-| 404 | 找不到该文档 | 文件不存在 |
-| 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
-
----
-
-### 7.4 知识库重建索引接口：POST /api/ai/knowledge/reindex/
-
-| 项 | 值 |
-|---|---|
-| 鉴权 | 需登录(Bearer) |
-| 请求 | 无请求体 |
-
-#### 成功响应（200）
-
-```json
-{
-  "status": true,
-  "data": {
-    "message": "已索引 2 个文档",
-    "indexed": [{"doc_id": "...", "source": "data/rag_datas/a.md"}],
-    "failed": []
-  }
-}
-```
-
-#### 错误码与文案
-
-| HTTP | message | 触发条件 |
-|---|---|---|
-| 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
-
----
-
-### 7.5 知识库添加文档接口：POST /api/ai/knowledge/documents/add/
-
-| 项 | 值 |
-|---|---|
-| 鉴权 | 需登录(Bearer) |
-| Content-Type | multipart/form-data |
-| 请求 | `file` 必填；`subdir` 可选（`项目文档` / `参考` / `手动`） |
-
-#### 成功响应（200）
-
-```json
-{
-  "status": true,
-  "data": {
-    "id": "手册.md",
-    "name": "手册.md",
-    "source": "手册.md",
-    "type": "",
-    "size": 12,
-    "ext": "md"
-  }
-}
-```
-
-#### 错误码与文案
-
-| HTTP | message | 触发条件 |
-|---|---|---|
-| 400 | 请选择要导入的文件 / 非法文件名 / 不支持的文件类型 / 文件过大 / 不支持的目标目录 / 文档保存失败 | 校验或写盘失败 |
-| 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
-
----
-
-## 8. uploads 组
-
-### 8.1 头像上传接口：POST /api/ai/upload-avatar/
+### 7.1 头像上传接口：POST /api/ai/upload-avatar/
 
 | 项 | 值 |
 |---|---|
@@ -1605,7 +1430,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 8.2 文件上传接口：POST /api/ai/upload-file/
+### 7.2 文件上传接口：POST /api/ai/upload-file/
 
 | 项 | 值 |
 |---|---|
@@ -1660,9 +1485,9 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-## 9. platform 组
+## 8. platform 组
 
-### 9.1 平台配置读取接口：GET /api/ai/platform-config/
+### 8.1 平台配置读取接口：GET /api/ai/platform-config/
 
 | 项 | 值 |
 |---|---|
@@ -1681,9 +1506,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
     "enable_business_tools": false,     # 业务工具开关
     "enable_mcp_tools": false,          # MCP 工具开关
     "enable_skills": false,             # 技能开关
-    "enable_knowledge_base": false,     # 知识库开关
-    "skills_config": {},                # 技能启停配置
-    "knowledge_sources": {}             # 知识库文档过滤
+    "skills_config": {}                 # 技能启停配置
   }
 }
 ```
@@ -1697,7 +1520,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 9.2 平台配置更新接口：POST /api/ai/platform-config/update/
+### 8.2 平台配置更新接口：POST /api/ai/platform-config/update/
 
 | 项 | 值 |
 |---|---|
@@ -1712,13 +1535,11 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 | enable_business_tools | boolean | 否 | 业务工具开关 |
 | enable_mcp_tools | boolean | 否 | MCP 工具开关 |
 | enable_skills | boolean | 否 | 技能开关 |
-| enable_knowledge_base | boolean | 否 | 知识库开关 |
 | skills_config | object | 否 | 技能启停配置 |
-| knowledge_sources | object | 否 | 知识库文档过滤 |
 
 #### 成功响应（200）
 
-与 §9.1 相同（返回更新后的完整配置）。
+与 §8.1 相同（返回更新后的完整配置）。
 
 #### 错误码与文案
 
@@ -1730,7 +1551,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 9.2a 设备提示词读取接口：GET /api/ai/device-prompts/
+### 8.2a 设备提示词读取接口：GET /api/ai/device-prompts/
 
 | 项 | 值 |
 |---|---|
@@ -1766,7 +1587,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 9.2b 设备提示词更新接口：POST /api/ai/device-prompts/update/
+### 8.2b 设备提示词更新接口：POST /api/ai/device-prompts/update/
 
 | 项 | 值 |
 |---|---|
@@ -1788,7 +1609,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 #### 成功响应（200）
 
-与 §9.2a 相同（返回更新后的完整提示词）。
+与 §8.2a 相同（返回更新后的完整提示词）。
 
 #### 错误码与文案
 
@@ -1802,7 +1623,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 9.2c 提示词历史列表接口：GET /api/ai/device-prompt-archives/
+### 8.2c 提示词历史列表接口：GET /api/ai/device-prompt-archives/
 
 | 项 | 值 |
 |---|---|
@@ -1844,7 +1665,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 9.2d 提示词历史详情接口：GET /api/ai/device-prompt-archives/{id}/
+### 8.2d 提示词历史详情接口：GET /api/ai/device-prompt-archives/{id}/
 
 | 项 | 值 |
 |---|---|
@@ -1852,7 +1673,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 #### 成功响应（200）
 
-在 §9.2c 每项字段之外，额外返回三份正文本体 `planner` / `executor` / `verifier`。
+在 §8.2c 每项字段之外，额外返回三份正文本体 `planner` / `executor` / `verifier`。
 
 #### 错误码与文案
 
@@ -1863,7 +1684,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 9.2e 用历史存档覆盖当前提示词：POST /api/ai/device-prompt-archives/{id}/restore/
+### 8.2e 用历史存档覆盖当前提示词：POST /api/ai/device-prompt-archives/{id}/restore/
 
 | 项 | 值 |
 |---|---|
@@ -1875,7 +1696,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 #### 成功响应（200）
 
-与 §9.2a 相同（返回覆盖后的完整提示词）。
+与 §8.2a 相同（返回覆盖后的完整提示词）。
 
 #### 错误码与文案
 
@@ -1887,7 +1708,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 9.2f 删除永久存档：POST /api/ai/device-prompt-archives/{id}/delete/
+### 8.2f 删除永久存档：POST /api/ai/device-prompt-archives/{id}/delete/
 
 | 项 | 值 |
 |---|---|
@@ -1909,7 +1730,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 9.2g 模型调试配置接口：GET /api/ai/model-debug/{role}/
+### 8.2g 模型调试配置接口：GET /api/ai/model-debug/{role}/
 
 工具箱「模型调试」来源与单模型调试页的数据源。role 取值 planner / executor / verifier。
 
@@ -1936,12 +1757,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
         { "name": "tap_screen", "read_only": false, "category": "设备控制", "enabled": true }
       ]
     },
-    "skills": { "gate_on": true, "shared_by_roles": true, "items": [{ "name": "skill-a", "path": "/abs/path" }] },
-    "knowledge": {
-      "gate_on": false, "enabled_source_ids": [], "file_count": 3,
-      "files": [{ "id": "doc/a.md", "name": "a.md", "type": "root" }],
-      "wired_to_runtime": false
-    }
+    "skills": { "gate_on": true, "shared_by_roles": true, "items": [{ "name": "skill-a", "path": "/abs/path" }] }
   }
 }
 ```
@@ -1952,7 +1768,6 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 | role.needs_device | 该角色工具子集里是否有工具需要设备（按工具签名是否含 `serial` 参数判定）：规划=false、执行/验收=true；前端据此决定是否要求先选设备 |
 | role.model | 模型连接摘要；**只回是否已配置（has_api_key），不回 api_key / base_url 明文** |
 | skills.shared_by_roles | 恒 true：Skill 由装配链路整组下发，**三模型共用**（非按角色分配） |
-| knowledge.wired_to_runtime | 恒 false：知识库当前只到配置层，**设备执行链路未挂载 RAG** |
 
 #### 错误码与文案
 
@@ -1965,9 +1780,9 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 9.2h 单角色调试对话接口：POST /api/ai/model-debug/{role}/chat
+### 8.2h 单角色调试对话接口：POST /api/ai/model-debug/{role}/chat
 
-用该角色的系统提示词、模型连接与**真实工具子集**发起一次对话，用于确认提示词修改是否生效。**挂载该角色实际装配的工具（可能真实操作设备）**，**不写入会话 / 消息表**。前端不设等待上限（模型多轮 ReAct + 抓屏可能远超 5 分钟）。
+用该角色的系统提示词、模型连接与**真实工具子集**发起一次对话，用于确认提示词修改是否生效。**挂载该角色实际装配的工具（可能真实操作设备）**，**不写入会话 / 消息表**。前端不设等待上限（模型多轮 ReAct + 抓屏可能远超 5 分钟）。本轮产生设备副作用点击时，响应带一份平台装配的**日志检查**（点击前时间点 + 点击后截图路径 + 该时间点后 5 秒日志）；读窗需等到「最后一次点击 + 5 秒」，因此这类对话的返回会比纯文本对话晚约 5 秒。
 
 | 项 | 值 |
 |---|---|
@@ -1993,6 +1808,10 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
       { "type": "call", "name": "current_app", "input": { "serial": "R5CT62RH88F" } },
       { "type": "result", "name": "current_app", "state": "success", "output": "{\"package\": \"com.govee.home\"}" }
     ],
+    "log_check": {
+      "clicks": [{ "action_time": "2026-09-28 10:51:03.219", "screenshot_path": "ai_tasks/12/s1.jpg" }],
+      "log": { "conclusion": "hit", "threshold_seconds": 5.0, "window_line_count": 3, "hits": [] }
+    },
     "usage": { "input_tokens": 1200, "output_tokens": 300 }, "cost": 0.0012
   }
 }
@@ -2000,7 +1819,9 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 | 字段 | 说明 |
 |---|---|
+| reply | 模型回复原文（平台不改写）。**执行模型**（`role=executor`）的回复即其输出契约：`{"result": "PASS|FAIL", "click_timer": "点击前时间戳", "screenshot": "点击后截图相对路径"}`（本步无点击 / 未截图时对应值为空串）；规划模型为 `{"plan": {…}}`，验收模型为 `{"action","assert","actual","result"}` |
 | tool_usage | 本轮工具调用轨迹（引擎从上下文回溯，脱敏无 base64）：`type=call` 带 `input`，`type=result` 带 `state` / `output` |
+| log_check | 本轮**设备点击证据**（平台装配，不依赖模型抄写；本轮没有任何副作用点击时该键不出现）：`clicks[]` 为每次点击的**点击前时间点**（北京时间毫秒）与**点击后截图路径**（该次点击后未截图时为空串）；`log` 为该时间点后 5 秒窗口内的日志证据（原始日志 + 命中标注，与任务步骤证据同源）。窗口在对话**之前**开启；日志端口全部处于关闭监听 / 采集未启用时 `log` 为 `null`（平台**不会**为了调试打开端口） |
 
 #### 错误码与文案
 
@@ -2018,7 +1839,58 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 9.3 平台工具启停接口：POST /api/ai/platform-tools/toggle/
+### 8.2i 日志关键词目录接口：GET /api/ai/log-keywords/
+
+AI 工具箱「日志关键词」来源的只读数据源：当前「串口日志关键词 → 功能模块 / 功能点」对照表。该表既是日志证据等级判定（强证据 / 疑似周期）的依据，也是只读日志查询工具还原功能点的依据。**只读**：不写文件、不写库、不启停任何端口。
+
+取值优先级：**采集正在运行时取运行中的关键词索引**（`origin=runtime`，即判定真正在用的那份）；采集尚未创建时直读配置文件（`origin=file`）；两者都拿不到时返回空列表（`origin=none`）与可读 `note`。关键词保持**表内顺序**，分组与排序由前端派生。
+
+| 项 | 值 |
+|---|---|
+| 鉴权 | 需登录(Bearer)，登录即可读（与「无线端口」列表同口径；无写入口） |
+| Content-Type | — |
+
+#### 成功响应（200）
+
+```json
+{
+  "status": true,
+  "data": {
+    "keywords": [
+      { "keyword": "switch_on", "features": [{ "id": 0, "module": "设备开关", "feature": "打开设备成功" }] },
+      { "keyword": "color_configs_set_success", "features": [
+        { "id": 2, "module": "音效律动", "feature": "灯光颜色设置成功" },
+        { "id": 17, "module": "彩色模式", "feature": "手动-颜色设置成功" }
+      ] }
+    ],
+    "keyword_count": 67, "feature_count": 56,
+    "origin": "runtime",
+    "keyword_file": "config/device_log_keywords.json",
+    "updated_at": "2026-09-28 18:20:11",
+    "note": ""
+  }
+}
+```
+
+| 字段 | 说明 |
+|---|---|
+| keywords | 逐关键词的对照条目，保持表内顺序；`features` 为该关键词对应的**全部**功能点（编号 + 模块 + 名称），一个关键词可对应多个 |
+| keyword_count / feature_count | 关键词数与功能点数（后者按「模块 + 编号 + 名称」去重） |
+| origin | 取值来源：`runtime` 运行中的采集索引 / `file` 关键词表文件 / `none` 都取不到 |
+| keyword_file / updated_at | 对照表文件路径与其最后修改时间（北京时间，秒精度；取不到为空串） |
+| note | 表不可用时的可读原因（正常为空串）；此时 `keywords` 为空列表 |
+
+#### 错误码与文案
+
+| HTTP | message | 触发条件 |
+|---|---|---|
+| 401 | 请先登录 / 登录已过期或令牌无效 | 鉴权失败 |
+
+> 表不可用不是错误：接口仍返回 200，靠 `note` 说明原因，页面据此给空态。
+
+---
+
+### 8.3 平台工具启停接口：POST /api/ai/platform-tools/toggle/
 
 | 项 | 值 |
 |---|---|
@@ -2056,7 +1928,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 9.4 平台工具调试 schema：GET /api/ai/platform-tools/{name}
+### 8.4 平台工具调试 schema：GET /api/ai/platform-tools/{name}
 
 | 项 | 值 |
 |---|---|
@@ -2120,7 +1992,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 9.5 平台工具调试调用：POST /api/ai/platform-tools/{name}/invoke
+### 8.5 平台工具调试调用：POST /api/ai/platform-tools/{name}/invoke
 
 | 项 | 值 |
 |---|---|
@@ -2159,7 +2031,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-## 10. legacy tool gateway（豁免路径）
+## 9. legacy tool gateway（豁免路径）
 
 > Django 函数视图 + `JsonResponse`（`@csrf_exempt`），不走 `EnvelopeJSONRenderer`；
 > 响应为视图内手动信封 `{status: true, data}` / `{status: false, message}`（与 DRF 信封形状相同，但 `data` 已是最终结果）。
@@ -2179,7 +2051,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 >
 > 状态码 `401`。CORS 预检（`OPTIONS`）不校验令牌。
 
-### 10.1 工具 schema 接口：GET /api/ai/tools/schemas/
+### 9.1 工具 schema 接口：GET /api/ai/tools/schemas/
 
 | 项 | 值 |
 |---|---|
@@ -2213,7 +2085,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 10.2 Agent 工具配置接口：GET /api/ai/tools/agent-config/{agent_id}
+### 9.2 Agent 工具配置接口：GET /api/ai/tools/agent-config/{agent_id}
 
 | 项 | 值 |
 |---|---|
@@ -2228,13 +2100,11 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
   "data": {
     "enabled_tools": ["list_devices"],  # 可用平台工具名列表
     "disabled_skills": [],              # 需隐藏的 workspace 技能名（已移除，恒空）
-    "knowledge_sources": [],            # 启用知识库文档 ID 列表
     "capability_flags": {               # 能力开关
       "enable_workspace_tools": false,
       "enable_business_tools": false,
       "enable_mcp_tools": false,
-      "enable_skills": false,
-      "enable_knowledge_base": false
+      "enable_skills": false
     }
   }
 }
@@ -2248,7 +2118,7 @@ Word（`.docx`）与 PDF：若旁路尚无同名 `.md` 则转换并写入，再�
 
 ---
 
-### 10.3 工具执行接口：POST /api/ai/tools/{module}/{action}
+### 9.3 工具执行接口：POST /api/ai/tools/{module}/{action}
 
 | 项 | 值 |
 |---|---|

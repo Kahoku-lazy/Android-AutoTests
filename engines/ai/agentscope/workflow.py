@@ -15,14 +15,25 @@ import re
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+
+from engines.ai.base import LogEvidenceProvider
 
 from .config import DeviceExecutionConfig
 from .evidence import save_verify_screenshot
+from .logcheck import build_executor_log_check, extract_action_time
 from .model import ExecutorRole, PlannerRole, RoleResult, VerifierRole
 from .usage import UsageAccumulator
 
 logger = logging.getLogger("ai_assistant.workflow")
+
+# 日志证据等级（与 engines.device.logbus 的常量口径一致，此处只做展示）
+_GRADE_LABEL = {
+    "strong": "强证据",
+    "periodic": "疑似周期",
+    "before_action": "动作前",
+    "out_of_window": "超窗",
+}
 
 
 # ── 数据契约（节点间交互的数据类型，模型自由文本 → 强类型）──
@@ -37,6 +48,22 @@ class Step(BaseModel):
         alias="assert",
         description="该操作的断言（操作后屏幕上可观察到的期望结果，供 verifier 比对）",
     )
+    log_check: bool = Field(
+        default=False,
+        description="该步断言是否需靠设备日志核对（真时执行侧一并产出 5 秒窗口日志）",
+    )
+
+    @field_validator("log_check", mode="before")
+    @classmethod
+    def _lenient_log_check(cls, value):
+        """宽松取值：该标记只决定是否附带日志，MUST NOT 因模型给了奇怪取值而让整个规划失败。"""
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, int):
+            return value != 0
+        if isinstance(value, str):
+            return value.strip().lower() in {"true", "1", "yes", "y", "on", "是"}
+        return False
 
 
 class Plan(BaseModel):
@@ -47,11 +74,17 @@ class Plan(BaseModel):
 
 
 class ExecutionOutput(BaseModel):
-    """executor 输出：执行结果（action + PASS/FAIL + 说明）。"""
+    """executor 输出：执行结果（PASS/FAIL + 点击前时间戳 + 点击后截图路径）。
 
-    action: str = Field(description="执行的操作")
+    契约只有这三个字段（模型 MUST NOT 再输出 action / message）：
+    `click_timer` / `screenshot` 由模型照抄工具返回（点击类工具的 `action_time`、
+    截图工具 `keep_local=true` 时的 `screenshot_path`）；平台**不替模型补值**，
+    取不到就如实留空串——权威点击证据另由平台按工具轨迹装配（`logcheck`）。
+    """
+
     result: Literal["PASS", "FAIL"] = Field(description="执行结果")
-    message: str = Field(description="操作说明或遇到的问题")
+    click_timer: str = Field(default="", description="点击前的时间戳（无点击时为空串）")
+    screenshot: str = Field(default="", description="点击后截图的相对路径（未截图时为空串）")
 
 
 class VerificationOutput(BaseModel):
@@ -259,6 +292,97 @@ def _role_trace(result: RoleResult | None) -> dict:
     return out
 
 
+def _step_action_times(result: RoleResult | None, skip_results: int = 0) -> list[str]:
+    """本步**全部**副作用动作的发出时刻（去重升序，北京时间毫秒）。
+
+    工具侧只在真正调设备前打点（读取类动作不打）。`skip_results` 用来跳过上下文里
+    **上一步遗留**的工具返回——executor 的上下文是整个任务累积的，不跳过就会把上一步的
+    动作时刻算进本步（真机验证时踩到过）。
+    """
+    if result is None:
+        return []
+    rows = [
+        item
+        for item in (result.tool_usage or [])
+        if isinstance(item, dict) and item.get("type") == "result"
+    ]
+    stamps: list[str] = []
+    for item in rows[max(0, skip_results) :]:
+        raw = item.get("output")
+        text = raw if isinstance(raw, str) else json.dumps(raw, ensure_ascii=False, default=str)
+        stamp = extract_action_time(text)
+        if stamp and stamp not in stamps:
+            stamps.append(stamp)
+    return sorted(stamps)
+
+
+def _first_action_time(result: RoleResult | None, skip_results: int = 0) -> str:
+    """本步最早一次副作用动作的发出时刻（单动作场景的便捷入口）。"""
+    stamps = _step_action_times(result, skip_results)
+    return stamps[0] if stamps else ""
+
+
+def _render_log_evidence(evidence: dict | None, action_time: str = "") -> str:
+    """把日志证据块渲染成给验收模型看的文本（无证据时明确标注，便于降级判定）。"""
+    if not evidence:
+        return "日志证据：无（本次未采集到设备日志证据，请只依据截图判断）。"
+    source = str(evidence.get("channel") or "").strip()
+    origin = f"来源 {source}，" if source and source != "*" else ""
+    stamps = [str(item) for item in (evidence.get("action_times") or []) if item]
+    if not stamps and evidence.get("action_time"):
+        stamps = [str(evidence["action_time"])]
+    action_text = "、".join(stamps) if stamps else (action_time or "-")
+    lines: list[str] = [
+        "设备日志证据（北京时间，基准=本步动作发出时刻，取证阈值 "
+        f"{evidence.get('threshold_seconds')}s，动作前基线 {evidence.get('baseline_seconds')}s）：",
+        f"- {origin}本步动作发出时间（{len(stamps)} 次）：{action_text}",
+        f"- 窗口内日志行数：{evidence.get('window_line_count')}，结论：{evidence.get('conclusion')}",
+    ]
+    hits = evidence.get("hits") or []
+    if hits:
+        lines.append("- 窗口内命中：")
+        for hit in hits:
+            features = "、".join(
+                f"#{item.get('id')} {item.get('module')}-{item.get('feature')}"
+                for item in hit.get("features") or []
+            )
+            grade = _GRADE_LABEL.get(str(hit.get("grade")), str(hit.get("grade")))
+            stamps = "、".join(hit.get("timestamps") or [])
+            lines.append(
+                f"  · [{grade}] 关键词 {hit.get('keyword')} → 功能点 {features}"
+                f"（出现 {hit.get('count')} 次；{stamps}）"
+            )
+            if hit.get("baseline_occurrences"):
+                before = "、".join(
+                    f"{item.get('timestamp')} {item.get('text')}"
+                    for item in hit["baseline_occurrences"]
+                )
+                lines.append(f"    动作前已出现过同名日志：{before}")
+    else:
+        lines.append("- 窗口内无关键词命中。")
+    if evidence.get("out_of_window"):
+        out = "、".join(
+            f"{item.get('keyword')}@{item.get('timestamp')}(+{item.get('delta_seconds')}s)"
+            for item in evidence["out_of_window"]
+        )
+        lines.append(f"- 超出取证阈值、不作为本次证据：{out}")
+    raw_lines = evidence.get("lines") or []
+    if raw_lines:
+        lines.append("- 窗口内原始日志：")
+        lines.extend(f"  | {item.get('timestamp')} {item.get('text')}" for item in raw_lines)
+    lines.append(
+        "采信口径（从严）：疑似周期证据不得单独作为通过依据；只有截图证据同时成立才可判通过。"
+    )
+    return "\n".join(lines)
+
+
+def _exec_evidence_text(exec_out: ExecutionOutput) -> str:
+    """执行侧证据文本（新契约没有说明文字，平台按三字段如实给出，缺项如实标注）。"""
+    click = exec_out.click_timer.strip() or "本步无点击"
+    shot = exec_out.screenshot.strip() or "本步未截图"
+    return f"点击前时间戳={click}；点击后截图={shot}"
+
+
 def _log_step(
     step: Step,
     loop: int,
@@ -267,6 +391,8 @@ def _log_step(
     screenshot: str = "",
     executor_trace: dict | None = None,
     verifier_trace: dict | None = None,
+    log_evidence: dict | None = None,
+    executor_log_check: dict | None = None,
 ) -> dict:
     """单次步骤重试的过程记录（详情页逐步骤渲染）。
 
@@ -278,9 +404,12 @@ def _log_step(
         screenshot: 验收证据截图相对路径（MEDIA），可空。
         executor_trace: 执行侧思考 + 工具调用（可空）。
         verifier_trace: 验收侧思考 + 工具调用（可空）。
+        log_evidence: 本步的日志证据块（可空）。
+        executor_log_check: 执行侧点击证据（可空；本步无点击且不需日志时不写键）。
 
     Returns:
-        {action, assert, loop, executor, verifier, screenshot?, *_trace?}
+        {action, assert, loop, executor, verifier, screenshot?, log_evidence?,
+         executor_log_check?, *_trace?}
     """
     entry = {
         "action": step.action,
@@ -295,6 +424,10 @@ def _log_step(
         entry["executor_trace"] = executor_trace
     if verifier_trace:
         entry["verifier_trace"] = verifier_trace
+    if log_evidence:
+        entry["log_evidence"] = log_evidence
+    if executor_log_check and (executor_log_check.get("clicks") or executor_log_check.get("log")):
+        entry["executor_log_check"] = executor_log_check
     return entry
 
 
@@ -318,6 +451,7 @@ class DeviceExecutionWorkflow:
         on_progress=None,
         task_id: int = 0,
         media_root: str = "",
+        log_evidence: LogEvidenceProvider | None = None,
     ):
         """Args:
         planner/executor/verifier: 三个角色对象（由 build_device_models 创建）。
@@ -326,6 +460,7 @@ class DeviceExecutionWorkflow:
         on_progress: 进度回调（可选，运行中检查点推送）。
         task_id: 任务 id（验收截图落盘用）。
         media_root: MEDIA_ROOT 绝对路径；空则跳过落盘。
+        log_evidence: 设备日志证据提供者（Django 注入；空 = 验收标注「无日志证据」）。
         """
         self.planner = planner
         self.executor = executor
@@ -335,7 +470,61 @@ class DeviceExecutionWorkflow:
         self._on_progress = on_progress
         self._task_id = task_id
         self._media_root = media_root
+        self._log_evidence = log_evidence
         self._usage = UsageAccumulator()
+
+    # ── 设备日志证据（动作前开窗 → 动作后读窗）──
+
+    def _open_log_window(self, idx: int) -> str:
+        """步骤交给执行模型之前开窗；无提供者时返回空串（验收会标注无日志证据）。"""
+        if self._log_evidence is None:
+            return ""
+        try:
+            window_id = str(self._log_evidence.open_window(self.serial, f"step-{idx}"))
+        except Exception as exc:  # 证据缺失不该中断任务，只降级
+            logger.warning("【日志窗口】步骤 %d 开窗失败：%s", idx, exc)
+            return ""
+        logger.info("【日志窗口】步骤 %d 已开窗 id=%s", idx, window_id)
+        return window_id
+
+    def _executor_results_seen(self) -> int:
+        """executor 上下文里已有的工具返回条数（用于只取本步新增的动作打点）。"""
+        counter = getattr(self.executor, "tool_results_seen", None)
+        if not callable(counter):
+            return 0
+        try:
+            return int(counter())
+        except Exception as exc:  # 取不到就按 0 处理（最多退化成看全量轨迹）
+            logger.warning("【日志窗口】读取 executor 已有工具返回数失败：%s", exc)
+            return 0
+
+    def _read_log_window(
+        self, idx: int, window_id: str, action_times: list[str] | None = None
+    ) -> dict | None:
+        """动作后读窗取证据；未开窗或读窗失败时返回 None（验收标注无日志证据）。"""
+        if self._log_evidence is None or not window_id:
+            return None
+        stamps = list(action_times or [])
+        try:
+            evidence = self._log_evidence.read_window(
+                self.serial,
+                window_id=window_id,
+                action_times=stamps,
+                wait_seconds=self.config.log_wait_seconds,
+            )
+        except Exception as exc:  # 同上：日志证据是加分项，不能因它中断任务
+            logger.warning("【日志窗口】步骤 %d 读窗失败：%s", idx, exc)
+            return None
+        logger.info(
+            "【日志证据】步骤 %d 动作时间=%s（本步 %d 次）结论=%s 命中=%d 窗口行数=%s",
+            idx,
+            stamps[0] if stamps else "-",
+            len(stamps),
+            evidence.get("conclusion"),
+            len(evidence.get("hits") or []),
+            evidence.get("window_line_count"),
+        )
+        return evidence if isinstance(evidence, dict) else None
 
     # ── 收一轮模型结果（累账 + 解析）──
 
@@ -406,14 +595,15 @@ class DeviceExecutionWorkflow:
         result = await self.executor.run(self.serial, step.action, idx, total, retry_hint)
         out = self._ingest(result)
         exec_out = _coerce(ExecutionOutput, out) or ExecutionOutput(
-            action=step.action,
             result="FAIL",
-            message="执行模型输出无效",
+            click_timer="",
+            screenshot="",
         )
         logger.info(
-            "【executor 输出】result=%s message=%s",
+            "【executor 输出】result=%s click_timer=%s screenshot=%s",
             exec_out.result,
-            exec_out.message,
+            exec_out.click_timer,
+            exec_out.screenshot,
         )
         return exec_out, result.screenshot, result
 
@@ -424,25 +614,28 @@ class DeviceExecutionWorkflow:
         total: int,
         exec_out: ExecutionOutput,
         screenshot,
+        log_evidence: dict | None = None,
     ) -> tuple[VerificationOutput, object | None, RoleResult]:
-        """验收一步：调 verifier 对比断言与截图，返回结论 + 验证侧截图。
+        """验收一步：调 verifier 对比断言 + 截图 + 日志证据，返回结论 + 验证侧截图。
 
         Args:
             step: 本步骤（action + 断言）。
             idx: 当前步骤序号（1 起）。
             total: 总步骤数。
-            exec_out: 执行结果（result/message 供 verifier 参考）。
+            exec_out: 执行结果（result 与点击前时间戳 / 点击后截图路径供 verifier 参考）。
             screenshot: 执行结果截图（DataBlock，可空）。
+            log_evidence: 本步日志证据块（可空 = 无日志证据，验收降级为只看截图）。
 
         Returns:
             (VerificationOutput, verifier 回复中的截图 DataBlock|None, RoleResult)。
         """
         logger.info(
-            "【verifier 输入】步骤%d/%d action=%r assert=%r",
+            "【verifier 输入】步骤%d/%d action=%r assert=%r 日志证据=%s",
             idx,
             total,
             step.action,
             step.assertion,
+            "有" if log_evidence else "无",
         )
         result = await self.verifier.run(
             self.serial,
@@ -450,8 +643,9 @@ class DeviceExecutionWorkflow:
             idx,
             total,
             exec_out.result,
-            exec_out.message,
+            _exec_evidence_text(exec_out),
             screenshot,
+            _render_log_evidence(log_evidence),
         )
         out = self._ingest(result)
         verdict = _coerce(VerificationOutput, out) or VerificationOutput(
@@ -609,10 +803,20 @@ class DeviceExecutionWorkflow:
                 loop + 1,
                 max_loops,
             )
-            # 执行 → 验收；证据路径优先用 verifier 工具回传的真实落盘路径
+            # 动作前开窗 → 执行 → 动作后读窗 → 验收（证据与截图一起进验收输入）
+            # skip_results：executor 上下文整个任务累积，只取本步新增的工具返回定基准
+            seen_results = self._executor_results_seen()
+            window_id = self._open_log_window(idx)
             exec_out, screenshot, exec_role = await self._execute_step(step, idx, total, retry_hint)
+            log_evidence = self._read_log_window(
+                idx, window_id, _step_action_times(exec_role, seen_results)
+            )
+            # 执行侧点击证据与验收侧证据同源：同一份 log_evidence，按本步标记决定是否附带
+            executor_log_check = build_executor_log_check(
+                exec_role, seen_results, log_evidence, step.log_check
+            )
             verdict, verifier_shot, ver_role = await self._verify_step(
-                step, idx, total, exec_out, screenshot
+                step, idx, total, exec_out, screenshot, log_evidence
             )
             shot_rel = (ver_role.screenshot_path or "").strip()
             if not shot_rel:
@@ -630,6 +834,8 @@ class DeviceExecutionWorkflow:
                     shot_rel,
                     _role_trace(exec_role),
                     _role_trace(ver_role),
+                    log_evidence,
+                    executor_log_check,
                 )
             )
             self._report(f"步骤 {idx}/{total} 验收 {verdict.result}", plan, log, done)

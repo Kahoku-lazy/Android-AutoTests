@@ -1,7 +1,7 @@
 """ai-assistant URL routing — DRF router + 豁免遗留路径。
 
 Batch 1-3 已迁移：Agent 组（AgentViewSet + APIView）、对话组（ConversationViewSet + TaskBoardAPIView）、
-工具箱/Agent 工具（ToolboxViewSet + AgentToolActionsMixin）、知识库与上传（APIView 组）。
+工具箱/Agent 工具（ToolboxViewSet + AgentToolActionsMixin）、上传（APIView 组）。
 豁免：SSE（chat_stream）与工具网关（schemas/agent-config/execute）。
 
 router 使用默认的 trailing_slash=True：全平台唯一约定是「/api/ 路径以 / 结尾」
@@ -29,12 +29,11 @@ from .views_drf import (
     TaskBoardAPIView,
     TaskSubmitAPIView,
 )
-from .views_knowledge_drf import (
-    KnowledgeAddDocAPIView,
-    KnowledgeDocumentsAPIView,
-    KnowledgePreviewAPIView,
-    KnowledgeReindexAPIView,
-    KnowledgeStatusAPIView,
+from .views_log_keywords_drf import LogKeywordCatalogAPIView
+from .views_log_ports_drf import (
+    LogPortLinesAPIView,
+    LogPortListAPIView,
+    LogPortToggleAPIView,
 )
 from .views_model_debug_drf import ModelDebugChatAPIView, ModelDebugConfigAPIView
 from .views_prompts_drf import (
@@ -77,6 +76,12 @@ special_patterns = [
     ),
     path("platform-config/", PlatformConfigAPIView.as_view(), name="platform_config"),
     path("platform-config/update/", PlatformConfigAPIView.as_view(), name="platform_config_update"),
+    # 无线端口管理（AI 工具箱「无线端口」区块）
+    path("log-ports/", LogPortListAPIView.as_view(), name="log_ports"),
+    path("log-ports/toggle/", LogPortToggleAPIView.as_view(), name="log_ports_toggle"),
+    path("log-ports/<int:port>/lines/", LogPortLinesAPIView.as_view(), name="log_port_lines"),
+    # 日志关键词目录（AI 工具箱「日志关键词」来源，只读）
+    path("log-keywords/", LogKeywordCatalogAPIView.as_view(), name="log_keywords"),
     path(
         "model-debug/<str:role>/",
         ModelDebugConfigAPIView.as_view(),
@@ -132,16 +137,6 @@ special_patterns = [
         AgentTaskRerunAPIView.as_view(),
         name="ai_agent_task_rerun",
     ),
-    # Knowledge base
-    path("knowledge/status/", KnowledgeStatusAPIView.as_view(), name="kb_status"),
-    path("knowledge/documents/", KnowledgeDocumentsAPIView.as_view(), name="kb_documents"),
-    path(
-        "knowledge/documents/preview/",
-        KnowledgePreviewAPIView.as_view(),
-        name="kb_preview",
-    ),
-    path("knowledge/reindex/", KnowledgeReindexAPIView.as_view(), name="kb_reindex"),
-    path("knowledge/documents/add/", KnowledgeAddDocAPIView.as_view(), name="kb_add_doc"),
     # Uploads
     path("upload-avatar/", UploadAvatarAPIView.as_view(), name="upload_avatar"),
     path("upload-file/", UploadFileAPIView.as_view(), name="upload_file"),

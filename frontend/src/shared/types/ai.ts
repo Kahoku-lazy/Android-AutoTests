@@ -2,7 +2,7 @@
 
 // ── 字面量联合类型 ──
 
-export type ViewMode = "agents" | "toolbox" | "knowledge"
+export type ViewMode = "agents" | "toolbox"
 export type AgentStatus = "active" | "paused" | "error"
 export type ConnectionMode = "sse" | "django" | "connecting" | "unknown"
 export type ModelStatus =
@@ -134,8 +134,14 @@ export interface TaskRunRoleTrace {
 }
 
 export interface TaskRunExecutorOut {
-  action?: string
   result?: string
+  /** 点击前的时间戳（新执行契约；存量旧记录没有该键） */
+  click_timer?: string
+  /** 点击后截图的相对路径（新执行契约；无截图时为空串） */
+  screenshot?: string
+  /** 存量旧记录：执行的操作 */
+  action?: string
+  /** 存量旧记录：模型写的说明文字 */
   message?: string
 }
 
@@ -150,6 +156,79 @@ export interface TaskRunVerifierOut {
   failed?: TaskFailedItem[]
 }
 
+/** 设备日志证据：命中的功能点（关键词 → 功能模块 / 功能点） */
+export interface TaskLogFeature {
+  id?: number
+  module?: string
+  feature?: string
+}
+
+/** 设备日志证据：某个关键词的一次出现（那一刻的原文） */
+export interface TaskLogOccurrence {
+  timestamp?: string
+  source?: string
+  text?: string
+  grade?: string
+}
+
+/** 设备日志证据：窗口原始日志行（同毫秒已合并，text 内保留换行） */
+export interface TaskLogLine {
+  timestamp?: string
+  source?: string
+  text?: string
+  port?: number
+}
+
+/** 设备日志证据：某个关键词的命中块 */
+export interface TaskLogEvidenceHit {
+  keyword?: string
+  /** strong（强证据）/ periodic（疑似周期，不能单独作为通过依据）/ before_action / out_of_window */
+  grade?: string
+  count?: number
+  timestamps?: string[]
+  occurrences?: TaskLogOccurrence[]
+  features?: TaskLogFeature[]
+  baseline_occurrences?: Array<{ timestamp?: string; text?: string }>
+}
+
+/** 设备日志证据：某步的验收取证块（引擎写入过程记录，页面只读展示） */
+export interface TaskLogEvidence {
+  channel?: string
+  window_id?: string
+  window_opened_at?: string
+  action_time?: string
+  action_times?: string[]
+  threshold_seconds?: number
+  baseline_seconds?: number
+  window_line_count?: number
+  /** hit / no_hit / no_log / out_of_window */
+  conclusion?: string
+  hits?: TaskLogEvidenceHit[]
+  before_action?: Array<{ keyword?: string; timestamp?: string; text?: string; grade?: string }>
+  out_of_window?: Array<{
+    keyword?: string
+    timestamp?: string
+    text?: string
+    grade?: string
+    delta_seconds?: number
+  }>
+  /** 窗口原始日志（服务端已按「同毫秒合并 + 最新在上」排好，前端 MUST NOT 再排序） */
+  lines?: TaskLogLine[]
+}
+
+/** 执行侧点击证据：一次副作用点击（点击前时间点 + 点击后截图路径，未截图时为空串） */
+export interface TaskLogCheckClick {
+  action_time?: string
+  screenshot_path?: string
+}
+
+/** 执行侧点击证据块（引擎写入过程记录；log 只在「本步断言需日志核对」时非空） */
+export interface TaskLogCheck {
+  clicks?: TaskLogCheckClick[]
+  /** 与该步验收证据同源的 5 秒窗口证据（不需日志核对的步骤为空） */
+  log?: TaskLogEvidence | null
+}
+
 /** 过程日志：一步一次重试 */
 export interface TaskRunLogEntry {
   action?: string
@@ -159,6 +238,10 @@ export interface TaskRunLogEntry {
   verifier?: TaskRunVerifierOut
   /** 验收证据截图（相对 MEDIA，如 ai_tasks/12/s2_l1.jpg） */
   screenshot?: string
+  /** 本步的验收设备日志证据（老任务 / 未采集时缺省） */
+  log_evidence?: TaskLogEvidence
+  /** 本步执行侧的点击证据（老任务 / 本步无点击且不需日志时缺省） */
+  executor_log_check?: TaskLogCheck
   executor_trace?: TaskRunRoleTrace
   verifier_trace?: TaskRunRoleTrace
   /** @deprecated 旧协议按目标聚合 */
@@ -401,7 +484,7 @@ export interface AgentHealthResponse {
   message?: string
 }
 
-// Conversations 组（Batch 2 已迁 DRF）：信封 {status, data}；toolbox/knowledge 待迁移，暂保持平铺。
+// Conversations 组（Batch 2 已迁 DRF）：信封 {status, data}；toolbox 待迁移，暂保持平铺。
 export interface ConversationListResponse {
   status?: boolean
   data?: { conversations: Conversation[] }
@@ -426,19 +509,9 @@ export interface SaveMessageResponse {
   message?: string
 }
 
-// Toolbox / Knowledge（Batch 3 已迁 DRF）：信封 {status, data}。
+// Toolbox（Batch 3 已迁 DRF）：信封 {status, data}。
 export interface ToolboxListResponse {
   status?: boolean
   data?: { items: object[] }
-  message?: string
-}
-
-export interface KnowledgeStatusResponse {
-  status?: boolean
-  data?: {
-    doc_count?: number
-    db_size_mb?: number
-    reindex?: { running?: boolean; last_indexed?: string | null; message?: string }
-  }
   message?: string
 }

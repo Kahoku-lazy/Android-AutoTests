@@ -2,7 +2,7 @@
 import type { PlatformToolCategory } from "../api/toolbox"
 import type { SharedToolItem } from "../api/toolbox"
 
-export type AssemblySourceKey = "biz" | "skill" | "prompt" | "debug"
+export type AssemblySourceKey = "biz" | "skill" | "prompt" | "port" | "debug" | "keywords"
 
 export interface AssemblySourceDef {
   key: AssemblySourceKey
@@ -10,6 +10,11 @@ export interface AssemblySourceDef {
   desc: string
   /** 空串 = 无「交给助手」总闸（如设备提示词） */
   gateKey: string
+  /**
+   * 来源行副标题文案。无总闸来源必填——它们不参与「交给助手」装配，
+   * 不存在「n/m 生效」语义，不得借用其它来源的数量充当分母。
+   */
+  meta?: string
   accent: string
 }
 
@@ -33,13 +38,31 @@ export const ASSEMBLY_SOURCES: AssemblySourceDef[] = [
     name: "设备提示词",
     desc: "规划 / 执行 / 验收三角色系统提示词（Markdown）",
     gateKey: "",
+    meta: "规划 / 执行 / 验收 · 始终交给助手",
+    accent: "var(--c-ai)",
+  },
+  {
+    key: "port",
+    name: "无线端口",
+    desc: "日志端口监听与原始日志查看（不交给助手）",
+    gateKey: "",
+    meta: "监听开关 · 原始日志 · 不交给助手",
     accent: "var(--c-ai)",
   },
   {
     key: "debug",
     name: "模型调试",
-    desc: "单模型调试台：提示词 / 工具 / Skill / 知识库 + 对话验证",
+    desc: "单模型调试台：提示词 / 工具 / Skill + 对话验证",
     gateKey: "",
+    meta: "规划 / 执行 / 验收 · 仅调试不交给助手",
+    accent: "var(--c-ai)",
+  },
+  {
+    key: "keywords",
+    name: "日志关键词",
+    desc: "关键词 → 功能模块 / 功能点（判定口径，只读）",
+    gateKey: "",
+    meta: "关键词 → 功能模块 / 功能点 · 只读",
     accent: "var(--c-ai)",
   },
 ]

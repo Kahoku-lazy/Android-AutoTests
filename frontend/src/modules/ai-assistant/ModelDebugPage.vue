@@ -6,11 +6,12 @@ import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import WorkbenchCrumbs from "@/shared/components/WorkbenchCrumbs.vue"
+import StepLogCheck from "./components/StepLogCheck.vue"
 import { renderSkillMarkdown } from "./helpers/skill-markdown"
 import { groupToolsByCategory } from "./helpers/model-debug-groups"
+import { hasLogCheck } from "./helpers/task-detail"
 import { useModelDebug } from "./composables/useModelDebug"
 import {
-  KNOWLEDGE_RAG_NOTE,
   MODEL_DEBUG_ANSWER_ERROR_LABEL,
   MODEL_DEBUG_ANSWER_LABEL,
   MODEL_DEBUG_DEVICE_CONFIRM_TITLE,
@@ -157,7 +158,7 @@ function traceDetail(call: ModelDebugToolCall): string {
   <div class="doc-page doc-page--fixed wb-shell ai-workbench model-debug-page">
     <WorkbenchHeader
       :title="config?.role.label || '模型调试'"
-      subtitle="单模型调试台：提示词 / 工具 / Skill / 知识库 + 对话验证是否生效"
+      subtitle="单模型调试台：提示词 / 工具 / Skill + 对话验证是否生效"
       icon="flask"
       icon-gradient="linear-gradient(135deg, var(--c-ai), var(--color-violet-75))"
     />
@@ -223,10 +224,6 @@ function traceDetail(call: ModelDebugToolCall): string {
                 <div class="md-fact">
                   <dt>Skill</dt>
                   <dd>{{ config.skills.items.length }} 个</dd>
-                </div>
-                <div class="md-fact">
-                  <dt>知识库</dt>
-                  <dd>{{ config.knowledge.file_count }} 份文档</dd>
                 </div>
               </dl>
             </section>
@@ -300,19 +297,6 @@ function traceDetail(call: ModelDebugToolCall): string {
               <h3 class="md-section-title">② 参考数据 · 有哪些资产</h3>
 
               <div class="md-panel">
-                <div class="md-group-head">
-                  <span class="md-group-title"
-                    >知识库（{{ config.knowledge.file_count }} 份文档）</span
-                  >
-                  <span class="md-badge warn">{{ KNOWLEDGE_RAG_NOTE }}</span>
-                </div>
-                <ul v-if="config.knowledge.files.length" class="md-list">
-                  <li v-for="item in config.knowledge.files" :key="item.id">{{ item.name }}</li>
-                </ul>
-                <p v-else class="md-empty">知识库目录下暂无文档</p>
-              </div>
-
-              <div class="md-panel">
                 <button
                   type="button"
                   class="md-group-head md-group-head--toggle"
@@ -346,6 +330,9 @@ function traceDetail(call: ModelDebugToolCall): string {
                   </p>
                   <p class="md-msg-text" :class="{ err: item.error }">{{ item.content }}</p>
                 </div>
+
+                <!-- 设备点击证据：点击前时间点 + 点击后截图路径（+ 该时间点后 5 秒日志） -->
+                <StepLogCheck v-if="hasLogCheck(item.log_check)" :check="item.log_check" />
 
                 <!-- 思考过程：默认展开，逐条可收起 -->
                 <div v-if="thinkingOf(item)" class="md-think">

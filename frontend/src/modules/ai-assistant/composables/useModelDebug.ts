@@ -14,6 +14,7 @@ import { listDevices } from "../api/tasks"
 import { MODEL_DEBUG_DEVICE_REQUIRED_HINT } from "../constants"
 import { formatApiError } from "@/shared/api-client"
 import type { DeviceRecord } from "@/shared/types/device"
+import type { TaskLogCheck } from "@/shared/types/ai"
 
 export const MODEL_DEBUG_ROLES: ModelDebugRole[] = ["planner", "executor", "verifier"]
 
@@ -24,6 +25,8 @@ export interface ModelDebugMessage {
   model_name?: string
   thinking?: string[]
   tool_usage?: ModelDebugToolCall[]
+  /** 本轮设备点击证据（平台装配；无副作用点击时缺省） */
+  log_check?: TaskLogCheck
   cost?: number
   error?: boolean
 }
@@ -97,6 +100,7 @@ export function useModelDebug(role: Ref<string>) {
           model_name: data.data.model_name,
           thinking: data.data.thinking || [],
           tool_usage: data.data.tool_usage || [],
+          log_check: data.data.log_check,
           cost: data.data.cost,
         })
       } else {

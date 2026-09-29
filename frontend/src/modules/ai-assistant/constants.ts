@@ -82,16 +82,6 @@ export function promptRoleLabel(role: PromptRole): string {
   return PROMPT_ROLES.find((item) => item.key === role)?.label || role
 }
 
-/** 知识库上传：落盘到 data/rag_datas */
-export const KB_UPLOAD_ACCEPT = ".md,.markdown,.txt,.docx,.pdf"
-
-export const KB_UPLOAD_SUBDIRS: { value: string; label: string }[] = [
-  { value: "", label: "根目录" },
-  { value: "项目文档", label: "项目文档" },
-  { value: "参考", label: "参考" },
-  { value: "手动", label: "手动" },
-]
-
 /** Agent health check interval (ms). */
 export const HEALTH_CHECK_INTERVAL_MS = 30 * 60 * 1000
 
@@ -132,13 +122,10 @@ export function modelDebugRoute(role: string): string {
   return `/ai-assistant/toolbox/models/${encodeURIComponent(role)}`
 }
 
-// ── 模型调试：归属标注（避免让人误以为按角色分配 / 已挂 RAG）──
+// ── 模型调试：归属标注（避免让人误以为按角色分配）──
 
 /** Skill 是三模型共用（装配链路整组传同一批目录，非按角色分配） */
 export const SKILL_SHARED_NOTE = "三模型共用（装配时整组下发，非按角色分配）"
-
-/** 知识库只到配置层：设备执行链路当前未挂载 RAG */
-export const KNOWLEDGE_RAG_NOTE = "执行链路当前未挂载 RAG（此处仅展示配置层来源）"
 
 // ── 模型调试：调试对话的区块标题（返回结果与思考过程必须一眼可分）──
 
@@ -154,8 +141,8 @@ export const MODEL_DEBUG_THINKING_LABEL = "思考过程"
 /** 助手消息里「工具调用」轨迹区块的标题 */
 export const MODEL_DEBUG_TRACE_LABEL = "工具调用"
 
-/** 轨迹里单条入参/返回的最大展示字符数 */
-export const MODEL_DEBUG_TRACE_DETAIL_MAX = 160
+/** 轨迹里单条入参/返回的最大展示字符数（action_time / screenshot_path 这类尾部字段必须看得到，故留足余量） */
+export const MODEL_DEBUG_TRACE_DETAIL_MAX = 600
 
 /** 调试范围说明：如实描述当前行为（挂真实工具、会真机操作） */
 export const MODEL_DEBUG_SCOPE_NOTE =
@@ -175,6 +162,43 @@ export function modelDebugDeviceConfirmText(deviceLabel: string, writeToolCount:
       : "本次只挂只读工具，不会修改该设备"
   return `目标设备：${deviceLabel}\n${scope}。是否继续？`
 }
+
+/** 任务详情：执行侧「日志检查」区块（StepLogCheck）文案 */
+export const STEP_LOG_CHECK_TITLE = "日志检查"
+
+/** 本步带有需日志核对的断言时的说明（区块头部） */
+export const STEP_LOG_CHECK_HINT = "本步断言需核对设备日志 · 取证窗 5 秒"
+
+/** 某次点击之后确实没截图时如实标注 */
+export const STEP_LOG_CHECK_NO_SHOT_TEXT = "该次点击后未截图"
+
+/** 任务详情：执行结果段里本步没有截图时如实标注（新执行契约的 screenshot 为空串） */
+export const STEP_EXEC_NO_SHOT_TEXT = "该步未截图"
+
+/** 工具箱「日志关键词」来源（只读表格）文案 */
+export const LOG_KEYWORD_SEARCH_PLACEHOLDER = "搜索关键词 / 功能模块 / 功能点…"
+
+/** 表格三列（一行一个「关键词 × 功能点」） */
+export const LOG_KEYWORD_COL_KEYWORD = "关键词"
+export const LOG_KEYWORD_COL_MODULE = "功能模块"
+export const LOG_KEYWORD_COL_FEATURE = "功能点"
+
+/** 取值来源的中文口径（后端 origin 字段） */
+export const LOG_KEYWORD_ORIGIN_LABELS: Record<string, string> = {
+  runtime: "运行中的采集索引",
+  file: "关键词表文件",
+  none: "未取到",
+}
+
+/** 改表生效时机：判定用的是平台启动时加载的那份表 */
+export const LOG_KEYWORD_RESTART_HINT = "改关键词表后需重启平台才用于判定"
+
+export const LOG_KEYWORD_EMPTY_TEXT = "暂无可用的日志关键词"
+
+export const LOG_KEYWORD_EMPTY_HINT =
+  "关键词表文件缺失或尚未生成：检查 DEVICE_LOG_KEYWORD_FILE 指向的文件"
+
+export const LOG_KEYWORD_NO_MATCH_TEXT = "没有匹配的关键词"
 
 /** 智能体线路（任务卡片「智能体」下拉） */
 export const AGENT_ROUTES = [{ value: "device_control", label: "控制设备" }] as const

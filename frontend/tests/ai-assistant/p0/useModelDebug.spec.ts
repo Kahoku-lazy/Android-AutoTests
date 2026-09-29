@@ -58,7 +58,6 @@ vi.mock('@/modules/ai-assistant/api/toolbox', () => ({
 }))
 
 import {
-  KNOWLEDGE_RAG_NOTE,
   MODEL_DEBUG_ANSWER_ERROR_LABEL,
   MODEL_DEBUG_ANSWER_LABEL,
   MODEL_DEBUG_SCOPE_NOTE,
@@ -105,13 +104,6 @@ const CONFIG = {
       ],
     },
     skills: { gate_on: true, shared_by_roles: true, items: [{ name: 'skill-a', path: '/p/a' }] },
-    knowledge: {
-      gate_on: false,
-      enabled_source_ids: [],
-      file_count: 1,
-      files: [{ id: 'doc/a.md', name: 'a.md', type: 'root' }],
-      wired_to_runtime: false,
-    },
   },
 }
 
@@ -305,7 +297,6 @@ describe('ModelDebugPage', () => {
     expect(facts).toContain('多模态（可读截图）')
     expect(facts).toContain('2/3 启用')
     expect(facts).toContain('1 个')
-    expect(facts).toContain('1 份文档')
 
     const text = wrapper.text()
     expect(text).toContain('① 生效装配 · 能干什么')
@@ -387,15 +378,12 @@ describe('ModelDebugPage', () => {
     expect(wrapper.find('.md-md').text()).toContain('EXECUTOR-PROMPT')
   })
 
-  it('两条归属标注出现在对应区块的组头内', async () => {
+  it('归属标注出现在对应区块的组头内', async () => {
     const wrapper = await mountLoaded()
 
     const heads = wrapper.findAll('.md-group-head')
     const skillHead = heads.find((node) => node.text().includes('Skill'))
-    const kbHead = heads.find((node) => node.text().includes('知识库'))
     expect(skillHead?.text()).toContain(SKILL_SHARED_NOTE)
-    expect(kbHead?.text()).toContain(KNOWLEDGE_RAG_NOTE)
-    expect(wrapper.text()).toContain('a.md')
   })
 
   it('角色分段项可点：push 同页不同 role 参数，当前角色不重复 push', async () => {

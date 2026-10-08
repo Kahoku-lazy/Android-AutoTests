@@ -6,6 +6,7 @@ import { isKnownTextOnly, modelOptionLabel, type ModelOption } from "../helpers/
 const props = defineProps<{ label: string; disabled?: boolean; needsImage?: boolean }>()
 const model = defineModel<RouteModelConfig>({ required: true })
 
+// 平台只支持两项模型服务：阿里百炼（DashScope）与 DeepSeek。
 // DeepSeek 清单镜像引擎侧的模型目录（engines/ai/agents/config.py 的 DEEPSEEK_MODELS），
 // 两侧由 tests/graybox/unit/test_ai_deepseek_model_catalog.py 对拍，改一侧不齐即红。
 const providers: { value: string; label: string; models: ModelOption[] }[] = [
@@ -20,30 +21,10 @@ const providers: { value: string; label: string; models: ModelOption[] }[] = [
     ],
   },
   {
-    value: "openai",
-    label: "OpenAI",
-    models: [
-      { name: "gpt-4o" },
-      { name: "gpt-4-turbo" },
-      { name: "gpt-3.5-turbo" },
-      { name: "o4-mini" },
-    ],
-  },
-  {
-    value: "anthropic",
-    label: "Anthropic (Claude)",
-    models: [
-      { name: "claude-fable-5" },
-      { name: "claude-opus-4-8" },
-      { name: "claude-sonnet-4-6" },
-    ],
-  },
-  {
     value: "deepseek",
     label: "DeepSeek",
     models: [{ name: "deepseek-flash", multimodal: true }, { name: "deepseek-v4-pro" }],
   },
-  { value: "custom", label: "自定义 (OpenAI 兼容)", models: [] },
 ]
 
 // 模型名下拉选项：跟随当前所选厂商

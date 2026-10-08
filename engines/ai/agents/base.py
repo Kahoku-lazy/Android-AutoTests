@@ -1,6 +1,7 @@
 """智能体基类：模型创建 + 角色基类。
 
-- `create_model`：按 provider 创建底层大模型连接（deepseek / dashscope / OpenAI 兼容）。
+- `create_model`：按 provider 创建底层大模型连接（平台只支持 deepseek / dashscope 两项；
+  DeepSeek 多模态档内部走 OpenAI 兼容客户端）。
 - `RoleSpec`：角色配方（角色名 / 系统提示词 / 工具子集 / 视觉 / 上下文 / ReAct 参数）。
 - `AgentRole`：角色实体基类，封装一个 AgentScope Agent，固化「装配 → 接受任务 → 执行 → 报告」
   不变主干；子类只填 RoleSpec，赋什么配置就编排成什么角色。
@@ -79,18 +80,19 @@ class RoleSpec:
 
 # ── provider 兼容分支 ──
 
-# OpenAI 兼容类可承接的 provider（其余走各自专用 SDK 类）
-OPENAI_COMPATIBLE_PROVIDERS = frozenset({"openai", "anthropic", "gemini", "custom"})
-
-# 引擎可处理的全部 provider：必须与 Django 侧 VALID_PROVIDERS 相等（一致性测试守护）
-SUPPORTED_PROVIDERS = frozenset({"deepseek", "dashscope"}) | OPENAI_COMPATIBLE_PROVIDERS
+# 平台支持的 provider（与 Django 侧 VALID_PROVIDERS 相等，一致性测试守护）：
+# 只保留 DeepSeek 与阿里百炼；不再有 OpenAI 兼容兜底分支
+SUPPORTED_PROVIDERS = frozenset({"deepseek", "dashscope"})
 
 
 # ── 模型连接创建（通用工厂，与角色无关）──
 
 
 def create_model(config: ModelConfig, stream: bool = True, vision: bool = False):
-    """按 provider 创建底层 ChatModel 连接（deepseek / dashscope / openai 兼容）。
+    """按 provider 创建底层 ChatModel 连接（deepseek / dashscope）。
+
+    DeepSeek 多模态档（vision=True）走 OpenAI 兼容客户端 + thinking，这是该档位的实现方式，
+    与"是否支持 openai 这个 provider"无关——平台只支持 deepseek 与 dashscope 两项 provider。
 
     Args:
         config: 模型连接配置（provider/model_name/api_key/base_url）。
@@ -130,12 +132,6 @@ def create_model(config: ModelConfig, stream: bool = True, vision: bool = False)
         )
         return DashScopeChatModel(
             credential=credential,
-            model=config.model_name,
-            stream=stream,
-        )
-    if config.provider in OPENAI_COMPATIBLE_PROVIDERS:
-        return OpenAIChatModel(
-            credential=OpenAICredential(api_key=api_key, base_url=base_url),
             model=config.model_name,
             stream=stream,
         )

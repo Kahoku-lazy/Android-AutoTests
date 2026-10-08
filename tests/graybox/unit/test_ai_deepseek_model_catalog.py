@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 
 from apps.ai_assistant import deepseek_billing as app_billing
+from apps.ai_assistant.provider_registry import VALID_PROVIDERS
 from engines.ai.agents.config import DEEPSEEK_MODELS, model_supports_image
 from engines.ai.billing import billing as engine_billing
 
@@ -33,11 +34,27 @@ MIN_MODELS = 2
 
 
 def _deepseek_block() -> str:
-    """取出前端清单里 DeepSeek 那一段（到下一个 provider 为止）。"""
+    """取出前端清单里 DeepSeek 那一段（到数组结尾为止）。
+
+    锚点刻意不依赖任何具体 provider：清单收敛（例如移除某个 provider）不应让本守卫失配。
+    """
     text = VUE_PATH.read_text(encoding="utf-8")
-    match = re.search(r'value:\s*"deepseek".*?value:\s*"custom"', text, re.DOTALL)
+    match = re.search(r'value:\s*"deepseek".*?\n\]', text, re.DOTALL)
     assert match, "未能在 ModelConfigField.vue 中定位 deepseek 模型清单（识别规则可能已失效）"
     return match.group(0)
+
+
+def test_frontend_provider_list_matches_backend_valid_providers() -> None:
+    """前端「模型服务」清单必须恰为后端合法 provider 集合（平台只支持 DeepSeek 与阿里百炼）。"""
+    text = VUE_PATH.read_text(encoding="utf-8")
+    block = re.search(r"const providers.*?\n\]", text, re.DOTALL)
+    assert block, "未能在 ModelConfigField.vue 中定位 providers 清单（识别规则可能已失效）"
+
+    values = re.findall(r'value:\s*"([^"]+)"', block.group(0))
+    assert len(values) >= 2, f"前端 provider 清单识别到的项数骤降：{values}"
+    assert set(values) == set(VALID_PROVIDERS), (
+        f"前端清单 {sorted(set(values))} 与后端合法集合 {sorted(VALID_PROVIDERS)} 不一致"
+    )
 
 
 def test_frontend_list_matches_engine_catalog() -> None:

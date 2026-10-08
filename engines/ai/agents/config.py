@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 class ModelConfig:
     """单个模型的连接配置（纯数据，供 create_model 建立连接）。"""
 
-    provider: str = "deepseek"  # 提供商：deepseek / dashscope / openai / 自定义（走 OpenAI 兼容）
+    provider: str = "deepseek"  # 提供商：deepseek / dashscope（平台只支持这两项）
     model_name: str = ""  # 模型名（如 deepseek-flash / qwen3.6-plus）
     api_key: str = ""  # 已解密的 API Key（Django 层解密后传入）
     base_url: str = ""  # 已解析的默认 base_url（provider_registry 解析）
@@ -45,7 +45,7 @@ DEEPSEEK_MODELS: dict[str, bool] = {
 def model_supports_image(provider: str, model_name: str) -> bool | None:
     """该 provider + 模型名是否支持图片输入；未知返回 None（不用于告警）。
 
-    只认目录内明确登记过的模型：其他 provider（dashscope / openai / …）与自定义模型名
+    只认目录内明确登记过的模型：其他 provider（如 dashscope）与自定义模型名
     一律返回 None，避免对未知模型误报"需要多模态"。
     """
     if str(provider or "").strip().lower() != "deepseek":

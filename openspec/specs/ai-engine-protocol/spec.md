@@ -35,6 +35,7 @@ Django SHALL 通过 `TaskRequest` 传入规划用户输入（字段名仍为 `go
 
 - **WHEN** 未配置设备日志采集，`log_evidence` 为空
 - **THEN** 引擎仍能完成执行，验收阶段标注「无日志证据」，MUST NOT 因缺少日志证据而中断任务
+
 ### Requirement: TaskResult 归一化
 引擎 SHALL 返回 `TaskResult`（`status`/`summary`/`completed`/`failed`/`log`/`usage`/`reason`）；两条线路（device_control / platform_task）结果同构，`summary` 落 `AITask.result`。
 
@@ -72,7 +73,7 @@ Django 侧组装任务时 SHALL 校验配置完整性：`device_control` 线路�
 - **THEN** 装配阶段报错说明无可用设备，MUST NOT 以空设备串启动工作流
 
 ### Requirement: provider 配置单一真相源
-系统 SHALL 保证「provider → base_url」映射只有一份真相源，且 provider 合法性只由该集合判定。装配阶段收到集合外的 provider SHALL 报错并列出合法集合；引擎侧创建模型连接时对无法处理的 provider SHALL 同样报错，MUST NOT 静默降级为某个兼容实现。装配阶段解析出的 base_url SHALL 生效于模型连接，MUST NOT 被静默丢弃。
+系统 SHALL 保证「provider → base_url」映射只有一份真相源，且 provider 合法性只由该集合判定。平台支持的 provider 集合 SHALL 恰为 DeepSeek 与阿里百炼（DashScope）两项。装配阶段收到集合外的 provider SHALL 报错并列出合法集合；引擎侧创建模型连接时对无法处理的 provider SHALL 同样报错，MUST NOT 静默降级为任何兼容实现。装配阶段解析出的 base_url SHALL 生效于模型连接，MUST NOT 被静默丢弃。
 
 #### Scenario: 未知 provider 在装配阶段被拒
 - **WHEN** 智能体配置中某角色的 provider 不在合法集合内
@@ -83,12 +84,12 @@ Django 侧组装任务时 SHALL 校验配置完整性：`device_control` 线路�
 - **THEN** 该 base_url 生效于模型连接；若该 provider 链路不支持自定义地址，则显式报错，不得解析后丢弃
 
 #### Scenario: 兜底分支不再吸收未知 provider
-- **WHEN** 引擎收到合法集合之外、且不在 OpenAI 兼容白名单内的 provider
-- **THEN** 抛出 ConfigurationError，MUST NOT 按 OpenAI 兼容发起模型请求
+- **WHEN** 引擎收到合法集合之外的 provider（含已移除的 `openai` / `anthropic` / `gemini` / `custom`）
+- **THEN** 抛出 `ConfigurationError`，MUST NOT 以任何兼容实现（含 OpenAI 兼容分支）发起模型请求
 
 #### Scenario: 两侧 provider 集合一致
 - **WHEN** 运行一致性测试
-- **THEN** 引擎侧可处理的 provider 集合与 Django 侧合法 provider 集合完全相等
+- **THEN** 引擎侧可处理的 provider 集合与 Django 侧合法 provider 集合完全相等，且恰为 `{deepseek, dashscope}`
 
 ### Requirement: 系统提示词随引擎走
 规划 / 执行 / 验收三份系统提示词 MUST 由引擎侧的提示词常量（`engines/ai/agents/config.py`）提供，MUST NOT 经 `TaskRequest` 由 Django 注入，MUST NOT 从数据库读取。引擎装配 Agent 时 MUST 取该角色自己声明的提示词常量。`TaskRequest` MUST NOT 存在系统提示词字段；装配工厂 MUST NOT 接受提示词入参。

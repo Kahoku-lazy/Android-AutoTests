@@ -22,11 +22,7 @@ import pytest
 
 from apps.ai_assistant import api, engine_adapter
 from apps.ai_assistant.provider_registry import VALID_PROVIDERS
-from engines.ai.agents.base import (
-    OPENAI_COMPATIBLE_PROVIDERS,
-    SUPPORTED_PROVIDERS,
-    create_model,
-)
+from engines.ai.agents.base import SUPPORTED_PROVIDERS, create_model
 from engines.ai.agents.config import ModelConfig
 from engines.ai.registry import ConfigurationError
 
@@ -229,14 +225,9 @@ def test_supported_providers_match_valid_providers():
     assert set(SUPPORTED_PROVIDERS) == set(VALID_PROVIDERS)
 
 
-def test_openai_compatible_providers_are_supported():
-    """OpenAI 兼容白名单是 SUPPORTED_PROVIDERS 的子集（防止常量自相矛盾）。"""
-    assert OPENAI_COMPATIBLE_PROVIDERS <= SUPPORTED_PROVIDERS
-
-
 @pytest.mark.parametrize("provider", sorted(SUPPORTED_PROVIDERS))
 def test_all_supported_providers_construct(provider):
-    """六个合法 provider 均可构造模型连接。"""
+    """平台支持的 provider（DeepSeek 与阿里百炼）均可构造模型连接。"""
     config = ModelConfig(
         provider=provider,
         model_name="some-model",
@@ -245,6 +236,20 @@ def test_all_supported_providers_construct(provider):
     )
 
     assert create_model(config, stream=False) is not None
+
+
+@pytest.mark.parametrize("provider", ["openai", "anthropic", "gemini", "custom"])
+def test_removed_providers_are_rejected(provider):
+    """已移除的 provider 不再被接受：引擎侧抛 ConfigurationError，无任何兼容兜底分支。"""
+    config = ModelConfig(
+        provider=provider,
+        model_name="some-model",
+        api_key="sk-test",
+        base_url=_EXAMPLE_BASE_URL,
+    )
+
+    with pytest.raises(ConfigurationError, match=provider):
+        create_model(config, stream=False)
 
 
 def test_deepseek_vision_constructs():

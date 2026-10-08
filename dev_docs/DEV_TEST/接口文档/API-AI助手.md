@@ -150,7 +150,7 @@
 | avatar | string | 否 | 头像，缺省 🤖 |
 | tags | string | 否 | 标签 |
 | description | string | 否 | 描述 |
-| model_provider | string | 否 | 提供商枚举：dashscope/openai/anthropic/deepseek/gemini/custom；缺省 dashscope |
+| model_provider | string | 否 | 提供商枚举：dashscope/deepseek（平台只支持这两项）；缺省 dashscope |
 | model_name | string | 否 | 主模型名，缺省 qwen-max |
 | vision_model_name | string | 否 | 视觉模型名 |
 | strong_model_name | string | 否 | 强模型名 |
@@ -189,7 +189,7 @@
 | 400 | base_url 无效 | 无法解析主机 |
 | 400 | 生产环境 base_url 必须使用 https | DEBUG=False 且 http |
 | 400 | base_url 不允许指向本机地址 | 主机为 localhost/127.0.0.1 等 |
-| 400 | base_url 主机不在 {provider} 提供商白名单内 | 非 custom 且主机不符 |
+| 400 | base_url 主机不在 {provider} 提供商白名单内 | 主机与所配 provider 不符 |
 
 ---
 

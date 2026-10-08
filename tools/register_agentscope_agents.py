@@ -21,14 +21,14 @@ for a in AIAgent.objects.filter(status="active"):
         print(f"SKIP agent-{a.id} ({a.name}): no API key configured")
         continue
 
-    provider_cfg = get_provider_config(a.model_provider or "custom", a.base_url or "")
+    provider_cfg = get_provider_config(a.model_provider or "deepseek", a.base_url or "")
     base_url = provider_cfg["base_url"]
 
     body = {
         "agent_id": f"agent-{a.id}",
         "name": a.name,
         "system_prompt": a.system_prompt or "你是一个AI测试助手",
-        "model_provider": a.model_provider or "custom",
+        "model_provider": a.model_provider or "deepseek",
         "model_name": a.model_name or "deepseek-flash",
         "api_key": api_key,
         "base_url": base_url,

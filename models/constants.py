@@ -90,12 +90,10 @@ class MemoryMode(StrEnum):
 
 
 class ModelProvider(StrEnum):
-    """AI 模型提供商"""
+    """AI 模型提供商 —— 平台只支持 DeepSeek 与阿里百炼（DashScope）"""
 
     DASHSCOPE = "dashscope"
-    OPENAI = "openai"
-    ANTHROPIC = "anthropic"
-    CUSTOM = "custom"
+    DEEPSEEK = "deepseek"
 
 
 # ── 聚合映射（方便遍历和校验）──

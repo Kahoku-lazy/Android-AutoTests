@@ -45,6 +45,7 @@ from engines.ai.agents import (
     PlannerRole,
     RoleSpec,
     VerifierRole,
+    build_device_models,
 )
 from engines.ai.workflow import (
     build_executor_log_check,

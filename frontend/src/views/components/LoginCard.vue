@@ -37,6 +37,7 @@ const emit = defineEmits<{
           placeholder="账号"
           size="large"
           class="form-input"
+          autocomplete="username"
           :class="{ 'is-error': errors.username }"
         />
       </div>
@@ -49,6 +50,7 @@ const emit = defineEmits<{
           @update:model-value="emit('update:password', $event)"
           type="password"
           show-password
+          autocomplete="current-password"
           placeholder="密码"
           size="large"
           class="form-input"

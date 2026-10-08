@@ -6,22 +6,22 @@
  * [P0] 必测 — 注册卡主交互（提交 / 禁用 / 去登录）
  * 目录：tests/login/p0/
  */
-import { describe, expect, it } from 'vitest'
-import { mount } from '@vue/test-utils'
-import RegisterCard from '@/views/components/RegisterCard.vue'
+import { describe, expect, it } from "vitest"
+import { mount } from "@vue/test-utils"
+import RegisterCard from "@/views/components/RegisterCard.vue"
 
 const stubs = {
-  IconUser: true,
-  IconLock: true,
-  IconMail: true,
-  'el-input': {
-    props: ['modelValue'],
-    emits: ['update:modelValue'],
+  "IconUser": true,
+  "IconLock": true,
+  "IconMail": true,
+  "el-input": {
+    props: ["modelValue", "autocomplete"],
+    emits: ["update:modelValue"],
     template:
-      '<input class="el-input" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+      '<input class="el-input" :value="modelValue" :autocomplete="autocomplete" @input="$emit(\'update:modelValue\', $event.target.value)" />',
   },
-  'el-button': {
-    props: ['disabled', 'loading'],
+  "el-button": {
+    props: ["disabled", "loading"],
     template: '<button class="el-button" :disabled="disabled"><slot /></button>',
   },
 }
@@ -29,10 +29,10 @@ const stubs = {
 function mountCard(props: Record<string, unknown> = {}) {
   return mount(RegisterCard, {
     props: {
-      username: 'bob',
-      email: 'bob@example.com',
-      password: '123456',
-      password2: '123456',
+      username: "bob",
+      email: "bob@example.com",
+      password: "123456",
+      password2: "123456",
       errors: {},
       canSubmit: true,
       ...props,
@@ -41,29 +41,35 @@ function mountCard(props: Record<string, unknown> = {}) {
   })
 }
 
-describe('[P0] RegisterCard', () => {
-  it('展示校验错误', () => {
+describe("[P0] RegisterCard", () => {
+  it("展示校验错误", () => {
     const wrapper = mountCard({
-      errors: { password2: '两次密码不一致' },
+      errors: { password2: "两次密码不一致" },
       canSubmit: false,
     })
-    expect(wrapper.text()).toContain('两次密码不一致')
+    expect(wrapper.text()).toContain("两次密码不一致")
   })
 
-  it('canSubmit=false 时：注册按钮禁用', () => {
+  it("canSubmit=false 时：注册按钮禁用", () => {
     const wrapper = mountCard({ canSubmit: false })
-    expect(wrapper.find('button.el-button').attributes('disabled')).toBeDefined()
+    expect(wrapper.find("button.el-button").attributes("disabled")).toBeDefined()
   })
 
-  it('点击完成注册：触发 submit', async () => {
+  it("点击完成注册：触发 submit", async () => {
     const wrapper = mountCard()
-    await wrapper.find('button.el-button').trigger('click')
-    expect(wrapper.emitted('submit')).toHaveLength(1)
+    await wrapper.find("button.el-button").trigger("click")
+    expect(wrapper.emitted("submit")).toHaveLength(1)
   })
 
-  it('点击去登录：触发 switchToLogin', async () => {
+  it("点击去登录：触发 switchToLogin", async () => {
     const wrapper = mountCard()
-    await wrapper.find('.form-toggle').trigger('click')
-    expect(wrapper.emitted('switchToLogin')).toHaveLength(1)
+    await wrapper.find(".form-toggle").trigger("click")
+    expect(wrapper.emitted("switchToLogin")).toHaveLength(1)
+  })
+
+  it("凭据提示属性：邮箱标 email、两个密码都标 new-password", () => {
+    const wrapper = mountCard()
+    expect(wrapper.find('input[autocomplete="email"]').exists()).toBe(true)
+    expect(wrapper.findAll('input[autocomplete="new-password"]')).toHaveLength(2)
   })
 })

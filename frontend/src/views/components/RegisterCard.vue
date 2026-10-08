@@ -50,6 +50,7 @@ const emit = defineEmits<{
           placeholder="邮箱地址"
           size="large"
           class="form-input"
+          autocomplete="email"
           :class="{ 'is-error': errors.email }"
         />
       </div>
@@ -62,6 +63,7 @@ const emit = defineEmits<{
           @update:model-value="emit('update:password', $event)"
           type="password"
           show-password
+          autocomplete="new-password"
           placeholder="设置密码（至少 6 位）"
           size="large"
           class="form-input"
@@ -77,6 +79,7 @@ const emit = defineEmits<{
           @update:model-value="emit('update:password2', $event)"
           type="password"
           show-password
+          autocomplete="new-password"
           placeholder="确认密码"
           size="large"
           class="form-input"

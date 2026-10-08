@@ -94,7 +94,15 @@ const imageMismatch = computed(
         }}
       </div>
       <el-form-item label="API Key">
-        <el-input v-model="model.api_key" type="password" show-password placeholder="sk-..." />
+        <!-- autocomplete="new-password"：本表单是配置表单（上方是模型名文本输入 + 这里是密码框），
+             浏览器会误判为登录表单并提示保存/填充凭据；new-password 表示"新凭据，不要填充"。 -->
+        <el-input
+          v-model="model.api_key"
+          type="password"
+          show-password
+          autocomplete="new-password"
+          placeholder="sk-..."
+        />
       </el-form-item>
       <el-form-item label="API 地址">
         <el-input v-model="model.base_url" placeholder="留空用默认" />

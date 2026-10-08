@@ -2,7 +2,7 @@
 
 职责边界（面向对象）：
 - 工作流【只做编排 + 数据契约 + JSON→契约解析】，不碰 AgentScope（零框架依赖）。
-- 模型交互（拼 prompt + 调角色 + 回复解析）已下沉 model.py 的单角色；
+- 模型交互（拼 prompt + 调角色）已下沉智能体包；回复怎么读在消息与事件包；
   每个角色 run() 返回 RoleResult（输出/思考/工具/上下文/本轮用量/费用）。
 - 用量累计：工作流持有 UsageAccumulator，按模型自报 usage 累加总账。
 """
@@ -17,9 +17,11 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
+from engines.ai.agents import DeviceExecutionConfig, ExecutorRole, PlannerRole, VerifierRole
 from engines.ai.base import LogEvidenceProvider
+from engines.ai.billing import UsageAccumulator
+from engines.ai.messaging import RoleResult
 
-from .config import DeviceExecutionConfig
 from .evidence import save_verify_screenshot
 from .logcheck import (
     build_executor_log_check,
@@ -30,8 +32,6 @@ from .logcheck import (
 from .logcheck import (
     render_log_evidence as _render_log_evidence,
 )
-from .model import ExecutorRole, PlannerRole, RoleResult, VerifierRole
-from .usage import UsageAccumulator
 
 logger = logging.getLogger("ai_assistant.workflow")
 

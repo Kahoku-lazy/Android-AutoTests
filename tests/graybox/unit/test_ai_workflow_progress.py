@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from engines.ai.agents.workflow import Plan, Step, _emit_progress, _progress_payload
+from engines.ai.workflow.workflow import Plan, Step, _emit_progress, _progress_payload
 
 
 def _cfg():

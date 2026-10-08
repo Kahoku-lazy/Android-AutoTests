@@ -1,14 +1,16 @@
-"""AgentScope 引擎实现 — 把 TaskRequest 装配成设备执行工作流并返回归一化 TaskResult。"""
+"""AgentScope 引擎组合根 —— 把 TaskRequest 装配成设备执行工作流，返回归一化 TaskResult。
+
+五部分的唯一组合点：智能体（agents，含 tools 的装配）→ 工作流（workflow）；
+费用计算（billing）由智能体侧算本轮、工作流侧累总账。协议与注册表在本层。
+"""
 
 from __future__ import annotations
 
 import asyncio
 
+from engines.ai.agents import DeviceExecutionConfig, ModelConfig, build_device_models
 from engines.ai.base import ModelSpec, TaskRequest, TaskResult
-
-from .config import DeviceExecutionConfig, ModelConfig
-from .model import build_device_models
-from .workflow import DeviceExecutionWorkflow
+from engines.ai.workflow import DeviceExecutionWorkflow
 
 __all__ = ["AgentScopeEngine"]
 

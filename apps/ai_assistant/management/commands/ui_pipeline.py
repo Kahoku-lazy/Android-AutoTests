@@ -11,9 +11,8 @@ from django.core.management.base import BaseCommand, CommandError
 from apps.ai_assistant.api import decrypt_key, get_platform_agent, get_provider_config
 from apps.ai_assistant.engine_adapter import build_tool_specs
 from apps.ai_assistant.skills_catalog import list_enabled_skill_dirs
-from engines.ai.agents.config import DeviceExecutionConfig, ModelConfig
-from engines.ai.agents.model import build_device_models
-from engines.ai.agents.workflow import DeviceExecutionWorkflow
+from engines.ai.agents import DeviceExecutionConfig, ModelConfig, build_device_models
+from engines.ai.workflow import DeviceExecutionWorkflow
 
 
 def _build_device_models(agent):

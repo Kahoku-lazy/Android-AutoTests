@@ -18,7 +18,7 @@ from engines.ai.agents.config import (
     VISION_TOOLS,
     ModelConfig,
 )
-from engines.ai.agents.model import RoleResult
+from engines.ai.messaging import RoleResult
 from shared.auth.jwt_auth import create_access_token
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db(transaction=True)]

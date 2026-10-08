@@ -37,18 +37,19 @@ from apps.ai_assistant.log_history import (
 )
 from apps.ai_assistant.skills_catalog import list_enabled_skill_dirs
 from apps.ai_assistant.tools import TOOL_META, TOOLS, available_device_options
-from engines.ai.agents.config import DeviceExecutionConfig, ModelConfig
-from engines.ai.agents.logcheck import (
-    build_executor_log_check,
-    checked_log_keywords,
-    render_log_evidence,
-)
-from engines.ai.agents.model import (
+from engines.ai.agents import (
     AgentRole,
+    DeviceExecutionConfig,
     ExecutorRole,
+    ModelConfig,
     PlannerRole,
     RoleSpec,
     VerifierRole,
+)
+from engines.ai.workflow import (
+    build_executor_log_check,
+    checked_log_keywords,
+    render_log_evidence,
 )
 
 logger = logging.getLogger("ai_assistant.model_debug")

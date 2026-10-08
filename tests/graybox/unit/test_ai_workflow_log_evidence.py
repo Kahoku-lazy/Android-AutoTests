@@ -13,7 +13,7 @@ from types import SimpleNamespace
 import pytest
 
 from engines.ai.agents.config import DeviceExecutionConfig
-from engines.ai.agents.workflow import (
+from engines.ai.workflow.workflow import (
     DeviceExecutionWorkflow,
     ExecutionOutput,
     Plan,

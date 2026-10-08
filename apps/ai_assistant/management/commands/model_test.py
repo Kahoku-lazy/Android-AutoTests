@@ -27,8 +27,8 @@ from apps.ai_assistant.api import (
     get_platform_agent,
 )
 from apps.ai_assistant.model_debug import build_device_models_for_agent
-from engines.ai.agents.config import ModelConfig
-from engines.ai.agents.workflow import (
+from engines.ai.agents import ModelConfig
+from engines.ai.workflow.workflow import (
     DeviceExecutionWorkflow,
     _parse_json,
 )

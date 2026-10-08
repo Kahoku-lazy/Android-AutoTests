@@ -26,7 +26,7 @@ from apps.ai_assistant.api import encrypt_key
 from apps.ai_assistant.log_history import NOTE_NO_LISTEN
 from apps.ai_assistant.models import AIAgent
 from engines.ai.agents.config import ModelConfig
-from engines.ai.agents.model import RoleResult
+from engines.ai.messaging import RoleResult
 from shared.auth.jwt_auth import create_access_token
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db(transaction=True)]

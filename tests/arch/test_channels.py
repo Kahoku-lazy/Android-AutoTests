@@ -71,14 +71,23 @@ class TestAgentScopeChannel:
     """③ AgentScope → Django — 进程内直接调用"""
 
     def test_agent_scope_no_adapters_or_rag(self):
-        """AgentScope 引擎不得自建数据库适配器（adapters/）或检索增强（rag/）。"""
-        scope = ROOT / "engines" / "ai" / "agents"
+        """AgentScope 引擎不得自建数据库适配器（adapters/）或检索增强（rag/）。
+
+        引擎按「智能体 / 消息与事件 / 工具 / 工作流 / 费用计算」五部分分层后，
+        禁止项的范围随布局从 `agents/` 扩展到 `engines/ai` 全层（语义不变，不放宽）。
+        """
+        root = ROOT / "engines" / "ai"
+        scope = root / "agents"
         assert scope.is_dir(), "engines/ai/agents 目录不存在"
-        assert not (ROOT / "engines" / "ai" / "agentscope").exists(), (
+        assert not (root / "agentscope").exists(), (
             "引擎目录已改名为 engines/ai/agents，禁止再出现 engines/ai/agentscope"
         )
-        assert not (scope / "adapters").exists(), "engines/ai/agents 下禁止新增 adapters/"
-        assert not (scope / "rag").exists(), "engines/ai/agents 下禁止新增 rag/"
+        assert not (root / "adapters").exists(), "engines/ai 下禁止新增 adapters/"
+        assert not (root / "rag").exists(), "engines/ai 下禁止新增 rag/"
+        for part in ("agents", "messaging", "tools", "workflow", "billing"):
+            base = root / part
+            assert not (base / "adapters").exists(), f"engines/ai/{part} 下禁止新增 adapters/"
+            assert not (base / "rag").exists(), f"engines/ai/{part} 下禁止新增 rag/"
 
 
 class TestEngineChannel:

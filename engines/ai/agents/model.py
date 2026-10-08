@@ -1,19 +1,19 @@
-"""模型层：Agent 角色 —— 配置角色、创建角色、接受任务、执行并产出任务报告。
+"""智能体层：Agent 角色 —— 配置角色、创建角色、接受任务、执行并产出任务报告。
 
 - RoleSpec：创建 Agent 角色的配置（角色名/系统提示词/工具子集/视觉/上下文/ReAct 参数）。
 - AgentRole：角色实体基类，封装一个 AgentScope Agent，固化「装配 → 接受任务 → 执行 → 报告」
   不变主干；子类只填 RoleSpec，赋什么配置就编排成什么角色。
-- RoleResult：一次任务执行的任务报告（输出/思考/工具/截图/用量/成本），供用户了解与开发者调试。
-- 边界：本模块只创建单角色，不编排角色间协作（planner → executor ↔ verifier 的流转在 workflow.py）。
+- 边界：本模块只负责「配一个 Agent」——name / system_prompt / model / toolkit；
+  回复怎么读（思考 / 工具调用 / 工具返回 / 截图路径）在 `engines.ai.messaging`，
+  用量与计价在 `engines.ai.billing`，角色间协作在 `engines.ai.workflow`。
 """
 
 from __future__ import annotations
 
-import json
 import logging
 
 from dataclasses import dataclass
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from agentscope.agent import Agent, ContextConfig, ReActConfig
 from agentscope.credential import DashScopeCredential, DeepSeekCredential, OpenAICredential
@@ -26,12 +26,22 @@ from agentscope.message import (
     UserMsg,
 )
 from agentscope.model import DashScopeChatModel, DeepSeekChatModel, OpenAIChatModel
-from pydantic import BaseModel, Field
 
 from engines.ai.base import ToolSpec
+from engines.ai.billing import model_cost
+from engines.ai.messaging import (
+    RoleResult,
+    collect_from_blocks,
+    collect_trace,
+    context_summary,
+    count_tool_results,
+    extract_screenshot,
+    extract_screenshot_path,
+    prompt_to_input_text,
+)
 from engines.ai.registry import ConfigurationError
+from engines.ai.tools import build_toolkit
 
-from .billing import model_cost
 from .config import (
     DEVICE_PLANNER_TOOLS,
     PLANNER_PROMPT,
@@ -42,101 +52,8 @@ from .config import (
     DeviceExecutionConfig,
     ModelConfig,
 )
-from .tool_wrapper import build_toolkit
 
 logger = logging.getLogger("ai_assistant.model")
-
-
-def _screenshot_path_from_tool_output(output) -> str:
-    """从 screenshot_page 工具结果里解析 summary.screenshot_path（工具真相，非模型编造）。"""
-    for text in _tool_output_text_parts(output):
-        try:
-            obj = json.loads(text)
-        except json.JSONDecodeError:
-            # 明确忽略：本函数遍历多段文本，非 JSON 片段跳过即可
-            continue
-        if not isinstance(obj, dict):
-            continue
-        path = str(obj.get("screenshot_path") or "").replace("\\", "/").strip()
-        if path:
-            return path
-    return ""
-
-
-def _tool_output_text_parts(output) -> list[str]:
-    """工具 output → 纯文本片段（忽略 DataBlock 二进制）。"""
-    texts: list[str] = []
-    if isinstance(output, str):
-        if output.strip():
-            texts.append(output)
-        return texts
-    if isinstance(output, list):
-        for block in output:
-            if isinstance(block, TextBlock) and block.text:
-                texts.append(block.text)
-            elif isinstance(block, str) and block.strip():
-                texts.append(block)
-    return texts
-
-
-def _sanitize_tool_output_text(output, *, limit: int = 800) -> str:
-    """工具返回 → 可落库短文本：保留 summary/路径，剔除 base64。"""
-    parts: list[str] = []
-    for text in _tool_output_text_parts(output):
-        try:
-            obj = json.loads(text)
-        except json.JSONDecodeError:
-            parts.append(text)
-            continue
-        if not isinstance(obj, dict):
-            parts.append(text)
-            continue
-        # 去掉可能夹带的超大字段
-        cleaned = {
-            k: v
-            for k, v in obj.items()
-            if k not in ("base64", "image", "data")
-            and not (isinstance(v, str) and len(v) > 500 and k.endswith("_b64"))
-        }
-        # screenshot_page：优先只留可读摘要 + 路径
-        if "screenshot_path" in cleaned or "screenshot_name" in cleaned:
-            slim = {
-                k: cleaned[k]
-                for k in (
-                    "serial",
-                    "package",
-                    "activity",
-                    "screen_w",
-                    "screen_h",
-                    "screenshot_path",
-                    "screenshot_name",
-                )
-                if k in cleaned
-            }
-            parts.append(json.dumps(slim or cleaned, ensure_ascii=False, default=str))
-        else:
-            parts.append(json.dumps(cleaned, ensure_ascii=False, default=str))
-    # DataBlock 仅记占位（图已由 screenshot_path / 验收证据落盘）
-    if isinstance(output, list) and any(isinstance(b, DataBlock) for b in output):
-        if not parts:
-            parts.append("[image]")
-    text = "\n".join(parts).strip()
-    if len(text) > limit:
-        return text[:limit] + "…"
-    return text
-
-
-def _prompt_to_input_text(content: str | list) -> str:
-    """发给 Agent 的 content → 可展示的输入文本（忽略图片块）。"""
-    if isinstance(content, str):
-        return content.strip()
-    parts: list[str] = []
-    for block in content or []:
-        if isinstance(block, TextBlock) and block.text:
-            parts.append(block.text)
-        elif isinstance(block, str) and block.strip():
-            parts.append(block)
-    return "\n".join(parts).strip()
 
 
 # ── 数据模型 ──
@@ -161,43 +78,6 @@ class RoleSpec:
     vision: bool = False
     context_config: dict | None = None
     react_config: dict | None = None
-
-
-class RoleResult(BaseModel):
-    """一次任务执行的任务报告（角色执行任务的完整产出）。
-
-    把 AgentScope 的原始 reply（消息块 + usage）解析成语义化字段，屏蔽框架差异。
-    供用户了解结果（output/screenshot/cost），供开发者调试（thinking/tool_usage/usage）。
-    """
-
-    role: str = Field(default="", description="本角色：planner / executor / verifier")
-    model_name: str = Field(default="", description="底层模型名（用量按此聚合）")
-    output: str = Field(default="", description="输出结果文本（TextBlock 拼接，供 JSON 解析）")
-    input_text: str = Field(
-        default="", description="本轮发给 Agent 的用户输入文本（详情页「输入」）"
-    )
-    thinking: list[str] = Field(default_factory=list, description="思考过程（ThinkingBlock 逐个）")
-    tool_usage: list[dict] = Field(
-        default_factory=list,
-        description="工具使用记录（type=call/result/image + name/入参/返回/状态）",
-    )
-    context: list[dict] = Field(
-        default_factory=list,
-        description="自己上下文摘要（每条仅 role + 截断文本，脱敏图片）",
-    )
-    screenshot: Any = Field(
-        default=None,
-        description="最后一张截图 DataBlock（executor 产出 → 传给 verifier）",
-    )
-    screenshot_path: str = Field(
-        default="",
-        description="本轮最后一次 screenshot_page 落盘相对 MEDIA 路径（验收证据用）",
-    )
-    usage: dict = Field(
-        default_factory=dict,
-        description="本轮用量（input_tokens/output_tokens/cache_input_tokens/cache_creation_input_tokens）",
-    )
-    cost: float = Field(default=0.0, description="本轮费用（元，仅 DeepSeek 计费，其余 0）")
 
 
 # ── provider 兼容分支 ──
@@ -361,7 +241,7 @@ class AgentRole:
         Returns:
             RoleResult：本轮的输出/思考/工具/上下文/用量/费用。
         """
-        input_text = _prompt_to_input_text(content)
+        input_text = prompt_to_input_text(content)
         msg = await self.agent.reply(UserMsg(name="user", content=content))
         self._dump_reply(msg)
         return self._to_result(msg, input_text=input_text)
@@ -376,12 +256,11 @@ class AgentRole:
         for block in getattr(msg, "content", None) or []:
             if isinstance(block, TextBlock):
                 output_parts.append(block.text)
-        thinking, tool_usage = self._collect_trace_from_context()
+        context = getattr(self.agent.state, "context", None) or []
+        thinking, tool_usage = collect_trace(context)
         # context 若为空（极端实现差异），回退扫最终 reply 块
         if not thinking and not tool_usage:
-            thinking, tool_usage = self._collect_trace_from_blocks(
-                getattr(msg, "content", None) or []
-            )
+            thinking, tool_usage = collect_from_blocks(getattr(msg, "content", None) or [])
         usage = self._usage_dict(msg)
         return RoleResult(
             role=self.spec.role,
@@ -390,23 +269,12 @@ class AgentRole:
             input_text=input_text,
             thinking=thinking,
             tool_usage=tool_usage,
-            context=self._context_summary(),
-            screenshot=self._extract_screenshot(getattr(msg, "content", None)),
-            screenshot_path=self._extract_screenshot_path(),
+            context=context_summary(context),
+            screenshot=extract_screenshot(getattr(msg, "content", None)),
+            screenshot_path=extract_screenshot_path(context),
             usage=usage,
             cost=model_cost(self.config.provider, self.model_name, usage),
         )
-
-    def _collect_trace_from_context(self) -> tuple[list[str], list[dict]]:
-        """从 agent 完整上下文收集思考 + 工具调用/返回（脱敏，无 base64）。"""
-        thinking: list[str] = []
-        tool_usage: list[dict] = []
-        context = getattr(self.agent.state, "context", None) or []
-        for msg in context:
-            t, u = self._collect_trace_from_blocks(getattr(msg, "content", None) or [])
-            thinking.extend(t)
-            tool_usage.extend(u)
-        return thinking, tool_usage
 
     def tool_results_seen(self) -> int:
         """当前上下文里已有的工具返回条数。
@@ -414,39 +282,7 @@ class AgentRole:
         上下文是**整个任务累积**的，工作流用这个数字切出「本步新增」的工具返回，
         否则本步的动作发出时刻会取到上一步的值（真机验证时踩到过）。
         """
-        _, rows = self._collect_trace_from_context()
-        return sum(1 for row in rows if row.get("type") == "result")
-
-    def _collect_trace_from_blocks(self, blocks) -> tuple[list[str], list[dict]]:
-        """从一组消息内容块收集思考 + 工具（脱敏）。"""
-        thinking: list[str] = []
-        tool_usage: list[dict] = []
-        for block in blocks:
-            if isinstance(block, ThinkingBlock) and block.thinking:
-                thinking.append(block.thinking)
-            elif isinstance(block, ToolCallBlock):
-                tool_usage.append({"type": "call", "name": block.name, "input": block.input})
-            elif isinstance(block, ToolResultBlock):
-                row: dict = {
-                    "type": "result",
-                    "name": block.name,
-                    "state": getattr(block, "state", ""),
-                }
-                out_text = _sanitize_tool_output_text(block.output)
-                if out_text:
-                    row["output"] = out_text
-                path = _screenshot_path_from_tool_output(block.output)
-                if path:
-                    row["screenshot_path"] = path
-                tool_usage.append(row)
-            elif isinstance(block, DataBlock):
-                tool_usage.append(
-                    {
-                        "type": "image",
-                        "media_type": getattr(block.source, "media_type", ""),
-                    }
-                )
-        return thinking, tool_usage
+        return count_tool_results(getattr(self.agent.state, "context", None) or [])
 
     def _usage_dict(self, msg) -> dict:
         """从一次 reply 提取本轮用量 dict（屏蔽 ChatUsage 对象差异）。"""
@@ -457,53 +293,6 @@ class AgentRole:
             "cache_input_tokens": int(getattr(u, "cache_input_tokens", 0) or 0),
             "cache_creation_input_tokens": int(getattr(u, "cache_creation_input_tokens", 0) or 0),
         }
-
-    def _context_summary(self) -> list[dict]:
-        """上下文摘要：每条消息只留 role + 截断 500 字文本（脱敏图片）。"""
-        summary = []
-        context = getattr(self.agent.state, "context", None)
-        for m in context or []:
-            content = getattr(m, "content", "")
-            text = (
-                content
-                if isinstance(content, str)
-                else "".join(getattr(b, "text", "") for b in (content or []) if hasattr(b, "text"))
-            )
-            summary.append({"role": getattr(m, "role", ""), "text": text[:500]})
-        return summary
-
-    def _extract_screenshot(self, content) -> Any:
-        """从 reply 内容块里取最后一张截图 DataBlock（倒序找，返回最后一个）。"""
-        for block in reversed(content or []):
-            if isinstance(block, DataBlock):
-                return block
-            if isinstance(block, ToolResultBlock):
-                out = block.output
-                if isinstance(out, DataBlock):
-                    return out
-                if isinstance(out, list):
-                    for b in reversed(out):
-                        if isinstance(b, DataBlock):
-                            return b
-        return None
-
-    def _extract_screenshot_path(self) -> str:
-        """从本轮 agent 上下文里取最后一次 screenshot_page 的落盘相对路径。
-
-        扫完整 context（工具结果在中间消息，不在最终 reply），路径来自工具 summary。
-        """
-        context = getattr(self.agent.state, "context", None) or []
-        last = ""
-        for msg in context:
-            for block in getattr(msg, "content", None) or []:
-                if not isinstance(block, ToolResultBlock):
-                    continue
-                if getattr(block, "name", "") != "screenshot_page":
-                    continue
-                path = _screenshot_path_from_tool_output(block.output)
-                if path:
-                    last = path
-        return last
 
     def _last_message(self, fallback=None):
         """取 agent 最近一条消息（打日志用）；无上下文回退 fallback。"""

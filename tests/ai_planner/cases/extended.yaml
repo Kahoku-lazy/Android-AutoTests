@@ -58,3 +58,43 @@ cases:
       steps_min: 1
       steps_max: 6
       require_flow_tool: true
+
+  # 以下两条来自真实测试点文档 logs/01/H6810自动化测试点.md（该目录被 .gitignore 覆盖，
+  # 故测试点原文逐字内联在此，保证用例自包含、可复现）。
+  # 输入用四键 JSON 的「附件文本内容」承载测试点文档 —— 与生产消费 Word/PDF 测试点的方式一致。
+
+  - id: classic-page-functions
+    title: 经典页面功能测试（H6810 卡片页）
+    goal: 按附件中的测试点，完成 H6810 设备卡片页「经典页面」的功能测试
+    input: json
+    attach: |
+      经典页面功能测试：
+      1. 长按H6810设备卡片页，选择经典，点击保存成功。
+      2. 点击经典卡片页上的开关OFF/ON，日志断言是否开关成功。
+      3. 检查经典卡片页上WIFI&蓝牙 图标显示正确。
+    device: ""
+    expect:
+      # 只取不可能被同义改写的硬事实；WIFI/蓝牙的写法会被改写，故不入关键词
+      must_contain: ["H6810", "经典", "开关"]
+      steps_min: 3
+      steps_max: 12
+      require_flow_tool: true
+      # 该组测试点天然混合两类断言（开关→日志断言、图标→页面断言），故要求 log_check 有区分度
+      expect_mixed_log_check: true
+
+  - id: dynamic-page-functions
+    title: 灵动页面功能测试（H6810 卡片页）
+    goal: 按附件中的测试点，完成 H6810 设备卡片页「灵动页面」的功能测试
+    input: json
+    attach: |
+      灵动页面功能测试：
+      1. 长按H6810设备卡片页，选择灵动，点击保存成功
+      2. 检查灵动卡片页上WIFI&蓝牙 图标显示正确。
+      3. 点击灵动卡片页上的开关OFF/ON，日志断言是否开关成功。
+    device: ""
+    expect:
+      must_contain: ["H6810", "灵动", "开关"]
+      steps_min: 3
+      steps_max: 12
+      require_flow_tool: true
+      expect_mixed_log_check: true

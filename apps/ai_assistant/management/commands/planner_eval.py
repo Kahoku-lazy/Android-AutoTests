@@ -171,9 +171,8 @@ def parse_plan(output: str) -> Plan | None:
 
 
 def plan_text(plan: Plan) -> str:
-    """Plan → 用于关键词覆盖比对的全文。"""
-    parts = [plan.goal] + [f"{s.action} {s.assertion}" for s in plan.steps]
-    return "\n".join(parts)
+    """Plan → 用于关键词覆盖比对的全文（只看步骤：契约里已不含 goal）。"""
+    return "\n".join(f"{s.action} {s.assertion}" for s in plan.steps)
 
 
 def check_contract(plan: Plan | None) -> list[str]:

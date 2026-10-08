@@ -275,7 +275,8 @@ export interface TaskRunLogEntry {
 }
 
 export interface TaskRunPlan {
-  goal: string
+  /** 规划输出已不再回述目标；存量记录里该键仍可能存在，故为可选 */
+  goal?: string
   steps?: Array<string | TaskRunStep>
   /** @deprecated 旧协议目标级验收 */
   verification?: string

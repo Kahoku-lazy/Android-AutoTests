@@ -31,11 +31,9 @@ from engines.ai.workflow.workflow import Plan, Step
 pytestmark = [pytest.mark.unit, pytest.mark.ai_assistant]
 
 
-def _plan(*steps: tuple[str, str, bool], goal: str = "目标") -> Plan:
-    return Plan(
-        goal=goal,
-        steps=[Step(action=a, assertion=s, log_check=lc) for a, s, lc in steps],
-    )
+def _plan(*steps: tuple[str, str, bool]) -> Plan:
+    """构造桩 plan（契约里已不含 goal）。"""
+    return Plan(steps=[Step(action=a, assertion=s, log_check=lc) for a, s, lc in steps])
 
 
 # ── 契约解析 ──
@@ -54,6 +52,22 @@ def test_parse_plan_rejects_invalid_output():
     assert parse_plan("我不会") is None
     assert parse_plan('{"foo": 1}') is None
     assert parse_plan('{"plan": {"goal": "g", "steps": "不是列表"}}') is None
+
+
+def test_parse_plan_ignores_legacy_goal_key():
+    """契约已不含 goal：模型若仍输出该键，按 pydantic 默认行为忽略，解析照常成功。"""
+    out = json.dumps(
+        {
+            "plan": {
+                "goal": "打开 govee 应用并进入设备主页",
+                "steps": [{"action": "启动 govee 应用", "assert": "前台是 govee"}],
+            }
+        }
+    )
+    plan = parse_plan(out)
+    assert plan is not None
+    assert "goal" not in plan.model_dump()
+    assert len(plan.steps) == 1
 
 
 # ── 硬性判据 ──

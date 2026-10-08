@@ -141,7 +141,7 @@ async def test_step_opens_window_before_action_and_reads_after() -> None:
     _stub_steps(wf, record, verifier_input)
 
     step = Step(action="点击打开设备", **{"assert": "设备已打开"})
-    plan = Plan(goal="打开设备", steps=[step])
+    plan = Plan(steps=[step])
     log: list[dict] = []
     verdict = await wf._run_step(step, 1, 1, plan, log, [])
 
@@ -163,7 +163,7 @@ async def test_missing_provider_degrades_without_breaking_task() -> None:
     _stub_steps(wf, record, verifier_input)
 
     step = Step(action="点击打开设备", **{"assert": "设备已打开"})
-    plan = Plan(goal="打开设备", steps=[step])
+    plan = Plan(steps=[step])
     log: list[dict] = []
     verdict = await wf._run_step(step, 1, 1, plan, log, [])
 
@@ -254,7 +254,7 @@ async def test_marked_step_records_executor_log_check_with_log() -> None:
     _stub_steps(wf, record, verifier_input)
 
     step = Step(action="点击开关", assertion="设备上报 switch_on", log_check=True)
-    plan = Plan(goal="开关", steps=[step])
+    plan = Plan(steps=[step])
     log: list[dict] = []
     await wf._run_step(step, 1, 1, plan, log, [])
 
@@ -274,7 +274,7 @@ async def test_unmarked_step_records_clicks_without_log() -> None:
     _stub_steps(wf, record, verifier_input)
 
     step = Step(action="进入详情页", **{"assert": "标题显示 H6810"})
-    plan = Plan(goal="进入详情页", steps=[step])
+    plan = Plan(steps=[step])
     log: list[dict] = []
     await wf._run_step(step, 1, 1, plan, log, [])
 

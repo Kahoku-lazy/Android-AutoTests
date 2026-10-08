@@ -67,9 +67,12 @@ class Step(BaseModel):
 
 
 class Plan(BaseModel):
-    """planner 输出：总目标 + 步骤列表（工作流据此逐步骤执行）。"""
+    """planner 输出：步骤列表（工作流据此逐步骤执行）。
 
-    goal: str = Field(default="", description="一句话总目标")
+    只含步骤、**不回述目标**——目标由任务自身的「任务目标」承载，回述容易走样且白花输出。
+    模型若仍偶发输出 `goal`，按 pydantic 默认行为忽略，不影响解析。
+    """
+
     steps: list[Step] = Field(description="操作步骤列表")
 
 

@@ -173,7 +173,7 @@ async def test_fail_verdict_feeds_actual_back_as_retry_hint() -> None:
 
     step = Step(action="点击开关", **{"assert": "灯亮"})
     log: list[dict] = []
-    verdict = await wf._run_step(step, 1, 1, Plan(goal="开灯", steps=[step]), log, [])
+    verdict = await wf._run_step(step, 1, 1, Plan(steps=[step]), log, [])
 
     assert verdict is not None and verdict.result == "FAIL"
     assert hints == ["", "灯没亮"]  # 第二次执行拿到失败原因
@@ -201,7 +201,7 @@ async def test_pass_verdict_passes_without_retry() -> None:
     wf._verify_step = fake_verify  # type: ignore[method-assign]
 
     step = Step(action="点击开关", **{"assert": "灯亮"})
-    verdict = await wf._run_step(step, 1, 1, Plan(goal="开灯", steps=[step]), [], [])
+    verdict = await wf._run_step(step, 1, 1, Plan(steps=[step]), [], [])
 
     assert verdict is not None and verdict.result == "PASS"
     assert hints == [""]  # 一次即过，不再重试
@@ -212,7 +212,7 @@ async def test_failed_step_record_keeps_actual_as_reason() -> None:
     wf = _workflow(max_loops=1)
 
     async def fake_plan(user_input):
-        return Plan(goal="开灯", steps=[Step(action="点击开关", **{"assert": "灯亮"})])
+        return Plan(steps=[Step(action="点击开关", **{"assert": "灯亮"})])
 
     async def fake_run_step(step, idx, total, plan, log, done):
         return VerificationOutput(result="FAIL", actual="灯没亮")

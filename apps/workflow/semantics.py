@@ -1,16 +1,13 @@
 """workflow 页面流语义摘要 — 图 → AI 可读结构.
 
 纯函数模块（不写库、不 import 其它 App）。输入 config dict（nodes/links），
-输出页面关系 / 跳转入口 / 页面下元素 / 路径摘要。对外出口见 ``api.py`` 的
-``get_document_digest`` / ``list_document_summaries``。
+输出**页面与节点关系**：页面身份 / 节点出入关系 / 连线（含触发口名称）/ 路径摘要。
+MUST NOT 输出页面元素清单——元素不参与规划，其真相源是元素定位域。
+对外出口见 ``api.py`` 的 ``get_document_digest`` / ``list_document_summaries``。
 
 字段口径（与前端 types/workflow.ts 对齐）：
   - 节点 type: StartNode/PageNode/PopupNode/EndNode → start/page/popup/end
   - 端口 type: entry/navigation/popup_trigger/popup_fixed/popup_close/data
-  - 元素来源（不实时 join 元素库，快照为准）:
-      snapshot      数字 ID（元素定位库快照）
-      builtin_pool  el_/pe_ 前缀（前端静态元素池，无归属页面）
-      unknown       无法识别
 """
 
 from __future__ import annotations
@@ -57,16 +54,6 @@ def _name_of(node: dict) -> str:
     if isinstance(wv, list) and wv:
         return _str(wv[0]) or _str(node.get("id"))
     return _str(node.get("id"))
-
-
-def _element_source(el_id: str) -> str:
-    """元素 ID 前缀 → 来源标注（Web 元素下线后不再有 web_snapshot 来源）。"""
-    el_id = _str(el_id)
-    if el_id.startswith("el_") or el_id.startswith("pe_"):
-        return "builtin_pool"
-    if el_id.isdigit():
-        return "snapshot"
-    return "unknown"
 
 
 def _element_domain() -> str:
@@ -144,80 +131,6 @@ def _resolve_port_targets(
         else:
             out.setdefault("navigates_to", []).append(desc)
     return out
-
-
-def _collect_elements(
-    node: dict, links: list, index: dict, warnings: list
-) -> tuple[list[dict], list[dict]]:
-    """页面下元素 = 端口 el ∪ linked_elements 快照（去重）；跳转入口 = 带 el 的输出端口。"""
-    props = node.get("properties") if isinstance(node.get("properties"), dict) else {}
-    outputs = node.get("outputs") if isinstance(node.get("outputs"), list) else []
-    catalog = props.get("linked_elements") if isinstance(props.get("linked_elements"), list) else []
-
-    elements: dict[str, dict] = {}
-    port_entries: list[dict] = []
-
-    for p in outputs:
-        if not isinstance(p, dict):
-            continue
-        el = p.get("el")
-        if not isinstance(el, dict):
-            continue
-        el_id = _str(el.get("id"))
-        if not el_id:
-            continue
-        entry = {
-            "element_id": el_id,
-            "label": _str(el.get("label")) or _str(p.get("name")),
-            "type": _str(el.get("type")),
-            "xpath": _str(el.get("xpath")),
-            "source": _element_source(el_id),
-            "on_port": True,
-            "port_slot": p.get("slot_index"),
-            "port_type": _str(p.get("type")),
-        }
-        elements[el_id] = entry
-        port_entries.append(entry)
-
-    for e in catalog:
-        if not isinstance(e, dict):
-            continue
-        el_id = _str(e.get("id"))
-        if not el_id:
-            continue
-        if el_id in elements:
-            base = elements[el_id]
-            if not base["xpath"]:
-                base["xpath"] = _str(e.get("xpath"))
-            base["label"] = base["label"] or _str(e.get("label"))
-        else:
-            elements[el_id] = {
-                "element_id": el_id,
-                "label": _str(e.get("label")),
-                "type": _str(e.get("type")),
-                "xpath": _str(e.get("xpath")),
-                "source": _element_source(el_id),
-                "on_port": False,
-                "port_slot": None,
-                "port_type": None,
-            }
-
-    entries: list[dict] = []
-    for port in port_entries:
-        targets = _resolve_port_targets(
-            node, port.get("port_slot"), port.get("port_type") or "", links, index, warnings
-        )
-        entries.append(
-            {
-                "element_id": port["element_id"],
-                "label": port["label"],
-                "xpath": port["xpath"],
-                "port_slot": port["port_slot"],
-                "port_type": port["port_type"],
-                **targets,
-            }
-        )
-    return list(elements.values()), entries
 
 
 def _collect_entry_points(nid: str, links: list, index: dict) -> list[dict]:
@@ -311,12 +224,6 @@ def build_graph_digest(config: Any, doc: Any = None) -> dict:
                 "url": _str(props.get("api_url")),
             }
 
-        if node_type in ("page", "popup") or (node_type == "start" and summary.get("page")):
-            elements, entries = _collect_elements(n, links, index, warnings)
-            summary["elements"] = elements
-            if node_type != "popup":
-                summary["navigation_entries"] = entries
-
         if node_type == "page" or node_type == "end":
             summary["entry_points"] = _collect_entry_points(nid, links, index)
         elif node_type == "popup":
@@ -335,6 +242,12 @@ def build_graph_digest(config: Any, doc: Any = None) -> dict:
         target = index.get(target_id)
         if origin is None or target is None:
             warnings.append(f"连线 {l.get('id')} 引用了不存在的节点: {origin_id} → {target_id}")
+        for raw_slot in (l.get("origin_slot"), l.get("target_slot")):
+            # 端口槽位"有值但不可解析"：原先由元素收集顺带告警，改在连线处产生（去重，避免与弹窗路径重复）
+            if raw_slot is not None and _slot_int(raw_slot) is None:
+                msg = f"连线 {l.get('id')} 端口槽位不可解析: {raw_slot!r}"
+                if msg not in warnings:
+                    warnings.append(msg)
         op = _output_port(origin, l.get("origin_slot"))
         tp = _input_port(target, l.get("target_slot"))
         resolved_links.append(

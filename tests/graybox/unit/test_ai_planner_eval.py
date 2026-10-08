@@ -6,6 +6,8 @@
 
 import json
 
+from pathlib import Path
+
 import pytest
 
 from apps.ai_assistant.management.commands.planner_eval import (
@@ -244,6 +246,20 @@ def test_load_cases_rejects_missing_path_and_empty(tmp_path):
     empty.write_text("cases: []\n", encoding="utf-8")
     with pytest.raises(ValueError, match="用例集为空"):
         load_cases(empty)
+
+
+def test_committed_case_files_match_agreed_scope():
+    """口径守卫：正式用例集只有单步与多步两条；更难的场景在 extended.yaml 按需跑。"""
+    cases_dir = Path(__file__).resolve().parents[3] / "tests" / "ai_planner" / "cases"
+
+    main = load_cases(cases_dir / "planner.yaml")
+    assert [c.id for c in main] == ["single-step", "multi-step"], (
+        f"正式口径应为单步 + 多步两条，实际：{[c.id for c in main]}"
+    )
+
+    extended = load_cases(cases_dir / "extended.yaml")
+    assert len(extended) >= 5, f"扩展用例数骤降：{[c.id for c in extended]}"
+    assert not ({c.id for c in main} & {c.id for c in extended}), "两个文件不应重复用例"
 
 
 # ── 报告 ──

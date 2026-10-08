@@ -1,0 +1,60 @@
+# 规划模型能力评测 —— 扩展用例集（按需指定，不默认跑）
+#
+# 正式口径只有 planner.yaml 的两条（单步 / 多步，模型用 deepseek-flash）；
+# 本文件收录更难的场景，用于按需深度评测：
+#   python manage.py planner_eval --cases tests/ai_planner/cases/extended.yaml --repeat 1 --tag extended
+#
+# 字段说明同 planner.yaml。
+
+cases:
+  - id: named-device
+    title: 指定设备名（不得中途换目标）
+    goal: 打开 govee 应用并进入 H6810 设备详情页
+    expect:
+      must_contain: ["govee", "H6810"]
+      steps_min: 2
+      steps_max: 5
+      require_flow_tool: true
+
+  - id: with-attachment
+    title: 需求要点来自附件文本
+    goal: 按附件要求操作设备
+    input: json
+    attach: 进入 H6810 设备详情页后，打开「音乐模式」页面
+    device: ""
+    expect:
+      must_contain: ["音乐"]
+      steps_min: 2
+      steps_max: 6
+      require_flow_tool: true
+
+  - id: json-four-keys
+    title: 四键 JSON 输入（含设备ID）
+    goal: 打开 govee 应用并进入设备主页
+    input: json
+    attach: ""
+    device: RF8N21MSW7A
+    expect:
+      must_contain: ["govee"]
+      steps_min: 2
+      steps_max: 4
+      require_flow_tool: true
+
+  - id: log-check-step
+    title: 开关类断言（应标需要日志核对）
+    goal: 打开 govee 应用，进入 H6810 设备详情页，关闭设备开关
+    expect:
+      must_contain: ["H6810"]
+      steps_min: 2
+      steps_max: 6
+      require_flow_tool: true
+      expect_mixed_log_check: true
+
+  - id: vague-demand
+    title: 模糊需求（测它会不会瞎猜）
+    goal: 帮我看看设备
+    expect:
+      must_contain: []
+      steps_min: 1
+      steps_max: 6
+      require_flow_tool: true

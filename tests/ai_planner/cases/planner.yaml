@@ -1,17 +1,17 @@
-# 规划模型能力评测用例集（planner_eval）
+# 规划模型能力评测 —— 正式口径用例集（只跑这两条）
+#
+# 正式口径（用户指定）：**只用 deepseek-flash 模型**、**只跑单步与多步两条**。
+# 更难的场景（四键 JSON / 附件 / 指定设备名 / 需日志核对 / 模糊需求）见同目录 extended.yaml，
+# 按需用 --cases 指定，不默认跑。
 #
 # 字段说明：
 #   id / title / goal  —— 用例标识 / 短标题 / 需求文本（goal 必填）
-#   input              —— text（默认，直接把 goal 喂给规划模型）| json（规格规定的四键中文 JSON）
-#   attach / device    —— 仅 input: json 时使用（附件文本内容 / 设备ID）
-#   expect:            —— 全部为机械可判的期望
-#     must_contain     —— 必须出现在 plan 里的关键词（硬性）
+#   input              —— text（默认）| json（规格规定的四键中文 JSON；可带 attach / device）
+#   expect:            —— 机械可判的期望
+#     must_contain     —— 必须出现在计划步骤里的关键词（硬性）
 #     steps_min / max  —— 步骤数区间（硬性）
-#     require_flow_tool—— 是否要求调用页面流工具（硬性；默认 true，与规划提示词"先看页面流"一致）
-#     expect_mixed_log_check —— 是否要求 log_check 出现混合取值（硬性；检验标注区分度）
-#   repeat             —— 该用例的重复次数（覆盖命令行 --repeat）
-#
-# 说明：用例期望刻意留宽区间，只有"明显不该出现"才算失败；质量类判断降为"疑似提示"，见命令实现。
+#     require_flow_tool—— 是否要求调用页面流工具（硬性；默认 true）
+#     expect_mixed_log_check —— 是否要求 log_check 出现混合取值（硬性）
 
 cases:
   - id: single-step
@@ -30,56 +30,4 @@ cases:
       must_contain: ["govee"]
       steps_min: 2
       steps_max: 4
-      require_flow_tool: true
-
-  - id: named-device
-    title: 指定设备名（不得中途换目标）
-    goal: 打开 govee 应用并进入 H6810 设备详情页
-    expect:
-      must_contain: ["govee", "H6810"]
-      steps_min: 2
-      steps_max: 5
-      require_flow_tool: true
-
-  - id: with-attachment
-    title: 需求要点来自附件文本
-    goal: 按附件要求操作设备
-    input: json
-    attach: 进入 H6810 设备详情页后，打开「音乐模式」页面
-    device: ""
-    expect:
-      must_contain: ["音乐"]
-      steps_min: 2
-      steps_max: 6
-      require_flow_tool: true
-
-  - id: json-four-keys
-    title: 四键 JSON 输入（含设备ID）
-    goal: 打开 govee 应用并进入设备主页
-    input: json
-    attach: ""
-    device: RF8N21MSW7A
-    expect:
-      must_contain: ["govee"]
-      steps_min: 2
-      steps_max: 4
-      require_flow_tool: true
-
-  - id: log-check-step
-    title: 开关类断言（应标需要日志核对）
-    goal: 打开 govee 应用，进入 H6810 设备详情页，关闭设备开关
-    expect:
-      must_contain: ["H6810"]
-      steps_min: 2
-      steps_max: 6
-      require_flow_tool: true
-      expect_mixed_log_check: true
-
-  - id: vague-demand
-    title: 模糊需求（测它会不会瞎猜）
-    goal: 帮我看看设备
-    expect:
-      must_contain: []
-      steps_min: 1
-      steps_max: 6
       require_flow_tool: true

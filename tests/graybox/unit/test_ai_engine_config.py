@@ -22,12 +22,12 @@ import pytest
 
 from apps.ai_assistant import api, engine_adapter
 from apps.ai_assistant.provider_registry import VALID_PROVIDERS
-from engines.ai.agents.config import ModelConfig
-from engines.ai.agents.model import (
+from engines.ai.agents.base import (
     OPENAI_COMPATIBLE_PROVIDERS,
     SUPPORTED_PROVIDERS,
     create_model,
 )
+from engines.ai.agents.config import ModelConfig
 from engines.ai.registry import ConfigurationError
 
 pytestmark = [pytest.mark.unit]
@@ -182,7 +182,7 @@ def _capture_chat_model(monkeypatch, name: str) -> dict:
         def __init__(self, **kwargs):
             captured.update(kwargs)
 
-    monkeypatch.setattr(f"engines.ai.agents.model.{name}", _FakeChatModel)
+    monkeypatch.setattr(f"engines.ai.agents.base.{name}", _FakeChatModel)
     return captured
 
 

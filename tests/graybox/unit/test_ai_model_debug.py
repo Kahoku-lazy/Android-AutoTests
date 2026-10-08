@@ -325,7 +325,7 @@ def test_config_marks_debug_mounted_tools(agent):
 
 
 def test_debug_role_mounts_real_tools_but_no_skill(agent, monkeypatch):
-    from engines.ai.agents import model as engine_model
+    from engines.ai.agents import base as engine_model
 
     seen: dict = {}
     real_build_toolkit = engine_model.build_toolkit

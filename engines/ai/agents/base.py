@@ -1,11 +1,16 @@
-"""智能体层：Agent 角色 —— 配置角色、创建角色、接受任务、执行并产出任务报告。
+"""智能体基类：模型创建 + 角色基类。
 
-- RoleSpec：创建 Agent 角色的配置（角色名/系统提示词/工具子集/视觉/上下文/ReAct 参数）。
-- AgentRole：角色实体基类，封装一个 AgentScope Agent，固化「装配 → 接受任务 → 执行 → 报告」
+- `create_model`：按 provider 创建底层大模型连接（deepseek / dashscope / OpenAI 兼容）。
+- `RoleSpec`：角色配方（角色名 / 系统提示词 / 工具子集 / 视觉 / 上下文 / ReAct 参数）。
+- `AgentRole`：角色实体基类，封装一个 AgentScope Agent，固化「装配 → 接受任务 → 执行 → 报告」
   不变主干；子类只填 RoleSpec，赋什么配置就编排成什么角色。
-- 边界：本模块只负责「配一个 Agent」——name / system_prompt / model / toolkit；
-  回复怎么读（思考 / 工具调用 / 工具返回 / 截图路径）在 `engines.ai.messaging`，
-  用量与计价在 `engines.ai.billing`，角色间协作在 `engines.ai.workflow`。
+
+本文件是**智能体包内**的基类，与 `engines/ai/base.py`（引擎协议：AiEngine / TaskRequest /
+TaskResult）不是一回事：那个是引擎对外契约，这个是包内实现基类。
+
+边界：本文件不认识任何具体角色——具体角色在同包的 `planner.py` / `executor.py` / `verifier.py`，
+各自从 `config.py` 取自己的提示词与工具子集。回复怎么读在 `engines.ai.messaging`，
+用量与计价在 `engines.ai.billing`，角色间协作在 `engines.ai.workflow`。
 """
 
 from __future__ import annotations
@@ -42,17 +47,9 @@ from engines.ai.messaging import (
 from engines.ai.registry import ConfigurationError
 from engines.ai.tools import build_toolkit
 
-from .config import (
-    DEVICE_PLANNER_TOOLS,
-    PLANNER_PROMPT,
-    VERIFIER_PROMPT,
-    VERIFIER_TOOLS,
-    VISION_PROMPT,
-    VISION_TOOLS,
-    DeviceExecutionConfig,
-    ModelConfig,
-)
+from .config import ModelConfig
 
+# logger 名沿用拆分前的 ai_assistant.model，保持既有日志口径不变（改名会改变日志分类）
 logger = logging.getLogger("ai_assistant.model")
 
 
@@ -161,7 +158,7 @@ class AgentRole:
     - _execute 是执行骨架（子类不覆盖）；子类 run() 只拼 content 再调 _execute。
     - 本类是复用基类而非多态接口：三个子类 run() 入参不同（goal / action+idx /
       assertion+截图），共享的是内部机制，不是统一签名。
-    - 角色间协作不在此类，在 workflow.py。
+    - 角色间协作不在此类，在 workflow 包。
     """
 
     spec: ClassVar[RoleSpec]
@@ -328,196 +325,3 @@ class AgentRole:
     def reset_context(self) -> None:
         """清空自己的上下文（每步开始前调用，避免上一步污染）。"""
         self.agent.state.context.clear()
-
-
-# ── 具体角色 ──
-
-
-class PlannerRole(AgentRole):
-    """规划角色：接受用户需求，输出步骤计划（goal + steps）。"""
-
-    spec = RoleSpec(
-        role="planner",
-        prompt=PLANNER_PROMPT,
-        tool_names=tuple(DEVICE_PLANNER_TOOLS),
-    )
-
-    async def run(self, goal: str) -> RoleResult:
-        """接受任务：用户一句话 UI 操作需求。
-
-        Args:
-            goal: 用户一句话 UI 操作需求。
-
-        Returns:
-            RoleResult（output 为 {"plan": {...}} 的 JSON 文本）。
-        """
-        return await self._execute(goal)
-
-
-class ExecutorRole(AgentRole):
-    """执行角色：接受单个操作步骤，在设备上执行并输出结果与截图。
-
-    多模态（vision=True）：靠截图看图定位元素；ReAct 最多 8 轮（max_iters=8）；
-    上下文最多保留 5 张图（max_image_num=5）控制 token。
-    """
-
-    spec = RoleSpec(
-        role="executor",
-        prompt=VISION_PROMPT,
-        tool_names=tuple(VISION_TOOLS),
-        vision=True,
-        context_config={"max_image_num": 5},
-        react_config={"max_iters": 8},
-    )
-
-    async def run(
-        self,
-        serial: str,
-        action: str,
-        idx: int,
-        total: int,
-        retry_hint: str = "",
-    ) -> RoleResult:
-        """接受任务：在指定设备上执行一个操作步骤。
-
-        Args:
-            serial: 目标设备 serial。
-            action: 本步骤要执行的一个操作。
-            idx: 当前步骤序号（1 起）。
-            total: 总步骤数。
-            retry_hint: 上次验收失败回灌的修正提示（空串 = 首次执行）。
-
-        Returns:
-            RoleResult（output 为 {"result","click_timer","screenshot"} JSON；screenshot 为操作结果截图）。
-        """
-        prompt = f"当前设备 serial：{serial}\n请执行以下操作（第 {idx}/{total} 步）：\n{action}"
-        if retry_hint:
-            prompt += f"\n<feedback>上次执行未通过验收，请修正后重做：\n{retry_hint}</feedback>"
-        return await self._execute(prompt)
-
-
-def _force_keep_local_screenshot(handler):
-    """验收工具包装：无论模型是否传 keep_local，一律保留路径回传。"""
-
-    def wrapped(serial: str, keep_local: bool = True, user_id: str = "", **kwargs):
-        return handler(serial, keep_local=True, user_id=user_id, **kwargs)
-
-    wrapped.__name__ = getattr(handler, "__name__", "screenshot_page")
-    wrapped.__doc__ = getattr(handler, "__doc__", "") or ""
-    return wrapped
-
-
-class VerifierRole(AgentRole):
-    """验收角色：对比断言与执行截图，输出是否通过（验收是否真实达成）。"""
-
-    spec = RoleSpec(
-        role="verifier",
-        prompt=VERIFIER_PROMPT,
-        tool_names=tuple(VERIFIER_TOOLS),
-        vision=True,
-        context_config={"max_image_num": 5},
-    )
-
-    def _select_tools(self, tools: list[ToolSpec]) -> list[ToolSpec]:
-        """验收子集：screenshot_page 强制 keep_local=True，保证证据路径回传。"""
-        selected = super()._select_tools(tools)
-        out: list[ToolSpec] = []
-        for spec in selected:
-            if spec.name == "screenshot_page":
-                out.append(
-                    ToolSpec(
-                        name=spec.name,
-                        handler=_force_keep_local_screenshot(spec.handler),
-                        read_only=spec.read_only,
-                        auto_allow=spec.auto_allow,
-                    )
-                )
-            else:
-                out.append(spec)
-        return out
-
-    async def run(
-        self,
-        serial: str,
-        assertion: str,
-        idx: int,
-        total: int,
-        exec_result: str,
-        exec_evidence: str,
-        screenshot=None,
-        log_evidence: str = "",
-        keyword_catalog: str = "",
-    ) -> RoleResult:
-        """接受任务：对比断言 + 截图 + 日志检查结论，判断操作是否成功。
-
-        Args:
-            serial: 目标设备 serial。
-            assertion: 本步骤的断言（期望的可观察结果）。
-            idx: 当前步骤序号（1 起）。
-            total: 总步骤数。
-            exec_result: 执行模型的 result（PASS/FAIL）。
-            exec_evidence: 平台按执行契约拼装的证据文本（点击前时间戳 + 点击后截图路径；
-                无点击 / 未截图时已如实标注）——执行模型不再输出说明文字。
-            screenshot: 执行模型产出的操作结果截图（DataBlock，可空）。
-            log_evidence: 本步的日志证据文本（可空 = 无日志证据，只看截图）。
-            keyword_catalog: 当前日志关键词表文本（关键词 → 功能点；空 = 不附）。
-
-        Returns:
-            RoleResult（output 为 {"result","click_timer","logAssertionTimer",
-            "logAssertionInfo","screenshot","actual"} JSON）。
-        """
-        text = (
-            f"当前设备 serial：{serial}\n"
-            f"断言 assert：{assertion}\n"
-            f"执行结果：result={exec_result}；{exec_evidence}\n"
-        )
-        if log_evidence:
-            text += f"\n{log_evidence}\n"
-        text += f"请截图确认，对比断言与实际结果（并结合日志证据与日志检查工具的结论），判断操作是否成功（第 {idx}/{total} 步）。"
-        # 判定口径：日志与截图两个条件缺一不可（检查工具未检测到就必须判 FAIL）
-        text += (
-            "\n判定口径（必须遵守）：**日志检测到 + 截图确认两个条件都满足才可判 PASS**；"
-            "调用 check_device_log 检查断言涉及的日志关键词，**未检测到该关键词时必须判 FAIL**"
-            "（并在 actual 里写明日志未检测到），MUST NOT 只凭截图判 PASS。"
-        )
-        if keyword_catalog:
-            text += f"\n\n{keyword_catalog}\n"
-        # 各字段的取值来源写清楚让模型照抄（取不到就留空串）
-        text += (
-            "\n输出时：click_timer 抄上面的点击前时间戳（本步没有点击就留空字符串）；"
-            "logAssertionTimer 抄 check_device_log 返回的命中时间戳（未检测到就留空字符串）；"
-            "logAssertionInfo 由平台按你的检查调用自动填；"
-            "screenshot 抄本次截图工具返回的 screenshot_path。"
-        )
-        content: list = [TextBlock(text=text)]
-        if screenshot is not None:
-            content.append(screenshot)
-        return await self._execute(content)
-
-
-# ── 装配工厂 ──
-
-
-def build_device_models(
-    config: DeviceExecutionConfig,
-    tools: list[ToolSpec],
-    user_id: str = "",
-    skill_dirs: list[str] | None = None,
-) -> tuple[PlannerRole, ExecutorRole, VerifierRole]:
-    """按三角色配置创建三个角色对象（planner / executor / verifier）。
-
-    Args:
-        config: 三角色模型连接配置 + max_loops。
-        tools: 平台全量工具（各角色按自己的 RoleSpec.tool_names 子集取用）。
-        user_id: 注入工具包装层（写工具鉴权/归属）。
-        skill_dirs: 启用的 skill 文件夹绝对路径。
-
-    Returns:
-        (planner, executor, verifier) 三个角色对象；系统提示词各自取自角色 spec（config.py）。
-    """
-    dirs = skill_dirs or []
-    return (
-        PlannerRole(config.planner, tools, user_id, dirs),
-        ExecutorRole(config.executor, tools, user_id, dirs),
-        VerifierRole(config.verifier, tools, user_id, dirs),
-    )

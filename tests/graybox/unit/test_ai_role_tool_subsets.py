@@ -9,7 +9,7 @@ import pytest
 
 from apps.ai_assistant.tools import TOOLS
 from engines.ai.agents.config import DEVICE_PLANNER_TOOLS, VERIFIER_TOOLS, VISION_TOOLS
-from engines.ai.agents.model import PlannerRole
+from engines.ai.agents.planner import PlannerRole
 from engines.ai.base import ToolSpec
 
 pytestmark = [pytest.mark.unit, pytest.mark.ai_assistant]

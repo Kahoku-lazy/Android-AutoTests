@@ -1,30 +1,47 @@
 <script setup lang="ts">
 import { computed } from "vue"
 import type { RouteModelConfig } from "@/shared/types/ai"
+import { isKnownTextOnly, modelOptionLabel, type ModelOption } from "../helpers/model-capability"
 
-defineProps<{ label: string; disabled?: boolean }>()
+const props = defineProps<{ label: string; disabled?: boolean; needsImage?: boolean }>()
 const model = defineModel<RouteModelConfig>({ required: true })
 
-const providers = [
+// DeepSeek 清单镜像引擎侧的模型目录（engines/ai/agents/config.py 的 DEEPSEEK_MODELS），
+// 两侧由 tests/graybox/unit/test_ai_deepseek_model_catalog.py 对拍，改一侧不齐即红。
+const providers: { value: string; label: string; models: ModelOption[] }[] = [
   {
     value: "dashscope",
     label: "阿里百炼 (DashScope)",
-    models: ["qwen-max", "qwen-plus", "qwen-turbo", "qwen3-235b"],
+    models: [
+      { name: "qwen-max" },
+      { name: "qwen-plus" },
+      { name: "qwen-turbo" },
+      { name: "qwen3-235b" },
+    ],
   },
   {
     value: "openai",
     label: "OpenAI",
-    models: ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo", "o4-mini"],
+    models: [
+      { name: "gpt-4o" },
+      { name: "gpt-4-turbo" },
+      { name: "gpt-3.5-turbo" },
+      { name: "o4-mini" },
+    ],
   },
   {
     value: "anthropic",
     label: "Anthropic (Claude)",
-    models: ["claude-fable-5", "claude-opus-4-8", "claude-sonnet-4-6"],
+    models: [
+      { name: "claude-fable-5" },
+      { name: "claude-opus-4-8" },
+      { name: "claude-sonnet-4-6" },
+    ],
   },
   {
     value: "deepseek",
     label: "DeepSeek",
-    models: ["deepseek-v4-pro", "deepseek-v4-flash", "deepseek-v4-flash-vision-exp"],
+    models: [{ name: "deepseek-flash", multimodal: true }, { name: "deepseek-v4-pro" }],
   },
   { value: "custom", label: "自定义 (OpenAI 兼容)", models: [] },
 ]
@@ -34,6 +51,14 @@ const modelOptions = computed(() => {
   const prov = providers.find((p) => p.value === (model.value.provider || "deepseek"))
   return prov?.models || []
 })
+
+/**
+ * 本角色需要读截图、但当前选中的是**已知纯文本**模型。
+ * 只对清单内的已知模型判定：手工输入的自定义模型名能力未知，不提示（避免误报）。
+ */
+const imageMismatch = computed(
+  () => Boolean(props.needsImage) && isKnownTextOnly(modelOptions.value, model.value.model_name),
+)
 </script>
 
 <template>
@@ -53,9 +78,21 @@ const modelOptions = computed(() => {
           filterable
           placeholder="选择或输入模型名"
         >
-          <el-option v-for="m in modelOptions" :key="m" :label="m" :value="m" />
+          <el-option
+            v-for="m in modelOptions"
+            :key="m.name"
+            :label="modelOptionLabel(m)"
+            :value="m.name"
+          />
         </el-select>
       </el-form-item>
+      <div v-if="needsImage" class="model-hint" :class="{ 'model-hint--warn': imageMismatch }">
+        {{
+          imageMismatch
+            ? "该模型不支持图片输入，本角色需要读截图，请改用多模态模型（如 deepseek-flash）"
+            : "本角色需要多模态模型（可读截图）"
+        }}
+      </div>
       <el-form-item label="API Key">
         <el-input v-model="model.api_key" type="password" show-password placeholder="sk-..." />
       </el-form-item>
@@ -75,5 +112,14 @@ const modelOptions = computed(() => {
   font-weight: 700;
   color: var(--ai-ink-soft);
   margin-bottom: var(--app-space-sm);
+}
+.model-hint {
+  margin: -8px 0 var(--app-space-sm) 90px;
+  font-size: var(--app-size-xs);
+  color: var(--ai-ink-soft);
+}
+.model-hint--warn {
+  color: var(--el-color-warning);
+  font-weight: 700;
 }
 </style>

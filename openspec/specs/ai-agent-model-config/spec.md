@@ -2,7 +2,9 @@
 
 ## Purpose
 TBD - created by archiving change agent-model-config-consolidation. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: 配置页统一管理三类模型
 
 系统 SHALL 在智能体配置页的模型配置区块提供三类模型配置：主推理模型、视觉模型、强模型，管理员可分别指定，且保存后配置持久化并在后续对话构建时生效。
@@ -49,3 +51,30 @@ TBD - created by archiving change agent-model-config-consolidation. Update Purpo
 - **WHEN** 用户查看智能体卡片
 - **THEN** 卡片仅展示「对话 / 配置 / 测试」三个操作，无模型下拉与删除按钮
 
+### Requirement: 模型清单标明多模态能力
+
+系统 SHALL 在智能体配置页的模型清单中只列出当前可用的正式模型名，并逐项标明该模型是否支持图片输入（多模态）；已被厂商下线的旧模型名 MUST NOT 作为清单选项出现，但 MUST 仍可被显式输入保存，且其费用 MUST 按其归属的正式模型价目计算。
+
+#### Scenario: 清单标明多模态能力
+
+- **WHEN** 管理员在配置页展开 DeepSeek 的模型清单
+- **THEN** 清单恰好包含当前正式模型 `deepseek-flash` 与 `deepseek-v4-pro`，前者带「多模态 · 支持图片」标注，后者标注为「纯文本」
+
+#### Scenario: 旧模型名不作为选项但仍可调用
+
+- **WHEN** 管理员手工输入旧模型名 `deepseek-v4-flash` 或 `deepseek-v4-flash-vision-exp`
+- **THEN** 保存可用，且其费用按 `deepseek-flash` 的价目计算（与厂商"旧名按 Flash 计费"的口径一致）
+
+### Requirement: 需要图片的角色绑定纯文本模型时给出提醒
+
+系统 SHALL 对需要图片输入的角色（执行 / 验收）声明其需要多模态模型；当这类角色绑定了已知不支持图片输入的模型时，系统 SHALL 在配置界面给出可见提示，并在引擎装配该角色时记录一条包含角色名与模型名的明确告警，且 MUST NOT 因此中断任务装配。
+
+#### Scenario: 配置界面提示该角色需要多模态
+
+- **WHEN** 管理员查看执行模型或验收模型的配置区块
+- **THEN** 该区块显示「本角色需要多模态模型（可读截图）」的提示
+
+#### Scenario: 绑定纯文本模型的装配告警
+
+- **WHEN** 执行模型或验收模型被配置为已知纯文本模型（如 `deepseek-v4-pro`）
+- **THEN** 引擎装配该角色时记录一条明确告警（含角色名与模型名），任务继续装配而不中断

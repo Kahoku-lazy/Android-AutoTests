@@ -22,8 +22,18 @@ watch(
   <section class="doc-section step-panel route-config">
     <div class="section-title"><span class="section-num">🚀</span>{{ label }}</div>
     <ModelConfigField v-model="config.planner" label="规划模型 Planner" :disabled="disabled" />
-    <ModelConfigField v-model="config.executor" label="执行模型 Executor" :disabled="disabled" />
-    <ModelConfigField v-model="config.verifier" label="校验模型 Verifier" :disabled="disabled" />
+    <ModelConfigField
+      v-model="config.executor"
+      label="执行模型 Executor"
+      :disabled="disabled"
+      needs-image
+    />
+    <ModelConfigField
+      v-model="config.verifier"
+      label="校验模型 Verifier"
+      :disabled="disabled"
+      needs-image
+    />
   </section>
 </template>
 

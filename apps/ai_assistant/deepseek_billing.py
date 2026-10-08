@@ -7,16 +7,12 @@
 from datetime import datetime
 
 # 空闲时段单价（元 / 百万 tokens）
+# 依据（2026-10-08 官方价目页）：deepseek-flash 0.02 / 1 / 4；deepseek-v4-pro 0.15 / 4.5 / 13.5。
 DEEPSEEK_PRICING = {
-    "deepseek-v4-flash": {
-        "input_cache_hit": 0.05,
-        "input_cache_miss": 1.5,
-        "output": 4.5,
-    },
-    "deepseek-v4-flash-vision-exp": {
-        "input_cache_hit": 0.05,
-        "input_cache_miss": 1.5,
-        "output": 4.5,
+    "deepseek-flash": {
+        "input_cache_hit": 0.02,
+        "input_cache_miss": 1.0,
+        "output": 4.0,
     },
     "deepseek-v4-pro": {
         "input_cache_hit": 0.15,
@@ -27,12 +23,15 @@ DEEPSEEK_PRICING = {
 
 _PEAK_MULTIPLIER = 2
 
+# 通用名与旧名 → 正式模型名（厂商口径：旧名仍可调用、按 Flash 计费）
 _DEEPSEEK_MODEL_ALIASES = {
-    "deepseek-chat": "deepseek-v4-flash",
+    "deepseek-chat": "deepseek-flash",
     "deepseek-reasoner": "deepseek-v4-pro",
+    "deepseek-v4-flash": "deepseek-flash",
+    "deepseek-v4-flash-vision-exp": "deepseek-flash",
 }
 
-_DEFAULT_DEEPSEEK_MODEL = "deepseek-v4-flash"
+_DEFAULT_DEEPSEEK_MODEL = "deepseek-flash"
 
 
 def _is_deepseek_model(model_name: str | None) -> bool:

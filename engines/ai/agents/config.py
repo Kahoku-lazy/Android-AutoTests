@@ -1,4 +1,4 @@
-"""配置层：模型连接配置 + 智能体提示词。设备执行专用。"""
+"""配置层：模型连接配置 + 模型能力目录 + 智能体提示词。设备执行专用。"""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ class ModelConfig:
     """单个模型的连接配置（纯数据，供 create_model 建立连接）。"""
 
     provider: str = "deepseek"  # 提供商：deepseek / dashscope / openai / 自定义（走 OpenAI 兼容）
-    model_name: str = ""  # 模型名（如 deepseek-v4-flash / qwen3.6-plus）
+    model_name: str = ""  # 模型名（如 deepseek-flash / qwen3.6-plus）
     api_key: str = ""  # 已解密的 API Key（Django 层解密后传入）
     base_url: str = ""  # 已解析的默认 base_url（provider_registry 解析）
 
@@ -25,6 +25,33 @@ class DeviceExecutionConfig:
     max_loops: int = 3  # 每步「执行↔验收」最大重试次数
     # 读日志证据前等多久（秒）：等到「动作发出 + 取证阈值」再读，慢一点的日志也能收进来
     log_wait_seconds: float = 0.0
+
+
+# ── DeepSeek 模型目录（正式模型名 → 是否支持图片输入）──
+#
+# 依据（2026-10-08 实测）：`GET https://api.deepseek.com/v1/models` 返回的
+# `input_modalities`（deepseek-flash 含 image、deepseek-v4-pro 仅 text）与官方价目页的
+# 「图像理解」一行；价目页同时注明旧名 deepseek-v4-flash / deepseek-v4-flash-vision-exp
+# 仍可调用但模型已下线、按 Flash 计费，故它们**不是清单选项**、只作计费别名。
+#
+# 前端模型清单镜像本目录（`frontend/src/modules/ai-assistant/components/ModelConfigField.vue`），
+# 由 tests/graybox/unit/test_ai_deepseek_model_catalog.py 做对拍，改任一侧不齐即红。
+DEEPSEEK_MODELS: dict[str, bool] = {
+    "deepseek-flash": True,  # DeepSeek-V4.1-Flash：支持图片输入（多模态）
+    "deepseek-v4-pro": False,  # DeepSeek-V4-Pro：纯文本
+}
+
+
+def model_supports_image(provider: str, model_name: str) -> bool | None:
+    """该 provider + 模型名是否支持图片输入；未知返回 None（不用于告警）。
+
+    只认目录内明确登记过的模型：其他 provider（dashscope / openai / …）与自定义模型名
+    一律返回 None，避免对未知模型误报"需要多模态"。
+    """
+    if str(provider or "").strip().lower() != "deepseek":
+        return None
+    name = str(model_name or "").strip().lower()
+    return DEEPSEEK_MODELS.get(name)
 
 
 # ── 智能体提示词（唯一真相源：提示词随引擎走，不由 Django 从库注入、不在前端展示）──

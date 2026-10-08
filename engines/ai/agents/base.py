@@ -47,7 +47,7 @@ from engines.ai.messaging import (
 from engines.ai.registry import ConfigurationError
 from engines.ai.tools import build_toolkit
 
-from .config import ModelConfig
+from .config import ModelConfig, model_supports_image
 
 # logger 名沿用拆分前的 ai_assistant.model，保持既有日志口径不变（改名会改变日志分类）
 logger = logging.getLogger("ai_assistant.model")
@@ -199,6 +199,15 @@ class AgentRole:
         system_prompt: str,
     ) -> Agent:
         """装配：模型连接 + 系统提示词 + 工具子集 → AgentScope Agent。"""
+        if self.spec.vision and model_supports_image(config.provider, config.model_name) is False:
+            # 提醒而非拦截：需要读截图的角色绑了已知纯文本模型时，截图很可能被模型拒绝
+            logger.warning(
+                "【装配提醒】角色 %s 绑定了不支持图片输入的模型 %s（provider=%s）："
+                "该角色需要读截图，请改用多模态模型（如 deepseek-flash）。",
+                self.spec.role,
+                config.model_name,
+                config.provider,
+            )
         model = create_model(config, stream=False, vision=self.spec.vision)
         return Agent(
             name=self.spec.role,

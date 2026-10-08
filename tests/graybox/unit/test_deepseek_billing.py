@@ -7,15 +7,27 @@ import pytest
 
 from apps.ai_assistant.deepseek_billing import deepseek_cost, task_deepseek_cost
 
+# 官方现价（2026-10-08 价目页）：deepseek-flash 空闲命中 0.02 / 未命中 1 / 输出 4（元/百万）
+FLASH_HIT, FLASH_MISS, FLASH_OUT = 0.02, 1.0, 4.0
+
 
 @pytest.mark.unit
 def test_flash_idle_cost_matches_official_rates():
-    # 空闲 flash：命中 0.05 / 未命中 1.5 / 输出 4.5（元/百万）
+    # 空闲 flash：命中 0.02 / 未命中 1 / 输出 4（元/百万）
     sunday = datetime(2026, 9, 6, 10, 0, 0)  # 周日
-    cost = deepseek_cost(79382, 3264, 38016, "deepseek-v4-flash", sunday)
+    cost = deepseek_cost(79382, 3264, 38016, "deepseek-flash", sunday)
     miss = 79382 - 38016
-    expected = (38016 * 0.05 + miss * 1.5 + 3264 * 4.5) / 1_000_000
+    expected = (38016 * FLASH_HIT + miss * FLASH_MISS + 3264 * FLASH_OUT) / 1_000_000
     assert round(cost, 6) == round(expected, 6)
+
+
+@pytest.mark.unit
+def test_legacy_flash_names_bill_at_flash_rate():
+    """厂商口径：旧名仍可调用、按 Flash 计费 —— 三个旧名与正式名同价。"""
+    sunday = datetime(2026, 9, 6, 10, 0, 0)
+    formal = deepseek_cost(10000, 500, 2000, "deepseek-flash", sunday)
+    for legacy in ("deepseek-v4-flash", "deepseek-v4-flash-vision-exp", "deepseek-chat"):
+        assert deepseek_cost(10000, 500, 2000, legacy, sunday) == formal, legacy
 
 
 @pytest.mark.unit
@@ -33,7 +45,7 @@ def test_task_uses_per_model_then_fallback_flash():
         finished_at=sunday,
         created_at=sunday,
         model_usage={
-            "deepseek-v4-flash": {
+            "deepseek-flash": {
                 "input_tokens": 1000,
                 "output_tokens": 100,
                 "cache_input_tokens": 200,
@@ -50,7 +62,7 @@ def test_task_uses_per_model_then_fallback_flash():
     )
     per_model = task_deepseek_cost(split)
     expected = round(
-        deepseek_cost(1000, 100, 200, "deepseek-v4-flash", sunday)
+        deepseek_cost(1000, 100, 200, "deepseek-flash", sunday)
         + deepseek_cost(500, 50, 0, "deepseek-v4-pro", sunday),
         4,
     )
@@ -65,6 +77,6 @@ def test_task_uses_per_model_then_fallback_flash():
         cache_input_tokens=38016,
     )
     assert task_deepseek_cost(fallback) == round(
-        deepseek_cost(79382, 3264, 38016, "deepseek-v4-flash", sunday),
+        deepseek_cost(79382, 3264, 38016, "deepseek-flash", sunday),
         4,
     )

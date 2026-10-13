@@ -1,0 +1,100 @@
+- title: H6810 短卡片页开关测试
+  steps:
+    - action: 启动 govee 应用
+      assert: 前台为 govee，进入 APP 主页
+
+    - action: 长按 H6810 卡片
+      assert: 页头第一行变为 ✕ / 「灵动 | 经典」/ ✓，并出现「卡片大小同步应用到同类设备」行
+
+    - action: 点分段控件「经典」（右半）
+      assert: 「经典」呈选中态
+
+    - action: 点右上角 ✓
+      assert: 样式栏消失、页头恢复标题「设备」；且卡片变为经典布局（名称在图片右侧同行、出现 ON ｜ OFF 分段）
+
+    - action: 等待连接成功
+      assert: 卡片右上角出现蓝色蓝牙与 WiFi 图标
+
+    - action: 点 ON ｜ OFF 的 ON 半边
+      assert: 设备日志返回开关成功（开灯事件）
+
+    - action: 点 ON ｜ OFF 的 OFF 半边
+      assert: 设备日志返回开关成功（关灯事件）
+
+    - action: 长按 H6810 卡片
+      assert: 页头第一行变为 ✕ / 「灵动 | 经典」/ ✓，并出现同步行
+
+    - action: 点分段控件「灵动」（左半）
+      assert: 「灵动」呈选中态
+
+    - action: 点右上角 ✓
+      assert: 样式栏消失、页头恢复标题「设备」；且卡片变为灵动布局（名称在左上、图在下方、右下角圆形电源按钮）
+
+    - action: 等待连接成功
+      assert: 卡片右上角出现蓝色蓝牙与 WiFi 图标
+
+    - action: 点右下角圆形电源按钮
+      assert: 设备日志返回开关成功（开灯事件）
+
+    - action: 再点该按钮
+      assert: 设备日志返回开关成功（关灯事件）
+
+    - action: 关闭 govee 应用
+      assert: 前台页面是手机主页
+
+
+
+- title: H6810 详情页亮度、颜色与场景模式测试
+  steps:
+    - action: 启动 govee 应用
+      assert: 前台为 govee，进入 APP 主页
+
+    - action: 点击H6810卡片，进入详情页
+      assert: 详情页标题为 H6810，顶部显示已连接标志，如果没有需要等待5s左右
+
+    - action: 检查设备状态，点击电源按钮打开设备；如果设备状态已经是开灯状态，则点击电源按钮关闭设备后再打开；
+      assert: 设备日志返回开关成功（开灯事件）
+
+    - action: 亮度设置大于70%
+      assert: 设备日志返回亮度设置成功
+
+    - action: 亮度设置小于30%
+      assert: 设备日志返回亮度设置成功
+
+    - action: 点击颜色模式按钮
+      assert: 颜色模式被选中，颜色模式按钮有蓝色填充
+
+    - action: 向上滑动页面，找到基础色标签
+      assert: 基础色标签下有颜色色块
+
+    - action: 点击红色色块
+      assert: 设备日志返回颜色设置成功
+
+    - action: 点击黄色色块
+      assert: 设备日志返回颜色设置成功
+
+    - action: 向下滑动页面，找到场景模式并点击
+      assert: 场景模式被选中，场景模式按钮有蓝色填充
+ 
+    - action: 点击任意标签，例如 Nature 标签；标签选中会有颜色填充
+      assert: 检查选中的标签是否有颜色填充
+
+    - action: 点击任意一种场景灯效，例如 Racing 灯效；灯效选中会有颜色填充
+      assert: 设备日志返回场景灯效设置成功
+
+    - action: 点击任意标签，例如 Nature 标签；标签选中会有颜色填充
+      assert: 检查选中的标签是否有颜色填充
+
+    - action: 点击任意一种场景灯效，例如 Racing 灯效；灯效选中会有颜色填充
+      assert: 设备日志返回场景灯效设置成功
+
+    - action: 关闭 govee 应用
+      assert: 前台页面是手机主页
+
+
+
+
+
+
+
+

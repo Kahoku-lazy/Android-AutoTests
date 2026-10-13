@@ -4,6 +4,9 @@
 1. 调用顺序为「开窗 → 执行 → 读窗 → 验收」，证据进入验收输入；
 2. 证据写进该步骤的过程记录（log_evidence 字段）；
 3. 未注入提供者时任务不被中断，验收输入标注「无日志证据」。
+
+编排已换成 AgentScope 官方 SOP（`SOPEngine` 驱动 `ExecutionSOPStep`），因此这里按
+「准备一步 → 驱动 SOP」的形态触发单步尝试（不再是自建重试循环）。
 """
 
 from __future__ import annotations
@@ -11,6 +14,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+
+from agentscope.sop import SOP, SOPEngine
 
 from engines.ai.agents.config import DeviceExecutionConfig
 from engines.ai.workflow.workflow import (
@@ -103,6 +108,20 @@ def _make_workflow(provider) -> DeviceExecutionWorkflow:
     )
 
 
+async def _run_one_step(wf: DeviceExecutionWorkflow, step: Step, log: list[dict]) -> None:
+    """按 SOP 走一遍单步：准备平台上下文 → `SOPEngine` 推进 → 过程记录落进 log。
+
+    本文件的执行 / 验收调用点已被 `_stub_steps` 换成桩，故不触发角色上下文重置。
+    """
+    plan = Plan(steps=[step])
+    steps = wf._steps(plan)
+    for idx, item in enumerate(steps, 1):
+        item.prepare(wf._step_context(step, idx, len(plan.steps)))
+        item.sink.usage_before = wf._usage.as_dict()
+    engine = SOPEngine(SOP(name="t", steps=steps), state=None)
+    await wf._drive(engine, plan, log, [])
+
+
 def _stub_steps(wf: DeviceExecutionWorkflow, record: list[tuple], verifier_input: dict) -> None:
     async def fake_execute(step, idx, total, retry_hint="", **_kwargs):
         record.append(("execute",))
@@ -141,14 +160,13 @@ async def test_step_opens_window_before_action_and_reads_after() -> None:
     _stub_steps(wf, record, verifier_input)
 
     step = Step(action="点击打开设备", **{"assert": "设备已打开"})
-    plan = Plan(steps=[step])
     log: list[dict] = []
-    verdict = await wf._run_step(step, 1, 1, plan, log, [])
+    await _run_one_step(wf, step, log)
 
-    assert verdict is not None and verdict.result == "PASS"
     assert [item[0] for item in provider.calls] == ["open", "read"]
-    assert record[0][0] == "execute"
+    assert record[0][0] == "execute" and record[1][0] == "verify"
     assert verifier_input["evidence"]["conclusion"] == "hit"
+    assert log[0]["verifier"]["result"] == "PASS"
     assert log[0]["log_evidence"]["hits"][0]["keyword"] == "switch_on"
     # 读窗基准就是执行侧回传的动作发出时刻
     assert provider.calls[1][2] == [ACTION_TIME]
@@ -163,12 +181,11 @@ async def test_missing_provider_degrades_without_breaking_task() -> None:
     _stub_steps(wf, record, verifier_input)
 
     step = Step(action="点击打开设备", **{"assert": "设备已打开"})
-    plan = Plan(steps=[step])
     log: list[dict] = []
-    verdict = await wf._run_step(step, 1, 1, plan, log, [])
+    await _run_one_step(wf, step, log)
 
-    assert verdict is not None and verdict.result == "PASS"
     assert verifier_input["evidence"] is None
+    assert log[0]["verifier"]["result"] == "PASS"
     assert "log_evidence" not in log[0]
     assert "无（本次未采集到设备日志证据" in _render_log_evidence(None)
 
@@ -188,31 +205,6 @@ def test_action_time_absent_for_read_only_calls() -> None:
         thinking=[],
     )
     assert _first_action_time(role) == ""
-
-
-def test_action_time_skips_previous_step_results() -> None:
-    """上下文累积时，基准只取本步新增的工具返回（真机踩到的缺陷回归）。"""
-    previous_step = {
-        "type": "result",
-        "name": "click_ratio",
-        "output": '{"package": "com.demo", "action_time": "2026-09-28 17:01:12.645"}',
-    }
-    current_step = {
-        "type": "result",
-        "name": "click_ratio",
-        "output": '{"package": "com.demo", "action_time": "2026-09-28 17:01:15.000"}',
-    }
-    role = SimpleNamespace(tool_usage=[previous_step, current_step], thinking=[])
-    # 跳过上一步遗留的 1 条 → 只认本步的 17:01:15.000
-    assert _first_action_time(role, skip_results=1) == "2026-09-28 17:01:15.000"
-    # 不跳过时会把上一步的当基准（旧行为，正是真机暴露的缺陷）
-    assert _first_action_time(role, skip_results=0) == "2026-09-28 17:01:12.645"
-
-
-def test_action_time_empty_when_no_new_results() -> None:
-    """本步没有新增工具返回（被跳过光了）→ 基准为空，交给读窗退回窗口起点。"""
-    role = _executor_result(action_time="2026-09-28 17:01:12.645")
-    assert _first_action_time(role, skip_results=5) == ""
 
 
 def test_rendered_evidence_carries_grades_and_strict_rule() -> None:
@@ -254,9 +246,8 @@ async def test_marked_step_records_executor_log_check_with_log() -> None:
     _stub_steps(wf, record, verifier_input)
 
     step = Step(action="点击开关", assertion="设备上报 switch_on", log_check=True)
-    plan = Plan(steps=[step])
     log: list[dict] = []
-    await wf._run_step(step, 1, 1, plan, log, [])
+    await _run_one_step(wf, step, log)
 
     block = log[0]["executor_log_check"]
     assert block["clicks"][0]["action_time"] == ACTION_TIME
@@ -274,9 +265,8 @@ async def test_unmarked_step_records_clicks_without_log() -> None:
     _stub_steps(wf, record, verifier_input)
 
     step = Step(action="进入详情页", **{"assert": "标题显示 H6810"})
-    plan = Plan(steps=[step])
     log: list[dict] = []
-    await wf._run_step(step, 1, 1, plan, log, [])
+    await _run_one_step(wf, step, log)
 
     block = log[0]["executor_log_check"]
     assert block["clicks"][0]["action_time"] == ACTION_TIME

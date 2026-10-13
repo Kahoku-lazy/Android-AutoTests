@@ -1,7 +1,6 @@
-"""步骤规划角色：接受用户需求，输出步骤计划（goal + steps）。
+"""步骤规划角色：接受用户需求，输出步骤计划（plan.steps）。
 
-继承 `base.AgentRole`，只填自己的配方（提示词与工具子集取自 `config.py`）；
-公共主干（装配 / 接受任务 / 执行 / 出报告）在基类，不在此文件。
+提示词与工具子集取自 `config.py`，公共主干在 `base.AgentRole`。
 """
 
 from __future__ import annotations
@@ -9,11 +8,11 @@ from __future__ import annotations
 from engines.ai.messaging import RoleResult
 
 from .base import AgentRole, RoleSpec
-from .config import DEVICE_PLANNER_TOOLS, PLANNER_PROMPT
+from .config import CHINESE_DEMAND, DEVICE_PLANNER_TOOLS, PLANNER_PROMPT
 
 
 class PlannerRole(AgentRole):
-    """规划角色：接受用户需求，输出步骤计划（goal + steps）。"""
+    """规划角色：接受用户需求，输出步骤计划（plan.steps）。"""
 
     spec = RoleSpec(
         role="planner",
@@ -30,4 +29,5 @@ class PlannerRole(AgentRole):
         Returns:
             RoleResult（output 为 {"plan": {...}} 的 JSON 文本）。
         """
-        return await self._execute(goal)
+        self.mark_scope("规划")
+        return await self._execute(goal + CHINESE_DEMAND)

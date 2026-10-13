@@ -27,12 +27,6 @@ const routes: RouteRecordRaw[] = [
     meta: { title: "工具调试" },
   },
   {
-    path: "/ai-assistant/toolbox/models/:role",
-    name: "ai-model-debug",
-    component: () => import("@/modules/ai-assistant/ModelDebugPage.vue"),
-    meta: { title: "模型调试" },
-  },
-  {
     path: "/ai-assistant/agent/:agentId",
     name: "ai-agent-detail",
     component: () => import("@/modules/ai-assistant/AgentDetail.vue"),

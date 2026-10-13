@@ -106,11 +106,16 @@ def test_read_only_step_yields_no_click() -> None:
     assert block["clicks"] == []
 
 
-def test_previous_step_results_are_skipped() -> None:
+def test_all_rows_belong_to_this_step() -> None:
+    """本步轨迹只含本步的工具返回（角色执行按轮取），因此所有行都参与点击配对。"""
     rows = [_click_row(), _shot_row(), _click_row(CLICK_2), _shot_row(SHOT_2)]
-    block = build_executor_log_check(_role(rows), skip_results=2)
-    assert block["clicks"] == [{"action_time": CLICK_2, "screenshot_path": SHOT_2}]
-    assert build_executor_log_check(_role(rows), skip_results=4)["clicks"] == []
+
+    block = build_executor_log_check(_role(rows))
+
+    assert block["clicks"] == [
+        {"action_time": CLICK_1, "screenshot_path": SHOT_1},
+        {"action_time": CLICK_2, "screenshot_path": SHOT_2},
+    ]
 
 
 def test_log_only_attached_when_step_needs_it() -> None:

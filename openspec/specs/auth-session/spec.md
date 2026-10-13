@@ -1,7 +1,7 @@
 # auth-session Specification
 
 ## Purpose
-TBD - created by archiving change revoke-session-on-logout. Update Purpose after archive.
+约定登出按会话作废本次登录签发的全部令牌，同一账号的其它登录不受影响；前端只保留一个账号的本地会话，登出或续期失败时清空会话并回到登录页。
 
 ## Requirements
 

@@ -1,10 +1,12 @@
 """结果验收角色：对比断言 + 执行截图 + 设备日志证据，判断操作是否真实达成。
 
-继承 `base.AgentRole`，只填自己的配方（提示词与工具子集取自 `config.py`）；
-本文件另含验收特有的截图工具包装（强制保留落盘路径）。公共主干在基类。
+提示词与工具子集取自 `config.py`，另含验收特有的截图工具包装（强制保留落盘路径），
+公共主干在 `base.AgentRole`。
 """
 
 from __future__ import annotations
+
+import inspect
 
 from agentscope.message import TextBlock
 
@@ -12,14 +14,23 @@ from engines.ai.base import ToolSpec
 from engines.ai.messaging import RoleResult
 
 from .base import AgentRole, RoleSpec
-from .config import VERIFIER_PROMPT, VERIFIER_TOOLS
+from .config import CHINESE_DEMAND, VERIFIER_PROMPT, VERIFIER_TOOLS
 
 
 def _force_keep_local_screenshot(handler):
-    """验收工具包装：无论模型是否传 keep_local，一律保留路径回传。"""
+    """验收工具包装：无论模型是否传 keep_local，一律以 keep_local=True 调用并保留路径回传。
+
+    `user_id` 只在被包装的实现声明了它时才转发；否则调用会报 `unexpected keyword argument`。
+    """
+    try:
+        accepts_user_id = "user_id" in inspect.signature(handler).parameters
+    except (TypeError, ValueError):  # 内建/不可自省的实现：按不接收处理
+        accepts_user_id = False
 
     def wrapped(serial: str, keep_local: bool = True, user_id: str = "", **kwargs):
-        return handler(serial, keep_local=True, user_id=user_id, **kwargs)
+        if accepts_user_id:
+            return handler(serial, keep_local=True, user_id=user_id, **kwargs)
+        return handler(serial, keep_local=True, **kwargs)
 
     wrapped.__name__ = getattr(handler, "__name__", "screenshot_page")
     wrapped.__doc__ = getattr(handler, "__doc__", "") or ""
@@ -85,6 +96,7 @@ class VerifierRole(AgentRole):
             RoleResult（output 为 {"result","click_timer","logAssertionTimer",
             "logAssertionInfo","screenshot","actual"} JSON）。
         """
+        self.mark_scope(f"步骤 {idx}/{total} 验收")
         text = (
             f"当前设备 serial：{serial}\n"
             f"断言 assert：{assertion}\n"
@@ -108,6 +120,7 @@ class VerifierRole(AgentRole):
             "logAssertionInfo 由平台按你的检查调用自动填；"
             "screenshot 抄本次截图工具返回的 screenshot_path。"
         )
+        text += CHINESE_DEMAND
         content: list = [TextBlock(text=text)]
         if screenshot is not None:
             content.append(screenshot)

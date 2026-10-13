@@ -1,17 +1,8 @@
-"""智能体基类：模型创建 + 角色基类。
+"""智能体基类：模型连接创建（`create_model`）+ 角色配方（`RoleSpec`）+ 角色基类（`AgentRole`）。
 
-- `create_model`：按 provider 创建底层大模型连接（平台只支持 deepseek / dashscope 两项；
-  DeepSeek 多模态档内部走 OpenAI 兼容客户端）。
-- `RoleSpec`：角色配方（角色名 / 系统提示词 / 工具子集 / 视觉 / 上下文 / ReAct 参数）。
-- `AgentRole`：角色实体基类，封装一个 AgentScope Agent，固化「装配 → 接受任务 → 执行 → 报告」
-  不变主干；子类只填 RoleSpec，赋什么配置就编排成什么角色。
-
-本文件是**智能体包内**的基类，与 `engines/ai/base.py`（引擎协议：AiEngine / TaskRequest /
-TaskResult）不是一回事：那个是引擎对外契约，这个是包内实现基类。
-
-边界：本文件不认识任何具体角色——具体角色在同包的 `planner.py` / `executor.py` / `verifier.py`，
-各自从 `config.py` 取自己的提示词与工具子集。回复怎么读在 `engines.ai.messaging`，
-用量与计价在 `engines.ai.billing`，角色间协作在 `engines.ai.workflow`。
+`AgentRole` 封装一个 AgentScope Agent，固化「装配 → 接受任务 → 执行(reply) → 生成报告」主干，
+子类只填 `RoleSpec` 与 `run()`。本模块不认识任何具体角色，具体角色在同包的
+`planner.py` / `executor.py` / `verifier.py`。
 """
 
 from __future__ import annotations
@@ -25,6 +16,7 @@ from agentscope.agent import Agent, ContextConfig, ReActConfig
 from agentscope.credential import DashScopeCredential, DeepSeekCredential, OpenAICredential
 from agentscope.message import (
     DataBlock,
+    Msg,
     TextBlock,
     ThinkingBlock,
     ToolCallBlock,
@@ -36,15 +28,16 @@ from agentscope.model import DashScopeChatModel, DeepSeekChatModel, OpenAIChatMo
 from engines.ai.base import ToolSpec
 from engines.ai.billing import model_cost
 from engines.ai.messaging import (
+    EventStreamRecorder,
     RoleResult,
     collect_from_blocks,
     collect_trace,
     context_summary,
-    count_tool_results,
     extract_screenshot,
     extract_screenshot_path,
     prompt_to_input_text,
 )
+from engines.ai.process_log import SCOPE_STANDALONE, AgentProcessLog
 from engines.ai.registry import ConfigurationError
 from engines.ai.tools import build_toolkit
 
@@ -80,8 +73,8 @@ class RoleSpec:
 
 # ── provider 兼容分支 ──
 
-# 平台支持的 provider（与 Django 侧 VALID_PROVIDERS 相等，一致性测试守护）：
-# 只保留 DeepSeek 与阿里百炼；不再有 OpenAI 兼容兜底分支
+# 平台支持的 provider（与 Django 侧 VALID_PROVIDERS 相等，由一致性测试守护）：
+# deepseek / dashscope 两项，无 OpenAI 兼容兜底分支。
 SUPPORTED_PROVIDERS = frozenset({"deepseek", "dashscope"})
 
 
@@ -89,21 +82,18 @@ SUPPORTED_PROVIDERS = frozenset({"deepseek", "dashscope"})
 
 
 def create_model(config: ModelConfig, stream: bool = True, vision: bool = False):
-    """按 provider 创建底层 ChatModel 连接（deepseek / dashscope）。
-
-    DeepSeek 多模态档（vision=True）走 OpenAI 兼容客户端 + thinking，这是该档位的实现方式，
-    与"是否支持 openai 这个 provider"无关——平台只支持 deepseek 与 dashscope 两项 provider。
+    """按 provider 创建底层 ChatModel 连接。
 
     Args:
         config: 模型连接配置（provider/model_name/api_key/base_url）。
-        stream: 是否流式；角色执行用非流式（stream=False），因需一次拿全 JSON。
-        vision: 是否多模态；True 走 OpenAI 兼容类（formatter 支持 image_url 图片）。
+        stream: 是否流式。角色执行传 False（需一次拿全 JSON）。
+        vision: 是否多模态；True 时按 DeepSeek 多模态档走 OpenAI 兼容客户端以支持图片输入。
 
     Returns:
         对应 provider 的 ChatModel 实例。
 
     Raises:
-        ConfigurationError: provider 不在 SUPPORTED_PROVIDERS 内（不再静默降级）。
+        ConfigurationError: provider 不在 SUPPORTED_PROVIDERS 内。
     """
     api_key = config.api_key or ""
     base_url = config.base_url
@@ -144,17 +134,9 @@ def create_model(config: ModelConfig, stream: bool = True, vision: bool = False)
 
 
 class AgentRole:
-    """Agent 角色实体基类：封装一个 AgentScope Agent，可接受任务并产出任务报告。
+    """Agent 角色实体基类：封装一个 AgentScope Agent，接受任务并产出任务报告。
 
-    固化「装配 Agent → 接受任务 → 执行(reply) → 生成报告」不变主干；子类只填
-    spec（角色配置）与 run()（拼任务输入）。赋什么 RoleSpec 就编排成什么角色。
-
-    设计要点：
-    - 类属性 spec 是角色的静态配方（每角色恒定，故用类属性而非构造参数）。
-    - _execute 是执行骨架（子类不覆盖）；子类 run() 只拼 content 再调 _execute。
-    - 本类是复用基类而非多态接口：三个子类 run() 入参不同（goal / action+idx /
-      assertion+截图），共享的是内部机制，不是统一签名。
-    - 角色间协作不在此类，在 workflow 包。
+    子类填 `spec`（角色配方）并实现 `run()`（拼任务输入）；执行骨架 `_execute` 不覆盖。
     """
 
     spec: ClassVar[RoleSpec]
@@ -166,20 +148,41 @@ class AgentRole:
         user_id: str = "",
         skill_dirs: list[str] | None = None,
         system_prompt: str | None = None,
+        media_root: str = "",
+        log_path: str = "",
+        task_id: int = 0,
     ):
         """装配本角色：1 份角色配置 + 1 份模型连接 + 全量工具 → 1 个 Agent。
 
         Args:
             config: 本角色的模型连接（provider/model_name/api_key/base_url）。
-            tools: 平台全量工具（内部按 self.spec.tool_names 子集装配）。
-            user_id: 注入工具包装层（写工具鉴权/归属）。
-            skill_dirs: 启用的 skill 文件夹绝对路径（空则不挂 Skill）。
-            system_prompt: 覆盖用的系统提示词；缺省取本角色 spec.prompt（config.py 常量）。
+            tools: 平台全量工具（内部按 `self.spec.tool_names` 取子集；同名设备动作工具由引擎自带）。
+            user_id: 注入工具包装层，用于写工具的鉴权与归属。
+            skill_dirs: 启用的 skill 文件夹绝对路径；空则不挂 Skill。
+            system_prompt: 覆盖用的系统提示词；None 时取 `self.spec.prompt`。
+            media_root: 截图等证据的落盘根目录；空则用引擎默认目录。
+            log_path: 过程日志基路径；空则用 `<当前目录>/logs/agents.log`。
+            task_id: 任务 id（只用于过程日志的任务与步骤标识；0 表示无任务上下文）。
         """
         resolved_prompt = self.spec.prompt if system_prompt is None else system_prompt
         self.config = config
         self.system_prompt = resolved_prompt
+        self.media_root = str(media_root or "")
+        self.task_id = int(task_id or 0)
+        self.process_log = AgentProcessLog(log_path)
+        self._scope = self.scope_label("")
         self.agent = self._assemble(config, tools, user_id, skill_dirs or [], resolved_prompt)
+
+    def scope_label(self, stage: str) -> str:
+        """过程日志的「任务与步骤」列：有任务时带任务号，无任务时如实写独立运行。"""
+        detail = str(stage or "").strip()
+        if not self.task_id:
+            return f"{SCOPE_STANDALONE} · {detail}" if detail else SCOPE_STANDALONE
+        return f"任务 {self.task_id} · {detail}" if detail else f"任务 {self.task_id}"
+
+    def mark_scope(self, stage: str) -> None:
+        """标记本角色当前所处的阶段（写进过程日志的任务与步骤列）。"""
+        self._scope = self.scope_label(stage)
 
     @property
     def model_name(self) -> str:
@@ -219,12 +222,28 @@ class AgentRole:
         )
 
     def _select_tools(self, tools: list[ToolSpec]) -> list[ToolSpec]:
-        """按 spec.tool_names 子集从全量 tools 选取（保持顺序，跳过不存在的名）。"""
-        by_name = {t.name: t for t in tools}
-        return [by_name[n] for n in self.spec.tool_names if n in by_name]
+        """按 `spec.tool_names` 从全量 tools 选取（保持顺序，跳过不存在的名）。
+
+        设备动作工具由引擎自带（`tool_device`）：同名注入条目被跳过，注入实现不再可见。
+        """
+        from engines.ai.tools.tool_device import device_tool_specs
+
+        # 属性缺省按空处理：本方法也允许按 spec 直接调用（不带装配实例）
+        media_root = str(getattr(self, "media_root", "") or "")
+        owned = {spec.name: spec for spec in device_tool_specs(media_root)}
+        injected = {tool.name: tool for tool in tools}
+        selected: list[ToolSpec] = []
+        for name in self.spec.tool_names:
+            if name in owned:
+                if name in injected:
+                    logger.debug("设备动作工具 %s 由引擎自带，跳过注入的同名实现", name)
+                selected.append(owned[name])
+            elif name in injected:
+                selected.append(injected[name])
+        return selected
 
     async def ask(self, content: str) -> RoleResult:
-        """单轮问答：供调试台 / 工具对本角色说一句话（复用执行骨架，不改动它）。
+        """单轮问答：把一句话发给本角色并取回任务报告。
 
         Args:
             content: 要发给本角色的纯文本。
@@ -235,7 +254,7 @@ class AgentRole:
         return await self._execute(content)
 
     async def _execute(self, content: str | list) -> RoleResult:
-        """执行任务骨架：调本角色 Agent → 打日志 → 解析成任务报告。
+        """执行任务骨架：消费事件流（实时写过程日志）→ 解析成任务报告。
 
         Args:
             content: 拼好的消息内容（str 或块列表），由子类 run() 负责拼装。
@@ -244,23 +263,52 @@ class AgentRole:
             RoleResult：本轮的输出/思考/工具/上下文/用量/费用。
         """
         input_text = prompt_to_input_text(content)
-        msg = await self.agent.reply(UserMsg(name="user", content=content))
+        recorder = EventStreamRecorder(
+            self.process_log,
+            role=self.spec.role,
+            model=self.model_name,
+            scope=self._scope,
+        )
+        msg = await self._stream_reply(content, recorder)
         self._dump_reply(msg)
-        return self._to_result(msg, input_text=input_text)
+        return self._to_result(msg, input_text=input_text, recorder=recorder)
 
-    def _to_result(self, msg, *, input_text: str = "") -> RoleResult:
-        """把一次 reply + 完整 context 解析成任务报告。
+    async def _stream_reply(self, content: str | list, recorder: EventStreamRecorder):
+        """消费 `reply_stream`：事件到达即写过程日志，末尾取回最终消息。
 
-        最终 reply 的 TextBlock → output（供 JSON 契约解析）；
-        思考 / 工具调用与返回扫整段 agent.state.context（ReAct 中间轮在 context 里）。
+        非流式模型同样逐块给出事件，两种档位走同一路径。
+        """
+        final = None
+        async for item in self.agent.reply_stream(
+            UserMsg(name="user", content=content), yield_final_msg=True
+        ):
+            if isinstance(item, Msg):
+                final = item
+                continue
+            recorder.consume(item)
+        recorder.finish()
+        return final if final is not None else self._last_message()
+
+    def _to_result(
+        self,
+        msg,
+        *,
+        input_text: str = "",
+        recorder: EventStreamRecorder | None = None,
+    ) -> RoleResult:
+        """把一次回复 + 完整 context 解析成任务报告。
+
+        思考与工具记录优先取事件流汇总（`recorder`）；事件流缺失时回退扫整段 context。
         """
         output_parts: list[str] = []
         for block in getattr(msg, "content", None) or []:
             if isinstance(block, TextBlock):
                 output_parts.append(block.text)
         context = getattr(self.agent.state, "context", None) or []
-        thinking, tool_usage = collect_trace(context)
-        # context 若为空（极端实现差异），回退扫最终 reply 块
+        thinking = list(getattr(recorder, "thinking", []) or [])
+        tool_usage = list(getattr(recorder, "tool_usage", []) or [])
+        if not thinking and not tool_usage:
+            thinking, tool_usage = collect_trace(context)
         if not thinking and not tool_usage:
             thinking, tool_usage = collect_from_blocks(getattr(msg, "content", None) or [])
         usage = self._usage_dict(msg)
@@ -273,18 +321,11 @@ class AgentRole:
             tool_usage=tool_usage,
             context=context_summary(context),
             screenshot=extract_screenshot(getattr(msg, "content", None)),
-            screenshot_path=extract_screenshot_path(context),
+            screenshot_path=str(getattr(recorder, "screenshot_path", "") or "")
+            or extract_screenshot_path(context),
             usage=usage,
             cost=model_cost(self.config.provider, self.model_name, usage),
         )
-
-    def tool_results_seen(self) -> int:
-        """当前上下文里已有的工具返回条数。
-
-        上下文是**整个任务累积**的，工作流用这个数字切出「本步新增」的工具返回，
-        否则本步的动作发出时刻会取到上一步的值（真机验证时踩到过）。
-        """
-        return count_tool_results(getattr(self.agent.state, "context", None) or [])
 
     def _usage_dict(self, msg) -> dict:
         """从一次 reply 提取本轮用量 dict（屏蔽 ChatUsage 对象差异）。"""
@@ -297,15 +338,12 @@ class AgentRole:
         }
 
     def _last_message(self, fallback=None):
-        """取 agent 最近一条消息（打日志用）；无上下文回退 fallback。"""
+        """取 agent 最近一条消息；无上下文时返回 fallback。"""
         context = getattr(self.agent.state, "context", None)
         return context[-1] if context else fallback
 
     def _dump_reply(self, msg) -> None:
-        """打印一次 reply 的完整内容块（截图只打 media_type 脱敏，供开发者调试）。
-
-        工具结果的详细返回已由 tool_wrapper 的【工具返回】日志负责，此处只打 name/state。
-        """
+        """把一次 reply 的内容块写进日志（截图只记 media_type，工具结果只记 name/state）。"""
         target = self._last_message(msg)
         logger.info(
             "===== %s | role=%s name=%s =====",

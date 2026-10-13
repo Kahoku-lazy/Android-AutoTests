@@ -1,12 +1,6 @@
 /** Toolbox + MCP + Skills API — TypeScript */
 import djangoClient from "@/shared/api-client"
-import type {
-  ToolboxListResponse,
-  AgentOpResponse,
-  ModelDebugLogBasis,
-  TaskLogCheck,
-  TaskLogEvidence,
-} from "@/shared/types/ai"
+import type { ToolboxListResponse, AgentOpResponse } from "@/shared/types/ai"
 
 // ── 共享工具箱项 DTO（类型跟着实现走，消费方从此处 import） ──
 export interface SharedToolItem {
@@ -146,101 +140,6 @@ export async function updatePlatformConfig(
   payload: Partial<PlatformConfig>,
 ): Promise<{ status: boolean; data?: PlatformConfig; message?: string }> {
   const { data } = await djangoClient.post("/ai/platform-config/update/", payload)
-  return data
-}
-
-// ── 单模型调试（工具箱「模型调试」）──
-
-export type ModelDebugRole = "planner" | "executor" | "verifier"
-
-export interface ModelDebugTool {
-  name: string
-  read_only: boolean
-  category: string
-  enabled: boolean
-  /** 是否进调试对话：false = 只属于角色生产子集（设备池记账工具），调试对话不装配 */
-  debug_mounted: boolean
-}
-
-export interface ModelDebugModelSummary {
-  provider: string
-  model_name: string
-  has_api_key: boolean
-  configured: boolean
-}
-
-export interface ModelDebugRoleConfig {
-  role: ModelDebugRole
-  label: string
-  vision: boolean
-  /** 该角色工具子集里是否有工具需要设备（决定页内是否必须选设备） */
-  needs_device: boolean
-  model: ModelDebugModelSummary
-  tools: ModelDebugTool[]
-}
-
-export interface ModelDebugSkills {
-  gate_on: boolean
-  shared_by_roles: boolean
-  items: { name: string; path: string }[]
-}
-
-export interface ModelDebugConfig {
-  agent_id: number
-  agent_name: string
-  role: ModelDebugRoleConfig
-  skills: ModelDebugSkills
-}
-
-/** 引擎回溯出的工具调用/返回记录（type=call 带 input，type=result 带 output/state） */
-export interface ModelDebugToolCall {
-  type: "call" | "result"
-  name: string
-  input?: Record<string, unknown>
-  output?: string
-  state?: string
-}
-
-export interface ModelDebugReply {
-  role: ModelDebugRole
-  label: string
-  model_name: string
-  reply: string
-  thinking?: string[]
-  /** 本轮工具调用轨迹（调试对话挂真实工具，故会非空） */
-  tool_usage?: ModelDebugToolCall[]
-  /** 本轮设备点击证据（平台装配；无副作用点击时缺省） */
-  log_check?: TaskLogCheck
-  /** 验收角色的调试日志证据（平台按取证基准从日志文件回溯取出；取不到时缺省） */
-  log_evidence?: TaskLogEvidence
-  /** 该证据的取证基准（基准时刻 / 来源 / 读取的文件 / 无日志时的原因） */
-  log_basis?: ModelDebugLogBasis
-  /** 本轮检查的日志关键词（平台按 check_device_log 的调用自动填；没检查过则缺省） */
-  log_assertion_info?: string
-  usage?: Record<string, number>
-  cost?: number
-}
-
-export async function fetchModelDebugConfig(
-  role: ModelDebugRole | string,
-): Promise<{ status: boolean; data?: ModelDebugConfig; message?: string }> {
-  const { data } = await djangoClient.get(`/ai/model-debug/${encodeURIComponent(role)}/`)
-  return data
-}
-
-/** 单角色调试对话：挂该角色真实工具（可能真机操作），故显式不设等待上限（serial 条件必填） */
-export async function chatWithModelDebug(
-  role: ModelDebugRole | string,
-  text: string,
-  serial = "",
-): Promise<{ status: boolean; data?: ModelDebugReply; message?: string }> {
-  const { data } = await djangoClient.post(
-    `/ai/model-debug/${encodeURIComponent(role)}/chat/`,
-    { text, serial },
-    // timeout: 0 = 不设上限（axios 语义）。MUST NOT 依赖"不传超时参数"：
-    // 共享客户端自带默认上限，不显式取消等于仍受它约束。
-    { timeout: 0 },
-  )
   return data
 }
 

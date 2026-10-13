@@ -1,7 +1,7 @@
 # frontend-l0-design-tokens Specification
 
 ## Purpose
-TBD - created by archiving change converge-module-theme-tokens. Update Purpose after archive.
+约定模块样式里的语义色、状态色与文本字号取自已登记的设计令牌，不再把 Element Plus 默认调色板或等价字面色当作模块色；分类色板的每个色相只声明一次。
 
 ## Requirements
 

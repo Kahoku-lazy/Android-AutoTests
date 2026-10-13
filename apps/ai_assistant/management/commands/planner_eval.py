@@ -7,7 +7,7 @@
 
 设计要点（见 openspec/changes/archive/2026-10-08-add-planner-eval/design.md）：
 
-- **生产同源装配**：复用 `model_debug.build_device_models_for_agent`（与 `model_test`、模型调试台
+- **生产同源装配**：复用 `model_assembly.build_device_models_for_agent`（与 `model_test`
   同一份装配），只取 planner 角色——否则测的不是生产实际那份提示词与工具子集。
 - **判据分两级**：硬性项（契约 / 关键词覆盖 / 步骤数区间 / 页面流工具 / 日志标记区分度）判失败；
   疑似项（多副作用动作、断言空话、结构不稳定）只提示不判失败——提示词本身规定的
@@ -32,7 +32,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from apps.ai_assistant.api import get_platform_agent
 from apps.ai_assistant.engine_adapter import build_tool_specs
-from apps.ai_assistant.model_debug import build_device_models_for_agent
+from apps.ai_assistant.model_assembly import build_device_models_for_agent
 from apps.ai_assistant.skills_catalog import list_enabled_skill_dirs
 from engines.ai.agents import build_device_models
 from engines.ai.workflow.workflow import Plan, _coerce, _parse_json

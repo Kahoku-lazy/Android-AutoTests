@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 from algorithms.hierarchy import parse_hierarchy_xml
-from engines.device.android.u2 import U2Engine
+from engines.device.android import U2Engine
 from engines.device.base import UiEngine
 
 FIXTURE_XML = (
@@ -70,13 +70,17 @@ def test_protocol_declares_raw_xml_only():
 @pytest.mark.device_pool
 def test_engine_impl_does_not_import_algorithms():
     """引擎实现不得 import 算法层（只扫 import 语句，注释里提到算法层不算违规）。"""
-    src = Path("engines/device/android/u2.py").read_text(encoding="utf-8")
-    offenders = [
-        line.strip()
-        for line in src.splitlines()
-        if line.strip().startswith(("from algorithms", "import algorithms"))
-    ]
-    assert offenders == []
+    for rel in (
+        "engines/device/android/android_device.py",
+        "engines/device/android/__init__.py",
+    ):
+        src = Path(rel).read_text(encoding="utf-8")
+        offenders = [
+            line.strip()
+            for line in src.splitlines()
+            if line.strip().startswith(("from algorithms", "import algorithms"))
+        ]
+        assert offenders == [], f"{rel} 直触算法层：{offenders}"
 
 
 @pytest.mark.unit

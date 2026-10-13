@@ -1,7 +1,7 @@
 # ai-page-flow-capture Specification
 
 ## Purpose
-TBD - created by archiving change add-ai-page-flow-capture. Update Purpose after archive.
+约定 AI 保存页面元素时可写入中文别名，未指定时回退为文本或资源标识；同一条页面跳转重复写入时复用已有记录，并能把结构化页面与跳转编译成页面流文档。
 ## Requirements
 ### Requirement: 元素可带别名保存到元素定位
 

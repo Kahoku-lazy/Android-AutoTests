@@ -1,7 +1,7 @@
 # ai-platform-task Specification
 
 ## Purpose
-TBD - created by archiving change add-platform-task-route. Update Purpose after archive.
+约定平台任务复用规划、执行、验收三模型工作流，执行与验收使用平台工具，写操作随任务下发自动放行，三个角色都使用文本模型。
 
 ## Requirements
 

@@ -44,11 +44,19 @@ Django SHALL 通过 `TaskRequest` 传入规划用户输入（字段名仍为 `go
 - **THEN** Django 按 `status` 写 `AITask` 状态，`summary` 写 `result`（device_control 不再恒空）
 
 ### Requirement: 引擎零 apps 依赖
-`ai_engines` SHALL 不 import `apps.*` 内部实现；业务工具经 `TaskRequest.tools` 注入，引擎只负责包装与调用。`ai_engines` 是唯一可触碰第三方 AI 框架的层。
+`ai_engines` SHALL 不 import `apps.*` 内部实现；数据类业务工具经 `TaskRequest.tools` 注入，引擎只负责包装与调用；设备动作类工具 SHALL 由引擎自带（设备工具 + 登记清单），不再经注入，装配时 MUST 跳过注入清单里的同名设备动作工具。`ai_engines` 是唯一可触碰第三方 AI 框架的层。引擎 MUST NOT 直接引用具体设备实现（只能经设备引擎协议），也 MUST NOT 因设备动作而获得对设备池台账与设备日志的直接访问。
 
 #### Scenario: 工具注入
-- **WHEN** 引擎需要平台工具
+- **WHEN** 引擎需要平台数据类工具（如页面流文档）
 - **THEN** 工具函数由 Django 层注入（`TaskRequest.tools`），引擎不直接 import `apps` 业务模块
+
+#### Scenario: 设备动作不经注入
+- **WHEN** 引擎装配设备动作工具
+- **THEN** 它使用引擎自带的设备工具，注入清单里的同名设备动作工具被跳过，模型可见的设备动作只有一份
+
+#### Scenario: 引擎不碰设备实现与台账
+- **WHEN** 引擎执行设备动作
+- **THEN** 它只经设备引擎协议（协议实现或替身）取设备句柄，不 import 具体设备实现、不读写设备池台账、不直接访问设备日志
 
 ### Requirement: 引擎注册与 fail-fast
 `get_ai_engine` SHALL 按 `AI_ENGINE_REGISTRY` 惰性加载引擎并进程内缓存；未注册名 / 不可导入 / 构建失败 SHALL 抛 `ConfigurationError`，不做静默回退。
@@ -106,3 +114,22 @@ Django 侧组装任务时 SHALL 校验配置完整性：`device_control` 线路�
 #### Scenario: 三份常量均非空
 - **WHEN** 读取引擎三份提示词常量
 - **THEN** 规划 / 执行 / 验收三份均非空且为 Markdown 正文
+
+### Requirement: 引擎以框架步骤承载执行与验收
+
+引擎 SHALL 使用 AgentScope 的标准作业流程（SOP）承载「执行 + 验收」的步骤化编排，MUST NOT 再自建执行 ↔ 验收的重试循环。引擎对 AgentScope 的依赖版本 SHALL 满足该模块存在；升级依赖 MUST NOT 改变引擎零平台依赖的边界。
+
+#### Scenario: 依赖面满足步骤编排
+
+- **WHEN** 引擎按当前依赖版本装配并运行一次任务
+- **THEN** 所用 AgentScope 版本提供 SOP 模块，且引擎既有的模型 / 凭证 / 消息块 / 事件流导入面不受影响
+
+#### Scenario: 引擎仍零平台依赖
+
+- **WHEN** 检查引擎源码的 import
+- **THEN** 引擎 MUST NOT import 平台模块；运行状态与过程日志的落点仍由调用方注入
+
+#### Scenario: 编排职责不再重复实现
+
+- **WHEN** 检查引擎的步骤推进实现
+- **THEN** 步骤推进、驳回计数与状态由框架步骤承载，引擎侧 MUST NOT 再保留同职责的自建循环

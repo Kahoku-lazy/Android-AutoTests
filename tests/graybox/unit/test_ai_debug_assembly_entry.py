@@ -1,17 +1,20 @@
-"""灰盒·单元测试 — 模型调试台 / model_test 共用的三角色装配入口。
+"""灰盒·单元测试 — `model_test` / `planner_eval` 共用的三角色装配入口。
 
 守的是**真实装配**这条链路：本用例刻意**不打桩被测函数本身**，只用桩 agent 调真实的
-`model_debug.build_device_models_for_agent`，因此装配链上任何一环名字悬空或签名漂移都会失败。
+`model_assembly.build_device_models_for_agent`，因此装配链上任何一环名字悬空或签名漂移都会失败。
 
 历史缺陷（本用例的由来）：该函数调用了未导入的 `build_device_models`，而旧用例把这个装配函数
 整体打桩，真实路径从未被执行 —— 缺陷从 `f823a6a7` 起潜伏，直到手工跑 `model_test` 才暴露。
+
+模块来源：原「模型调试」后端模块；调试页退役后装配函数拆到
+`apps/ai_assistant/model_assembly.py`，本用例随之改指新模块（断言口径不变）。
 """
 
 from types import SimpleNamespace
 
 import pytest
 
-from apps.ai_assistant import model_debug
+from apps.ai_assistant import model_assembly
 from engines.ai.agents import DeviceExecutionConfig, ExecutorRole, PlannerRole, VerifierRole
 
 pytestmark = [pytest.mark.unit, pytest.mark.ai_assistant]
@@ -51,13 +54,15 @@ def stub_externals(monkeypatch):
 
     被测函数本身、工具装配（build_tool_specs）与角色构造都走真实实现。
     """
-    monkeypatch.setattr(model_debug, "decrypt_key", lambda raw: f"plain::{raw}")
-    monkeypatch.setattr(model_debug, "list_enabled_skill_dirs", lambda: [])
+    monkeypatch.setattr(model_assembly, "decrypt_key", lambda raw: f"plain::{raw}")
+    monkeypatch.setattr(model_assembly, "list_enabled_skill_dirs", lambda: [])
 
 
 def test_assembly_entry_builds_config_and_three_roles(stub_externals):
     """装配入口必须能真跑通，产出「1 份三角色配置 + 3 个角色对象」。"""
-    config, planner, executor, verifier = model_debug.build_device_models_for_agent(_stub_agent())
+    config, planner, executor, verifier = model_assembly.build_device_models_for_agent(
+        _stub_agent()
+    )
 
     assert isinstance(config, DeviceExecutionConfig)
     assert config.max_loops == 2
@@ -79,7 +84,9 @@ def test_assembly_entry_builds_config_and_three_roles(stub_externals):
 
 def test_assembly_entry_keeps_role_recipes(stub_externals):
     """三个角色对象的配方与生产规格同源（角色名 / 视觉标记）。"""
-    _config, planner, executor, verifier = model_debug.build_device_models_for_agent(_stub_agent())
+    _config, planner, executor, verifier = model_assembly.build_device_models_for_agent(
+        _stub_agent()
+    )
 
     assert (planner.spec.role, planner.spec.vision) == ("planner", False)
     assert (executor.spec.role, executor.spec.vision) == ("executor", True)

@@ -1,11 +1,13 @@
 # ai-device-action Specification
 
 ## Purpose
-TBD - created by archiving change add-ai-device-action. Update Purpose after archive.
+
+定义 AI 智能体操作 Android 设备的行为契约：动作清单与坐标/方向语义、设备可用性与占用约束、动作后回传前台应用供跳转判定、包名发现、动作发出时刻留痕，以及设备动作执行归属（引擎侧自带工具 + 登记清单，平台侧保持现状）。
+
 ## Requirements
 ### Requirement: 智能体可执行设备 UI 动作
 
-系统 SHALL 提供一个平台写工具，使 AI 智能体可对指定设备执行 `start_app / stop_app / click / long_click / swipe / back / input_text / current` 之一；`click`/`long_click` MUST 使用设备像素坐标，`swipe` MUST 使用方向与距离，`back` MUST 触发系统返回键，`current` MUST 不产生设备副作用、仅读取前台应用。
+系统 SHALL 使 AI 智能体可对指定设备执行 `start_app / stop_app / click / long_click / swipe / back / input_text` 之一，并 SHALL 保留只读的 `current`（不产生设备副作用，仅读取前台应用）。`click`/`long_click` MUST 使用设备像素坐标，`swipe` MUST 使用方向与距离，`back` MUST 触发系统返回键。这些写动作 SHALL 由引擎侧设备工具经系统中转层直接执行；平台侧同名工具在本变更中 SHALL 保持现状不变（继续服务外部工具通道与工具箱调试页），引擎装配时 MUST 跳过注入清单里的同名设备动作工具，使同一动作在模型可见的工具集里只有一份。工具名、入参、返回形状与前端可见行为 MUST NOT 变化。
 
 #### Scenario: 启动被测 App
 
@@ -21,6 +23,11 @@ TBD - created by archiving change add-ai-device-action. Update Purpose after arc
 
 - **WHEN** 智能体对指定设备调用 `current`
 - **THEN** 返回该设备当前前台 `package` 与 `activity`，且不改变设备状态
+
+#### Scenario: 写动作由引擎工具执行
+
+- **WHEN** 引擎在没有平台注入实现的情况下执行任一写动作
+- **THEN** 动作经系统中转层直接作用于目标设备，且模型可见的设备动作只有引擎自带的一份
 
 ### Requirement: 设备动作受可用性与占用约束
 
@@ -47,12 +54,17 @@ TBD - created by archiving change add-ai-device-action. Update Purpose after arc
 
 ### Requirement: 智能体可发现设备已安装的 App 包名
 
-系统 SHALL 提供一个只读平台工具，使 AI 智能体可按关键词查询设备已安装包名，以自主获取被测 App 包名后再启动该 App。
+系统 SHALL 保留一个平台侧只读工具，可按关键词查询设备已安装包名（供获取被测 App 包名后再启动该 App）。该工具 MUST NOT 装配进执行模型的工具子集——执行模型的工具子集只含引擎自带的设备动作工具；其调用入口 SHALL 为工具网关与工具箱调试页。
 
 #### Scenario: 按关键词获取包名
 
-- **WHEN** 智能体对指定设备调用包名查询并传入关键词（如 `govee`）
+- **WHEN** 经工具网关或工具箱调试页调用包名查询并传入关键词（如 `govee`）
 - **THEN** 返回该设备已安装包名中包含该关键词的包名列表（如 `com.govee.home`）
+
+#### Scenario: 执行模型不再装配该工具
+
+- **WHEN** 检查设备执行链路的执行模型工具子集
+- **THEN** 其中不含包名查询工具
 ### Requirement: 设备动作记录并回传发出时间
 
 系统 SHALL 在每个产生设备副作用的动作工具执行时记录该动作的**发出时刻**，取值 MUST 为北京时间（UTC+8）且精确到毫秒；该时刻 MUST 随该工具结果一并返回，使编排层能把它与该步截图一起交给验收模型。读取类动作 MUST NOT 被记为动作发出时刻。
@@ -66,3 +78,79 @@ TBD - created by archiving change add-ai-device-action. Update Purpose after arc
 
 - **WHEN** 智能体调用只读动作（如读取当前前台应用）
 - **THEN** 该调用不产生设备副作用，且不被记录为动作发出时刻
+
+### Requirement: 设备工具带登记清单
+
+引擎 SHALL 以一份登记清单描述设备动作工具：每项含名字、说明书（描述与参数表）、实现引用与元数据（是否只读、是否串行、是否设备动作）。该清单 MUST 为纯数据且不依赖任何 AI 框架，框架翻译发生在清单之外的单独一层。
+
+#### Scenario: 登记清单是唯一真相源
+
+- **WHEN** 引擎装配设备工具
+- **THEN** 装配只依据登记清单的名字、说明书与实现引用，不在别处再写一份描述
+
+#### Scenario: 清单不依赖框架
+
+- **WHEN** 检查登记清单模块的依赖
+- **THEN** 它只含纯数据与实现引用，不 import 任何 AI 框架
+
+### Requirement: 平台侧设备工具在本变更中保持不变
+
+平台侧既有的设备动作工具 SHALL 在本变更中保持现状：其实现、入参、返回形状、分类元数据与启停开关行为 MUST NOT 变化；引擎侧设备工具 MUST NOT 改变平台工具的调用结果。
+
+#### Scenario: 平台工具行为不变
+
+- **WHEN** 经外部工具通道或工具箱调试页调用平台侧设备工具
+- **THEN** 其行为与本次变更前一致
+
+#### Scenario: apps 目录零改动
+
+- **WHEN** 审阅本变更的改动范围
+- **THEN** `apps/` 下没有任何文件改动
+
+### Requirement: 截图工具只编一次并同时给出模型图与本地图
+
+截图工具 SHALL 取**原始帧**后只编码一次作为模型输入，且该编码 MUST 为**无损、不缩放**（原始帧原尺寸 → PNG → base64），MUST NOT 对给模型的图做有损压缩或降采样，也 MUST NOT 先落到有损格式再二次压缩。工具返回 SHALL 同时包含给模型的图片数据（base64 与媒体类型 `image/png`）与本地图片信息（相对路径与文件名）。本地图片 SHALL 以**毫秒**精度时间戳命名（`capture_YYYYmmdd_HHMMSS_mmm.jpg`），SHALL 保存为全分辨率，且扩展名 MUST 与真实格式一致。`keep_local` 为假时 MUST NOT 写本地文件，但仍 SHALL 把图片数据给模型。
+
+#### Scenario: 一次编码
+
+- **WHEN** 角色调用截图工具
+- **THEN** 设备只被取一次原始帧；给模型的图片由该原始帧直接编码得到，MUST NOT 存在中间的重复压缩
+
+#### Scenario: 同时返回 base64 与本地路径
+
+- **WHEN** 截图成功且 `keep_local` 为真
+- **THEN** 工具返回里既有给模型的图片数据，也有本地图片的相对路径与文件名
+
+#### Scenario: 本地图毫秒命名且格式一致
+
+- **WHEN** 截图落盘
+- **THEN** 文件名为 `capture_YYYYmmdd_HHMMSS_mmm.jpg`（毫秒三位），内容为全分辨率 JPEG，扩展名与真实格式一致
+
+#### Scenario: 模型图不超过档位
+
+- **WHEN** 角色调用截图工具并拿到给模型的图片
+- **THEN** 该图片为**无损格式（PNG）**，且尺寸与原始帧一致（不缩放、不有损压缩）
+
+#### Scenario: 不落盘时仍给模型
+
+- **WHEN** `keep_local` 为假
+- **THEN** 不写本地文件，本地路径与文件名如实为空，但给模型的图片数据仍 SHALL 返回
+
+### Requirement: xpath 读取文本时列出全部命中
+
+当 `xpath_action` 的动作为读取文本时，系统 SHALL 返回该 xpath 命中的全部元素。每条命中 MUST 带有与点击、长按相同的下标、元素文本，以及屏幕像素范围。返回中的 `text` SHALL 为入参 `index` 所指向那一条的文本；`index` 超出命中范围或没有任何命中时，`text` MUST 为空字符串。`count` MUST 等于命中条数。存在检查、点击与长按的行为 MUST NOT 因本要求而改变。
+
+#### Scenario: 多个相同文本都带下标和范围
+
+- **WHEN** 页面上有两个文本都是 `ON` 的元素命中同一 xpath，并以 `index` 为 0 读取文本
+- **THEN** 返回的 `count` 为 2，`text` 为 `ON`，`items` 含下标 0 与 1，且每条都有该元素的像素范围
+
+#### Scenario: 指定下标决定 text
+
+- **WHEN** 同一 xpath 命中至少两条，并以 `index` 为 1 读取文本
+- **THEN** `text` 为下标 1 那一条的文本，`items` 仍列出全部命中及其下标
+
+#### Scenario: 没有命中
+
+- **WHEN** 该 xpath 没有命中任何元素
+- **THEN** 返回 `count` 为 0，`text` 为空字符串，`items` 为空列表

@@ -1,7 +1,7 @@
 # ai-agent-model-config Specification
 
 ## Purpose
-TBD - created by archiving change agent-model-config-consolidation. Update Purpose after archive.
+约定智能体配置页统一管理主推理、视觉与强模型，用开关决定是否把对话交给强模型，强模型名留空时回退视觉模型，并在需要图片的角色绑了纯文本模型时给出提醒。
 
 ## Requirements
 

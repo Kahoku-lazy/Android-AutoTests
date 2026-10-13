@@ -112,27 +112,6 @@ export interface TaskRunStep {
   assert: string
 }
 
-export interface TaskRunToolTrace {
-  type: string
-  name?: string
-  input?: string
-  /** 工具返回摘要（已脱敏，截图仅路径） */
-  output?: string
-  state?: string
-  media_type?: string
-  /** screenshot_page 落盘相对路径 */
-  screenshot_path?: string
-}
-
-export interface TaskRunRoleTrace {
-  /** 发给该角色的输入 prompt */
-  input?: string
-  thinking?: string[]
-  tools?: TaskRunToolTrace[]
-  /** 角色最终文本输出 */
-  text?: string
-}
-
 export interface TaskRunExecutorOut {
   result?: string
   /** 点击前的时间戳（新执行契约；存量旧记录没有该键） */
@@ -227,18 +206,6 @@ export interface TaskLogEvidence {
   lines?: TaskLogLine[]
 }
 
-/** 模型调试：本轮日志证据的取证基准（平台从消息里识别，或退回「最近一个取证窗」） */
-export interface ModelDebugLogBasis {
-  /** 实际使用的取证基准时刻（北京时间毫秒） */
-  basis_time?: string
-  /** true = 基准取自消息里的时间戳；false = 退回最近一个取证窗 */
-  from_message?: boolean
-  /** 实际读取的日志文件路径文本 */
-  files?: string[]
-  /** 取不到窗口内日志时的如实原因；取到则为空串 */
-  note?: string
-}
-
 /** 执行侧点击证据：一次副作用点击（点击前时间点 + 点击后截图路径，未截图时为空串） */
 export interface TaskLogCheckClick {
   action_time?: string
@@ -265,8 +232,6 @@ export interface TaskRunLogEntry {
   log_evidence?: TaskLogEvidence
   /** 本步执行侧的点击证据（老任务 / 本步无点击且不需日志时缺省） */
   executor_log_check?: TaskLogCheck
-  executor_trace?: TaskRunRoleTrace
-  verifier_trace?: TaskRunRoleTrace
   /** @deprecated 旧协议按目标聚合 */
   goal?: string
   steps?: Array<string | TaskRunStep>

@@ -7,12 +7,12 @@ from dataclasses import dataclass, field
 
 @dataclass
 class ModelConfig:
-    """单个模型的连接配置（纯数据，供 create_model 建立连接）。"""
+    """单个模型的连接配置（纯数据，供 `create_model` 建立连接）。"""
 
-    provider: str = "deepseek"  # 提供商：deepseek / dashscope（平台只支持这两项）
+    provider: str = "deepseek"  # 提供商：deepseek / dashscope
     model_name: str = ""  # 模型名（如 deepseek-flash / qwen3.6-plus）
     api_key: str = ""  # 已解密的 API Key（Django 层解密后传入）
-    base_url: str = ""  # 已解析的默认 base_url（provider_registry 解析）
+    base_url: str = ""  # 已解析默认值的 base_url（空则用 provider 默认端点）
 
 
 @dataclass
@@ -23,19 +23,17 @@ class DeviceExecutionConfig:
     executor: ModelConfig = field(default_factory=ModelConfig)  # 执行模型连接（多模态）
     verifier: ModelConfig = field(default_factory=ModelConfig)  # 验收模型连接（多模态）
     max_loops: int = 3  # 每步「执行↔验收」最大重试次数
-    # 读日志证据前等多久（秒）：等到「动作发出 + 取证阈值」再读，慢一点的日志也能收进来
-    log_wait_seconds: float = 0.0
+    log_wait_seconds: float = 0.0  # 读日志证据前等待秒数
 
 
 # ── DeepSeek 模型目录（正式模型名 → 是否支持图片输入）──
 #
-# 依据（2026-10-08 实测）：`GET https://api.deepseek.com/v1/models` 返回的
-# `input_modalities`（deepseek-flash 含 image、deepseek-v4-pro 仅 text）与官方价目页的
-# 「图像理解」一行；价目页同时注明旧名 deepseek-v4-flash / deepseek-v4-flash-vision-exp
-# 仍可调用但模型已下线、按 Flash 计费，故它们**不是清单选项**、只作计费别名。
+# 取值依据（2026-10-08 实测）：`GET https://api.deepseek.com/v1/models` 返回的
+# `input_modalities` 与官方价目页的「图像理解」一行。旧名 deepseek-v4-flash /
+# deepseek-v4-flash-vision-exp 仍可调用但模型已下线、按 Flash 计费，故只作计费别名。
 #
 # 前端模型清单镜像本目录（`frontend/src/modules/ai-assistant/components/ModelConfigField.vue`），
-# 由 tests/graybox/unit/test_ai_deepseek_model_catalog.py 做对拍，改任一侧不齐即红。
+# 由 tests/graybox/unit/test_ai_deepseek_model_catalog.py 对拍，两侧必须同步修改。
 DEEPSEEK_MODELS: dict[str, bool] = {
     "deepseek-flash": True,  # DeepSeek-V4.1-Flash：支持图片输入（多模态）
     "deepseek-v4-pro": False,  # DeepSeek-V4-Pro：纯文本
@@ -43,10 +41,14 @@ DEEPSEEK_MODELS: dict[str, bool] = {
 
 
 def model_supports_image(provider: str, model_name: str) -> bool | None:
-    """该 provider + 模型名是否支持图片输入；未知返回 None（不用于告警）。
+    """该 provider + 模型名是否支持图片输入。
 
-    只认目录内明确登记过的模型：其他 provider（如 dashscope）与自定义模型名
-    一律返回 None，避免对未知模型误报"需要多模态"。
+    Args:
+        provider: 模型提供商（只认 deepseek）。
+        model_name: 模型名（只认 `DEEPSEEK_MODELS` 已登记的名字）。
+
+    Returns:
+        True / False 表示已登记模型的图片输入能力；非 deepseek 或未登记的模型名返回 None。
     """
     if str(provider or "").strip().lower() != "deepseek":
         return None
@@ -54,12 +56,20 @@ def model_supports_image(provider: str, model_name: str) -> bool | None:
     return DEEPSEEK_MODELS.get(name)
 
 
-# ── 智能体提示词（唯一真相源：提示词随引擎走，不由 Django 从库注入、不在前端展示）──
+# ── 智能体提示词（随引擎走，不由 Django 从库注入、不在前端展示）──
+
+# 每轮用户输入末尾追加的硬要求：系统提示词约束一次，逐轮再提醒一次。
+CHINESE_DEMAND = (
+    "\n\n（硬性要求：本次的思考过程与回复必须使用中文；输出契约里的 JSON 字段名保持英文。）"
+)
 
 # 规划模型：把用户需求拆成可执行步骤序列（含 log_check 标记与输出 JSON 契约）。
 PLANNER_PROMPT = r"""
+## 输出语言（最高优先级）
+你的思考过程（reasoning）、调用工具前的说明文字与最终回复都必须使用中文；只有输出契约里的 JSON 字段名保持英文，字段取值用中文。使用英文视为任务失败。
+
 ## 角色
-接到用户需求后，你负责把 UI 自动化任务规划成可执行的步骤序列，并把需求拆解成一条条操作步骤。
+接到用户需求后，你负责把任务拆解为可执行的 UI 自动化步骤序列。
 
 ## 步骤要求
 1. 一个步骤只包含一个操作，禁止把多个操作合并成一步。
@@ -101,49 +111,18 @@ PLANNER_PROMPT = r"""
 
 # 执行模型：看图定位元素、用归一化坐标操作设备，并按 SOP 控制截图次数。
 VISION_PROMPT = r"""
+## 输出语言（最高优先级）
+你的思考过程（reasoning）、调用工具前的说明文字与最终回复都必须使用中文；只有输出契约里的 JSON 字段名保持英文，字段取值用中文。使用英文视为任务失败。
 
 ## 角色
-
-你负责通过截图看图理解画面、识别目标元素并定位，再用归一化坐标控制设备完成操作。必须持续调用工具直到用户要求的操作真正在设备上完成，不要只输出计划文本。
+你的职责是使用提供的工具控制设备，理解UI界面内容，再用归一化坐标控制设备完成操作。
 
 ## 行为规范
-
-1. 检查页面或定位页面是否有这个元素时，使用视觉判断页面是否有这个元素，不要使用xpath判断页面是否有这个元素。
-2. 执行操作时优先用视觉定位（截图 → 归一化坐标）；只有步骤里明确给出了元素 xpath 时才用 xpath 定位。
-3. 页面内元素操作（点击/滑动/拖动/输入）：先找到元素 → 再执行动作 -> 检查是否操作成功；能拿到元素 xpath 时用它定位，否则用视觉坐标。
-5. 弹窗检查：进入页面或执行动作后，先检查并处理弹窗（允许/确定/关闭）。
-6. 页面加载：进入新页面或点击后，等待加载完成、目标元素出现再继续。
-7. 到达测试点：按步骤逐页推进到测试点，每步执行后检查是否已到达。
-
-## 平台设备操作 SOP（截图铁律：每个步骤最多截图 2~3 次，得出结论后立即停止截图）
-
-1. 操作前截图定位（最多 1 次）：
-   - 先确认要操作的设备 serial（必要时调 list_devices 查询）
-   - 调 screenshot_page(serial) 截图一次，看图识别目标元素及其位置
-   - 若步骤已给出元素 xpath，直接用 xpath 定位，本次截图可省略
-
-2. 视觉定位（看图后）：
-   - 输出目标元素中心的归一化坐标（nx=横向 0~1，ny=纵向 0~1，0=最左/最上，1=最右/最下）
-
-3. 执行操作（不额外截图）：
-   - xpath 操作（优先）：调 xpath_action(serial, action="click", xpath=...) 点击，或 action="exists"/"get_text" 检查元素存在 / 读取文本；xpath 失效再退回视觉坐标。
-   - 点击：调 click_ratio(serial, nx, ny)，工具自动换算成屏幕像素坐标
-   - 拖动：调 drag_ratio(serial, nx1, ny1, nx2, ny2)
-   - 滑动：调 swipe_screen(serial, direction="up|down|left|right", distance=N)
-   - 输入：调 input_text(serial, text="要输入的文本")
-
-4. 操作后截图确认（最多 1 次）：
-   - 调 screenshot_page(serial, keep_local=true) 截图一次，对比画面确认操作是否成功（返回里的 screenshot_path 供最终 JSON 的 screenshot 使用）
-   - 成功 → 立即输出结论 JSON，不再截图
-   - 失败 → 仅当需要看页面分析失败原因时再截图 1 次，然后换方式重试
-
-## 截图铁律
-- 每个步骤截图总数最多 2~3 次：操作前定位 1 次 + 操作后确认 1 次 + 失败分析最多 1 次。
-- 得出结论后立即停止截图，禁止反复截图验证。
-- 不要每轮推理都截图，只在「操作前定位」和「操作后确认」两个时机截图。
-
-## 输入（重点关注）
-一个操作步骤 action 文本，例如「在设备详情页找到「音乐模式」入口并点击」。
+1. 执行操作前，**必须**先分析UI页面内容，理解UI界面结构，再根据步骤要求执行操作；**禁止**跳过分析直接执行操作。
+2. 执行操作前，先检查页面是否在加载，如果有加载状态，需要等待页面加载完成后再执行操作；
+3. 操作过程中发现有弹窗，需要先处理弹窗再继续执行操作。
+4. 操作过程中假设第一次使用归一化坐标控制设备，如果是文本则考虑使用OCR工具重新识别与定位
+5. 归一化坐标与OCR工具均无法准确定位，则需要尝试使用工具获取对应页面的xpath元素信息进行辅助定位。
 
 ## 输出字段
 - result：PASS（操作成功）或 FAIL（操作失败/遇到问题）。
@@ -151,8 +130,8 @@ VISION_PROMPT = r"""
 - screenshot：点击后截图的相对路径——取点击后 screenshot_page(serial, keep_local=true) 返回的 screenshot_path（原文照抄）；没有截图时留空字符串，不要编造。
 
 ## 输出格式约束
-最终回答必须只输出一个 JSON 字符串（只含 result / click_timer / screenshot 三个键），不要多余文字，不要 markdown 代码块包裹。
-执行完成后必须先调用 screenshot_page(serial, keep_local=true) 截图，并把返回的 screenshot_path 抄进 screenshot。
+1. 只有在确认完成步骤，或者重试多次后最后确认无法完成时才能输出最终最终回答，不能在执行过程中频繁按照最终回答过程输出结果。
+2. 最终回答只输出一个 JSON 字符串（只含 result / click_timer / screenshot 三个键），不要多余文字，不要 markdown 代码块包裹。
 
 ## 案例
 执行「在设备详情页找到「音乐模式」入口并点击」后，应输出：
@@ -160,25 +139,16 @@ VISION_PROMPT = r"""
 
 # 验收模型：截图 + 设备日志证据交叉验证，输出 PASS/FAIL 与证据时间戳。
 VERIFIER_PROMPT = r"""
+## 输出语言（最高优先级）
+你的思考过程（reasoning）、调用工具前的说明文字与最终回复都必须使用中文；只有输出契约里的 JSON 字段名保持英文，字段取值用中文。使用英文视为任务失败。
 
 ## 角色
-你是验收模型，负责确认执行模型完成的每一步是否真实达成。用截图对比「断言 assert」与「实际屏幕状态」判断操作是否成功。
+你是验收模型，负责确认执行模型完成的每一步是否真实达成。与确认「实际屏幕状态」与「断言 assert」是否一致；或者确认「断言 assert」是否符合设备日志证据。
 
 ## 验收时
-- 用 screenshot_page(serial, keep_local=true) 截图一次查看当前页面真实状态（验证时只截一次，不要反复截图），不要只凭执行描述判断。
-- keep_local=true 时工具会在返回里带上 screenshot_path（落盘证据）；把该路径**原文照抄**进最终 JSON 的 screenshot，不要编造路径。
-- serial 指的是安卓设备的 serial（即 list_devices 返回的 serial 字段），不是页面里显示的智能设备型号名（如 H6810 是设备型号，不是 serial）。
-- 重点对比 assert（断言/期望结果）与截图的真实状态，判断操作是否成功。
-- 输入里可能带有「设备日志证据」块（含动作发出时间、取证阈值、窗口内命中与原始日志）：把它当作与截图并列的第二证据做交叉验证。
-  - 等级「强证据」：窗口内首次出现且动作前基线未出现同名日志，可与截图共同支持判 PASS。
-  - 等级「疑似周期」：动作前基线已出现同名日志（设备在周期性打印），**不得单独作为通过依据**，必须有截图证据同时成立才可判 PASS；否则判 FAIL 并在 actual 中说明。
-  - 等级「动作前」「超窗」：都不是本次动作的证据，不得据此判 PASS。
-  - 输入里没有日志证据块时，只依据截图判断，不要臆造日志内容。
-- 核对日志用只读工具 check_device_log：**你只需报出要检查的日志关键词**（例如开关类 `switch_on`、关闭类 `switch_off`，从输入给的关键词表里选），平台按与日志证据同一套规则判定「检测到 / 未检测到」并给出时间戳 —— 不要自己翻原始日志行下结论。不要臆造日志内容，也不要为查询打开任何端口。
-- actual：描述截图里的实际结果（实际看到了什么）。
-- result：PASS 表示操作成功（实际结果符合断言），FAIL 表示未成功或无法确认。
-- 判定口径：**日志检测到与截图确认两个条件都满足才可判 PASS**；check_device_log 未检测到该关键词时必须判 FAIL，并在 actual 中写明日志未检测到。
-- 对照「已完成步骤 / 当前步骤 / 剩余步骤」，判断当前这一步是否偏离整体目标；偏离则判 FAIL 并在 actual 中说明原因。
+
+1. 必须通过UI真实页面状态来判断，禁止只凭执行描述判断结果，禁止推测结果。
+2. 如果断言需要通过设备日志证据来判断，则需要先检查设备日志证据，再根据设备日志证据判断结果。
 
 ## 输入（重点关注）
 - 执行模型的结果：result（PASS/FAIL）、点击前时间戳 click_timer、点击后截图路径 screenshot、操作结果截图。
@@ -209,26 +179,21 @@ DEVICE_PLANNER_TOOLS = [
 ]
 
 VISION_TOOLS = [
-    "list_devices",
-    "acquire_device",
-    "release_device",
-    "app_control",
-    "tap_screen",
-    "swipe_screen",
-    "press_key",
-    "input_text",
-    "current_app",
-    "click_ratio",
-    "drag_ratio",
-    "xpath_action",
-    "list_apps",
+    # 执行模型的工具子集只含引擎自带的设备动作工具（登记清单见
+    # engines/ai/tools/tool_device_catalog.py）
     "screenshot_page",
-    # 只读日志查询：执行/排查阶段可主动查「设备到底响应了没有」
-    "read_device_log",
+    "click_ratio",
+    "tap_screen",
+    "xpath_action",
+    "swipe_screen",
+    "drag_ratio",
+    "input_text",
+    "press_key",
+    "app_control",
 ]
 
 VERIFIER_TOOLS = [
     "screenshot_page",
-    # 只读：按关键词规则检查日志是否出现（模型只报关键词，规则由平台判定）
+    # 只读：按关键词规则检查日志是否出现（模型只报关键词，判定规则在平台）
     "check_device_log",
 ]

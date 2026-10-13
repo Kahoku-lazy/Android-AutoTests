@@ -1,17 +1,12 @@
 <script setup lang="ts">
 /**
- * 单轮尝试卡片：执行结果常显；Agent 过程可折叠（默认收起）。
+ * 单轮尝试卡片：执行结果常显，下接日志检查与设备日志证据。
  */
 import { computed } from "vue"
 import StepLogCheck from "./StepLogCheck.vue"
 import StepLogEvidence from "./StepLogEvidence.vue"
 import type { TaskStepAttempt } from "../helpers/task-detail"
-import {
-  attemptTraceSides,
-  hasLogCheck,
-  toolScreenshotUrl,
-  toolTraceLine,
-} from "../helpers/task-detail"
+import { hasLogCheck } from "../helpers/task-detail"
 import { STEP_EXEC_NO_SHOT_TEXT } from "../constants"
 
 const props = defineProps<{
@@ -19,7 +14,6 @@ const props = defineProps<{
   maxLoops: number
 }>()
 
-const sides = computed(() => attemptTraceSides(props.attempt))
 const showLogCheck = computed(() => hasLogCheck(props.attempt.logCheck))
 /** 新执行契约的点击证据（点击前时间戳 / 点击后截图路径）是否有内容可显示 */
 const hasExecEvidence = computed(
@@ -136,46 +130,6 @@ const hasExecEvidence = computed(
 
     <!-- 验收依据：设备日志证据（摘要常显 + 详情折叠） -->
     <StepLogEvidence :evidence="attempt.logEvidence" />
-
-    <!-- Agent 过程：默认全部收起 -->
-    <el-collapse v-if="sides.length" class="tac-trace">
-      <el-collapse-item v-for="side in sides" :key="side.key" :name="side.key" :title="side.label">
-        <el-collapse class="tac-trace tac-trace--nested">
-          <el-collapse-item v-if="side.trace.input" :name="`${side.key}-input`" title="输入">
-            <p class="tac-trace__body">{{ side.trace.input }}</p>
-          </el-collapse-item>
-          <el-collapse-item
-            v-if="side.trace.thinking?.length"
-            :name="`${side.key}-think`"
-            title="思考过程"
-          >
-            <p v-for="(t, ti) in side.trace.thinking" :key="ti" class="tac-trace__body">{{ t }}</p>
-          </el-collapse-item>
-          <el-collapse-item
-            v-if="side.trace.tools?.length"
-            :name="`${side.key}-tools`"
-            title="工具"
-          >
-            <ul class="tac-trace__tools">
-              <li v-for="(tool, ti) in side.trace.tools" :key="ti">
-                <span>{{ toolTraceLine(tool) }}</span>
-                <el-image
-                  v-if="toolScreenshotUrl(tool)"
-                  :src="toolScreenshotUrl(tool)"
-                  :preview-src-list="[toolScreenshotUrl(tool)]"
-                  fit="contain"
-                  class="tac__img tac__img--tool"
-                  preview-teleported
-                />
-              </li>
-            </ul>
-          </el-collapse-item>
-          <el-collapse-item v-if="side.trace.text" :name="`${side.key}-text`" title="文本">
-            <p class="tac-trace__body">{{ side.trace.text }}</p>
-          </el-collapse-item>
-        </el-collapse>
-      </el-collapse-item>
-    </el-collapse>
   </article>
 </template>
 
@@ -271,53 +225,6 @@ const hasExecEvidence = computed(
   border-radius: var(--app-radius-sm);
   background: var(--app-bg-subtle, var(--paper));
   cursor: zoom-in;
-}
-.tac__img--tool {
-  max-height: 140px;
-  margin-top: var(--app-space-xs);
-}
-.tac-trace {
-  border: none;
-}
-.tac-trace--nested {
-  padding-left: var(--app-space-sm);
-}
-.tac-trace :deep(.el-collapse-item__header) {
-  font-size: var(--app-size-sm);
-  font-weight: 700;
-  color: var(--ink);
-  height: auto;
-  line-height: 1.4;
-  padding: var(--app-space-xs) 0;
-  border: none;
-  background: transparent;
-}
-.tac-trace :deep(.el-collapse-item__wrap),
-.tac-trace :deep(.el-collapse-item__content) {
-  border: none;
-  background: transparent;
-  padding: 0 0 var(--app-space-xs);
-}
-.tac-trace :deep(.el-collapse-item) {
-  border-left: 2px solid var(--ai-warm-border);
-  padding-left: var(--app-space-sm);
-  margin-bottom: var(--app-space-xs);
-}
-.tac-trace__body {
-  margin: 0 0 var(--app-space-xs);
-  font-size: var(--app-size-sm);
-  font-weight: 400;
-  color: var(--ai-ink-soft, var(--app-text-secondary));
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-.tac-trace__tools {
-  margin: 0;
-  padding-left: 1.2em;
-  font-size: var(--app-size-sm);
-  color: var(--ai-ink-soft, var(--app-text-secondary));
-  line-height: 1.5;
 }
 .is-ok {
   color: var(--app-status-success-text);

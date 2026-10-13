@@ -1,7 +1,7 @@
 # admin-managed-shared-agent Specification
 
 ## Purpose
-TBD - created by archiving change admin-managed-shared-agent. Update Purpose after archive.
+约定智能体由超级管理员统一配置并共享：创建、修改、删除、导入工具箱与查看完整密钥仅超级管理员可做，普通用户可以查看这些智能体并在其上继续自己的对话。
 ## Requirements
 ### Requirement: 超级管理员身份判定
 平台 API MUST 能将 JWT 认证用户解析为平台真实用户，并 MUST 能判定其是否为超级管理员，供权限控制复用。

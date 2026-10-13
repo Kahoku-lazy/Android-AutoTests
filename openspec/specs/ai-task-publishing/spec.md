@@ -1,7 +1,7 @@
 # ai-task-publishing Specification
 
 ## Purpose
-TBD - created by archiving change refactor-ai-two-routes-task-publishing. Update Purpose after archive.
+约定用户从任务卡片提交设备控制任务：标题与目标必填，可附 Word 或 PDF，未选设备时绑定当时第一台在线设备，并按线路分发；列表展示标题与附件名，详情可查看目标、规划输入、日志证据与执行结果。
 
 ## Requirements
 
@@ -274,3 +274,31 @@ TBD - created by archiving change refactor-ai-two-routes-task-publishing. Update
 
 - **WHEN** 后端下发的该块缺少某一项（如某次点击后未截图）
 - **THEN** 前端如实呈现该结论，MUST NOT 用其它数据补齐或重新推导
+
+### Requirement: 任务过程记录不含模型思考与工具明细
+
+任务过程记录 MUST NOT 包含模型思考过程与工具调用 / 返回明细（执行侧与验收侧皆然）；这些内容 SHALL 只出现在过程日志文件中。过程记录 SHALL 保留展示与判定所需的全部数据：规划步骤、执行结果三字段、验收结论五字段、验证截图路径、日志检查块与设备日志证据。
+
+#### Scenario: 新任务的过程记录不含过程明细
+
+- **WHEN** 查看一个新任务的某步过程记录
+- **THEN** 该步记录中不含思考过程与工具调用 / 返回明细字段
+
+#### Scenario: 判定所需数据仍完整
+
+- **WHEN** 查看一个新任务的某步过程记录
+- **THEN** 仍能读到该步的执行结果三字段、验收结论五字段、验证截图路径，以及需日志核对时的日志检查与设备日志证据
+
+### Requirement: 任务详情页不展示模型思考与工具明细
+
+任务详情页 MUST NOT 呈现模型思考过程与工具调用 / 返回明细（含任何折叠区块）。页面 SHALL 保留：规划模型给出的步骤清单、每一步的执行结果、验证截图、日志检查块与设备日志证据；这些区块 MUST 为只读展示。
+
+#### Scenario: 步骤卡片不含思考与工具区块
+
+- **WHEN** 用户打开一个任务的详情页
+- **THEN** 每张步骤尝试卡片上都不出现思考过程或工具调用明细的区块
+
+#### Scenario: 结果与证据仍可见
+
+- **WHEN** 用户打开一个已完成任务的详情页
+- **THEN** 仍能看到规划步骤、每步执行结果、验证截图；被标记需日志核对时仍能看到日志检查与设备日志证据

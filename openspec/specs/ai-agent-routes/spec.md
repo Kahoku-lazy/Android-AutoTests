@@ -1,7 +1,7 @@
 # ai-agent-routes Specification
 
 ## Purpose
-TBD - created by archiving change refactor-ai-two-routes-task-publishing. Update Purpose after archive.
+约定一个智能体可以配置多条能力线路，每条线路自带规划模型与执行模型；线路中的 API Key 加密存储，读取时脱敏，不把明文交还给非超级管理员。
 ## Requirements
 ### Requirement: 智能体支持多线路模型配置
 

@@ -1,7 +1,7 @@
 # ai-verifier-output Specification
 
 ## Purpose
-定义设备执行链路**验收模型**的输出契约：只回 `result`（PASS/FAIL）、`click_timer`（点击前时间戳）、`logAssertionTimer`（检测到日志关键词的时间戳，未检测到为空）、`screenshot`（验证截图路径）与 `actual`（截图里实际看到什么）五个字段，并规定各字段的取值来源、空值口径，以及工作流、任务过程记录、任务详情页与验收模型调试对话如何按新契约呈现。
+定义设备执行链路**验收模型**的输出契约：只回 `result`（PASS/FAIL）、`click_timer`（点击前时间戳）、`logAssertionTimer`（检测到日志关键词的时间戳，未检测到为空）、`screenshot`（验证截图路径）与 `actual`（截图里实际看到什么）五个字段，并规定各字段的取值来源、空值口径，以及工作流、任务过程记录、任务详情页如何按新契约呈现。
 
 ## Requirements
 

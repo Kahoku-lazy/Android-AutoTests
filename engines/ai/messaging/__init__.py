@@ -1,15 +1,15 @@
-"""消息与事件包（叶子）—— 智能体通信的读取与记录。
+"""消息与事件包 —— 智能体回复与上下文的读取与记录。
 
-公开导出：角色任务报告 `RoleResult` 与把消息块/上下文读成语义记录的函数。
-后续变更的事件流出口（消费 AgentScope `reply_stream` 并打印日志）落在本包。
+公开导出角色任务报告 `RoleResult`、消息块与上下文 → 语义记录的函数，
+以及消费 `reply_stream` 事件流的 `EventStreamRecorder`。
 """
 
+from .events import EventStreamRecorder
 from .messages import (
     RoleResult,
     collect_from_blocks,
     collect_trace,
     context_summary,
-    count_tool_results,
     extract_screenshot,
     extract_screenshot_path,
     prompt_to_input_text,
@@ -19,11 +19,11 @@ from .messages import (
 )
 
 __all__ = [
+    "EventStreamRecorder",
     "RoleResult",
     "collect_from_blocks",
     "collect_trace",
     "context_summary",
-    "count_tool_results",
     "extract_screenshot",
     "extract_screenshot_path",
     "prompt_to_input_text",

@@ -5,8 +5,8 @@
 2. 无效输出（缺 result / 布尔 result / 非 JSON 对象）不成契约（由调用方走 FAIL 兜底）；
 3. 取不到的坐标默认空串，不编造；
 4. 平台按日志检查工具的实际调用回填关键词（并只在模型留空时补时间戳）；
-5. 工作流按 `result == "PASS"` 判通过；`FAIL` 时把 `actual` 作为原因回灌给执行模型重试，
-   并把该原因写进任务的失败步骤记录。
+5. 编排走 AgentScope 官方 SOP：`result == "PASS"` 判通过；被驳回时把 `actual` 作为说明
+   回灌给执行模型重试，用尽驳回次数则该步与整轮失败，并把原因写进失败步骤记录。
 """
 
 from __future__ import annotations
@@ -18,11 +18,9 @@ from types import SimpleNamespace
 import pytest
 
 from engines.ai.agents.config import DeviceExecutionConfig
+from engines.ai.messaging import RoleResult
 from engines.ai.workflow.workflow import (
     DeviceExecutionWorkflow,
-    ExecutionOutput,
-    Plan,
-    Step,
     VerificationOutput,
     _coerce,
     _fill_log_assertion,
@@ -132,21 +130,97 @@ def test_not_detected_leaves_timer_empty() -> None:
     assert filled.log_assertion_timer == ""
 
 
-# ── 判定与回灌 ──
+# ── 判定与回灌（编排走官方 SOP）──
 
 
-class _StubRole:
-    """只提供 run() 里会调的上下文重置（模型本身被桩掉）。"""
+def _role_result(output: str, role: str) -> RoleResult:
+    return RoleResult(
+        role=role,
+        model_name="stub",
+        output=output,
+        input_text="",
+        thinking=[],
+        tool_usage=[],
+        context=[],
+        screenshot=None,
+        screenshot_path="",
+        usage={"input_tokens": 1, "output_tokens": 1, "cache_input_tokens": 0},
+        cost=0.0,
+    )
+
+
+class _StubPlanner:
+    """桩规划角色：直接给出计划，不碰模型。"""
+
+    model_name = "stub-planner"
+
+    def __init__(self, steps: list[dict]):
+        self._steps = steps
 
     def reset_context(self) -> None:
         pass
 
+    async def run(self, goal: str) -> RoleResult:
+        return _role_result(json.dumps({"plan": {"steps": self._steps}}), "planner")
 
-def _workflow(max_loops: int = 2) -> DeviceExecutionWorkflow:
+
+class _StubExecutor:
+    """桩执行角色：按顺序回放给定的执行结果，记录每次拿到的重试提示。"""
+
+    model_name = "stub-executor"
+
+    def __init__(self, outputs: list[dict]):
+        self._outputs = outputs
+        self.hints: list[str] = []
+
+    def reset_context(self) -> None:
+        pass
+
+    async def run(self, serial, action, idx, total, retry_hint="") -> RoleResult:
+        self.hints.append(retry_hint)
+        out = self._outputs[min(len(self.hints) - 1, len(self._outputs) - 1)]
+        return _role_result(json.dumps(out), "executor")
+
+
+class _StubVerifier:
+    """桩验收角色：按顺序回放给定的验收结论。"""
+
+    model_name = "stub-verifier"
+
+    def __init__(self, verdicts: list[dict]):
+        self._verdicts = verdicts
+        self.seen: list[tuple] = []
+
+    def reset_context(self) -> None:
+        pass
+
+    async def run(
+        self,
+        serial,
+        assertion,
+        idx,
+        total,
+        exec_result,
+        exec_evidence,
+        screenshot,
+        log_evidence="",
+        keyword_catalog="",
+    ) -> RoleResult:
+        self.seen.append((assertion, exec_result, exec_evidence))
+        out = self._verdicts[min(len(self.seen) - 1, len(self._verdicts) - 1)]
+        return _role_result(json.dumps(out), "verifier")
+
+
+def _workflow(
+    steps: list[dict],
+    execs: list[dict],
+    verdicts: list[dict],
+    max_loops: int = 2,
+) -> DeviceExecutionWorkflow:
     return DeviceExecutionWorkflow(
-        planner=_StubRole(),
-        executor=_StubRole(),
-        verifier=_StubRole(),
+        planner=_StubPlanner(steps),
+        executor=_StubExecutor(execs),
+        verifier=_StubVerifier(verdicts),
         config=DeviceExecutionConfig(max_loops=max_loops),
         serial="dev-1",
     )
@@ -154,78 +228,48 @@ def _workflow(max_loops: int = 2) -> DeviceExecutionWorkflow:
 
 @pytest.mark.asyncio
 async def test_fail_verdict_feeds_actual_back_as_retry_hint() -> None:
-    wf = _workflow()
-    hints: list[str] = []
+    wf = _workflow(
+        [{"action": "点击开关", "assert": "灯亮"}],
+        [{"result": "FAIL", "click_timer": "t1", "screenshot": ""}],
+        [{"result": "FAIL", "actual": "灯没亮"}],
+    )
 
-    async def fake_execute(step, idx, total, retry_hint="", **_kwargs):
-        hints.append(retry_hint)
-        return ExecutionOutput(result="FAIL", click_timer="t1", screenshot=""), None, _exec_role()
+    result = await wf.run("开灯")
 
-    async def fake_verify(step, idx, total, exec_out, screenshot, log_evidence=None, **_kwargs):
-        return (
-            VerificationOutput(result="FAIL", actual="灯没亮"),
-            None,
-            SimpleNamespace(screenshot_path="", tool_usage=[], thinking=[], output="{}"),
-        )
-
-    wf._execute_step = fake_execute  # type: ignore[method-assign]
-    wf._verify_step = fake_verify  # type: ignore[method-assign]
-
-    step = Step(action="点击开关", **{"assert": "灯亮"})
-    log: list[dict] = []
-    verdict = await wf._run_step(step, 1, 1, Plan(steps=[step]), log, [])
-
-    assert verdict is not None and verdict.result == "FAIL"
-    assert hints == ["", "灯没亮"]  # 第二次执行拿到失败原因
-    assert log[0]["verifier"]["result"] == "FAIL"
-    assert log[0]["verifier"]["actual"] == "灯没亮"
+    assert wf.executor.hints == ["", "灯没亮"]  # 第二次执行拿到失败原因
+    assert result["status"] == "fail"
+    assert result["log"][0]["verifier"]["result"] == "FAIL"
+    assert result["log"][0]["verifier"]["actual"] == "灯没亮"
 
 
 @pytest.mark.asyncio
 async def test_pass_verdict_passes_without_retry() -> None:
-    wf = _workflow(max_loops=3)
-    hints: list[str] = []
+    wf = _workflow(
+        [{"action": "点击开关", "assert": "灯亮"}],
+        [{"result": "PASS", "click_timer": "t1", "screenshot": ""}],
+        [{"result": "PASS", "actual": "灯已亮"}],
+        max_loops=3,
+    )
 
-    async def fake_execute(step, idx, total, retry_hint="", **_kwargs):
-        hints.append(retry_hint)
-        return ExecutionOutput(result="PASS", click_timer="t1", screenshot=""), None, _exec_role()
+    result = await wf.run("开灯")
 
-    async def fake_verify(step, idx, total, exec_out, screenshot, log_evidence=None, **_kwargs):
-        return (
-            VerificationOutput(result="PASS", actual="灯已亮"),
-            None,
-            SimpleNamespace(screenshot_path="v.jpg", tool_usage=[], thinking=[], output="{}"),
-        )
-
-    wf._execute_step = fake_execute  # type: ignore[method-assign]
-    wf._verify_step = fake_verify  # type: ignore[method-assign]
-
-    step = Step(action="点击开关", **{"assert": "灯亮"})
-    verdict = await wf._run_step(step, 1, 1, Plan(steps=[step]), [], [])
-
-    assert verdict is not None and verdict.result == "PASS"
-    assert hints == [""]  # 一次即过，不再重试
+    assert result["status"] == "success"
+    assert wf.executor.hints == [""]  # 一次即过，不再重试
+    assert result["completed"] == ["点击开关"]
 
 
 @pytest.mark.asyncio
 async def test_failed_step_record_keeps_actual_as_reason() -> None:
-    wf = _workflow(max_loops=1)
-
-    async def fake_plan(user_input):
-        return Plan(steps=[Step(action="点击开关", **{"assert": "灯亮"})])
-
-    async def fake_run_step(step, idx, total, plan, log, done):
-        return VerificationOutput(result="FAIL", actual="灯没亮")
-
-    wf._plan = fake_plan  # type: ignore[method-assign]
-    wf._run_step = fake_run_step  # type: ignore[method-assign]
+    wf = _workflow(
+        [{"action": "点击开关", "assert": "灯亮"}],
+        [{"result": "FAIL", "click_timer": "t1", "screenshot": ""}],
+        [{"result": "FAIL", "actual": "灯没亮"}],
+        max_loops=1,
+    )
 
     result = await wf.run("开灯")
 
     assert result["status"] == "fail"
     assert result["failed"][0]["actual"] == "灯没亮"
     assert result["failed"][0]["action"] == "点击开关"
-
-
-def _exec_role() -> SimpleNamespace:
-    return SimpleNamespace(tool_usage=[], thinking=[], output="{}", screenshot_path="")
+    assert result["failed"][0]["assert"] == "灯亮"

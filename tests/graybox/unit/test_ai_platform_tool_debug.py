@@ -265,10 +265,13 @@ def test_device_action_split_into_single_purpose_tools():
         assert TOOLS[name][1] is False, name
     assert TOOLS["current_app"][1] is True
 
-    # 引擎角色子集不得引用不存在的工具，且拆出的 6 个都在 executor 可用集里
+    # 引擎角色子集不得引用不存在的工具；拆出的写工具都在 executor 可用集里
     assert set(VISION_TOOLS) <= set(TOOLS)
-    for name in _SPLIT_WRITE_TOOLS + ["current_app"]:
+    for name in _SPLIT_WRITE_TOOLS:
         assert name in VISION_TOOLS, name
+    # 只读信息工具（current_app）已不在执行模型子集内，仍保留在平台工具注册表中
+    assert "current_app" not in VISION_TOOLS
+    assert "current_app" in TOOLS
 
     # 每个新工具只暴露自己动作需要的参数
     assert [p["name"] for p in get_tool_debug_schema("app_control")["parameters"]] == [

@@ -1,15 +1,14 @@
-"""模型费用计算 — 当前仅计 DeepSeek（价目对齐 apps.ai_assistant.deepseek_billing）。
+"""模型费用计算：按用量与价目表算出单轮费用（元）。
 
-每轮 RoleResult.cost 由此计算；非 DeepSeek 模型返回 0。
-调价需同步 apps/ai_assistant/deepseek_billing.py 的 DEEPSEEK_PRICING。
+当前仅计 DeepSeek，非 DeepSeek 的 provider 返回 0。调价须同步
+`apps/ai_assistant/deepseek_billing.py` 的 DEEPSEEK_PRICING。
 """
 
 from __future__ import annotations
 
 from datetime import datetime
 
-# 空闲时段单价（元 / 百万 tokens）
-# 依据（2026-10-08 官方价目页）：deepseek-flash 0.02 / 1 / 4；deepseek-v4-pro 0.15 / 4.5 / 13.5。
+# 空闲时段单价（元 / 百万 tokens）；依据 2026-10-08 官方价目页。
 DEEPSEEK_PRICING = {
     "deepseek-flash": {"input_cache_hit": 0.02, "input_cache_miss": 1.0, "output": 4.0},
     "deepseek-v4-pro": {"input_cache_hit": 0.15, "input_cache_miss": 4.5, "output": 13.5},
@@ -17,7 +16,7 @@ DEEPSEEK_PRICING = {
 
 _PEAK_MULTIPLIER = 2
 
-# 通用名与旧名 → 正式模型名（厂商口径：旧名仍可调用、按 Flash 计费）
+# 通用名与旧名 → 正式模型名（旧名仍可调用，按 Flash 计费）
 _DEEPSEEK_MODEL_ALIASES = {
     "deepseek-chat": "deepseek-flash",
     "deepseek-reasoner": "deepseek-v4-pro",
@@ -50,7 +49,17 @@ def model_cost(
     usage: dict,
     created_at: datetime | None = None,
 ) -> float:
-    """单轮模型费用（元）。非 DeepSeek 返回 0。"""
+    """单轮模型费用（元）。
+
+    Args:
+        provider: 模型提供商；非 deepseek 直接返回 0。
+        model_name: 模型名（含别名，未登记则按 deepseek-flash 计）。
+        usage: 本轮用量 dict（input_tokens / output_tokens / cache_input_tokens）。
+        created_at: 调用时刻，用于判断是否处于高峰时段；None 按非高峰。
+
+    Returns:
+        费用（元，保留 6 位小数）。
+    """
     if str(provider or "").strip().lower() != "deepseek":
         return 0.0
     price = _resolve_price(model_name)

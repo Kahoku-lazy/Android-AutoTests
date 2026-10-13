@@ -4,10 +4,8 @@ import type {
   TaskLogEvidence,
   TaskRunLogEntry,
   TaskRunPlan,
-  TaskRunRoleTrace,
   TaskRunStep,
   TaskRunExecutorOut,
-  TaskRunToolTrace,
   TaskRunVerifierOut,
 } from "@/shared/types/ai"
 import { mediaUrl } from "@/shared/helpers/mediaUrl"
@@ -38,8 +36,6 @@ export interface TaskStepAttempt {
   logEvidence?: TaskLogEvidence
   /** 本步执行侧的点击证据（老任务 / 本步无点击且不需日志时缺省） */
   logCheck?: TaskLogCheck
-  executorTrace: TaskRunRoleTrace
-  verifierTrace: TaskRunRoleTrace
 }
 
 export interface TaskStepBlock {
@@ -213,46 +209,7 @@ function toAttempt(entry: TaskRunLogEntry): TaskStepAttempt {
     screenshotUrl: attemptScreenshotUrl(entry.screenshot),
     logEvidence: entry.log_evidence,
     logCheck: entry.executor_log_check,
-    executorTrace: entry.executor_trace || {},
-    verifierTrace: entry.verifier_trace || {},
   }
-}
-
-export function hasRoleTrace(trace?: TaskRunRoleTrace): boolean {
-  return Boolean(trace?.input || trace?.thinking?.length || trace?.tools?.length || trace?.text)
-}
-
-export function toolTraceLine(tool: TaskRunToolTrace): string {
-  const kind =
-    tool.type === "call"
-      ? "调用"
-      : tool.type === "result"
-        ? "返回"
-        : tool.type === "image"
-          ? "截图"
-          : tool.type || "工具"
-  const name = tool.name || (tool.media_type ? tool.media_type : "—")
-  const bits = [kind, name]
-  if (tool.input) bits.push(tool.input)
-  if (tool.output) bits.push(tool.output)
-  else if (tool.state) bits.push(tool.state)
-  if (tool.screenshot_path) bits.push(tool.screenshot_path)
-  return bits.join(" · ")
-}
-
-/** 工具行里可展示的截图 URL（仅 result 且带 screenshot_path） */
-export function toolScreenshotUrl(tool: TaskRunToolTrace): string {
-  if (tool.type !== "result" && tool.type !== "image") return ""
-  return attemptScreenshotUrl(tool.screenshot_path)
-}
-
-export function attemptTraceSides(
-  attempt: TaskStepAttempt,
-): Array<{ key: string; label: string; trace: TaskRunRoleTrace }> {
-  return [
-    { key: "exec", label: "Executor Agent Info", trace: attempt.executorTrace },
-    { key: "ver", label: "Verifier Agent Info", trace: attempt.verifierTrace },
-  ].filter((side) => hasRoleTrace(side.trace))
 }
 
 /** MEDIA 相对路径 → 可展示 URL；旧任务无字段返回空 */

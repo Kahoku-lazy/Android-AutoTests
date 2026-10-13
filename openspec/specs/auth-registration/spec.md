@@ -1,7 +1,7 @@
 # auth-registration Specification
 
 ## Purpose
-TBD - created by archiving change fix-register-duplicate-race. Update Purpose after archive.
+约定注册时用户名唯一性以数据库约束为准：并发重名时后写入者得到 409 与「用户名已存在」，不泄漏底层完整性错误，也不破坏调用方事务。
 
 ## Requirements
 

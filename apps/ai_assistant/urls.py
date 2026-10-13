@@ -35,7 +35,6 @@ from .views_log_ports_drf import (
     LogPortListAPIView,
     LogPortToggleAPIView,
 )
-from .views_model_debug_drf import ModelDebugChatAPIView, ModelDebugConfigAPIView
 from .views_tool_debug_drf import PlatformToolInvokeAPIView, PlatformToolSchemaAPIView
 from .views_toolbox_drf import SkillFileAPIView, SkillTreeAPIView, ToolboxViewSet
 from .views_upload_drf import UploadAvatarAPIView, UploadFileAPIView
@@ -75,16 +74,6 @@ special_patterns = [
     path("log-ports/<int:port>/lines/", LogPortLinesAPIView.as_view(), name="log_port_lines"),
     # 日志关键词目录（AI 工具箱「日志关键词」来源，只读）
     path("log-keywords/", LogKeywordCatalogAPIView.as_view(), name="log_keywords"),
-    path(
-        "model-debug/<str:role>/",
-        ModelDebugConfigAPIView.as_view(),
-        name="model_debug_config",
-    ),
-    path(
-        "model-debug/<str:role>/chat/",
-        ModelDebugChatAPIView.as_view(),
-        name="model_debug_chat",
-    ),
     path("toolbox/skills/<str:name>/tree/", SkillTreeAPIView.as_view(), name="toolbox_skill_tree"),
     path("toolbox/skills/<str:name>/file/", SkillFileAPIView.as_view(), name="toolbox_skill_file"),
     # Workbench task board

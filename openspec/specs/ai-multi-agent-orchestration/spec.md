@@ -1,7 +1,7 @@
 # ai-multi-agent-orchestration Specification
 
 ## Purpose
-TBD - created by archiving change add-ai-multi-agent-orchestration. Update Purpose after archive.
+约定一个智能体由意图识别、视觉、推理、强模型多套 Harness 组成：先产出格式化意图，再把优化后的任务交给对应 Harness；强模型可由开关短路，对话入口对用户保持透明。
 ## Requirements
 ### Requirement: 智能体由多套 Harness 组成
 

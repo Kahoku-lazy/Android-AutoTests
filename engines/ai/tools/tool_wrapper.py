@@ -57,6 +57,12 @@ class PlatformFunctionTool(FunctionTool):
         )
         self._user_id = user_id
         self._auto_allow = spec.auto_allow
+        # 只对**声明了** user_id 的工具注入归属：引擎自带设备工具没有用户概念，
+        # 无条件注入会让它们每次调用都抛 TypeError（真机跑测实测踩到）。
+        try:
+            self._accepts_user_id = "user_id" in inspect.signature(spec.handler).parameters
+        except (TypeError, ValueError):
+            self._accepts_user_id = False
         props = self.input_schema.get("properties", {})
         props.pop("user_id", None)
         required = self.input_schema.get("required", [])
@@ -64,7 +70,8 @@ class PlatformFunctionTool(FunctionTool):
             required.remove("user_id")
 
     async def call(self, **kwargs):
-        kwargs.setdefault("user_id", self._user_id)
+        if self._accepts_user_id:
+            kwargs.setdefault("user_id", self._user_id)
         logger.info(
             "【工具调用】%s 入参=%s",
             self._func.__name__,

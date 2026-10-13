@@ -2,13 +2,13 @@
 import type { PlatformToolCategory } from "../api/toolbox"
 import type { SharedToolItem } from "../api/toolbox"
 
-export type AssemblySourceKey = "biz" | "skill" | "port" | "debug" | "keywords"
+export type AssemblySourceKey = "biz" | "skill" | "port" | "keywords"
 
 export interface AssemblySourceDef {
   key: AssemblySourceKey
   name: string
   desc: string
-  /** 空串 = 无「交给助手」总闸（如无线端口 / 模型调试 / 日志关键词） */
+  /** 空串 = 无「交给助手」总闸（如无线端口 / 日志关键词） */
   gateKey: string
   /**
    * 来源行副标题文案。无总闸来源必填——它们不参与「交给助手」装配，
@@ -39,14 +39,6 @@ export const ASSEMBLY_SOURCES: AssemblySourceDef[] = [
     desc: "日志端口监听与原始日志查看（不交给助手）",
     gateKey: "",
     meta: "监听开关 · 原始日志 · 不交给助手",
-    accent: "var(--c-ai)",
-  },
-  {
-    key: "debug",
-    name: "模型调试",
-    desc: "单模型调试台：提示词 / 工具 / Skill + 对话验证",
-    gateKey: "",
-    meta: "规划 / 执行 / 验收 · 仅调试不交给助手",
     accent: "var(--c-ai)",
   },
   {

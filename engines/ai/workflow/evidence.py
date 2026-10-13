@@ -19,13 +19,13 @@ def save_verify_screenshot(
     loop: int,
     block,
 ) -> str:
-    """将验收截图落盘为 JPEG，返回相对 MEDIA_ROOT 的路径；无法保存时返回空串。
+    """把验收截图落盘为 JPEG，返回相对 MEDIA_ROOT 的路径；无法保存时返回空串。
 
     Args:
         media_root: 媒体根目录绝对路径（Django MEDIA_ROOT）。
-        task_id: 任务 id（目录 ai_tasks/{id}/）。
+        task_id: 任务 id（目录 ai_tasks/{id}/）；为 0 时不落盘。
         step_idx: 步骤序号（1 起）。
-        loop: 本步重试轮次（1 起）。
+        loop: 本步尝试轮次（1 起）。
         block: AgentScope DataBlock（含 Base64Source），可空。
 
     Returns:

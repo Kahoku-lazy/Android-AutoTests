@@ -6,25 +6,14 @@
 
 ## 技术栈
 
-1. Agent框架当前版本： AgentScope 2.0.7.post1
+1. Agent框架当前版本： AgentScope 2.0.9
 
 
+## 代码规则
+
+1. **函数方法**：函数方法注释只写功能 / 入参 / 返回值，禁写设计旁白与"给谁看"
 
 ## 测试
 
->代码修改后先检查是否需要执行迁移指令： `python manage.py migrate ai_assistant`,
+> 代码修改后先检查是否需要执行迁移指令： `python manage.py migrate ai_assistant`,
 
-1. 模型测试指令文件：`apps/ai_assistant/management/commands/model_test.py`
-``` bash
-# 1. 规划模型：输入用户需求 → 输出 plans（目标/步骤/验收标准）
-python manage.py model_test planner "启动 govee 应用并进入设备列表"
-
-# 2. 执行模型：输入步骤 → 在设备上执行 → 输出结果（需设备）
-python manage.py model_test executor "1. 确认 govee 包名 2. 启动 govee" --serial RF8N21MSW7A
-
-# 3. 验收模型：输入验收标准 → 截图二次确认 → 输出 pass/fail + completed/failed
-python manage.py model_test verifier "前台 package 应为 govee 包名" --serial RF8N21MSW7A
-
-# 4. 测试模型：输入用户需求 → 输出结果（需设备）
-python manage.py model_test full "启动 govee 应用并进入设备列表" --serial RF8N21MSW7A
-```

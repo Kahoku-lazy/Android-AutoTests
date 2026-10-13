@@ -48,8 +48,6 @@ function makeAttempt(overrides: Partial<TaskStepAttempt> = {}): TaskStepAttempt 
     verifierResult: 'pass',
     actual: '日志命中',
     screenshotUrl: '/media/ai_tasks/12/s2_l1_verify.jpg',
-    executorTrace: {},
-    verifierTrace: {},
     ...overrides,
   }
 }

@@ -1,7 +1,6 @@
-"""AgentScope 引擎组合根 —— 把 TaskRequest 装配成设备执行工作流，返回归一化 TaskResult。
+"""AgentScope 引擎实现：把 `TaskRequest` 装配成设备执行工作流并阻塞运行。
 
-五部分的唯一组合点：智能体（agents，含 tools 的装配）→ 工作流（workflow）；
-费用计算（billing）由智能体侧算本轮、工作流侧累总账。协议与注册表在本层。
+装配智能体三角色与 `DeviceExecutionWorkflow`，把工作流终态 dict 归一化为 `TaskResult`。
 """
 
 from __future__ import annotations
@@ -62,6 +61,9 @@ class AgentScopeEngine:
             req.tools,
             req.user_id,
             skill_dirs=req.skill_dirs,
+            media_root=req.media_root,
+            log_path=req.log_path,
+            task_id=req.task_id,
         )
         wf = DeviceExecutionWorkflow(
             planner,

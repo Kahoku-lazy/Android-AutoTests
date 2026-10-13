@@ -26,7 +26,7 @@ from apps.ai_assistant.api import (
     finalize_task,
     get_platform_agent,
 )
-from apps.ai_assistant.model_debug import build_device_models_for_agent
+from apps.ai_assistant.model_assembly import build_device_models_for_agent
 from engines.ai.agents import ModelConfig
 from engines.ai.workflow.workflow import (
     DeviceExecutionWorkflow,
@@ -58,7 +58,7 @@ def _setup_logging() -> None:
 def _build_device_models(agent):
     """按智能体配置装配三个角色模型，返回 (config, planner, executor, verifier)。
 
-    与工具箱「模型调试」共用 model_debug.build_device_models_for_agent，避免两处装配漂移。
+    与命令行 `planner_eval` 共用 `model_assembly.build_device_models_for_agent`，避免两处装配漂移。
     """
     return build_device_models_for_agent(agent)
 

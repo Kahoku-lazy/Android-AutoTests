@@ -1,8 +1,4 @@
-"""通用 token 用量累加器 — 按模型 / 按角色拆分，供各工作流复用。
-
-接收一轮用量的 dict（input_tokens / output_tokens / cache_input_tokens /
-cache_creation_input_tokens），累加总量、按模型、按角色。
-"""
+"""通用 token 用量累加器 —— 按总量 / 按模型 / 按角色拆分，供各工作流复用。"""
 
 from __future__ import annotations
 
@@ -19,7 +15,13 @@ class UsageAccumulator:
         self.by_role: dict = {}
 
     def acc(self, usage: dict, model_name: str = "", role: str = "") -> None:
-        """把一轮用量 dict 累加进来（含缓存命中/写入）。"""
+        """累加一轮用量（含缓存命中与缓存写入）。
+
+        Args:
+            usage: 一轮用量 dict；非 dict 时忽略。
+            model_name: 模型名；非空时同时累加到 `models`。
+            role: 角色名；非空时同时累加到 `by_role`。
+        """
         if not isinstance(usage, dict):
             return
         inp = int(usage.get("input_tokens", 0) or 0)
@@ -48,7 +50,7 @@ class UsageAccumulator:
             r["cache_input_tokens"] += hit
 
     def as_dict(self) -> dict:
-        """导出当前累计值（深拷贝内层，避免外部拿到可变引用）。"""
+        """导出当前累计值（内层 dict 为拷贝，外部修改不影响累加器）。"""
         return {
             "input_tokens": self.input_tokens,
             "output_tokens": self.output_tokens,

@@ -1,7 +1,7 @@
-"""AI 引擎层 — 注册表与工厂（可替换插槽，对齐 engines/device/registry.py）。
+"""AI 引擎注册表与工厂：按引擎名惰性 import 实现类，进程内缓存实例。
 
-失败策略：引擎未知名 / 不可导入 / 构建失败即 fail-fast（抛 ConfigurationError），
-不做静默回退。层纯度：不 import django settings——引擎名由调用方从 settings 解析后传入。
+引擎未知名 / 不可导入 / 构建失败一律抛 `ConfigurationError`，不做静默回退。
+引擎名由调用方传入（本模块不读 django settings）。
 """
 
 from __future__ import annotations
@@ -23,7 +23,6 @@ class ConfigurationError(RuntimeError):
 # 引擎名 → 实现类 import 路径（懒加载，实例化延迟到首次取用）
 AI_ENGINE_REGISTRY = {
     "agentscope": "engines.ai.engine.AgentScopeEngine",
-    # 未来插槽示例： "langchain": "engines.ai.langchain.engine.LangChainEngine",
 }
 
 DEFAULT_ENGINE = "agentscope"
@@ -56,7 +55,10 @@ def get_ai_engine(name: str = DEFAULT_ENGINE) -> AiEngine:
     """按名取 AI 引擎实例（惰性 import + 进程内缓存，线程安全）。
 
     Args:
-        name: 引擎名（调用方从 settings.AI_ENGINE 解析后传入）。
+        name: 注册表里的引擎名，默认 `DEFAULT_ENGINE`。
+
+    Returns:
+        引擎实例（同一引擎名在进程内复用同一实例）。
 
     Raises:
         ConfigurationError: 未知名 / 未实现 / 构建失败。

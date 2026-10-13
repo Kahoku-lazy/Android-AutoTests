@@ -111,8 +111,6 @@ describe("taskStepBlocks", () => {
         verifierResult: "fail",
         actual: "x",
         screenshotUrl: "",
-        executorTrace: {},
-        verifierTrace: {},
       },
     ]
     expect(stepBadgeText(blocks[0], 3)).toBe("失败（重试 3/3 用尽）")
@@ -273,61 +271,6 @@ describe("taskStepBlocks", () => {
     expect(blocks[0].attempts[1].executorScreenshotPath).toBe("")
     expect(blocks[0].attempts[1].executorScreenshotUrl).toBe("")
     expect(blocks[0].attempts[1].executorMessage).toBe("已点击")
-  })
-
-  it("每轮映射执行/验收思考与工具调用", () => {
-    const detail: TaskDetail = {
-      id: 6,
-      title: "t",
-      goal: "启动",
-      status: "completed",
-      run: {
-        plans: [
-          {
-            goal: "启动",
-            steps: [{ action: "启动应用", assert: "包名正确" }],
-          },
-        ],
-        log: [
-          {
-            action: "启动应用",
-            assert: "包名正确",
-            loop: 1,
-            executor: { result: "FAIL", message: "连接失败" },
-            verifier: { result: false, actual: "未启动" },
-            executor_trace: {
-              input: "请执行：启动应用",
-              thinking: ["设备看起来在线，先查 list_devices"],
-              tools: [
-                { type: "call", name: "list_devices", input: "{}" },
-                { type: "result", name: "list_devices", state: "done", output: '{"count":1}' },
-              ],
-              text: '{"result":"FAIL"}',
-            },
-            verifier_trace: {
-              thinking: ["无法确认前台包名"],
-              tools: [
-                {
-                  type: "result",
-                  name: "screenshot_page",
-                  input: '{"serial":"x"}',
-                  screenshot_path: "inspector/shots/capture_x.png",
-                  output: '{"screenshot_path":"inspector/shots/capture_x.png"}',
-                },
-              ],
-            },
-          },
-        ],
-      },
-    }
-    const blocks = taskStepBlocks(detail)
-    const a = blocks[0].attempts[0]
-    expect(a.executorTrace.input).toContain("启动应用")
-    expect(a.executorTrace.thinking?.[0]).toContain("list_devices")
-    expect(a.executorTrace.tools).toHaveLength(2)
-    expect(a.executorTrace.text).toContain("FAIL")
-    expect(a.verifierTrace.tools?.[0].name).toBe("screenshot_page")
-    expect(a.verifierTrace.tools?.[0].screenshot_path).toBe("inspector/shots/capture_x.png")
   })
 
   it("运行中：首个未通过步骤为执行中，后续待执行", () => {

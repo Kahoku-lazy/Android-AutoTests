@@ -154,6 +154,17 @@ def test_request_carries_no_system_prompts():
     assert not hasattr(req, "system_prompts")
 
 
+def test_request_carries_agent_log_path():
+    """角色过程日志落点由平台注入：<BASE_DIR>/logs/agents.log。"""
+    from pathlib import Path
+
+    from django.conf import settings
+
+    req = engine_adapter.build_request(_task(), _agent())
+
+    assert Path(req.log_path) == Path(str(settings.BASE_DIR)) / "logs" / "agents.log"
+
+
 # ── provider 配置单一真相源 ──
 
 

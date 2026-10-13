@@ -37,7 +37,9 @@ pytest-playwright>=0.5.0
 
 # ── AgentScope 2.0 AI ──
 # ≥2.0.7.post1 才包含 pipeline 模块（GoalPipeline）；main 分支当前版本号仍为 2.0.7.post1
-agentscope>=2.0.7.post1
+agentscope>=2.0.9
+# 国务院节假日安排。DeepSeek 高峰在法定假日取消；未收录的年份退回周一至周五
+chinesecalendar>=1.11.0
 fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 pyjwt>=2.8.0

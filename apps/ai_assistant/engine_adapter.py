@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from engines.ai.base import ModelSpec, TaskRequest, ToolSpec
 
 from . import api
@@ -16,11 +18,23 @@ from .provider_registry import VALID_PROVIDERS, get_provider_config
 from .skills_catalog import list_enabled_skill_dirs
 from .tools import AUTO_ALLOW_TOOLS, TOOLS
 
-__all__ = ["build_request", "build_tool_specs", "resolve_device_serial"]
+__all__ = ["agent_log_path", "build_request", "build_tool_specs", "resolve_device_serial"]
 
 # 装配期校验的线路键与角色名（与 AIAgent.route_configs 的结构一致）
 ROUTE_KEY = "device_control"
 ROUTE_ROLES = ("planner", "executor", "verifier")
+
+
+def agent_log_path() -> str:
+    """角色过程日志**基路径**：`<BASE_DIR>/logs/agents.log`（思考 / 工具调用实时追加写）。
+
+    引擎不认识平台配置，落点由平台在装配期注入；实际文件由引擎按天派生
+    （形如 `agents-20261009.log`），文件不存在时由引擎侧自动创建。
+    """
+    from django.conf import settings
+
+    base = Path(str(getattr(settings, "BASE_DIR", "") or "."))
+    return str(base / "logs" / "agents.log")
 
 
 def _model_spec(role: str, cfg: object) -> ModelSpec:
@@ -111,6 +125,8 @@ def build_request(task, agent) -> TaskRequest:
         user_id=str(agent.owner_id or ""),
         task_id=int(getattr(task, "id", 0) or 0),
         media_root=str(getattr(settings, "MEDIA_ROOT", "") or ""),
+        # 角色过程日志落点：思考 / 工具调用与返回实时写这里（任务 result 不再存过程明细）
+        log_path=agent_log_path(),
         skill_dirs=list_enabled_skill_dirs() if agent.enable_skills else [],
         # 设备日志证据：按需启动常驻采集并注入；开关关闭 / 启动失败时为 None（验收降级为只看截图）
         log_evidence=ensure_log_evidence(),

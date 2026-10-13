@@ -1,0 +1,20 @@
+{
+  "serial": "R5CT62RH88F",
+  "steps": [
+    {
+      "action": "启动 govee 应用（com.govee.home）",
+      "assert": "前台应用为 govee APP主页（首页）",
+      "log_check": false
+    },
+    {
+      "action": "在设备主页把设备列表向上滑动一次",
+      "assert": "列表内容发生滚动，页面仍在设备主页",
+      "log_check": false
+    },
+    {
+      "action": "按一次返回键",
+      "assert": "设备回到上一页或保持前台不崩溃",
+      "log_check": false
+    }
+  ]
+}

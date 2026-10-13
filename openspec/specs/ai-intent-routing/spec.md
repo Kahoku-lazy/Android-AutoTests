@@ -1,7 +1,7 @@
 # ai-intent-routing Specification
 
 ## Purpose
-TBD - created by archiving change add-ai-intent-routing. Update Purpose after archive.
+约定每次回复前先把用户输入分成控制手机、工作流、平台用例或其它，再按类别选择视觉或文本模型并裁剪工具集；置信度不足时先澄清，不直接执行。
 ## Requirements
 ### Requirement: 智能体按用户输入做意图分类
 

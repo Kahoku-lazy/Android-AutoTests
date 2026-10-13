@@ -1,0 +1,920 @@
+{
+  "source": "apps.workflow.api：list_document_summaries + get_document_digest（页面流语义摘要，AI 只读出口）",
+  "extracted_at": "2026-10-08 15:36:33",
+  "tool_responses": {
+    "list_page_flows": {
+      "total": 1,
+      "documents": [
+        {
+          "doc_id": "WF-PF-20260923-172216-VEHU",
+          "title": "H6810设备页面关系流",
+          "prototype_id": 3,
+          "prototype_name": "GoveeHome APP的页面流",
+          "directory_id": 6,
+          "directory_name": "默认目录",
+          "directory_path": "默认目录",
+          "directory_depth": 1,
+          "node_count": 17,
+          "link_count": 16,
+          "updated_at": "2026-10-08T12:44:39.270818"
+        }
+      ]
+    },
+    "get_page_flow": {
+      "WF-PF-20260923-172216-VEHU": {
+        "doc_id": "WF-PF-20260923-172216-VEHU",
+        "title": "H6810设备页面关系流",
+        "node_count": 17,
+        "link_count": 16,
+        "nodes": [
+          {
+            "node_id": "n1",
+            "node_type": "start",
+            "name": "启动 App",
+            "start_kind": "app",
+            "package_name": "com.govee.home"
+          },
+          {
+            "node_id": "n2",
+            "node_type": "page",
+            "name": "APP主页",
+            "page": {
+              "page_id": "53",
+              "page_name": "APP主页",
+              "domain": "android"
+            },
+            "entry_points": [
+              {
+                "from_node_id": "n1",
+                "from_name": "启动 App",
+                "port_type": "navigation"
+              }
+            ]
+          },
+          {
+            "node_id": "n3",
+            "node_type": "page",
+            "name": "设备主页页面",
+            "page": {
+              "page_id": "52",
+              "page_name": "设备主页页面",
+              "domain": "android"
+            },
+            "entry_points": [
+              {
+                "from_node_id": "n2",
+                "from_name": "APP主页",
+                "port_type": "navigation",
+                "trigger_element": {
+                  "element_id": "957",
+                  "label": "设备主页入口"
+                }
+              }
+            ]
+          },
+          {
+            "node_id": "n4",
+            "node_type": "page",
+            "name": "H6810设备详情页",
+            "page": {
+              "page_id": "51",
+              "page_name": "H6810设备详情页",
+              "domain": "android"
+            },
+            "entry_points": [
+              {
+                "from_node_id": "n3",
+                "from_name": "设备主页页面",
+                "port_type": "navigation",
+                "trigger_element": {
+                  "element_id": "970",
+                  "label": "H6810"
+                }
+              }
+            ]
+          },
+          {
+            "node_id": "n8",
+            "node_type": "page",
+            "name": "详情页-颜色模式页面",
+            "page": {
+              "page_id": "56",
+              "page_name": "详情页-颜色模式页面",
+              "domain": "android"
+            },
+            "entry_points": [
+              {
+                "from_node_id": "n4",
+                "from_name": "H6810设备详情页",
+                "port_type": "navigation",
+                "trigger_element": {
+                  "element_id": "943",
+                  "label": "颜色模式"
+                }
+              }
+            ]
+          },
+          {
+            "node_id": "n9",
+            "node_type": "page",
+            "name": "设备详情页--场景模式页面",
+            "page": {
+              "page_id": "57",
+              "page_name": "设备详情页--场景模式页面",
+              "domain": "android"
+            },
+            "entry_points": [
+              {
+                "from_node_id": "n4",
+                "from_name": "H6810设备详情页",
+                "port_type": "navigation",
+                "trigger_element": {
+                  "element_id": "944",
+                  "label": "场景模式"
+                }
+              }
+            ]
+          },
+          {
+            "node_id": "n10",
+            "node_type": "page",
+            "name": "详情页-音乐模式页面",
+            "page": {
+              "page_id": "58",
+              "page_name": "详情页-音乐模式页面",
+              "domain": "android"
+            },
+            "entry_points": [
+              {
+                "from_node_id": "n4",
+                "from_name": "H6810设备详情页",
+                "port_type": "navigation",
+                "trigger_element": {
+                  "element_id": "945",
+                  "label": "音乐模式"
+                }
+              }
+            ]
+          },
+          {
+            "node_id": "n12",
+            "node_type": "page",
+            "name": "详情页-DIY模式页面",
+            "page": {
+              "page_id": "60",
+              "page_name": "详情页-DIY模式页面",
+              "domain": "android"
+            },
+            "entry_points": [
+              {
+                "from_node_id": "n4",
+                "from_name": "H6810设备详情页",
+                "port_type": "navigation",
+                "trigger_element": {
+                  "element_id": "947",
+                  "label": "DIY模式"
+                }
+              }
+            ]
+          },
+          {
+            "node_id": "n13",
+            "node_type": "page",
+            "name": "详情页-涂鸦模式页面",
+            "page": {
+              "page_id": "61",
+              "page_name": "详情页-涂鸦模式页面",
+              "domain": "android"
+            },
+            "entry_points": [
+              {
+                "from_node_id": "n4",
+                "from_name": "H6810设备详情页",
+                "port_type": "navigation",
+                "trigger_element": {
+                  "element_id": "948",
+                  "label": "涂鸦模式"
+                }
+              }
+            ]
+          },
+          {
+            "node_id": "n14",
+            "node_type": "page",
+            "name": "详情页-AI模式页面",
+            "page": {
+              "page_id": "62",
+              "page_name": "详情页-AI模式页面",
+              "domain": "android"
+            },
+            "entry_points": [
+              {
+                "from_node_id": "n4",
+                "from_name": "H6810设备详情页",
+                "port_type": "navigation",
+                "trigger_element": {
+                  "element_id": "949",
+                  "label": "AI模式"
+                }
+              }
+            ]
+          },
+          {
+            "node_id": "n22",
+            "node_type": "page",
+            "name": "详情页-更多模式页面",
+            "page": {
+              "page_id": "63",
+              "page_name": "详情页-更多模式页面",
+              "domain": "android"
+            },
+            "entry_points": [
+              {
+                "from_node_id": "n4",
+                "from_name": "H6810设备详情页",
+                "port_type": "navigation",
+                "trigger_element": {
+                  "element_id": "950",
+                  "label": "更多"
+                }
+              }
+            ]
+          },
+          {
+            "node_id": "n24",
+            "node_type": "page",
+            "name": "设备详情页-用户分享页面",
+            "page": {
+              "page_id": "59",
+              "page_name": "设备详情页-用户分享页面",
+              "domain": "android"
+            },
+            "entry_points": [
+              {
+                "from_node_id": "n4",
+                "from_name": "H6810设备详情页",
+                "port_type": "navigation",
+                "trigger_element": {
+                  "element_id": "946",
+                  "label": "用户分享"
+                }
+              }
+            ]
+          },
+          {
+            "node_id": "n26",
+            "node_type": "page",
+            "name": "更多-灯效库页面",
+            "page": {
+              "page_id": "64",
+              "page_name": "更多-灯效库页面",
+              "domain": "android"
+            },
+            "entry_points": [
+              {
+                "from_node_id": "n22",
+                "from_name": "详情页-更多模式页面",
+                "port_type": "navigation",
+                "trigger_element": {
+                  "element_id": "1010",
+                  "label": "灯效库"
+                }
+              }
+            ]
+          },
+          {
+            "node_id": "n28",
+            "node_type": "page",
+            "name": "更多-定时功能页面",
+            "entry_points": [
+              {
+                "from_node_id": "n22",
+                "from_name": "详情页-更多模式页面",
+                "port_type": "navigation",
+                "trigger_element": {
+                  "element_id": "1007",
+                  "label": "定时"
+                }
+              }
+            ]
+          },
+          {
+            "node_id": "n30",
+            "node_type": "page",
+            "name": "更多-调色板功能页面",
+            "entry_points": [
+              {
+                "from_node_id": "n22",
+                "from_name": "详情页-更多模式页面",
+                "port_type": "navigation",
+                "trigger_element": {
+                  "element_id": "1011",
+                  "label": "调色板"
+                }
+              }
+            ]
+          },
+          {
+            "node_id": "n31",
+            "node_type": "page",
+            "name": "更多-随机颜色页面",
+            "entry_points": [
+              {
+                "from_node_id": "n22",
+                "from_name": "详情页-更多模式页面",
+                "port_type": "navigation",
+                "trigger_element": {
+                  "element_id": "1012",
+                  "label": "随机颜色"
+                }
+              }
+            ]
+          },
+          {
+            "node_id": "n32",
+            "node_type": "page",
+            "name": "更多-点亮生活页面",
+            "entry_points": [
+              {
+                "from_node_id": "n22",
+                "from_name": "详情页-更多模式页面",
+                "port_type": "navigation",
+                "trigger_element": {
+                  "element_id": "1013",
+                  "label": "点亮生活"
+                }
+              }
+            ]
+          }
+        ],
+        "links": [
+          {
+            "id": 5,
+            "type": "navigation",
+            "from_node_id": "n1",
+            "from_node_name": "启动 App",
+            "from_port_name": "启动",
+            "to_node_id": "n2",
+            "to_node_name": "APP主页",
+            "to_port_name": "入口"
+          },
+          {
+            "id": 6,
+            "type": "navigation",
+            "from_node_id": "n2",
+            "from_node_name": "APP主页",
+            "from_port_name": "设备主页入口",
+            "to_node_id": "n3",
+            "to_node_name": "设备主页页面",
+            "to_port_name": "入口"
+          },
+          {
+            "id": 7,
+            "type": "navigation",
+            "from_node_id": "n3",
+            "from_node_name": "设备主页页面",
+            "from_port_name": "H6810",
+            "to_node_id": "n4",
+            "to_node_name": "H6810设备详情页",
+            "to_port_name": "入口"
+          },
+          {
+            "id": 15,
+            "type": "navigation",
+            "from_node_id": "n4",
+            "from_node_name": "H6810设备详情页",
+            "from_port_name": "颜色模式",
+            "to_node_id": "n8",
+            "to_node_name": "详情页-颜色模式页面",
+            "to_port_name": "入口"
+          },
+          {
+            "id": 16,
+            "type": "navigation",
+            "from_node_id": "n4",
+            "from_node_name": "H6810设备详情页",
+            "from_port_name": "场景模式",
+            "to_node_id": "n9",
+            "to_node_name": "设备详情页--场景模式页面",
+            "to_port_name": "入口"
+          },
+          {
+            "id": 17,
+            "type": "navigation",
+            "from_node_id": "n4",
+            "from_node_name": "H6810设备详情页",
+            "from_port_name": "音乐模式",
+            "to_node_id": "n10",
+            "to_node_name": "详情页-音乐模式页面",
+            "to_port_name": "入口"
+          },
+          {
+            "id": 18,
+            "type": "navigation",
+            "from_node_id": "n4",
+            "from_node_name": "H6810设备详情页",
+            "from_port_name": "DIY模式",
+            "to_node_id": "n12",
+            "to_node_name": "详情页-DIY模式页面",
+            "to_port_name": "入口"
+          },
+          {
+            "id": 19,
+            "type": "navigation",
+            "from_node_id": "n4",
+            "from_node_name": "H6810设备详情页",
+            "from_port_name": "涂鸦模式",
+            "to_node_id": "n13",
+            "to_node_name": "详情页-涂鸦模式页面",
+            "to_port_name": "入口"
+          },
+          {
+            "id": 20,
+            "type": "navigation",
+            "from_node_id": "n4",
+            "from_node_name": "H6810设备详情页",
+            "from_port_name": "AI模式",
+            "to_node_id": "n14",
+            "to_node_name": "详情页-AI模式页面",
+            "to_port_name": "入口"
+          },
+          {
+            "id": 23,
+            "type": "navigation",
+            "from_node_id": "n4",
+            "from_node_name": "H6810设备详情页",
+            "from_port_name": "更多",
+            "to_node_id": "n22",
+            "to_node_name": "详情页-更多模式页面",
+            "to_port_name": "入口"
+          },
+          {
+            "id": 25,
+            "type": "navigation",
+            "from_node_id": "n4",
+            "from_node_name": "H6810设备详情页",
+            "from_port_name": "用户分享",
+            "to_node_id": "n24",
+            "to_node_name": "设备详情页-用户分享页面",
+            "to_port_name": "入口"
+          },
+          {
+            "id": 27,
+            "type": "navigation",
+            "from_node_id": "n22",
+            "from_node_name": "详情页-更多模式页面",
+            "from_port_name": "灯效库",
+            "to_node_id": "n26",
+            "to_node_name": "更多-灯效库页面",
+            "to_port_name": "入口"
+          },
+          {
+            "id": 29,
+            "type": "navigation",
+            "from_node_id": "n22",
+            "from_node_name": "详情页-更多模式页面",
+            "from_port_name": "定时",
+            "to_node_id": "n28",
+            "to_node_name": "更多-定时功能页面",
+            "to_port_name": "入口"
+          },
+          {
+            "id": 33,
+            "type": "navigation",
+            "from_node_id": "n22",
+            "from_node_name": "详情页-更多模式页面",
+            "from_port_name": "调色板",
+            "to_node_id": "n30",
+            "to_node_name": "更多-调色板功能页面",
+            "to_port_name": "入口"
+          },
+          {
+            "id": 34,
+            "type": "navigation",
+            "from_node_id": "n22",
+            "from_node_name": "详情页-更多模式页面",
+            "from_port_name": "随机颜色",
+            "to_node_id": "n31",
+            "to_node_name": "更多-随机颜色页面",
+            "to_port_name": "入口"
+          },
+          {
+            "id": 35,
+            "type": "navigation",
+            "from_node_id": "n22",
+            "from_node_name": "详情页-更多模式页面",
+            "from_port_name": "点亮生活",
+            "to_node_id": "n32",
+            "to_node_name": "更多-点亮生活页面",
+            "to_port_name": "入口"
+          }
+        ],
+        "paths": [
+          {
+            "text": "启动 App → APP主页 → (点击「设备主页入口」) → 设备主页页面 → (点击「H6810」) → H6810设备详情页 → (点击「颜色模式」) → 详情页-颜色模式页面 → (无出边，终止)",
+            "steps": [
+              {
+                "node_id": "n1",
+                "name": "启动 App"
+              },
+              {
+                "node_id": "n2",
+                "name": "APP主页",
+                "action": {
+                  "element_id": "957",
+                  "label": "设备主页入口"
+                }
+              },
+              {
+                "node_id": "n3",
+                "name": "设备主页页面",
+                "action": {
+                  "element_id": "970",
+                  "label": "H6810"
+                }
+              },
+              {
+                "node_id": "n4",
+                "name": "H6810设备详情页",
+                "action": {
+                  "element_id": "943",
+                  "label": "颜色模式"
+                }
+              },
+              {
+                "node_id": "n8",
+                "name": "详情页-颜色模式页面"
+              }
+            ]
+          },
+          {
+            "text": "启动 App → APP主页 → (点击「设备主页入口」) → 设备主页页面 → (点击「H6810」) → H6810设备详情页 → (点击「场景模式」) → 设备详情页--场景模式页面 → (无出边，终止)",
+            "steps": [
+              {
+                "node_id": "n1",
+                "name": "启动 App"
+              },
+              {
+                "node_id": "n2",
+                "name": "APP主页",
+                "action": {
+                  "element_id": "957",
+                  "label": "设备主页入口"
+                }
+              },
+              {
+                "node_id": "n3",
+                "name": "设备主页页面",
+                "action": {
+                  "element_id": "970",
+                  "label": "H6810"
+                }
+              },
+              {
+                "node_id": "n4",
+                "name": "H6810设备详情页",
+                "action": {
+                  "element_id": "944",
+                  "label": "场景模式"
+                }
+              },
+              {
+                "node_id": "n9",
+                "name": "设备详情页--场景模式页面"
+              }
+            ]
+          },
+          {
+            "text": "启动 App → APP主页 → (点击「设备主页入口」) → 设备主页页面 → (点击「H6810」) → H6810设备详情页 → (点击「音乐模式」) → 详情页-音乐模式页面 → (无出边，终止)",
+            "steps": [
+              {
+                "node_id": "n1",
+                "name": "启动 App"
+              },
+              {
+                "node_id": "n2",
+                "name": "APP主页",
+                "action": {
+                  "element_id": "957",
+                  "label": "设备主页入口"
+                }
+              },
+              {
+                "node_id": "n3",
+                "name": "设备主页页面",
+                "action": {
+                  "element_id": "970",
+                  "label": "H6810"
+                }
+              },
+              {
+                "node_id": "n4",
+                "name": "H6810设备详情页",
+                "action": {
+                  "element_id": "945",
+                  "label": "音乐模式"
+                }
+              },
+              {
+                "node_id": "n10",
+                "name": "详情页-音乐模式页面"
+              }
+            ]
+          },
+          {
+            "text": "启动 App → APP主页 → (点击「设备主页入口」) → 设备主页页面 → (点击「H6810」) → H6810设备详情页 → (点击「DIY模式」) → 详情页-DIY模式页面 → (无出边，终止)",
+            "steps": [
+              {
+                "node_id": "n1",
+                "name": "启动 App"
+              },
+              {
+                "node_id": "n2",
+                "name": "APP主页",
+                "action": {
+                  "element_id": "957",
+                  "label": "设备主页入口"
+                }
+              },
+              {
+                "node_id": "n3",
+                "name": "设备主页页面",
+                "action": {
+                  "element_id": "970",
+                  "label": "H6810"
+                }
+              },
+              {
+                "node_id": "n4",
+                "name": "H6810设备详情页",
+                "action": {
+                  "element_id": "947",
+                  "label": "DIY模式"
+                }
+              },
+              {
+                "node_id": "n12",
+                "name": "详情页-DIY模式页面"
+              }
+            ]
+          },
+          {
+            "text": "启动 App → APP主页 → (点击「设备主页入口」) → 设备主页页面 → (点击「H6810」) → H6810设备详情页 → (点击「涂鸦模式」) → 详情页-涂鸦模式页面 → (无出边，终止)",
+            "steps": [
+              {
+                "node_id": "n1",
+                "name": "启动 App"
+              },
+              {
+                "node_id": "n2",
+                "name": "APP主页",
+                "action": {
+                  "element_id": "957",
+                  "label": "设备主页入口"
+                }
+              },
+              {
+                "node_id": "n3",
+                "name": "设备主页页面",
+                "action": {
+                  "element_id": "970",
+                  "label": "H6810"
+                }
+              },
+              {
+                "node_id": "n4",
+                "name": "H6810设备详情页",
+                "action": {
+                  "element_id": "948",
+                  "label": "涂鸦模式"
+                }
+              },
+              {
+                "node_id": "n13",
+                "name": "详情页-涂鸦模式页面"
+              }
+            ]
+          },
+          {
+            "text": "启动 App → APP主页 → (点击「设备主页入口」) → 设备主页页面 → (点击「H6810」) → H6810设备详情页 → (点击「AI模式」) → 详情页-AI模式页面 → (无出边，终止)",
+            "steps": [
+              {
+                "node_id": "n1",
+                "name": "启动 App"
+              },
+              {
+                "node_id": "n2",
+                "name": "APP主页",
+                "action": {
+                  "element_id": "957",
+                  "label": "设备主页入口"
+                }
+              },
+              {
+                "node_id": "n3",
+                "name": "设备主页页面",
+                "action": {
+                  "element_id": "970",
+                  "label": "H6810"
+                }
+              },
+              {
+                "node_id": "n4",
+                "name": "H6810设备详情页",
+                "action": {
+                  "element_id": "949",
+                  "label": "AI模式"
+                }
+              },
+              {
+                "node_id": "n14",
+                "name": "详情页-AI模式页面"
+              }
+            ]
+          },
+          {
+            "text": "启动 App → APP主页 → (点击「设备主页入口」) → 设备主页页面 → (点击「H6810」) → H6810设备详情页 → (点击「更多」) → 详情页-更多模式页面 → (点击「灯效库」) → 更多-灯效库页面 → (无出边，终止)",
+            "steps": [
+              {
+                "node_id": "n1",
+                "name": "启动 App"
+              },
+              {
+                "node_id": "n2",
+                "name": "APP主页",
+                "action": {
+                  "element_id": "957",
+                  "label": "设备主页入口"
+                }
+              },
+              {
+                "node_id": "n3",
+                "name": "设备主页页面",
+                "action": {
+                  "element_id": "970",
+                  "label": "H6810"
+                }
+              },
+              {
+                "node_id": "n4",
+                "name": "H6810设备详情页",
+                "action": {
+                  "element_id": "950",
+                  "label": "更多"
+                }
+              },
+              {
+                "node_id": "n22",
+                "name": "详情页-更多模式页面",
+                "action": {
+                  "element_id": "1010",
+                  "label": "灯效库"
+                }
+              },
+              {
+                "node_id": "n26",
+                "name": "更多-灯效库页面"
+              }
+            ]
+          },
+          {
+            "text": "启动 App → APP主页 → (点击「设备主页入口」) → 设备主页页面 → (点击「H6810」) → H6810设备详情页 → (点击「更多」) → 详情页-更多模式页面 → (点击「定时」) → 更多-定时功能页面 → (无出边，终止)",
+            "steps": [
+              {
+                "node_id": "n1",
+                "name": "启动 App"
+              },
+              {
+                "node_id": "n2",
+                "name": "APP主页",
+                "action": {
+                  "element_id": "957",
+                  "label": "设备主页入口"
+                }
+              },
+              {
+                "node_id": "n3",
+                "name": "设备主页页面",
+                "action": {
+                  "element_id": "970",
+                  "label": "H6810"
+                }
+              },
+              {
+                "node_id": "n4",
+                "name": "H6810设备详情页",
+                "action": {
+                  "element_id": "950",
+                  "label": "更多"
+                }
+              },
+              {
+                "node_id": "n22",
+                "name": "详情页-更多模式页面",
+                "action": {
+                  "element_id": "1007",
+                  "label": "定时"
+                }
+              },
+              {
+                "node_id": "n28",
+                "name": "更多-定时功能页面"
+              }
+            ]
+          },
+          {
+            "text": "启动 App → APP主页 → (点击「设备主页入口」) → 设备主页页面 → (点击「H6810」) → H6810设备详情页 → (点击「更多」) → 详情页-更多模式页面 → (点击「调色板」) → 更多-调色板功能页面 → (无出边，终止)",
+            "steps": [
+              {
+                "node_id": "n1",
+                "name": "启动 App"
+              },
+              {
+                "node_id": "n2",
+                "name": "APP主页",
+                "action": {
+                  "element_id": "957",
+                  "label": "设备主页入口"
+                }
+              },
+              {
+                "node_id": "n3",
+                "name": "设备主页页面",
+                "action": {
+                  "element_id": "970",
+                  "label": "H6810"
+                }
+              },
+              {
+                "node_id": "n4",
+                "name": "H6810设备详情页",
+                "action": {
+                  "element_id": "950",
+                  "label": "更多"
+                }
+              },
+              {
+                "node_id": "n22",
+                "name": "详情页-更多模式页面",
+                "action": {
+                  "element_id": "1011",
+                  "label": "调色板"
+                }
+              },
+              {
+                "node_id": "n30",
+                "name": "更多-调色板功能页面"
+              }
+            ]
+          },
+          {
+            "text": "启动 App → APP主页 → (点击「设备主页入口」) → 设备主页页面 → (点击「H6810」) → H6810设备详情页 → (点击「更多」) → 详情页-更多模式页面 → (点击「随机颜色」) → 更多-随机颜色页面 → (无出边，终止)",
+            "steps": [
+              {
+                "node_id": "n1",
+                "name": "启动 App"
+              },
+              {
+                "node_id": "n2",
+                "name": "APP主页",
+                "action": {
+                  "element_id": "957",
+                  "label": "设备主页入口"
+                }
+              },
+              {
+                "node_id": "n3",
+                "name": "设备主页页面",
+                "action": {
+                  "element_id": "970",
+                  "label": "H6810"
+                }
+              },
+              {
+                "node_id": "n4",
+                "name": "H6810设备详情页",
+                "action": {
+                  "element_id": "950",
+                  "label": "更多"
+                }
+              },
+              {
+                "node_id": "n22",
+                "name": "详情页-更多模式页面",
+                "action": {
+                  "element_id": "1012",
+                  "label": "随机颜色"
+                }
+              },
+              {
+                "node_id": "n31",
+                "name": "更多-随机颜色页面"
+              }
+            ]
+          }
+        ],
+        "parse_warnings": []
+      }
+    }
+  }
+}

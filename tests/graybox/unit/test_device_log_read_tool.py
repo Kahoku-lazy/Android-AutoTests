@@ -17,13 +17,12 @@ import pytest
 
 from django.test import override_settings
 
-from apps.ai_assistant.tools import (
+from apps.ai_assistant.tools import list_tool_schemas, read_device_log
+from engines.agents.tools.tool_serial import (
     LOG_SPAN_DEFAULT_SECONDS,
     LOG_SPAN_MAX_SECONDS,
     _clamp_log_span,
     _parse_log_at,
-    list_tool_schemas,
-    read_device_log,
 )
 from engines.ai.agents.config import VERIFIER_TOOLS, VISION_TOOLS
 from engines.device.logbus import (
@@ -109,6 +108,17 @@ def test_parse_log_at_time_only_uses_today() -> None:
     today = datetime.now(BEIJING_TZ).date()
     assert moment.date() == today
     assert moment.hour == 13 and moment.minute == 5
+
+
+def test_parse_log_at_without_milliseconds() -> None:
+    """不带毫秒时按该秒的 .000，日期和时刻两种写法都接受。"""
+    full = _parse_log_at("2026-09-28 13:05:37")
+    assert full.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] == "2026-09-28 13:05:37.000"
+    assert full.utcoffset() == timedelta(hours=8)
+
+    clock = _parse_log_at("13:05:37")
+    assert clock.date() == datetime.now(BEIJING_TZ).date()
+    assert (clock.hour, clock.minute, clock.second, clock.microsecond) == (13, 5, 37, 0)
 
 
 def test_parse_log_at_rejects_garbage() -> None:
@@ -342,12 +352,12 @@ def test_tool_is_registered_in_toolbox() -> None:
     assert "日志" in row["summary"]
 
 
-# ── 3.2 执行模型装配（验收模型改用按规则检查的工具）──────────
+# ── 3.2 工具装配范围（执行模型收敛为引擎设备动作工具；验收模型用按规则检查的工具）──
 
 
-def test_tool_is_mounted_for_executor_only() -> None:
-    """通用查询工具只给执行模型；验收模型用的是按关键词规则检查的工具。"""
-    assert TOOL_NAME in VISION_TOOLS
+def test_tool_is_not_mounted_for_any_role() -> None:
+    """通用查询工具不装配进任何模型角色；验收模型用的是按关键词规则检查的工具。"""
+    assert TOOL_NAME not in VISION_TOOLS
     assert TOOL_NAME not in VERIFIER_TOOLS
     assert VERIFIER_TOOLS == ["screenshot_page", "check_device_log"]
 

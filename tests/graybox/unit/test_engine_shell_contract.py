@@ -10,7 +10,7 @@ import pytest
 
 from uiautomator2.abstract import ShellResponse
 
-from engines.device.android.u2 import U2Engine
+from engines.device.android import U2Engine
 from engines.device.base import UiEngine
 
 

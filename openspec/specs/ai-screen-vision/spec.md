@@ -1,7 +1,7 @@
 # ai-screen-vision Specification
 
 ## Purpose
-TBD - created by archiving change add-ai-screen-vision-capture. Update Purpose after archive.
+约定智能体可以截取在线且未被占用设备的当前屏幕，把截图作为图片交给视觉模型并在对话中回显；历史重新打开时还原图片，并可用 OCR 读取当前页面的文本坐标。
 ## Requirements
 ### Requirement: 智能体可截取手机屏幕并返回图片
 

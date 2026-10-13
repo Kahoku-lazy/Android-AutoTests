@@ -1,7 +1,7 @@
 # dashboard-ai-usage Specification
 
 ## Purpose
-TBD - created by archiving change add-dashboard-ai-usage. Update Purpose after archive.
+约定每条 AI 回复落库时记下输入、输出与缓存命中 token，仪表盘按今日与累计汇总对话数、token、命中率与平均每对话用量并展示出来。
 ## Requirements
 ### Requirement: 后端持久化 AI 消息 token 用量
 

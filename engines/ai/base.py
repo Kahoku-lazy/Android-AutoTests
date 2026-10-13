@@ -1,10 +1,7 @@
-"""AI 引擎协议层 — Django 与可替换 AI 引擎之间的进程内契约。
+"""AI 引擎协议层：定义 Django 与 AI 引擎实现之间的进程内契约。
 
-对齐设备引擎 `engines/device/base.py`（L1c 可替换插槽）。Django 只传
-`TaskRequest`（任务表单 + 三角色模型配置 + 工具清单），引擎返回归一化
-`TaskResult`。换框架只换引擎实现，Django 逻辑不变。
-
-导入边界：零 `django.*`、零 `apps.*`；只依赖标准库类型。
+入参 `TaskRequest`（任务表单 + 三角色模型配置 + 工具清单），返回归一化 `TaskResult`。
+只依赖标准库与 AgentScope 消息类型，不 import `django.*` 与 `apps.*`。
 """
 
 from __future__ import annotations
@@ -46,14 +43,18 @@ class ToolSpec:
 
 
 class LogEvidenceProvider(Protocol):
-    """设备日志证据提供者 —— Django 侧注入，引擎只经协议调用。
-
-    与 `on_progress` 同构：只含标准库类型，引擎不直接碰串口 / TCP 句柄，也不 import `engines.device`。
-    工作流在把步骤交给执行模型**之前**开窗，在验收之前读窗。
-    """
+    """设备日志证据提供者协议：由 Django 注入，引擎只经协议调用。"""
 
     def open_window(self, device: str, label: str = "") -> str:
-        """开一个日志证据窗口，返回窗口标识（必须早于动作发出）。"""
+        """开一个日志证据窗口，返回窗口标识（必须早于动作发出）。
+
+        Args:
+            device: 设备 serial。
+            label: 窗口标签（可为空）。
+
+        Returns:
+            窗口标识，供 `read_window` 使用。
+        """
         ...
 
     def read_window(
@@ -63,10 +64,19 @@ class LogEvidenceProvider(Protocol):
         action_times: list[str] | None = None,
         wait_seconds: float = 0.0,
     ) -> dict:
-        """读窗口并返回日志证据（含等级标注）；未开窗时应抛错，不得用历史日志顶替。
+        """读窗口并返回日志证据（含等级标注）；未开窗时抛错，不得用历史日志顶替。
 
-        `action_times` 是本步骤**全部**副作用动作的发出时刻（一步可能有多次点击）：
-        取证窗取「每次动作 + 阈值」的并集，只有首次动作会把后面的响应误判成超窗。
+        Args:
+            device: 设备 serial。
+            window_id: 开窗返回的窗口标识。
+            action_times: 本步骤全部副作用动作的发出时刻；取证窗取「每次动作 + 阈值」的并集。
+            wait_seconds: 读窗前等待秒数。
+
+        Returns:
+            日志证据 dict。
+
+        Raises:
+            Exception: 未开窗或窗口不可读。
         """
         ...
 
@@ -89,6 +99,8 @@ class TaskRequest:
     log_evidence: LogEvidenceProvider | None = None
     # 当前日志关键词表文本（关键词 → 功能点；Django 从运行时索引渲染后注入，空 = 不附）
     log_keywords: str = ""
+    # 角色过程日志落点（Django 注入；空则引擎用 <当前工作目录>/logs/agents.log）
+    log_path: str = ""
 
 
 @dataclass

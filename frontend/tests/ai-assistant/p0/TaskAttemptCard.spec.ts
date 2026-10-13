@@ -1,5 +1,5 @@
 /**
- * [P0] 必测 — 任务尝试卡片（执行结果常显 / 截图不折叠 / Agent 默认收起）
+ * [P0] 必测 — 任务尝试卡片（执行结果常显 / 截图不折叠 / 不再展示 Agent 过程）
  * 目录：tests/ai-assistant/p0/
  */
 import { describe, expect, it } from "vitest"
@@ -9,7 +9,7 @@ import type { TaskStepAttempt } from "@/modules/ai-assistant/helpers/task-detail
 
 const stubs = {
   "el-collapse": {
-    template: '<div class="el-collapse" data-testid="agent-collapse"><slot /></div>',
+    template: '<div class="el-collapse" data-testid="collapse-stub"><slot /></div>',
   },
   "el-collapse-item": {
     props: ["title", "name"],
@@ -33,17 +33,6 @@ function makeAttempt(overrides: Partial<TaskStepAttempt> = {}): TaskStepAttempt 
     verifierResult: "pass",
     actual: "页面已跳转",
     screenshotUrl: "/media/shots/verify-1.png",
-    executorTrace: {
-      input: "执行：点击登录",
-      thinking: ["先找登录按钮"],
-      tools: [{ type: "call", name: "tap", input: "登录" }],
-      text: "点击完成",
-    },
-    verifierTrace: {
-      input: "验收：进入首页",
-      thinking: ["检查标题"],
-      text: "验收通过",
-    },
     ...overrides,
   }
 }
@@ -69,7 +58,6 @@ describe("[P0] TaskAttemptCard", () => {
     expect(result.text()).toContain("验收")
     expect(result.text()).toContain("页面已跳转")
     expect(result.find(".el-collapse").exists()).toBe(false)
-    expect(wrapper.find('[data-testid="agent-collapse"]').exists()).toBe(true)
   })
 
   it("有截图时 el-image 常显在结果区", () => {
@@ -177,18 +165,12 @@ describe("[P0] TaskAttemptCard", () => {
     expect(result.find('[data-testid="attempt-verifier-shot-path"]').exists()).toBe(false)
   })
 
-  it("Agent 折叠默认未展开", () => {
+  it("不再渲染 Agent 过程区块（思考 / 工具明细已下线）", () => {
     const wrapper = mountCard()
-    const collapse = wrapper.find('[data-testid="agent-collapse"]')
-    expect(collapse.exists()).toBe(true)
-    const wraps = collapse.findAll(".el-collapse-item__wrap")
-    expect(wraps.length).toBeGreaterThan(0)
-    wraps.forEach((w) => {
-      const style = (w.attributes("style") || "").replace(/\s/g, "")
-      expect(style).toContain("display:none")
-    })
-    expect(collapse.text()).toContain("Executor Agent Info")
-    expect(collapse.text()).toContain("Verifier Agent Info")
+    expect(wrapper.find(".el-collapse").exists()).toBe(false)
+    expect(wrapper.text()).not.toContain("Executor Agent Info")
+    expect(wrapper.text()).not.toContain("Verifier Agent Info")
+    expect(wrapper.text()).not.toContain("思考过程")
   })
 
   it("标题与正文 class 分离", () => {
@@ -199,7 +181,7 @@ describe("[P0] TaskAttemptCard", () => {
     expect(wrapper.find(".tac-result__label").exists()).toBe(true)
   })
 
-  it("日志证据摘要常显在尝试卡片内（不在 Agent 折叠块里）", () => {
+  it("日志证据摘要常显在尝试卡片内", () => {
     const wrapper = mountCard({
       logEvidence: {
         conclusion: "hit",

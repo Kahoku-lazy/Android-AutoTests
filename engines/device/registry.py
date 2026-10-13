@@ -27,7 +27,7 @@ class ConfigurationError(RuntimeError):
 
 # 引擎名 → 实现类 import 路径（懒加载，实例化延迟到首次取用）
 ENGINE_REGISTRY = {
-    "u2": "engines.device.android.u2.U2Engine",
+    "u2": "engines.device.android.U2Engine",
     # 未来插槽示例： "cloud": "engines.device.android.cloud.CloudDeviceEngine",
 }
 

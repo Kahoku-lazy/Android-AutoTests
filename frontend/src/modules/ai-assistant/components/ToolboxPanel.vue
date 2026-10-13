@@ -248,36 +248,6 @@
                 </div>
               </div>
             </template>
-
-            <template v-else-if="activeSource === 'debug'">
-              <EmptyState
-                v-if="!debugRolesLoading && !debugRoles.length"
-                icon="🧪"
-                text="暂无角色配置"
-              />
-              <div v-else v-loading="debugRolesLoading" class="tb-debug-grid">
-                <button
-                  v-for="item in debugRoles"
-                  :key="item.role"
-                  type="button"
-                  class="tb-debug-card"
-                  :data-role="item.role"
-                  @click="openModelDebug(item.role)"
-                >
-                  <span class="tb-debug-head">
-                    <span class="tb-debug-name">{{ item.label }}</span>
-                    <span v-if="item.vision" class="tb-debug-badge">视觉</span>
-                  </span>
-                  <span class="tb-debug-model">{{
-                    item.model.model_name || "（未配置模型）"
-                  }}</span>
-                  <span class="tb-debug-meta">
-                    {{ item.tools.length }} 个工具 ·
-                    {{ item.model.configured ? "已配置" : "缺 API Key" }}
-                  </span>
-                </button>
-              </div>
-            </template>
           </div>
         </template>
       </section>
@@ -286,7 +256,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from "vue"
+import { computed } from "vue"
 import { useRouter } from "vue-router"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import LogKeywordPanel from "./LogKeywordPanel.vue"
@@ -295,9 +265,8 @@ import { useToolbox } from "../composables/useToolbox"
 import { usePlatformTools } from "../composables/usePlatformTools"
 import { usePlatformConfig } from "../composables/usePlatformConfig"
 import { useToolboxAssembly } from "../composables/useToolboxAssembly"
-import { useModelDebugRoles } from "../composables/useModelDebug"
 import { gatedSources } from "../helpers/toolbox-assembly"
-import { modelDebugRoute, skillViewerRoute, toolDebugRoute } from "../constants"
+import { skillViewerRoute, toolDebugRoute } from "../constants"
 import type { AssemblySourceDef } from "../helpers/toolbox-assembly"
 import type { SharedToolItem } from "../api/toolbox"
 
@@ -345,13 +314,6 @@ const {
   sharedItems: items,
 })
 
-const { roles: debugRoles, loading: debugRolesLoading, load: loadDebugRoles } = useModelDebugRoles()
-
-/** 进入「模型调试」来源时按需拉三角色概览（三个角色各一次只读配置） */
-watch(activeSource, (now) => {
-  if (now === "debug" && !debugRoles.value.length) void loadDebugRoles()
-})
-
 const gatedLiveSources = computed(() => gatedSources())
 
 const catalogLoading = computed(() => {
@@ -372,10 +334,6 @@ function openSkill(item: SharedToolItem) {
 
 function openToolDebug(name: string) {
   router.push(toolDebugRoute(name))
-}
-
-function openModelDebug(role: string) {
-  router.push(modelDebugRoute(role))
 }
 </script>
 

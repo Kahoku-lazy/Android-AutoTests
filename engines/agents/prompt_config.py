@@ -1,35 +1,11 @@
-"""配置层：模型连接配置 + 模型能力目录 + 智能体提示词。设备执行专用。"""
+"""配置层：模型能力目录 + 智能体提示词。设备执行专用。"""
 
 from __future__ import annotations
-
-from dataclasses import dataclass, field
 
 from .prompts.common_prompt import CHINESE_DEMAND
 from .prompts.executor_prompt import EXECUTOR_PROMPT
 from .prompts.planner_prompt import PLANNER_PROMPT
 from .prompts.verifier_prompt import VERIFIER_PROMPT
-
-
-@dataclass
-class ModelConfig:
-    """单个模型的连接配置（纯数据，供 `create_model` 建立连接）。"""
-
-    provider: str = "deepseek"  # 提供商：deepseek / dashscope
-    model_name: str = ""  # 模型名（如 deepseek-flash / qwen3.6-plus）
-    api_key: str = ""  # 已解密的 API Key（Django 层解密后传入）
-    base_url: str = ""  # 已解析默认值的 base_url（空则用 provider 默认端点）
-
-
-@dataclass
-class DeviceExecutionConfig:
-    """设备执行三角色配置（规划 / 执行 / 验收）+ 每步最大重试次数。"""
-
-    planner: ModelConfig = field(default_factory=ModelConfig)  # 规划模型连接
-    executor: ModelConfig = field(default_factory=ModelConfig)  # 执行模型连接（多模态）
-    verifier: ModelConfig = field(default_factory=ModelConfig)  # 验收模型连接（多模态）
-    max_loops: int = 3  # 每步「执行↔验收」最大重试次数
-    log_wait_seconds: float = 0.0  # 读日志证据前等待秒数
-
 
 # ── DeepSeek 模型目录（正式模型名 → 是否支持图片输入）──
 #
@@ -71,9 +47,7 @@ def model_supports_image(provider: str, model_name: str) -> bool | None:
 __all__ = [
     "CHINESE_DEMAND",
     "DEEPSEEK_MODELS",
-    "DeviceExecutionConfig",
     "EXECUTOR_PROMPT",
-    "ModelConfig",
     "PLANNER_PROMPT",
     "VERIFIER_PROMPT",
     "model_supports_image",

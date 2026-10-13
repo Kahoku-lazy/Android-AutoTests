@@ -47,6 +47,15 @@ def _parse_log_at(value: str):
     """解析查询时间点。支持完整时间，或只给时刻（按当天北京时间）。
 
     可以带毫秒，也可以只到秒。只到秒时按该秒的 `.000`。
+
+    Args:
+        value: 时间点字符串。
+
+    Returns:
+        带北京时间时区的 `datetime`。
+
+    Raises:
+        ValueError: 四种支持格式都匹配不上。
     """
     text = (value or "").strip()
     for fmt in LOG_AT_FORMATS:
@@ -136,6 +145,10 @@ def read_device_log(
         seconds: 跨度秒数，默认 30，最大 300
         port: 日志来源端口，默认平台配置的端口（现场 7005）；传未配置的端口不报错，返回「端口 X 未配置为日志来源」的结论
         keyword: 可选，只看包含该关键词的日志行（忽略大小写），并还原命中的功能模块 / 功能点
+
+    Raises:
+        ValueError: at 时间点无法解析。
+        ValueError: 设备日志采集未启动（平台未开启日志采集 DEVICE_LOG_ENABLED）或无可用来源。
     """
     del user_id
     bus = get_log_bus()
@@ -254,6 +267,10 @@ def check_device_log(
         at: 起点时间（北京时间）。从这一刻起向后 5 秒，含起点。
             可写到毫秒，也可只到秒（按该秒的 `.000`）
         sku: 设备型号，例如 H6810 或 H7011
+
+    Raises:
+        ValueError: at 时间点无法解析。
+        ValueError: 起点之后 5 秒窗口内没有任何日志（日志为空），中断本轮。
     """
     del user_id
     wanted = str(keyword or "").strip()

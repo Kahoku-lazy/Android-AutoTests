@@ -165,7 +165,11 @@ def final_summary(
 
 
 def main(argv: list[str] | None = None) -> None:
-    """读出全部用例，每条单独启动角色并跑一遍 SOP。"""
+    """读出全部用例，每条单独启动角色并跑一遍 SOP。
+
+    Raises:
+        SystemExit: 未设置 `DEEPSEEK_API_KEY` 环境变量（提示不要把 key 写进源码）。
+    """
     args = parse_case_args(argv)
     cases = load_sop_cases(args.case)
     api_key = os.getenv("DEEPSEEK_API_KEY", "").strip()

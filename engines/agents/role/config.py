@@ -35,7 +35,6 @@ class ModelConfig:
 
     Raises:
         FrozenInstanceError: 模型配置不可变。
-        ValueError: API 密钥不是字符串或 SecretStr 类型。
     """
 
     provider: str = ""
@@ -96,10 +95,6 @@ class ChatModelFactory:
             config: 模型配置。
             stream: 是否流式输出。
             vision: 是否多模态。
-
-        Raises:
-            ValueError: 不支持的模型提供商。
-            ValueError: API 密钥不是字符串或 SecretStr 类型。
         """
 
         self.config = config
@@ -153,7 +148,15 @@ class ChatModelFactory:
         )
 
     def create(self) -> ChatModelBase:
-        """按 provider 创建模型。未知 provider 时抛出 ValueError，并列出可选厂商。"""
+        """按 provider 创建模型。
+
+        Returns:
+            该 provider 对应的聊天模型实例。
+
+        Raises:
+            ValueError: provider 不在支持集合内（deepseek / openai / dashscope），
+                报错会列出可选厂商。
+        """
         config = self.config
         builders = {
             "deepseek": self.deepseek_model,

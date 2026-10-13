@@ -9,14 +9,14 @@
 
 1. `role`: **存放**智能体角色，所有角色创建都必须继承 `base.BaseRole`类
 2. `prompts`: **存放**智能提示词，所有智能体角色的`system_prompt`, `user_prompt`用提示词额外配置，与`assistant_prompt`助手消息额外配置都在这个目录下存放。 模块名称模板`XXXX_prompt.py`其中XXX是角色名称。
-3. `messaging`:
+3. `messaging`: **存放**对话稿与消息处理：对话落库（`dialogue.py`）、工具输出与用量费用解析、上屏渲染（`messages.py`）。
 4. `tools`: **存放**智能体角色工具
 5. `skills`: **存放**智能体角色skill技能
 6. `mcp_config`:**存放**智能体角色mcp工具
 7. `workflow`: **存放** SOP 步骤输入与单次运行。不在此目录创建角色，也不在此配置提示词或工具。
 
 ### engines/agents 根目录代码文件说明
-1. `billing.py`: 费用计算相关功能放在这个模块(`.py`)，里面都是模型 Token 费用计算规则，。
+1. `billing.py`: 费用计算相关功能放在这个模块(`.py`)，里面都是模型 Token 费用计算规则。
 2. `prompt_config.py`: **配置**智能体提示词的模块，智能体角色提示词**必须**通过这个模块配置
 3. `tools_config.py`: **配置**智能体工具的模块，智能体角色工具**必须**通过这个模块配置
 

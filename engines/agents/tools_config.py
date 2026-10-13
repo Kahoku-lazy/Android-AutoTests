@@ -32,7 +32,17 @@ class ToolGroupSpec:
 
 
 def select_tools(names: tuple[str, ...]):
-    """按名字表取出 ToolSpec，顺序与名字表一致。未知名字直接报错。"""
+    """按名字表取出 ToolSpec，顺序与名字表一致。未知名字直接报错。
+
+    Args:
+        names: 要取出的工具名。
+
+    Returns:
+        工具规格列表，顺序与 `names` 一致。
+
+    Raises:
+        ValueError: 名字表里有未登记的工具（报错会列出可选名）。
+    """
     by_name = {spec.name: spec for spec in (*device_tool_specs(), *serial_tool_specs())}
     missing = [name for name in names if name not in by_name]
     if missing:
@@ -59,7 +69,18 @@ def _assigned_tools(
     basic_tool_names: tuple[str, ...],
     groups: tuple[ToolGroupSpec, ...],
 ) -> dict[str, str]:
-    """记录每个工具名属于哪一组。同一名字出现两次则报错。"""
+    """记录每个工具名属于哪一组。同一名字出现两次则报错。
+
+    Args:
+        basic_tool_names: 常驻组（basic）的工具名。
+        groups: 可开关工具组。
+
+    Returns:
+        工具名 → 所属组名的映射。
+
+    Raises:
+        ValueError: 同一工具名同时列入 basic 与某个可开关组。
+    """
     owner: dict[str, str] = {}
     for name in basic_tool_names:
         if name in owner:
@@ -215,7 +236,8 @@ def _tool_group(toolkit: Toolkit, name: str):
         同名工具组。
 
     Raises:
-        ValueError: 工具包中没有该组。basic 缺失时改为 RuntimeError。
+        RuntimeError: 工具包缺少 basic 组。
+        ValueError: 工具包中没有该组。
     """
     for group in toolkit.tool_groups:
         if group.name == name:
@@ -230,7 +252,18 @@ def _skill_sources(
     *,
     scan_subdir: bool,
 ) -> list[Skill | SkillLoaderBase]:
-    """把路径、Skill、加载器收成 Toolkit 能挂上的来源。"""
+    """把路径、Skill、加载器收成 Toolkit 能挂上的来源。
+
+    Args:
+        skills: skill 来源，可以是目录路径、`Skill` 或 `SkillLoader`。
+        scan_subdir: 目录来源是否递归扫描子目录。
+
+    Returns:
+        可直接挂到 Toolkit 的来源列表。
+
+    Raises:
+        TypeError: 来源既不是目录路径，也不是 `Skill` / `SkillLoaderBase`。
+    """
     sources: list[Skill | SkillLoaderBase] = []
     for item in skills:
         if isinstance(item, str):

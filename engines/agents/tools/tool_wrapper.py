@@ -73,6 +73,18 @@ class PlatformFunctionTool(FunctionTool):
             required.remove("user_id")
 
     async def call(self, **kwargs):
+        """执行工具：注入 user_id、记调用日志、把返回值转成 ToolChunk。
+
+        Args:
+            **kwargs: 工具入参。
+
+        Returns:
+            工具返回值转换出的 ToolChunk。
+
+        Raises:
+            DeveloperOrientedException: 工具返回值为 `LOG_EMPTY`（日志为空）时，
+                转成开发者可见异常而不是普通参数错误。
+        """
         if self._accepts_user_id:
             kwargs.setdefault("user_id", self._user_id)
         logger.info(

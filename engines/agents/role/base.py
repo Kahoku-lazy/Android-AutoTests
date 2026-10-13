@@ -43,7 +43,7 @@ class BaseRole:
         self.role = role
         self.model = ChatModelFactory(config, stream=role.stream, vision=role.vision).create()
         self.agent: Agent | None = None
-        self._reply_task: asyncio.Task | None = None
+        self._reply_task: asyncio.Task[object] | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
 
     def start(self) -> None:

@@ -80,6 +80,7 @@ class TaskStatus(StrEnum):
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 class MemoryMode(StrEnum):

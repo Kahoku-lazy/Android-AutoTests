@@ -46,6 +46,7 @@ def run_task_async(task_id: int, agent_id: int) -> None:
             verifier_model=verifier_model,
             task_id=task_id,
             case_title=task.case_title or "",
+            device_serial=task.device_serial or "",
         )
         api.set_config_load_message(task, result.get("load_message") or "")
         status_map = {

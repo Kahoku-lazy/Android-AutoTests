@@ -654,11 +654,9 @@ def generate_markdown():
         prefix_map = {
             "device_pool": "dp_",
             "case_manager": "cm_",
-            "test_runner": "tr_",
             "report_generator": "rg_",
             "ai_assistant": "ai_",
             "workflow": "wf_",
-            "evaluator": "ev_",
             "dashboard": "—",
         }
         prefix = prefix_map.get(a["name"], "??")
@@ -886,11 +884,9 @@ def generate_agents_md_sections():
     prefix_map = {
         "device_pool": "dp_",
         "case_manager": "cm_",
-        "test_runner": "tr_",
         "report_generator": "rg_",
         "ai_assistant": "ai_",
         "workflow": "wf_",
-        "evaluator": "ev_",
         "dashboard": "—",
     }
     lines = []

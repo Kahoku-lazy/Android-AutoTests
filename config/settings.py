@@ -74,16 +74,14 @@ INSTALLED_APPS = [
     # Framework
     "gateway",
     "shared",
-    # Django Apps（10 个；其中 test_runner、evaluator 已下线，仅保留卸表迁移）
+    # Django Apps（8 个；test_runner、evaluator 已退役，卸载迁移随 app 一并删除）
     "apps.device_pool",
     "apps.case_manager",
     "apps.workflow",
-    "apps.test_runner",
     "apps.report_generator",
     "apps.accounts",
     "apps.ai_assistant",
     "apps.serial_log",
-    "apps.evaluator",
     "apps.dashboard",
 ]
 

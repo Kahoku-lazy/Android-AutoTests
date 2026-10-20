@@ -3,7 +3,7 @@
 演示集成测试写法；真实用例请替换为对应模块的 ORM/多模块协作测试。
 
 注意：django_db 使用 config.test_settings（SQLite :memory:）。
-部分 App 迁移链含 MySQL 专属 RunSQL（如 test_runner/0017、ai_assistant/0021），
+部分 App 迁移链含 MySQL 专属 RunSQL（如 ai_assistant/0021），
 SQLite 测试库可能无法建库；涉及这些 App 的集成测试需 mock 或显式跳过。
 """
 

@@ -21,7 +21,6 @@ _ZERO = Decimal("0.00000000")
 _ROLE_KIND = {
     "executor_role": "executor",
     "verifier_role": "verifier",
-    "planner_role": "planner",
 }
 
 

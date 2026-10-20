@@ -23,9 +23,6 @@ PUBLIC_PREFIXES = [
     "/api/auth/login",
     "/api/auth/register",
     "/api/auth/refresh",
-    # 工具网关：免 JWT（服务间），由 gateway.internal_token.InternalToolTokenMiddleware
-    # 校验 X-Internal-Token；令牌未配置时一律 401（fail-closed）
-    "/api/ai/tools/",
     # 后台与静态资源
     "/admin/",
     "/static/",

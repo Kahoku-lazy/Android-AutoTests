@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from .prompts.common_prompt import CHINESE_DEMAND
 from .prompts.executor_prompt import EXECUTOR_PROMPT
-from .prompts.planner_prompt import PLANNER_PROMPT
 from .prompts.verifier_prompt import VERIFIER_PROMPT
 
 # ── DeepSeek 模型目录（正式模型名 → 是否支持图片输入）──
@@ -38,9 +37,8 @@ def model_supports_image(provider: str, model_name: str) -> bool | None:
     return DEEPSEEK_MODELS.get(name)
 
 
-# ── 智能体提示词分配（正文在 prompts/，角色只从本模块取用）──
+# 智能体提示词分配（正文在 prompts/，角色只从本模块取用）
 #
-# planner   → PLANNER_PROMPT
 # executor  → EXECUTOR_PROMPT    （执行角色唯一系统提示词）
 # verifier  → VERIFIER_PROMPT    （验收角色唯一系统提示词）
 # 共用片段  → CHINESE_DEMAND     （追加在每轮用户输入末尾）
@@ -49,7 +47,6 @@ __all__ = [
     "CHINESE_DEMAND",
     "DEEPSEEK_MODELS",
     "EXECUTOR_PROMPT",
-    "PLANNER_PROMPT",
     "VERIFIER_PROMPT",
     "model_supports_image",
 ]

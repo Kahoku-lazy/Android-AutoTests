@@ -17,14 +17,13 @@ from enum import Enum
 import pytest
 
 from models import constants as models_constants
-from models import test_models
 
 pytestmark = [pytest.mark.unit]
 
-SSOT_MODULES = (models_constants, test_models)
+SSOT_MODULES = (models_constants,)
 
-# `models/` 内 SSOT 枚举总数（constants 10 + test_models 3）；仅作「发现没漏」的下限
-MIN_DISCOVERED_ENUMS = 13
+# `models/` 内 SSOT 枚举总数（constants 11）；仅作「发现没漏」的下限
+MIN_DISCOVERED_ENUMS = 11
 
 
 def _discover_enums() -> list[tuple[str, type[Enum]]]:

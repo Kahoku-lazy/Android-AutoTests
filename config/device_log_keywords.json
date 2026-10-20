@@ -159,7 +159,7 @@
         "feature": "成功切换至DIY模式"
       }
     ],
-    "diy_configs_set_success": [
+    "diy2d_mode_start": [
       {
         "id": 23,
         "module": "DIY模式",

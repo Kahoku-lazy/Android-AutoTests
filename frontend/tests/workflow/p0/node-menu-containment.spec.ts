@@ -1,19 +1,18 @@
 /**
- * [P0] 必测 — 画布右键菜单（含「选择 Android 页面」列表）不出屏
+ * [P0] 必测 — 画布右键菜单不出屏
  * （spec: page-flow-overlay-containment）
  * 目录：tests/workflow/p0/
  *
  * 覆盖 `page-flow-canvas-cursor-anchoring` 的浮层边界契约：
  *  1. 锚点在屏内时保持光标锚定位置；
  *  2. 锚点落在右下角外时，菜单左/上边缘收进视口（保留 8px 边距），不是被裁切；
- *  3. 切到「选择 Android 页面」列表后仍在屏内，搜索框可见；
- *  4. 仍是光标锚定的非模态菜单：不出现全屏遮罩，也不居中。
+ *  3. 仍是光标锚定的非模态菜单：不出现全屏遮罩，也不居中。
  *
- * jsdom 的 getBoundingClientRect 恒为 0，因此贴边用浮层常量尺寸（与 CSS 宽度一致）；
- * 真实浏览器下的实测尺寸精修由浏览器实测（tasks 3.3）覆盖。
+ * 节点菜单只有「删除节点」一项（关联 Android 页面已随元素定位退役删除）。
+ * jsdom 的 getBoundingClientRect 恒为 0，因此贴边用浮层常量尺寸（与 CSS 宽度一致）。
  */
 import { mount, flushPromises } from "@vue/test-utils"
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 
 import NodeContextMenu from "@/modules/workflow/components/vueflow/NodeContextMenu.vue"
 import EdgeContextMenu from "@/modules/workflow/components/vueflow/EdgeContextMenu.vue"
@@ -22,10 +21,6 @@ import {
   NODE_MENU_SIZE,
   OVERLAY_MARGIN,
 } from "@/modules/workflow/helpers/overlayPosition"
-
-vi.mock("@/modules/workflow/data/pageCatalog", () => ({
-  fetchCatalogPages: vi.fn().mockResolvedValue({ pages: [], source: "api", message: "" }),
-}))
 
 /** 与浮层定位读到的视口同源（jsdom 默认 1024×768） */
 const VIEWPORT = { width: window.innerWidth, height: window.innerHeight }
@@ -38,7 +33,6 @@ function mountMenu(x: number, y: number) {
       y,
       nodeId: "n1",
       nodeLabel: "页面1",
-      canLinkPage: true,
     },
     global: { stubs: { teleport: true } },
   })
@@ -80,21 +74,8 @@ describe("画布右键菜单 — 视口内完整可见", () => {
 
     expect(left + NODE_MENU_SIZE.width).toBeLessThanOrEqual(VIEWPORT.width - OVERLAY_MARGIN)
     expect(wrapper.find(".menu-item").exists()).toBe(true)
-    expect(wrapper.text()).toContain("关联 Android 页面")
     expect(wrapper.text()).toContain("删除节点")
-  })
-
-  it("切到「选择 Android 页面」列表后仍在屏内，搜索框可见", async () => {
-    const wrapper = mountMenu(VIEWPORT.width - 10, VIEWPORT.height - 10)
-
-    await wrapper.find(".menu-item").trigger("click")
-    await flushPromises()
-
-    const { left, top } = menuPosition(wrapper)
-    expect(left + NODE_MENU_SIZE.width).toBeLessThanOrEqual(VIEWPORT.width - OVERLAY_MARGIN)
-    expect(top + NODE_MENU_SIZE.height).toBeLessThanOrEqual(VIEWPORT.height - OVERLAY_MARGIN)
-    expect(wrapper.find("input.search").exists()).toBe(true)
-    expect(wrapper.find(".list").exists()).toBe(true)
+    expect(wrapper.text()).not.toContain("关联 Android 页面")
   })
 
   it("仍是光标锚定的非模态菜单：无全屏遮罩、不居中", () => {

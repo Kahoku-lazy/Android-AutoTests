@@ -50,8 +50,8 @@ export const MULTI_IN_PORT_TYPES: ReadonlySet<string> = new Set([PORT_TYPE.ENTRY
 
 export type WorkflowNodeType = "PageNode" | "PopupNode" | "StartNode" | "EndNode"
 export type WorkflowCategory = "page" | "popup" | "start" | "end"
-/** StartNode: launch app / page-as-entry */
-export type StartKind = "app" | "page"
+/** StartNode: 只有启动 App（「起始页面」随元素定位退役删除） */
+export type StartKind = "app"
 
 export interface WorkflowNode {
   id: string

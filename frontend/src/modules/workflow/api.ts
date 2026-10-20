@@ -1,5 +1,5 @@
 /**
- * 工作流工作台 API — 原型 + 目录/文档 + 元素素材
+ * 工作流工作台 API — 原型 + 目录/文档
  */
 import client from "@/shared/api-client"
 import type { DjangoResponse } from "@/shared/api-client"
@@ -32,16 +32,6 @@ export interface WorkflowDocumentRow {
   config?: unknown
   created_at?: string
   updated_at?: string
-}
-
-/** 列出元素管理中的页面树 */
-export function listPages() {
-  return client.get("/elements/pages/")
-}
-
-/** 列出某页下的元素 */
-export function listPageElements(pageId, filter = "all") {
-  return client.get(`/elements/pages/${pageId}/items/`, { params: { filter } })
 }
 
 // ── 原型 ──

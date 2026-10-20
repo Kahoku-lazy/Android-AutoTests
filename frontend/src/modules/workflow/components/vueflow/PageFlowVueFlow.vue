@@ -35,8 +35,6 @@ import { useContainedOverlay } from "@/modules/workflow/composables/useContained
 function elXpath(el: { xpath?: string; type: string }): string {
   return el.xpath || el.type
 }
-import type { CatalogPage } from "@/modules/workflow/data/pageCatalog"
-
 import "@vue-flow/core/dist/style.css"
 import "@vue-flow/core/dist/theme-default.css"
 import "@vue-flow/controls/dist/style.css"
@@ -102,9 +100,6 @@ const ctxMenu = ref({
   y: 0,
   nodeId: "",
   nodeLabel: "",
-  canLinkPage: true,
-  linkedPageId: undefined as string | undefined,
-  linkedPageName: undefined as string | undefined,
 })
 
 const edgeMenu = ref({
@@ -123,38 +118,17 @@ function openNodeContext(e: MouseEvent | TouchEvent, nodeId: string) {
   store.select(nodeId)
   const clientX = "clientX" in e ? e.clientX : (e.touches?.[0]?.clientX ?? 0)
   const clientY = "clientY" in e ? e.clientY : (e.touches?.[0]?.clientY ?? 0)
-  const canLink =
-    node.type === "PageNode" ||
-    node.type === "PopupNode" ||
-    (node.type === "StartNode" && node.properties?.start_kind !== "app")
   ctxMenu.value = {
     show: true,
     x: clientX,
     y: clientY,
     nodeId,
     nodeLabel: node.widgets_values[0] || nodeId,
-    canLinkPage: !!canLink,
-    linkedPageId: node.properties?.linked_page_id as string | undefined,
-    linkedPageName: node.properties?.linked_page_name as string | undefined,
   }
 }
 
 function onNodeContextMenu({ event, node }: NodeMouseEvent) {
   openNodeContext(event as MouseEvent, node.id)
-}
-
-function handleLinkPage(page: CatalogPage) {
-  if (!ctxMenu.value.nodeId) return
-  store.linkPage(ctxMenu.value.nodeId, page)
-  refreshFromStore()
-  status.value = store.statusMessage || `已关联「${page.name}」，请添加元素`
-}
-
-async function handleResyncPage() {
-  if (!ctxMenu.value.nodeId) return
-  const ok = await store.resyncLinkedPage(ctxMenu.value.nodeId)
-  refreshFromStore()
-  status.value = store.statusMessage || (ok ? "元素已刷新" : "刷新失败")
 }
 
 function handleDeleteFromCtx() {
@@ -184,9 +158,6 @@ provide("vfRefresh", () => {
 const pickerPool = computed(() => {
   const node = store.findNode(picker.value.nodeId)
   if (!node) return []
-
-  const linked = node.properties?.linked_elements as typeof PAGE_ELEMENTS | undefined
-  if (linked?.length) return linked
   return NODE_REGISTRY[node.type]?.elementPool === "popup" ? POPUP_ELEMENTS : PAGE_ELEMENTS
 })
 
@@ -665,12 +636,7 @@ watch(
       :y="ctxMenu.y"
       :node-id="ctxMenu.nodeId"
       :node-label="ctxMenu.nodeLabel"
-      :can-link-page="ctxMenu.canLinkPage"
-      :linked-page-id="ctxMenu.linkedPageId"
-      :linked-page-name="ctxMenu.linkedPageName"
       @close="ctxMenu.show = false"
-      @link-page="handleLinkPage"
-      @resync-page="handleResyncPage"
       @delete-node="handleDeleteFromCtx"
     />
 

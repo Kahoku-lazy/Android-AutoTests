@@ -4,15 +4,7 @@ export const NAV_CATEGORIES = [
     label: "",
     items: [
       { path: "/dashboard", icon: "layout-dashboard", label: "仪表盘" },
-      {
-        path: "/ai-assistant",
-        icon: "bot",
-        label: "AI 助手",
-        children: [
-          { path: "/ai-assistant/agents", icon: "sticky-note", label: "平台小助手" },
-          { path: "/ai-assistant/toolbox", icon: "wrench", label: "AI工具箱" },
-        ],
-      },
+      { path: "/ai-assistant", icon: "bot", label: "AI 助手" },
     ],
   },
   {
@@ -20,9 +12,8 @@ export const NAV_CATEGORIES = [
     label: "数据",
     items: [
       { path: "/devices", icon: "smartphone", label: "设备管理" },
-      { path: "/inspector", icon: "search", label: "设备检查器" },
-      { path: "/elements", icon: "crosshair", label: "元素定位" },
       { path: "/workflow", icon: "git-branch", label: "页面流" },
+      { path: "/serial-log", icon: "terminal", label: "串口日志" },
     ],
   },
   {
@@ -35,17 +26,14 @@ export const NAV_CATEGORIES = [
   },
 ]
 
-// ── Doodle Craft 协调：path → 模块色（active 书签条），与主区 8 模块色同源 ──
+// ── Doodle Craft 协调：path → 模块色（active 书签条），与主区模块色同源 ──
 export const MOD_COLORS = {
   "/dashboard": "var(--c-dashboard)",
   "/devices": "var(--c-device)",
-  "/inspector": "var(--c-device)",
-  "/elements": "var(--c-element)",
-  "/elements/projects": "var(--c-element)",
   "/cases": "var(--c-case)",
   "/reports": "var(--c-report)",
   "/ai-assistant": "var(--c-ai)",
   "/ai-assistant/agents": "var(--c-ai)",
-  "/ai-assistant/toolbox": "var(--c-ai)",
   "/workflow": "var(--c-workflow)",
+  "/serial-log": "var(--c-device)",
 }

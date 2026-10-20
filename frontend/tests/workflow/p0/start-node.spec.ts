@@ -1,11 +1,11 @@
 /**
- * [P0] 必测 — 页面流起点收敛为「启动 App / 起始页面」两种模式
+ * [P0] 必测 — 页面流起点只剩「启动 App」
  * 目录：tests/workflow/p0/
  *
- * 覆盖 `remove-page-flow-start-url-api` 的起点契约：
- *  1. 起点属性只写 start_kind / package_name，MUST NOT 写 start_url / start_api；
- *  2. 「启动 App」模式保留单一「启动」输出口；「起始页面」模式清空输出口并丢掉上一次的关联页面；
- *  3. 适配层把历史 url / api 取值降级为「启动 App」，且不再向节点数据暴露 URL / API 字段。
+ * 覆盖 `retire-inspector-and-element-locator` 的起点契约：
+ *  1. 起点属性只写 start_kind / package_name，MUST NOT 写 start_url / start_api / linked_*；
+ *  2. 起点保留单一「启动」输出口，不能承载元素输出口；
+ *  3. 适配层把历史 page / url / api 取值一律降级为「启动 App」。
  */
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -28,12 +28,12 @@ function mappedData(nodeId: string) {
   return mapped.data
 }
 
-describe('页面流起点 — 模式与参数契约', () => {
+describe('页面流起点 — 只剩启动 App', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
   })
 
-  it('新建起点默认是「启动 App」，属性只有 start_kind / package_name', () => {
+  it('新建起点是「启动 App」，属性只有 start_kind / package_name', () => {
     const { node } = seedStart()
 
     expect(node.properties.start_kind).toBe('app')
@@ -41,11 +41,9 @@ describe('页面流起点 — 模式与参数契约', () => {
     expect(Object.keys(node.properties).sort()).toEqual(['package_name', 'start_kind'])
   })
 
-  it('切换模式后仍不写入 start_url / start_api', () => {
+  it('设置起点后仍只写两个属性，不写 start_url / start_api', () => {
     const { store, node } = seedStart()
 
-    store.setStartKind(node.id, 'app')
-    store.setStartKind(node.id, 'page')
     store.setStartKind(node.id, 'app')
 
     expect(Object.keys(node.properties).sort()).toEqual(['package_name', 'start_kind'])
@@ -53,10 +51,9 @@ describe('页面流起点 — 模式与参数契约', () => {
     expect(node.properties.start_api).toBeUndefined()
   })
 
-  it('「启动 App」模式保留单一「启动」输出口', () => {
+  it('起点保留单一「启动」输出口', () => {
     const { store, node } = seedStart()
 
-    store.setStartKind(node.id, 'page')
     store.setStartKind(node.id, 'app')
 
     expect(node.outputs).toHaveLength(1)
@@ -65,41 +62,34 @@ describe('页面流起点 — 模式与参数契约', () => {
     expect(node.widgets_values[0]).toBe('启动 App')
   })
 
-  it('「起始页面」模式清空输出口并丢掉上一次关联的页面', () => {
+  it('起点不能创建元素输出口', () => {
     const { store, node } = seedStart()
 
-    store.setStartKind(node.id, 'page')
-    store.linkPage(node.id, {
-      id: 'p1',
-      name: '主页',
-      elements: [{ id: 'el_001', label: '登录', type: 'text' }],
-    })
-    expect(node.properties.linked_page_id).toBe('p1')
-    expect(node.widgets_values[0]).toBe('主页')
+    expect(store.canCreateOutput(node)).toBe(false)
+  })
 
-    store.setStartKind(node.id, 'page')
+  it('历史残留的关联字段在写回时被清掉', () => {
+    const { store, node } = seedStart()
+    node.properties = {
+      ...node.properties,
+      linked_page_id: 'p1',
+      linked_page_name: '主页',
+      linked_elements: [{ id: 'el_001', label: '登录', type: 'text' }],
+      linked_page_domain: 'android',
+    }
 
-    expect(node.outputs).toEqual([])
+    store.setStartKind(node.id, 'app')
+
     expect(node.properties.linked_page_id).toBeUndefined()
     expect(node.properties.linked_page_name).toBeUndefined()
     expect(node.properties.linked_elements).toBeUndefined()
-    expect(node.widgets_values[0]).toBe('起始页面')
+    expect(node.properties.linked_page_domain).toBeUndefined()
   })
 })
 
-describe('页面流起点 — 适配层渲染数据', () => {
+describe('页面流起点 — 适配层降级', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-  })
-
-  it('page 模式映射为 page，其余映射为 app', () => {
-    const { store, node } = seedStart()
-
-    store.setStartKind(node.id, 'page')
-    expect(mappedData(node.id).startKind).toBe('page')
-
-    store.setStartKind(node.id, 'app')
-    expect(mappedData(node.id).startKind).toBe('app')
   })
 
   it('缺省 start_kind 的历史起点降级为 app', () => {
@@ -109,10 +99,10 @@ describe('页面流起点 — 适配层渲染数据', () => {
     expect(mappedData(node.id).startKind).toBe('app')
   })
 
-  it('历史 url / api 起点降级为 app，且不暴露 URL / API 字段', () => {
+  it('历史 page / url / api 起点降级为 app，且不暴露 URL / API 字段', () => {
     const { node } = seedStart()
 
-    for (const legacyKind of ['url', 'api']) {
+    for (const legacyKind of ['page', 'url', 'api']) {
       node.properties = {
         start_kind: legacyKind,
         package_name: 'com.example.app',

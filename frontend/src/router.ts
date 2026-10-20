@@ -1,25 +1,22 @@
 import { createRouter, createWebHistory } from "vue-router"
 import { getToken } from "@/shared/auth/token-storage"
 import dbRoutes from "@/modules/dashboard/routes"
-import elRoutes from "@/modules/element-locator/routes"
-import diRoutes from "@/modules/device-inspector/routes"
 import dpRoutes from "@/modules/device-pool/routes"
 import cmRoutes from "@/modules/case-manager/routes"
 import rgRoutes from "@/modules/report-generator/routes"
-// element-manager 已合并到 element-locator (routes.js 中 /element-mgr 路由)
 import aiRoutes from "@/modules/ai-assistant/routes"
 import wfRoutes from "@/modules/workflow/routes"
+import slRoutes from "@/modules/serial-log/routes"
 
 const routes = [
   { path: "/login", name: "login", component: () => import("@/views/LoginView.vue") },
   ...dbRoutes,
-  ...diRoutes,
-  ...elRoutes,
   ...dpRoutes,
   ...cmRoutes,
   ...rgRoutes,
   ...aiRoutes,
   ...wfRoutes,
+  ...slRoutes,
   { path: "/", redirect: "/dashboard" },
   {
     path: "/:pathMatch(.*)*",

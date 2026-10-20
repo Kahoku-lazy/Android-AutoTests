@@ -62,11 +62,6 @@ function onTogglePortType(slot: number) {
   refreshFlow()
 }
 
-function onStartKind(kind: StartKind) {
-  store.setStartKind(props.id, kind)
-  refreshFlow()
-}
-
 function onPackageChange(e: Event) {
   store.setStartPackage(props.id, (e.target as HTMLInputElement).value)
   refreshFlow()
@@ -96,26 +91,7 @@ watch(
       <input class="pf-title nodrag" :value="data.label" @change="onRename" @mousedown.stop />
     </div>
 
-    <!-- Start: app / page -->
-    <div v-if="isStart" class="pf-kind nodrag" @mousedown.stop>
-      <button
-        type="button"
-        class="kind-btn"
-        :class="{ active: startKind === 'app' }"
-        @click.stop="onStartKind('app')"
-      >
-        启动 App
-      </button>
-      <button
-        type="button"
-        class="kind-btn"
-        :class="{ active: startKind === 'page' }"
-        @click.stop="onStartKind('page')"
-      >
-        页面
-      </button>
-    </div>
-
+    <!-- Start: 只有「启动 App」，包名在下方输入 -->
     <div v-if="isStart && startKind === 'app'" class="pf-pkg nodrag" @mousedown.stop>
       <label>包名</label>
       <input
@@ -127,21 +103,11 @@ watch(
     </div>
 
     <div class="pf-sub">
-      <template v-if="isStart && startKind === 'app'"> 无入口 · 从「启动」连到页面入口 </template>
-      <template v-else-if="isStart && startKind === 'page'">
-        <template v-if="data.linkedPageName">
-          关联: {{ data.linkedPageName }} · 已选
-          {{ data.outputs.filter((o) => o.el).length }} 个元素
-        </template>
-        <template v-else> 无入口 · 右键关联页面后添加元素 </template>
-      </template>
+      <template v-if="isStart"> 无入口 · 从「启动」连到页面入口 </template>
       <template v-else-if="isEnd"> 无输出 · 接收 navigation / popup_close </template>
       <template v-else-if="isPopup && !data.canCreateOutput">需要先连接触发</template>
-      <template v-else-if="data.linkedPageName">
-        关联: {{ data.linkedPageName }} · 已选 {{ data.outputs.filter((o) => o.el).length }} 个元素
-      </template>
       <template v-else>
-        {{ data.outputs.filter((o) => o.el).length }} 个元素 · 右键关联页面后添加
+        {{ data.outputs.filter((o) => o.el).length }} 个元素 · 右键添加
       </template>
     </div>
 

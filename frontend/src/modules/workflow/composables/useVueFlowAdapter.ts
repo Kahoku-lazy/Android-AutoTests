@@ -15,9 +15,7 @@ export interface PageFlowNodeData {
   inputs: PortDefinition[]
   outputs: PortDefinition[]
   canCreateOutput: boolean
-  linkedPageId?: string
-  linkedPageName?: string
-  startKind?: "app" | "page"
+  startKind?: "app"
   packageName?: string
 }
 
@@ -33,11 +31,8 @@ export function toVueFlowNodes(store: WorkflowStore): Node<PageFlowNodeData>[] {
       inputs: [...n.inputs],
       outputs: [...n.outputs],
       canCreateOutput: store.canCreateOutput(n),
-      linkedPageId: n.properties?.linked_page_id as string | undefined,
-      linkedPageName: n.properties?.linked_page_name as string | undefined,
-      // 起点模式只认 page，其余（含历史 url / api 取值）一律按「启动 App」呈现
-      startKind:
-        n.type === "StartNode" ? (n.properties?.start_kind === "page" ? "page" : "app") : undefined,
+      // 起点模式只剩「启动 App」；历史 page / url / api 取值一律按 app 呈现
+      startKind: n.type === "StartNode" ? "app" : undefined,
       packageName:
         n.type === "StartNode"
           ? (n.properties?.package_name as string) || "com.example.app"

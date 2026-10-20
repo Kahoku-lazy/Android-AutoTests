@@ -125,7 +125,7 @@ export const useWorkflowStore = defineStore("wf-workflow", () => {
     return node
   }
 
-  /** Switch StartNode mode: app | page */
+  /** StartNode 只有「启动 App」一种模式；保留入口以兼容旧调用。 */
   function setStartKind(nodeId: string, kind: StartKind): void {
     const node = findNode(nodeId)
     if (!node || node.type !== "StartNode") return
@@ -138,26 +138,18 @@ export const useWorkflowStore = defineStore("wf-workflow", () => {
       start_kind: kind,
       package_name: (node.properties?.package_name as string) || "com.example.app",
     }
+    // 历史文档可能残留关联字段：写回时一并清掉
+    delete node.properties.linked_page_id
+    delete node.properties.linked_page_name
+    delete node.properties.linked_elements
+    delete node.properties.linked_page_domain
 
-    const labelMap: Record<string, string> = { app: "启动 App", page: "起始页面" }
-    const statusMap: Record<string, string> = {
-      app: "起点已设为：启动 App（包名启动）",
-      page: "起点已设为：页面（关联页面+元素）",
-    }
-
-    if (kind === "app") {
-      clearElementOutputs(nodeId)
-      node.outputs = [
-        { name: "启动", type: PORT_TYPE.NAVIGATION, slot_index: 0, link: null, links: [] },
-      ]
-    } else {
-      node.outputs = []
-      delete node.properties.linked_page_id
-      delete node.properties.linked_page_name
-      delete node.properties.linked_elements
-    }
-    node.widgets_values[0] = labelMap[kind] || "起点"
-    setStatus(statusMap[kind] || "起点模式已切换")
+    clearElementOutputs(nodeId)
+    node.outputs = [
+      { name: "启动", type: PORT_TYPE.NAVIGATION, slot_index: 0, link: null, links: [] },
+    ]
+    node.widgets_values[0] = "启动 App"
+    setStatus("起点已设为：启动 App（包名启动）")
   }
 
   function setStartPackage(nodeId: string, pkg: string): void {
@@ -209,9 +201,7 @@ export const useWorkflowStore = defineStore("wf-workflow", () => {
 
     const registry = NODE_REGISTRY[node.type]
     const pool = registry?.elementPool === "popup" ? POPUP_ELEMENTS : PAGE_ELEMENTS
-    // Prefer elements from linked page catalog snapshot
-    const linkedPool = (node.properties?.linked_elements as typeof PAGE_ELEMENTS | undefined) || []
-    const el = linkedPool.find((e) => e.id === elId) || pool.find((e) => e.id === elId)
+    const el = pool.find((e) => e.id === elId)
     if (!el) return
 
     addPortFromElement(nodeId, el, portType)
@@ -247,82 +237,6 @@ export const useWorkflowStore = defineStore("wf-workflow", () => {
     node.outputs.forEach((p) => (p.links || []).forEach((id) => outLinkIds.add(id)))
     for (const lid of outLinkIds) removeLink(lid)
     node.outputs = []
-  }
-
-  /**
-   * 关联元素管理页面：只记录页面与元素列表，不自动创建输出端口。
-   * 用户通过「添加元素」自行挑选。
-   */
-  function linkPage(
-    nodeId: string,
-    page: {
-      id: string
-      name: string
-      domain?: string
-      elements: { id: string; label: string; type: string; xpath?: string }[]
-    },
-  ): void {
-    const node = findNode(nodeId)
-    if (!node) return
-    const isPageLike =
-      node.type === "PageNode" ||
-      node.type === "PopupNode" ||
-      (node.type === "StartNode" && node.properties?.start_kind !== "app")
-    if (!isPageLike) {
-      setStatus("当前节点不能关联页面（起点请先切到「页面」模式）")
-      return
-    }
-
-    // 换页时清掉旧元素端口（避免残留其它页的输出）
-    const prevId = node.properties?.linked_page_id
-    if (prevId && String(prevId) !== String(page.id)) {
-      clearElementOutputs(nodeId)
-    }
-
-    node.properties = {
-      ...node.properties,
-      linked_page_id: page.id,
-      linked_page_name: page.name,
-      linked_elements: page.elements,
-    }
-    node.widgets_values = [page.name, node.widgets_values[1] || "teal"]
-
-    setStatus(
-      `已关联「${page.name}」（${page.elements.length} 个可选元素）。请点「+ 添加元素」挑选端口`,
-    )
-  }
-
-  /** 刷新关联页的元素目录；已添加的端口保留，失效元素端口移除 */
-  async function resyncLinkedPage(nodeId: string): Promise<boolean> {
-    const node = findNode(nodeId)
-    if (!node?.properties?.linked_page_id) {
-      setStatus("该节点未关联页面")
-      return false
-    }
-    const { fetchCatalogPageById } = await import("@/modules/workflow/data/pageCatalog")
-    const page = await fetchCatalogPageById(String(node.properties.linked_page_id))
-    if (!page) {
-      setStatus("刷新失败：元素管理中找不到该页面")
-      return false
-    }
-    const ids = new Set(page.elements.map((e) => e.id))
-    // 更新目录
-    node.properties = {
-      ...node.properties,
-      linked_page_id: page.id,
-      linked_page_name: page.name,
-      linked_elements: page.elements,
-    }
-    node.widgets_values = [page.name, node.widgets_values[1] || "teal"]
-    // 移除已不存在于页面的端口（不自动添加新元素）
-    const toRemove = node.outputs
-      .filter((p) => p.el && !ids.has(p.el.id))
-      .map((p) => p.slot_index)
-      .sort((a, b) => b - a)
-    for (const slot of toRemove) removePort(nodeId, slot)
-
-    setStatus(`已刷新「${page.name}」元素目录（${page.elements.length} 个可选）；已有端口保留`)
-    return true
   }
 
   function removePort(nodeId: string, slotIndex: number): void {
@@ -614,9 +528,7 @@ export const useWorkflowStore = defineStore("wf-workflow", () => {
   // ── Business Rules (Component Registry style) ──
   function canCreateOutput(node: WorkflowNode): boolean {
     if (node.type === "EndNode") return false
-    if (node.type === "StartNode") {
-      return node.properties?.start_kind !== "app"
-    }
+    if (node.type === "StartNode") return false
     if (node.type === "PopupNode") {
       return links.value.some((l) => l.target_id === node.id)
     }
@@ -715,8 +627,6 @@ export const useWorkflowStore = defineStore("wf-workflow", () => {
     addPort,
     addPortFromElement,
     clearElementOutputs,
-    linkPage,
-    resyncLinkedPage,
     removePort,
     togglePortType,
     addInput,

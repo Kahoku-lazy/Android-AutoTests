@@ -5,7 +5,7 @@
  */
 import { ref, computed, watch } from "vue"
 import { useRouter } from "vue-router"
-import { countUpFormatted } from "@/shared/animations"
+import { countUpFormatted, formatSignificant } from "@/shared/animations"
 import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
 import KpiCard from "@/shared/components/KpiCard.vue"
 
@@ -20,6 +20,8 @@ export interface StatsCardProps {
   path?: string
   loading?: boolean
   decimals?: number
+  /** 大于 0 时按有效数字显示，不再补固定小数位 */
+  significantDigits?: number
   live?: boolean
   trend?: number
   trendLabel?: string
@@ -38,6 +40,7 @@ const props = withDefaults(defineProps<StatsCardProps>(), {
   path: "",
   loading: false,
   decimals: 0,
+  significantDigits: 0,
   live: false,
   trend: undefined,
   trendLabel: "",
@@ -72,6 +75,7 @@ const trendText = computed(() => {
 })
 
 function displayValue(): string {
+  if (props.significantDigits > 0) return formatSignificant(props.value, props.significantDigits)
   return props.value.toLocaleString(undefined, {
     minimumFractionDigits: props.decimals,
     maximumFractionDigits: props.decimals,
@@ -82,7 +86,16 @@ watch(
   () => props.value,
   (newVal) => {
     if (valueRef.value && displayed.value) {
-      countUpFormatted(valueRef.value, 0, newVal, 800, props.prefix, props.suffix, props.decimals)
+      countUpFormatted(
+        valueRef.value,
+        0,
+        newVal,
+        800,
+        props.prefix,
+        props.suffix,
+        props.decimals,
+        props.significantDigits,
+      )
     }
   },
 )
@@ -100,6 +113,7 @@ function onCardEnter() {
           props.prefix,
           props.suffix,
           props.decimals,
+          props.significantDigits,
         )
       }
     }, 200)

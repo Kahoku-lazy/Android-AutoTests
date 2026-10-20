@@ -9,8 +9,13 @@ from decimal import Decimal
 
 from django.db.models import Q
 
-from apps.ai_assistant.api import filter_agents_for_user, resolve_assistant_name
-from apps.ai_assistant.models import AIAgent, AITask, AITaskEvent
+from apps.ai_assistant.api import (
+    filter_agents_for_user,
+    list_task_attachments,
+    resolve_assistant_name,
+)
+from apps.ai_assistant.models import AIAgent, AITask, AITaskAttachment, AITaskEvent
+from engines.agents.workflow.case_file import validate_platform_yaml
 
 PASS_STATUSES = frozenset({"completed", "success"})
 FAIL_STATUSES = frozenset({"failed"})
@@ -333,7 +338,7 @@ def _thumb(event: AITaskEvent) -> str:
 def _item(event: AITaskEvent, count: int) -> dict:
     payload = event.payload if isinstance(event.payload, dict) else {}
     moment = event.ended_at or event.started_at or event.called_at
-    return {
+    row = {
         "seq": event.seq,
         "event_type": event.event_type,
         "label": _EVENT_LABEL.get(event.event_type, event.event_type),
@@ -342,8 +347,21 @@ def _item(event: AITaskEvent, count: int) -> dict:
         "count": count,
         "step_seq": event.step_seq,
         "attempt": event.attempt,
+        "role_name": event.role_name or "",
+        "role_kind": event.role_kind or "",
+        "model": event.model or "",
         "thumb": _thumb(event) if count == 1 else "",
     }
+    if event.event_type == "ToolCallEndEvent":
+        args = _args(payload)
+        if args.get("handover"):
+            row["handover"] = str(args.get("handover") or "")
+        if payload.get("tool_name") == "GenerateStructuredOutput" and "passed" in args:
+            row["verdict"] = {
+                "passed": _passed(args.get("passed")),
+                "message": str(args.get("message") or ""),
+            }
+    return row
 
 
 def _grouped(events: list[AITaskEvent]) -> list[tuple[dict, str]]:
@@ -371,14 +389,92 @@ def _grouped(events: list[AITaskEvent]) -> list[tuple[dict, str]]:
     return grouped
 
 
+_ROLE_LABEL = {
+    "executor": "执行",
+    "verifier": "验收",
+    "planner": "规划",
+}
+
+
+def _role_kind(item: dict) -> str:
+    kind = str(item.get("role_kind") or "")
+    if kind in _ROLE_LABEL:
+        return kind
+    name = str(item.get("role_name") or "").lower()
+    if "verif" in name:
+        return "verifier"
+    if "plan" in name:
+        return "planner"
+    if "execut" in name:
+        return "executor"
+    return ""
+
+
+def _task_cases(task: AITask):
+    """按执行顺序取出要跑的用例。指定了用例标题时只留那一条。"""
+    config = next(
+        (row for row in list_task_attachments(task) if row.kind == AITaskAttachment.KIND_CONFIG),
+        None,
+    )
+    if config is None or not (config.body or "").strip():
+        return []
+    cases, reason = validate_platform_yaml(config.body)
+    if reason or not cases:
+        return []
+    wanted = (task.case_title or "").strip()
+    if wanted:
+        return [case for case in cases if case.title == wanted]
+    return list(cases)
+
+
+def _duty(kind: str, step_seq, attempt, steps) -> str:
+    """这一轮在做的事：带上步骤序号。执行者用动作，验收者用要达成的结果。"""
+    label = _ROLE_LABEL.get(kind, "")
+    text = ""
+    if steps and step_seq:
+        index = int(step_seq) - 1
+        if 0 <= index < len(steps):
+            step = steps[index]
+            text = step.expected if kind == "verifier" else step.action
+    if label and attempt and int(attempt) > 1:
+        label = f"第 {int(attempt)} 次{label}"
+    if label and text:
+        action = f"{label}：{text}"
+    elif label and step_seq:
+        action = label
+    else:
+        action = ""
+    head = f"步骤 {int(step_seq)}" if step_seq else ""
+    return " · ".join(part for part in (head, action) if part)
+
+
 def _rounds(grouped: list[tuple[dict, str]]) -> list[dict]:
     """按时间把事件放进图片上的阶段；阶段切换才新开一块。"""
     rounds: list[dict] = []
     current: dict | None = None
     for item, phase in grouped:
         if current is None or item["event_type"] == "ReplyStartEvent":
-            current = {"role_name": "", "blocks": []}
+            current = {
+                "role": "",
+                "role_name": "",
+                "model": "",
+                "duty": "",
+                "step_seq": None,
+                "_kind": "",
+                "_attempt": None,
+                "blocks": [],
+            }
             rounds.append(current)
+        kind = _role_kind(item)
+        if kind and not current["_kind"]:
+            current["_kind"] = kind
+        if item.get("role_name") and not current["role"]:
+            current["role"] = item["role_name"]
+        if item.get("step_seq") and current["step_seq"] is None:
+            current["step_seq"] = item["step_seq"]
+            current["_attempt"] = item.get("attempt")
+        if item.get("model") and not current["model"]:
+            current["model"] = item["model"]
         if item["event_type"] == "ReplyStartEvent":
             current["role_name"] = item["detail"]
         title = _PHASE_TITLE.get(phase, phase or "其它")
@@ -389,6 +485,154 @@ def _rounds(grouped: list[tuple[dict, str]]) -> list[dict]:
     return rounds
 
 
+def _split_round_groups(rounds: list[dict]) -> list[list[dict]]:
+    """步骤序号倒退表示下一条用例开始。同一用例内的重试序号不会变小。"""
+    groups: list[list[dict]] = []
+    current: list[dict] = []
+    last = 0
+    for entry in rounds:
+        step = int(entry.get("step_seq") or 0)
+        if current and step and last and step < last:
+            groups.append(current)
+            current = []
+            last = 0
+        current.append(entry)
+        if step:
+            last = step
+    if current:
+        groups.append(current)
+    return groups
+
+
+def _verdict_maps(events: list[AITaskEvent]) -> list[dict]:
+    """每条用例一张表：步骤序号 → 该步最后一次判决是否通过。"""
+    maps: list[dict] = []
+    current: dict = {}
+    last = 0
+    saw = False
+    for event in events:
+        step = int(event.step_seq or 0)
+        if step and last and step < last:
+            maps.append(current)
+            current = {}
+            last = 0
+        if step:
+            last = step
+            saw = True
+        if event.event_type != "ToolCallEndEvent" or not step:
+            continue
+        payload = event.payload if isinstance(event.payload, dict) else {}
+        args = _args(payload)
+        if payload.get("tool_name") == "GenerateStructuredOutput" and "passed" in args:
+            current[step] = _passed(args.get("passed"))
+    if saw or current:
+        maps.append(current)
+    return maps
+
+
+def _step_outcome(passed, seq: int, group: list[dict]) -> str:
+    if passed is True:
+        return "PASS"
+    if passed is False:
+        return "FAIL"
+    reached = any(int(entry.get("step_seq") or 0) == seq for entry in group)
+    return "未完成" if reached else "未执行"
+
+
+def _case_outcome(steps: list[dict], started: bool) -> str:
+    if not started:
+        return "未执行"
+    if not steps:
+        return "未完成"
+    marks = [step["outcome"] for step in steps]
+    if all(mark == "PASS" for mark in marks):
+        return "PASS"
+    if any(mark == "FAIL" for mark in marks):
+        return "FAIL"
+    return "未完成"
+
+
+def _subject(kind: str, step_seq, steps) -> str:
+    if not steps or not step_seq:
+        return ""
+    index = int(step_seq) - 1
+    if not 0 <= index < len(steps):
+        return ""
+    step = steps[index]
+    return step.expected if kind == "verifier" else step.action
+
+
+def _lift_note(entry: dict, key: str):
+    found = None
+    for block in entry.get("blocks") or []:
+        for item in block.get("items") or []:
+            value = item.pop(key, None)
+            if value:
+                found = value
+    return found
+
+
+def _annotate(group: list[dict], steps) -> list[dict]:
+    for entry in group:
+        kind = entry.pop("_kind", "")
+        attempt = entry.pop("_attempt", None)
+        entry["role_kind"] = kind
+        entry["attempt"] = attempt
+        entry["subject"] = _subject(kind, entry.get("step_seq"), steps)
+        entry["verdict"] = _lift_note(entry, "verdict")
+        entry["handover"] = _lift_note(entry, "handover") or ""
+        entry["duty"] = _duty(kind, entry.get("step_seq"), attempt, steps)
+    return group
+
+
+def _flow_cases(task: AITask, events: list[AITaskEvent], rounds: list[dict]) -> list[dict]:
+    """把轮次按用例切开，并给出每条用例、每一步的结果。"""
+    specs = _task_cases(task)
+    groups = _split_round_groups(rounds)
+    verdicts = _verdict_maps(events)
+    total = max(len(specs), len(groups), 0)
+    if not specs and not groups:
+        return []
+    packed = []
+    for index in range(total):
+        spec = specs[index] if index < len(specs) else None
+        group = groups[index] if index < len(groups) else []
+        verdict = verdicts[index] if index < len(verdicts) else {}
+        step_defs = list(spec.steps) if spec else []
+        steps = []
+        if step_defs:
+            for seq, step in enumerate(step_defs, start=1):
+                steps.append(
+                    {
+                        "seq": seq,
+                        "action": step.action,
+                        "expected": step.expected,
+                        "outcome": _step_outcome(verdict.get(seq), seq, group),
+                    }
+                )
+        else:
+            seen = sorted({int(entry["step_seq"]) for entry in group if entry.get("step_seq")})
+            for seq in seen:
+                steps.append(
+                    {
+                        "seq": seq,
+                        "action": "",
+                        "expected": "",
+                        "outcome": _step_outcome(verdict.get(seq), seq, group),
+                    }
+                )
+        title = spec.title if spec else (task.case_title or f"用例 {index + 1}")
+        packed.append(
+            {
+                "title": title,
+                "outcome": _case_outcome(steps, bool(group)),
+                "steps": steps,
+                "rounds": _annotate(group, step_defs),
+            }
+        )
+    return packed
+
+
 def build_task_flow(user_id: str | None, task_id: str) -> dict | None:
     """可见任务的事件流程。看不见或编号无效时返回 None。"""
     task = _visible_task(user_id, task_id)
@@ -397,6 +641,7 @@ def build_task_flow(user_id: str | None, task_id: str) -> dict | None:
     events = list(
         AITaskEvent.objects.filter(task_id=task.id).select_related("media").order_by("seq")
     )
+    rounds = _rounds(_grouped(events))
     return {
         "status": True,
         "task": {
@@ -412,5 +657,6 @@ def build_task_flow(user_id: str | None, task_id: str) -> dict | None:
             "result": _clip(task.result),
         },
         "conclusion": _conclusion(task, events),
-        "rounds": _rounds(_grouped(events)),
+        "rounds": rounds,
+        "cases": _flow_cases(task, events, rounds),
     }

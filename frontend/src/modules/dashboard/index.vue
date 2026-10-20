@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useDashboardView, toMillions, toK } from "./DashboardView.logic"
+import { formatSignificant } from "@/shared/animations"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import StatsAppCard from "./components/StatsCard.vue"
@@ -207,12 +208,12 @@ const {
             label="DeepSeek 费用"
             :value="stats.aiUsage.deepseekCost.total"
             suffix=" 元"
-            :decimals="8"
+            :significant-digits="3"
             color="dust"
             path="/ai-assistant"
             :show-enter="false"
             :loading="loading"
-            :desc="`今日 ${stats.aiUsage.deepseekCost.today.toFixed(8)} 元`"
+            :desc="`今日 ${formatSignificant(stats.aiUsage.deepseekCost.today, 3)} 元`"
           >
             <template #icon><IconZap :size="15" /></template>
           </StatsAppCard>

@@ -19,6 +19,24 @@ function runMotion(targets: AnimateTarget, params: AnimateParams): ReturnType<ty
   return animate(targets, { ...params, duration: 0, delay: 0, loop: false })
 }
 
+/** 按有效数字显示，不使用科学计数法。0 显示为 0。 */
+export function formatSignificant(value: number, digits = 3): string {
+  if (!Number.isFinite(value) || value === 0) return "0"
+  const negative = value < 0
+  const abs = Math.abs(value)
+  const exponent = Math.floor(Math.log10(abs))
+  const scale = 10 ** (digits - 1 - exponent)
+  const rounded = Math.round(abs * scale) / scale
+  const roundedExponent = Math.floor(Math.log10(rounded))
+  const fractionDigits = Math.max(0, digits - 1 - roundedExponent)
+  const text = rounded.toLocaleString(undefined, {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+    useGrouping: rounded >= 1000,
+  })
+  return negative ? `-${text}` : text
+}
+
 export function countUpFormatted(
   el: HTMLElement,
   from: number,
@@ -27,15 +45,17 @@ export function countUpFormatted(
   prefix = "",
   suffix = "",
   decimals = 0,
+  significantDigits = 0,
 ): void {
+  const render = (n: number) =>
+    significantDigits > 0
+      ? formatSignificant(n, significantDigits)
+      : n.toLocaleString(undefined, {
+          minimumFractionDigits: decimals,
+          maximumFractionDigits: decimals,
+        })
   if (prefersReducedMotion()) {
-    el.textContent =
-      prefix +
-      to.toLocaleString(undefined, {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-      }) +
-      suffix
+    el.textContent = prefix + render(to) + suffix
     return
   }
   const obj = { val: from }
@@ -44,13 +64,7 @@ export function countUpFormatted(
     duration,
     ease: "outExpo",
     onUpdate: () => {
-      el.textContent =
-        prefix +
-        obj.val.toLocaleString(undefined, {
-          minimumFractionDigits: decimals,
-          maximumFractionDigits: decimals,
-        }) +
-        suffix
+      el.textContent = prefix + render(obj.val) + suffix
     },
   })
 }

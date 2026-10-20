@@ -2,7 +2,7 @@
 
 ## Purpose
 
-把测试报告工作台的列表、KPI 与趋势接到当前用户可见的 AI 助手任务卡，并禁止从该页跳进已失效的 Run/用例详情。
+把测试报告工作台的列表、KPI 与趋势接到当前用户可见的 AI 助手任务卡。点击一行进入该任务的事件流程；任务编号不链到已失效的 Run 详情。
 
 ## Requirements
 
@@ -31,12 +31,19 @@ Each `runs[]` item MUST include: task id, device display (`device_label` if non-
 - **WHEN** a task has empty `device_label` and a non-empty `device_serial`
 - **THEN** the row device field shows the serial
 
-### Requirement: Report workbench does not navigate away
-The report workbench list MUST render task id as plain text, not as a link to `/reports/:id`. KPI pass/fail cards MUST NOT navigate to case breakdown. Clicking a table row MUST NOT change the route.
+### Requirement: Report workbench opens the task flow
 
-#### Scenario: Clicking a row stays on the page
-- **WHEN** the user clicks a report list row or the task id cell
-- **THEN** the browser remains on `/reports`
+测试报告列表 MUST 把任务编号显示为纯文本，MUST NOT 链到 `/reports/:id`。KPI 的通过与失败卡片 MUST NOT 进入用例分解。点击列表中的一行 MUST 进入该任务的事件流程页 `/reports/task/:taskId`。
+
+#### Scenario: Clicking a row opens the task flow
+
+- **WHEN** 用户点击测试报告列表中的一行
+- **THEN** 浏览器进入 `/reports/task/` 加上该行的任务编号
+
+#### Scenario: Task id is not a run detail link
+
+- **WHEN** 用户查看列表中的任务编号
+- **THEN** 该编号不是指向 `/reports/:id` 的链接
 
 ### Requirement: Empty copy points to AI assistant
 When `runs` is empty, the workbench MUST tell the user to publish a task in AI assistant. Copy MUST NOT tell the user to run tests in the execution engine.

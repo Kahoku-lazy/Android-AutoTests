@@ -1,0 +1,85 @@
+## MODIFIED Requirements
+
+### Requirement: L2 plus pages expose visible back navigation
+
+深度大于单页的工作台页面（Hub 以下工作台 / 叶子、报告详情链、AI 深链）MUST 在 L2 页面 `.doc-body` 顶部提供可见回退：返回芯片、波浪面包屑，或二者并存。系统 SHALL NOT 把浏览器原生 history 当作唯一回退手段。系统 SHALL NOT 把该回退导航渲染在 `.wb-header` 内。单页模块（仪表盘、设备管理、页面流）SHALL NOT 为凑齐导航而伪造祖先链。
+
+#### Scenario: Report detail shows list ancestor
+
+- **WHEN** 用户打开某次 run 的报告详情
+- **THEN** `.doc-body` 顶部可见回到「测试报告」列表的控件
+- **AND** `.wb-header` 内没有该回退控件
+- **AND** 激活该控件后路由回到报告列表，不新开浏览器标签
+
+#### Scenario: Element file leaf shows Hub and workbench ancestors
+
+- **WHEN** 用户打开用例管理某项目下的文件页
+- **THEN** `.doc-body` 顶部可见可点的祖先（用例管理 Hub、当前项目工作台）与当前文件名
+- **AND** 当前项不可再点，祖先可点并进入对应路由
+- **AND** `.wb-header` 只显示主标题与副标题（可含品牌图标）
+
+#### Scenario: Case workbench shows Hub ancestor
+
+- **WHEN** 用户打开用例管理某项目工作台
+- **THEN** `.doc-body` 顶部可见回到项目列表的控件
+- **AND** 激活后路由回到 `/cases`
+
+### Requirement: Two navigation templates cover platform depth
+
+系统 MUST 用且只用下列两种模版表达子页导航，不得在页内再叠与侧栏重复的顶栏 Tab：
+
+1. 面包屑条：Hub → 工作台 → 叶子（用例管理；本轮不改页面流画布页头结构以外的画布）
+2. 列表行进入：报告 run/task/cases 与同类列表进详情，详情正文顶部提供回列表
+
+AI 助手只有一个侧栏入口，不再占用「侧栏子项」模版。
+
+#### Scenario: AI has a single entry
+
+<!-- 场景名沿自变更前：AI 工具箱与侧栏子项均已下线，本场景改为守住「AI 助手只有一个入口」 -->
+
+- **WHEN** 用户进入 AI 助手
+- **THEN** 侧栏只有一个「AI 助手」入口，页内没有第二套顶栏 Tab
+- **AND** 页头标题固定为平台小助手
+- **AND** 侧栏与路由既不出现评测中心，也不出现知识库、AI 工具箱
+
+#### Scenario: AI deep link returns to the single entry
+
+<!-- 场景名沿自变更前：子项已收起，回退目标统一为 AI 助手入口 -->
+
+- **WHEN** 用户打开任务详情或智能体编辑页
+- **THEN** `.doc-body` 顶部提供回到 AI 助手入口的可见回退
+- **AND** 激活后进入 `/ai-assistant/agents`
+- **AND** `.wb-header` 内没有该回退控件
+
+#### Scenario: Report list row enters detail in the same shell
+
+- **WHEN** 用户在报告列表点击一行 run
+- **THEN** 在同一主区内打开详情，不新开浏览器标签
+- **AND** 详情 `.doc-body` 顶部提供回列表
+
+## REMOVED Requirements
+
+### Requirement: Back chip sits at the right of the crumb row
+
+**Reason**: 该要求的 scoped 场景绑定元素定位项目工作台（`.locator-project-workspace`）与其返回路由 `/elements`，页面已随元素定位退役删除。
+**Migration**: 由本单新增的「Back chip sits at the right of the crumb row (generic)」承接通用对齐口径，去掉页面专属举例。
+
+## ADDED Requirements
+
+### Requirement: Back chip sits at the right of the crumb row (generic)
+
+当 `.doc-body` 顶部的面包屑条同时渲染波浪祖先链与返回芯片时，返回芯片 MUST 位于该条右端（导航行右上角），祖先链 MUST 仍靠该条左端。系统 SHALL NOT 把返回芯片迁入 `.wb-header`。仅有祖先链、没有返回芯片时，祖先链仍靠左，不为此伪造芯片。仅有返回芯片、没有祖先链时，该芯片仍 MUST 靠该条右端。
+
+#### Scenario: Workbench back chip is top-right of the crumb row
+
+- **WHEN** 用户打开一个带返回芯片的工作台子页（如用例管理某项目工作台）
+- **THEN** 「返回」芯片在 `.wb-crumbs` 内可见，且位于该条右端
+- **AND** 祖先链（Hub → 当前工作台）仍靠该条左端
+- **AND** `.wb-header` 内没有该芯片
+- **AND** 激活芯片后路由回到上一层
+
+#### Scenario: Back-only crumb row still aligns the chip right
+
+- **WHEN** 某 L2 子页只传入返回芯片、不渲染祖先链
+- **THEN** 返回芯片仍位于 `.wb-crumbs` 右端
+- **AND** 激活后仍进入该芯片绑定的上一层路由

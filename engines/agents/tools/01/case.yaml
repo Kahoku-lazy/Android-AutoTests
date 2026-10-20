@@ -1,7 +1,0 @@
-- title: H6810 详情页开关测试
-  steps:
-    - action: 启动Govee Home App
-      assert: 断言设备日志关闭设备成功
-      
-    - action: 点击H6810开关按键
-      assert: 断言设备日志打开设备成功

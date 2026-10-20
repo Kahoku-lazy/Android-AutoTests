@@ -21,6 +21,8 @@ from agentscope.model import (
 from agentscope.tool import Toolkit
 from pydantic import SecretStr
 
+from utils.logs import agent_event_log
+
 
 @dataclass(frozen=True)
 class ModelConfig:
@@ -97,6 +99,7 @@ class ChatModelFactory:
             vision: 是否多模态。
         """
 
+        self.log = agent_event_log
         self.config = config
         self.stream = stream
         self.vision = vision

@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import inspect
 import json
-import logging
 
 from agentscope.exception import DeveloperOrientedException
 from agentscope.message import Base64Source, DataBlock, TextBlock
@@ -13,38 +12,42 @@ from agentscope.permission import PermissionBehavior, PermissionDecision
 from agentscope.skill import LocalSkillLoader
 from agentscope.tool import FunctionTool, ToolChunk, ToolGroup, Toolkit
 
-from engines.ai.base import ToolSpec
+from utils.logs import agent_event_log
 
-from .tool_serial import LOG_EMPTY
+from .tool_base import ToolSpec
+from .tool_serial import LOG_EMPTY, LOG_SPAN_SHORT
 
 __all__ = ["PlatformFunctionTool", "build_toolkit"]
 
-logger = logging.getLogger("ai_assistant.tools")
-
 
 def _safe_log(value) -> str:
-    """工具返回值 → 可安全打印的字符串（图片结果脱敏 base64，只留 summary）。"""
+    """工具返回值 → 可安全打印的字符串（图片结果脱敏 base64，只留格式与体积）。"""
     if isinstance(value, str):
         return value
     if isinstance(value, dict) and "image" in value:
-        return json.dumps(value.get("summary") or {}, ensure_ascii=False, default=str)
+        image = value.get("image") or {}
+        return json.dumps(
+            {
+                "media_type": image.get("media_type", ""),
+                "base64_len": len(image.get("base64") or ""),
+            },
+            ensure_ascii=False,
+            default=str,
+        )
     if isinstance(value, dict):
         return json.dumps(value, ensure_ascii=False, default=str)
     return str(value)
 
 
 def _image_result_to_chunk(result) -> ToolChunk | None:
-    """截图工具返回的 image dict → ToolChunk（文本 summary + 图片 DataBlock）。"""
+    """截图工具返回的 image dict → ToolChunk（图片 DataBlock；有 summary 才附文本）。"""
     if isinstance(result, dict) and "image" in result:
         img = result["image"]
-        return ToolChunk(
-            content=[
-                TextBlock(
-                    text=json.dumps(result.get("summary") or {}, ensure_ascii=False, default=str)
-                ),
-                DataBlock(source=Base64Source(data=img["base64"], media_type=img["media_type"])),
-            ]
-        )
+        content = [DataBlock(source=Base64Source(data=img["base64"], media_type=img["media_type"]))]
+        summary = result.get("summary") or {}
+        if summary:
+            content.insert(0, TextBlock(text=json.dumps(summary, ensure_ascii=False, default=str)))
+        return ToolChunk(content=content)
     return None
 
 
@@ -58,6 +61,7 @@ class PlatformFunctionTool(FunctionTool):
             is_read_only=spec.read_only,
             is_concurrency_safe=spec.read_only,
         )
+        self.log = agent_event_log
         self._user_id = user_id
         self._auto_allow = spec.auto_allow
         # 只对**声明了** user_id 的工具注入归属：引擎自带设备工具没有用户概念，
@@ -82,15 +86,17 @@ class PlatformFunctionTool(FunctionTool):
             工具返回值转换出的 ToolChunk。
 
         Raises:
-            DeveloperOrientedException: 工具返回值为 `LOG_EMPTY`（日志为空）时，
+            DeveloperOrientedException: 工具抛出日志为空或时间不足 5 秒时，
                 转成开发者可见异常而不是普通参数错误。
         """
         if self._accepts_user_id:
             kwargs.setdefault("user_id", self._user_id)
-        logger.info(
-            "【工具调用】%s 入参=%s",
-            self._func.__name__,
-            json.dumps(kwargs, ensure_ascii=False, default=str),
+        self.log.info(
+            "【工具调用】%s 入参=%s"
+            % (
+                self._func.__name__,
+                json.dumps(kwargs, ensure_ascii=False, default=str),
+            )
         )
         try:
             if inspect.iscoroutinefunction(self._func):
@@ -98,10 +104,10 @@ class PlatformFunctionTool(FunctionTool):
             else:
                 result = await asyncio.to_thread(self._func, **kwargs)
         except ValueError as exc:
-            if str(exc) == LOG_EMPTY:
-                raise DeveloperOrientedException(LOG_EMPTY) from exc
+            if str(exc) in {LOG_EMPTY, LOG_SPAN_SHORT}:
+                raise DeveloperOrientedException(str(exc)) from exc
             raise
-        logger.info("【工具返回】%s 返回=%s", self._func.__name__, _safe_log(result))
+        self.log.info("【工具返回】%s 返回=%s" % (self._func.__name__, _safe_log(result)))
         chunk = _image_result_to_chunk(result)
         if chunk is not None:
             return chunk

@@ -1,36 +1,33 @@
-"""设备动作层 —— 系统声明 + 三类方法名契约 + 动作类（每个动作一个类，每种方式一个独立函数）。
+"""
+调试运行入口：python -m engines.device.action
 
-三层含义：
+模块说明：
+设备动作封装模块，提供设备连接、信息查询、控制功能。
 
-1. `System`：声明可选系统（ANDROID / IOS / WINDOWS），并按系统解析三类实现类。
-   当前只有 ANDROID 有实现；IOS / WINDOWS 是预留选择位，取用时给可读结论（`SystemNotSupported`）。
-2. **方法名契约**（`DeviceConnection` / `DeviceInfo` / `DeviceControl`，均为抽象基类）：
-   三端实现 MUST 使用契约里的**同一套方法名**（例如图片点击一律 `click_img`，
-   禁止某端写成 `click_image`），改名即违约——子类缺任一抽象方法都无法实例化。
-3. **动作类**（`Click` / `LongClick` / `Swipe` / `Drag` / `InputText` / `PressKey` /
-   `Screenshot` / `AppControl`）：每个类表示一个动作，天然兼容三端（只依赖 `DeviceControl` 契约），
-   支持多种方式，**每种方式是一个独立函数**（如点击的 `by_coord` / `by_element` / `by_img`）。
+类功能简介：
+1. System: 系统声明 + 各系统实现类解析。
+2. DeviceConnection: 设备连接：连接 / 断开 / 存活探测 / 重连。
+3. DeviceInfo: 设备信息查询（只读，不产生副作用）。
+4. DeviceControl: 设备控制：动作方法名统一，三端实现 MUST NOT 各创别名。
+5. Click: 点击动作：坐标 / 图像两种方式，各自独立函数。
+6. LongClick: 长按动作：坐标 / 图像两种方式，各自独立函数。
+7. Swipe: 滑动动作：按方向 / 按坐标两种方式，各自独立函数。
+8. Drag: 拖动动作：按归一化起终点拖动。
 
-用法：
+9. DeviceConnection
+10. DeviceInfo
+11. DeviceControl
 
-    connection, info, control = open_device(System.ANDROID, "R5CT62RH88F")
-    try:
-        Click(control).by_img(0.5, 0.5)
-        print(info.screen_size())
-    finally:
-        connection.disconnect()
 """
 
 from __future__ import annotations
 
 import base64
 import importlib
-import io
-import os
 
 from abc import ABC, abstractmethod
-from datetime import datetime
-from pathlib import Path
+
+from utils.logs import device_log
 
 __all__ = [
     "AppControl",
@@ -45,10 +42,14 @@ __all__ = [
     "Screenshot",
     "Swipe",
     "System",
+    "EngineConnectError",
     "SystemNotSupported",
     "open_device",
-    "resolve_output_root",
 ]
+
+
+class EngineConnectError(RuntimeError):
+    """设备连接失败。"""
 
 
 class SystemNotSupported(RuntimeError):
@@ -72,7 +73,7 @@ class System:
         WINDOWS: None,
     }
     _INFO: dict[str, str | None] = {
-        ANDROID: "engines.device.android.android_device.AndroidInfo",
+        ANDROID: "engines.device.android.android_device.AdbInfo",
         IOS: None,
         WINDOWS: None,
     }
@@ -133,14 +134,6 @@ class DeviceConnection(ABC):
     def disconnect(self) -> None:
         """断开连接。"""
 
-    @abstractmethod
-    def is_alive(self) -> bool:
-        """连接是否仍然可用。"""
-
-    @abstractmethod
-    def reconnect(self) -> bool:
-        """重建连接；重建失败返回 False 或抛错。"""
-
 
 class DeviceInfo(ABC):
     """设备信息查询（只读，不产生副作用）。"""
@@ -175,12 +168,8 @@ class DeviceControl(ABC):
         """按设备像素坐标点击。"""
 
     @abstractmethod
-    def click_element(self, by: str, value: str, index: int = 0) -> bool:
-        """按元素定位点击（by：xpath / id / text）；未命中返回 False。"""
-
-    @abstractmethod
-    def click_img(self, nx: float, ny: float) -> None:
-        """按图像定位点击（归一化坐标，0~1）。"""
+    def click_img(self, nx: float, ny: float) -> tuple[int, int]:
+        """按图像定位点击（归一化坐标，0~1）；返回实际点击的像素坐标。"""
 
     # ── 长按 ──
     @abstractmethod
@@ -188,14 +177,8 @@ class DeviceControl(ABC):
         """按像素坐标长按。"""
 
     @abstractmethod
-    def long_click_element(
-        self, by: str, value: str, index: int = 0, duration: float = 0.8
-    ) -> bool:
-        """按元素定位长按；未命中返回 False。"""
-
-    @abstractmethod
-    def long_click_img(self, nx: float, ny: float, duration: float = 0.8) -> None:
-        """按图像定位长按（归一化坐标）。"""
+    def long_click_img(self, nx: float, ny: float, duration: float = 0.8) -> tuple[int, int]:
+        """按图像定位长按（归一化坐标）；返回实际按下的像素坐标。"""
 
     # ── 滑动 / 拖动 ──
     @abstractmethod
@@ -221,12 +204,12 @@ class DeviceControl(ABC):
 
     # ── 截图 / 应用 ──
     @abstractmethod
-    def screenshot(self) -> bytes:
-        """截取当前屏幕（字节）。"""
+    def screenshot_bytes(self) -> bytes:
+        """设备当前屏幕的原始图片字节；编码格式由实现自述（screenshot_media_type，缺省按 JPEG）。"""
 
-    @abstractmethod
-    def screenshot_raw(self) -> bytes:
-        """取**原始帧**（无损字节）：供调用方只编一次（给模型 / 落盘证据）。"""
+    def screenshot_b64(self) -> str:
+        """设备当前屏幕的 base64；由 `screenshot_bytes` 统一编码，实现侧不必各写一遍。"""
+        return base64.b64encode(self.screenshot_bytes()).decode("ascii")
 
     @abstractmethod
     def app_start(self, package: str) -> None:
@@ -243,102 +226,97 @@ class DeviceControl(ABC):
 
 
 class Click:
-    """点击动作：坐标 / 元素（xpath、id、text）/ 图像三种方式，各自独立函数。"""
+    """点击动作：坐标 / 图像两种方式，各自独立函数；只回传实际点击的像素坐标。"""
 
     def __init__(self, control: DeviceControl) -> None:
+        self.log = device_log
         self._control = control
 
     def by_coord(self, x: int, y: int) -> dict:
         self._control.click_coord(int(x), int(y))
-        return {"clicked": True, "mode": "coord", "x": int(x), "y": int(y)}
-
-    def by_element(self, by: str = "xpath", value: str = "", index: int = 0) -> dict:
-        hit = bool(self._control.click_element(str(by), str(value), int(index)))
-        return {"clicked": hit, "mode": "element", "by": by, "value": value, "index": index}
+        return {"x": int(x), "y": int(y)}
 
     def by_img(self, nx: float, ny: float) -> dict:
-        self._control.click_img(float(nx), float(ny))
-        return {"clicked": True, "mode": "img", "nx": float(nx), "ny": float(ny)}
+        x, y = self._control.click_img(float(nx), float(ny))
+        return {"x": int(x), "y": int(y)}
 
 
 class LongClick:
-    """长按动作：坐标 / 元素 / 图像三种方式，各自独立函数。"""
+    """长按动作：坐标 / 图像两种方式，各自独立函数；只回传实际按下的像素坐标。"""
 
     def __init__(self, control: DeviceControl) -> None:
+        self.log = device_log
         self._control = control
 
     def by_coord(self, x: int, y: int, duration: float = 0.8) -> dict:
         self._control.long_click_coord(int(x), int(y), float(duration))
-        return {"clicked": True, "mode": "coord", "x": int(x), "y": int(y)}
-
-    def by_element(
-        self, by: str = "xpath", value: str = "", index: int = 0, duration: float = 0.8
-    ) -> dict:
-        hit = bool(
-            self._control.long_click_element(str(by), str(value), int(index), float(duration))
-        )
-        return {"clicked": hit, "mode": "element", "by": by, "value": value, "index": index}
+        return {"x": int(x), "y": int(y)}
 
     def by_img(self, nx: float, ny: float, duration: float = 0.8) -> dict:
-        self._control.long_click_img(float(nx), float(ny), float(duration))
-        return {"clicked": True, "mode": "img", "nx": float(nx), "ny": float(ny)}
+        x, y = self._control.long_click_img(float(nx), float(ny), float(duration))
+        return {"x": int(x), "y": int(y)}
 
 
 class Swipe:
-    """滑动动作：按方向 / 按坐标两种方式，各自独立函数。"""
+    """滑动动作：按方向 / 按坐标两种方式，各自独立函数；不回传内容，由调用方补动作时间。"""
 
     def __init__(self, control: DeviceControl) -> None:
+        self.log = device_log
         self._control = control
 
     def by_direction(self, direction: str = "up", distance: int = 500) -> dict:
         self._control.swipe(str(direction or "up"), int(distance or 500))
-        return {"direction": direction, "distance": int(distance or 500)}
+        return {}
 
     def by_coord(self, x1: int, y1: int, x2: int, y2: int, duration: float = 0.5) -> dict:
         self._control.swipe_coord(int(x1), int(y1), int(x2), int(y2), float(duration))
-        return {"x1": int(x1), "y1": int(y1), "x2": int(x2), "y2": int(y2)}
+        return {}
 
 
 class Drag:
-    """拖动动作：按归一化起终点拖动。"""
+    """拖动动作：按归一化起终点拖动；不回传内容，由调用方补动作时间。"""
 
     def __init__(self, control: DeviceControl) -> None:
+        self.log = device_log
         self._control = control
 
     def by_ratio(self, nx1: float, ny1: float, nx2: float, ny2: float) -> dict:
         self._control.drag(float(nx1), float(ny1), float(nx2), float(ny2))
-        return {"nx1": float(nx1), "ny1": float(ny1), "nx2": float(nx2), "ny2": float(ny2)}
+        return {}
 
 
 class InputText:
-    """输入动作：向当前输入框输入文本。"""
+    """输入动作：向当前输入框输入文本；不回传内容，由调用方补动作时间。"""
 
     def __init__(self, control: DeviceControl) -> None:
+        self.log = device_log
         self._control = control
 
     def by_text(self, text: str, clear_first: bool = True) -> dict:
         self._control.input_text(str(text or ""), bool(clear_first))
-        return {"text": str(text or ""), "clear_first": bool(clear_first)}
+        return {}
 
 
 class PressKey:
-    """按键动作：按系统按键（默认返回键）。"""
+    """按键动作：按系统按键（默认返回键）；不回传内容，由调用方补动作时间。"""
 
     def __init__(self, control: DeviceControl) -> None:
+        self.log = device_log
         self._control = control
 
     def by_key(self, key: str = "back") -> dict:
         self._control.press_key(str(key or "back"))
-        return {"key": str(key or "back")}
+        return {}
 
     def back(self) -> dict:
         return self.by_key("back")
 
 
 class AppControl:
-    """应用动作：启动 / 停止。"""
+    """应用动作：启动 / 停止；回传包名与动作，前后前台应用由调用方补。"""
 
     def __init__(self, control: DeviceControl) -> None:
+        self.log = device_log
         self._control = control
 
     def start(self, package: str) -> dict:
@@ -350,88 +328,50 @@ class AppControl:
         return {"package": str(package), "action": "stop_app"}
 
 
-def resolve_output_root(explicit: str = "") -> str:
-    """截图落盘根目录：显式给出 > 环境变量 `ENGINE_DEVICE_SHOT_DIR` > `<当前目录>/temps/engine_shots`。"""
-    value = str(explicit or "").strip()
-    if value:
-        return value
-    env_value = os.environ.get("ENGINE_DEVICE_SHOT_DIR", "").strip()
-    if env_value:
-        return env_value
-    return str(Path.cwd() / "temps" / "engine_shots")
-
-
-# 截图编码口径：给模型的那份**无损、不缩放**（PNG 原尺寸）；落盘证据那份 JPEG 90（给人看）
-MODEL_MEDIA_TYPE = "image/png"
-LOCAL_JPEG_QUALITY = 90
-
-
-def millisecond_stamp() -> str:
-    """毫秒精度时间戳（文件名用）：`YYYYmmdd_HHMMSS_mmm`。"""
-    now = datetime.now()
-    return f"{now:%Y%m%d_%H%M%S}_{now.microsecond // 1000:03d}"
-
-
-def _encode_png(raw: bytes) -> bytes:
-    """原始帧字节 → 无损 PNG 字节（不缩放、不有损压缩）。"""
-    from PIL import Image
-
-    with Image.open(io.BytesIO(raw)) as img:
-        buf = io.BytesIO()
-        img.save(buf, format="PNG")
-    return buf.getvalue()
-
-
-def _encode_jpeg(raw: bytes, *, quality: int) -> bytes:
-    """原始帧字节 → JPEG 字节（仅用于落盘证据）。"""
-    from PIL import Image
-
-    with Image.open(io.BytesIO(raw)) as img:
-        if img.mode not in ("RGB", "L"):
-            img = img.convert("RGB")
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=quality)
-    return buf.getvalue()
-
-
 class Screenshot:
-    """截图动作：截取屏幕，产出图片数据与（可选的）本地落盘路径。"""
+    """截图动作：截取屏幕，产出无损图片的 base64 与格式（不落盘）。"""
+
+    # 截图编码口径：格式由控制实现自述（缺省按 JPEG）；base64 由设备原始字节一次编出，不转码
+    MODEL_MEDIA_TYPE = "image/jpeg"
 
     def __init__(self, control: DeviceControl) -> None:
+        self.log = device_log
         self._control = control
 
-    def full(self) -> bytes:
-        """取原始帧字节（无损）。"""
-        return self._control.screenshot_raw()
-
-    def save(self, output_root: str = "", keep_local: bool = True) -> dict:
-        """截屏，编码图片并按需落盘。
-
-        Args:
-            output_root: 落盘根目录（空则用引擎默认目录）。
-            keep_local: 是否落盘一份本地图片。
+    def capture(self) -> dict:
+        """截屏，返回无损图片的 base64 与格式；不写任何文件。
 
         Returns:
-            {"screenshot_path", "screenshot_name", "image_base64", "media_type"}；
-            不落盘时路径与文件名为空串。
+            {"image_base64", "media_type"}；base64 是设备返回的原始字节编出的，
+            与模型看到的是同一份像素，中间不做二次编码。
+
+        Raises:
+            RuntimeError: 控制实现截屏失败或返回的不是图片。
         """
-        raw = self._control.screenshot_raw()
-        model_b64 = base64.b64encode(_encode_png(raw)).decode("ascii")
-        result = {
-            "screenshot_path": "",
-            "screenshot_name": "",
-            "image_base64": model_b64,
-            "media_type": MODEL_MEDIA_TYPE,
+        raw = self._control.screenshot_bytes()
+        # 控制实现可声明自己的截图格式（纯 adb 给无损 PNG）；未声明时按 u2 的 JPEG 口径。
+        return {
+            "image_base64": base64.b64encode(raw).decode("ascii"),
+            "media_type": getattr(self._control, "screenshot_media_type", self.MODEL_MEDIA_TYPE),
         }
-        if not keep_local:
-            return result
-        name = f"capture_{millisecond_stamp()}.jpg"
-        shots = Path(resolve_output_root(output_root)) / "inspector" / "shots"
-        shots.mkdir(parents=True, exist_ok=True)
-        (shots / name).write_bytes(_encode_jpeg(raw, quality=LOCAL_JPEG_QUALITY))
-        result["screenshot_path"] = f"inspector/shots/{name}"
-        result["screenshot_name"] = name
-        return result
+
+
+def _android_connection(target: str) -> DeviceConnection:
+    """按设备标识建立 Android 连接。无线标识为 ``地址:端口``，否则视为 USB 序列号。"""
+    from engines.device.android.android_device import AndroidConnection, AndroidConnectionConfig
+
+    if ":" in target:
+        host, port_text = target.rsplit(":", 1)
+        try:
+            port = int(port_text)
+        except ValueError as exc:
+            raise EngineConnectError(f"无线端口无效：{target}") from exc
+        config = AndroidConnectionConfig(address=host, address_port=port)
+    else:
+        config = AndroidConnectionConfig(uuid=target)
+    connection = AndroidConnection(config)
+    connection.connect()
+    return connection
 
 
 def open_device(
@@ -439,14 +379,22 @@ def open_device(
     serial: str = "",
     addr: str = "",
 ) -> tuple[DeviceConnection, DeviceInfo, DeviceControl]:
-    """打开一个设备：连接 + 信息 + 控制三件套（三端同一套用法）。
+    """打开一个设备：连接 + 信息 + 控制三件套。
 
-    未实现的系统抛 `SystemNotSupported`（附可用系统）；连接失败由连接实现抛错。
+    设备标识优先用 ``addr``，为空时用 ``serial``。
+    未实现的系统抛 `SystemNotSupported`；连接失败抛 `EngineConnectError`。
     """
-    connection = System.connection(system)()
-    connection.connect(str(serial), str(addr or ""))
+    target = str(addr or serial).strip()
+    if not target:
+        raise EngineConnectError("设备标识不能为空")
+    name = str(system or "").strip().lower()
+    if name == System.ANDROID:
+        connection = _android_connection(target)
+    else:
+        connection = System.connection(name)()
+        connection.connect(target)
     return (
         connection,
-        System.info(system)(connection),
-        System.control(system)(connection),
+        System.info(name)(target),
+        System.control(name)(target),
     )

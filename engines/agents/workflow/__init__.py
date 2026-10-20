@@ -1,6 +1,5 @@
-"""设备检查 SOP：步骤装配与一次运行。"""
+"""设备检查 SOP：一次运行。"""
 
-from .runner import SopRunner
-from .steps import SopStepInput, SopSteps
+from .ui_auto_workflow import AgentSOPWorkflow, load_test_cases, run_workflow
 
-__all__ = ["SopRunner", "SopStepInput", "SopSteps"]
+__all__ = ["AgentSOPWorkflow", "load_test_cases", "run_workflow"]

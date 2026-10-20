@@ -2,32 +2,31 @@
 python -m 调试路径: engines.agents.role.base
 
 本模块的业务功能如下：
-1. BaseRole: 角色基类, 主要功能有智能体创建、运行智能体与智能体中断功能。
+1. BaseRole: Agent 智能体基类, 主要有 智能体创建、运行、中断等功能。
+2. AgentRoleConfig: 角色配置类，主要用于创建角色配置。
 """
 
 from __future__ import annotations
 
 import asyncio
-
-from contextlib import asynccontextmanager
+import os
 
 from agentscope.agent import Agent, ContextConfig, ReActConfig
-from agentscope.event import UserInterruptEvent
+from agentscope.console import ConsoleRenderer
 from agentscope.message import Msg, UserMsg
+from agentscope.tool import Toolkit
 
-from ..messaging.messages import render_reply_stream
+from utils.logs import agent_event_log
+
 from .config import ChatModelFactory, ModelConfig, RoleSpecConfig
 
 
 class BaseRole:
-    """用模型配置和角色配置创建并运行一个智能体。
-
-    既定异常：构造时模型提供商不在支持集合内会抛 `ValueError`；
-    `reply` / `reply_stream` / `interrupt` 在未 `start()` 或
-    在运行中的事件循环内调用时会抛 `RuntimeError`。
+    """
+    角色基类：用模型配置和角色配置创建并运行一个智能体。
     """
 
-    def __init__(self, config: ModelConfig, role: RoleSpecConfig) -> None:
+    def __init__(self, config: ModelConfig, role_config: RoleSpecConfig) -> None:
         """
         创建角色基类：用模型配置与角色配置创建智能体。
 
@@ -39,19 +38,14 @@ class BaseRole:
             ValueError: 不支持的模型提供商。
 
         """
+        self.log = agent_event_log
         self.config = config
-        self.role = role
-        self.model = ChatModelFactory(config, stream=role.stream, vision=role.vision).create()
-        self.agent: Agent | None = None
-        self._reply_task: asyncio.Task[object] | None = None
-        self._loop: asyncio.AbstractEventLoop | None = None
+        self.role = role_config
 
-    def start(self) -> None:
-        """用角色配置里的名称、提示词、工具包、ReAct 与上下文创建智能体。
+        self.model = ChatModelFactory(
+            config, stream=self.role.stream, vision=self.role.vision
+        ).create()
 
-        Returns:
-            None。
-        """
         self.agent = Agent(
             name=self.role.name,
             system_prompt=self.role.system_prompt,
@@ -61,84 +55,55 @@ class BaseRole:
             toolkit=self.role.toolkit,
         )
 
-    def reply(self, content: str):
-        """等这一轮结束，返回消息，不做实时上屏。
+        # self._reply_task: asyncio.Task[object] | None = None
+        # self._loop: asyncio.AbstractEventLoop | None = None
+
+    def _user_msg(self, content: str) -> Msg:
+
+        return UserMsg(name="user", content=content)
+
+    def user_reply(self, content: str) -> Msg:
+        """等本轮结束，返回最终消息。不打印、不解析。
 
         Args:
             content: 本轮用户输入正文。
 
         Returns:
-            本轮的最终消息。
+            本轮最终消息。
 
         Raises:
-            RuntimeError: 未调用 `start()`（经 `_require_agent` 抛出）。
-            RuntimeError: 在运行中的事件循环内调用（`asyncio.run` 拒绝）。
+            RuntimeError: 在已经运行的事件循环内调用（`asyncio.run` 拒绝）。
         """
-        return asyncio.run(self._reply(content))
+        return asyncio.run(self.agent.reply(self._user_msg(content)))
 
-    def interrupt(self) -> None:
-        """运行中取消当前回复；已暂停则结束等待中的工具确认。
-
-        Raises:
-            RuntimeError: 未调用 `start()`（经 `_interrupt_paused` → `_require_agent` 抛出）。
-            RuntimeError: 没有运行中的回复时在事件循环内调用（`asyncio.run` 拒绝）。
-        """
-        task = self._reply_task
-        loop = self._loop
-        if task is not None and loop is not None and loop.is_running() and not task.done():
-            loop.call_soon_threadsafe(task.cancel)
-            return
-        asyncio.run(self._interrupt_paused())
-
-    def reply_stream(self, content: str):
-        """实时打印思考、工具调用、工具结果和文本，并返回最后一条消息。
+    def user_reply_stream(self, content: str) -> Msg:
+        """同步上屏，结束后返回最终消息。
 
         Args:
             content: 本轮用户输入正文。
 
         Returns:
-            事件流末端的最终消息。
+            本轮最终消息。
 
         Raises:
-            RuntimeError: 未调用 `start()`（经 `_require_agent` 抛出）。
-            RuntimeError: 在运行中的事件循环内调用（`asyncio.run` 拒绝）。
+            RuntimeError: 在已经运行的事件循环内调用（`asyncio.run` 拒绝）。
+            RuntimeError: 事件流没有给出最终消息。
         """
-        return asyncio.run(self._reply_stream(content))
+        return asyncio.run(self._print_reply(content))
 
-    @asynccontextmanager
-    async def _running(self):
-        """记下当前回复任务，供 interrupt 取消。"""
-        self._loop = asyncio.get_running_loop()
-        self._reply_task = asyncio.current_task()
-        try:
-            yield
-        finally:
-            self._reply_task = None
-            self._loop = None
-
-    async def _reply(self, content: str):
-        async with self._running():
-            return await self._require_agent().reply(self._user_msg(content))
-
-    async def _interrupt_paused(self) -> None:
-        """对暂停中的回复发送 UserInterruptEvent。未在等待时由框架空返回。"""
-        agent = self._require_agent()
-        event = UserInterruptEvent(reply_id=agent.state.reply_id)
-        async for _event in agent.reply_stream(event):
-            pass
-
-    def _require_agent(self) -> Agent:
-        """取出 `start()` 创建的智能体。
-
-        Returns:
-            已创建的智能体。
-
-        Raises:
-            RuntimeError: 尚未调用 `start()`。
-        """
-        if self.agent is None:
-            raise RuntimeError("请先调用 start()")
-        return self.agent
+    async def _print_reply(self, content: str) -> Msg:
+        """逐事件打印到控制台。"""
+        renderer = ConsoleRenderer()
+        final: Msg | None = None
+        stream = self.agent.reply_stream(self._user_msg(content), yield_final_msg=True)
+        async for event in stream:
+            if isinstance(event, Msg):
+                final = event
+                continue
+            renderer.render(event)
+        if final is None:
+            raise RuntimeError("事件流没有给出最终消息")
+        return final
 
     def _react_config(self) -> ReActConfig:
         return ReActConfig(
@@ -155,10 +120,64 @@ class BaseRole:
             max_image_num=self.role.max_image_num,
         )
 
-    def _user_msg(self, content: str) -> Msg:
-        return UserMsg(name="user", content=content)
 
-    async def _reply_stream(self, content: str):
-        """驱动一次流式回复：上屏交给 messaging 层，本方法只管任务登记。"""
-        async with self._running():
-            return await render_reply_stream(self._require_agent(), self._user_msg(content))
+class AgentRoleConfig:
+    def __init__(
+        self,
+        provider: str,
+        model_name: str,
+        base_url: str,
+        api_key: str,
+        name: str,
+        system_prompt: str,
+        toolkit: Toolkit,
+        vision: bool,
+    ):
+
+        self.log = agent_event_log
+        self.provider = provider
+        self.model_name = model_name
+        self.base_url = base_url
+        self.api_key = api_key
+
+        self.name = name
+        self.system_prompt = system_prompt
+        self.toolkit = toolkit
+        self.vision = vision
+
+    def load_config(self):
+
+        return (
+            ModelConfig(
+                provider=self.provider,
+                model_name=self.model_name,
+                base_url=self.base_url,
+                api_key=self.api_key,
+            ),
+            RoleSpecConfig(
+                name=self.name,
+                system_prompt=self.system_prompt,
+                toolkit=self.toolkit,
+                vision=self.vision,
+            ),
+        )
+
+    def _load_api_key(self, provider: str):
+
+        api_key = None
+
+        if provider == "deepseek":
+            api_key = os.getenv("DEEPSEEK_API_KEY", "").strip()
+        elif provider == "openai":
+            api_key = os.getenv("OPENAI_API_KEY", "").strip()
+        elif provider == "dashscope":
+            api_key = os.getenv("DASHSCOPE_API_KEY", "").strip()
+        else:
+            raise ValueError(
+                f" 当前不支持{provider}厂商模型配置；可选：deepseek、openai、dashscope"
+            )
+
+        if not api_key:
+            raise SystemExit("请先设置环境变量 DEEPSEEK_API_KEY（不要把 key 写进源码）")
+
+        return api_key

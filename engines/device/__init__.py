@@ -1,1 +1,1 @@
-"""设备引擎（L1c）— UiEngine 协议 + 可替换注册表 + u2 实现。"""
+"""设备引擎。对外只使用 action，Android 实现由 action 加载。"""

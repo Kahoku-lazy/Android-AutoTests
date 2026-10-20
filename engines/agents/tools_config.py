@@ -22,7 +22,15 @@ _SkillSource = str | Skill | SkillLoaderBase
 
 @dataclass(frozen=True)
 class ToolGroupSpec:
-    """一个可开关工具组的标识、说明和成员。"""
+    """
+    一个可开关工具组的标识、说明和成员。
+    Attributes:
+        name: 工具组名称
+        description: 工具组描述
+        instructions: 工具组使用说明
+        tool_names: 工具组包含的工具名
+        skill_dirs: 工具组包含的技能目录
+    """
 
     name: str
     description: str
@@ -121,8 +129,8 @@ EXECUTOR_TOOL_GROUPS = (
     ),
     ToolGroupSpec(
         name="xpath",
-        description="xpath。通过 xpath 检查元素、读取文本、点击或长按。",
-        instructions="已有 xpath 时检查、读取、点击或长按。",
+        description="xpath。获取页面 xpath 元素的文本与中心坐标。",
+        instructions="已有 xpath 时先取文本和坐标，再用 tap_screen 按像素坐标点击或长按。",
         tool_names=("xpath_action",),
     ),
     ToolGroupSpec(
@@ -185,8 +193,6 @@ def build_verifier_toolkit() -> Toolkit:
 
 
 # ── 技能注册（工具包 + 技能来源） ──
-
-
 def register_skills(
     toolkit: Toolkit,
     skills: Sequence[_SkillSource],

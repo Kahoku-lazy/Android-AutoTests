@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uiautomator2 as u2
 
-from engines.device.base import EngineConnectError
+from engines.device.action import EngineConnectError
 
 __all__ = ["fetch_device_info", "probe_u2"]
 

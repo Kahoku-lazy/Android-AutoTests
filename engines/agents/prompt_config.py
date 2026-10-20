@@ -9,15 +9,16 @@ from .prompts.verifier_prompt import VERIFIER_PROMPT
 
 # ── DeepSeek 模型目录（正式模型名 → 是否支持图片输入）──
 #
-# 取值依据（2026-10-08 实测）：`GET https://api.deepseek.com/v1/models` 返回的
-# `input_modalities` 与官方价目页的「图像理解」一行。旧名 deepseek-v4-flash /
-# deepseek-v4-flash-vision-exp 仍可调用但模型已下线、按 Flash 计费，故只作计费别名。
+# 取值依据（2026-10-17 官方价目页）：`deepseek-flash` 现为 DeepSeek-V4.1-Flash-1017，
+# `deepseek-v4-pro` 现为 DeepSeek-V4-Pro-0813。图像理解以价目页「图像理解」一行为准。
+# 旧名 deepseek-v4-flash / deepseek-v4-flash-vision-exp 仍可调用，但对应模型已下线，
+# 请求由 Flash-1017 提供并按 Flash 计费，故只作计费别名。
 #
 # 前端模型清单镜像本目录（`frontend/src/modules/ai-assistant/components/ModelConfigField.vue`），
 # 由 tests/graybox/unit/test_ai_deepseek_model_catalog.py 对拍，两侧必须同步修改。
 DEEPSEEK_MODELS: dict[str, bool] = {
-    "deepseek-flash": True,  # DeepSeek-V4.1-Flash：支持图片输入（多模态）
-    "deepseek-v4-pro": False,  # DeepSeek-V4-Pro：纯文本
+    "deepseek-flash": True,  # DeepSeek-V4.1-Flash-1017：支持图片输入（多模态）
+    "deepseek-v4-pro": False,  # DeepSeek-V4-Pro-0813：纯文本
 }
 
 

@@ -10,11 +10,6 @@ export interface CaseBreakdownItem {
   enabled?: number
 }
 
-export interface ElementBreakdownItem {
-  type: string // 'android' | 'web' | 'api'
-  total: number
-}
-
 // ── 平台概览统计 ──
 
 export interface AiUsageMetric {
@@ -48,7 +43,6 @@ export interface AiUsage {
 export interface DashboardStats {
   devices: { online: number; total: number }
   cases: { total: number; enabled: number; breakdown: CaseBreakdownItem[] }
-  elements: { total: number; pages: number; typeBreakdown: ElementBreakdownItem[] }
   runs: { total: number; active: number }
   agents: { total: number; active: number }
   workflow: { total: number }
@@ -124,7 +118,6 @@ export interface ActivityItem {
 export interface DashboardRawData {
   devices: { online: number; total: number }
   cases: { total: number; enabled: number; breakdown: CaseBreakdownItem[] }
-  elements: { total: number; pages: number; type_breakdown: ElementBreakdownItem[] }
   runs: { total: number; active: number }
   agents: { total: number; active: number }
   workflow: { total: number }
@@ -160,9 +153,3 @@ export interface CaseProjectCardDisplay {
   path: string
 }
 
-export interface ElementBreakdownDisplay {
-  type: string
-  label: string
-  color: string
-  icon: object // component ref (Vue Component)
-}

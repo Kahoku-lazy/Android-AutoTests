@@ -40,14 +40,6 @@ function makeRaw(): DashboardRawData {
         { project_id: 11, name: '空项目', total: 0 },
       ],
     },
-    elements: {
-      total: 42,
-      pages: 6,
-      type_breakdown: [
-        { type: 'android', total: 30 },
-        { type: 'web', total: 12 },
-      ],
-    },
     runs: { total: 100, active: 2 },
     agents: { total: 4, active: 1 },
     workflow: { total: 7 },
@@ -120,22 +112,8 @@ describe('[P1] useDashboardView（编排）', () => {
     expect(result.caseProjectCards.value).toEqual([])
   })
 
-  it('getElementItem 命中：返回 typeBreakdown 项', async () => {
-    const result = await mountView()
-
-    expect(result.getElementItem('web')).toEqual({ type: 'web', total: 12 })
-  })
-
-  it('getElementItem 未命中：回退零值项', async () => {
-    const result = await mountView()
-
-    expect(result.getElementItem('api')).toEqual({ type: 'api', total: 0 })
-  })
-
-  it('暴露展示配置：页头与 Android 元素分项', async () => {
+  it('暴露展示配置：页头', async () => {
     const result = await mountView()
     expect(result.PAGE_HEADER.title).toBe('仪表盘')
-    expect(result.elementBreakdown).toHaveLength(1)
-    expect(result.elementBreakdown.map((e) => e.type)).toEqual(['android'])
   })
 })

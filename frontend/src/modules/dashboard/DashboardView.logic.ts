@@ -4,13 +4,9 @@ import { computed, onMounted, type ComputedRef } from "vue"
 
 import { useDashboardStats, type UseDashboardStatsReturn } from "./composables/useDashboardStats"
 
-import type {
-  ElementBreakdownItem,
-  CaseProjectCardDisplay,
-  ElementBreakdownDisplay,
-} from "@/shared/types/dashboard"
+import type { CaseProjectCardDisplay } from "@/shared/types/dashboard"
 
-import { IconDevice, IconLayers } from "@/shared/icons/index"
+import { IconLayers } from "@/shared/icons/index"
 
 // ── 展示配置 ──
 
@@ -27,10 +23,6 @@ export const PAGE_HEADER = {
 }
 
 const PROJECT_CARD_COLORS = ["deep", "sage", "cream", "dust"] as const
-
-const ELEMENT_BREAKDOWN: ElementBreakdownDisplay[] = [
-  { type: "android", label: "Android元素", color: "deep", icon: IconDevice },
-]
 
 // ── 数值格式化助手（单位换算：累计 token → 百万 M；平均每任务 token → 千 K）──
 
@@ -61,10 +53,6 @@ export interface DashboardViewState extends UseDashboardStatsReturn {
 
   caseProjectCards: ComputedRef<CaseProjectCardDisplay[]>
 
-  elementBreakdown: ElementBreakdownDisplay[]
-
-  getElementItem: (type: string) => ElementBreakdownItem
-
   tokenSeries: ComputedRef<SeriesDisplay[]>
 
   costSeries: ComputedRef<SeriesDisplay[]>
@@ -90,15 +78,6 @@ export function useDashboardView(): DashboardViewState {
       path: `/cases/projects/${row.project_id}`,
     })),
   )
-
-  function getElementItem(type: string): ElementBreakdownItem {
-    return (
-      statsComposable.stats.value.elements.typeBreakdown?.find((b) => b.type === type) || {
-        type,
-        total: 0,
-      }
-    )
-  }
 
   // ECharts Canvas 不解析 CSS 变量，系列色为字面量（与 tokens.css 同值）：
 
@@ -149,10 +128,6 @@ export function useDashboardView(): DashboardViewState {
     PAGE_HEADER,
 
     caseProjectCards,
-
-    elementBreakdown: ELEMENT_BREAKDOWN,
-
-    getElementItem,
 
     tokenSeries,
 

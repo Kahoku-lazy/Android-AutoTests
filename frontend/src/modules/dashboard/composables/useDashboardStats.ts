@@ -53,7 +53,6 @@ const DEFAULT_AI_USAGE: AiUsage = {
 const DEFAULT_STATS: DashboardStats = {
   devices: { online: 0, total: 0 },
   cases: { total: 0, enabled: 0, breakdown: [] },
-  elements: { total: 0, pages: 0, typeBreakdown: [] },
   runs: { total: 0, active: 0 },
   agents: { total: 0, active: 0 },
   workflow: { total: 0 },
@@ -90,11 +89,6 @@ export function mapStatsResponse(raw: DashboardRawData): MappedData {
         total: raw.cases?.total ?? 0,
         enabled: raw.cases?.enabled ?? 0,
         breakdown: raw.cases?.breakdown ?? [],
-      },
-      elements: {
-        total: raw.elements?.total ?? 0,
-        pages: raw.elements?.pages ?? 0,
-        typeBreakdown: raw.elements?.type_breakdown ?? [],
       },
       runs: {
         total: raw.runs?.total ?? 0,

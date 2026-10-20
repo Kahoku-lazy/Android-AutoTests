@@ -37,11 +37,6 @@ function makeRaw(): DashboardRawData {
       enabled: 18,
       breakdown: [{ project_id: 1, name: '冒烟项目', total: 8 }],
     },
-    elements: {
-      total: 42,
-      pages: 6,
-      type_breakdown: [{ type: 'android', total: 30 }],
-    },
     runs: { total: 100, active: 2 },
     agents: { total: 4, active: 1 },
     workflow: { total: 7 },
@@ -84,7 +79,6 @@ describe('[P0] useDashboardStats', () => {
     expect(s.error.value).toBeNull()
     expect(s.stats.value.devices).toEqual({ online: 3, total: 5 })
     expect(s.stats.value.cases.breakdown).toHaveLength(1)
-    expect(s.stats.value.elements.typeBreakdown).toEqual([{ type: 'android', total: 30 }])
     expect(s.stats.value.runs.active).toBe(2)
     expect(s.stats.value.agents.total).toBe(4)
     expect(s.stats.value.workflow).toEqual({ total: 7 })
@@ -191,7 +185,6 @@ describe('[P0] mapStatsResponse（纯映射）', () => {
       enabled: 18,
       breakdown: [{ project_id: 1, name: '冒烟项目', total: 8 }],
     })
-    expect(mapped.stats.elements.typeBreakdown).toEqual([{ type: 'android', total: 30 }])
     expect(mapped.stats.workflow).toEqual({ total: 7 })
     expect(mapped.executionChart.success).toEqual([10])
     expect(mapped.executionSummary.passed).toBe(50)
@@ -205,7 +198,6 @@ describe('[P0] mapStatsResponse（纯映射）', () => {
 
     expect(mapped.stats.devices).toEqual({ online: 0, total: 0 })
     expect(mapped.stats.cases.breakdown).toEqual([])
-    expect(mapped.stats.elements.typeBreakdown).toEqual([])
     expect(mapped.stats.workflow).toEqual({ total: 0 })
     expect(mapped.executionChart).toEqual({ labels: [], success: [], failed: [] })
     expect(mapped.executionSummary).toEqual({ passed: 0, failed: 0 })

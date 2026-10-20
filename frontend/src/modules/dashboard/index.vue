@@ -40,8 +40,6 @@ const {
   loadData,
   refreshData,
   caseProjectCards,
-  elementBreakdown,
-  getElementItem,
   tokenSeries,
   costSeries,
   roleBreakdown,
@@ -236,12 +234,6 @@ const {
             <span class="chip chip--teal"
               >用例 <b>{{ stats.cases.total }}</b></span
             >
-            <span class="chip chip--violet"
-              >元素 <b>{{ stats.elements.total }}</b></span
-            >
-            <span class="chip"
-              >页面 <b>{{ stats.elements.pages }}</b></span
-            >
           </div>
         </header>
         <div class="asset-cols">
@@ -265,24 +257,6 @@ const {
             <div v-else-if="!loading" class="cases-empty">
               <p class="cases-empty__text">暂无用例项目</p>
               <RouterLink class="cases-empty__link" to="/cases">前往用例管理创建</RouterLink>
-            </div>
-          </div>
-          <div>
-            <div class="subhead">元素定位 <span class="subhead__tag">Elements</span></div>
-            <div class="dashboard__stats-grid">
-              <StatsAppCard
-                v-for="item in elementBreakdown"
-                :key="'el-' + item.type"
-                :label="item.label"
-                :value="getElementItem(item.type).total"
-                :color="item.color"
-                path="/elements"
-                :loading="loading"
-              >
-                <template #icon>
-                  <component :is="item.icon" :size="15" />
-                </template>
-              </StatsAppCard>
             </div>
           </div>
         </div>

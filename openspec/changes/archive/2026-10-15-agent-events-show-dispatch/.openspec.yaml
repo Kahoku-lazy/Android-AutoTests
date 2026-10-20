@@ -1,0 +1,4 @@
+schema: android-autotests
+created: 2026-10-15
+# 纯重构：控制台时间线文案不变，只把分派从大分支收成无状态方法。
+skip_specs: true

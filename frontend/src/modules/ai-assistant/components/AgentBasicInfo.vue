@@ -1,70 +1,72 @@
 <script setup lang="ts">
-import { DATA_IMAGE_PREFIX } from "../constants"
+import { ASSISTANT_DUTY, ASSISTANT_WORKFLOW, DATA_IMAGE_PREFIX } from "../constants"
 
 defineProps<{
   form: Record<string, any>
-  isNew?: boolean
   uploading?: boolean
-  /** 线路级：仅名称/头像；平台级：标签/描述 */
-  routeMode?: boolean
 }>()
 const emit = defineEmits<{ "trigger-upload": [] }>()
 </script>
 
 <template>
   <div class="doc-section step-panel">
-    <div class="section-title">
-      <span class="section-num">{{ routeMode ? "👤" : "📋" }}</span>
-      {{ routeMode ? "基本信息" : "平台信息" }}
-    </div>
+    <div class="section-title"><span class="section-num">📋</span>基本信息</div>
     <el-form label-width="100px" class="agent-form">
-      <template v-if="routeMode">
-        <el-form-item label="名称">
-          <el-input v-model="form.name" placeholder="例如：控制设备助手" />
-        </el-form-item>
-        <el-form-item label="头像">
-          <div class="avatar-row">
-            <div
-              class="avatar-preview"
-              :style="
-                form.avatar?.startsWith(DATA_IMAGE_PREFIX)
-                  ? { backgroundImage: `url(${form.avatar})` }
-                  : {}
-              "
-            >
-              <span v-if="!form.avatar?.startsWith(DATA_IMAGE_PREFIX)">{{
-                form.avatar || "🤖"
-              }}</span>
-            </div>
-            <el-button :loading="uploading" size="default" @click="emit('trigger-upload')">
-              {{ uploading ? "上传中..." : "上传图片" }}
-            </el-button>
-            <el-input
-              v-model="form.avatar"
-              placeholder="Emoji 或留空用默认"
-              style="max-width: 160px"
-            />
+      <el-form-item label="名称">
+        <el-input v-model="form.name" placeholder="例如：平台小助手" />
+      </el-form-item>
+      <el-form-item label="头像">
+        <div class="avatar-row">
+          <div
+            class="avatar-preview"
+            :style="
+              form.avatar?.startsWith(DATA_IMAGE_PREFIX)
+                ? { backgroundImage: `url(${form.avatar})` }
+                : {}
+            "
+          >
+            <span v-if="!form.avatar?.startsWith(DATA_IMAGE_PREFIX)">{{
+              form.avatar || "🤖"
+            }}</span>
           </div>
-        </el-form-item>
-      </template>
-      <template v-else>
-        <el-form-item label="标签">
-          <el-input v-model="form.tags" placeholder="测试,用例,自动化" />
-        </el-form-item>
-        <el-form-item label="描述">
-          <el-input
-            v-model="form.description"
-            type="textarea"
-            :rows="3"
-            placeholder="智能体职责描述"
-          />
-        </el-form-item>
-      </template>
+          <el-button :loading="uploading" size="default" @click="emit('trigger-upload')">
+            {{ uploading ? "上传中..." : "上传图片" }}
+          </el-button>
+          <el-input v-model="form.avatar" placeholder="Emoji 或留空用默认" style="max-width: 160px" />
+        </div>
+      </el-form-item>
+      <el-form-item label="标签">
+        <el-input v-model="form.tags" placeholder="测试,用例,自动化" />
+      </el-form-item>
+      <el-form-item label="描述">
+        <el-input
+          v-model="form.description"
+          type="textarea"
+          :rows="3"
+          placeholder="智能体职责描述"
+        />
+      </el-form-item>
+      <el-form-item label="职责">
+        <el-input :model-value="ASSISTANT_DUTY" readonly />
+      </el-form-item>
+      <el-form-item label="工作流">
+        <el-input :model-value="ASSISTANT_WORKFLOW" readonly />
+      </el-form-item>
     </el-form>
   </div>
 </template>
 
 <style scoped>
+.agent-form :deep(.el-form-item__label) {
+  font-size: var(--app-size-md);
+  font-weight: 600;
+  color: var(--ai-ink-subtle);
+}
+.agent-form :deep(.el-input__wrapper),
+.agent-form :deep(.el-textarea__inner) {
+  border-radius: var(--app-radius-md);
+  font-size: var(--app-size-md);
+}
 .avatar-row {
   display: flex;
   align-items: center;

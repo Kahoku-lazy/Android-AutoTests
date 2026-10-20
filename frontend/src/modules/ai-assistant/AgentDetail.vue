@@ -1,104 +1,66 @@
 <script setup>
 import { ref, onMounted, computed } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import { getAgentDetail, uploadAvatar, saveAgent, testAgent } from "./api/agents"
+import { getAgentDetail, uploadAvatar, saveAgent } from "./api/agents"
 import { formatApiError } from "@/shared/api-client"
-import { ElMessage, ElMessageBox } from "element-plus"
+import { ElMessage } from "element-plus"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import WorkbenchCrumbs from "@/shared/components/WorkbenchCrumbs.vue"
 import { ROUTE_AI_ASSISTANT } from "./constants"
 import AgentBasicInfo from "./components/AgentBasicInfo.vue"
-import AgentRouteConfig from "./components/AgentRouteConfig.vue"
 import AgentFormFooter from "./components/AgentFormFooter.vue"
 
 const route = useRoute()
 const router = useRouter()
 const agentId = computed(() => route.params.agentId)
 const isNew = computed(() => agentId.value === "new")
-const activeRoute = computed(() => {
-  const r = route.query.route
-  return r === "device_control" ? r : null
-})
 const agent = ref(null)
 const loading = ref(false)
 const loadError = ref("")
 const uploading = ref(false)
 const fileInput = ref(null)
-const uploadTargetRoute = ref(null)
-const testing = ref(false)
-const testResults = ref(null)
-const ROLE_LABELS = { planner: "规划模型", executor: "执行模型", verifier: "校验模型" }
 
+// 配置页只维护基本信息；模型/线路由后台维护，执行链仍读 route_configs。
 const form = ref({
   name: "",
   avatar: "🤖",
   tags: "",
   description: "",
-  model_provider: "dashscope",
-  model_name: "qwen-max",
-  vision_model_name: "",
-  strong_model_name: "",
-  strong_enabled: false,
-  api_key: "",
-  base_url: "",
-  enable_workspace_tools: false,
-  enable_business_tools: false,
-  enable_mcp_tools: false,
-  enable_skills: false,
-  tools: [],
-  skills_config: {},
-  max_loops: 3,
-  route_configs: {
-    device_control: { name: "", avatar: "📱", planner: {}, executor: {}, verifier: {} },
-  },
 })
 
 async function loadAgentDetail() {
-  // All data sources are independent — load them in a single parallel batch.
-  // Including getAgentDetail avoids a second sequential network round-trip
-  // for edit mode.
   loadError.value = ""
-  if (!isNew.value) {
-    loading.value = true
-  }
+  if (isNew.value) return
+  loading.value = true
   try {
-    if (!isNew.value) {
-      const data = await getAgentDetail(agentId.value)
-      if (data?.status && data.data?.agent) {
-        const agentPayload = data.data.agent
-        form.value = { ...form.value, ...agentPayload, tools: [] }
-        form.value.route_configs = {
-          device_control: {
-            name: "",
-            avatar: "📱",
-            planner: {},
-            executor: {},
-            verifier: {},
-            ...(agentPayload.route_configs?.device_control || {}),
-          },
-        }
-        form.value.max_loops = agentPayload.max_loops ?? 3
-        agent.value = agentPayload
+    const data = await getAgentDetail(agentId.value)
+    if (data?.status && data.data?.agent) {
+      const payload = data.data.agent
+      const routeConfig = payload.route_configs?.device_control || {}
+      form.value = {
+        name: routeConfig.name || payload.name || "",
+        avatar: routeConfig.avatar || payload.avatar || "🤖",
+        tags: payload.tags || "",
+        description: payload.description || "",
       }
+      agent.value = payload
     }
   } catch (err) {
-    if (!isNew.value) {
-      loadError.value = "加载智能体详情失败，请检查网络连接"
-      console.error("Failed to load agent detail:", err)
-    }
+    loadError.value = "加载智能体详情失败，请检查网络连接"
+    console.error("Failed to load agent detail:", err)
   }
-  if (!isNew.value) loading.value = false
+  loading.value = false
 }
 
 onMounted(() => {
   loadAgentDetail()
 })
 
-function triggerUpload(routeKey) {
-  uploadTargetRoute.value = routeKey
+function triggerUpload() {
   fileInput.value?.click()
 }
+
 async function handleAvatarUpload(e) {
   const file = e.target.files?.[0]
   if (!file) return
@@ -106,47 +68,25 @@ async function handleAvatarUpload(e) {
   const reader = new FileReader()
   reader.onload = async () => {
     try {
-      const data = await uploadAvatar({
-        image: reader.result,
-      })
+      const data = await uploadAvatar({ image: reader.result })
       if (data.status) {
-        const url = data.data?.url || ""
-        const routeKey = uploadTargetRoute.value || activeRoute.value
-        if (routeKey && form.value.route_configs[routeKey]) {
-          form.value.route_configs[routeKey].avatar = url
-        } else {
-          form.value.avatar = url
-        }
+        form.value.avatar = data.data?.url || ""
       }
     } catch (err) {
       console.error("Failed to upload avatar:", err)
       ElMessage.error("头像上传失败，请稍后重试")
     }
     uploading.value = false
-    uploadTargetRoute.value = null
   }
   reader.readAsDataURL(file)
 }
 
 async function save() {
-  const payload = { ...form.value }
-  if (!payload.name?.trim()) {
-    const routeKey = activeRoute.value
-    const routeName = routeKey
-      ? payload.route_configs?.[routeKey]?.name
-      : payload.route_configs?.device_control?.name
-    payload.name = (routeName || "").trim() || "平台小助手"
-  }
-  // 工具配置已移到 AI 工具箱页（platform-config），此处不随智能体提交
-  for (const k of [
-    "tools",
-    "enable_workspace_tools",
-    "enable_business_tools",
-    "enable_mcp_tools",
-    "enable_skills",
-    "skills_config",
-  ]) {
-    delete payload[k]
+  const payload = {
+    name: (form.value.name || "").trim() || "平台小助手",
+    avatar: form.value.avatar || "",
+    tags: form.value.tags || "",
+    description: form.value.description || "",
   }
   try {
     const data = await saveAgent(isNew.value, agentId.value, payload)
@@ -159,27 +99,6 @@ async function save() {
   } catch (err) {
     ElMessage.error("保存失败: " + formatApiError(err))
   }
-}
-
-async function testConnection() {
-  if (testing.value) return
-  testing.value = true
-  testResults.value = null
-  try {
-    const data = await testAgent(agentId.value, { route: activeRoute.value })
-    if (data.status && data.data) {
-      if (data.data.results) testResults.value = data.data.results
-      const st = data.data.status
-      if (st === "ready" || data.data.connected) ElMessage.success("已连通，可执行任务")
-      else if (st === "unusable") ElMessage.warning("秘钥已连接，但无法使用")
-      else ElMessage.warning("连接失败，小助手断线")
-    } else {
-      ElMessage.error(data.message || "校验失败")
-    }
-  } catch (err) {
-    ElMessage.error("校验请求失败，请检查网络连接")
-  }
-  testing.value = false
 }
 </script>
 
@@ -212,57 +131,7 @@ async function testConnection() {
           style="display: none"
           @change="handleAvatarUpload"
         />
-        <AgentBasicInfo
-          v-if="activeRoute"
-          :form="form.route_configs[activeRoute]"
-          :uploading="uploading && uploadTargetRoute === activeRoute"
-          route-mode
-          @trigger-upload="triggerUpload(activeRoute)"
-        />
-        <AgentBasicInfo v-if="!activeRoute" :form="form" :is-new="isNew" />
-
-        <section class="doc-section step-panel">
-          <div class="section-title"><span class="section-num">🔄</span>循环次数</div>
-          <el-form label-width="110px" class="agent-form">
-            <el-form-item label="max_loops">
-              <el-input-number v-model="form.max_loops" :min="1" :max="10" />
-            </el-form-item>
-          </el-form>
-        </section>
-
-        <template v-if="!activeRoute || activeRoute === 'device_control'">
-          <AgentBasicInfo
-            v-if="!activeRoute"
-            :form="form.route_configs.device_control"
-            :uploading="uploading && uploadTargetRoute === 'device_control'"
-            route-mode
-            @trigger-upload="triggerUpload('device_control')"
-          />
-          <AgentRouteConfig
-            label="控制设备 Device Control"
-            v-model="form.route_configs.device_control"
-          />
-        </template>
-
-        <section class="doc-section step-panel">
-          <div class="section-title"><span class="section-num">✅</span>模型校验</div>
-          <el-button :loading="testing" :disabled="isNew" @click="testConnection"
-            >校验模型连接</el-button
-          >
-          <div v-if="testResults" class="test-results">
-            <div v-for="(r, role) in testResults" :key="role" class="test-row">
-              <span class="test-role">{{ ROLE_LABELS[role] || role }}</span>
-              <span class="test-state" :class="r.connected ? 'ok' : r.key_ok ? 'warn' : 'fail'">
-                <template v-if="r.connected">✓ 可用于执行</template>
-                <template v-else-if="r.key_ok"
-                  >△ 密钥可达但不可用{{ r.message ? "：" + r.message : "" }}</template
-                >
-                <template v-else>✗ {{ r.message || "未连通" }}</template>
-              </span>
-            </div>
-          </div>
-        </section>
-
+        <AgentBasicInfo :form="form" :uploading="uploading" @trigger-upload="triggerUpload" />
         <AgentFormFooter :is-new="isNew" @save="save" />
       </template>
     </div>
@@ -282,7 +151,7 @@ async function testConnection() {
   overflow-y: auto;
 }
 
-/* ── Back button ── */
+/* ── Section badge ── */
 :deep(.section-num) {
   display: flex;
   align-items: center;
@@ -295,49 +164,5 @@ async function testConnection() {
   font-size: var(--app-size-md);
   font-weight: 700;
   box-shadow: var(--app-shadow-sm);
-}
-.agent-form :deep(.el-form-item__label) {
-  font-size: var(--app-size-md);
-  font-weight: 600;
-  color: var(--ai-ink-subtle);
-}
-.agent-form :deep(.el-input__wrapper),
-.agent-form :deep(.el-textarea__inner) {
-  border-radius: var(--app-radius-md);
-  font-size: var(--app-size-md);
-}
-.form-hint {
-  font-size: var(--app-size-sm);
-  color: var(--ai-ink-muted);
-  margin-left: 10px;
-}
-.test-results {
-  display: flex;
-  flex-direction: column;
-  gap: var(--app-space-sm);
-  margin-top: var(--app-space-md);
-}
-.test-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: var(--app-size-sm);
-}
-.test-role {
-  font-weight: 700;
-  color: var(--ai-ink-muted);
-  min-width: 72px;
-}
-.test-state.ok {
-  color: var(--ai-teal-text);
-  font-weight: 700;
-}
-.test-state.warn {
-  color: var(--c-dashboard);
-  font-weight: 700;
-}
-.test-state.fail {
-  color: var(--el-color-danger);
-  font-weight: 700;
 }
 </style>

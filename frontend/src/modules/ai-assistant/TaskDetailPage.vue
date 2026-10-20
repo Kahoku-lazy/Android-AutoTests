@@ -136,6 +136,9 @@ const finalToneClass = computed(() => {
             :planner-input="detail.planner_input"
             :attachment="detail.attachment"
             :attachment-filename="detail.attachment_filename"
+            :load-message="detail.load_message"
+            :yaml-body="detail.yaml_body"
+            :documents="detail.documents"
           />
 
           <div v-if="blocks.length" class="td-split">

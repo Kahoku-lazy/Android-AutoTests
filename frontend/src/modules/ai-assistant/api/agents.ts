@@ -4,8 +4,6 @@ import type {
   AgentListResponse,
   AgentDetailResponse,
   AgentOpResponse,
-  AgentTestResponse,
-  AgentHealthResponse,
 } from "@/shared/types/ai"
 
 /** 获取所有 Agent 列表 */
@@ -14,35 +12,9 @@ export async function listAgents(): Promise<AgentListResponse> {
   return data
 }
 
-/** 获取 Agent 健康状态 */
-export async function checkAgentsHealth(): Promise<AgentHealthResponse> {
-  const { data } = await djangoClient.get<AgentHealthResponse>("/ai/agents/health/")
-  return data
-}
-
-/** 测试 Agent 连接（可选按线路 route + 角色 role 校验 route_configs 内模型） */
-export async function testAgent(
-  agentId: number,
-  opts?: { route?: string; role?: string },
-): Promise<AgentTestResponse> {
-  const { data } = await djangoClient.post<AgentTestResponse>(
-    `/ai/agents/${agentId}/test/`,
-    opts || {},
-  )
-  return data
-}
-
 /** 获取 Agent 详情 */
 export async function getAgentDetail(agentId: number): Promise<AgentDetailResponse> {
   const { data } = await djangoClient.get<AgentDetailResponse>(`/ai/agents/${agentId}/`)
-  return data
-}
-
-/** 检测可用模型 */
-export async function detectModels(
-  payload: object,
-): Promise<{ status?: boolean; data?: { models?: string[] }; message?: string }> {
-  const { data } = await djangoClient.post("/ai/models/detect/", payload)
   return data
 }
 

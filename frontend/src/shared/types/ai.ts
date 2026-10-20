@@ -1,16 +1,8 @@
-/** AI 助手模块共享类型 — AgentScope SSE 事件、Agent、对话、消息、工具调用 */
+/** AI 助手模块共享类型 — 智能体、线路配置、工具与任务发布 DTO */
 
 // ── 字面量联合类型 ──
 
-export type ViewMode = "agents" | "toolbox"
 export type AgentStatus = "active" | "paused" | "error"
-export type ConnectionMode = "sse" | "django" | "connecting" | "unknown"
-export type ModelStatus =
-  "idle" | "streaming" | "thinking" | "tool_calling" | "calling_model" | "done"
-export type MessageRole = "user" | "assistant"
-export type DeliveryStatus = "sending" | "sent" | "error"
-export type StreamReason = "normal" | "exceed_max_iters" | "stopped" | "error" | "detached"
-export type ToolState = "calling" | "submitted" | "running" | "success" | "error" | "denied"
 
 // ── Agent ──
 export interface AgentRecord {
@@ -38,25 +30,12 @@ export interface RouteModelConfig {
   base_url?: string
 }
 
-/** 线路连通三态：可执行 / 密钥通但不可用 / 断线 */
-export type RouteConnStatus = "ready" | "unusable" | "offline"
-
-export interface RouteHealth {
-  is_connected?: boolean | null
-  /** ready | unusable | offline；缺省时前端按探测中处理 */
-  status?: RouteConnStatus | null
-  last_checked_at?: string
-  last_checked?: string
-  results?: Record<string, RouteModelTestResult>
-}
-
 export interface RouteConfig {
   name?: string
   avatar?: string
   planner?: RouteModelConfig
   executor?: RouteModelConfig
   verifier?: RouteModelConfig
-  health?: RouteHealth
 }
 
 export interface RouteConfigMap {
@@ -75,10 +54,14 @@ export interface TaskRecord {
   device_serial?: string
   /** 卡片展示用设备名（型号）；空则前端回退 serial */
   device_label?: string
+  /** 指定用例标题；空串/缺省=全部用例 */
+  case_title?: string
   /** 当前线路助手名（实时派生，随改名同步） */
   assistant_name?: string
   /** 附件原始文件名（仅文件名，正文只在详情下发） */
   attachment_filename?: string
+  /** 全部附件文件名；列表不下发正文 */
+  attachment_names?: string[]
   created_at?: string
   started_at?: string
   finished_at?: string
@@ -87,9 +70,9 @@ export interface TaskRecord {
 
 export interface TaskSubmitPayload {
   title: string
-  goal: string
-  device_serial?: string
-  device_label?: string
+  agent_id: number
+  device_serial: string
+  case_title?: string
 }
 
 export interface TaskListResponse {
@@ -274,6 +257,12 @@ export interface TaskDetail {
   attachment?: string
   /** 引擎实际交给规划模型的四键 JSON 原文（与装配同源派生） */
   planner_input?: string
+  /** 配置加载结论：配置加载成功 / 加载失败 */
+  load_message?: string
+  /** 配置 YAML 原文 */
+  yaml_body?: string
+  /** 文档附件的解析正文 */
+  documents?: { filename: string; body: string }[]
   created_at?: string
   started_at?: string
   finished_at?: string
@@ -305,121 +294,8 @@ export interface TaskSubmitResponse {
   message?: string
 }
 
-// ── Conversation ──
-export interface Conversation {
-  id: number
-  title: string
-  status: string
-}
-
-// ── Content Blocks ──
-export interface ContentBlock {
-  type: string
-  id?: string
-  [key: string]: unknown
-}
-
-export interface TextBlock extends ContentBlock {
-  type: "text"
-  text: string
-}
-
-export interface ThinkingBlock extends ContentBlock {
-  type: "thinking"
-  thinking: string
-  done?: boolean
-  roundIndex?: number
-}
-
-export interface ToolCallBlock extends ContentBlock {
-  type: "tool_call"
-  name: string
-  input?: object
-  inputRaw?: string
-  state: string
-  roundIndex?: number
-}
-
-export interface ToolResultBlock extends ContentBlock {
-  type: "tool_result"
-  name: string
-  output: string
-  state: string
-}
-
-export interface ToolPairBlock extends ContentBlock {
-  type: "tool_pair"
-  call: ToolCallBlock
-  result: ToolResultBlock
-}
-
-export interface HintBlock extends ContentBlock {
-  type: "hint"
-  hint: string | object
-  source?: string
-}
-
-// ── Tool Call (UI state) ──
-export interface ToolCall {
-  id: string
-  name: string
-  state: ToolState
-  displayArgs?: string
-  input?: object
-  inputRaw?: string
-  output?: string
-  resultImage?: string
-  partialOutput?: string | null
-  roundIndex?: number
-  source?: "builtin" | "platform" | "mcp" | "skill"
-  startedAt?: number
-}
-
-// ── SSE Round (ReAct per-round) ──
-export interface SSERound {
-  thinking: string
-  thinkingDone: boolean
-  thinkingExpanded?: boolean
-  tools: ToolCall[]
-  _pending?: string
-}
-
-// ── Chat Message ──
-export interface ChatMessage {
-  id?: number | string
-  role: MessageRole
-  content: string
-  blocks?: ContentBlock[]
-  flow?: string | null
-  tokens?: number
-  inputTokens?: number
-  modelName?: string
-  model_name?: string
-  created_at?: string
-  thinking?: string
-  thinkingDone?: boolean
-  thinkingExpanded?: boolean
-  toolFlow?: ToolCall[]
-  rounds?: SSERound[]
-  hint?: object | string | null
-  reason?: StreamReason
-  deliveryStatus?: DeliveryStatus
-}
-
-// ── HITL Confirm Event ──
-export interface HitlToolCall {
-  tool_call_id: string
-  tool_call_name?: string
-  arguments?: string | object
-}
-
-export interface HitlConfirmEvent {
-  replyId?: string
-  toolCalls?: HitlToolCall[]
-}
-
 // ── API 响应（宽松 interface — strict:false 下字面量判别属性会被拓宽，union 窄化失效）
-// Agents 组（Batch 1 已迁 DRF）：信封 {status, data}；其余端点（conversations 等）待迁移，暂保持平铺。
+// Agents 组（Batch 1 已迁 DRF）：信封 {status, data}。
 export interface AgentListResponse {
   status?: boolean
   data?: { agents: AgentRecord[] }
@@ -435,72 +311,5 @@ export interface AgentDetailResponse {
 export interface AgentOpResponse {
   status?: boolean
   data?: { id?: number }
-  message?: string
-}
-
-export interface RouteModelTestResult {
-  connected?: boolean
-  /** 密钥能否访问供应商（list 或等价鉴权） */
-  key_ok?: boolean
-  model_name?: string
-  message?: string
-}
-
-export interface AgentTestResponse {
-  status?: boolean
-  data?: {
-    connected?: boolean
-    /** 线路三态；与 connected（仅 ready）对齐 */
-    status?: RouteConnStatus
-    available_models?: string[]
-    message?: string
-    results?: Record<string, RouteModelTestResult>
-    last_checked?: string
-  }
-  message?: string
-}
-
-export interface AgentHealthResponse {
-  status?: boolean
-  data?: {
-    agents: {
-      id: number
-      is_connected: boolean
-      last_checked?: string
-      routes?: Record<string, RouteHealth>
-    }[]
-  }
-  message?: string
-}
-
-// Conversations 组（Batch 2 已迁 DRF）：信封 {status, data}；toolbox 待迁移，暂保持平铺。
-export interface ConversationListResponse {
-  status?: boolean
-  data?: { conversations: Conversation[] }
-  message?: string
-}
-
-export interface ConversationCreateResponse {
-  status?: boolean
-  data?: { id?: number; title?: string; agent_scope_session_id?: string }
-  message?: string
-}
-
-export interface MessagesResponse {
-  status?: boolean
-  data?: { messages: ChatMessage[] }
-  message?: string
-}
-
-export interface SaveMessageResponse {
-  status?: boolean
-  data?: { id?: number }
-  message?: string
-}
-
-// Toolbox（Batch 3 已迁 DRF）：信封 {status, data}。
-export interface ToolboxListResponse {
-  status?: boolean
-  data?: { items: object[] }
   message?: string
 }

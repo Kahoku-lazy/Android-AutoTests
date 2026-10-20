@@ -1,84 +1,52 @@
 <script setup lang="ts">
 import { ref, computed } from "vue"
-import { useRouter, useRoute } from "vue-router"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import WbLoader from "./components/WbLoader.vue"
 import AgentRouteCard from "./components/AgentRouteCard.vue"
-import ToolboxPanel from "./components/ToolboxPanel.vue"
 import TaskBoard from "./components/TaskBoard.vue"
+import { displayedAssistantCards } from "./helpers/assistant-cards"
 import { useAgentBoard } from "./index.logic"
 import { useAuthUser } from "@/shared/composables/useAuthUser"
-import type { ViewMode } from "@/shared/types/ai"
 
-const router = useRouter()
-const route = useRoute()
 const dutyRosterRef = ref<HTMLElement | null>(null)
 const {
   agents,
   loading,
   agentsError,
   PAGE_HEADER,
-  testingRoute,
-  routeConnStatus,
   loadAgents,
   editAgent,
-  testConnection,
 } = useAgentBoard(dutyRosterRef)
 
 const { isSuperuser } = useAuthUser()
 const isAdmin = computed(() => isSuperuser.value === true)
 
 // 两条助手线路（每条线路独立 name/avatar，存于 route_configs）
-const routeCards = computed(() => {
-  const agent = agents.value[0]
-  const configs = agent?.route_configs || {}
-  const fallbackName = agent?.name || "未命名助手"
-  const fallbackAvatar = agent?.avatar || agent?.avatar_url || "🤖"
-  return [
-    {
-      key: "device_control",
-      config: configs.device_control,
-      agentName: configs.device_control?.name || fallbackName,
-      agentAvatar: configs.device_control?.avatar || fallbackAvatar,
-    },
-  ]
-})
+const routeCards = computed(() =>
+  displayedAssistantCards(agents.value[0]).map((card) => ({
+    key: card.key,
+    config: card.config,
+    agentName: card.name,
+    agentAvatar: card.avatar,
+  })),
+)
 
-// ── 视图（侧边栏子项路由驱动，/ai-assistant/agents|toolbox）──
-const VIEW_BY_PATH: Record<string, ViewMode> = {
-  "/ai-assistant/agents": "agents",
-  "/ai-assistant/toolbox": "toolbox",
-}
-const viewMode = computed<ViewMode>(() => VIEW_BY_PATH[route.path] || "agents")
-
-// ── 顶部 WorkbenchHeader 随侧边栏子项变化 ──
-const VIEW_META: Record<ViewMode, { title: string; subtitle: string }> = {
-  agents: {
-    title: "平台小助手",
-    subtitle: "助手看板 + 任务卡片列表：配置两条线路、新建任务并下发执行",
-  },
-  toolbox: {
-    title: "AI工具箱",
-    subtitle: "先看助手此刻能用什么，再按来源开关目录 · 两条线路共用同一套装配",
-  },
-}
-const pageMeta = computed(() => VIEW_META[viewMode.value])
+// ── 视图（AI 助手只有一个入口：平台小助手看板 + 任务列表）──
 </script>
 
 <template>
   <div class="doc-page doc-page--fixed wb-shell ai-workbench">
     <WorkbenchHeader
-      :title="pageMeta.title"
-      :subtitle="pageMeta.subtitle"
+      title="平台小助手"
+      subtitle="助手看板 + 任务卡片列表：配置两条线路、新建任务并下发执行"
       :icon="PAGE_HEADER.icon"
       :icon-gradient="PAGE_HEADER.iconGradient"
     />
 
     <div class="doc-body">
-      <template v-if="viewMode === 'agents'">
-        <section class="doc-section duty-section">
+      <section class="doc-section duty-section">
           <div class="doc-section__header">
             <h3 class="doc-section__title">平台小助手<span class="doc-tag">Assistant</span></h3>
             <span class="filter-count">{{ routeCards.length }} 个助手</span>
@@ -95,10 +63,7 @@ const pageMeta = computed(() => VIEW_META[viewMode.value])
               :agent-name="rc.agentName"
               :agent-avatar="rc.agentAvatar"
               :can-manage="isAdmin"
-              :testing="testingRoute === rc.key"
-              :route-status="routeConnStatus[rc.key]"
               @edit="editAgent(agents[0]?.id ?? 0, rc.key)"
-              @test="agents[0] && testConnection(agents[0], rc.key)"
             />
             <EmptyState
               v-if="!agents.length && !loading"
@@ -111,9 +76,6 @@ const pageMeta = computed(() => VIEW_META[viewMode.value])
 
         <!-- 模块 2：任务卡片列表（新建任务弹窗 + 卡片式列表） -->
         <TaskBoard />
-      </template>
-
-      <ToolboxPanel v-if="viewMode === 'toolbox'" class="tb-host" :can-manage="isAdmin" />
     </div>
   </div>
 </template>

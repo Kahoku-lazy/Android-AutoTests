@@ -28,6 +28,12 @@ export async function deleteTask(taskId: number): Promise<TaskDeleteResponse> {
   return data
 }
 
+/** 关闭运行中的 SOP */
+export async function cancelTask(taskId: number): Promise<TaskSubmitResponse> {
+  const { data } = await djangoClient.post<TaskSubmitResponse>(`/ai/agent-tasks/${taskId}/cancel/`)
+  return data
+}
+
 /** 失败任务克隆新建并调度 */
 export async function rerunTask(taskId: number): Promise<TaskSubmitResponse> {
   const { data } = await djangoClient.post<TaskSubmitResponse>(`/ai/agent-tasks/${taskId}/rerun/`)

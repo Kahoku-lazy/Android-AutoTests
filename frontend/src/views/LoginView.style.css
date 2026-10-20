@@ -2,7 +2,10 @@
 
 .login-page {
   --login-rule: var(--color-blue-82-a30);
-  --login-dash: var(--comp-sidebar-dash);
+  /* 登录页保留手绘虚线：线型是本页自己的登记，不借用侧栏的 --comp-sidebar-dash，
+     以免全站线型切换时被静默带走（见 openspec frontend-login-hand-drawn-hero） */
+  --login-line: dashed;
+  --login-border: var(--size-stroke-sketch) var(--login-line) var(--ink);
 
   position: relative;
   width: 100%;
@@ -141,7 +144,7 @@
   justify-content: center;
   min-height: 42px;
   padding: 0 var(--app-space-lg);
-  border: 2.5px solid var(--ink);
+  border: var(--size-stroke-sketch) solid var(--ink);
   border-radius: 2px;
   font-family: var(--app-font);
   font-size: var(--app-size-sm);
@@ -162,7 +165,7 @@
 .hero-cta--ghost {
   background: transparent;
   color: var(--ink);
-  border-style: dashed;
+  border-style: var(--login-line);
   box-shadow: none;
 }
 
@@ -204,7 +207,7 @@
   width: 100%;
   max-width: 420px;
   padding: var(--app-space-lg);
-  border: var(--login-dash);
+  border: var(--login-border);
   background: var(--app-bg-card);
   box-shadow: 4px 4px 0 0 var(--c-case);
   /* 手绘倾斜。注意：带 transform 的祖先会成为 position: fixed 后代的包含块 ——

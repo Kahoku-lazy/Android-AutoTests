@@ -28,6 +28,15 @@ export interface ByRoleMetric {
   total: Record<string, RoleTokenUsage>
 }
 
+export interface AgentUsage {
+  id: number
+  name: string
+  input_tokens: number
+  output_tokens: number
+  cache_hit_tokens: number
+  cost_total: string
+}
+
 export interface AiUsage {
   taskCount: AiUsageMetric
   inputTokens: AiUsageMetric
@@ -38,6 +47,7 @@ export interface AiUsage {
   avgTokensPerTask: AiUsageMetric
   deepseekCost: AiUsageMetric
   byRole: ByRoleMetric
+  agents: AgentUsage[]
 }
 
 export interface DashboardStats {
@@ -131,6 +141,7 @@ export interface DashboardRawData {
     avg_tokens_per_task: AiUsageMetric
     deepseek_cost: AiUsageMetric
     by_role: ByRoleMetric
+    agents?: AgentUsage[]
   }
   charts: {
     execution: ExecutionChart

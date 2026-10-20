@@ -224,6 +224,8 @@
   --z-modal: 9991;
 
   --size-border-width: 3px;
+  /* 手绘描边宽度：纸面/卡片/弹窗的粗线描边（与工作台实线边框 3px 区分） */
+  --size-stroke-sketch: 2.5px;
   --size-topbar-h: 96px;
   --size-sidebar-w: 228px;
 

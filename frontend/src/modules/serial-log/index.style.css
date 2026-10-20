@@ -1,0 +1,40 @@
+/* Serial Log 页面壳：只负责页头下的 Tab 容器，不承载面板内部样式 */
+
+.serial-log-workbench {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.serial-log-workbench .doc-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.serial-log-section {
+  background: var(--app-bg-card);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-sm);
+  overflow: hidden;
+}
+
+/* Tab 条与页头同风格：贴边、无额外外边距 */
+.serial-log-section :deep(.el-tabs__header) {
+  margin: 0;
+  padding: 0 var(--app-space-lg);
+  border-bottom: 2px solid var(--ink);
+  background: var(--app-bg-subtle);
+}
+
+.serial-log-section :deep(.el-tabs__nav-wrap::after) {
+  display: none;
+}
+
+.serial-log-section :deep(.el-tabs__content) {
+  padding: 0;
+}

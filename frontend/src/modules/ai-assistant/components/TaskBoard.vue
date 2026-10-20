@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from "vue"
+import { computed, ref } from "vue"
 import { useRouter } from "vue-router"
-import type { FormInstance, UploadRawFile } from "element-plus"
+import type { FormInstance, UploadFile } from "element-plus"
 import { ElMessage } from "element-plus"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
@@ -11,11 +11,15 @@ import DoodleNote from "@/shared/components/DoodleNote.vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
 import {
   TASK_STATUS_LABELS,
-  taskDetailRoute,
   taskStatusTone,
   type TaskStatusTone,
 } from "../constants"
 import { formatTaskCost, formatTaskDuration } from "../helpers/task-detail"
+import {
+  isSelectableTaskDevice,
+  taskDeviceAddress,
+  taskDeviceLabel,
+} from "../helpers/task-device-address"
 import { useTaskPublish } from "../composables/useTaskPublish"
 import { useTaskList } from "../composables/useTaskList"
 import type { TaskRecord } from "@/shared/types/ai"
@@ -41,20 +45,26 @@ const {
   form,
   submitting,
   devices,
+  agentOptions,
+  caseTitles,
+  caseError,
   dialogVisible,
-  ATTACH_ACCEPT,
+  CONFIG_ACCEPT,
   openDialog,
   closeDialog,
   submit,
   canSubmit,
-  onAttachChange,
-  clearAttach,
+  onConfigChange,
+  clearConfig,
 } = useTaskPublish()
+
+const selectableDevices = computed(() => devices.value.filter(isSelectableTaskDevice))
 
 const taskFormRef = ref<FormInstance>()
 const taskRules = {
   title: [{ required: true, message: "请填写任务标题", trigger: "blur" }],
-  goal: [{ required: true, message: "请填写任务目标", trigger: "blur" }],
+  agent_id: [{ required: true, message: "请选择智能体", trigger: "change" }],
+  device_serial: [{ required: true, message: "请选择设备", trigger: "change" }],
 }
 const {
   tasks,
@@ -70,37 +80,46 @@ const {
   clearAll,
   rerun,
   rerunningId,
+  cancel,
+  cancellingId,
 } = useTaskList()
 
 function openDetail(taskId: number) {
-  router.push(taskDetailRoute(taskId))
+  router.push(`/reports/task/${taskId}`)
 }
 
 function isFailed(t: TaskRecord): boolean {
   return taskStatusTone(t.status) === "failed"
 }
 
-function beforeAttachUpload(raw: UploadRawFile) {
-  const name = raw.name || ""
-  const ok = /\.(docx|pdf)$/i.test(name)
-  if (!ok) {
-    ElMessage.error("仅支持 Word（.docx）与 PDF")
-    return false
+function attachmentNames(t: TaskRecord): string {
+  const names = t.attachment_names?.filter(Boolean) || []
+  if (names.length) return names.join("、")
+  return t.attachment_filename || "—"
+}
+
+function isRunning(t: TaskRecord): boolean {
+  return taskStatusTone(t.status) === "running"
+}
+
+function pickedFile(file: UploadFile): File | null {
+  return file.raw ?? null
+}
+
+function onConfigPicked(file: UploadFile) {
+  const raw = pickedFile(file)
+  if (!raw) return
+  if (!/\.(yaml|yml)$/i.test(raw.name || "")) {
+    ElMessage.error("配置仅支持 YAML；CSV 与 JSON 暂不可用")
+    clearConfig()
+    return
   }
   if (raw.size > 20 * 1024 * 1024) {
     ElMessage.error("文件过大（上限 20MB）")
-    return false
+    clearConfig()
+    return
   }
-  onAttachChange(raw)
-  return false // 阻止 el-upload 自动上传；随表单一起提交
-}
-
-function onAttachRemove() {
-  clearAttach()
-}
-
-function onAttachExceed() {
-  ElMessage.warning("每条任务最多一份附件")
+  onConfigChange(raw)
 }
 
 async function onSubmit() {
@@ -154,49 +173,66 @@ async function onSubmit() {
             show-word-limit
           />
         </el-form-item>
-        <el-form-item label="任务目标" prop="goal">
-          <el-input
-            v-model="form.goal"
-            type="textarea"
-            :rows="2"
-            placeholder="例如：拖动 H705F 的色温滑块到最左端"
-          />
+        <el-form-item label="智能体" prop="agent_id">
+          <el-select
+            v-model="form.agent_id"
+            style="width: 100%"
+            filterable
+            placeholder="请选择智能体"
+          >
+            <el-option
+              v-for="item in agentOptions"
+              :key="item.id"
+              :label="item.label"
+              :value="item.id"
+            />
+          </el-select>
         </el-form-item>
-        <el-form-item label="任务附件">
+        <el-form-item label="配置">
+          <div class="task-format-row">
+            <span class="task-format is-off">CSV · 暂不可用</span>
+            <span class="task-format is-on">YAML</span>
+            <span class="task-format is-off">JSON · 暂不可用</span>
+          </div>
           <el-upload
-            :accept="ATTACH_ACCEPT"
+            :accept="CONFIG_ACCEPT"
             :limit="1"
             :auto-upload="false"
             :show-file-list="true"
-            :before-upload="beforeAttachUpload"
-            :on-remove="onAttachRemove"
-            :on-exceed="onAttachExceed"
+            :on-change="onConfigPicked"
+            :on-remove="clearConfig"
           >
-            <el-button size="small">选择 Word / PDF</el-button>
-            <template #tip>
-              <div class="el-upload__tip">
-                可选；仅 .docx / .pdf，上传后解析为 Markdown 供规划模型使用
-              </div>
-            </template>
+            <el-button size="small">选择 YAML</el-button>
           </el-upload>
-          <p v-if="form.attachmentFile" class="task-attach-name">
-            已选：{{ form.attachmentFile.name }}
-          </p>
+          <p v-if="form.configFile" class="task-attach-name">已选：{{ form.configFile.name }}</p>
+          <p v-if="caseError" class="task-case-error">{{ caseError }}</p>
         </el-form-item>
-        <el-form-item label="设备">
+        <el-form-item label="设备" prop="device_serial">
           <el-select
             v-model="form.device_serial"
             style="width: 100%"
             clearable
             filterable
-            placeholder="留空则第一台在线设备"
+            placeholder="请选择设备"
           >
             <el-option
-              v-for="d in devices"
+              v-for="d in selectableDevices"
               :key="d.serial"
-              :label="`${d.serial}${d.model ? ' · ' + d.model : ''} (${d.status})`"
-              :value="d.serial"
+              :label="taskDeviceLabel(d)"
+              :value="taskDeviceAddress(d)"
             />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="测试指定用例">
+          <el-select
+            v-model="form.case_title"
+            style="width: 100%"
+            clearable
+            placeholder="全部用例"
+            @clear="form.case_title = ''"
+          >
+            <el-option label="全部用例" value="" />
+            <el-option v-for="title in caseTitles" :key="title" :label="title" :value="title" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -257,10 +293,18 @@ async function onSubmit() {
                   </li>
                   <li class="task-card__meta-row">
                     <span class="task-card__meta-k">附件</span>
-                    <span class="task-card__meta-v">{{ t.attachment_filename || "—" }}</span>
+                    <span class="task-card__meta-v">{{ attachmentNames(t) }}</span>
                   </li>
                 </ul>
                 <template #actions>
+                  <DoodleBtn
+                    v-if="isRunning(t)"
+                    tone="danger"
+                    :disabled="cancellingId === t.id"
+                    @click="cancel(t)"
+                  >
+                    {{ cancellingId === t.id ? "关闭中…" : "关闭" }}
+                  </DoodleBtn>
                   <DoodleBtn
                     v-if="isFailed(t)"
                     tone="yellow"
@@ -296,10 +340,34 @@ async function onSubmit() {
 .task-board__body {
   min-height: var(--app-space-2xl);
 }
+.task-format-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-space-sm);
+  margin-bottom: var(--app-space-xs);
+}
+.task-format {
+  font-size: var(--app-size-xs);
+  padding: 2px var(--app-space-xs);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+}
+.task-format.is-on {
+  background: var(--ai-sticky-bg);
+}
+.task-format.is-off {
+  color: var(--ai-ink-muted);
+  background: var(--app-bg-card);
+}
 .task-attach-name {
   margin: var(--app-space-xs) 0 0;
   font-size: var(--app-size-xs);
   color: var(--ai-ink-muted);
+}
+.task-case-error {
+  margin: var(--app-space-xs) 0 0;
+  font-size: var(--app-size-xs);
+  color: var(--app-status-danger-text);
 }
 .task-card__meta {
   list-style: none;

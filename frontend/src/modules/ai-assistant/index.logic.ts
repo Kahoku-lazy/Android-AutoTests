@@ -1,22 +1,15 @@
 /** AI 助手看板页 — 逻辑编排器（从 index.vue 提取） */
-import { ref, onMounted, onActivated, onUnmounted, nextTick, type Ref } from "vue"
-import { ElMessage } from "element-plus"
-import { animate } from "animejs"
+import { ref, onMounted, onActivated, type Ref } from "vue"
 import { selectPop, iconBounce } from "@/shared/animations"
-import { listAgents, checkAgentsHealth, testAgent } from "./api/agents"
-import type {
-  AgentRecord,
-  RouteConnStatus,
-  RouteModelTestResult,
-  ViewMode,
-} from "@/shared/types/ai"
-import { agentDetailRoute, HEALTH_CHECK_INTERVAL_MS } from "./constants"
+import { listAgents } from "./api/agents"
+import type { AgentRecord } from "@/shared/types/ai"
+import { agentDetailRoute } from "./constants"
 
 // ── 页面配置 ──
 
 export const PAGE_HEADER = {
   title: "AI 助手",
-  subtitle: "智能体看板贴便签，工具箱一站管理",
+  subtitle: "智能体看板贴便签，新建任务并下发执行",
   icon: "bot" as const,
   iconGradient: "linear-gradient(135deg, var(--ai-teal), var(--ai-teal-hover))",
 }
@@ -29,23 +22,15 @@ const NOTE_ROTATIONS = [-2.8, 1.6, -1.4, 2.2, -2.1, 1.2, -1.8, 2.5]
 // ── 返回类型 ──
 
 export interface AgentBoardState {
-  viewMode: Ref<ViewMode>
   agents: Ref<AgentRecord[]>
   loading: Ref<boolean>
   agentsError: Ref<string>
-  testingRoute: Ref<string | null>
-  healthResults: Ref<Record<number, { is_connected: boolean; last_checked?: string }>>
-  routeTestResults: Ref<Record<string, Record<string, RouteModelTestResult>>>
-  routeConnStatus: Ref<Record<string, RouteConnStatus>>
   // helpers
   PAGE_HEADER: typeof PAGE_HEADER
   noteRotation: (agent: AgentRecord) => number
   tapeHue: (agent: AgentRecord) => string
-  agentStatusText: (agent: AgentRecord) => string
-  agentStatusClass: (agent: AgentRecord) => string
   // actions
   loadAgents: () => Promise<void>
-  testConnection: (agent: AgentRecord, routeKey?: string) => Promise<void>
   openAgent: (agent: AgentRecord) => void
   editAgent: (id: number, routeKey?: string) => void
   onAgentCardClick: (ev: Event) => void
@@ -59,19 +44,9 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
   const router = useRouter()
 
   // ── State ──
-  const viewMode = ref<ViewMode>("agents")
   const agents = ref<AgentRecord[]>([])
   const loading = ref(false)
-  const testingRoute = ref<string | null>(null)
-  const healthTimer = ref<ReturnType<typeof setInterval> | null>(null)
-  const healthResults = ref<Record<number, { is_connected: boolean; last_checked?: string }>>({})
-  const routeTestResults = ref<Record<string, Record<string, RouteModelTestResult>>>({})
-  const routeConnStatus = ref<Record<string, RouteConnStatus>>({})
   const agentsError = ref("")
-
-  function isRouteConnStatus(v: unknown): v is RouteConnStatus {
-    return v === "ready" || v === "unusable" || v === "offline"
-  }
 
   // ── Derived ──
 
@@ -90,42 +65,7 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
     return TAPE_HUES[hashString(agent.name || String(agent.id), TAPE_HUES.length)]
   }
 
-  // ── Status helpers ──
-
-  function agentStatusType(agent: AgentRecord): string {
-    if (agent.status !== "active") return agent.status === "paused" ? "warning" : "danger"
-    const h = healthResults.value[agent.id]
-    if (h && !h.is_connected) return "danger"
-    return "success"
-  }
-  function agentStatusText(agent: AgentRecord): string {
-    if (agent.status !== "active") return agent.status === "paused" ? "已暂停" : "错误"
-    const h = healthResults.value[agent.id]
-    if (h && !h.is_connected) return "未连通"
-    return "运行中"
-  }
-  function agentStatusClass(agent: AgentRecord): string {
-    return `is-${agentStatusType(agent)}`
-  }
-
   // ── Animations ──
-
-  function animateStatusBubbles() {
-    const container = dutyRosterRef.value
-    if (!container) return
-    const bubbles = container.querySelectorAll(".ac-status-bubble")
-    bubbles.forEach((el, i) => {
-      animate(el as HTMLElement, {
-        opacity: [0, 1],
-        scale: [0.4, 1.14, 1],
-        translateY: [10, -3, 0],
-        translateX: [4, 0],
-        duration: 560,
-        delay: 90 + i * 80,
-        ease: "outBack(1.8)",
-      })
-    })
-  }
 
   function onAgentCardClick(ev: Event) {
     const card = (ev as unknown as { currentTarget?: HTMLElement }).currentTarget
@@ -146,7 +86,6 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
       const data = await listAgents()
       if (data.status && data.data) {
         agents.value = data.data.agents
-        hydrateRouteTests(agents.value)
       } else {
         agentsError.value = data.message || "加载失败"
       }
@@ -154,85 +93,6 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
       agentsError.value = "加载智能体列表失败，请检查网络连接"
     }
     loading.value = false
-    nextTick(() => animateStatusBubbles())
-  }
-
-  function hydrateRouteTests(list: AgentRecord[]) {
-    const configs = list[0]?.route_configs || {}
-    for (const key of ["device_control"] as const) {
-      const health = configs[key]?.health
-      const results = health?.results
-      if (results && Object.keys(results).length) {
-        routeTestResults.value[key] = results
-      }
-      if (isRouteConnStatus(health?.status)) {
-        routeConnStatus.value[key] = health.status
-      }
-    }
-  }
-
-  function applyHealthRoutes(
-    routes?: Record<
-      string,
-      { status?: RouteConnStatus | null; results?: Record<string, RouteModelTestResult> }
-    >,
-  ) {
-    if (!routes) return
-    for (const [key, payload] of Object.entries(routes)) {
-      if (payload?.results && Object.keys(payload.results).length) {
-        routeTestResults.value[key] = payload.results
-      }
-      if (isRouteConnStatus(payload?.status)) {
-        routeConnStatus.value[key] = payload.status
-      }
-    }
-  }
-
-  async function checkAllHealth() {
-    try {
-      const data = await checkAgentsHealth()
-      if (data.status && data.data?.agents) {
-        for (const h of data.data.agents) {
-          healthResults.value[h.id] = { is_connected: h.is_connected, last_checked: h.last_checked }
-          applyHealthRoutes(h.routes)
-        }
-        nextTick(() => animateStatusBubbles())
-      }
-    } catch {
-      ElMessage.error("健康检查失败")
-    }
-  }
-
-  async function testConnection(agent: AgentRecord, routeKey?: string) {
-    testingRoute.value = routeKey || "__all__"
-    try {
-      const data = await testAgent(agent.id, routeKey ? { route: routeKey } : {})
-      const payload = data.data
-      if (data.status && payload) {
-        healthResults.value[agent.id] = {
-          is_connected: payload.connected ?? false,
-          last_checked: new Date().toISOString(),
-        }
-        if (routeKey && payload.results) {
-          routeTestResults.value[routeKey] = payload.results
-        }
-        if (routeKey && isRouteConnStatus(payload.status)) {
-          routeConnStatus.value[routeKey] = payload.status
-        }
-        if (payload.status === "ready" || payload.connected) {
-          ElMessage.success(`${agent.name} 已连通，可执行任务`)
-        } else if (payload.status === "unusable") {
-          ElMessage.warning(`${agent.name} 秘钥已连接，但无法使用`)
-        } else {
-          ElMessage.warning(
-            `${agent.name} 连接失败，小助手断线${payload.message ? `: ${payload.message}` : ""}`,
-          )
-        }
-      }
-    } catch {
-      ElMessage.error(`${agent.name} 检测请求失败`)
-    }
-    testingRoute.value = null
   }
 
   function openAgent(_agent: AgentRecord) {
@@ -246,32 +106,19 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
 
   onMounted(async () => {
     await loadAgents()
-    checkAllHealth()
-    healthTimer.value = setInterval(checkAllHealth, HEALTH_CHECK_INTERVAL_MS)
   })
   onActivated(() => {
     loadAgents()
   })
-  onUnmounted(() => {
-    if (healthTimer.value) clearInterval(healthTimer.value)
-  })
 
   return {
-    viewMode,
     agents,
     loading,
     agentsError,
-    testingRoute,
-    healthResults,
-    routeTestResults,
-    routeConnStatus,
     PAGE_HEADER,
     noteRotation,
     tapeHue,
-    agentStatusText,
-    agentStatusClass,
     loadAgents,
-    testConnection,
     openAgent,
     editAgent,
     onAgentCardClick,

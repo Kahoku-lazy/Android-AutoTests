@@ -1,7 +1,7 @@
 /** 任务列表 — 加载 / 刷新 / 按线路筛选 / 运行态轮询 */
 import { ref, computed, onMounted, onUnmounted } from "vue"
 import { ElMessage } from "element-plus"
-import { listTasks, deleteTask, clearTasks, rerunTask } from "../api/tasks"
+import { listTasks, deleteTask, clearTasks, rerunTask, cancelTask } from "../api/tasks"
 import { useFilterTabs } from "@/shared/composables/useFilterTabs"
 import {
   TASK_FILTER_TABS,
@@ -22,6 +22,7 @@ export function useTaskList() {
   const loading = ref(false)
   const error = ref("")
   const rerunningId = ref<number | null>(null)
+  const cancellingId = ref<number | null>(null)
   let pollTimer: ReturnType<typeof setInterval> | null = null
 
   const { activeFilter, filterTabs, filteredItems } = useFilterTabs(
@@ -131,6 +132,27 @@ export function useTaskList() {
     rerunningId.value = null
   }
 
+  async function cancel(task: TaskRecord) {
+    if (cancellingId.value != null) return
+    if (taskStatusTone(task.status) !== "running") {
+      ElMessage.warning("只有运行中的任务可以关闭")
+      return
+    }
+    cancellingId.value = task.id
+    try {
+      const data = await cancelTask(task.id)
+      if (data.status) {
+        ElMessage.success("已关闭任务")
+        await load(true)
+      } else {
+        ElMessage.error(data.message || "关闭失败")
+      }
+    } catch {
+      ElMessage.error("关闭失败，请检查网络连接")
+    }
+    cancellingId.value = null
+  }
+
   onMounted(load)
   onUnmounted(stopPoll)
 
@@ -140,6 +162,7 @@ export function useTaskList() {
     error,
     load,
     rerunningId,
+    cancellingId,
     activeFilter,
     filterTabs,
     filteredItems,
@@ -149,5 +172,6 @@ export function useTaskList() {
     remove,
     clearAll,
     rerun,
+    cancel,
   }
 }

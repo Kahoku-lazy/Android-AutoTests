@@ -16,6 +16,9 @@ const props = defineProps<{
   attachment?: string
   /** 附件原始文件名 */
   attachmentFilename?: string
+  loadMessage?: string
+  yamlBody?: string
+  documents?: { filename: string; body: string }[]
 }>()
 
 /** 规划输入展示态：缩进 JSON 代码块（原文不改写，渲染期派生） */
@@ -24,7 +27,23 @@ const plannerInputText = computed(() => formatPlannerInputText(props.plannerInpu
 
 <template>
   <el-collapse class="ti-collapse">
-    <el-collapse-item name="planner-input">
+    <el-collapse-item v-if="loadMessage || yamlBody" name="config">
+      <template #title>
+        <span class="ti-title">配置加载<span class="ti-tag">YAML</span></span>
+      </template>
+      <p v-if="loadMessage" class="ti-file">{{ loadMessage }}</p>
+      <pre v-if="yamlBody" class="ti-pre">{{ yamlBody }}</pre>
+    </el-collapse-item>
+    <el-collapse-item v-if="documents?.length" name="documents">
+      <template #title>
+        <span class="ti-title">文档正文<span class="ti-tag">Markdown</span></span>
+      </template>
+      <div v-for="doc in documents" :key="doc.filename" class="ti-doc">
+        <p class="ti-file">{{ doc.filename }}</p>
+        <pre class="ti-pre">{{ doc.body }}</pre>
+      </div>
+    </el-collapse-item>
+    <el-collapse-item v-if="plannerInputText" name="planner-input">
       <template #title>
         <span class="ti-title">送给规划模型的输入<span class="ti-tag">Planner Input</span></span>
       </template>

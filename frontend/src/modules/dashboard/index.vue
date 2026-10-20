@@ -207,15 +207,32 @@ const {
             label="DeepSeek 费用"
             :value="stats.aiUsage.deepseekCost.total"
             suffix=" 元"
-            :decimals="2"
+            :decimals="8"
             color="dust"
             path="/ai-assistant"
             :show-enter="false"
             :loading="loading"
-            :desc="`今日 ${stats.aiUsage.deepseekCost.today.toFixed(2)} 元`"
+            :desc="`今日 ${stats.aiUsage.deepseekCost.today.toFixed(8)} 元`"
           >
             <template #icon><IconZap :size="15" /></template>
           </StatsAppCard>
+        </div>
+        <div v-if="stats.aiUsage.agents.length" class="agent-usage-list">
+          <AppCard
+            v-for="(agent, index) in stats.aiUsage.agents"
+            :key="agent.id"
+            class="agent-usage-card"
+            :tone="sketchToneAt(index)"
+            :tilt="sketchTiltAt(index)"
+          >
+            <h4 class="agent-usage-card__name">{{ agent.name || "智能体" }}</h4>
+            <ul class="agent-usage-card__stats">
+              <li><span>缓存命中</span><b>{{ agent.cache_hit_tokens.toLocaleString() }}</b></li>
+              <li><span>输入</span><b>{{ agent.input_tokens.toLocaleString() }}</b></li>
+              <li><span>输出</span><b>{{ agent.output_tokens.toLocaleString() }}</b></li>
+              <li><span>总费用</span><b>{{ agent.cost_total }} 元</b></li>
+            </ul>
+          </AppCard>
         </div>
       </section>
 
@@ -315,3 +332,37 @@ const {
 </template>
 
 <style src="./DashboardView.style.css" scoped></style>
+<style scoped>
+.agent-usage-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--app-space-md);
+  margin-top: var(--app-space-md);
+}
+
+.agent-usage-card__name {
+  margin: 0 0 var(--app-space-sm);
+  font-size: var(--app-size-md);
+}
+
+.agent-usage-card__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--app-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agent-usage-card__stats li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+  font-size: var(--app-size-sm);
+}
+
+.agent-usage-card__stats span {
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+}
+</style>

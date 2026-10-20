@@ -9,24 +9,6 @@ const routes: RouteRecordRaw[] = [
     meta: { title: "平台小助手" },
   },
   {
-    path: "/ai-assistant/toolbox",
-    name: "ai-assistant-toolbox",
-    component: () => import("@/modules/ai-assistant/index.vue"),
-    meta: { title: "AI工具箱" },
-  },
-  {
-    path: "/ai-assistant/toolbox/skills/:skillName",
-    name: "ai-skill-viewer",
-    component: () => import("@/modules/ai-assistant/SkillViewerPage.vue"),
-    meta: { title: "Skill 内容" },
-  },
-  {
-    path: "/ai-assistant/toolbox/tools/:toolName",
-    name: "ai-tool-debug",
-    component: () => import("@/modules/ai-assistant/ToolDebugPage.vue"),
-    meta: { title: "工具调试" },
-  },
-  {
     path: "/ai-assistant/agent/:agentId",
     name: "ai-agent-detail",
     component: () => import("@/modules/ai-assistant/AgentDetail.vue"),

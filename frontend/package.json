@@ -36,6 +36,7 @@
     "dompurify": "^3.4.12",
     "echarts": "^5.5.0",
     "element-plus": "^2.7.0",
+    "js-yaml": "^5.5.0",
     "lucide": "^1.45.0",
     "marked": "^18.0.5",
     "mermaid": "^11.16.0",
@@ -46,6 +47,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/js-yaml": "^4.0.9",
     "@typescript-eslint/eslint-plugin": "^8.66.0",
     "@typescript-eslint/parser": "^8.66.0",
     "@vitejs/plugin-vue": "^5.0.0",

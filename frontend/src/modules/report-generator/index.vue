@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue"
+import { useRouter } from "vue-router"
 import { animate, stagger } from "animejs"
 import AppCard from "@/shared/components/AppCard.vue"
 import AppTable from "@/shared/components/AppTable.vue"
@@ -21,6 +22,7 @@ import {
   TABLE_COLUMNS,
 } from "./constants"
 
+const router = useRouter()
 const runs = ref([])
 const summary = ref(null)
 const loading = ref(false)
@@ -158,6 +160,11 @@ function clearFilters() {
   filterCreator.value = ""
   currentPage.value = 1
   fetchReports()
+}
+
+function openTaskReport(row) {
+  if (!row?.run_id) return
+  router.push(`/reports/task/${row.run_id}`)
 }
 </script>
 
@@ -340,6 +347,7 @@ function clearFilters() {
                 :empty-text="EMPTY_TEXT.noData"
                 accent="var(--c-report)"
                 class="report-table report-table--flow"
+                @row-click="openTaskReport"
               >
                 <template #cell-run_id="{ record }">
                   <code class="cell-run-id">{{ record.run_id }}</code>
@@ -640,6 +648,9 @@ function clearFilters() {
 
 .report-table {
   width: 100%;
+}
+.report-table--flow :deep(.el-table__body tr) {
+  cursor: pointer;
 }
 .report-table :deep(.el-table__header th) {
   background: var(--app-bg-subtle) !important;

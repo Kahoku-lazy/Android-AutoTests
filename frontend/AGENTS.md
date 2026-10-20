@@ -55,3 +55,29 @@ src/modules/{name}/
 
 7. 字号只能取 `tokens.css` 的字号刻度（T0 原子 `--font-size-*`；过渡期 `--app-size-*` 为等价别名，最小 12px），禁止硬编码 `font-size` 字面量。
 
+
+### 2. API 风格偏好
+
+1. 采用组合式 API + 单文件组件构建 Vue 单页应用.代码示例如下
+```vue
+<script setup>
+import { ref, onMounted } from 'vue'
+
+// 响应式状态
+const count = ref(0)
+
+// 用来修改状态、触发更新的函数
+function increment() {
+  count.value++
+}
+
+// 生命周期钩子
+onMounted(() => {
+  console.log(`The initial count is ${count.value}.`)
+})
+</script>
+
+<template>
+  <button @click="increment">Count is: {{ count }}</button>
+</template>
+```

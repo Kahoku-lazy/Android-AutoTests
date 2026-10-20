@@ -10,6 +10,14 @@ export function isImageAvatar(av: string | null | undefined): boolean {
   return av.startsWith(DATA_IMAGE_PREFIX)
 }
 
+// ── Platform assistant fixed identity（当前写死，不落库） ──
+
+/** 平台小助手的固定职责 */
+export const ASSISTANT_DUTY = "UI自动化"
+
+/** 平台小助手使用的固定工作流 */
+export const ASSISTANT_WORKFLOW = "ui_auto_workflow"
+
 // ── Built-in Tool Names ──
 
 /** Workspace (file-system) tool names — built into the agent runtime. */
@@ -28,15 +36,7 @@ export const PLATFORM_TOOL_NAMES: readonly string[] = [
   "list_apps",
   "acquire_device",
   "release_device",
-  "app_control",
-  "tap_screen",
-  "swipe_screen",
-  "press_key",
-  "input_text",
   "current_app",
-  "click_ratio",
-  "drag_ratio",
-  "xpath_action",
   "screenshot_page",
   "list_page_flows",
   "get_page_flow",
@@ -72,16 +72,6 @@ export function taskDetailRoute(id: number | string): string {
   return `/ai-assistant/tasks/${id}`
 }
 
-/** Skill 内容查看页 */
-export function skillViewerRoute(name: string): string {
-  return `/ai-assistant/toolbox/skills/${encodeURIComponent(name)}`
-}
-
-/** 平台工具调试页 */
-export function toolDebugRoute(name: string): string {
-  return `/ai-assistant/toolbox/tools/${encodeURIComponent(name)}`
-}
-
 /** 任务详情：执行侧「日志检查」区块（StepLogCheck）文案 */
 export const STEP_LOG_CHECK_TITLE = "日志检查"
 
@@ -93,31 +83,6 @@ export const STEP_LOG_CHECK_NO_SHOT_TEXT = "该次点击后未截图"
 
 /** 任务详情：执行结果段里本步没有截图时如实标注（新执行契约的 screenshot 为空串） */
 export const STEP_EXEC_NO_SHOT_TEXT = "该步未截图"
-
-/** 工具箱「日志关键词」来源（只读表格）文案 */
-export const LOG_KEYWORD_SEARCH_PLACEHOLDER = "搜索关键词 / 功能模块 / 功能点…"
-
-/** 表格三列（一行一个「关键词 × 功能点」） */
-export const LOG_KEYWORD_COL_KEYWORD = "关键词"
-export const LOG_KEYWORD_COL_MODULE = "功能模块"
-export const LOG_KEYWORD_COL_FEATURE = "功能点"
-
-/** 取值来源的中文口径（后端 origin 字段） */
-export const LOG_KEYWORD_ORIGIN_LABELS: Record<string, string> = {
-  runtime: "运行中的采集索引",
-  file: "关键词表文件",
-  none: "未取到",
-}
-
-/** 改表生效时机：判定用的是平台启动时加载的那份表 */
-export const LOG_KEYWORD_RESTART_HINT = "改关键词表后需重启平台才用于判定"
-
-export const LOG_KEYWORD_EMPTY_TEXT = "暂无可用的日志关键词"
-
-export const LOG_KEYWORD_EMPTY_HINT =
-  "关键词表文件缺失或尚未生成：检查 DEVICE_LOG_KEYWORD_FILE 指向的文件"
-
-export const LOG_KEYWORD_NO_MATCH_TEXT = "没有匹配的关键词"
 
 /** 智能体线路（任务卡片「智能体」下拉） */
 export const AGENT_ROUTES = [{ value: "device_control", label: "控制设备" }] as const

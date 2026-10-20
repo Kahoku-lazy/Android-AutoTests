@@ -1,0 +1,130 @@
+/* LogKeywordPanel — 串口日志页「日志关键词」Tab（Doodle Craft 令牌；类名 lk-* / sl-* 为本组件私有）
+ *
+ * 区块头与按键由本面板自带：组件是多根节点，页面级 scoped 样式到不了这里，
+ * MUST NOT 再依赖其它模块的样式文件。数值只引用令牌。
+ */
+
+/* ── 区块头 ── */
+.sl-cat-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--app-space-md);
+  padding: var(--app-space-md) var(--app-space-lg);
+  border-bottom: 2px solid var(--ink);
+  background: var(--app-bg-subtle);
+  flex-wrap: wrap;
+}
+.sl-cat-title {
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+  color: var(--ink);
+}
+.sl-cat-sub {
+  margin: var(--app-space-xs) 0 0;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+.sl-cat-actions {
+  display: flex;
+  gap: var(--app-space-sm);
+  /* 说明文案较长时头部会换行，这里把操作按钮顶到右侧 */
+  margin-left: auto;
+}
+.sl-cat-body {
+  padding: var(--app-space-md) var(--app-space-lg) var(--app-space-lg);
+  min-height: 200px;
+}
+
+/* ── 通用按键 ── */
+.sl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+  padding: 6px 12px;
+  border-radius: var(--app-radius-sm);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  border: 2px solid var(--ink);
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 2px 2px 0 var(--ink);
+  background: var(--app-bg-card);
+  color: var(--ink);
+  transition:
+    transform var(--app-duration-fast),
+    background var(--app-duration-fast);
+}
+.sl-btn:hover {
+  background: var(--app-highlight);
+  transform: translateY(-1px);
+}
+.sl-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.lk-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--app-space-sm);
+  margin-bottom: var(--app-space-xs);
+}
+.lk-search {
+  flex: 1 1 240px;
+  min-width: 0;
+  padding: var(--app-space-xs) var(--app-space-sm);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-card);
+  color: var(--ink);
+  font-size: var(--app-size-sm);
+}
+.lk-count {
+  font-size: var(--app-size-xs);
+  font-weight: 800;
+  color: var(--app-text-secondary);
+}
+
+.lk-origin {
+  margin: 0 0 var(--app-space-sm);
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+  line-height: 1.5;
+}
+.lk-origin-dim {
+  color: var(--app-text-muted);
+}
+
+/* 单元格：关键词等宽、功能点编号弱化、名称加粗 */
+.lk-keyword {
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  color: var(--ink);
+  word-break: break-all;
+}
+.lk-module {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+.lk-feature-id {
+  margin-right: var(--app-space-xs);
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--app-text-muted);
+}
+.lk-feature-name {
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sl-btn {
+    transition: none;
+  }
+}

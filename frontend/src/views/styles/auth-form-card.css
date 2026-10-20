@@ -51,7 +51,7 @@
 }
 
 .field-error {
-  margin: -var(--app-space-sm) 0 0 28px;
+  margin: calc(-1 * var(--app-space-sm)) 0 0 28px;
   font-size: var(--app-size-xs);
   color: var(--app-error);
   font-weight: 500;
@@ -64,7 +64,7 @@
 .form-submit .el-button {
   flex: 1;
   min-height: 42px;
-  border: 2.5px solid var(--ink) !important;
+  border: var(--size-stroke-sketch) solid var(--ink) !important;
   border-radius: 2px !important;
   background: var(--app-marker-red) !important;
   color: var(--app-text-inverse) !important;

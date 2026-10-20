@@ -126,6 +126,7 @@ def run_single_query(
                     try:
                         event = json.loads(line)
                     except json.JSONDecodeError:
+                        # 噪音输出行不是 JSON，跳过
                         continue
 
                     # Early detection via stream events

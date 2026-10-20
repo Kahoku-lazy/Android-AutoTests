@@ -196,6 +196,7 @@ def ai_daily_series(user_id, days=12):
             cache_tokens[idx] = int(row["hit"] or 0)
             cost[idx] = _money(row["spent"])
     except (OperationalError, ProgrammingError):
+        # 统计表缺失或迁移未完成时返回空数据，不阻断仪表盘
         pass
 
     return {

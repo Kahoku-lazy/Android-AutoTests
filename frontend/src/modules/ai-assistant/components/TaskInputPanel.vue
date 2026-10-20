@@ -43,7 +43,7 @@ const plannerInputText = computed(() => formatPlannerInputText(props.plannerInpu
         <pre class="ti-pre">{{ doc.body }}</pre>
       </div>
     </el-collapse-item>
-    <el-collapse-item v-if="plannerInputText" name="planner-input">
+    <el-collapse-item name="planner-input">
       <template #title>
         <span class="ti-title">送给规划模型的输入<span class="ti-tag">Planner Input</span></span>
       </template>

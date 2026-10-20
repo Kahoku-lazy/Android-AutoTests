@@ -66,6 +66,7 @@ def _parse_log_at(value: str):
         try:
             moment = datetime.strptime(text, fmt)
         except ValueError:
+            # 当前格式不匹配，继续尝试下一个格式
             continue
         if fmt.startswith("%H"):
             moment = datetime.combine(datetime.now().astimezone().date(), moment.time())

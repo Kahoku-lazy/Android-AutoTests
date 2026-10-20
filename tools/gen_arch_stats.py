@@ -173,7 +173,7 @@ def scan_file_size_violations(py_limit=400, vue_limit=500):
         if lines > py_limit:
             violations.append(
                 {
-                    "file": str(py_file.relative_to(PROJECT_ROOT)),
+                    "file": py_file.relative_to(PROJECT_ROOT).as_posix(),
                     "lines": lines,
                     "limit": py_limit,
                     "excess": lines - py_limit,
@@ -188,7 +188,7 @@ def scan_file_size_violations(py_limit=400, vue_limit=500):
         if lines > vue_limit:
             violations.append(
                 {
-                    "file": str(vue_file.relative_to(PROJECT_ROOT)),
+                    "file": vue_file.relative_to(PROJECT_ROOT).as_posix(),
                     "lines": lines,
                     "limit": vue_limit,
                     "excess": lines - vue_limit,

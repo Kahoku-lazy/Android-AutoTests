@@ -102,6 +102,24 @@
       "lines": 518,
       "plan": "待拆分",
       "added": "2026-07-15"
+    },
+    {
+      "file": "frontend/src/modules/case-manager/components/ProjectTree.vue",
+      "lines": 713,
+      "plan": "待拆分",
+      "added": "2026-10-20"
+    },
+    {
+      "file": "frontend/src/modules/ai-assistant/TaskDetailPage.vue",
+      "lines": 549,
+      "plan": "待拆分",
+      "added": "2026-10-20"
+    },
+    {
+      "file": "frontend/src/modules/ai-assistant/components/TaskBoard.vue",
+      "lines": 527,
+      "plan": "待拆分",
+      "added": "2026-10-20"
     }
   ]
 }

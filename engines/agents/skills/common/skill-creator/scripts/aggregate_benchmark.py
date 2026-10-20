@@ -145,6 +145,7 @@ def load_run_results(benchmark_dir: Path) -> dict:
                         result["time_seconds"] = timing_data.get("total_duration_seconds", 0.0)
                         result["tokens"] = timing_data.get("total_tokens", 0)
                     except json.JSONDecodeError:
+                        # timing.json 损坏时保留默认耗时与 token
                         pass
 
                 # Extract metrics if available

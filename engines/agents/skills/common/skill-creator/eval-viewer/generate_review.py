@@ -119,6 +119,7 @@ def build_run(root: Path, run_dir: Path) -> dict | None:
                 prompt = metadata.get("prompt", "")
                 eval_id = metadata.get("eval_id")
             except (json.JSONDecodeError, OSError):
+                # 元数据不可读时跳过该候选文件
                 pass
             if prompt:
                 break
@@ -133,6 +134,7 @@ def build_run(root: Path, run_dir: Path) -> dict | None:
                     if match:
                         prompt = match.group(1).strip()
                 except OSError:
+                    # 提示文件不可读时跳过该候选文件
                     pass
                 if prompt:
                     break
@@ -157,6 +159,7 @@ def build_run(root: Path, run_dir: Path) -> dict | None:
             try:
                 grading = json.loads(candidate.read_text())
             except (json.JSONDecodeError, OSError):
+                # 评分文件不可读时按无评分处理
                 pass
             if grading:
                 break
@@ -253,6 +256,7 @@ def load_previous_iteration(workspace: Path) -> dict[str, dict]:
                 if r.get("feedback", "").strip()
             }
         except (json.JSONDecodeError, OSError, KeyError):
+            # 历史评审文件损坏时按无反馈处理
             pass
 
     # Load runs (to get outputs)
@@ -324,10 +328,12 @@ def _kill_port(port: int) -> None:
                 try:
                     os.kill(int(pid_str.strip()), signal.SIGTERM)
                 except (ProcessLookupError, ValueError):
+                    # 进程已退出时忽略 kill 失败
                     pass
         if result.stdout.strip():
             time.sleep(0.5)
     except subprocess.TimeoutExpired:
+        # lsof 超时说明端口未被占用，忽略
         pass
     except FileNotFoundError:
         print("Note: lsof not found, cannot check if port is in use", file=sys.stderr)
@@ -366,6 +372,7 @@ class ReviewHandler(BaseHTTPRequestHandler):
                 try:
                     benchmark = json.loads(self.benchmark_path.read_text())
                 except (json.JSONDecodeError, OSError):
+                    # benchmark 文件损坏时按无基准数据渲染
                     pass
             html = generate_html(runs, self.skill_name, self.previous, benchmark)
             content = html.encode("utf-8")
@@ -461,6 +468,7 @@ def main() -> None:
         try:
             benchmark = json.loads(benchmark_path.read_text())
         except (json.JSONDecodeError, OSError):
+            # benchmark 文件损坏时按无基准数据处理
             pass
 
     if args.static:

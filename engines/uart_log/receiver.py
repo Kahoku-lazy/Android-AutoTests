@@ -108,6 +108,7 @@ class PortReceiver(threading.Thread):
                 try:
                     client, _peer = server.accept()
                 except TimeoutError:
+                    # accept 超时属正常轮询，继续等待新连接
                     continue
                 except OSError as exc:
                     if self._stop.is_set():
@@ -136,6 +137,7 @@ class PortReceiver(threading.Thread):
                 try:
                     data = client.recv(4096)
                 except TimeoutError:
+                    # recv 超时属正常轮询，继续读取数据
                     continue
                 except OSError as exc:
                     serial_log.warning("uart recv failed: %s", exc)

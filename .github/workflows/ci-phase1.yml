@@ -37,6 +37,12 @@ jobs:
       - name: Django system check
         env:
           DJANGO_SECRET_KEY: ci-django-check-key-not-for-prod
+          # 占位凭证：check 只做静态校验，不调用模型。
+          # 但 engines/agents/role/agents.py 在导入期构造角色单例，AgentScope 的
+          # OpenAIChatModel 会在此刻创建 openai.AsyncClient；缺少该变量时 URLconf
+          # 导入失败，check 以 OpenAIError 退出。
+          OPENAI_API_KEY: ci-check-placeholder
+          DEEPSEEK_API_KEY: ci-check-placeholder
         run: |
           python manage.py check --deploy 2>&1 || true
           python manage.py check

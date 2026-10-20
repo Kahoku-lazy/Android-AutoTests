@@ -15,6 +15,7 @@ import threading
 from collections.abc import Callable
 from pathlib import Path
 
+from engines.agents.event_log import write_line
 from engines.agents.prompt_config import EXECUTOR_PROMPT
 from engines.agents.prompts.verifier_prompt import verifier_system_prompt
 from engines.agents.role.base import AgentRoleConfig, BaseRole
@@ -27,6 +28,7 @@ _cancel_events: dict[int, threading.Event] = {}
 _inflight: dict[int, tuple[asyncio.AbstractEventLoop, asyncio.Task]] = {}
 
 CaseRunner = Callable[[str, list[tuple[str, str]], str], str]
+AppCloser = Callable[[str], None]
 
 
 def bind_cancel(task_id: int) -> threading.Event:
@@ -64,6 +66,8 @@ def run_platform_sop(
     task_id: int = 0,
     case_title: str = "",
     run_case: CaseRunner | None = None,
+    device_serial: str = "",
+    close_recent_apps: AppCloser | None = None,
 ) -> dict:
     """按 YAML 跑 SOP。工具由引擎代码装配，本函数不接收工具清单。
 
@@ -75,6 +79,8 @@ def run_platform_sop(
         task_id: 平台任务 id。0 表示不登记取消。
         case_title: 只跑该标题的用例；空串表示按文件顺序跑全部。
         run_case: 替身。省略时用注入的模型与代码中的工具包跑真 SOP。
+        device_serial: 收尾时要关闭应用的设备。空串则跳过收尾。
+        close_recent_apps: 收尾替身。省略时由引擎连设备关闭最近任务。
 
     Returns:
         load_message、reason、status、completed。
@@ -97,39 +103,58 @@ def run_platform_sop(
             }
     cancel_event = _cancel_events.get(task_id)
     if run_case is not None:
-        return _drive_stub(cases, opening, run_case, cancel_event)
+        return _drive_stub(cases, opening, run_case, cancel_event, device_serial, close_recent_apps)
     return asyncio.run(
-        _drive_real(cases, opening, executor_model, verifier_model, task_id, cancel_event)
+        _drive_real(
+            cases,
+            opening,
+            executor_model,
+            verifier_model,
+            task_id,
+            cancel_event,
+            device_serial,
+            close_recent_apps,
+        )
     )
 
 
-def _drive_stub(cases, opening: str, run_case: CaseRunner, cancel_event) -> dict:
+def _drive_stub(
+    cases,
+    opening: str,
+    run_case: CaseRunner,
+    cancel_event,
+    device_serial: str,
+    closer: AppCloser | None,
+) -> dict:
     completed: list[str] = []
-    for case in cases:
-        if cancel_event is not None and cancel_event.is_set():
-            return _cancelled(completed)
-        steps = [(step.action, step.expected) for step in case.steps]
-        phase = run_case(case.title, steps, opening)
-        if phase == "cancelled":
-            return _cancelled(completed)
-        if phase != "completed":
-            return {
-                "load_message": LOAD_OK,
-                "reason": f"用例「{case.title}」未完成",
-                "status": "fail",
-                "completed": completed,
-            }
-        completed.append(case.title)
-    return {
-        "load_message": LOAD_OK,
-        "reason": "",
-        "status": "success",
-        "completed": completed,
-    }
+    try:
+        for case in cases:
+            if cancel_event is not None and cancel_event.is_set():
+                return _cancelled(completed)
+            steps = [(step.action, step.expected) for step in case.steps]
+            try:
+                phase = run_case(case.title, steps, opening)
+            finally:
+                _close_after_case(device_serial, closer)
+            if phase == "cancelled":
+                return _cancelled(completed)
+            if phase != "completed":
+                return _case_failed(case.title, completed)
+            completed.append(case.title)
+        return _succeeded(completed)
+    except asyncio.CancelledError:
+        return _cancelled(completed)
 
 
 async def _drive_real(
-    cases, opening, executor_model, verifier_model, task_id, cancel_event
+    cases,
+    opening,
+    executor_model,
+    verifier_model,
+    task_id,
+    cancel_event,
+    device_serial: str,
+    closer: AppCloser | None,
 ) -> dict:
     current = asyncio.current_task()
     if task_id and current is not None:
@@ -153,21 +178,14 @@ async def _drive_real(
             if cancel_event is not None and cancel_event.is_set():
                 return _cancelled(completed)
             steps = [(step.action, step.expected) for step in case.steps]
-            phase = await workflow.run_workflow(case.title, steps, opening)
+            try:
+                phase = await workflow.run_workflow(case.title, steps, opening)
+            finally:
+                _close_after_case(device_serial, closer)
             if phase != "completed":
-                return {
-                    "load_message": LOAD_OK,
-                    "reason": f"用例「{case.title}」未完成",
-                    "status": "fail",
-                    "completed": completed,
-                }
+                return _case_failed(case.title, completed)
             completed.append(case.title)
-        return {
-            "load_message": LOAD_OK,
-            "reason": "",
-            "status": "success",
-            "completed": completed,
-        }
+        return _succeeded(completed)
     except asyncio.CancelledError:
         return _cancelled(completed)
     finally:
@@ -189,6 +207,41 @@ def _build_role(model: ModelConfig, *, name: str, system_prompt: str, toolkit) -
             vision=True,
         ).load_config()
     )
+
+
+def _close_after_case(device_serial: str, closer: AppCloser | None) -> None:
+    """一条已开始的用例结束后关闭最近任务。空序列号跳过。收尾失败不外抛。"""
+    serial = str(device_serial or "").strip()
+    if not serial:
+        write_line("-", "收尾跳过：设备序列号为空")
+        return
+    finish = closer
+    if finish is None:
+        from engines.device.android.recent_apps import close_recent_apps
+
+        finish = close_recent_apps
+    try:
+        finish(serial)
+    except Exception as exc:
+        write_line("-", f"收尾关闭应用失败：{exc}")
+
+
+def _case_failed(title: str, completed: list[str]) -> dict:
+    return {
+        "load_message": LOAD_OK,
+        "reason": f"用例「{title}」未完成",
+        "status": "fail",
+        "completed": completed,
+    }
+
+
+def _succeeded(completed: list[str]) -> dict:
+    return {
+        "load_message": LOAD_OK,
+        "reason": "",
+        "status": "success",
+        "completed": completed,
+    }
 
 
 def _fail(reason: str) -> dict:

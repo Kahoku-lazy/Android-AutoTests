@@ -23,6 +23,9 @@ from pydantic import SecretStr
 
 from utils.logs import agent_event_log
 
+# 框架在自由推理用尽后，会把工具选择强制成这个名字。
+_FORCED_HANDOVER_TOOL = "GenerateStructuredOutput"
+
 
 @dataclass(frozen=True)
 class ModelConfig:
@@ -78,12 +81,37 @@ class RoleSpecConfig:
     vision: bool = True
     stream: bool = True
     max_iters: int = 30
-    structured_output_grace_iters: int = 3
+    structured_output_grace_iters: int = 5
     stop_on_reject: bool = True
     trigger_ratio: float = 0.7
     reserve_ratio: float = 0.2
     tool_result_limit: int = 400000
     max_image_num: int = 5
+
+
+def apply_forced_handover_kwargs(model: object, tool_choice: object, kwargs: dict) -> dict:
+    """强制交卷时关闭思考，并保留额外体里的其他键。其余请求原样返回。"""
+    if getattr(tool_choice, "mode", None) != _FORCED_HANDOVER_TOOL:
+        return kwargs
+    base = dict(getattr(model, "extra_body", None) or {})
+    incoming = dict(kwargs.get("extra_body") or {})
+    thinking = dict(base.get("thinking") or {})
+    thinking.update(dict(incoming.get("thinking") or {}))
+    thinking["type"] = "disabled"
+    merged = {**base, **incoming, "thinking": thinking}
+    return {**kwargs, "extra_body": merged}
+
+
+def bind_forced_handover(model: ChatModelBase) -> ChatModelBase:
+    """挂到模型调用上：只有强制结构化交卷的那一次关闭思考。"""
+    original = model._call_api
+
+    async def _call_api(*args, **kwargs):
+        kwargs = apply_forced_handover_kwargs(model, kwargs.get("tool_choice"), kwargs)
+        return await original(*args, **kwargs)
+
+    model._call_api = _call_api
+    return model
 
 
 class ChatModelFactory:
@@ -169,4 +197,4 @@ class ChatModelFactory:
         builder = builders.get(config.provider)
         if builder is None:
             raise ValueError(f"不支持的模型提供商: {config.provider}；可选：{', '.join(builders)}")
-        return builder()
+        return bind_forced_handover(builder())

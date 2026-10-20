@@ -18,3 +18,11 @@
 
 - [x] 4.1 把 `frontend/src/modules/device-inspector/store.ts` 中「后端仍接受 ocr」的注释改为抓取只接受 `dump`。验证：该文件不再声称后端保留 `ocr` 入参。
 - [x] 4.2 跑架构边界检查。验证：`python tools/gen_arch_stats.py --check-boundaries` 通过。
+
+## 5. 事后订正（2026-10-20）
+
+> 本节由 `retire-utils-vision` 补记，不改变上文验收结论。
+
+- 1.1 的「删除 `utils/vision`」只发生在工作区：该路径在 2026-10-20 17:12 已被 `e14cf891` 收进版本库（`R100` 改名自 `algorithms/vision`），因此这次删除没有进入 git 索引。
+- 2026-10-20 18:13:34 一次批量文件还原（198 个文件，内容与 HEAD 一致，`88e3796a` 为空提交可佐证）把 `utils/vision` 重新写回工作区，抵消了删除；由于写回内容与 HEAD 相同，当时 `git status` 仍是干净的。
+- 本单归档时只做了工作区路径检查，未复核 `git ls-files utils/vision`。之后删除类验收必须同时检查工作区、`git ls-files` 与 `git status`，并由 `retire-utils-vision` 收口。

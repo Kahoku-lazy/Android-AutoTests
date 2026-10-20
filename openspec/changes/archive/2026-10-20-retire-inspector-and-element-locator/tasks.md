@@ -36,3 +36,11 @@
 - [x] 6.2 归档时把 delta 并入主 specs，9 份退役能力的主规格 `## Requirements` 变空后删除对应 `spec.md`。验证：`openspec archive retire-inspector-and-element-locator` 后 `openspec validate --all`。**验证结果**：9 份主规格文件与空目录已删除（`ai-page-flow-capture`、`device-inspector-{page,snapshots,layers}`、`element-locator-{projects,page-workbench,element-fields}`、`inspector-save-to-elements`、`element-layering`）；4 份修改逐条合并（`page-flow-start-node` 2 条含新增起点契约、`ai-screen-vision` 4 条、`serial-log-page` 4 条、`dashboard-chapter-boards` 4 条）；`openspec validate --all` 83 passed / 0 failed；change 已移至 `openspec/changes/archive/2026-10-20-retire-inspector-and-element-locator`。
 - [x] 6.3 关单门禁：`python manage.py check`、`python -m ruff check`、`npm run build`、`python tools/gen_arch_stats.py --check-boundaries`。**验证结果**：`check` 无问题；`ruff check` All checks passed、`ruff format --check` 通过（dashboard 已格式化）；`npm run build` 成功；边界检查零违规。
 - [ ] 6.4 手工验收：登录后侧栏只剩「设备管理 / 页面流 / 串口日志」三个数据入口；打开一篇历史页面流文档能正常显示、保存；仪表盘「测试资产」章节不再出现「Android元素」。验证：逐条目视确认（需启动后端）
+
+## 7. 事后订正（2026-10-20）
+
+> 本节由 `retire-utils-vision` 补记，不改变上文验收结论。
+
+- 本单提交 `e14cf891` 以 `git add -A` 暂存工作区时，把未申报的 `algorithms/` → `utils/` 整包改名一并带入；`algorithms/vision/*` 被 git 识别为 `R100` 改名到 `utils/vision/*`，旧的 OCR 实现由此重新进入版本库。
+- 2.4 写的「删除 `utils/xpath.py` 与 `utils/element_layers.py`」只在工作区视角成立；提交时 git 中的路径仍是 `algorithms/`。删除类验收应以 `git ls-files` / `git status` 复核，而不是只看路径是否存在。
+- `utils/vision` 的复活与收口见 `2026-10-20-move-ocr-into-engine` 的「事后订正」与变更 `retire-utils-vision`。

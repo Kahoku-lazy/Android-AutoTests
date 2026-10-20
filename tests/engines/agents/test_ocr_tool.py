@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import ast
+import shutil
+import subprocess
 
 from pathlib import Path
 
@@ -103,3 +105,47 @@ def test_ocr_tool_imports_vision_only_inside_function():
         elif isinstance(node, ast.Import):
             modules.extend(alias.name for alias in node.names)
         assert all(not name.startswith(needle) for name in modules)
+
+
+_SKIP_DIRS = {"__pycache__", ".venv", "venv", "node_modules", ".git"}
+
+
+def _retired_vision_hits(root: Path) -> list[str]:
+    """扫出引用已退役识别路径的 Python 文件（拼接字面量，避免自身命中）。"""
+    needles = ("utils" + ".vision", "utils" + " import vision")
+    hits: list[str] = []
+    for path in root.rglob("*.py"):
+        if _SKIP_DIRS.intersection(path.parts):
+            continue
+        text = path.read_text(encoding="utf-8")
+        if any(needle in text for needle in needles):
+            hits.append(str(path.relative_to(root)))
+    return hits
+
+
+def test_retired_vision_package_is_gone():
+    """已退役的 utils/vision 既不在工作区，也不被版本库跟踪。"""
+    root = Path(__file__).resolve().parents[3]
+    assert not (root / "utils" / "vision").exists()
+    if shutil.which("git") is None:
+        pytest.skip("git 不在 PATH，跳过版本库层断言")
+
+    proc = subprocess.run(
+        ["git", "ls-files", "--error-unmatch", "utils/vision"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode != 0, f"utils/vision 仍被版本库跟踪：{proc.stdout.strip()}"
+
+
+def test_no_source_references_retired_vision():
+    """任何 Python 源码都不得引用已退役的识别路径。"""
+    root = Path(__file__).resolve().parents[3]
+    assert _retired_vision_hits(root) == []
+
+
+def test_retired_vision_guard_catches_reintroduction(tmp_path):
+    """守卫本身有效：模拟旧路径被重新 import 时必须命中。"""
+    (tmp_path / "bad.py").write_text("from " + "utils" + ".vision import ocr\n", encoding="utf-8")
+    assert _retired_vision_hits(tmp_path) == ["bad.py"]

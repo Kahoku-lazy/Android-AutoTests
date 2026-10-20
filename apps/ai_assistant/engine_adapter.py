@@ -1,46 +1,27 @@
-"""Django ↔ AI 引擎胶水层：从 AITask + AIAgent 组装 TaskRequest。
+"""平台任务装配：从控制设备线路读取执行 / 验收模型，并解析设备串。
 
-只负责「读配置 + 解密 + 组装」，不碰框架实现；引擎经 engines.ai.registry 获取。
-装配期 fail-fast：线路 / 角色 / provider / 设备串任一项缺失或非法即抛错，
-由调用方（后台任务线程）兜底成任务失败终态，不再产出空模型连接。
+不调用旧规划引擎。模型名、密钥或 provider 不合法时在这里失败，
+由调用方（后台任务线程）兜底成任务失败终态。
 """
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from engines.ai.base import ModelSpec, TaskRequest, ToolSpec
+from engines.agents.role.config import ModelConfig
 
 from . import api
-from .log_evidence import ensure_log_evidence
-from .log_history import keyword_catalog_text
 from .provider_registry import VALID_PROVIDERS, get_provider_config
-from .skills_catalog import list_enabled_skill_dirs
-from .tools import AUTO_ALLOW_TOOLS, TOOLS
 
-__all__ = ["agent_log_path", "build_request", "build_tool_specs", "resolve_device_serial"]
+__all__ = ["resolve_device_serial", "sop_role_models"]
 
-# 装配期校验的线路键与角色名（与 AIAgent.route_configs 的结构一致）
+# 装配期校验的线路键（与 AIAgent.route_configs 的结构一致）
 ROUTE_KEY = "device_control"
-ROUTE_ROLES = ("planner", "executor", "verifier")
+SOP_ROLES = ("executor", "verifier")
 
 
-def agent_log_path() -> str:
-    """角色过程日志**基路径**：`<BASE_DIR>/logs/agents.log`（思考 / 工具调用实时追加写）。
+def _model_config(role: str, cfg: object) -> ModelConfig:
+    """单个角色的线路配置 → ModelConfig（解密 key + 解析默认 base_url）。
 
-    引擎不认识平台配置，落点由平台在装配期注入；实际文件由引擎按天派生
-    （形如 `agents-20261009.log`），文件不存在时由引擎侧自动创建。
-    """
-    from django.conf import settings
-
-    base = Path(str(getattr(settings, "BASE_DIR", "") or "."))
-    return str(base / "logs" / "agents.log")
-
-
-def _model_spec(role: str, cfg: object) -> ModelSpec:
-    """单个角色的线路配置 → ModelSpec（解密 key + 解析默认 base_url）。
-
-    装配期 fail-fast：角色缺失 / provider 非法 / 模型名或密钥为空即抛错。
+    角色缺失、provider 非法、模型名或密钥为空时抛错。
     """
     if not isinstance(cfg, dict) or not cfg:
         raise ValueError(f"智能体配置缺少 {ROUTE_KEY}.{role}，无法组装模型连接")
@@ -60,7 +41,7 @@ def _model_spec(role: str, cfg: object) -> ModelSpec:
     if not api_key:
         raise ValueError(f"智能体配置 {ROUTE_KEY}.{role}.api_key 为空")
 
-    return ModelSpec(
+    return ModelConfig(
         provider=provider,
         model_name=model_name,
         api_key=api_key,
@@ -68,17 +49,10 @@ def _model_spec(role: str, cfg: object) -> ModelSpec:
     )
 
 
-def build_tool_specs() -> list[ToolSpec]:
-    """把平台工具注册表（TOOLS）转成 ToolSpec 列表。"""
-    return [
-        ToolSpec(
-            name=name,
-            handler=func,
-            read_only=read_only,
-            auto_allow=name in AUTO_ALLOW_TOOLS,
-        )
-        for name, (func, read_only) in TOOLS.items()
-    ]
+def sop_role_models(agent):
+    """控制设备线路上的执行 / 验收模型。不读取规划角色，也不读取平台工具清单。"""
+    route_cfg = (agent.route_configs or {}).get(ROUTE_KEY) or {}
+    return tuple(_model_config(role, route_cfg.get(role)) for role in SOP_ROLES)
 
 
 def resolve_device_serial(task_device_serial: str = "") -> str:
@@ -97,39 +71,3 @@ def resolve_device_serial(task_device_serial: str = "") -> str:
     if not first_serial:
         raise ValueError("无可用设备：在线设备缺少 serial")
     return first_serial
-
-
-# 兼容旧名
-_resolve_device_serial = resolve_device_serial
-
-
-def build_request(task, agent) -> TaskRequest:
-    """AITask + AIAgent → TaskRequest（任务表单 + 三角色模型 + 工具清单）。
-
-    装配期 fail-fast：线路 / 角色 / provider / 设备串任一项缺失或非法即抛错。
-    规划用户输入为四键中文 JSON，仍经 TaskRequest.goal 传入引擎。
-    系统提示词不在此组装：它随引擎走（engines/ai/agents/config.py），不经 TaskRequest 注入。
-    """
-    from django.conf import settings
-
-    route_cfg = (agent.route_configs or {}).get(ROUTE_KEY) or {}
-    models = {role: _model_spec(role, route_cfg.get(role)) for role in ROUTE_ROLES}
-    # 提交时已固化 serial；此处再解析一次兜底旧任务 / 测试桩
-    serial = resolve_device_serial(getattr(task, "device_serial", "") or "")
-    return TaskRequest(
-        goal=api.build_planner_user_input(task),
-        models=models,
-        tools=build_tool_specs(),
-        max_loops=int(agent.max_loops or 3),
-        device_serial=serial,
-        user_id=str(agent.owner_id or ""),
-        task_id=int(getattr(task, "id", 0) or 0),
-        media_root=str(getattr(settings, "MEDIA_ROOT", "") or ""),
-        # 角色过程日志落点：思考 / 工具调用与返回实时写这里（任务 result 不再存过程明细）
-        log_path=agent_log_path(),
-        skill_dirs=list_enabled_skill_dirs() if agent.enable_skills else [],
-        # 设备日志证据：按需启动常驻采集并注入；开关关闭 / 启动失败时为 None（验收降级为只看截图）
-        log_evidence=ensure_log_evidence(),
-        # 当前关键词表（关键词 → 功能点）：验收模型据此报出要检查的关键词
-        log_keywords=keyword_catalog_text(),
-    )

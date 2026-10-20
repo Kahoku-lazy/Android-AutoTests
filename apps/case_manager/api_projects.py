@@ -6,6 +6,8 @@ from typing import Any
 
 from django.db import IntegrityError, transaction
 
+from utils.logs import backend_log
+
 from .models import CaseProject, TestDefinition
 
 __all__ = [
@@ -24,6 +26,7 @@ class ConflictError(Exception):
     """Business conflict (duplicate name, illegal move, etc.)."""
 
     def __init__(self, message: str):
+        self.log = backend_log
         self.message = message
         super().__init__(message)
 

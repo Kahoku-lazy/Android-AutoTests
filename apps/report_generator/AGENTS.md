@@ -13,7 +13,7 @@
 | 列表只读聚合可见 `AITask`（`ai_task_reports.py`） | import dashboard / ai_assistant 的 service、views |
 
 - **列表数据源**：`GET /api/reports` 读当前用户可见的 `AITask`（成功 = `completed`/`success`，失败 = `failed`）；不写 `ai_tasks`。
-- **详情壳**：`/reports/run|task|cases` 仍为空壳（本变更不复活）。
+- **详情**：`GET /api/reports/task/{id}` 只读该用户可见任务的事件流程（`ai_task_events`）；`/reports/run|cases` 仍为空壳。
 - 下载/查看端点必须防路径穿越（`{filename}` 校验），现有 403/404 语义保持。
 
 ## 本 App 契约（特例 + 真相源）

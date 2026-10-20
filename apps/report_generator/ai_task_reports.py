@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import json
+
 from datetime import date, timedelta
+from decimal import Decimal
 
 from django.db.models import Q
 
 from apps.ai_assistant.api import filter_agents_for_user, resolve_assistant_name
-from apps.ai_assistant.models import AIAgent, AITask
+from apps.ai_assistant.models import AIAgent, AITask, AITaskEvent
 
 PASS_STATUSES = frozenset({"completed", "success"})
 FAIL_STATUSES = frozenset({"failed"})
@@ -179,4 +182,235 @@ def build_report_list(
         "bug_summary": {},
         "trend": trend,
         "runs": runs,
+    }
+
+
+_PHASE_TITLE = {
+    "开始": "开始",
+    "推理": "推理阶段",
+    "执行": "执行阶段",
+    "结束": "结束",
+}
+
+_EVENT_LABEL = {
+    "ReplyStartEvent": "生命周期事件：智能体开始新的回复",
+    "ModelCallStartEvent": "模型调用事件：模型 API 调用开始",
+    "TextBlockStartEvent": "文本流式事件：新的文本块开始",
+    "TextBlockDeltaEvent": "文本流式事件：增量文本内容到达",
+    "TextBlockEndEvent": "文本流式事件：文本块完成",
+    "ThinkingBlockEndEvent": "思考块完成",
+    "DataBlockStartEvent": "数据流式事件：新的数据块开始",
+    "DataBlockDeltaEvent": "数据流式事件：增量二进制数据到达",
+    "DataBlockEndEvent": "数据流式事件：数据块完成",
+    "ToolCallStartEvent": "工具调用流式事件：智能体开始一次工具调用",
+    "ToolCallDeltaEvent": "工具调用流式事件：增量工具参数到达",
+    "ToolCallEndEvent": "工具调用流式事件：工具调用参数完成",
+    "ModelCallEndEvent": "模型调用事件：模型 API 调用完成",
+    "ToolResultStartEvent": "工具结果流式事件：工具开始执行",
+    "ToolResultTextDeltaEvent": "工具结果流式事件：增量文本输出到达",
+    "ToolResultDataDeltaEvent": "工具结果流式事件：增量二进制数据到达",
+    "ToolResultEndEvent": "工具结果流式事件：工具执行完成",
+    "ReplyEndEvent": "生命周期事件：智能体完成回复",
+}
+
+_DETAIL_LIMIT = 240
+
+
+def _clip(text: object) -> str:
+    raw = str(text or "").replace("\r", " ").strip()
+    if len(raw) <= _DETAIL_LIMIT:
+        return raw
+    return raw[:_DETAIL_LIMIT] + "…"
+
+
+def _money(value) -> str:
+    return f"{Decimal(value or 0):.8f}"
+
+
+def _visible_task(user_id: str | None, task_id: str):
+    if not user_id:
+        return None
+    try:
+        pk = int(task_id)
+    except (TypeError, ValueError):
+        return None
+    agents = filter_agents_for_user(AIAgent.objects.all(), user_id)
+    return AITask.objects.filter(pk=pk, agent__in=agents).select_related("agent").first()
+
+
+def _args(payload: dict) -> dict:
+    raw = payload.get("args")
+    if isinstance(raw, dict):
+        return raw
+    if not isinstance(raw, str) or not raw.strip():
+        return {}
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _passed(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes"}
+
+
+def _conclusion(task: AITask, events: list[AITaskEvent]) -> dict:
+    """从验收结构化输出取出判决。不读文本日志。"""
+    verdicts: list[dict] = []
+    delivery = ""
+    for event in events:
+        if event.event_type != "ToolCallEndEvent":
+            continue
+        payload = event.payload if isinstance(event.payload, dict) else {}
+        args = _args(payload)
+        if payload.get("tool_name") == "GenerateStructuredOutput" and "passed" in args:
+            verdicts.append(
+                {
+                    "passed": _passed(args.get("passed")),
+                    "message": str(args.get("message") or ""),
+                    "role_name": event.role_name or "",
+                    "step_seq": event.step_seq,
+                    "attempt": event.attempt,
+                }
+            )
+        elif args.get("handover"):
+            delivery = str(args.get("handover") or "")
+    status = (task.status or "").lower()
+    if status in {"failed", "cancelled", "stopped"}:
+        outcome = "FAIL"
+    elif verdicts and verdicts[-1]["passed"] and status in {"completed", "success"}:
+        outcome = "PASS"
+    elif verdicts and not verdicts[-1]["passed"]:
+        outcome = "FAIL"
+    else:
+        outcome = ""
+    return {"outcome": outcome, "verdicts": verdicts, "delivery": delivery}
+
+
+def _detail(event: AITaskEvent, payload: dict) -> str:
+    kind = event.event_type
+    if kind == "ReplyStartEvent":
+        role = event.role_name or str(payload.get("role") or "")
+        model = event.model or str(payload.get("model") or "")
+        return _clip(" · ".join(part for part in (role, model) if part and part != "-"))
+    if kind in ("TextBlockEndEvent", "ThinkingBlockEndEvent"):
+        text = _clip(payload.get("text"))
+        count = payload.get("delta_count")
+        if count:
+            return _clip(f"{text}（{count} 段增量）")
+        return text
+    if kind == "ToolCallEndEvent":
+        return _clip(f"{payload.get('tool_name') or '-'} · {payload.get('args') or ''}")
+    if kind == "ModelCallEndEvent":
+        return (
+            f"输入 {event.input_tokens} · 缓存 {event.cache_input_tokens} · "
+            f"输出 {event.output_tokens} · 费用 {_money(event.cost_total)}"
+        )
+    if kind == "DataBlockEndEvent":
+        return _clip(payload.get("media_type") or "")
+    if kind == "ToolResultEndEvent":
+        return _clip(
+            f"{payload.get('tool_name') or '-'} · {payload.get('status') or ''} · "
+            f"{payload.get('result') or ''}"
+        )
+    if kind == "ReplyEndEvent":
+        reason = str(payload.get("finished_reason") or "")
+        return _clip(f"{reason} · {event.duration_ms} ms · 费用 {_money(event.cost_total)}")
+    return ""
+
+
+def _thumb(event: AITaskEvent) -> str:
+    media = event.media
+    if media is None or not media.thumb_b64:
+        return ""
+    kind = (media.media_type or "image/jpeg").split(";")[0]
+    return f"data:{kind};base64,{media.thumb_b64}"
+
+
+def _item(event: AITaskEvent, count: int) -> dict:
+    payload = event.payload if isinstance(event.payload, dict) else {}
+    moment = event.ended_at or event.started_at or event.called_at
+    return {
+        "seq": event.seq,
+        "event_type": event.event_type,
+        "label": _EVENT_LABEL.get(event.event_type, event.event_type),
+        "detail": _detail(event, payload),
+        "time": _iso(moment),
+        "count": count,
+        "step_seq": event.step_seq,
+        "attempt": event.attempt,
+        "thumb": _thumb(event) if count == 1 else "",
+    }
+
+
+def _grouped(events: list[AITaskEvent]) -> list[tuple[dict, str]]:
+    """连续的同一类增量并成一条，阶段取该组第一条。"""
+    grouped: list[tuple[dict, str]] = []
+    index = 0
+    while index < len(events):
+        event = events[index]
+        count = 1
+        if event.is_delta:
+            cursor = index + 1
+            while (
+                cursor < len(events)
+                and events[cursor].is_delta
+                and events[cursor].event_type == event.event_type
+                and events[cursor].step_seq == event.step_seq
+                and events[cursor].attempt == event.attempt
+            ):
+                count += 1
+                cursor += 1
+            index = cursor
+        else:
+            index += 1
+        grouped.append((_item(event, count), event.phase or ""))
+    return grouped
+
+
+def _rounds(grouped: list[tuple[dict, str]]) -> list[dict]:
+    """按时间把事件放进图片上的阶段；阶段切换才新开一块。"""
+    rounds: list[dict] = []
+    current: dict | None = None
+    for item, phase in grouped:
+        if current is None or item["event_type"] == "ReplyStartEvent":
+            current = {"role_name": "", "blocks": []}
+            rounds.append(current)
+        if item["event_type"] == "ReplyStartEvent":
+            current["role_name"] = item["detail"]
+        title = _PHASE_TITLE.get(phase, phase or "其它")
+        blocks = current["blocks"]
+        if not blocks or blocks[-1]["phase"] != phase:
+            blocks.append({"phase": phase, "title": title, "items": []})
+        blocks[-1]["items"].append(item)
+    return rounds
+
+
+def build_task_flow(user_id: str | None, task_id: str) -> dict | None:
+    """可见任务的事件流程。看不见或编号无效时返回 None。"""
+    task = _visible_task(user_id, task_id)
+    if task is None:
+        return None
+    events = list(
+        AITaskEvent.objects.filter(task_id=task.id).select_related("media").order_by("seq")
+    )
+    return {
+        "status": True,
+        "task": {
+            "id": task.id,
+            "title": task.title or "",
+            "case_title": task.case_title or "",
+            "status": task.status or "",
+            "device": _device_display(task),
+            "assistant": resolve_assistant_name(getattr(task, "agent", None)),
+            "started_at": _iso(task.started_at or task.created_at),
+            "finished_at": _iso(task.finished_at),
+            "cost_total": _money(task.cost_total),
+            "result": _clip(task.result),
+        },
+        "conclusion": _conclusion(task, events),
+        "rounds": _rounds(_grouped(events)),
     }

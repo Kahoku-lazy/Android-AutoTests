@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import logging
 import time
 
 from pathlib import Path
 
 from django.conf import settings
 
-logger = logging.getLogger(__name__)
+from utils.logs import backend_log
 
 UPLOAD_DIR = Path(settings.MEDIA_ROOT)
 DEFAULT_MAX_AGE_SECONDS = int(getattr(settings, "UPLOAD_CLEANUP_MAX_AGE_DAYS", 7) * 24 * 3600)
@@ -40,7 +39,7 @@ def remove_upload_file(filepath: Path | str) -> bool:
         path.unlink(missing_ok=True)
         return True
     except OSError as exc:
-        logger.warning("Failed to delete upload %s: %s", path, exc)
+        backend_log.warning("Failed to delete upload %s: %s", path, exc)
         return False
 
 

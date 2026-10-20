@@ -1,7 +1,7 @@
 """无线端口编排层 —— 把「库里的监听开关」落成「引擎层真正在监听的端口」，并汇总页面数据。
 
 边界：本模块不碰 ORM（写库一律经 `api.py`）、不碰 socket 与文件句柄（在引擎层
-`engines/device/logbus.py` / `logfiles.py`），只做三件事：
+`engines/uart_log`），只做三件事：
 
 1. `reconcile()`：读开关状态 → 逐端口启停采集（幂等；平台启动与接口访问都调它）；
 2. `set_enabled()`：写开关 + 立即生效（关闭即释放端口）；
@@ -13,24 +13,20 @@
 
 from __future__ import annotations
 
-import logging
 import time
 
 from typing import Any
 
 from django.conf import settings
 
-from engines.device.logbus import (
-    LogSourceSpec,
-    get_or_create_log_bus,
-    merge_lines_by_timestamp,
-)
-from engines.device.logfiles import log_file_path, parse_log_line, tail_lines
+from engines.device.logbus import LogSourceSpec
+from engines.device.logfiles import tail_lines
+from engines.uart_log import MAX_PORTS, PortParams, get_port_switch, reset_port_switch
+from utils.logs import backend_log, capture_file_path
 
-from . import api
-from .log_evidence import build_config, source_specs
+from . import api, sources
 
-logger = logging.getLogger("ai_assistant")
+CAP_NOTE = "同时监听的端口已达 10 个，无法再打开"
 
 __all__ = [
     "clamp_tail",
@@ -59,10 +55,6 @@ def port_disabled_note(port: int) -> str:
     return f"端口 {int(port)} 已关闭监听"
 
 
-def _log_dir() -> str:
-    return str(getattr(settings, "DEVICE_LOG_LOG_DIR", "") or "")
-
-
 def _tail_default() -> int:
     return int(getattr(settings, "DEVICE_LOG_TAIL_LINES", FALLBACK_TAIL_LINES))
 
@@ -85,7 +77,7 @@ def clamp_tail(value: Any) -> int:
 
 def spec_for_port(port: int) -> LogSourceSpec | None:
     """配置里该端口的来源登记；未登记返回 None。"""
-    for spec in source_specs():
+    for spec in sources.source_specs():
         if int(spec.port) == int(port):
             return spec
     return None
@@ -104,7 +96,7 @@ def disabled_port_note(port: int = 0) -> str:
     不传端口时看平台默认来源（现场 7005）：AI 用默认端口查询时同样能拿到关闭态结论。
     本函数只读开关状态，MUST NOT 启动或恢复任何监听。
     """
-    specs = source_specs()
+    specs = sources.source_specs()
     if not specs:
         return ""
     target = int(port) if port else int(specs[0].port)
@@ -113,47 +105,64 @@ def disabled_port_note(port: int = 0) -> str:
     return "" if api.is_log_port_enabled(target) else port_disabled_note(target)
 
 
-def reconcile() -> list[int]:
-    """按库里的开关状态启停端口，返回**开关为开启**的端口列表（幂等）。
+def _params_for(spec: LogSourceSpec) -> PortParams:
+    return PortParams(
+        host=str(getattr(settings, "DEVICE_LOG_TCP_HOST", "0.0.0.0") or "0.0.0.0"),
+        port=int(spec.port),
+        sku=spec.channel,
+    )
 
-    返回的是「应当处于监听」的端口：绑定由采集线程异步完成，真实监听状态以
-    `list_ports()` 的 `listening` 字段（`LogBus.is_listening`）为准。
+
+def _capture_path(spec: LogSourceSpec):
+    return capture_file_path(spec.channel, int(spec.port))
+
+
+def reconcile() -> list[int]:
+    """按库里的开关状态启停端口。同时实际监听的端口不超过 10 个。
+
+    返回的是本次要求打开的端口。超出上限的端口保持库里的开关值，但不监听。
     """
     if not getattr(settings, "DEVICE_LOG_ENABLED", True):
-        logger.info("device log collection disabled by settings; nothing to reconcile")
+        backend_log.info("device log collection disabled by settings; nothing to reconcile")
+        reset_port_switch()
         return []
-    specs = source_specs()
+    specs = sources.source_specs()
     if not specs:
-        logger.info("no device log port configured; nothing to reconcile")
+        backend_log.info("no device log port configured; nothing to reconcile")
         return []
-    bus = get_or_create_log_bus(build_config())
+    switch = get_port_switch()
     api.ensure_log_ports(specs)
     states = api.get_log_port_enabled_map()
-    enabled_ports: list[int] = []
+    enabled = sorted(int(spec.port) for spec in specs if states.get(int(spec.port), True))
+    started = enabled[:MAX_PORTS]
+    skipped = enabled[MAX_PORTS:]
+    if skipped:
+        backend_log.warning("uart listen cap %s: skip ports %s", MAX_PORTS, skipped)
+    by_port = {int(spec.port): spec for spec in specs}
+    for port in started:
+        switch.open(_params_for(by_port[port]))
     for spec in specs:
-        if states.get(int(spec.port), True):
-            bus.start_source(int(spec.port))
-            enabled_ports.append(int(spec.port))
-        else:
-            bus.stop_source(int(spec.port))
-    logger.debug("device log ports reconciled: enabled=%s", enabled_ports)
-    return sorted(enabled_ports)
+        port = int(spec.port)
+        if port not in started:
+            switch.close(port)
+    backend_log.debug("device log ports reconciled: started=%s", started)
+    return started
 
 
 def list_ports() -> list[dict]:
     """端口管理页的表格数据：三列取配置，`enabled` 取库，`listening` 取运行时。"""
-    specs = source_specs()
+    specs = sources.source_specs()
     if not specs:
         return []
-    bus = get_or_create_log_bus(build_config())
+    switch = get_port_switch()
     rows = api.ensure_log_ports(specs)
     states = {row.port: bool(row.enabled) for row in rows}
     result: list[dict] = []
     for spec in specs:
         port = int(spec.port)
         enabled = states.get(port, True)
-        listening = bus.is_listening(port)
-        path = log_file_path(_log_dir(), spec.channel, port)
+        listening = switch.is_listening(port)
+        path = _capture_path(spec)
         note = ""
         if enabled and not listening:
             note = "已开启但端口未监听（可能已被其它程序占用）"
@@ -175,22 +184,26 @@ def list_ports() -> list[dict]:
 def set_enabled(port: int, enabled: bool) -> dict:
     """写开关并立即生效：开启即开始监听，关闭即停止监听并释放端口。"""
     spec = _require_spec(port)
-    api.ensure_log_ports(source_specs())
+    switch = get_port_switch()
+    if enabled and not switch.is_reserved(int(spec.port)) and switch.reserved_count() >= MAX_PORTS:
+        backend_log.warning("refuse uart port %s: listen cap %s", spec.port, MAX_PORTS)
+        persisted = api.get_log_port_enabled_map().get(int(spec.port), False)
+        return _port_payload(spec, enabled=persisted, listening=False, note=CAP_NOTE)
+    api.ensure_log_ports(sources.source_specs())
     api.set_log_port_enabled(int(spec.port), bool(enabled))
-    bus = get_or_create_log_bus(build_config())
     if enabled:
-        bus.start_source(int(spec.port))
-        _await_listening(bus, int(spec.port))
+        switch.open(_params_for(spec))
+        _await_listening(int(spec.port))
     else:
-        bus.stop_source(int(spec.port))
-    logger.info(
+        switch.close(int(spec.port))
+    backend_log.info(
         "device log port %s %s (listening=%s)",
         spec.port,
         "开启监听" if enabled else "停止监听",
-        bus.is_listening(int(spec.port)),
+        switch.is_listening(int(spec.port)),
     )
-    path = log_file_path(_log_dir(), spec.channel, int(spec.port))
-    listening = bus.is_listening(int(spec.port))
+    path = _capture_path(spec)
+    listening = switch.is_listening(int(spec.port))
     note = ""
     if not enabled:
         note = port_disabled_note(spec.port)
@@ -208,15 +221,30 @@ def set_enabled(port: int, enabled: bool) -> dict:
     }
 
 
-def _await_listening(bus, port: int, timeout: float = LISTEN_WAIT_SECONDS) -> bool:
+def _await_listening(port: int, timeout: float = LISTEN_WAIT_SECONDS) -> bool:
     """短暂等待采集线程完成端口绑定，让开关响应里的 `listening` 是真实结果。"""
+    switch = get_port_switch()
     deadline = time.monotonic() + max(0.0, timeout)
     while True:
-        if bus.is_listening(port):
+        if switch.is_listening(port):
             return True
         if time.monotonic() >= deadline:
             return False
         time.sleep(0.02)
+
+
+def _port_payload(spec: LogSourceSpec, *, enabled: bool, listening: bool, note: str) -> dict:
+    path = _capture_path(spec)
+    return {
+        "port": int(spec.port),
+        "sku": spec.channel,
+        "baud": int(spec.baud),
+        "enabled": bool(enabled),
+        "listening": bool(listening),
+        "log_file": path.name,
+        "size_bytes": path.stat().st_size if path.is_file() else 0,
+        "note": note,
+    }
 
 
 def read_lines(port: int, tail: Any = 0) -> dict:
@@ -238,7 +266,7 @@ def read_lines(port: int, tail: Any = 0) -> dict:
             "conclusion": "port_not_configured",
             "note": port_not_configured_note(port),
         }
-    path = log_file_path(_log_dir(), spec.channel, int(spec.port))
+    path = _capture_path(spec)
     payload: dict = {
         "port": int(spec.port),
         "sku": spec.channel,
@@ -256,16 +284,19 @@ def read_lines(port: int, tail: Any = 0) -> dict:
             }
         )
         return payload
-    parsed = [item for item in (parse_log_line(raw) for raw in tail_lines(path, limit)) if item]
-    # 与 AI 日志查询同一口径：同毫秒合并且最新在最上面（合并条内部保持发生顺序）
-    merged = merge_lines_by_timestamp(parsed)
+    rows = _raw_rows(tail_lines(path, limit))
     payload.update(
         {
-            "line_count": len(merged),
-            "raw_line_count": len(parsed),
-            "lines": merged,
-            "conclusion": "ok" if merged else "no_log",
-            "note": "" if merged else "当前日志文件暂无内容",
+            "line_count": len(rows),
+            "raw_line_count": len(rows),
+            "lines": rows,
+            "conclusion": "ok" if rows else "no_log",
+            "note": "" if rows else "暂无日志",
         }
     )
     return payload
+
+
+def _raw_rows(raw_lines: list[str]) -> list[dict[str, str]]:
+    """按文件顺序返回原文行，不拆时间、不倒序。"""
+    return [{"text": raw.rstrip("\r\n")} for raw in raw_lines if raw.strip()]

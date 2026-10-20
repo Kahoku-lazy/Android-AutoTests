@@ -10,7 +10,6 @@
 「连接/会话/操作面」。写库仍经本模块类方法（由 api.py 白名单转调）。
 """
 
-import logging
 import subprocess
 import time
 
@@ -20,8 +19,9 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from rest_framework.exceptions import APIException
 
-from engines.device.base import EngineConnectError
+from engines.device.action import EngineConnectError
 from engines.device.connection import fetch_device_info, probe_u2
+from utils.logs import backend_log
 
 from .contracts import (
     RUNNER_OCCUPIED_PREFIXES,
@@ -34,8 +34,6 @@ from .contracts import (
 from .models import Device, DeviceLock
 from .pool import device as device_pool
 
-logger = logging.getLogger(__name__)
-
 # observe 观察占用锁的兜底超时（秒）：关页/崩溃无释放时，30 分钟后由心跳回收
 OBSERVE_LOCK_TTL = 1800
 
@@ -45,6 +43,7 @@ class DeviceError(APIException):
 
     def __init__(self, message: str, status_code: int = 400):
         super().__init__(message)
+        self.log = backend_log
         self.status_code = status_code
 
 
@@ -58,7 +57,7 @@ class DeviceDetector:
         USB 恒可解析，无线需 getprop ro.serialno 就绪。
         """
         detected: list[DeviceInfo] = []
-        for addr in self.adb_device_serials():
+        for addr in self.connectable_serials():
             serial, conn_addr = self.resolve_serial(addr)
             if not serial:
                 continue
@@ -85,6 +84,11 @@ class DeviceDetector:
             return serials
         except Exception:
             return set()
+
+    def connectable_serials(self, listed: set | None = None) -> set:
+        """去掉无线调试别名，只留能作为 adb -s 目标的 USB 序列号和 IP:端口。"""
+        rows = self.adb_device_serials() if listed is None else listed
+        return {addr for addr in rows if not str(addr).endswith("_adb-tls-connect._tcp")}
 
     def is_wireless(self, addr: str) -> bool:
         """判断是否无线设备（IP:port 或 mDNS transport）。"""
@@ -163,10 +167,9 @@ class DeviceDetector:
         传输地址（IP:port）顶替 serial —— 地址会随重连变化，导致设备身份漂移。
         """
         if self.is_wireless(addr):
-            serial = self.fetch_serial_no(addr)
-            if not serial and addr.startswith("adb-"):
-                serial = self.parse_mdns_serial(addr)
-            return serial, addr
+            if str(addr).endswith("_adb-tls-connect._tcp"):
+                return "", addr
+            return self.fetch_serial_no(addr), addr
         return addr, ""
 
     def get_info(self, addr: str) -> DeviceInfo:
@@ -249,6 +252,7 @@ class DeviceRegistry:
     """设备注册落库 — dp_devices 增删 + 连接状态（依赖 DeviceDetector）。"""
 
     def __init__(self, detector: DeviceDetector):
+        self.log = backend_log
         self._detector = detector
 
     def register_device(self, addr: str, user_id: str = "") -> tuple[Device, bool]:
@@ -303,7 +307,7 @@ class DeviceRegistry:
                 ]
             )
         except Exception as e:
-            logger.warning("采集设备信息失败 %s: %s", addr, e)
+            backend_log.warning("采集设备信息失败 %s: %s", addr, e)
 
     def delete_device_record(self, dev: Device, reason: str = LockReleaseReason.DISCONNECT) -> None:
         """删除设备行并清理连接缓存（不保留离线/DISCONNECTED 墓碑）。
@@ -343,6 +347,7 @@ class DeviceStateMachine:
     """设备状态机 — ONLINE/BUSY 判定 + 同步 + 锁定/释放/占用 + 心跳（依赖 Detector + Registry）。"""
 
     def __init__(self, detector: DeviceDetector, registry: DeviceRegistry):
+        self.log = backend_log
         self._detector = detector
         self._registry = registry
 
@@ -370,7 +375,7 @@ class DeviceStateMachine:
         """
         self._registry.purge_disconnected_devices()
         now = datetime.now()
-        adb_serials = self._detector.adb_device_serials()
+        adb_serials = self._detector.connectable_serials()
         updated = 0
         removed = 0
 
@@ -509,7 +514,7 @@ class DeviceStateMachine:
             update_fields.extend(["locked_by", "locked_at"])
         dev.save(update_fields=update_fields)
 
-        logger.info("设备 %s 已释放占用 (reason=%s)", dev.serial, reason)
+        backend_log.info("设备 %s 已释放占用 (reason=%s)", dev.serial, reason)
 
     def release_occupy(self, dev: Device) -> dict:
         """释放设备检查器占用；执行引擎占用受保护，不可释放。"""
@@ -558,7 +563,7 @@ class DeviceStateMachine:
                 try:
                     self.release_observe(lock.device)
                 except Exception:
-                    logger.warning("过期 observe 锁回收失败: device=%s", lock.device_id)
+                    backend_log.warning("过期 observe 锁回收失败: device=%s", lock.device_id)
 
         online = Device.objects.filter(status=DeviceStatus.ONLINE).count()
         busy = Device.objects.filter(status=DeviceStatus.BUSY).count()

@@ -33,23 +33,7 @@ class AIAgent(models.Model):
     max_loops = models.IntegerField(default=3)
     api_key = models.CharField(max_length=500, default="", blank=True)
     base_url = models.CharField(max_length=500, default="", blank=True)
-    # Per-agent workspace skill toggles.
-    # JSON object: {"Bash": true, "Read": true, "Write": false, ...}
-    # Missing keys default to true (enabled).
-    skills_config = models.JSONField(default=dict, blank=True)
-    # Capability toggles — all default False (pure conversation model).
-    # User enables capabilities through the frontend UI.
-    enable_workspace_tools = models.BooleanField(default=False)  # Bash/Edit/Glob/Grep/Read/Write
-    enable_business_tools = models.BooleanField(
-        default=False
-    )  # 23 platform tools (device/case/test/elements)
-    enable_mcp_tools = models.BooleanField(default=False)  # User-configured MCP servers
-    enable_skills = models.BooleanField(default=False)  # User-uploaded skill folders
     status = models.CharField(max_length=20, default="active")
-    # Health check fields
-    last_checked_at = models.DateTimeField(null=True, blank=True)
-    is_connected = models.BooleanField(default=False)
-    available_models = models.TextField(default="", blank=True)  # JSON list of model names
     # AgentScope agent_id returned by POST /agent/ — needed to reference in chat/session calls
     agent_scope_id = models.CharField(max_length=100, default="", blank=True)
     # Security: one-time API key reveal — set False on key change, True after first reveal
@@ -66,143 +50,11 @@ class AIAgent(models.Model):
         return self.name
 
 
-class AISharedTool(models.Model):
-    """共享工具箱项 — skill / mcp / extension，全局唯一，直接启用/停用。
-
-    平台只用单一智能体：`enabled` 直接决定该智能体是否使用，
-    无需 per-agent 副本或「导入」步骤。
-    """
-
-    name = models.CharField(max_length=200)
-    item_type = models.CharField(max_length=20)  # 'skill' | 'mcp' | 'extension'
-    description = models.TextField(default="", blank=True)
-    config_json = models.TextField(default="{}")
-    enabled = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = "ai_shared_tools"
-        verbose_name = "共享工具"
-        verbose_name_plural = "共享工具"
-
-    def __str__(self):
-        return f"{self.name} [{self.item_type}]"
-
-
-class AIPlatformTool(models.Model):
-    """Global platform business tool enable/disable state → ai_platform_tools.
-
-    全局开关（所有智能体共享）：AI 工具箱统一决定启用/停用哪个平台业务工具，
-    智能体只保留 `enable_business_tools` 总开关。默认（无记录）＝启用；
-    停用 = 记录 enabled=False；启用 = 删除记录回默认。
-    """
-
-    name = models.CharField(max_length=200, unique=True)
-    enabled = models.BooleanField(default=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = "ai_platform_tools"
-        verbose_name = "平台业务工具开关"
-        verbose_name_plural = "平台业务工具开关"
-
-    def __str__(self):
-        return f"{self.name} [{'启用' if self.enabled else '停用'}]"
-
-
-class AILogPort(models.Model):
-    """日志端口监听开关 → ai_log_ports。
-
-    端口 / SKU / 波特率三列的真相源是平台配置（`DEVICE_LOG_SOURCES`），本表只持久化
-    「这个端口要不要持续监听」：**无记录 = 开启**（与 `AIPlatformTool` 的默认口径一致），
-    `enabled=False` 表示用户关掉了监听。写库一律经 `api.py`。
-    日志正文不进数据库，只落本地文件（见 `engines/device/logfiles.py`）。
-    """
-
-    port = models.PositiveIntegerField(unique=True)
-    sku = models.CharField(max_length=100, default="", blank=True)
-    baud = models.PositiveIntegerField(default=0)
-    enabled = models.BooleanField(default=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = "ai_log_ports"
-        ordering = ["port"]
-        verbose_name = "日志端口监听开关"
-        verbose_name_plural = "日志端口监听开关"
-
-    def __str__(self):
-        return f"{self.port} [{'监听' if self.enabled else '停止'}]"
-
-
-class AIConversation(models.Model):
-    """Chat conversation → ai_conversations."""
-
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="ai_conversations",
-    )
-    agent = models.ForeignKey(AIAgent, on_delete=models.CASCADE, related_name="conversations")
-    title = models.CharField(max_length=500, default="新对话")
-    status = models.CharField(max_length=20, default="active")
-    agent_scope_session_id = models.CharField(
-        max_length=200, default="", blank=True, help_text="AgentScope session ID for SSE streaming"
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = "ai_conversations"
-        verbose_name = "对话"
-        verbose_name_plural = "对话"
-
-    def __str__(self):
-        return f"{self.title} [{self.agent.name}]"
-
-
-class AIMessage(models.Model):
-    """Chat message → ai_messages."""
-
-    conversation = models.ForeignKey(
-        AIConversation, on_delete=models.CASCADE, related_name="messages"
-    )
-    role = models.CharField(max_length=20)
-    content = models.TextField(default="", blank=True)
-    tool_calls = models.TextField(default="", blank=True)
-    # Complete ContentBlock structure from AgentScope SSE event stream
-    # Stores the full block list: [{type, id, thinking?, name?, input?, output?, state?, hint?}]
-    blocks = models.TextField(default="[]", blank=True)
-    # Why the reply ended: 'normal' | 'exceed_max_iters' | 'stopped' | 'error'
-    reason = models.CharField(max_length=30, default="normal", blank=True)
-    tokens = models.IntegerField(default=0)
-    input_tokens = models.IntegerField(default=0)
-    cache_input_tokens = models.IntegerField(default=0)
-    cache_creation_input_tokens = models.IntegerField(default=0)
-    model_name = models.CharField(max_length=100, default="", blank=True)
-    # Transport used for this reply: 'sse' | 'fallback' | '' (legacy/unknown)
-    flow = models.CharField(max_length=20, default="", blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "ai_messages"
-        ordering = ["created_at"]
-        verbose_name = "消息"
-        verbose_name_plural = "消息"
-
-    def __str__(self):
-        return f"[{self.role}] {self.content[:60]}"
-
-
 class AITask(models.Model):
     """Agent task → ai_tasks."""
 
     agent = models.ForeignKey(AIAgent, on_delete=models.CASCADE, related_name="tasks")
     title = models.CharField(max_length=500)
-    description = models.TextField(default="", blank=True)
     # 任务发布字段
     goal = models.TextField(default="", blank=True)  # 任务目标（必填）
     attachment = models.TextField(default="", blank=True)  # 附件解析后的 Markdown（无附件为空）
@@ -215,9 +67,11 @@ class AITask(models.Model):
     device_label = models.CharField(
         max_length=200, default="", blank=True
     )  # 卡片展示用设备名（型号优先，否则空）
+    case_title = models.CharField(
+        max_length=255, default="", blank=True
+    )  # 指定用例标题；空串=执行 YAML 中的全部用例
     status = models.CharField(max_length=20, default="pending")
     result = models.TextField(default="", blank=True)
-    scheduled_at = models.DateTimeField(null=True, blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
     # ── token 用量（任务完成时由工作流采集落库）──
@@ -230,6 +84,10 @@ class AITask(models.Model):
     # 按角色拆分：{"planner"/"executor"/"verifier": {"input_tokens", "output_tokens", "cache_input_tokens"}}
     by_role = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    cost_input = models.DecimalField(max_digits=14, decimal_places=8, default=0)
+    cost_cache = models.DecimalField(max_digits=14, decimal_places=8, default=0)
+    cost_output = models.DecimalField(max_digits=14, decimal_places=8, default=0)
+    cost_total = models.DecimalField(max_digits=14, decimal_places=8, default=0)
 
     class Meta:
         db_table = "ai_tasks"
@@ -240,23 +98,149 @@ class AITask(models.Model):
         return f"{self.title} [{self.status}]"
 
 
-class AIExecutionLog(models.Model):
-    """Execution log → ai_execution_logs."""
+class AITaskAttachment(models.Model):
+    """任务附件正文与原件路径 → ai_task_attachments。"""
 
-    agent = models.ForeignKey(AIAgent, on_delete=models.CASCADE, related_name="logs")
-    task = models.ForeignKey(
-        AITask, on_delete=models.SET_NULL, null=True, blank=True, related_name="logs"
+    KIND_CONFIG = "config"
+    KIND_DOCUMENT = "document"
+
+    task = models.ForeignKey(AITask, on_delete=models.CASCADE, related_name="file_attachments")
+    kind = models.CharField(max_length=16)
+    filename = models.CharField(max_length=255, default="", blank=True)
+    body = models.TextField(default="", blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    stored_path = models.CharField(max_length=500, default="", blank=True)
+    load_message = models.CharField(max_length=32, default="", blank=True)
+
+    class Meta:
+        db_table = "ai_task_attachments"
+        ordering = ["sort_order", "id"]
+        verbose_name = "任务附件"
+        verbose_name_plural = "任务附件"
+
+    def __str__(self):
+        return f"{self.kind}:{self.filename}"
+
+
+class AITaskEvent(models.Model):
+    """一条智能体运行事件 → ai_task_events。"""
+
+    task = models.ForeignKey(AITask, on_delete=models.CASCADE, related_name="events")
+    case_title = models.CharField(max_length=255, default="", blank=True)
+    step_seq = models.IntegerField(null=True, blank=True)
+    attempt = models.IntegerField(null=True, blank=True)
+    seq = models.IntegerField()
+    event_type = models.CharField(max_length=48)
+    phase = models.CharField(max_length=8)
+    block_type = models.CharField(max_length=16)
+    is_delta = models.BooleanField(default=False)
+    role_name = models.CharField(max_length=64, default="", blank=True)
+    role_kind = models.CharField(max_length=16, default="", blank=True)
+    model = models.CharField(max_length=64, default="", blank=True)
+    status = models.CharField(max_length=16, default="", blank=True)
+    payload = models.JSONField(null=True, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    duration_ms = models.IntegerField(default=0)
+    called_at = models.DateTimeField(null=True, blank=True)
+    called_date = models.DateField(null=True, blank=True)
+    called_hour = models.PositiveSmallIntegerField(null=True, blank=True)
+    is_peak = models.BooleanField(null=True, blank=True)
+    input_tokens = models.IntegerField(default=0)
+    cache_input_tokens = models.IntegerField(default=0)
+    cache_miss_tokens = models.IntegerField(default=0)
+    output_tokens = models.IntegerField(default=0)
+    cache_creation_tokens = models.IntegerField(default=0)
+    cost_input = models.DecimalField(max_digits=14, decimal_places=8, default=0)
+    cost_cache = models.DecimalField(max_digits=14, decimal_places=8, default=0)
+    cost_output = models.DecimalField(max_digits=14, decimal_places=8, default=0)
+    cost_total = models.DecimalField(max_digits=14, decimal_places=8, default=0)
+    pricing_snapshot = models.JSONField(null=True, blank=True)
+    media = models.ForeignKey(
+        "AITaskMedia",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="events",
     )
-    level = models.CharField(max_length=10, default="info")
-    message = models.TextField(default="", blank=True)
-    metadata = models.TextField(default="{}", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "ai_execution_logs"
-        ordering = ["-created_at"]
-        verbose_name = "执行日志"
-        verbose_name_plural = "执行日志"
+        db_table = "ai_task_events"
+        indexes = [
+            models.Index(fields=["task", "seq"], name="idx_evt_task_seq"),
+            models.Index(fields=["task", "event_type"], name="idx_evt_task_type"),
+            models.Index(fields=["called_date", "called_hour"], name="idx_evt_usage"),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=["task", "seq"], name="uk_evt_task_seq"),
+        ]
 
     def __str__(self):
-        return f"[{self.level}] {self.message[:60]}"
+        return f"{self.task_id}#{self.seq} {self.event_type}"
+
+
+class AITaskMedia(models.Model):
+    """任务图片缩略图 → ai_task_media。不存原图。"""
+
+    task = models.ForeignKey(AITask, on_delete=models.CASCADE, related_name="media")
+    event_seq = models.IntegerField(null=True, blank=True)
+    role_name = models.CharField(max_length=64, default="", blank=True)
+    step_seq = models.IntegerField(null=True, blank=True)
+    attempt = models.IntegerField(null=True, blank=True)
+    sha256 = models.CharField(max_length=64)
+    media_type = models.CharField(max_length=32)
+    byte_size = models.IntegerField(default=0)
+    width = models.IntegerField(null=True, blank=True)
+    height = models.IntegerField(null=True, blank=True)
+    thumb_b64 = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ai_task_media"
+        constraints = [
+            models.UniqueConstraint(fields=["task", "sha256"], name="uk_media_task_sha"),
+        ]
+        indexes = [
+            models.Index(fields=["task", "step_seq"], name="idx_media_task_step"),
+        ]
+
+    def __str__(self):
+        return f"{self.task_id}:{self.sha256[:8]}"
+
+
+class AIUsageHourly(models.Model):
+    """按小时累计的模型费用。agent_id 是裸数字，不设外键。"""
+
+    stat_date = models.DateField()
+    stat_hour = models.PositiveSmallIntegerField()
+    is_peak = models.BooleanField(default=False)
+    agent_id = models.BigIntegerField(default=0)
+    model = models.CharField(max_length=64)
+    role_name = models.CharField(max_length=64)
+    role_kind = models.CharField(max_length=16, default="", blank=True)
+    calls = models.IntegerField(default=0)
+    input_tokens = models.BigIntegerField(default=0)
+    cache_input_tokens = models.BigIntegerField(default=0)
+    cache_miss_tokens = models.BigIntegerField(default=0)
+    output_tokens = models.BigIntegerField(default=0)
+    cost_input = models.DecimalField(max_digits=14, decimal_places=8, default=0)
+    cost_cache = models.DecimalField(max_digits=14, decimal_places=8, default=0)
+    cost_output = models.DecimalField(max_digits=14, decimal_places=8, default=0)
+    cost_total = models.DecimalField(max_digits=14, decimal_places=8, default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "ai_usage_hourly"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["stat_date", "stat_hour", "model", "role_name", "agent_id"],
+                name="uk_usage_slot",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["agent_id", "stat_date"], name="idx_usage_agent"),
+        ]
+
+    def __str__(self):
+        return f"{self.stat_date} {self.stat_hour} {self.model}"

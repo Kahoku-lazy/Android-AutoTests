@@ -1,6 +1,6 @@
 """report-generator HTTP routes — endpoints under /api/reports/*.
 
-列表只读聚合可见 AITask；run/task/cases 详情仍为空壳。
+列表只读聚合可见 AITask；任务流程读 ai_task_events；run/cases 详情仍为空壳。
 File download/view still read LOG_DIR if files exist.
 """
 
@@ -10,7 +10,11 @@ from django.conf import settings
 from django.http import FileResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-from apps.report_generator.ai_task_reports import build_report_list, parse_chart_range
+from apps.report_generator.ai_task_reports import (
+    build_report_list,
+    build_task_flow,
+    parse_chart_range,
+)
 
 
 def list_reports(request):
@@ -56,8 +60,11 @@ def run_report(request, run_id):
 
 @csrf_exempt
 def task_report(request, task_id):
-    """GET /api/reports/task/{task_id} — task cards no longer exist."""
-    return JsonResponse({"status": False, "message": "task not found"}, status=404)
+    """GET /api/reports/task/{task_id} — 当前用户可见任务的事件流程。"""
+    payload = build_task_flow(getattr(request, "user_id", None), task_id)
+    if payload is None:
+        return JsonResponse({"status": False, "message": "task not found"}, status=404)
+    return JsonResponse(payload)
 
 
 @csrf_exempt

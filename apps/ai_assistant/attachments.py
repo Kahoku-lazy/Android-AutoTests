@@ -1,53 +1,65 @@
-"""任务附件解析 — Word / PDF 旁路转 Markdown（任务发布用，不落盘）。"""
+"""任务附件解析 — 配置 YAML 原样保留，文档转为 Markdown。"""
 
 from __future__ import annotations
 
-import logging
+import uuid
 
+from dataclasses import dataclass
 from pathlib import Path
 
-logger = logging.getLogger("ai_assistant")
+from utils.logs import backend_log
 
-TASK_ATTACHMENT_EXTENSIONS = {".docx", ".pdf"}
-TASK_ATTACHMENT_MAX_SIZE = 20 * 1024 * 1024  # 20MB，与通用上传对齐
+DOCUMENT_EXTENSIONS = {".md", ".docx", ".pdf"}
+CONFIG_EXTENSIONS = {".yaml", ".yml"}
+REJECTED_CONFIG_EXTENSIONS = {".csv", ".json"}
+TASK_ATTACHMENT_MAX_SIZE = 20 * 1024 * 1024
 
 
 class AttachmentError(ValueError):
     """用户可见的任务附件错误。"""
 
 
-def parse_docx_to_markdown(filepath: str) -> str:
-    """Word → Markdown 文本（段落拼接）。"""
-    from docx import Document
-
-    doc = Document(filepath)
-    return "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+def _suffix(filename: str) -> str:
+    return Path(str(filename or "")).suffix.lower()
 
 
-def parse_pdf_to_markdown(filepath: str) -> str:
-    """PDF → Markdown 文本（按页加二级标题）。"""
-    import fitz
-
-    pdf = fitz.open(filepath)
-    parts = []
-    for page in pdf:
-        text = page.get_text()
-        if text.strip():
-            parts.append(f"## 第 {page.number + 1} 页\n\n{text.strip()}")
-    return "\n\n".join(parts) if parts else "（PDF 无可用文本）"
-
-
-def parse_task_attachment_bytes(filename: str, content: bytes) -> tuple[str, str]:
-    """任务附件：仅 .docx/.pdf → (markdown, 安全文件名)。失败抛 AttachmentError。"""
-    if len(content) > TASK_ATTACHMENT_MAX_SIZE:
-        raise AttachmentError("文件过大")
+def _safe_name(filename: str) -> str:
     raw = str(filename or "").replace("\\", "/").strip()
     base = Path(raw).name.strip()
     if not base or base in {".", ".."}:
         raise AttachmentError("非法文件名")
-    ext = Path(base).suffix.lower()
-    if ext not in TASK_ATTACHMENT_EXTENSIONS:
-        raise AttachmentError("仅支持 Word（.docx）与 PDF")
+    return base
+
+
+def _check_size(content: bytes) -> None:
+    if len(content) > TASK_ATTACHMENT_MAX_SIZE:
+        raise AttachmentError("文件过大")
+
+
+def convert_with_markitdown(path: str) -> str:
+    """用 MarkItDown 把 Word 或 PDF 转成 Markdown。"""
+    from markitdown import MarkItDown
+
+    result = MarkItDown().convert(path)
+    text = str(getattr(result, "text_content", "") or "").strip()
+    if not text:
+        raise AttachmentError("文档解析失败: 没有可用文本")
+    return text
+
+
+def parse_document_bytes(filename: str, content: bytes) -> tuple[str, str]:
+    """文档附件 → (markdown, 安全文件名)。失败抛 AttachmentError。"""
+    _check_size(content)
+    base = _safe_name(filename)
+    ext = _suffix(base)
+    if ext not in DOCUMENT_EXTENSIONS:
+        raise AttachmentError("文档仅支持 Markdown、Word（.docx）与 PDF")
+    if ext == ".md":
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise AttachmentError("Markdown 必须是 UTF-8") from exc
+        return text, base
     import tempfile
 
     with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
@@ -55,16 +67,74 @@ def parse_task_attachment_bytes(filename: str, content: bytes) -> tuple[str, str
         tmp_path = tmp.name
     try:
         try:
-            md = (
-                parse_pdf_to_markdown(tmp_path)
-                if ext == ".pdf"
-                else parse_docx_to_markdown(tmp_path)
-            )
+            text = convert_with_markitdown(tmp_path)
         except AttachmentError:
             raise
         except Exception as exc:
-            logger.exception("任务附件解析失败: %s", base)
+            backend_log.exception("任务附件解析失败: %s", base)
             raise AttachmentError(f"文档解析失败: {exc}") from None
     finally:
         Path(tmp_path).unlink(missing_ok=True)
-    return md, base
+    return text, base
+
+
+def parse_task_attachment_bytes(filename: str, content: bytes) -> tuple[str, str]:
+    """兼容旧调用名，行为与 parse_document_bytes 相同。"""
+    return parse_document_bytes(filename, content)
+
+
+@dataclass(frozen=True)
+class PreparedUpload:
+    kind: str
+    filename: str
+    body: str
+    content: bytes
+
+
+def _upload_pair(item) -> tuple[str, bytes]:
+    if hasattr(item, "read"):
+        return _safe_name(getattr(item, "name", "") or "file"), item.read()
+    filename, content = item
+    return _safe_name(filename), content
+
+
+def collect_task_files(configs: list, documents: list) -> list[PreparedUpload]:
+    """检查一次提交的配置与文档。失败抛 AttachmentError。不写库、不落盘。"""
+    from engines.agents.workflow.case_file import validate_platform_yaml
+
+    if not configs:
+        raise AttachmentError("需要一份 YAML 配置")
+    if len(configs) != 1:
+        raise AttachmentError("只能有一份配置")
+    filename, content = _upload_pair(configs[0])
+    _check_size(content)
+    ext = _suffix(filename)
+    if ext in REJECTED_CONFIG_EXTENSIONS:
+        raise AttachmentError("csv 与 json 暂不可用")
+    if ext not in CONFIG_EXTENSIONS:
+        raise AttachmentError("配置只支持 YAML")
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise AttachmentError("YAML 必须是 UTF-8") from exc
+    _cases, reason = validate_platform_yaml(text)
+    if reason:
+        raise AttachmentError(reason)
+    prepared = [PreparedUpload(kind="config", filename=filename, body=text, content=content)]
+    for item in documents:
+        doc_name, doc_bytes = _upload_pair(item)
+        markdown, safe = parse_document_bytes(doc_name, doc_bytes)
+        prepared.append(
+            PreparedUpload(kind="document", filename=safe, body=markdown, content=doc_bytes)
+        )
+    return prepared
+
+
+def store_flat_upload(filename: str, content: bytes) -> str:
+    """把原件写成上传目录第一层的文件，返回相对文件名。"""
+    from apps.ai_assistant.upload_cleanup import ensure_upload_dir
+
+    root = ensure_upload_dir()
+    target = root / f"{uuid.uuid4().hex}_{_safe_name(filename)}"
+    target.write_bytes(content)
+    return target.name

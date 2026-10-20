@@ -10,7 +10,8 @@ filter_agents_for_user 已移入 api.py（跨 App 合法通道），此处 re-ex
 from django.contrib.auth import get_user_model
 
 from apps.ai_assistant.api import filter_agents_for_user  # noqa: F401
-from apps.ai_assistant.models import AIAgent, AIConversation
+from apps.ai_assistant.models import AIAgent
+from shared.users import is_superuser
 
 User = get_user_model()
 
@@ -23,13 +24,8 @@ def _same_user(record_owner_id, user_id: str) -> bool:
 
 
 def _is_superuser(user_id) -> bool:
-    """按 user_id 判定是否为超级管理员。"""
-    if not user_id:
-        return False
-    try:
-        return User.objects.filter(pk=int(user_id), is_superuser=True).exists()
-    except (ValueError, TypeError):
-        return False
+    """按 user_id 判定是否为超级管理员（唯一实现在 shared.users）。"""
+    return is_superuser(user_id)
 
 
 def _owner_is_superuser(owner_id) -> bool:
@@ -64,33 +60,11 @@ def check_agent_visible(user_id: str, agent_id: int) -> bool:
     return _owner_is_superuser(agent.owner_id)
 
 
-def check_conversation_access(user_id: str, conv_id: int) -> bool:
-    """检查用户是否有权访问该对话（对话 owner 即可，不要求同时拥有 agent）。"""
-    if not user_id:
-        return False
-    conv = AIConversation.objects.filter(id=conv_id).only("id", "owner_id").first()
-    if not conv:
-        return False
-    return _same_user(conv.owner_id, user_id)
-
-
 def check_can_create_agent(user_id: str) -> bool:
     """仅超级管理员可创建 Agent。"""
-    return _is_superuser(user_id)
-
-
-def check_can_delete_agent(user_id: str, agent_id: int) -> bool:
-    """仅超级管理员可删除 Agent。"""
     return _is_superuser(user_id)
 
 
 def check_can_update_agent(user_id: str, agent_id: int) -> bool:
     """仅超级管理员可更新 Agent 配置。"""
     return _is_superuser(user_id)
-
-
-def filter_conversations_for_user(queryset, user_id: str | None):
-    """Scope conversation list to user-owned rows only."""
-    if not user_id:
-        return queryset.none()
-    return queryset.filter(owner_id=user_id)

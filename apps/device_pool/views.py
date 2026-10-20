@@ -4,7 +4,6 @@
 响应经 EnvelopeJSONRenderer 统一为 {status, data} / {status, message}。
 """
 
-import logging
 import re
 
 from django.conf import settings
@@ -12,14 +11,13 @@ from drf_spectacular.utils import OpenApiTypes, extend_schema
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from engines.device.registry import close_engine, open_engine
+from engines.device.action import System, open_device
+from utils.logs import backend_log
 
 from .contracts import ConnectionType, DeviceStatus, LockReleaseReason
 from .manager import DeviceError, detector, registry, serializer, state_machine
 from .models import Device
 from .pool import device as device_pool
-
-logger = logging.getLogger(__name__)
 
 
 def _device(serial: str) -> Device:
@@ -79,7 +77,7 @@ def list_devices(request):
             }
         )
     except Exception:
-        logger.exception("list_devices failed")
+        backend_log.exception("list_devices failed")
         return Response({"message": "设备列表加载失败"}, status=500)
 
 
@@ -98,14 +96,17 @@ def device_current(request):
         except Device.DoesNotExist:
             dev = None
         if dev is not None:
-            engine = open_engine(current_serial, dev.connection_addr or current_serial)
+            connection, device_info, _control = open_device(
+                System.ANDROID, current_serial, dev.connection_addr or current_serial
+            )
             try:
-                info = engine.device_info
-                app = engine.app_current()
+                width, height = device_info.screen_size()
+                info = {"displayWidth": width, "displayHeight": height}
+                app = device_info.current_app() or {}
             except Exception:
-                logger.warning("读取设备前台失败 serial=%s", current_serial)
+                backend_log.warning("读取设备前台失败 serial=%s", current_serial)
             finally:
-                close_engine(engine)
+                connection.disconnect()
 
     if dev is not None:
         return Response(
@@ -192,7 +193,7 @@ def scan_device(request):
                     }
                 )
 
-            adb_serials = detector.adb_device_serials()
+            adb_serials = detector.connectable_serials()
             if target in adb_serials:
                 dev, created = registry.register_device(target, user_id)
                 return Response(
@@ -204,7 +205,7 @@ def scan_device(request):
                 )
             return Response({"message": f"device {target} not found"}, status=400)
 
-        adb_serials = detector.adb_device_serials()
+        adb_serials = detector.connectable_serials()
         newly_added = 0
         devices_out = []
         for addr in adb_serials:
@@ -229,7 +230,7 @@ def scan_device(request):
     except DeviceError:
         raise  # 交给 DRF 异常处理器返回具体 message（如无法解析序列号）
     except Exception:
-        logger.exception("scan_device failed")
+        backend_log.exception("scan_device failed")
         return Response({"message": "扫描失败"}, status=500)
 
 
@@ -285,7 +286,7 @@ def disconnect_device(request, serial):
         raise DeviceError("设备使用中，无法删除", status_code=409)
 
     registry.delete_device_record(dev, reason=LockReleaseReason.DISCONNECT)
-    logger.warning("设备 %s 已删除", serial)
+    backend_log.warning("设备 %s 已删除", serial)
 
     return Response({"serial": serial, "deleted": True})
 

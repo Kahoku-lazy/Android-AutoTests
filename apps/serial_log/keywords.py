@@ -1,4 +1,4 @@
-"""日志关键词对照表的只读目录（AI 工具箱「日志关键词」来源）。
+"""日志关键词对照表的只读目录（串口日志页「日志关键词」Tab）。
 
 「串口日志关键词 → 功能模块 / 功能点」对照表既是证据等级判定的依据，也是只读日志
 查询工具还原功能点的依据。本模块只做**读取与组装**，供只读端点使用：
@@ -13,20 +13,16 @@
 
 from __future__ import annotations
 
-import logging
-
 from datetime import datetime
 from pathlib import Path
 
 from django.conf import settings
 
-from engines.device.logbus import KeywordIndex, get_log_bus
-
-logger = logging.getLogger("ai_assistant")
+from engines.device.logbus import KeywordIndex
+from utils.logs import backend_log
 
 __all__ = ["collect_keywords"]
 
-_ORIGIN_RUNTIME = "runtime"
 _ORIGIN_FILE = "file"
 _ORIGIN_NONE = "none"
 
@@ -73,13 +69,9 @@ def collect_keywords() -> dict:
         {keywords, keyword_count, feature_count, origin, keyword_file, updated_at, note}
     """
     path = _keyword_file()
-    bus = get_log_bus()
-    mapping = bus.keywords.mapping if bus is not None else None
-    origin = _ORIGIN_RUNTIME
+    origin = _ORIGIN_FILE
     note = ""
-    if not mapping:
-        origin = _ORIGIN_FILE
-        mapping = KeywordIndex.from_file(path).mapping if path else {}
+    mapping = KeywordIndex.from_file(path).mapping if path else {}
     if not mapping:
         origin = _ORIGIN_NONE
         note = (
@@ -87,7 +79,7 @@ def collect_keywords() -> dict:
             if path
             else "未配置关键词表文件（DEVICE_LOG_KEYWORD_FILE 为空）"
         )
-        logger.warning("device log keyword catalog is empty: %s", note)
+        backend_log.warning("device log keyword catalog is empty: %s", note)
     rows = _rows(mapping)
     return {
         "keywords": rows,

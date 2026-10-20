@@ -1,67 +1,112 @@
-"""Dashboard AI 用量聚合 — 任务 / token / 缓存命中 + DeepSeek 费用。
+"""Dashboard AI 用量聚合 — 只读小时用量表。
 
-对话模式已移除（ARCH v3.4），AI 用量改按「任务」（AITask）统计：任务数量、
-每任务累计 token（工作流采集落库）与 DeepSeek 费用。从 views.py 抽出以控制文件体量。
+任务数仍按可见任务计。token、缓存命中和费用按智能体整份合计，不按角色拆开。
 纯只读聚合，无任何写操作。
 """
 
 from datetime import timedelta
+from decimal import Decimal
 
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Sum
 from django.utils import timezone
 
-from apps.ai_assistant.api import filter_agents_for_user, task_deepseek_cost
-from apps.ai_assistant.models import AIAgent, AITask
+from apps.ai_assistant.api import filter_agents_for_user, resolve_assistant_name
+from apps.ai_assistant.models import AIAgent, AITask, AIUsageHourly
 
-# 价目与高峰规则见 apps.ai_assistant.deepseek_billing（经 api.task_deepseek_cost 消费）
+
+def _agents(user_id):
+    return list(filter_agents_for_user(AIAgent.objects.all(), user_id))
 
 
 def _task_qs(user_id):
-    """当前用户可见智能体产生的任务（任务数 / token / 费用统一口径）。"""
-    agents = filter_agents_for_user(AIAgent.objects.all(), user_id)
-    return AITask.objects.filter(agent__in=agents)
+    """当前用户可见智能体产生的任务。任务数仍按任务表计。"""
+    return AITask.objects.filter(agent__in=_agents(user_id))
 
 
-def _task_cost(task) -> float:
-    """单任务 DeepSeek 费用（与任务详情同一口径）。"""
-    return task_deepseek_cost(task)
+def _hourly_qs(agent_ids):
+    if not agent_ids:
+        return AIUsageHourly.objects.none()
+    return AIUsageHourly.objects.filter(agent_id__in=agent_ids)
 
 
-def _qs_cost(queryset):
-    """对任务 queryset 逐条计费并累加（元，保留 4 位小数）。"""
+def _money(value) -> float:
+    amount = Decimal(value or 0).quantize(Decimal("0.00000001"))
+    return float(amount)
+
+
+def _sum_usage(qs):
+    """小时用量合计：输入、输出、缓存命中、总费用。"""
     try:
-        tasks = list(
-            queryset.only(
-                "finished_at",
-                "created_at",
-                "model_usage",
-                "input_tokens",
-                "output_tokens",
-                "cache_input_tokens",
-            )
+        row = qs.aggregate(
+            inp=Sum("input_tokens"),
+            out=Sum("output_tokens"),
+            hit=Sum("cache_input_tokens"),
+            cost=Sum("cost_total"),
         )
     except (OperationalError, ProgrammingError):
-        return 0.0
-    return round(sum(_task_cost(t) for t in tasks), 4)
+        return 0, 0, 0, 0.0
+    return (
+        int(row["inp"] or 0),
+        int(row["out"] or 0),
+        int(row["hit"] or 0),
+        _money(row["cost"]),
+    )
 
 
 def _agg_by_role(qs):
-    """聚合 by_role JSON（planner/executor/verifier 分角色 token 总量）。"""
+    """按角色种类合计 token。执行者与验收者并进同一个智能体之前，角色芯片仍分开。"""
     result = {}
     try:
-        tasks = qs.only("by_role")
+        rows = qs.values("role_kind").annotate(
+            inp=Sum("input_tokens"),
+            out=Sum("output_tokens"),
+            hit=Sum("cache_input_tokens"),
+        )
     except (OperationalError, ProgrammingError):
         return result
-    for t in tasks:
-        for role, v in (t.by_role or {}).items():
-            r = result.setdefault(
-                role, {"input_tokens": 0, "output_tokens": 0, "cache_input_tokens": 0}
-            )
-            r["input_tokens"] += int(v.get("input_tokens") or 0)
-            r["output_tokens"] += int(v.get("output_tokens") or 0)
-            r["cache_input_tokens"] += int(v.get("cache_input_tokens") or 0)
+    for row in rows:
+        role = row["role_kind"] or ""
+        if role not in {"planner", "executor", "verifier"}:
+            continue
+        result[role] = {
+            "input_tokens": int(row["inp"] or 0),
+            "output_tokens": int(row["out"] or 0),
+            "cache_input_tokens": int(row["hit"] or 0),
+        }
     return result
+
+
+def _agent_usage(agents):
+    """每个智能体一份合计，不按角色或模型拆开。"""
+    try:
+        grouped = (
+            _hourly_qs([agent.id for agent in agents])
+            .values("agent_id")
+            .annotate(
+                inp=Sum("input_tokens"),
+                out=Sum("output_tokens"),
+                hit=Sum("cache_input_tokens"),
+                cost=Sum("cost_total"),
+            )
+        )
+    except (OperationalError, ProgrammingError):
+        grouped = []
+    rows = {row["agent_id"]: row for row in grouped}
+    usage = []
+    for agent in agents:
+        row = rows.get(agent.id) or {}
+        usage.append(
+            {
+                "id": agent.id,
+                "name": resolve_assistant_name(agent) or agent.name,
+                "input_tokens": int(row.get("inp") or 0),
+                "output_tokens": int(row.get("out") or 0),
+                "cache_hit_tokens": int(row.get("hit") or 0),
+                "cost_total": f"{Decimal(row.get('cost') or 0):.8f}",
+            }
+        )
+    return usage
 
 
 def ai_usage_stats(user_id):
@@ -71,7 +116,10 @@ def ai_usage_stats(user_id):
     DeepSeek 费用，各指标分 today / total 两组口径。
     """
     today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    task_qs = _task_qs(user_id)
+    agents = _agents(user_id)
+    task_qs = AITask.objects.filter(agent__in=agents)
+    hourly = _hourly_qs([agent.id for agent in agents])
+    today_hourly = hourly.filter(stat_date=today_start.date())
 
     def safe_count(qs):
         try:
@@ -82,20 +130,8 @@ def ai_usage_stats(user_id):
     task_total = safe_count(task_qs)
     task_today = safe_count(task_qs.filter(created_at__gte=today_start))
 
-    def agg(qs):
-        """聚合输入/输出/缓存命中 token；表缺失时计 0。"""
-        try:
-            row = qs.aggregate(
-                inp=Sum("input_tokens"),
-                out=Sum("output_tokens"),
-                hit=Sum("cache_input_tokens"),
-            )
-        except (OperationalError, ProgrammingError):
-            return 0, 0, 0
-        return int(row["inp"] or 0), int(row["out"] or 0), int(row["hit"] or 0)
-
-    in_t, out_t, hit_t = agg(task_qs)
-    in_d, out_d, hit_d = agg(task_qs.filter(created_at__gte=today_start))
+    in_t, out_t, hit_t, cost_t = _sum_usage(hourly)
+    in_d, out_d, hit_d, cost_d = _sum_usage(today_hourly)
 
     def rate(hit, inp):
         # 缓存命中率 = 命中 token / 输入 token，返回百分比（0-100，1 位小数）
@@ -104,8 +140,8 @@ def ai_usage_stats(user_id):
     def avg(inp, out, cnt):
         return int((inp + out) / cnt) if cnt else 0
 
-    by_role_total = _agg_by_role(task_qs)
-    by_role_today = _agg_by_role(task_qs.filter(created_at__gte=today_start))
+    by_role_total = _agg_by_role(hourly)
+    by_role_today = _agg_by_role(today_hourly)
 
     return {
         "task_count": {"today": task_today, "total": task_total},
@@ -118,11 +154,9 @@ def ai_usage_stats(user_id):
             "today": avg(in_d, out_d, task_today),
             "total": avg(in_t, out_t, task_total),
         },
-        "deepseek_cost": {
-            "today": _qs_cost(task_qs.filter(created_at__gte=today_start)),
-            "total": _qs_cost(task_qs),
-        },
+        "deepseek_cost": {"today": cost_d, "total": cost_t},
         "by_role": {"today": by_role_today, "total": by_role_total},
+        "agents": _agent_usage(agents),
     }
 
 
@@ -141,44 +175,34 @@ def ai_daily_series(user_id, days=12):
     total_tokens = [0] * days
     cache_tokens = [0] * days
     cost = [0.0] * days
-
+    start_date = first_day.date()
     try:
-        tasks = list(
-            _task_qs(user_id)
-            .filter(created_at__gte=first_day)
-            .only(
-                "created_at",
-                "input_tokens",
-                "output_tokens",
-                "cache_input_tokens",
-                "finished_at",
-                "model_usage",
+        rows = (
+            _hourly_qs([agent.id for agent in _agents(user_id)])
+            .filter(stat_date__gte=start_date)
+            .values("stat_date")
+            .annotate(
+                inp=Sum("input_tokens"),
+                out=Sum("output_tokens"),
+                hit=Sum("cache_input_tokens"),
+                spent=Sum("cost_total"),
             )
         )
+        for row in rows:
+            idx = (row["stat_date"] - start_date).days
+            if not 0 <= idx < days:
+                continue
+            total_tokens[idx] = int(row["inp"] or 0) + int(row["out"] or 0)
+            cache_tokens[idx] = int(row["hit"] or 0)
+            cost[idx] = _money(row["spent"])
     except (OperationalError, ProgrammingError):
-        return {
-            "labels": labels,
-            "total_tokens": total_tokens,
-            "cache_tokens": cache_tokens,
-            "deepseek_cost": cost,
-        }
-
-    start_date = first_day.date()
-    for t in tasks:
-        idx = (t.created_at.date() - start_date).days
-        if not 0 <= idx < days:
-            continue
-        inp = t.input_tokens or 0
-        out = t.output_tokens or 0
-        total_tokens[idx] += inp + out
-        cache_tokens[idx] += t.cache_input_tokens or 0
-        cost[idx] += _task_cost(t)
+        pass
 
     return {
         "labels": labels,
         "total_tokens": total_tokens,
         "cache_tokens": cache_tokens,
-        "deepseek_cost": [round(c, 4) for c in cost],
+        "deepseek_cost": cost,
     }
 
 

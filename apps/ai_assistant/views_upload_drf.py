@@ -8,7 +8,6 @@
 """
 
 import base64
-import logging
 import uuid
 
 from drf_spectacular.types import OpenApiTypes
@@ -18,8 +17,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .upload_cleanup import ensure_upload_dir, remove_upload_file
-
-logger = logging.getLogger("ai_assistant")
 
 UPLOAD_DIR = ensure_upload_dir()
 

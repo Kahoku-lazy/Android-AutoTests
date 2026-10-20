@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.db.models import Count
 
-from .models import CaseDirectory, CaseFile, CaseProject, TestDefinition
+from .models import CaseDirectory, CaseFile, CaseProject, CaseStep, TestDefinition
 
 
 @admin.register(CaseProject)
@@ -33,17 +33,34 @@ class CaseFileAdmin(admin.ModelAdmin):
     search_fields = ("name",)
 
 
+class CaseStepInline(admin.TabularInline):
+    model = CaseStep
+    extra = 0
+    fields = ("sort_order", "action", "assertion")
+    ordering = ("sort_order",)
+
+
 @admin.register(TestDefinition)
 class TestDefinitionAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "title",
-        "test_type",
+        "priority",
+        "system",
+        "case_type",
         "business_type",
         "project",
         "file",
         "directory",
         "updated_at",
     )
-    list_filter = ("test_type", "business_type")
+    list_filter = ("priority", "system", "case_type", "business_type")
     search_fields = ("id", "title")
+    inlines = (CaseStepInline,)
+
+
+@admin.register(CaseStep)
+class CaseStepAdmin(admin.ModelAdmin):
+    list_display = ("id", "case", "sort_order", "action", "assertion")
+    search_fields = ("case", "action", "assertion")
+    ordering = ("case_id", "sort_order")

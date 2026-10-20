@@ -1,0 +1,199 @@
+﻿/* CaseFileSheet 私有样式：用例表格骨架与行内编辑（标签样式在 SheetTagPicker 内部） */
+
+/* 页面根/主体骨架由 .doc-page / .doc-body 提供；表格区域仍由本页接管滚动 */
+.case-sheet .doc-body {
+  overflow: auto;
+  border-top: 2px solid var(--case-border-subtle);
+  padding: var(--app-space-lg);
+}
+
+.case-sheet__table-wrap {
+  overflow: auto;
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  background: var(--paper);
+  padding: var(--app-space-sm);
+}
+
+.case-sheet__table {
+  /* 用例表网格与表头配色：本表专用（消费点为本表 th/td），在此集中登记一次 */
+  --case-sheet-grid: var(--color-orange-76); /* 单元格网格线 */
+  --case-sheet-head-bg: var(--color-blue-89); /* 表头底色 */
+  --case-sheet-head-fg: var(--color-blue-27); /* 表头文字 */
+  --case-sheet-head-border: var(--color-blue-82); /* 表头描边 */
+  width: 100%;
+  min-width: 1500px;
+  table-layout: fixed;
+  font-size: var(--app-size-sm);
+  background: var(--app-bg-card);
+  border-collapse: collapse;
+}
+
+.case-sheet__table th,
+.case-sheet__table td {
+  border: 1.5px solid var(--case-sheet-grid);
+  padding: 0;
+  vertical-align: middle;
+}
+
+.case-sheet__table th {
+  background: var(--case-sheet-head-bg);
+  color: var(--case-sheet-head-fg);
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-base);
+  text-align: center;
+  padding: var(--app-space-sm);
+  border-color: var(--case-sheet-head-border);
+}
+
+.case-sheet__table tr.is-dirty td {
+  background: color-mix(in srgb, var(--c-case) 10%, var(--app-bg-card));
+}
+
+.col-id {
+  width: 150px;
+}
+.col-pri {
+  width: 100px;
+}
+.col-sys {
+  width: 120px;
+}
+.col-kind {
+  width: 100px;
+}
+.col-biz {
+  width: 110px;
+}
+.col-title {
+  width: 200px;
+}
+.col-module {
+  width: 120px;
+}
+.col-pre {
+  width: 180px;
+}
+.col-steps {
+  width: 96px;
+}
+.col-time {
+  width: 150px;
+}
+.col-ops {
+  width: 88px;
+  text-align: center;
+}
+
+.sheet-cell {
+  min-height: 44px;
+  padding: var(--app-space-sm);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.sheet-cell--muted {
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+}
+
+.sheet-cell--center {
+  text-align: center;
+}
+
+.sheet-cell--pre {
+  white-space: pre-wrap;
+}
+
+.sheet-cell--editable {
+  cursor: text;
+}
+
+.sheet-cell--editable:hover {
+  outline: 2px dashed color-mix(in srgb, var(--c-case) 55%, transparent);
+  outline-offset: -2px;
+}
+
+.sheet-cell--editable.is-empty {
+  color: var(--app-text-muted);
+}
+
+.sheet-cell--editing {
+  padding: var(--app-space-xs);
+  outline: 2px solid var(--c-case);
+  outline-offset: -2px;
+  background: var(--app-bg-card);
+}
+
+.sheet-editor {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  color: var(--ink);
+  padding: var(--app-space-xs);
+  min-height: 32px;
+}
+
+.sheet-editor--area {
+  resize: vertical;
+  min-height: 64px;
+  line-height: 1.45;
+}
+
+/* 步骤数摘要：点击打开步骤面板 */
+.steps-trigger {
+  display: block;
+  width: calc(100% - 12px);
+  margin: var(--app-space-xs);
+  min-height: 32px;
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  background: var(--app-bg-card);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.steps-trigger.is-empty {
+  color: var(--app-text-muted);
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.steps-trigger:hover {
+  background: color-mix(in srgb, var(--c-case) 12%, var(--app-bg-card));
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+.sheet-del-btn {
+  margin: var(--app-space-xs) auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  height: 30px;
+  padding: 0 var(--app-space-sm);
+  border-radius: var(--app-radius-md);
+  border: 2px solid var(--ink);
+  background: var(--app-bg-card);
+  color: var(--app-status-danger-text);
+  font-weight: 700;
+  font-size: var(--app-size-xs);
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.sheet-del-btn:hover {
+  background: var(--app-status-danger-bg);
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--ink);
+}

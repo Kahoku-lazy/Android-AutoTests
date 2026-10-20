@@ -1,0 +1,103 @@
+﻿/* CaseStepDrawer 私有样式：步骤卡片列表 + 编辑框 */
+
+.step-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-md);
+}
+
+.step-drawer__hint {
+  margin: 0;
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+  line-height: 1.6;
+}
+
+.step-drawer__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-md);
+}
+
+.step-drawer__item {
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  background: var(--app-bg-card);
+  padding: var(--app-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+}
+
+.step-drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-sm);
+}
+
+.step-drawer__index {
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.step-drawer__ops {
+  display: inline-flex;
+  gap: var(--app-space-xs);
+}
+
+.step-drawer__op {
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  background: var(--app-bg-card);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  padding: var(--app-space-xs) var(--app-space-sm);
+  cursor: pointer;
+}
+
+.step-drawer__op:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.step-drawer__op.is-danger {
+  color: var(--app-status-danger-text);
+}
+
+.step-drawer__label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--app-text-secondary);
+}
+
+.step-drawer__input {
+  width: 100%;
+  border: 2px solid var(--case-border-subtle);
+  border-radius: var(--app-radius-md);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--app-size-sm);
+  line-height: 1.5;
+  padding: var(--app-space-sm);
+  resize: vertical;
+}
+
+.step-drawer__input:focus {
+  outline: 2px solid var(--c-case);
+  outline-offset: -2px;
+}
+
+.step-drawer__add {
+  align-self: flex-start;
+}

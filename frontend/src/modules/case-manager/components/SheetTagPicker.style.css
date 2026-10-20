@@ -1,0 +1,139 @@
+﻿/* SheetTagPicker 私有样式：标签色板按「优先级 / 系统 / 类型 / 业务」四组编码登记一次 */
+
+.sheet-tag-wrap {
+  position: relative;
+  display: inline-flex;
+  padding: var(--app-space-sm) 10px;
+  max-width: 100%;
+}
+
+.sheet-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+  max-width: 100%;
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-pill);
+  padding: var(--app-space-xs) var(--app-space-sm);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  font-family: inherit;
+  background: var(--paper);
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.sheet-tag--sm {
+  cursor: default;
+  border-width: 1.5px;
+  padding: var(--app-space-xs) var(--app-space-sm);
+  font-size: var(--app-size-xs);
+}
+
+.sheet-tag__caret {
+  font-size: var(--app-size-xs);
+  opacity: 0.75;
+}
+
+/* 优先级 */
+.sheet-tag--pri-p0 {
+  background: var(--color-red-95);
+  color: var(--color-red-49);
+}
+
+.sheet-tag--pri-p1 {
+  background: var(--color-yellow-94);
+  color: var(--color-yellow-27);
+}
+
+.sheet-tag--pri-p2 {
+  background: var(--color-blue-89);
+  color: var(--color-blue-27);
+}
+
+/* 系统 */
+.sheet-tag--sys-android {
+  background: var(--color-lime-94);
+  color: var(--color-green-33);
+}
+
+.sheet-tag--sys-web {
+  background: var(--color-white);
+  color: var(--color-cyan-40);
+}
+
+.sheet-tag--sys-ios {
+  background: var(--color-violet-96);
+  color: var(--color-indigo-46);
+}
+
+.sheet-tag--sys-api {
+  background: var(--color-yellow-94);
+  color: var(--color-yellow-27);
+}
+
+/* 类型 */
+.sheet-tag--ct-func {
+  background: var(--color-blue-89);
+  color: var(--color-blue-27);
+}
+
+.sheet-tag--ct-auto {
+  background: var(--color-lime-94);
+  color: var(--color-teal-30);
+}
+
+/* 业务 */
+.sheet-tag--biz-appliance {
+  background: var(--color-lime-94);
+  color: var(--color-green-33);
+}
+
+.sheet-tag--biz-lighting {
+  background: var(--color-red-95);
+  color: var(--color-red-49);
+}
+
+.sheet-tag--biz-app {
+  background: var(--color-violet-96);
+  color: var(--color-purple-47);
+}
+
+.sheet-tag-menu {
+  position: absolute;
+  top: calc(100% - 4px);
+  left: 10px;
+  z-index: var(--z-raised);
+  min-width: 148px;
+  background: var(--app-bg-card);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  padding: var(--app-space-sm);
+  box-shadow: 4px 4px 0 var(--color-indigo-13-a18);
+}
+
+.sheet-tag-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: var(--app-space-xs) var(--app-space-sm);
+  border-radius: var(--app-radius-md);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sheet-tag-menu__item:hover {
+  background: var(--paper);
+}
+
+.sheet-tag-menu__note {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-muted);
+  white-space: nowrap;
+}

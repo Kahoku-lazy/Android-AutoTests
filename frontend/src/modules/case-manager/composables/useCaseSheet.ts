@@ -10,7 +10,8 @@ import {
   updateDefinition,
   updateFile,
 } from "../api"
-import type { BusinessType, CaseDefinition, CaseFileMeta, SheetRowDraft, TestType } from "../types"
+import { MAX_STEP_TEXT } from "../types"
+import type { CaseDefinition, CaseFileMeta, CaseStep, SheetRowDraft } from "../types"
 
 let tempSeq = 0
 
@@ -19,38 +20,50 @@ export function emptySheetRow(): SheetRowDraft {
   return {
     id: `temp-${Date.now()}-${tempSeq}`,
     title: "",
-    test_type: "app",
+    priority: "P1",
+    system: "ANDROID",
+    case_type: "AUTO",
     business_type: "appliance",
     module: "",
     precondition: "",
-    steps: "",
-    expected_result: "",
+    steps: [],
     updated_at: "",
     dirty: true,
     isNew: true,
   }
 }
 
+function toSteps(steps: CaseStep[] | undefined): CaseStep[] {
+  return (steps || []).map((step) => ({ action: step.action, assertion: step.assertion }))
+}
+
 function toDraft(row: CaseDefinition): SheetRowDraft {
   return {
     id: row.id,
     title: row.title,
-    test_type: row.test_type,
+    priority: row.priority,
+    system: row.system,
+    case_type: row.case_type,
     business_type: row.business_type,
     module: row.module,
     precondition: row.precondition,
-    steps: row.steps,
-    expected_result: row.expected_result,
+    steps: toSteps(row.steps),
     updated_at: row.updated_at,
     dirty: false,
     isNew: false,
   }
 }
 
-function validateRow(row: SheetRowDraft): string | null {
+export function validateRow(row: SheetRowDraft): string | null {
   if (!row.title.trim()) return "测试标题不能为空"
-  if (!row.steps.trim()) return "执行步骤不能为空"
-  if (!row.expected_result.trim()) return "预期结果不能为空"
+  if (!row.steps.length) return "执行步骤不能为空"
+  for (const [index, step] of row.steps.entries()) {
+    if (!step.action.trim()) return `第 ${index + 1} 步：动作不能为空`
+    if (!step.assertion.trim()) return `第 ${index + 1} 步：断言不能为空`
+    if (step.action.length > MAX_STEP_TEXT) return `第 ${index + 1} 步：动作不能超过 ${MAX_STEP_TEXT} 字符`
+    if (step.assertion.length > MAX_STEP_TEXT)
+      return `第 ${index + 1} 步：断言不能超过 ${MAX_STEP_TEXT} 字符`
+  }
   return null
 }
 
@@ -64,6 +77,12 @@ export function useCaseSheet(projectId: () => number, fileId: () => number) {
 
   const isDirty = computed(() => rows.value.some((r) => r.dirty))
   const dirtyCount = computed(() => rows.value.filter((r) => r.dirty).length)
+
+  /** 行号前缀：服务端只报步骤序号，行号由前端补 */
+  function rowLabel(row: SheetRowDraft): string {
+    const index = rows.value.findIndex((r) => r.id === row.id)
+    return index >= 0 ? `第 ${index + 1} 行` : "当前行"
+  }
 
   async function loadSheet() {
     const fid = fileId()
@@ -87,6 +106,11 @@ export function useCaseSheet(projectId: () => number, fileId: () => number) {
 
   function markDirty(row: SheetRowDraft) {
     row.dirty = true
+  }
+
+  function applySteps(row: SheetRowDraft, steps: CaseStep[]) {
+    row.steps = toSteps(steps)
+    markDirty(row)
   }
 
   function addRow() {
@@ -119,7 +143,7 @@ export function useCaseSheet(projectId: () => number, fileId: () => number) {
     for (const row of dirtyRows) {
       const msg = validateRow(row)
       if (msg) {
-        ElMessage.warning(msg)
+        ElMessage.warning(`${rowLabel(row)} · ${msg}`)
         return false
       }
     }
@@ -128,17 +152,16 @@ export function useCaseSheet(projectId: () => number, fileId: () => number) {
     try {
       const pid = projectId()
       const fid = fileId()
-      for (let i = 0; i < dirtyRows.length; i++) {
-        const row = dirtyRows[i]
+      for (const row of dirtyRows) {
         const body = {
           title: row.title.trim(),
-          test_type: row.test_type as TestType,
-          business_type: row.business_type as BusinessType,
+          priority: row.priority,
+          system: row.system,
+          case_type: row.case_type,
+          business_type: row.business_type,
           module: row.module.trim(),
           precondition: row.precondition,
-          steps: row.steps,
-          expected_result: row.expected_result,
-          require_fields: true,
+          steps: toSteps(row.steps),
         }
         if (row.isNew) {
           const { data } = await createDefinition({
@@ -148,7 +171,7 @@ export function useCaseSheet(projectId: () => number, fileId: () => number) {
             sort_order: rows.value.indexOf(row),
           })
           if (!data.status || !data.data) {
-            ElMessage.error(data.message || "新建行失败")
+            ElMessage.error(`${rowLabel(row)} · ${data.message || "新建行失败"}`)
             return false
           }
           const idx = rows.value.findIndex((r) => r.id === row.id)
@@ -156,7 +179,7 @@ export function useCaseSheet(projectId: () => number, fileId: () => number) {
         } else {
           const { data } = await updateDefinition(row.id, body)
           if (!data.status || !data.data) {
-            ElMessage.error(data.message || "保存失败")
+            ElMessage.error(`${rowLabel(row)} · ${data.message || "保存失败"}`)
             return false
           }
           const idx = rows.value.findIndex((r) => r.id === row.id)
@@ -233,6 +256,7 @@ export function useCaseSheet(projectId: () => number, fileId: () => number) {
     skipGuard,
     loadSheet,
     markDirty,
+    applySteps,
     addRow,
     saveAll,
     removeRow,

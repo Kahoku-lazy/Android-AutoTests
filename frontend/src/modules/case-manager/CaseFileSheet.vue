@@ -1,16 +1,23 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from "vue"
+import { computed, nextTick, ref } from "vue"
 import { useRoute } from "vue-router"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import WorkbenchCrumbs from "@/shared/components/WorkbenchCrumbs.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import CaseStepDrawer from "./components/CaseStepDrawer.vue"
+import SheetTagPicker from "./components/SheetTagPicker.vue"
 import { useCaseSheet } from "./composables/useCaseSheet"
-import { BUSINESS_TYPE_OPTIONS, TEST_TYPE_OPTIONS } from "./types"
-import type { BusinessType, SheetRowDraft, TestType } from "./types"
+import {
+  BUSINESS_TYPE_OPTIONS,
+  CASE_TYPE_OPTIONS,
+  PRIORITY_OPTIONS,
+  SYSTEM_OPTIONS,
+} from "./types"
+import type { CaseStep, SheetRowDraft } from "./types"
 
-type TextField = "title" | "module" | "precondition" | "steps" | "expected_result"
-type TagKind = "test_type" | "business_type"
+type TextField = "title" | "module" | "precondition"
+type ToneKind = "priority" | "system" | "case_type" | "business_type"
 
 const route = useRoute()
 
@@ -26,6 +33,7 @@ const {
   dirtyCount,
   loadSheet,
   markDirty,
+  applySteps,
   addRow,
   saveAll,
   removeRow,
@@ -42,32 +50,26 @@ const renameDraft = ref("")
 /** `${rowId}:${field}` */
 const editingKey = ref<string | null>(null)
 const editDraft = ref("")
-const openTagKey = ref<string | null>(null)
 
-const TEST_TAG_CLASS: Record<TestType, string> = {
-  app: "sheet-tag--app",
-  web: "sheet-tag--web",
-  api: "sheet-tag--api",
-  func: "sheet-tag--func",
+const stepDrawerOpen = ref(false)
+const stepDrawerRow = ref<SheetRowDraft | null>(null)
+
+const TONES: Record<ToneKind, Record<string, string>> = {
+  priority: { P0: "pri-p0", P1: "pri-p1", P2: "pri-p2" },
+  system: { ANDROID: "sys-android", WEB: "sys-web", IOS: "sys-ios", API: "sys-api" },
+  case_type: { FUNC: "ct-func", AUTO: "ct-auto" },
+  business_type: {
+    appliance: "biz-appliance",
+    lighting: "biz-lighting",
+    app: "biz-app",
+  },
 }
 
-const BIZ_TAG_CLASS: Record<BusinessType, string> = {
-  appliance: "sheet-tag--appliance",
-  lighting: "sheet-tag--lighting",
-  app: "sheet-tag--biz-app",
+function toneOf(kind: ToneKind) {
+  return (value: string) => TONES[kind][value] || "pri-p2"
 }
 
-function labelOf(kind: TagKind, value: string): string {
-  const opts = kind === "test_type" ? TEST_TYPE_OPTIONS : BUSINESS_TYPE_OPTIONS
-  return opts.find((o) => o.value === value)?.label || value
-}
-
-function tagClass(kind: TagKind, value: string): string {
-  if (kind === "test_type") return TEST_TAG_CLASS[value as TestType] || "sheet-tag--app"
-  return BIZ_TAG_CLASS[value as BusinessType] || "sheet-tag--appliance"
-}
-
-function cellKey(rowId: string, field: TextField | TagKind): string {
+function cellKey(rowId: string, field: TextField): string {
   return `${rowId}:${field}`
 }
 
@@ -77,6 +79,14 @@ function isEditing(rowId: string, field: TextField): boolean {
 
 function displayText(value: string): string {
   return (value || "").trim()
+}
+
+function stepsTooltip(row: SheetRowDraft): string {
+  if (!row.steps.length) return "还没有步骤"
+  return row.steps
+    .slice(0, 3)
+    .map((step, index) => `${index + 1}. ${step.action || "（空动作）"}`)
+    .join("\n")
 }
 
 function startRename() {
@@ -91,20 +101,15 @@ async function confirmRename() {
   if (ok) renaming.value = false
 }
 
-function toggleTagMenu(rowId: string, kind: TagKind) {
-  const key = cellKey(rowId, kind)
-  openTagKey.value = openTagKey.value === key ? null : key
-}
-
-function pickTag(row: SheetRowDraft, kind: TagKind, value: string) {
-  if (kind === "test_type") row.test_type = value as TestType
-  else row.business_type = value as BusinessType
+function pickTag(row: SheetRowDraft, kind: ToneKind, value: string) {
+  if (kind === "priority") row.priority = value as SheetRowDraft["priority"]
+  else if (kind === "system") row.system = value as SheetRowDraft["system"]
+  else if (kind === "case_type") row.case_type = value as SheetRowDraft["case_type"]
+  else row.business_type = value as SheetRowDraft["business_type"]
   markDirty(row)
-  openTagKey.value = null
 }
 
 async function beginEdit(row: SheetRowDraft, field: TextField) {
-  openTagKey.value = null
   editingKey.value = cellKey(row.id, field)
   editDraft.value = row[field] || ""
   await nextTick()
@@ -143,20 +148,21 @@ function onEditKeydown(e: KeyboardEvent, row: SheetRowDraft, field: TextField, m
   }
 }
 
-function onDocClick(e: MouseEvent) {
-  const t = e.target as HTMLElement | null
-  if (!t?.closest(".sheet-tag-wrap")) openTagKey.value = null
+function openSteps(row: SheetRowDraft) {
+  stepDrawerRow.value = row
+  stepDrawerOpen.value = true
 }
 
-onMounted(() => document.addEventListener("click", onDocClick))
-onUnmounted(() => document.removeEventListener("click", onDocClick))
+function onStepsApply(steps: CaseStep[]) {
+  if (stepDrawerRow.value) applySteps(stepDrawerRow.value, steps)
+}
 </script>
 
 <template>
   <div class="doc-page doc-page--fixed wb-shell case-workbench case-sheet">
     <WorkbenchHeader
       :title="pageTitle"
-      subtitle="双击单元格编辑；类型标签可点击切换"
+      subtitle="双击文本单元格编辑；枚举标签可点击切换；步骤在右侧面板编辑"
       icon="layers"
       :icon-gradient="'linear-gradient(135deg,var(--c-case),var(--case-icon-accent))'"
     >
@@ -184,7 +190,7 @@ onUnmounted(() => document.removeEventListener("click", onDocClick))
         v-else-if="!loading && !rows.length"
         icon="📊"
         text="暂无用例行"
-        hint="点击「新建行」开始填写；文本列双击编辑"
+        hint="点击「新建行」开始填写；步骤在「N 步」面板里编辑"
       />
 
       <div v-else class="case-sheet__table-wrap">
@@ -192,14 +198,15 @@ onUnmounted(() => document.removeEventListener("click", onDocClick))
           <thead>
             <tr>
               <th class="col-id">用例 ID</th>
-              <th class="col-type">测试类型</th>
+              <th class="col-pri">优先级</th>
+              <th class="col-sys">系统</th>
+              <th class="col-kind">类型</th>
               <th class="col-biz">业务类型</th>
-              <th class="col-time">时间</th>
               <th class="col-title">标题</th>
               <th class="col-module">模块</th>
               <th class="col-pre">前置</th>
               <th class="col-steps">步骤</th>
-              <th class="col-expect">预期结果</th>
+              <th class="col-time">时间</th>
               <th class="col-ops">操作</th>
             </tr>
           </thead>
@@ -211,73 +218,40 @@ onUnmounted(() => document.removeEventListener("click", onDocClick))
                 </div>
               </td>
 
-              <td class="col-type">
-                <div class="sheet-tag-wrap" @click.stop>
-                  <button
-                    type="button"
-                    class="sheet-tag"
-                    :class="tagClass('test_type', row.test_type)"
-                    @click="toggleTagMenu(row.id, 'test_type')"
-                  >
-                    {{ labelOf("test_type", row.test_type) }}
-                    <span class="sheet-tag__caret">▾</span>
-                  </button>
-                  <div v-if="openTagKey === cellKey(row.id, 'test_type')" class="sheet-tag-menu">
-                    <button
-                      v-for="opt in TEST_TYPE_OPTIONS"
-                      :key="opt.value"
-                      type="button"
-                      class="sheet-tag-menu__item"
-                      @click="pickTag(row, 'test_type', opt.value)"
-                    >
-                      <span
-                        class="sheet-tag sheet-tag--sm"
-                        :class="tagClass('test_type', opt.value)"
-                      >
-                        {{ opt.label }}
-                      </span>
-                    </button>
-                  </div>
-                </div>
+              <td class="col-pri">
+                <SheetTagPicker
+                  :options="PRIORITY_OPTIONS"
+                  :value="row.priority"
+                  :tone-of="toneOf('priority')"
+                  @pick="pickTag(row, 'priority', $event)"
+                />
+              </td>
+
+              <td class="col-sys">
+                <SheetTagPicker
+                  :options="SYSTEM_OPTIONS"
+                  :value="row.system"
+                  :tone-of="toneOf('system')"
+                  @pick="pickTag(row, 'system', $event)"
+                />
+              </td>
+
+              <td class="col-kind">
+                <SheetTagPicker
+                  :options="CASE_TYPE_OPTIONS"
+                  :value="row.case_type"
+                  :tone-of="toneOf('case_type')"
+                  @pick="pickTag(row, 'case_type', $event)"
+                />
               </td>
 
               <td class="col-biz">
-                <div class="sheet-tag-wrap" @click.stop>
-                  <button
-                    type="button"
-                    class="sheet-tag"
-                    :class="tagClass('business_type', row.business_type)"
-                    @click="toggleTagMenu(row.id, 'business_type')"
-                  >
-                    {{ labelOf("business_type", row.business_type) }}
-                    <span class="sheet-tag__caret">▾</span>
-                  </button>
-                  <div
-                    v-if="openTagKey === cellKey(row.id, 'business_type')"
-                    class="sheet-tag-menu"
-                  >
-                    <button
-                      v-for="opt in BUSINESS_TYPE_OPTIONS"
-                      :key="opt.value"
-                      type="button"
-                      class="sheet-tag-menu__item"
-                      @click="pickTag(row, 'business_type', opt.value)"
-                    >
-                      <span
-                        class="sheet-tag sheet-tag--sm"
-                        :class="tagClass('business_type', opt.value)"
-                      >
-                        {{ opt.label }}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </td>
-
-              <td class="col-time">
-                <div class="sheet-cell sheet-cell--muted sheet-cell--center">
-                  {{ row.updated_at || "—" }}
-                </div>
+                <SheetTagPicker
+                  :options="BUSINESS_TYPE_OPTIONS"
+                  :value="row.business_type"
+                  :tone-of="toneOf('business_type')"
+                  @pick="pickTag(row, 'business_type', $event)"
+                />
               </td>
 
               <td class="col-title" @dblclick="beginEdit(row, 'title')">
@@ -319,10 +293,7 @@ onUnmounted(() => document.removeEventListener("click", onDocClick))
               </td>
 
               <td class="col-pre" @dblclick="beginEdit(row, 'precondition')">
-                <div
-                  v-if="isEditing(row.id, 'precondition')"
-                  class="sheet-cell sheet-cell--editing"
-                >
+                <div v-if="isEditing(row.id, 'precondition')" class="sheet-cell sheet-cell--editing">
                   <textarea
                     :data-edit-key="cellKey(row.id, 'precondition')"
                     v-model="editDraft"
@@ -341,46 +312,21 @@ onUnmounted(() => document.removeEventListener("click", onDocClick))
                 </div>
               </td>
 
-              <td class="col-steps" @dblclick="beginEdit(row, 'steps')">
-                <div v-if="isEditing(row.id, 'steps')" class="sheet-cell sheet-cell--editing">
-                  <textarea
-                    :data-edit-key="cellKey(row.id, 'steps')"
-                    v-model="editDraft"
-                    class="sheet-editor sheet-editor--area"
-                    rows="4"
-                    @blur="commitEdit(row, 'steps')"
-                    @keydown="onEditKeydown($event, row, 'steps', true)"
-                  />
-                </div>
-                <div
-                  v-else
-                  class="sheet-cell sheet-cell--editable sheet-cell--pre"
-                  :class="{ 'is-empty': !displayText(row.steps) }"
+              <td class="col-steps">
+                <button
+                  type="button"
+                  class="steps-trigger"
+                  :class="{ 'is-empty': !row.steps.length }"
+                  :title="stepsTooltip(row)"
+                  @click="openSteps(row)"
                 >
-                  {{ displayText(row.steps) || "双击填写" }}
-                </div>
+                  {{ row.steps.length }} 步
+                </button>
               </td>
 
-              <td class="col-expect" @dblclick="beginEdit(row, 'expected_result')">
-                <div
-                  v-if="isEditing(row.id, 'expected_result')"
-                  class="sheet-cell sheet-cell--editing"
-                >
-                  <textarea
-                    :data-edit-key="cellKey(row.id, 'expected_result')"
-                    v-model="editDraft"
-                    class="sheet-editor sheet-editor--area"
-                    rows="4"
-                    @blur="commitEdit(row, 'expected_result')"
-                    @keydown="onEditKeydown($event, row, 'expected_result', true)"
-                  />
-                </div>
-                <div
-                  v-else
-                  class="sheet-cell sheet-cell--editable sheet-cell--pre"
-                  :class="{ 'is-empty': !displayText(row.expected_result) }"
-                >
-                  {{ displayText(row.expected_result) || "双击填写" }}
+              <td class="col-time">
+                <div class="sheet-cell sheet-cell--muted sheet-cell--center">
+                  {{ row.updated_at || "—" }}
                 </div>
               </td>
 
@@ -393,6 +339,13 @@ onUnmounted(() => document.removeEventListener("click", onDocClick))
       </div>
     </div>
 
+    <CaseStepDrawer
+      v-model="stepDrawerOpen"
+      :title="stepDrawerRow?.title || ''"
+      :steps="stepDrawerRow?.steps || []"
+      @apply="onStepsApply"
+    />
+
     <el-dialog v-model="renaming" title="重命名文件" width="400px" :close-on-click-modal="false">
       <el-input v-model="renameDraft" maxlength="200" @keyup.enter="confirmRename" />
       <template #footer>
@@ -403,260 +356,4 @@ onUnmounted(() => document.removeEventListener("click", onDocClick))
   </div>
 </template>
 
-<style scoped>
-/* 模块作用域色板：登记本页用到的非全局色值（消费点都在页面根之内；页面根即组件根） */
-
-/* 页面根/主体骨架由 .doc-page / .doc-body 提供；表格区域仍由本页接管滚动 */
-.case-sheet .doc-body {
-  overflow: auto;
-  border-top: 2px solid var(--case-border-subtle);
-  padding: var(--app-space-lg);
-}
-.case-sheet__table-wrap {
-  overflow: auto;
-  border: 2px solid var(--ink);
-  border-radius: var(--app-radius-md);
-  background: var(--paper);
-  padding: var(--app-space-sm);
-}
-.case-sheet__table {
-  /* 用例表网格与表头配色：本表专用（消费点为本表 th/td），在此集中登记一次 */
-  --case-sheet-grid: var(--color-orange-76) /* -> --color-orange-76 */; /* 单元格网格线 */
-  --case-sheet-head-bg: var(--color-blue-89) /* -> --color-blue-89 */; /* 表头底色 */
-  --case-sheet-head-fg: var(--color-blue-27) /* -> --color-blue-27 */; /* 表头文字 */
-  --case-sheet-head-border: var(--color-blue-82) /* -> --color-blue-82 */; /* 表头描边 */
-  width: 100%;
-  min-width: 1280px;
-  border-collapse: collapse;
-  table-layout: fixed;
-  font-size: var(--app-size-sm);
-  background: var(--app-bg-card);
-}
-.case-sheet__table th,
-.case-sheet__table td {
-  border: 1.5px solid var(--case-sheet-grid);
-  padding: 0;
-  vertical-align: middle;
-}
-.case-sheet__table th {
-  background: var(--case-sheet-head-bg);
-  color: var(--case-sheet-head-fg);
-  font-weight: 700;
-  position: sticky;
-  top: 0;
-  z-index: var(--z-base);
-  text-align: center;
-  padding: 10px var(--app-space-sm);
-  border-color: var(--case-sheet-head-border);
-}
-.case-sheet__table tr.is-dirty td {
-  background: color-mix(in srgb, var(--c-case) 10%, var(--app-bg-card));
-}
-.col-id {
-  width: 150px;
-}
-.col-type {
-  width: 110px;
-}
-.col-biz {
-  width: 110px;
-}
-.col-time {
-  width: 150px;
-}
-.col-title {
-  width: 160px;
-}
-.col-module {
-  width: 120px;
-}
-.col-pre {
-  width: 180px;
-}
-.col-steps {
-  width: 220px;
-}
-.col-expect {
-  width: 220px;
-}
-.col-ops {
-  width: 88px;
-  text-align: center;
-}
-
-.sheet-cell {
-  min-height: 44px;
-  padding: var(--app-space-sm) 10px;
-  line-height: 1.4;
-  word-break: break-word;
-}
-.sheet-cell--muted {
-  color: var(--app-text-secondary);
-  font-size: var(--app-size-xs);
-}
-.sheet-cell--center {
-  text-align: center;
-}
-.sheet-cell--pre {
-  white-space: pre-wrap;
-}
-.sheet-cell--editable {
-  cursor: text;
-}
-.sheet-cell--editable:hover {
-  outline: 2px dashed color-mix(in srgb, var(--c-case) 55%, transparent);
-  outline-offset: -2px;
-}
-.sheet-cell--editable.is-empty {
-  color: var(--app-text-muted);
-}
-.sheet-cell--editing {
-  padding: var(--app-space-xs);
-  outline: 2px solid var(--c-case);
-  outline-offset: -2px;
-  background: var(--app-bg-card);
-}
-.sheet-editor {
-  width: 100%;
-  border: none;
-  outline: none;
-  background: transparent;
-  font: inherit;
-  color: var(--ink);
-  padding: 6px;
-  min-height: 32px;
-}
-.sheet-editor--area {
-  resize: vertical;
-  min-height: 64px;
-  line-height: 1.45;
-}
-
-.sheet-tag-wrap {
-  position: relative;
-  display: inline-flex;
-  padding: var(--app-space-sm) 10px;
-}
-.sheet-tag {
-  /* 测试类型分类色板：7 类是数据编码色（非状态语义），色相为登记例外，
-     在此集中声明一次，消费规则只用变量（口径见 frontend-l0-design-tokens） */
-  --tag-app-bg: var(--color-lime-94) /* -> --color-lime-94 */;
-  --tag-app-fg: var(--color-teal-30) /* -> --color-teal-30 */;
-  --tag-web-bg: var(--color-white) /* -> --color-white */;
-  --tag-web-fg: var(--color-cyan-40) /* -> --color-cyan-40 */;
-  --tag-api-bg: var(--color-violet-96) /* -> --color-violet-96 */;
-  --tag-api-fg: var(--color-indigo-46) /* -> --color-indigo-46 */;
-  --tag-func-bg: var(--color-yellow-94) /* -> --color-yellow-94 */;
-  --tag-func-fg: var(--color-yellow-27) /* -> --color-yellow-27 */;
-  --tag-appliance-bg: var(--color-lime-94) /* -> --color-lime-94 */;
-  --tag-appliance-fg: var(--color-green-33) /* -> --color-green-33 */;
-  --tag-lighting-bg: var(--color-red-95) /* -> --color-red-95 */;
-  --tag-lighting-fg: var(--color-red-49) /* -> --color-red-49 */;
-  --tag-biz-app-bg: var(--color-violet-96) /* -> --color-violet-96 */;
-  --tag-biz-app-fg: var(--color-purple-47) /* -> --color-purple-47 */;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--app-space-xs);
-  border: 2px solid var(--ink);
-  border-radius: var(--app-radius-pill);
-  padding: var(--app-space-xs) 10px;
-  font-size: var(--app-size-xs);
-  font-weight: 700;
-  line-height: 1.2;
-  cursor: pointer;
-  font-family: inherit;
-  background: var(--tag-app-bg);
-  color: var(--tag-app-fg);
-}
-.sheet-tag--sm {
-  cursor: default;
-  border-width: 1.5px;
-  padding: 2px var(--app-space-sm);
-  font-size: var(--app-size-xs);
-}
-.sheet-tag__caret {
-  font-size: var(--app-size-xs);
-  opacity: 0.75;
-}
-.sheet-tag--app {
-  background: var(--tag-app-bg);
-  color: var(--tag-app-fg);
-}
-.sheet-tag--web {
-  background: var(--tag-web-bg);
-  color: var(--tag-web-fg);
-}
-.sheet-tag--api {
-  background: var(--tag-api-bg);
-  color: var(--tag-api-fg);
-}
-.sheet-tag--func {
-  background: var(--tag-func-bg);
-  color: var(--tag-func-fg);
-}
-.sheet-tag--appliance {
-  background: var(--tag-appliance-bg);
-  color: var(--tag-appliance-fg);
-}
-.sheet-tag--lighting {
-  background: var(--tag-lighting-bg);
-  color: var(--tag-lighting-fg);
-}
-.sheet-tag--biz-app {
-  background: var(--tag-biz-app-bg);
-  color: var(--tag-biz-app-fg);
-}
-
-.sheet-tag-menu {
-  position: absolute;
-  top: calc(100% - 4px);
-  left: 10px;
-  z-index: 20;
-  min-width: 128px;
-  /* 浮层硬阴影墨色（rgb(30,30,36) 即 --ink），本弹层自身登记 */
-  --case-menu-shadow: var(--color-indigo-13-a18) /* -> --color-indigo-13-a18 */;
-  background: var(--app-bg-card);
-  border: 2px solid var(--ink);
-  border-radius: var(--app-radius-md);
-  padding: 6px;
-  box-shadow: 4px 4px 0 var(--case-menu-shadow);
-}
-.sheet-tag-menu__item {
-  display: block;
-  width: 100%;
-  text-align: left;
-  border: none;
-  background: transparent;
-  padding: 6px var(--app-space-sm);
-  border-radius: var(--app-radius-md);
-  cursor: pointer;
-  font-family: inherit;
-}
-.sheet-tag-menu__item:hover {
-  background: var(--paper);
-}
-
-.sheet-del-btn {
-  margin: 6px auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 56px;
-  height: 30px;
-  padding: 0 12px;
-  border-radius: var(--app-radius-md);
-  border: 2px solid var(--ink);
-  background: var(--app-bg-card);
-  color: var(--app-status-danger-text);
-  font-weight: 700;
-  font-size: var(--app-size-xs);
-  cursor: pointer;
-  font-family: inherit;
-  box-shadow: 2px 2px 0 var(--ink);
-}
-.sheet-del-btn:hover {
-  background: var(--app-status-danger-bg);
-  transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 var(--ink);
-}
-</style>
+<style src="./CaseFileSheet.style.css" scoped></style>

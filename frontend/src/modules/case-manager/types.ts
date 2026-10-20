@@ -1,7 +1,16 @@
 /** case-manager 项目化文档用例类型（wire snake_case） */
 
-export type TestType = "app" | "web" | "api" | "func"
+export type SystemType = "ANDROID" | "WEB" | "IOS" | "API"
+export type CaseType = "FUNC" | "AUTO"
+export type Priority = "P0" | "P1" | "P2"
 export type BusinessType = "appliance" | "lighting" | "app"
+
+/** 一条步骤：动作 + 断言；id 只在读接口回来时存在，保存时按位置整段替换 */
+export interface CaseStep {
+  id?: number
+  action: string
+  assertion: string
+}
 
 export interface CaseProject {
   id: number
@@ -54,12 +63,14 @@ export interface CaseDefinition {
   file_id: number
   directory_id: number | null
   title: string
-  test_type: TestType
+  priority: Priority
+  system: SystemType
+  case_type: CaseType
   business_type: BusinessType
   module: string
   precondition: string
-  steps: string
-  expected_result: string
+  steps: CaseStep[]
+  step_count: number
   sort_order: number
   created_by: string
   updated_by: string
@@ -76,26 +87,48 @@ export interface SheetRowDraft {
   /** 已保存行用真实 id；新建未保存用 temp-* */
   id: string
   title: string
-  test_type: TestType
+  priority: Priority
+  system: SystemType
+  case_type: CaseType
   business_type: BusinessType
   module: string
   precondition: string
-  steps: string
-  expected_result: string
+  steps: CaseStep[]
   updated_at: string
   dirty: boolean
   isNew: boolean
 }
 
-export const TEST_TYPE_OPTIONS = [
-  { value: "app" as const, label: "APP" },
-  { value: "web" as const, label: "WEB" },
-  { value: "api" as const, label: "API" },
-  { value: "func" as const, label: "FUNC" },
+export interface EnumOption<T extends string = string> {
+  value: T
+  label: string
+  /** 选项附注（如 IOS 暂不支持执行） */
+  note?: string
+}
+
+export const PRIORITY_OPTIONS: EnumOption<Priority>[] = [
+  { value: "P0", label: "P0 必测" },
+  { value: "P1", label: "P1 应测" },
+  { value: "P2", label: "P2 可测" },
 ]
 
-export const BUSINESS_TYPE_OPTIONS = [
-  { value: "appliance" as const, label: "家电" },
-  { value: "lighting" as const, label: "照明" },
-  { value: "app" as const, label: "APP" },
+export const SYSTEM_OPTIONS: EnumOption<SystemType>[] = [
+  { value: "ANDROID", label: "ANDROID" },
+  { value: "WEB", label: "WEB" },
+  { value: "IOS", label: "IOS", note: "暂不支持执行" },
+  { value: "API", label: "API" },
 ]
+
+export const CASE_TYPE_OPTIONS: EnumOption<CaseType>[] = [
+  { value: "FUNC", label: "功能" },
+  { value: "AUTO", label: "自动化" },
+]
+
+export const BUSINESS_TYPE_OPTIONS: EnumOption<BusinessType>[] = [
+  { value: "appliance", label: "家电" },
+  { value: "lighting", label: "照明" },
+  { value: "app", label: "APP" },
+]
+
+/** 单段动作 / 断言的字符上限，与后端 api_definitions.MAX_STEP_TEXT 同口径 */
+export const MAX_STEP_TEXT = 2000

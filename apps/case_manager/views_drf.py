@@ -226,14 +226,14 @@ class TestDefinitionViewSet(viewsets.ViewSet):
                 file_id=int(body.get("file_id")),
                 user_id=_user_id(request),
                 title=body.get("title", ""),
-                test_type=body.get("test_type", "app"),
+                priority=body.get("priority", "P1"),
+                system=body.get("system", "ANDROID"),
+                case_type=body.get("case_type", "AUTO"),
                 business_type=body.get("business_type", "appliance"),
                 module=body.get("module", ""),
                 precondition=body.get("precondition", ""),
-                steps=body.get("steps", ""),
-                expected_result=body.get("expected_result", ""),
+                steps=body.get("steps"),
                 sort_order=int(body.get("sort_order") or 0),
-                require_fields=bool(body.get("require_fields")),
             )
         except Exception as exc:
             return _raise_or_conflict(exc)
@@ -251,16 +251,16 @@ class TestDefinitionViewSet(viewsets.ViewSet):
         kwargs = {
             "case_id": str(pk),
             "user_id": _user_id(request),
-            "require_fields": body.get("require_fields", True),
         }
         for key in (
             "title",
-            "test_type",
+            "priority",
+            "system",
+            "case_type",
             "business_type",
             "module",
             "precondition",
             "steps",
-            "expected_result",
             "sort_order",
         ):
             if key in body:

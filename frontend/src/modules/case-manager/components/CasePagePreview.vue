@@ -3,10 +3,10 @@
  * 用例只读预览（用例管理工作台右栏专用）。
  *
  * 定位：右栏是**概览位**，只回答「这个文件里有哪些用例」。因此固定五列
- * （用例 ID · 测试类型 · 业务类型 · 标题 · 时间），通过共享分页让全部用例都可浏览；
+ * （用例 ID · 系统·类型 · 业务类型 · 标题 · 时间），通过共享分页让全部用例都可浏览；
  * 只调 getFileSheet 读数据——不导入任何写函数（createDefinition / updateDefinition /
  * deleteDefinition），也不渲染行内编辑、类型标签下拉、新建行 / 删除行 / 保存按键。
- * 「模块 / 前置 / 步骤 / 预期结果 / 操作」等列与全部编辑能力只在文件详情页
+ * 「模块 / 前置 / 步骤 / 操作」等列与全部编辑能力只在文件详情页
  * （/cases/projects/:projectId/files/:fileId）提供，本组件给一个进入那里的入口。
  */
 import { computed, onMounted, ref, watch } from "vue"
@@ -19,7 +19,8 @@ import { usePagination } from "@/shared/composables/usePagination"
 import { getFileSheet } from "../api"
 import {
   BUSINESS_TYPE_OPTIONS,
-  TEST_TYPE_OPTIONS,
+  CASE_TYPE_OPTIONS,
+  SYSTEM_OPTIONS,
   type CaseDefinition,
   type TreeFileNode,
 } from "../types"
@@ -27,7 +28,13 @@ import {
 /** 只读预览列：五列，顺序即展示顺序（其余列只在文件详情页） */
 const PREVIEW_COLUMNS = [
   { dataIndex: "id", width: 150, label: "用例 ID", showOverflowTooltip: false },
-  { dataIndex: "test_type", width: 96, align: "center", label: "测试类型", showOverflowTooltip: false },
+  {
+    dataIndex: "system",
+    width: 190,
+    align: "center",
+    label: "系统·类型",
+    showOverflowTooltip: false,
+  },
   {
     dataIndex: "business_type",
     width: 96,
@@ -56,7 +63,8 @@ function labelOf(
   return options.find((option) => option.value === value)?.label || value || "—"
 }
 
-const testTypeLabel = (value: string) => labelOf(TEST_TYPE_OPTIONS, value)
+const systemLabel = (value: string) => labelOf(SYSTEM_OPTIONS, value)
+const caseTypeLabel = (value: string) => labelOf(CASE_TYPE_OPTIONS, value)
 const businessTypeLabel = (value: string) => labelOf(BUSINESS_TYPE_OPTIONS, value)
 
 async function load() {
@@ -123,8 +131,12 @@ onMounted(load)
             <template #cell-id="{ row }">
               <span class="case-preview__text" :title="row.id">{{ row.id }}</span>
             </template>
-            <template #cell-test_type="{ row }">
-              <span class="case-preview__tag">{{ testTypeLabel(row.test_type) }}</span>
+            <template #cell-system="{ row }">
+              <span class="case-preview__tags">
+                <span class="case-preview__tag">{{ systemLabel(row.system) }}</span>
+                <span class="case-preview__sep">·</span>
+                <span class="case-preview__tag">{{ caseTypeLabel(row.case_type) }}</span>
+              </span>
             </template>
             <template #cell-business_type="{ row }">
               <span class="case-preview__tag">{{ businessTypeLabel(row.business_type) }}</span>
@@ -243,5 +255,15 @@ onMounted(load)
   font-weight: 700;
   color: var(--ink);
   background: var(--app-bg-input);
+}
+.case-preview__tags {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+  max-width: 100%;
+}
+.case-preview__sep {
+  color: var(--app-text-muted);
+  font-weight: 700;
 }
 </style>

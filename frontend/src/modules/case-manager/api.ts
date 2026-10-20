@@ -2,13 +2,16 @@
 import client from "@/shared/api-client"
 import type { DjangoResponse } from "@/shared/api-client"
 import type {
+  BusinessType,
   CaseDefinition,
   CaseFileMeta,
   CaseFileSheet,
   CaseProject,
+  CaseStep,
+  CaseType,
+  Priority,
   ProjectTreePayload,
-  BusinessType,
-  TestType,
+  SystemType,
 } from "./types"
 
 type Envelope<T> = Promise<{ data: DjangoResponse<T> }>
@@ -92,14 +95,14 @@ export function createDefinition(body: {
   project_id: number
   file_id: number
   title?: string
-  test_type?: TestType
+  priority?: Priority
+  system?: SystemType
+  case_type?: CaseType
   business_type?: BusinessType
   module?: string
   precondition?: string
-  steps?: string
-  expected_result?: string
+  steps?: CaseStep[]
   sort_order?: number
-  require_fields?: boolean
 }): Envelope<CaseDefinition> {
   return client.post<DjangoResponse<CaseDefinition>>("/cases/definitions/", body)
 }
@@ -112,14 +115,14 @@ export function updateDefinition(
   id: string,
   body: Partial<{
     title: string
-    test_type: TestType
+    priority: Priority
+    system: SystemType
+    case_type: CaseType
     business_type: BusinessType
     module: string
     precondition: string
-    steps: string
-    expected_result: string
+    steps: CaseStep[]
     sort_order: number
-    require_fields: boolean
   }>,
 ): Envelope<CaseDefinition> {
   return client.patch<DjangoResponse<CaseDefinition>>(`/cases/definitions/${id}/`, body)

@@ -4,7 +4,9 @@ from rest_framework import serializers
 
 from .models import (
     BUSINESS_TYPE_CHOICES,
-    TEST_TYPE_CHOICES,
+    CASE_TYPE_CHOICES,
+    PRIORITY_CHOICES,
+    SYSTEM_CHOICES,
     CaseDirectory,
     CaseProject,
     TestDefinition,
@@ -55,12 +57,12 @@ class TestDefinitionSerializer(serializers.ModelSerializer):
             "project",
             "directory",
             "title",
-            "test_type",
+            "priority",
+            "system",
+            "case_type",
             "business_type",
             "module",
             "precondition",
-            "steps",
-            "expected_result",
             "sort_order",
             "created_by",
             "updated_by",
@@ -79,7 +81,9 @@ class TestDefinitionSerializer(serializers.ModelSerializer):
             "updated_at_display",
         ]
         extra_kwargs = {
-            "test_type": {"choices": TEST_TYPE_CHOICES},
+            "priority": {"choices": PRIORITY_CHOICES},
+            "system": {"choices": SYSTEM_CHOICES},
+            "case_type": {"choices": CASE_TYPE_CHOICES},
             "business_type": {"choices": BUSINESS_TYPE_CHOICES},
         }
 

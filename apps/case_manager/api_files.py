@@ -5,9 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 from django.db import IntegrityError, transaction
+from django.db.models import Prefetch
 
 from .api_projects import ConflictError, get_project
-from .models import CaseDirectory, CaseFile, TestDefinition
+from .models import CaseDirectory, CaseFile, CaseStep, TestDefinition
 
 __all__ = [
     "create_file",
@@ -116,7 +117,14 @@ def list_file_cases(*, file_id: int, user_id: str) -> list:
     obj = get_file(file_id=file_id, user_id=user_id)
     if obj is None:
         raise LookupError("文件不存在")
-    rows = obj.cases.all().order_by("sort_order", "id")
+    # 一次预取全部步骤：否则每行都会触发一次查询（N+1）
+    rows = (
+        obj.cases.prefetch_related(
+            Prefetch("steps", queryset=CaseStep.objects.order_by("sort_order", "id"))
+        )
+        .all()
+        .order_by("sort_order", "id")
+    )
     return [serialize_definition(c) for c in rows]
 
 

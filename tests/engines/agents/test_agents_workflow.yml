@@ -1,0 +1,10 @@
+TestAgentsWorkflow:
+  - title: 测试 Agents 工作流
+    steps:
+      - action: 打开 手机 WIFI 设置页面
+        assert: 检查页面是否为WiFi设置页面
+
+
+TestToolDevice:
+  serial: 192.168.35.57:39569
+  package: com.govee.home

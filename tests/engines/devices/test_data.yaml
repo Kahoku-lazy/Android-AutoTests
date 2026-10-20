@@ -1,0 +1,14 @@
+TestAndroidConnection:
+  - address: 192.168.35.57
+    address_port: 39569
+
+TestAndroidControl:
+  - app_package: com.govee.home
+
+
+TestAdbChannel:
+  - serial: R5CT62RH88F
+
+TestAdbInfo:
+  - serial: R5CT62RH88F
+

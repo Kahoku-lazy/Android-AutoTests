@@ -1,0 +1,4 @@
+- title: 测试 Agents 工作流
+  steps:
+    - action: 启动 com.govee.home 应用，检查用户是否登录。
+      assert: 用户名是：GH-Kahoku

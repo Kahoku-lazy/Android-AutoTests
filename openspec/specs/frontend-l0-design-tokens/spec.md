@@ -4,6 +4,7 @@
 约定模块样式里的语义色、状态色与文本字号取自已登记的设计令牌，不再把 Element Plus 默认调色板或等价字面色当作模块色；分类色板的每个色相只声明一次。
 
 ## Requirements
+
 ### Requirement: Module styles consume registered design tokens
 
 模块样式（`modules/**/*.vue` 的 `<style>` 与 `modules/**/*.css`）中的**语义色与状态色** MUST 取 `shared/styles/tokens.css` 已登记的令牌（`--c-*` / `--app-status-*` / `--ink` / `--paper` / `--app-bg-*` / `--app-text-*`），MUST NOT 直写字面量。**文本字号** MUST 取 `--app-size-*` 刻度且 MUST NOT 低于 12px（图形/展示级字号例外见 `frontend/AGENTS.md` 硬性规范 §1.14）。Element Plus 默认调色板（如 `#409eff`）MUST NOT 被当作模块色。**画布绘制色**（ECharts 系列色 / canvas 绘制色，同既有 ECharts 例外）与**数据编码型分类色板**（分类标签色）MAY 保留字面色相；其中分类色板每个色相 MUST 在该文件的具名局部自定义属性中声明一次，SHALL NOT 在规则里重复散落同一字面量。
@@ -395,3 +396,27 @@ T0 主 token 的颜色原子 SHALL 收敛为一套经感知聚类（CIE76 ΔE �
 #### Scenario: 展示档不扩散到常规 UI 文本
 - **WHEN** 检索样式文件中 `--app-size-3xl` 的使用位置
 - **THEN** 命中仅出现在登录页 Hero 标题载体
+
+### Requirement: 描边宽度与线型以令牌登记
+
+手绘风格的描边宽度 SHALL 以 T0 规格原子 `--size-stroke-sketch`（2.5px）登记在 `shared/styles/tokens.css`；消费该宽度的样式 MUST 以 `var()` 引用该原子，SHALL NOT 直写 `2.5px` 描边字面量。
+
+描边**线型**（`dashed` / `solid`）SHALL 由消费边界以具名令牌自行声明（如登录页的 `--login-line`），MUST NOT 借用其它边界的组件令牌（`--comp-*`）或模块令牌来决定自身线型。理由是线型是"这个边界要不要留手绘虚线"的决定，由别的边界代为持有会让该决定在别处被改写时静默失效。
+
+#### Scenario: 描边宽度取自已登记的原子
+
+- **WHEN** 静态检索 `frontend/src` 中 `2.5px` 描边宽度字面量，并检查登录页的三处描边（`.hero-cta`、`.login-border` 组合、表单提交按钮）
+- **THEN** 这些位置引用 `var(--size-stroke-sketch)`
+- **AND** `tokens.css` 中该原子恰好声明一次
+
+#### Scenario: 线型不跨边界借用
+
+- **WHEN** 检索登录页样式对共享组件令牌 `--comp-sidebar-dash` 的引用
+- **THEN** 命中数为 `0`
+- **AND** 登录页线型由声明在 `.login-page` 作用域内的令牌提供
+
+#### Scenario: 门禁保持通过
+
+- **WHEN** 运行 `npm run lint:styles`
+- **THEN** 字号下限、token 唯一性与引用完整性、几何尺度四类检查均不新增命中
+- **AND** 新增原子名命中 `--size-*` 规格命名，不含模块前缀

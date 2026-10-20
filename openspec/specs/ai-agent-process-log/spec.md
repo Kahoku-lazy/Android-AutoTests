@@ -4,6 +4,7 @@
 把三角色（规划 / 执行 / 验收）在模型执行过程中的思考、工具调用与工具返回，在产生的当下追加落盘成一份人类可读、可实时跟随的过程日志，使"模型到底在想什么、点了什么、返回了什么"不再依赖平台界面，也不再被截图与展示上限裁剪。
 
 ## Requirements
+
 ### Requirement: 角色执行过程实时写入过程日志
 
 系统 SHALL 在角色执行过程中，把思考、工具调用与工具返回**在产生的当下**追加写入过程日志，MUST NOT 等整轮执行结束后一次性写入。每条记录 SHALL 至少包含：时间戳（毫秒精度）、角色名、模型名、任务与步骤标识、事件类型、内容；无任务上下文时（命令行、跑测工具）任务与步骤标识 SHALL 如实写为独立运行，MUST NOT 留空。
@@ -35,22 +36,24 @@
 
 ### Requirement: 过程日志的文件与自动创建
 
-过程日志 SHALL **按天切分**写入：文件名由「基名 + 当天日期」构成（形如 `agents-20261009.log`），写入 SHALL 为 UTF-8 追加，MUST NOT 覆盖既有内容。落点由调用方以**基路径**注入（未指定时使用 `<当前工作目录>/logs/agents.log`）；文件或其所在目录不存在时 MUST 自动创建。同一次运行跨过零点后，后续记录 MUST 落到新一天的文件。并发写入（多角色、多任务同时执行）时每条记录 MUST 自成一行，MUST NOT 出现跨行交错。引擎 MUST NOT 依赖平台配置或框架来取得落点，也 MUST NOT 自动删除历史文件。
+过程日志 SHALL 经进程内唯一的日志对象追加写入 `logs/agents/agent_events.log`，与智能体事件时间线共用该文件。写入 SHALL 为 UTF-8 追加，MUST NOT 覆盖既有内容。过程日志 MUST NOT 再按天切分到 `agents-YYYYMMDD.log`，也 MUST NOT 再使用 `<当前工作目录>/logs/agents.log` 作为基路径派生当天文件。文件或其所在目录不存在时 MUST 自动创建。并发写入（多角色、多任务同时执行）时每条记录 MUST 自成一行，MUST NOT 出现跨行交错。引擎 MUST NOT 依赖平台配置或框架来取得该落点，也 MUST NOT 自动删除历史文件。磁盘上已经存在的按天过程日志文件 MUST 原样保留，本能力 MUST NOT 删除、截断或移动它们。
+
+每条过程记录 SHALL 使用 `logging` 的时间、等级与记录器名，正文 SHALL 包含角色名、模型名、任务与步骤标识、事件类型与内容。
 
 #### Scenario: 首次运行时自动创建
 
-- **WHEN** 当天文件或其所在目录尚不存在，且发生了第一次角色执行
-- **THEN** 系统创建该目录与当天文件（文件名含当天日期）并写入记录，MUST NOT 因此报错或中断执行
+- **WHEN** `logs/agents/agent_events.log` 或其目录尚不存在，且发生了第一次角色执行
+- **THEN** 系统创建该目录与文件并写入记录，MUST NOT 因此报错或中断执行
 
 #### Scenario: 跨天自动切换
 
-- **WHEN** 一次运行跨过零点后继续产生记录
-- **THEN** 零点之后的记录写入新一天的文件，零点之前的记录留在原文件，MUST NOT 被移动或覆盖
+- **WHEN** 一次运行跨过零点后继续产生过程记录
+- **THEN** 零点之后的记录仍追加在 `logs/agents/agent_events.log`，MUST NOT 新建 `agents-YYYYMMDD.log`，也 MUST NOT 移动或覆盖零点之前的记录
 
 #### Scenario: 落点由调用方注入
 
-- **WHEN** 平台以自有的基路径调用引擎
-- **THEN** 当天文件落在该基路径所在目录下；引擎侧 MUST NOT import 平台模块来解析落点
+- **WHEN** 引擎写出一条过程记录
+- **THEN** 该记录出现在 `logs/agents/agent_events.log`；引擎侧 MUST NOT import 平台模块来解析落点，也 MUST NOT 再接受按天基路径
 
 #### Scenario: 并发写入不串行
 
@@ -59,7 +62,7 @@
 
 #### Scenario: 历史文件不被清理
 
-- **WHEN** 已经存在前几天写下的日志文件
+- **WHEN** 已经存在前几天写下的 `agents-YYYYMMDD.log`
 - **THEN** 引擎 MUST NOT 删除、截断或移动这些文件
 
 ### Requirement: 三角色中文思考与回复

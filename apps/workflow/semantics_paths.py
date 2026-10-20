@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from .semantics import MAX_PATH_DEPTH, MAX_PATHS, _name_of, _output_port, _str
+from .semantics import MAX_PATH_DEPTH, MAX_PATHS, _name_of, _str
 
 __all__ = ["build_paths"]
 
@@ -57,15 +57,6 @@ def build_paths(nodes: list, links: list, index: dict) -> list[dict]:
                 for l in outs:
                     if len(paths) >= MAX_PATHS:
                         break
-                    op = _output_port(node, l.get("origin_slot"))
-                    action = None
-                    if isinstance(op, dict) and isinstance(op.get("el"), dict):
-                        action = {
-                            "element_id": _str(op["el"].get("id")),
-                            "label": _str(op["el"].get("label")) or _str(op.get("name")),
-                        }
-                        steps[-1]["action"] = action
-                        parts.append(f"(点击「{action['label']}」)")
                     target = index.get(_str(l.get("target_id")))
                     if target is None:
                         parts.append("目标节点缺失")
@@ -73,9 +64,6 @@ def build_paths(nodes: list, links: list, index: dict) -> list[dict]:
                         parts.pop()
                     else:
                         dfs(target, depth + 1, steps, parts)
-                    if action:
-                        parts.pop()
-                        steps[-1].pop("action", None)
         steps.pop()
         parts.pop()
 

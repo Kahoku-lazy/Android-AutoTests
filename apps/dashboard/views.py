@@ -1,7 +1,5 @@
 """Dashboard stats views — aggregated platform statistics for the frontend dashboard."""
 
-import logging
-
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Q
 from django.utils import timezone
@@ -22,10 +20,8 @@ from apps.dashboard.ai_usage import (
     platform_activities,
 )
 from apps.device_pool.models import Device
-from apps.element_locator.models import Element, Page
 from apps.workflow.models import WorkflowDocument
-
-logger = logging.getLogger(__name__)
+from utils.logs import backend_log
 
 
 def _user_id(request):
@@ -48,7 +44,7 @@ def _safe_count(queryset_or_model, filter_kwargs=None, q_filter=None):
             qs = qs.filter(q_filter)
         return qs.count()
     except (OperationalError, ProgrammingError) as e:
-        logger.debug("Safe count fallback for %s: %s", str(queryset_or_model)[:80], e)
+        backend_log.debug("Safe count fallback for %s: %s", str(queryset_or_model)[:80], e)
         return 0
 
 
@@ -86,13 +82,6 @@ def _cases_breakdown(user_id=None):
     ]
 
 
-def _elements_breakdown():
-    """Return the element breakdown —— Web/API 两域随元素定位下线，只保留 Android。"""
-    return [
-        {"type": "android", "label": "Android元素", "total": Element.objects.count()},
-    ]
-
-
 def _workflow_stats():
     """Return workflow document count."""
     return {"total": _safe_count(WorkflowDocument)}
@@ -117,11 +106,6 @@ class DashboardStatsAPIView(APIView):
             filter_agents_for_user(AIAgent.objects.all(), user_id).filter(status="active").count()
         )
 
-        # ── Elements: totals + page count ──
-        elements_breakdown = _elements_breakdown()
-        element_total = sum(row["total"] for row in elements_breakdown)
-        pages_count = _safe_count(Page)
-
         # ── AI 用量 + 每日 token/缓存/费用序列 ──
         daily_ai = ai_daily_series(user_id)
 
@@ -132,11 +116,6 @@ class DashboardStatsAPIView(APIView):
                     "total": case_total,
                     "enabled": case_enabled,
                     "breakdown": cases_breakdown,
-                },
-                "elements": {
-                    "total": element_total,
-                    "pages": pages_count,
-                    "type_breakdown": elements_breakdown,
                 },
                 "workflow": _workflow_stats(),
                 "runs": {"total": run_total, "active": run_active},

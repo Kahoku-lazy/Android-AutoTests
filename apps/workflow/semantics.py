@@ -56,11 +56,6 @@ def _name_of(node: dict) -> str:
     return _str(node.get("id"))
 
 
-def _element_domain() -> str:
-    """页面所属域：元素定位收敛为单一 android 项目后恒为 android。"""
-    return "android"
-
-
 def _slot_int(v: Any) -> int | None:
     """槽位归一为 int；不可解析返回 None（手改/第三方 JSON 可能传 str 或垃圾值）。"""
     try:
@@ -148,12 +143,6 @@ def _collect_entry_points(nid: str, links: list, index: dict) -> list[dict]:
             "from_name": _name_of(origin) if origin else "",
             "port_type": _str(l.get("type")),
         }
-        op = _output_port(origin, l.get("origin_slot"))
-        if isinstance(op, dict) and isinstance(op.get("el"), dict):
-            item["trigger_element"] = {
-                "element_id": _str(op["el"].get("id")),
-                "label": _str(op["el"].get("label")) or _str(op.get("name")),
-            }
         pts.append(item)
     return pts
 
@@ -201,16 +190,6 @@ def build_graph_digest(config: Any, doc: Any = None) -> dict:
         props = n.get("properties") if isinstance(n.get("properties"), dict) else {}
 
         summary: dict[str, Any] = {"node_id": nid, "node_type": node_type, "name": _name_of(n)}
-
-        # 页面归属（页面/弹窗/页面模式起点）
-        page_id = _str(props.get("linked_page_id"))
-        page_name = _str(props.get("linked_page_name"))
-        if page_id or page_name:
-            summary["page"] = {
-                "page_id": page_id or None,
-                "page_name": page_name or None,
-                "domain": _str(props.get("linked_page_domain")) or _element_domain(),
-            }
 
         if node_type == "start":
             summary["start_kind"] = _str(props.get("start_kind"))

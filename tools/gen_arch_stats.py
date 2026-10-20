@@ -653,8 +653,6 @@ def generate_markdown():
     for a in apps:
         prefix_map = {
             "device_pool": "dp_",
-            "device_inspector": "di_",
-            "element_locator": "el_",
             "case_manager": "cm_",
             "test_runner": "tr_",
             "report_generator": "rg_",
@@ -887,8 +885,6 @@ def generate_agents_md_sections():
     # ── DB table list ──
     prefix_map = {
         "device_pool": "dp_",
-        "device_inspector": "di_",
-        "element_locator": "el_",
         "case_manager": "cm_",
         "test_runner": "tr_",
         "report_generator": "rg_",

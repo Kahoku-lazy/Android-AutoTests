@@ -74,9 +74,7 @@ INSTALLED_APPS = [
     # Framework
     "gateway",
     "shared",
-    # Django Apps（11 个；其中 test_runner、evaluator 已下线，仅保留卸表迁移）
-    "apps.device_inspector",
-    "apps.element_locator",
+    # Django Apps（10 个；其中 test_runner、evaluator 已下线，仅保留卸表迁移）
     "apps.device_pool",
     "apps.case_manager",
     "apps.workflow",
@@ -84,14 +82,13 @@ INSTALLED_APPS = [
     "apps.report_generator",
     "apps.accounts",
     "apps.ai_assistant",
+    "apps.serial_log",
     "apps.evaluator",
     "apps.dashboard",
 ]
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
-    # 工具网关内部令牌（JWT 豁免前缀的替代凭据；只在 /api/ai/tools/ 上生效）
-    "gateway.internal_token.InternalToolTokenMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.gzip.GZipMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -183,14 +180,11 @@ CSRF_COOKIE_SECURE = os.environ.get("CSRF_COOKIE_SECURE", "False" if DEBUG else 
 DB_ENGINE = os.environ.get("DB_ENGINE", "mysql")
 
 # ── 设备引擎（L1c 可替换插槽）──
-# 上层经 engines.device.registry 工厂（open_engine / close_engine）取引擎；换引擎只改此配置。
+# 上层经 engines.device.action.open_device 打开设备。
 # 注：设备交互无中间层（原 L2 会话层已于 2026-09-03 扁平化删除）。
 DEVICE_ENGINE = os.environ.get("DEVICE_ENGINE", "u2")
 
-# ── AI 引擎（L1c 可替换插槽，对齐 DEVICE_ENGINE）──
-# 消费方 apps/ai_assistant/views_drf.py 经 engines.ai.registry 取引擎
-# （get_ai_engine(settings.AI_ENGINE)）；换 AI 框架只改此配置。
-AI_ENGINE = os.environ.get("AI_ENGINE", "agentscope")
+# 控制设备任务由 engines.agents 的 SOP 执行，不再按引擎名加载实现。
 
 
 if DB_ENGINE == "mysql":
@@ -268,11 +262,6 @@ CHANNEL_LAYERS = _channel_layers_config()
 # ── JWT ──
 JWT_ACCESS_TTL = int(os.environ.get("JWT_ACCESS_TTL", "3600"))  # 1 hour
 JWT_REFRESH_TTL = int(os.environ.get("JWT_REFRESH_TTL", "604800"))  # 7 days
-
-# ── 内部服务凭据 ──
-# 工具网关 `/api/ai/tools/` 免 JWT（服务间调用），改由 `X-Internal-Token` 校验；
-# 留空 = 该前缀一律 401（fail-closed），不要在未配置时放开。
-AI_TOOL_GATEWAY_TOKEN = os.environ.get("AI_TOOL_GATEWAY_TOKEN", "")
 
 # ── 设备日志证据（设备动作 → 日志证据窗口 → 验收模型）──
 # 采集常驻，不随动作开关；时间戳一律北京时间毫秒（固定 UTC+8，不依赖 tzdata）。
@@ -356,6 +345,10 @@ SPECTACULAR_SETTINGS = {
         {"name": "workflow", "description": "工作流：编排文档 CRUD 与导入导出"},
         {"name": "auth", "description": "登录鉴权：登录 / 注册 / 刷新 / 登出 / 当前用户"},
         {"name": "ai", "description": "AI 助手：智能体、会话、知识库与任务发布"},
+        {
+            "name": "serial_log",
+            "description": "串口日志：端口监听开关、当前日志查看与关键词对照表",
+        },
         {"name": "schema", "description": "OpenAPI schema 端点（drf-spectacular 自带）"},
     ],
 }
@@ -416,7 +409,6 @@ JAZZMIN_SETTINGS = {
         "auth": "fas fa-users-cog",
         "auth.user": "fas fa-user",
         "auth.group": "fas fa-users",
-        "apps.element_locator": "fas fa-search",
         "apps.device_pool": "fas fa-mobile-alt",
         "apps.case_manager": "fas fa-clipboard-list",
         "apps.report_generator": "fas fa-chart-bar",
@@ -437,11 +429,8 @@ JAZZMIN_UI_TWEAKS = {
 
 
 # ── Logging — 始终配置 ──
-# 曾经只在 DOCKER_CONTAINER=true 时定义，而该变量在整个仓库仅此一处引用、且仓库内无容器编排文件，
-# 结果应用级 INFO 日志没有任何 handler（仅 logging.lastResort 输出 WARNING+），排障时看不到业务日志。
-# 现在：本地（默认）控制台 + logs/django.log；容器只输出 stdout（由编排侧收集）。级别由 LOG_LEVEL 控制。
+# 框架日志只留控制台。业务代码日志由 utils.logs 写入 logs/backend.log 等四组文件。
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
-_IS_CONTAINER = os.environ.get("DOCKER_CONTAINER", "").lower() in ("true", "1", "yes")
 
 _LOG_HANDLERS = {
     "console": {
@@ -451,17 +440,6 @@ _LOG_HANDLERS = {
     },
 }
 _LOG_ROOT_HANDLERS = ["console"]
-if not _IS_CONTAINER:
-    _LOG_HANDLERS["file"] = {
-        "class": "logging.handlers.RotatingFileHandler",
-        "filename": str(LOG_DIR / "django.log"),
-        "maxBytes": 5 * 1024 * 1024,
-        "backupCount": 3,
-        "encoding": "utf-8",
-        "delay": True,  # 日志目录尚未创建时延迟到首次写入再打开
-        "formatter": "simple",
-    }
-    _LOG_ROOT_HANDLERS.append("file")
 
 LOGGING = {
     "version": 1,

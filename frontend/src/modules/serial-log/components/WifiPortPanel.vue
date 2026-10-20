@@ -2,7 +2,9 @@
   <div class="sl-cat-head">
     <div>
       <h3 class="sl-cat-title">{{ PORTS_PANEL_TITLE }}</h3>
-      <p class="sl-cat-sub">{{ PORTS_PANEL_DESC }} · 端口 / SKU名称 / 波特率来自平台配置登记（只读）</p>
+      <p class="sl-cat-sub">
+        {{ PORTS_PANEL_DESC }} · 端口 / SKU名称 / 波特率来自平台配置登记（只读）
+      </p>
     </div>
     <div class="sl-cat-actions">
       <button type="button" class="sl-btn" :disabled="loading" @click="loadPorts">

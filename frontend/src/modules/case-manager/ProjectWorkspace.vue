@@ -193,14 +193,14 @@ onBeforeUnmount(() => {
     />
 
     <div class="doc-body">
-      <WorkbenchCrumbs
-        back-to="/cases"
-        back-label="返回项目列表"
-        :items="crumbItems"
-      />
+      <WorkbenchCrumbs back-to="/cases" back-label="返回项目列表" :items="crumbItems" />
       <div class="case-workspace-main">
         <SkeletonCard v-if="loading" variant="list" :lines="6" />
-        <ErrorState v-else-if="treeError && !tree.length" :message="treeError" @retry="refreshTree" />
+        <ErrorState
+          v-else-if="treeError && !tree.length"
+          :message="treeError"
+          @retry="refreshTree"
+        />
         <div
           v-else
           ref="splitRef"

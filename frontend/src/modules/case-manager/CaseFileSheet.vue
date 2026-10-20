@@ -8,12 +8,7 @@ import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import CaseStepDrawer from "./components/CaseStepDrawer.vue"
 import SheetTagPicker from "./components/SheetTagPicker.vue"
 import { useCaseSheet } from "./composables/useCaseSheet"
-import {
-  BUSINESS_TYPE_OPTIONS,
-  CASE_TYPE_OPTIONS,
-  PRIORITY_OPTIONS,
-  SYSTEM_OPTIONS,
-} from "./types"
+import { BUSINESS_TYPE_OPTIONS, CASE_TYPE_OPTIONS, PRIORITY_OPTIONS, SYSTEM_OPTIONS } from "./types"
 import type { CaseStep, SheetRowDraft } from "./types"
 
 type TextField = "title" | "module" | "precondition"
@@ -293,7 +288,10 @@ function onStepsApply(steps: CaseStep[]) {
               </td>
 
               <td class="col-pre" @dblclick="beginEdit(row, 'precondition')">
-                <div v-if="isEditing(row.id, 'precondition')" class="sheet-cell sheet-cell--editing">
+                <div
+                  v-if="isEditing(row.id, 'precondition')"
+                  class="sheet-cell sheet-cell--editing"
+                >
                   <textarea
                     :data-edit-key="cellKey(row.id, 'precondition')"
                     v-model="editDraft"

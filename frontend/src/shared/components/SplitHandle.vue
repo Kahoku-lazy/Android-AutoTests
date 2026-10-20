@@ -33,7 +33,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   "update:modelValue": [value: number]
   /** 松手 / 键盘操作后触发，供调用方持久化 */
-  commit: [value: number]
+  "commit": [value: number]
 }>()
 
 const isDragging = ref(false)

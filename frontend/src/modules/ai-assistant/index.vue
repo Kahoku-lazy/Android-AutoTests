@@ -11,14 +11,8 @@ import { useAgentBoard } from "./index.logic"
 import { useAuthUser } from "@/shared/composables/useAuthUser"
 
 const dutyRosterRef = ref<HTMLElement | null>(null)
-const {
-  agents,
-  loading,
-  agentsError,
-  PAGE_HEADER,
-  loadAgents,
-  editAgent,
-} = useAgentBoard(dutyRosterRef)
+const { agents, loading, agentsError, PAGE_HEADER, loadAgents, editAgent } =
+  useAgentBoard(dutyRosterRef)
 
 const { isSuperuser } = useAuthUser()
 const isAdmin = computed(() => isSuperuser.value === true)
@@ -47,35 +41,35 @@ const routeCards = computed(() =>
 
     <div class="doc-body">
       <section class="doc-section duty-section">
-          <div class="doc-section__header">
-            <h3 class="doc-section__title">平台小助手<span class="doc-tag">Assistant</span></h3>
-            <span class="filter-count">{{ routeCards.length }} 个助手</span>
+        <div class="doc-section__header">
+          <h3 class="doc-section__title">平台小助手<span class="doc-tag">Assistant</span></h3>
+          <span class="filter-count">{{ routeCards.length }} 个助手</span>
+        </div>
+        <ErrorState v-if="agentsError" :message="agentsError" @retry="loadAgents" />
+        <div v-else class="route-card-grid" v-loading="loading">
+          <div v-if="loading && !agents.length" class="ai-loading-wrap">
+            <WbLoader /><span>正在加载智能体…</span>
           </div>
-          <ErrorState v-if="agentsError" :message="agentsError" @retry="loadAgents" />
-          <div v-else class="route-card-grid" v-loading="loading">
-            <div v-if="loading && !agents.length" class="ai-loading-wrap">
-              <WbLoader /><span>正在加载智能体…</span>
-            </div>
-            <AgentRouteCard
-              v-for="rc in routeCards"
-              :key="rc.key"
-              :config="rc.config"
-              :agent-name="rc.agentName"
-              :agent-avatar="rc.agentAvatar"
-              :can-manage="isAdmin"
-              @edit="editAgent(agents[0]?.id ?? 0, rc.key)"
-            />
-            <EmptyState
-              v-if="!agents.length && !loading"
-              icon="🤖"
-              text="还没有智能体"
-              :hint="'请联系管理员配置智能体'"
-            />
-          </div>
-        </section>
+          <AgentRouteCard
+            v-for="rc in routeCards"
+            :key="rc.key"
+            :config="rc.config"
+            :agent-name="rc.agentName"
+            :agent-avatar="rc.agentAvatar"
+            :can-manage="isAdmin"
+            @edit="editAgent(agents[0]?.id ?? 0, rc.key)"
+          />
+          <EmptyState
+            v-if="!agents.length && !loading"
+            icon="🤖"
+            text="还没有智能体"
+            :hint="'请联系管理员配置智能体'"
+          />
+        </div>
+      </section>
 
-        <!-- 模块 2：任务卡片列表（新建任务弹窗 + 卡片式列表） -->
-        <TaskBoard />
+      <!-- 模块 2：任务卡片列表（新建任务弹窗 + 卡片式列表） -->
+      <TaskBoard />
     </div>
   </div>
 </template>

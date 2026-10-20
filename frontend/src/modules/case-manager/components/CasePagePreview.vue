@@ -56,10 +56,7 @@ const rows = ref<CaseDefinition[]>([])
 
 const { currentPage, totalPages, pagedItems, goPage } = usePagination(rows, { pageSize: 10 })
 
-function labelOf(
-  options: ReadonlyArray<{ value: string; label: string }>,
-  value: string,
-): string {
+function labelOf(options: ReadonlyArray<{ value: string; label: string }>, value: string): string {
   return options.find((option) => option.value === value)?.label || value || "—"
 }
 

@@ -32,7 +32,11 @@ const emit = defineEmits<{ "trigger-upload": [] }>()
           <el-button :loading="uploading" size="default" @click="emit('trigger-upload')">
             {{ uploading ? "上传中..." : "上传图片" }}
           </el-button>
-          <el-input v-model="form.avatar" placeholder="Emoji 或留空用默认" style="max-width: 160px" />
+          <el-input
+            v-model="form.avatar"
+            placeholder="Emoji 或留空用默认"
+            style="max-width: 160px"
+          />
         </div>
       </el-form-item>
       <el-form-item label="标签">

@@ -1,10 +1,6 @@
 /** Agent CRUD API — TypeScript */
 import djangoClient from "@/shared/api-client"
-import type {
-  AgentListResponse,
-  AgentDetailResponse,
-  AgentOpResponse,
-} from "@/shared/types/ai"
+import type { AgentListResponse, AgentDetailResponse, AgentOpResponse } from "@/shared/types/ai"
 
 /** 获取所有 Agent 列表 */
 export async function listAgents(): Promise<AgentListResponse> {

@@ -102,7 +102,11 @@ function stepName(seq) {
 
 function roundTitle(round) {
   const kind =
-    round.role_kind === "verifier" ? "验收模型" : round.role_kind === "planner" ? "规划模型" : "执行模型"
+    round.role_kind === "verifier"
+      ? "验收模型"
+      : round.role_kind === "planner"
+        ? "规划模型"
+        : "执行模型"
   const who = [round.role, round.model].filter(Boolean).join(" · ")
   const retry = Number(round.attempt) > 1 ? `第 ${round.attempt} 次 ` : ""
   const subject = round.subject ? `：${round.subject}` : ""
@@ -176,10 +180,7 @@ function phaseClass(phase) {
       <WorkbenchCrumbs
         back-to="/reports"
         back-label="返回列表"
-        :items="[
-          { label: '测试报告', to: '/reports' },
-          { label: task?.title || '任务报告' },
-        ]"
+        :items="[{ label: '测试报告', to: '/reports' }, { label: task?.title || '任务报告' }]"
       />
 
       <SkeletonCard v-if="loading && !task" variant="list" :lines="6" />
@@ -223,17 +224,15 @@ function phaseClass(phase) {
           hint="任务跑完后，这里会按用例和步骤展开"
         />
 
-        <section
-          v-for="(caseItem, caseIndex) in cases"
-          :key="caseIndex"
-          class="flow-case"
-        >
+        <section v-for="(caseItem, caseIndex) in cases" :key="caseIndex" class="flow-case">
           <button type="button" class="flow-case__title" @click="toggleCase(caseIndex)">
             <span class="flow-round__mark">{{ caseOpen(caseIndex) ? "▾" : "▸" }}</span>
             <span class="flow-case__name"
               >{{ caseIndex + 1 }}. 测试用例：{{ caseItem.title || "未命名用例" }}</span
             >
-            <span class="badge" :class="outcomeClass(caseItem.outcome)">{{ caseItem.outcome }}</span>
+            <span class="badge" :class="outcomeClass(caseItem.outcome)">{{
+              caseItem.outcome
+            }}</span>
           </button>
           <div v-show="caseOpen(caseIndex)" class="flow-case__body">
             <article
@@ -278,15 +277,13 @@ function phaseClass(phase) {
                     <h4 class="flow-phase__title">
                       {{ blockNo(round, blockIndex) }}. {{ block.title }}
                     </h4>
-                    <div
-                      v-for="item in block.items"
-                      :key="item.seq"
-                      class="flow-item"
-                    >
+                    <div v-for="item in block.items" :key="item.seq" class="flow-item">
                       <div class="flow-item__head">
                         <time>{{ formatDateTime(item.time) }}</time>
                         <strong>{{ item.label }}</strong>
-                        <span v-if="item.count > 1" class="flow-item__count">×{{ item.count }}</span>
+                        <span v-if="item.count > 1" class="flow-item__count"
+                          >×{{ item.count }}</span
+                        >
                         <span v-if="item.step_seq" class="flow-item__step">
                           步骤 {{ item.step_seq }} · 第 {{ item.attempt || 1 }} 次
                         </span>

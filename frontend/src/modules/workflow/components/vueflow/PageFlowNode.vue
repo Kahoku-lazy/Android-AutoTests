@@ -106,9 +106,7 @@ watch(
       <template v-if="isStart"> 无入口 · 从「启动」连到页面入口 </template>
       <template v-else-if="isEnd"> 无输出 · 接收 navigation / popup_close </template>
       <template v-else-if="isPopup && !data.canCreateOutput">需要先连接触发</template>
-      <template v-else>
-        {{ data.outputs.filter((o) => o.el).length }} 个元素 · 右键添加
-      </template>
+      <template v-else> {{ data.outputs.filter((o) => o.el).length }} 个元素 · 右键添加 </template>
     </div>
 
     <div v-for="port in data.inputs" :key="'in-' + port.slot_index" class="pf-row in">

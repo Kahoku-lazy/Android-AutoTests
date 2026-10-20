@@ -60,7 +60,8 @@ export function validateRow(row: SheetRowDraft): string | null {
   for (const [index, step] of row.steps.entries()) {
     if (!step.action.trim()) return `第 ${index + 1} 步：动作不能为空`
     if (!step.assertion.trim()) return `第 ${index + 1} 步：断言不能为空`
-    if (step.action.length > MAX_STEP_TEXT) return `第 ${index + 1} 步：动作不能超过 ${MAX_STEP_TEXT} 字符`
+    if (step.action.length > MAX_STEP_TEXT)
+      return `第 ${index + 1} 步：动作不能超过 ${MAX_STEP_TEXT} 字符`
     if (step.assertion.length > MAX_STEP_TEXT)
       return `第 ${index + 1} 步：断言不能超过 ${MAX_STEP_TEXT} 字符`
   }

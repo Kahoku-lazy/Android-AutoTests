@@ -17,7 +17,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   "update:modelValue": [value: boolean]
-  apply: [steps: CaseStep[]]
+  "apply": [steps: CaseStep[]]
 }>()
 
 const draft = ref<CaseStep[]>([])

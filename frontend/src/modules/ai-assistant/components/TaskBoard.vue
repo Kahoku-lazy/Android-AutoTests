@@ -9,11 +9,7 @@ import FilterTabs from "@/shared/components/FilterTabs.vue"
 import ConfirmButton from "@/shared/components/patterns/ConfirmButton.vue"
 import DoodleNote from "@/shared/components/DoodleNote.vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
-import {
-  TASK_STATUS_LABELS,
-  taskStatusTone,
-  type TaskStatusTone,
-} from "../constants"
+import { TASK_STATUS_LABELS, taskStatusTone, type TaskStatusTone } from "../constants"
 import { formatTaskCost, formatTaskDuration } from "../helpers/task-detail"
 import {
   isSelectableTaskDevice,

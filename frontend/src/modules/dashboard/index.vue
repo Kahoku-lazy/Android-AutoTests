@@ -228,10 +228,18 @@ const {
           >
             <h4 class="agent-usage-card__name">{{ agent.name || "智能体" }}</h4>
             <ul class="agent-usage-card__stats">
-              <li><span>缓存命中</span><b>{{ agent.cache_hit_tokens.toLocaleString() }}</b></li>
-              <li><span>输入</span><b>{{ agent.input_tokens.toLocaleString() }}</b></li>
-              <li><span>输出</span><b>{{ agent.output_tokens.toLocaleString() }}</b></li>
-              <li><span>总费用</span><b>{{ agent.cost_total }} 元</b></li>
+              <li>
+                <span>缓存命中</span><b>{{ agent.cache_hit_tokens.toLocaleString() }}</b>
+              </li>
+              <li>
+                <span>输入</span><b>{{ agent.input_tokens.toLocaleString() }}</b>
+              </li>
+              <li>
+                <span>输出</span><b>{{ agent.output_tokens.toLocaleString() }}</b>
+              </li>
+              <li>
+                <span>总费用</span><b>{{ agent.cost_total }} 元</b>
+              </li>
             </ul>
           </AppCard>
         </div>

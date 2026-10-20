@@ -163,4 +163,3 @@ export interface CaseProjectCardDisplay {
   color: string
   path: string
 }
-

@@ -22,7 +22,7 @@ __all__ = [
     "LockStatus",
 ]
 
-# 执行引擎占用前缀：强制释放/设备动作受保护，不与执行引擎抢设备（与 device_inspector 同口径）
+# 执行引擎占用前缀：强制释放/设备动作受保护，不与执行引擎抢设备
 RUNNER_OCCUPIED_PREFIXES = ("ai_agent", "runner-", "task-", "run-")
 
 

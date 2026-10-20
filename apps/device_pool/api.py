@@ -1,6 +1,6 @@
 """device-pool 跨模块写操作白名单。
 
-共享给其他模块（ai_assistant / element_locator / device_inspector）。
+共享给其他模块（如 ai_assistant）。
 遵循防火墙 #2：跨 App 写操作必须走本 api；本模块写逻辑下沉到 service.py。
 """
 

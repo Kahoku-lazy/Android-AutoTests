@@ -4,7 +4,6 @@
 约定模块样式里的语义色、状态色与文本字号取自已登记的设计令牌，不再把 Element Plus 默认调色板或等价字面色当作模块色；分类色板的每个色相只声明一次。
 
 ## Requirements
-
 ### Requirement: Module styles consume registered design tokens
 
 模块样式（`modules/**/*.vue` 的 `<style>` 与 `modules/**/*.css`）中的**语义色与状态色** MUST 取 `shared/styles/tokens.css` 已登记的令牌（`--c-*` / `--app-status-*` / `--ink` / `--paper` / `--app-bg-*` / `--app-text-*`），MUST NOT 直写字面量。**文本字号** MUST 取 `--app-size-*` 刻度且 MUST NOT 低于 12px（图形/展示级字号例外见 `frontend/AGENTS.md` 硬性规范 §1.14）。Element Plus 默认调色板（如 `#409eff`）MUST NOT 被当作模块色。**画布绘制色**（ECharts 系列色 / canvas 绘制色，同既有 ECharts 例外）与**数据编码型分类色板**（分类标签色）MAY 保留字面色相；其中分类色板每个色相 MUST 在该文件的具名局部自定义属性中声明一次，SHALL NOT 在规则里重复散落同一字面量。
@@ -19,7 +18,6 @@
 
 - **WHEN** 检索模块样式中的 Element Plus 默认色（`#409eff` / `#67c23a` / `#f56c6c` / `#e6a23c`）
 - **THEN** 命中为 0，改用该模块的 `--c-*` 模块色或 `--app-status-*` 状态色
-- **AND** 本轮收敛 `device-inspector/components/PageElementsPanel.vue` 的 dump / OCR 徽标底色
 
 #### Scenario: Text size respects the 12px floor
 
@@ -31,7 +29,7 @@
 
 - **WHEN** 某处字面量色值与 `tokens.css` 已登记令牌的值等价
 - **THEN** 该处引用令牌而非字面量
-- **AND** 本轮收敛 `report-generator` 的 `#a03030` → `--app-status-danger-text`、`device-inspector` 的 `#a78bfa` → `--c-element`
+- **AND** 本轮收敛 `report-generator` 的 `#a03030` → `--app-status-danger-text`
 
 #### Scenario: Categorical palettes are declared once
 
@@ -211,11 +209,10 @@ T0 主 token 的颜色原子 SHALL 收敛为一套经感知聚类（CIE76 ΔE �
 
 - **WHEN** 静态检索 `frontend/src` 下全部 `.vue` / `.css` 的阴影声明（包括自定义属性值内嵌的阴影）并解析其模糊半径
 - **THEN** 模糊半径大于 `0` 的命中数为 `0`
-- **AND** 本轮收敛 `ai-assistant` 2 处、`device-inspector` 4 处、`workflow` 2 处
 
 #### Scenario: Floating surfaces use flat hard shadow
 
-- **WHEN** 打开设备检查器的截图面板与两个放大预览浮层，以及工作流的 API 节点与元素选择浮层
+- **WHEN** 打开仍存在的等价页面
 - **THEN** 这些表面的阴影为零模糊硬偏移（无光晕、无渐变过渡的柔影）
 - **AND** 浮层仍与下层纸面可区分（描边或硬偏移影至少其一可见）
 
@@ -242,7 +239,7 @@ T0 主 token 的颜色原子 SHALL 收敛为一套经感知聚类（CIE76 ΔE �
 
 #### Scenario: Segmented control keeps doodle geometry and a readable active state
 
-- **WHEN** 打开任何使用 `el-radio-button` 的分段控件（如 `/elements` 的页面元素表筛选器）
+- **WHEN** 打开仍存在的等价页面
 - **THEN** 每个分段的计算圆角非零且取自已登记的 `--app-radius-*`，不因 EP 变量的多值组合而在 computed-value 阶段失效回落到 0
 - **AND** 选中态文字与选中底色的对比度不低于 `4.5:1`，且与项目其他分段控件（`AppTabs`）同口径
 

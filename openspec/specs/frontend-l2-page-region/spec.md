@@ -3,7 +3,6 @@
 定义前端 L2 区域（页头区 / 页面根区）的可见行为契约：页头内的操作按钮必须保留其语义色与主题变体色，页头内容在放不下时只能收敛、不得溢出侵入正文，页头的层叠声明必须实际生效，且每一个 L2 页面根都必须提供工作台主题作用域，使页头按钮与页内共享组件呈现一致的 Doodle Craft 主题外观。
 
 ## Requirements
-
 ### Requirement: Header action buttons keep their semantic colors
 页头（`.wb-header`）内的按钮 SHALL 保留其语义色与主题变体色：`type="primary"` 呈现主色（`var(--c-dashboard)`）、`type="success"` 呈现成功色（`var(--c-device)`）、`type="danger"` 呈现危险色（`var(--app-status-danger)`）、`wb-btn--sunset` 呈现其变体色；系统 MUST NOT 把页头内的按钮统一压成白底而丢失语义区分。
 
@@ -71,11 +70,11 @@
 前端每个 L2 页面根 SHALL 复用共享骨架类作为唯一页面根容器（`.doc-page`；固定视口页同时带 `.doc-page--fixed`），其主体内容容器 SHALL 复用 `.doc-body`；模块 MUST NOT 以私有类名自建等价于该骨架的根容器或主体容器，私有类只能作为作用域 modifier 与既有样式钩子保留。主体为自由布局画布 / 图形编辑器的页面 MAY 例外使用私有主体容器，但该例外 MUST 同时登记在 `frontend/AGENTS.md` 与本 spec，且 MUST NOT 扩散到非画布页面。
 
 #### Scenario: Case and element pages use the shared skeleton
-- **WHEN** 依次打开 `/cases`、`/cases/projects/:projectId`、`/cases/projects/:projectId/files/:fileId`、`/elements`、`/elements/projects/:code`、`/elements/projects/:code/files/:fileId` 与 `/workflow`
+- **WHEN** 依次打开 `/cases`、`/cases/projects/:projectId`、`/cases/projects/:projectId/files/:fileId`、`/workflow` 与 `/serial-log`
 - **THEN** 每个页面根元素的 class 同时包含 `doc-page` 与 `doc-page--fixed`，且其主体内容容器包含 `doc-body`
 
 #### Scenario: Visual appearance does not regress
-- **WHEN** 对比迁移前后上述 7 个页面
+- **WHEN** 对比迁移前后上述页面
 - **THEN** 分隔线、树面板宽度与表格横向滚动行为保持等价，无新增重叠或内容裁剪（纸面点阵已按 `frontend-l3-container` 收敛为暖白实色 + 主区涂鸦）
 
 #### Scenario: Canvas page exception is registered and contained
@@ -97,7 +96,7 @@
 L2 页头与其下方内容的水平内边距 SHALL 取自同一设计令牌 `--app-space-lg`（24px）；页面 MUST NOT 出现页头内容与主体内容左边缘不一致的取值。
 
 #### Scenario: Left edges align across pages
-- **WHEN** 依次打开 `/dashboard`、`/devices`、`/inspector`、`/reports`、`/ai-assistant/agents`、`/cases`、`/elements`、`/workflow`
+- **WHEN** 依次打开 `/dashboard`、`/devices`、`/reports`、`/ai-assistant/agents`、`/cases`、`/workflow` 与 `/serial-log`
 - **THEN** 页头品牌区左边缘与主体内容左边缘对齐（浏览器实测差值不超过 1px）
 
 ### Requirement: No L2 declaration without a consumer
@@ -117,18 +116,18 @@ L2 相关的共享件与页面 MUST NOT 保留零消费方的声明：`Workbench
 
 ### Requirement: Module page root class names are module-prefixed and globally unique
 
-每个模块的页面根 modifier 类名 MUST 带该模块前缀（如 `case-` / `locator-` / `ai-`），且 MUST 在全仓唯一 —— 系统 SHALL NOT 出现两个模块使用同名页根类的情况。孪生组件（同角色的两份实现）的私有类名 MUST 采用同一规格来源（令牌或共享选择器），SHALL NOT 各自维护分叉的字面量规格。
+每个模块的页面根 modifier 类名 MUST 带该模块前缀（如 `case-` / `ai-`），且 MUST 在全仓唯一 —— 系统 SHALL NOT 出现两个模块使用同名页根类的情况。孪生组件（同角色的两份实现）的私有类名 MUST 采用同一规格来源（令牌或共享选择器），SHALL NOT 各自维护分叉的字面量规格。
 
 #### Scenario: No page root class is shared across modules
 
 - **WHEN** 静态检索全仓 `modules/**` 中出现的页根 modifier 类名
 - **THEN** 每个类名只出现在一个模块内
-- **AND** `project-list-page` / `project-workspace` 不再被两个模块同时使用
+- **AND** 不存在两个模块共用同一页根类名
 
 #### Scenario: Twin components share one spec source
 
-- **WHEN** 对比 `case-manager/components/ProjectTree.vue` 与 `element-locator/components/LocatorTree.vue` 的 `.ex-btn`
-- **THEN** 两者的圆角与底色**取自同一令牌**（`--app-radius-sm` / `--paper`），内边距取值一致
+- **WHEN** 检查同一模块内同角色的两份组件实现（若存在）
+- **THEN** 两者的圆角与底色**取自同一令牌**（如 `--app-radius-sm` / `--paper`），内边距取值一致
 - **AND** 不存在一方用字面量、另一方用令牌的分叉（圆角与底色维度）
 
 ### Requirement: Subpage navigation lives at the top of doc-body
@@ -143,7 +142,7 @@ L2+ 的可见回退（返回芯片与波浪面包屑）MUST 渲染在该页 `.do
 
 #### Scenario: Case and element leaf navigation is inside doc-body
 
-- **WHEN** 用户打开用例文件页或元素文件页
+- **WHEN** 用户打开用例文件页
 - **THEN** 祖先面包屑或返回芯片位于 `.doc-body` 顶部
 - **AND** 页面根仍同时带 `doc-page` 与 `wb-shell`
 - **AND** `.wb-header` 仍显示主标题与副标题
@@ -156,6 +155,6 @@ L2+ 的可见回退（返回芯片与波浪面包屑）MUST 渲染在该页 `.do
 
 #### Scenario: Locator project workbench matches the same placement
 
-- **WHEN** 用户打开 `/elements/projects/:code`
+- **WHEN** 用户打开任一带目录树的项目工作台（如 `/cases/projects/:projectId`）
 - **THEN** 返回芯片与面包屑在 `.doc-body` 内
 - **AND** `.wb-header` 内没有 `.wb-crumbs`

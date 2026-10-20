@@ -5,7 +5,6 @@
 定义前端共享撕纸入口卡（资源网格：项目 / 原型）在 Hand-Drawn Doodle 主题下的可见行为、cycle 配色与无障碍要求，保证用例、元素定位、页面流三处列表使用同一组件。
 
 ## Requirements
-
 ### Requirement: Shared sketch card uses torn-paper doodle shell
 
 系统 MUST 通过共享 `SketchCard` 呈现可进入的资源网格项。默认外观 SHALL 采用撕纸卡壳：2.5px 虚线墨色描边、近直角、无模糊的色块硬偏移阴影、34px 墨线图标方块填充 accent；SHALL NOT 再使用顶部实色 accent 条 + 大圆角实线边作为这三处列表的默认卡片。
@@ -26,31 +25,6 @@
 - **THEN** index 0 与 index 1 的 accent 令牌不同
 - **AND** index 8 与 index 0 使用同一令牌（模 8 循环）
 
-### Requirement: Three resource lists consume SketchCard
-
-用例项目列表、元素定位项目列表、页面流原型列表 MUST 使用共享 `SketchCard`。SHALL NOT 继续维护私有 `project-card__accent` / `proto-card__accent` 顶条实现。
-
-#### Scenario: Case project list uses SketchCard
-
-- **WHEN** 用户打开用例管理且存在至少一个项目
-- **THEN** 每张卡为 `SketchCard` 撕纸壳
-- **AND** 点击卡片进入该项目工作台
-- **AND** 删除控件不冒泡为进入
-
-#### Scenario: Element project list uses SketchCard
-
-- **WHEN** 用户打开元素定位且存在系统项目
-- **THEN** 每张卡为 `SketchCard` 撕纸壳
-- **AND** 点击卡片进入对应 `code` 工作台
-- **AND** 不提供删除控件
-
-#### Scenario: Workflow prototype list uses SketchCard
-
-- **WHEN** 用户打开页面流且存在至少一个原型
-- **THEN** 每张卡为 `SketchCard` 撕纸壳
-- **AND** 点击卡片进入该原型工作台
-- **AND** 删除控件不冒泡为进入
-
 ### Requirement: Keyboard and reduced motion
 
 可点击的撕纸入口卡 MUST 支持键盘 Enter / Space 激活进入。在 `prefers-reduced-motion: reduce` 下 MUST NOT 依赖倾斜或位移动效传达可交互性；静态虚线边与硬阴影仍保留。
@@ -65,3 +39,21 @@
 - **WHEN** 用户环境为 `prefers-reduced-motion: reduce`
 - **THEN** 悬停 MUST NOT 播放旋转或位移动效
 - **AND** 虚线边与硬阴影仍可见
+
+### Requirement: Two resource lists consume SketchCard
+
+用例项目列表与页面流原型列表 MUST 使用共享 `SketchCard`。SHALL NOT 继续维护私有 `project-card__accent` / `proto-card__accent` 顶条实现。
+
+#### Scenario: Case project list uses SketchCard
+
+- **WHEN** 用户打开用例管理且存在至少一个项目
+- **THEN** 每张卡为 `SketchCard` 撕纸壳
+- **AND** 点击卡片进入该项目工作台
+- **AND** 删除控件不冒泡为进入
+
+#### Scenario: Workflow prototype list uses SketchCard
+
+- **WHEN** 用户打开页面流且存在至少一个原型
+- **THEN** 每张卡为 `SketchCard` 撕纸壳
+- **AND** 点击卡片进入该原型工作台
+- **AND** 删除控件不冒泡为进入

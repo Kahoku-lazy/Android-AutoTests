@@ -4,7 +4,6 @@
 定义前端 L5 覆盖层的实现口径：阻塞型覆盖层统一由 Element Plus 提供，禁止浏览器原生对话框与自建 backdrop / modal，并界定非 modal 浮层的边界，防止同层双实现复发。
 
 ## Requirements
-
 ### Requirement: Blocking overlays are provided by Element Plus
 
 系统 MUST 以 Element Plus 覆盖层组件（`el-dialog` / `el-drawer` / `ElMessageBox`）提供所有阻塞型覆盖层；SHALL NOT 自建 backdrop 或 modal（自绘全屏遮罩 + 手写 ESC / 焦点 / 滚动锁）。
@@ -23,7 +22,7 @@
 
 #### Scenario: Thumbnail enlargement preview
 
-- **WHEN** 用户在 device-inspector 点击元素缩略图或结构缩略图
+- **WHEN** 用户在任一列表或工作台点击缩略图
 - **THEN** 放大预览由 Element Plus 对话框呈现
 - **AND** 预览字段内容与关闭行为与改造前一致
 
@@ -103,7 +102,7 @@
 
 #### Scenario: Drawer shares the dialog paper language
 
-- **WHEN** 在任一页面打开 `el-drawer`（如检查器快照抽屉）
+- **WHEN** 在任一页面打开 `el-drawer`（如报告或页脚抽屉）
 - **THEN** 抽屉的外观与 `el-dialog` 同源：近直角圆角与墨色描边来自 `style.css` 的全局皮肤
 - **AND** 该模块的 `<style scoped>` 中没有为抽屉私写的边框 / 圆角 / 背景覆写
 
@@ -119,7 +118,7 @@
 
 #### Scenario: Input-bearing dialog requires explicit close
 
-- **WHEN** 打开含输入控件的弹层（新建项目 / 新建原型 / 重命名 / 新建目录 / 新建任务 / 试卷编辑器 / 局域网连接 / 导入文档 / 保存到元素定位）
+- **WHEN** 打开含输入控件的弹层（新建项目 / 新建原型 / 重命名 / 新建目录 / 新建任务 / 试卷编辑器 / 局域网连接 / 导入文档）
 - **THEN** 点击遮罩不关闭弹层，必须点取消 / 关闭按钮或按 ESC
 - **AND** 该弹层带 `:close-on-click-modal="false"`
 
@@ -127,7 +126,6 @@
 
 - **WHEN** 打开纯展示 / 预览 / 只读列表选择的弹层（缩略图放大、快照抽屉、知识预览、步骤截图预览）
 - **THEN** 点遮罩即可关闭（保持默认）
-- **AND** 该弹层不写 `close-on-click-modal`
 
 ### Requirement: Store layer does not ask users via modal dialogs
 

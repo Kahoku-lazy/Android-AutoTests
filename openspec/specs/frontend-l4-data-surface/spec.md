@@ -4,7 +4,6 @@
 定义 L4 数据展示面（表格 / 卡片网格 / 表单）的实现口径：表格首选共享件并明确可绕过的能力边界、分页唯一实现、表单校验走 Element Plus 原生 `:rules` + `validate()`，以及卡片与网格的零件归属，使各模块的列表与表单读起来是同一套语言。
 
 ## Requirements
-
 ### Requirement: Shared AppTable is the default table implementation
 
 L4 多行多列列表 MUST 使用共享件 `AppTable`（`.ac-table`），列以 `{title, dataIndex, width, align}` 数组声明；系统 SHALL NOT 为同一场景另建第二套通用表格封装，也 SHALL NOT 直接使用原生 `el-table`。`AppTable` MUST 覆盖分组表头（`columns[].children`）、自定义表头（`#header-<prop>`）、底层实例取用（模板 ref 上的 `tableRef`）与属性透传（`$attrs`），使这些能力的诉求不再构成绕开共享件的理由。
@@ -40,18 +39,18 @@ L4 分页 MUST 由共享 `usePagination` composable 提供（`currentPage` / `to
 #### Scenario: Registered exception does not multiply
 
 - **WHEN** 检查全仓分页实现
-- **THEN** 唯一实现是 `shared/composables/usePagination.ts`，消费方为 `device-pool`、`report-generator/index`、`report-generator/ReportDetail` 与 `device-inspector`
+- **THEN** 唯一实现是 `shared/composables/usePagination.ts`，消费方为 `device-pool`、`report-generator/index`、`report-generator/ReportDetail` 与 `case-manager`
 - **AND** 原 `report-generator/ReportDetail.vue` 的手写分页例外已于 2026-09-15 退役，全仓 SHALL NOT 重新引入自算 `totalPages` / 自写 `goPage` 的状态机
 
 #### Scenario: Fixed page size still comes from module constants
 
-- **WHEN** 设备检查器元素表格固定单一每页行数且不渲染「显示行数」选择器
-- **THEN** 其 `PAGE_SIZE_OPTIONS` 只登记单一取值，该取值与默认行数相等，且两者均声明在 `device-inspector/constants.ts`
-- **AND** 页面内不出现行数字面量；该 capability 不钉具体行数——具体行数由 `device-inspector-page` 定义，避免同一数字在两份规格里各登记一次
+- **WHEN** 某模块的表格固定单一每页行数且不渲染「显示行数」选择器
+- **THEN** 其 `PAGE_SIZE_OPTIONS` 只登记单一取值，该取值与默认行数相等，且两者均声明在该模块的 `constants.ts`
+- **AND** 页面内不出现行数字面量；该 capability 不钉具体行数——具体行数由使用该表格的页面能力定义，避免同一数字在两份规格里各登记一次
 
 #### Scenario: Shrinking source never leaves an empty page
 
-- **WHEN** 用户停在第 3 页时切换筛选条件，使结果集只剩 1 页（设备管理页与设备检查器同口径）
+- **WHEN** 用户停在第 3 页时切换筛选条件，使结果集只剩 1 页
 - **THEN** `currentPage` 自动落到有效范围（第 1 页），表格 MUST NOT 显示空页
 - **AND** 该夹取行为由共享 `usePagination` 承担，消费方无需各写一遍
 
@@ -93,7 +92,7 @@ L4 分页 MUST 由共享 `usePagination` composable 提供（`currentPage` / `to
 
 #### Scenario: Selected row is highlighted
 
-- **WHEN** `/inspector` 的结构表格（页面分区 + 元素表格唯一视图）中某一行处于选中态（把该行置为选中的手势由该页自有要求定义，本 capability 不约定手势）
+- **WHEN** 任一含表格的页面（如 `/devices` 表格视图）中某一行处于选中态（把该行置为选中的手势由该页自有要求定义，本 capability 不约定手势）
 - **THEN** 该行单元格呈现选中底色，且与未选中行可区分
 - **AND** 该底色不是声明在 `tr` 上
 
@@ -115,13 +114,13 @@ L4 分页 MUST 由共享 `usePagination` composable 提供（`currentPage` / `to
 
 #### Scenario: No module-specific separators
 
-- **WHEN** 打开 `/devices` 表格视图与 `/elements` 的页面元素表
+- **WHEN** 打开 `/devices` 表格视图与 `/reports` 列表
 - **THEN** 两者都不出现彩色行分隔线或列分隔线
-- **AND** 表格观感差异仅来自表纸强调色（`--c-device` / `--c-element`）与状态标识
+- **AND** 表格观感差异仅来自表纸强调色（`--c-device` / `--c-report`）与状态标识
 
 #### Scenario: Header typography is single-sourced
 
-- **WHEN** 比较 `/devices`、`/reports` 与 `/elements` 的表格表头计算样式
+- **WHEN** 比较 `/devices`、`/reports` 与 `/cases` 的表格表头计算样式
 - **THEN** 字号、字重与大小写变换一致（12px / 700 / uppercase）
 - **AND** 不存在模块私有的表头字号或字重覆盖
 
@@ -137,7 +136,7 @@ L4 分页 MUST 由共享 `usePagination` composable 提供（`currentPage` / `to
 
 #### Scenario: Striped rows are visually distinct
 
-- **WHEN** 在浏览器中打开任一传 `striped` 的表格（`device-pool`、`report-generator` 列表与详情、`/elements` 的页面元素表）
+- **WHEN** 在浏览器中打开任一传 `striped` 的表格（`device-pool`、`report-generator` 列表与详情、`case-manager` 列表）
 - **THEN** 条纹行与普通行的单元格计算底色不同
 - **AND** 该差异来自共享规则而非 EP 默认（不依赖 `--el-fill-color-lighter` 的冷灰）
 

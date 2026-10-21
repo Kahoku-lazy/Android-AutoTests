@@ -15,7 +15,7 @@
 | 选中行 | `--comp-table-row-selected-bg`（`color-mix(--c-element 18%, 白)`，模块可覆写 accent）；类名唯一 `is-selected`（兼容 EP `current-row`）|
 | 圆角 / 外框 | 圆角 `--app-radius-table`（`4px 10px`）+ `overflow: hidden`；外框**未覆盖** |
 | 表纸皮肤（`AppTable` 传 `accent`）| `.sketch-sheet`：框 `--comp-sheet-border`（2.5px dashed 墨）、底 `--comp-sheet-bg` 白、圆角 `--comp-sheet-radius`（`2px 6px 2px 4px`）、硬影 `4px 4px 0 0 <accent>`、**表体不旋转**（显式 `transform: none`）|
-| 已登记例外 | device-inspector / device-pool / element-locator 三页把表纸虚线改成**实线**（只改 border-style）|
+| 已登记例外 | device-pool 页把表纸虚线改成**实线**（只改 border-style）|
 
 **约束**：只用共享 `AppTable`（禁原生 `el-table`、禁第二套通用表封装）；扁列表**不得**再套 `el-card`，需要分组容器时用 `.doc-section` 或 `AppCard`；高度（固定表头）由页面通过 `height` 属性透传；加载走 `loading`，空态走 `emptyText` / `#empty` 插槽。
 

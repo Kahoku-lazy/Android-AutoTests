@@ -449,11 +449,8 @@ FAIL → Bug → 修复 → 复测 → PASS 形成闭环
 | 文件 | 用途 |
 |------|------|
 | `references/methodology.md` | 完整方法论 V2.0 — 复杂度分级/8种方法详解/校验步骤 |
-| `dev_docs/02-PRD需求/测试用例设计方法论-V2.md` | 方法论 V2.0 独立文档（可对外分享） |
 | 项目需求文档（如 `02_Cleaned_Text/*.md`） | 拆解需求原子的输入源 |
 | 已有用例库（如 `DeepSeek-V4-Pro-Cases/*/`） | 增量模式时的覆盖对比基准 |
-| `.agents/skills/prd-writer/SKILL.md` | PRD 编写 — 用例设计的前置步骤 |
-| `.agents/skills/functional-testing/SKILL.md` | 功能测试 — 执行层配合 |
 
 ---
 

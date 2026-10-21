@@ -1,7 +1,7 @@
 # 方案原型编写手册
 
-> 配套 `assets/plan-prototype-template.html`（1491 行 / 58KB，自包含：CSS 全在 `<style>`，交互全在文末 `<script>`，无构建、无 CDN 依赖，双击即可看）。
-> 用法：**整份复制**，只改章节内容与配色变量，保留骨架。下文行号对应当前 `assets` 副本。
+> 配套 `assets/plan-prototype-template.html`（约 1.4k 行 / 56KB，自包含：CSS 全在 `<style>`，交互全在文末 `<script>`，无构建、无 CDN 依赖，双击即可看）。
+> 用法：**整份复制**，只改章节内容与配色变量，保留骨架。下文行号会随模板演进漂移，**以类名 / 函数名搜索为准**。
 
 ## 1. 拷贝与落位
 
@@ -36,7 +36,7 @@ Copy-Item .agents/skills/frontend-change-plan/assets/plan-prototype-template.htm
 
 | 类别 | 变量 | 是否等于产品真相源 |
 | --- | --- | --- |
-| 8 个模块色 | `--c-dashboard` `--c-device` `--c-element` `--c-case` `--c-runner` `--c-report` `--c-ai` `--c-workflow` | **是**，与 `doodle-craft` skill 的模块色表逐值一致 |
+| 8 支彩笔令牌 | `--c-dashboard` `--c-device` `--c-element` `--c-case` `--c-runner` `--c-report` `--c-ai` `--c-workflow` | **是**，与 `doodle-craft` skill 的彩笔令牌表逐值一致（`--c-element` / `--c-runner` 已无同名模块页面，但仍是产品在用的令牌） |
 | 通用涂鸦色 | `--ink` `#2c2c2c`、`--yellow` `#ffd93d`、`--red` `#ff6b6b`、`--teal` `#4ecdc4`、`--paper-card` `#fffdf0` | **否**，仅原型局部 |
 
 产品真相源是 `frontend/src/shared/styles/tokens.css`：`--ink` = `--color-indigo-13`（`#1e1e24`）、`--paper` = `--color-lime-94`（`#fffef5`）、`--app-bg-card` = `--color-white`。
@@ -59,12 +59,11 @@ Copy-Item .agents/skills/frontend-change-plan/assets/plan-prototype-template.htm
 | `table.map` + `.depth-1/2/3` | 信息架构表 + 深度着色 | 285-314 |
 | `.wb[data-accent]` / `.wb-head` / `.wb-body` | 工作台壳 + 页头 + 体 | 317-370 |
 | `.crumbs` / `.back-chip` | 面包屑（祖先可点 + `.here` 当前项）/ 返回芯片 | 341-369 |
-| `.wb-split` / `.tree-pane` / `.content-pane` | 分栏台（`.inspector` 变体左右互换） | 371-411 |
+| `.wb-split` / `.tree-pane` / `.content-pane` | 分栏台（左树 + 右内容） | 371-410 |
 | `.proj-grid` / `.proj-card` / `.tape` | Hub 撕纸入口卡 + 胶带 | 413-441 |
 | `.sheet` | 表纸（列表/详情表） | 443-470 |
 | `.ai-tabs` / `.ai-tab` | 侧栏子项式页内 Tab | 472-492 |
 | `.canvas-mock` / `.node` | 流程图示意画布（节点 + 连线段） | 494-535 |
-| `.insp-shot` / `.insp-list` / `.insp-el` | 相纸框 + 元素列表 | 537-563 |
 | `.excel-mock` | Excel 纸（带网格线，与 `.sheet` 不同） | 565-581 |
 | `.step-rail` / `.step` | 步骤条，标示当前深度 | 583-601 |
 | `.hidden` / `.toast` | 显隐开关 / 右下角提示 | 603-617 |
@@ -72,7 +71,7 @@ Copy-Item .agents/skills/frontend-change-plan/assets/plan-prototype-template.htm
 
 ## 5. 已知坑（照抄前先看）
 
-1. **`.wb` 默认阴影是紫色**：`.wb` 用 `--c-element`（320），`data-accent` 只登记了 `ai/case/report/workflow/device`（324-328）。要 `dashboard`/`runner` 必须自己补一条 `[data-accent="..."]`，否则**静默**用紫，看不出报错。`data-accent="element"` 依赖默认值，写法上合法但容易被误读为"已登记"。
+1. **`.wb` 默认阴影是靛紫**：`.wb` 的底影取 `--c-element`，而 `data-accent` 只登记了 `ai/case/report/workflow/device`（324-328 行附近）。要用 `dashboard` 必须自己补一条 `[data-accent="dashboard"]`，否则**静默**用靛紫，看不出报错。
 2. **`.mini` 的微倾依赖兄弟序号**：`:nth-child(4n+k)`（236-239）只在同一父网格内成立；单独一个 `.mini` 会拿到 4n+1 的 `-0.6deg` 与红阴影。
 3. **`prefers-reduced-motion` 只覆盖了一部分**：637-639 只处理 `.nav-item .mini .proj-card .sticky`。`.panel`/`.wb` 本身无 transform 所以无碍，但若你给新片段加了倾角，记得同步加进这条媒体查询。
 4. **`.pin` 缺 `pointer-events: none`**（208-218）：产品侧的 `.ac-card__pin` 是有的。图钉若压在可点元素上会吃掉点击——照抄时建议补一行，别让原型出现"点不动"的假象。

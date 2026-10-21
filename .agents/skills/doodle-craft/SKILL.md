@@ -46,18 +46,20 @@ Doodle Craft 是本平台前端的**默认设计方案**：极简几何 · 粗�
 | Element Plus 外观 | `tokens.css` 的 `--el-*` 段（值只能是 `var(...)`）；模块确需差异才写 `:deep()` | [tokens.md](references/tokens.md) §1.17 |
 | 模块专属色板 | `modules/<模块>/tokens.css`，作用域 = 该模块页面根类 | [tokens.md](references/tokens.md) §1.14 |
 
-**8 支模块彩笔**（跨技能对齐的语义映射，记错就穿帮，故留在入口）：
+**8 支彩笔令牌**（跨技能对齐的语义映射，记错就穿帮，故留在入口）：
 
-| 模块 | 变量 | 色值 |
-| --- | --- | --- |
-| dashboard | `--c-dashboard` | `#F7C948` 柠黄 |
-| device-pool | `--c-device` | `#6BCB77` 薄荷绿 |
-| element-locator | `--c-element` | `#A78BFA` 薰衣草紫 |
-| case-manager | `--c-case` | `#4ECDC4` 青绿 |
-| test-runner | `--c-runner` | `#FFB5A7` 桃粉 |
-| report-generator | `--c-report` | `#7C6F83` 灰紫 |
-| ai-assistant | `--c-ai` | `#E879F9` 柔粉紫 |
-| workflow | `--c-workflow` | `#89CFF0` 天蓝 |
+| 令牌 | 变量 | 色值 | 现消费方 |
+| --- | --- | --- | --- |
+| 仪表盘 | `--c-dashboard` | `#F7C948` 柠黄 | dashboard |
+| 设备 | `--c-device` | `#6BCB77` 薄荷绿 | device-pool、serial-log 导航 |
+| 靛紫 | `--c-element` | `#A78BFA` 薰衣草紫 | report-generator、device-pool、dashboard、ai-assistant |
+| 用例 | `--c-case` | `#4ECDC4` 青绿 | case-manager |
+| 桃粉 | `--c-runner` | `#FFB5A7` | report-generator、dashboard |
+| 报告 | `--c-report` | `#7C6F83` 灰紫 | report-generator |
+| AI | `--c-ai` | `#E879F9` 柔粉紫 | ai-assistant、任务清单 |
+| 流程 | `--c-workflow` | `#89CFF0` 天蓝 | workflow |
+
+> `--c-element` / `--c-runner` 已无同名模块页面，但仍被共享表格、看板卡片与报告页引用，**不得**当死令牌删除。
 
 ## 组件目录
 

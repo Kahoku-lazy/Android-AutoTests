@@ -38,16 +38,16 @@
 **侧栏图标用 Lucide**（`data-lucide` + `window.lucide.createIcons()`），映射真相源 `frontend/src/shared/components/sidebarNavConfig.ts`：
 
 ```javascript
+// 真相源：frontend/src/shared/components/sidebarNavConfig.ts 的 NAV_CATEGORIES[].items[].icon
 const NAV_ICONS = {
-  dashboard:       'layout-dashboard',
-  device_pool:     'smartphone',
-  element_locator: 'crosshair',
-  case_manager:    'layers',
-  test_runner:     'play-circle',
-  report:          'file-bar-chart',
-  ai_assistant:    'bot',
-  workflow:        'git-branch',
-  digital_human:   'user-round',
+  dashboard:    'layout-dashboard', // /dashboard
+  ai_assistant: 'bot',              // /ai-assistant
+  device_pool:  'smartphone',       // /devices
+  workflow:     'git-branch',       // /workflow
+  serial_log:   'terminal',         // /serial-log
+  task_list:    'clipboard-list',   // /tasks
+  case_manager: 'layers',           // /cases
+  report:       'file-bar-chart',   // /reports
 }
 ```
 

@@ -25,18 +25,20 @@
 | `--app-stat-text` | `#5d5950` | `--color-ink-34` | 统计卡主文字 |
 | `--app-marker-red` | `#f56b6a` | `--color-red-69` | 马克笔红：**仅**危险 CTA（侧栏退出）|
 
-## 1.2 8 模块色
+## 1.2 8 支彩笔令牌
 
-| 模块 | CSS 变量 | 色值 |
-|------|----------|------|
-| dashboard | `--c-dashboard` | `#F7C948` |
-| device-pool | `--c-device` | `#6BCB77` |
-| element-locator | `--c-element` | `#A78BFA` |
-| case-manager | `--c-case` | `#4ECDC4` |
-| test-runner | `--c-runner` | `#FFB5A7` |
-| report-generator | `--c-report` | `#7C6F83` |
-| ai-assistant | `--c-ai` | `#E879F9` |
-| workflow | `--c-workflow` | `#89CFF0` |
+| 令牌 | CSS 变量 | 色值 | 现消费方 |
+|------|----------|------|----------|
+| 仪表盘 | `--c-dashboard` | `#F7C948` | dashboard |
+| 设备 | `--c-device` | `#6BCB77` | device-pool、serial-log 导航 |
+| 靛紫 | `--c-element` | `#A78BFA` | report-generator、device-pool、dashboard、ai-assistant |
+| 用例 | `--c-case` | `#4ECDC4` | case-manager |
+| 桃粉 | `--c-runner` | `#FFB5A7` | report-generator、dashboard |
+| 报告 | `--c-report` | `#7C6F83` | report-generator |
+| AI | `--c-ai` | `#E879F9` | ai-assistant、任务清单 |
+| 流程 | `--c-workflow` | `#89CFF0` | workflow |
+
+> `--c-element` / `--c-runner` 已无同名模块页面，但仍被共享表格、看板卡片与报告页引用，**不得**当死令牌删除。
 
 允许用途：描边装饰、图标色、图表系列色、浅色底块、硬阴影色源。**禁止**铺正文大面积，**禁止**当普通卡片底色。
 
@@ -200,7 +202,7 @@ easing：`--app-ease: cubic-bezier(0.25,0.1,0.25,1)`、`--app-spring: cubic-bezi
 | T0 原子 | `shared/styles/tokens.css` 的 `:root` | `--color-<色相>-<明度>[-s<饱和>][-a<alpha>]` · `--font-*` · `--space-*` · `--radius-*` · `--shadow-*` · `--duration-*` · `--ease` · `--size-*` · `--z-*` | **字面量色值的唯一登记处**；同一色值只声明一次；原子名不得含模块名或场景名 |
 | 兼容别名 | 同上 | `--app-*` | 值 = `var(原子)`；消费点可继续用，避免大改 |
 | 通用组件 | 同上 | `--comp-<组件>-<场景>` | `shared/components/**` 跨模块复用的配色；值必须引用颜色原子 |
-| 模块令牌（T1）| `modules/<模块>/tokens.css` | `--<模块前缀>-*` | 作用域必须是**该模块页面根类**（`.ai-workbench` / `.case-workbench` / `.inspector-workbench` / `.locator-workbench` / `.workflow-workbench`），**不得**提升到 `:root`；值必须引用 T0 原子；模块不得借用别的模块的家族 |
+| 模块令牌（T1）| `modules/<模块>/tokens.css` | `--<模块前缀>-*` | 作用域必须是**该模块页面根类**（`.ai-workbench` / `.case-workbench` / `.dashboard-workbench` / `.device-workbench` / `.report-workbench` / `.workflow-workbench`），**不得**提升到 `:root`；值必须引用 T0 原子；模块不得借用别的模块的家族 |
 | EP 覆盖 | `shared/styles/tokens.css` 的 EP 段 | `--el-*` | 值**只能**是 `var(...)`，不得写字面量 |
 
 新增颜色的正确顺序：**先复用最接近的原子（感知聚类 ΔE ≤ 8）→ 确需新增才登记原子 → 消费处 `var()` 引用**。颜色原子总数只降不增，禁止序号兜底名（`-2`…`-9`）。

@@ -17,7 +17,7 @@
 | 本仓的 AI agent（DSH / Claude Code 等） | 触发时读 `SKILL.md`，按需读 `references/**` |
 | 人（review 技能、对齐口径） | 本 README + `SKILL.md` + `references/` |
 
-技能放在 `.agents/skills/doodle-craft/`，由 agent 运行时的技能目录加载（本仓唯一落点，不复制到 `engines/ai/skills/` 或 `dev_docs/`，避免副本漂移）。
+技能放在 `.agents/skills/doodle-craft/`，由 agent 运行时的技能目录加载（本仓唯一落点，不复制到其它目录，避免副本漂移）。
 
 ## 目录结构
 

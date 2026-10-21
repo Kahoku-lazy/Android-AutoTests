@@ -373,7 +373,6 @@
       grid-template-columns: 260px 1fr;
       min-height: 320px;
     }
-    .wb-split.inspector { grid-template-columns: 1fr 340px; }
     .tree-pane {
       border-right: var(--dash);
       padding: 14px;
@@ -534,34 +533,6 @@
       opacity: 0.5;
     }
 
-    .insp-shot {
-      border: var(--dash);
-      background: #f0ede8;
-      min-height: 260px;
-      display: grid;
-      place-items: center;
-      font-weight: 800;
-      opacity: 0.7;
-    }
-    .insp-list {
-      display: grid;
-      gap: 6px;
-      max-height: 260px;
-      overflow: auto;
-    }
-    .insp-el {
-      border: 1.5px dashed var(--ink);
-      padding: 8px 10px;
-      font-size: 12px;
-      font-weight: 700;
-      background: #fff;
-      text-align: left;
-    }
-    .insp-el.active {
-      background: rgba(107, 203, 119, 0.25);
-      border-style: solid;
-    }
-
     .excel-mock {
       border: var(--dash);
       overflow: auto;
@@ -631,7 +602,7 @@
     @media (max-width: 960px) {
       .app { grid-template-columns: 1fr; }
       .sidebar { max-height: 32vh; border-right: 0; border-bottom: var(--dash); }
-      .grid-2, .grid-3, .grid-4, .wb-split, .wb-split.inspector { grid-template-columns: 1fr; }
+      .grid-2, .grid-3, .grid-4, .wb-split { grid-template-columns: 1fr; }
       .tree-pane { border-right: 0; border-bottom: var(--dash); }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -720,25 +691,11 @@
                 <td>已有 SketchTable 方案</td>
               </tr>
               <tr>
-                <td><strong>设备检查器</strong></td>
-                <td><span class="depth depth-1">L1 单页</span></td>
-                <td><code>/inspector</code></td>
-                <td>C 分栏工作台</td>
-                <td>左截图右列表虚线纸；抽屉也走 Dialog 纸</td>
-              </tr>
-              <tr>
-                <td><strong>元素定位</strong></td>
-                <td><span class="depth depth-3">L3 三级</span></td>
-                <td><code>/elements</code> → <code>.../projects/:code</code> → <code>.../files/:fileId</code></td>
-                <td>Hub 卡 → C 树台 → 详情</td>
-                <td><span class="marker">子页导航 + 撕纸项目卡</span></td>
-              </tr>
-              <tr>
                 <td><strong>用例管理</strong></td>
                 <td><span class="depth depth-3">L3 三级</span></td>
                 <td><code>/cases</code> → <code>.../projects/:id</code> → <code>.../files/:fileId</code></td>
                 <td>Hub 卡 → C 树台 → Excel 纸</td>
-                <td>与元素定位同一套「Hub→台→叶」</td>
+                <td>Hub→台→叶：项目卡 → 树台 → 用例纸</td>
               </tr>
               <tr>
                 <td><strong>测试报告</strong></td>
@@ -757,9 +714,9 @@
               <tr>
                 <td><strong>AI 助手</strong></td>
                 <td><span class="depth depth-2">侧栏子项 + 深链</span></td>
-                <td>agents/toolbox/knowledge/evaluator → agent/task/skill</td>
+                <td>agents → agent/task</td>
                 <td>侧栏子导航 + 详情全屏</td>
-                <td>四子项共用壳；深链要面包屑回退</td>
+                <td>侧栏子项共用壳；深链要面包屑回退</td>
               </tr>
             </tbody>
           </table>
@@ -777,11 +734,11 @@
           </article>
           <article class="mini">
             <h3>C · 分栏台</h3>
-            <p>左树/面板 + 右内容。元素/用例工作台、检查器。</p>
+            <p>左树/面板 + 右内容。用例工作台、页面流画布台。</p>
           </article>
           <article class="mini">
             <h3>H · Hub 入口</h3>
-            <p>项目/原型撕纸卡网格，点进下一层。元素、用例、页面流共用。</p>
+            <p>项目/原型撕纸卡网格，点进下一层。用例、页面流共用。</p>
           </article>
         </div>
 
@@ -793,7 +750,7 @@
               <li>L2+ 页头必有「返回」或波浪面包屑</li>
               <li>同模块三级共用同一模块色硬阴影</li>
               <li>Hub 用 SketchCard；工作台用分栏；叶子用纸（表/Excel/详情）</li>
-              <li>AI 四子项侧栏切换，深链页独立全屏 + 回退</li>
+              <li>AI 侧栏子项切换，深链页独立全屏 + 回退</li>
               <li>画布 / 表体 / Excel 禁止旋转</li>
             </ul>
           </div>
@@ -815,9 +772,9 @@
           <p style="font-size:13.5px;line-height:1.7">
             <span class="prio prio-p0">P0</span>共享件：SketchTable / SketchCard(Hub) / 面包屑条 / DialogForm<br />
             <span class="prio prio-p0">P0</span>设备管理（已有原型）→ 报告列表接同一张表纸<br />
-            <span class="prio prio-p1">P1</span>元素定位 + 用例管理「Hub→台→叶」成对落地（同一导航模版）<br />
-            <span class="prio prio-p1">P1</span>AI 四子项壳 + 任务/智能体详情回退<br />
-            <span class="prio prio-p2">P2</span>页面流列表 + 画布外框；检查器分栏纸；仪表盘钉板收尾
+            <span class="prio prio-p1">P1</span>用例管理「Hub→台→叶」落地（同一导航模版）<br />
+            <span class="prio prio-p1">P1</span>AI 侧栏子项壳 + 任务/智能体详情回退<br />
+            <span class="prio prio-p2">P2</span>页面流列表 + 画布外框；串口日志表纸；仪表盘钉板收尾
           </p>
         </div>
       </section>
@@ -904,7 +861,7 @@
       <!-- HUB → WORKSPACE → LEAF -->
       <section class="page" id="page-hub">
         <p class="page-lead">
-          可点原型：模拟 <span class="marker">元素定位 / 用例管理</span> 的三级路径。
+          可点原型：模拟 <span class="marker">用例管理</span> 的三级路径。
           点项目卡 → 树工作台 → 文件叶子。顶部步骤条表示当前深度。
         </p>
 
@@ -915,45 +872,45 @@
         </div>
 
         <!-- Step 1 -->
-        <div class="wb" id="hub-1" data-accent="element">
+        <div class="wb" id="hub-1" data-accent="case">
           <div class="wb-head">
             <div>
-              <div class="meta">ELEMENT LOCATOR · HUB</div>
-              <h3>元素定位</h3>
-              <div class="meta">三个系统项目 · 撕纸卡进入</div>
+              <div class="meta">CASE MANAGER · HUB</div>
+              <h3>用例管理</h3>
+              <div class="meta">三个用例项目 · 撕纸卡进入</div>
             </div>
           </div>
           <div class="wb-body">
             <div class="proj-grid">
               <button class="proj-card" type="button" data-enter="android">
                 <span class="tape"></span>
-                <strong>Android 页面</strong>
-                <span>128 个文件 · 点进工作台</span>
+                <strong>H6810 功能回归</strong>
+                <span>62 个文件 · 点进工作台</span>
               </button>
               <button class="proj-card" type="button" data-enter="web">
                 <span class="tape"></span>
-                <strong>Web 元素</strong>
-                <span>64 个文件 · 点进工作台</span>
+                <strong>H717D 兼容性</strong>
+                <span>38 个文件 · 点进工作台</span>
               </button>
               <button class="proj-card" type="button" data-enter="api">
                 <span class="tape"></span>
-                <strong>API 接口</strong>
-                <span>41 个文件 · 点进工作台</span>
+                <strong>登录与鉴权</strong>
+                <span>12 个文件 · 点进工作台</span>
               </button>
             </div>
-            <p class="sub" style="margin-top:14px;margin-bottom:0">用例管理同款：Hub 卡换成「项目名 + 文件数」，进 <code>/cases/projects/:id</code>。</p>
+            <p class="sub" style="margin-top:14px;margin-bottom:0">点项目卡进树工作台；文件行点进用例纸。</p>
           </div>
         </div>
 
         <!-- Step 2 -->
-        <div class="wb hidden" id="hub-2" data-accent="element">
+        <div class="wb hidden" id="hub-2" data-accent="case">
           <div class="wb-head">
             <button class="back-chip" type="button" id="hub-back-1">← 项目列表</button>
             <div>
               <div class="crumbs">
-                <button type="button" id="hub-crumb-root">元素定位</button>
+                <button type="button" id="hub-crumb-root">用例管理</button>
                 <span class="sep">/</span>
-                <span class="here" id="hub-proj-name">Android 页面</span>
+                <span class="here" id="hub-proj-name">H6810 功能回归</span>
               </div>
               <h3 style="margin-top:4px">项目工作台</h3>
               <div class="meta">左树右空态 · 点文件进叶子</div>
@@ -962,19 +919,19 @@
           <div class="wb-split">
             <div class="tree-pane">
               <h4>Directory</h4>
-              <button class="tree-item folder" type="button">📁 首页</button>
-              <button class="tree-item active" type="button" data-file="home">📄 首页结构.json</button>
-              <button class="tree-item folder" type="button">📁 商城</button>
-              <button class="tree-item" type="button" data-file="mall">📄 商城列表.json</button>
-              <button class="tree-item" type="button" data-file="mine">📄 我的.json</button>
+              <button class="tree-item folder" type="button">📁 登录</button>
+              <button class="tree-item active" type="button" data-file="home">📄 登录用例.md</button>
+              <button class="tree-item folder" type="button">📁 订单</button>
+              <button class="tree-item" type="button" data-file="mall">📄 下单用例.md</button>
+              <button class="tree-item" type="button" data-file="mine">📄 个人中心用例.md</button>
             </div>
             <div class="content-pane">
-              <div class="panel flat" style="margin:0;box-shadow:3px 3px 0 0 var(--c-element)">
+              <div class="panel flat" style="margin:0;box-shadow:3px 3px 0 0 var(--c-case)">
                 <div class="pin purple"></div>
                 <strong>选中文件后打开</strong>
                 <p style="font-size:13px;margin-top:8px;opacity:.8">工作台本身不嵌详情编辑器（用例模块约定：台里只有树）。点左侧文件进入第 3 层。</p>
                 <div class="btn-row" style="margin-top:12px">
-                  <button class="btn btn-yellow" type="button" id="hub-open-file">打开「首页结构.json」</button>
+                  <button class="btn btn-yellow" type="button" id="hub-open-file">打开「登录用例.md」</button>
                 </div>
               </div>
             </div>
@@ -987,14 +944,14 @@
             <button class="back-chip" type="button" id="hub-back-2">← 工作台</button>
             <div>
               <div class="crumbs">
-                <button type="button" class="hub-to-root">元素定位</button>
+                <button type="button" class="hub-to-root">用例管理</button>
                 <span class="sep">/</span>
-                <button type="button" id="hub-to-ws">Android 页面</button>
+                <button type="button" id="hub-to-ws">H6810 功能回归</button>
                 <span class="sep">/</span>
-                <span class="here" id="hub-file-name">首页结构.json</span>
+                <span class="here" id="hub-file-name">登录用例.md</span>
               </div>
               <h3 style="margin-top:4px">文件叶子</h3>
-              <div class="meta">元素详情纸 · 用例模块则换成 Excel 纸（示意如下）</div>
+              <div class="meta">用例纸 · Excel 网格（示意如下）</div>
             </div>
             <div style="margin-left:auto" class="btn-row">
               <button class="btn btn-ghost" type="button">保存</button>
@@ -1006,35 +963,35 @@
               <table>
                 <thead>
                   <tr>
-                    <th>名称</th>
-                    <th>类型</th>
-                    <th>定位</th>
+                    <th>用例</th>
+                    <th>步骤数</th>
+                    <th>优先级</th>
                     <th>备注</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td>搜索框</td>
-                    <td><span class="chip">EditText</span></td>
-                    <td><span class="marker">resource-id/search</span></td>
-                    <td>首页顶栏</td>
+                    <td>登录-正常账号</td>
+                    <td><span class="chip">5 步</span></td>
+                    <td><span class="marker">P0</span></td>
+                    <td>冒烟</td>
                   </tr>
                   <tr>
-                    <td>商城 Tab</td>
-                    <td><span class="chip">TextView</span></td>
-                    <td><span class="marker">text=商城</span></td>
-                    <td>底栏</td>
+                    <td>登录-错误密码</td>
+                    <td><span class="chip">3 步</span></td>
+                    <td><span class="marker">P1</span></td>
+                    <td>负向</td>
                   </tr>
                   <tr>
-                    <td>加入购物车</td>
-                    <td><span class="chip">Button</span></td>
-                    <td><span class="marker">rid/btn_cart</span></td>
-                    <td>详情页</td>
+                    <td>登录-验证码过期</td>
+                    <td><span class="chip">4 步</span></td>
+                    <td><span class="marker">P1</span></td>
+                    <td>异常</td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            <p class="sub" style="margin-top:12px;margin-bottom:0">用例叶子：同一壳，表头换成「测试类型 / 标题 / 步骤 / 预期」；脏离开确认逻辑保留。</p>
+            <p class="sub" style="margin-top:12px;margin-bottom:0">文件叶子：同一壳承载用例行；表头按需换「用例 / 步骤数 / 优先级 / 备注」；脏离开确认逻辑保留。</p>
           </div>
         </div>
       </section>
@@ -1069,9 +1026,7 @@
           <div class="wb-body">
             <div class="ai-tabs" id="ai-tabs">
               <button class="ai-tab active" type="button" data-ai="agents">平台小助手</button>
-              <button class="ai-tab" type="button" data-ai="toolbox">AI工具箱</button>
-              <button class="ai-tab" type="button" data-ai="knowledge">知识库</button>
-              <button class="ai-tab" type="button" data-ai="evaluator">评测中心</button>
+              <button class="ai-tab" type="button" data-ai="tasks">任务清单</button>
             </div>
 
             <div id="ai-view-agents">
@@ -1088,6 +1043,9 @@
                   <p style="font-size:12.5px;margin-top:6px;opacity:.8">DialogForm 虚线纸；主按钮黄马克笔</p>
                 </div>
               </div>
+            </div>
+
+            <div class="hidden" id="ai-view-tasks">
               <div class="sheet">
                 <table>
                   <thead>
@@ -1116,28 +1074,6 @@
               </div>
             </div>
 
-            <div class="hidden" id="ai-view-toolbox">
-              <div class="panel flat" style="margin:0">
-                <div class="pin yellow"></div>
-                <strong>装配台</strong>
-                <p style="font-size:13px;margin-top:8px;opacity:.85">上：生效芯片。下：左两源 + 右目录。Skill 卡点击进深链 <code>/toolbox/skills/:name</code>，同样要面包屑回工具箱。</p>
-              </div>
-            </div>
-            <div class="hidden" id="ai-view-knowledge">
-              <div class="panel flat" style="margin:0">
-                <div class="pin teal"></div>
-                <strong>知识库</strong>
-                <p style="font-size:13px;margin-top:8px;opacity:.85">状态卡 + 文档表纸；重建索引用确认 DialogForm。</p>
-              </div>
-            </div>
-            <div class="hidden" id="ai-view-evaluator">
-              <div class="panel flat" style="margin:0">
-                <div class="pin green"></div>
-                <strong>评测中心</strong>
-                <p style="font-size:13px;margin-top:8px;opacity:.85">描述输入（NoteField）+ 设备选择 + 生成/执行。表单走涂鸦字段态。</p>
-              </div>
-            </div>
-
             <div class="hidden" id="ai-view-task">
               <div class="wb-split">
                 <div class="tree-pane">
@@ -1159,7 +1095,7 @@
       <!-- MATRIX -->
       <section class="page" id="page-matrix">
         <p class="page-lead">
-          其余模块的改法一览 + 迷你原型。报告走「表纸→详情」；页面流走「Hub→画布」；检查器走「分栏台」。
+          其余模块的改法一览 + 迷你原型。报告走「表纸→详情」；页面流走「Hub→画布」；用例走「Hub→树台→用例纸」。
         </p>
 
         <h2>测试报告 · 列表 → 详情</h2>
@@ -1287,36 +1223,6 @@
           </div>
         </div>
 
-        <h2>设备检查器 · 分栏台</h2>
-        <div class="wb" data-accent="device">
-          <div class="wb-head">
-            <div>
-              <div class="meta">INSPECTOR · VARIANT C</div>
-              <h3>设备检查器</h3>
-              <div class="meta">单页工作台 · 无子路由，但有抽屉/弹层</div>
-            </div>
-            <div style="margin-left:auto" class="btn-row">
-              <button class="btn btn-ghost" type="button">快照历史</button>
-              <button class="btn btn-device" type="button">抓取</button>
-            </div>
-          </div>
-          <div class="wb-split inspector">
-            <div class="content-pane">
-              <div class="insp-shot">Screenshot · 虚线相纸框</div>
-            </div>
-            <div class="tree-pane" style="border-right:0;border-left:var(--dash)">
-              <h4>Elements</h4>
-              <div class="insp-list">
-                <button class="insp-el active" type="button">FrameLayout · root</button>
-                <button class="insp-el" type="button">TextView · 商城</button>
-                <button class="insp-el" type="button">EditText · 搜索</button>
-                <button class="insp-el" type="button">Button · 加入购物车</button>
-              </div>
-              <p class="sub" style="margin-top:12px;margin-bottom:0">筛选用 FilterTabs（近直角）；保存到元素定位走 DialogForm。</p>
-            </div>
-          </div>
-        </div>
-
         <h2 style="margin-top:22px">与已有方案的关系</h2>
         <div class="panel flat">
           <div class="pin yellow"></div>
@@ -1339,7 +1245,7 @@
       nav: ["NAV RULES", "子页导航三种模版"],
       hub: ["PROTOTYPE", "列表 → 工作台 → 叶子"],
       ai: ["PROTOTYPE", "AI 侧栏子项 + 深链"],
-      matrix: ["PROTOTYPE", "报告 / 页面流 / 检查器"],
+      matrix: ["PROTOTYPE", "报告 / 页面流 / 用例"],
     };
 
     document.querySelectorAll(".nav-item").forEach((btn) => {
@@ -1372,7 +1278,7 @@
 
     document.querySelectorAll("[data-enter]").forEach((card) => {
       card.addEventListener("click", () => {
-        const names = { android: "Android 页面", web: "Web 元素", api: "API 接口" };
+        const names = { android: "H6810 功能回归", web: "H717D 兼容性", api: "登录与鉴权" };
         document.getElementById("hub-proj-name").textContent = names[card.dataset.enter];
         document.getElementById("hub-to-ws").textContent = names[card.dataset.enter];
         setHubStep(2);
@@ -1386,12 +1292,12 @@
       toast("打开叶子 · " + name);
     }
 
-    document.getElementById("hub-open-file").addEventListener("click", () => openFile("首页结构.json"));
+    document.getElementById("hub-open-file").addEventListener("click", () => openFile("登录用例.md"));
     document.querySelectorAll("[data-file]").forEach((item) => {
       item.addEventListener("click", () => {
         document.querySelectorAll(".tree-item").forEach((t) => t.classList.remove("active"));
         item.classList.add("active");
-        const map = { home: "首页结构.json", mall: "商城列表.json", mine: "我的.json" };
+        const map = { home: "登录用例.md", mall: "下单用例.md", mine: "个人中心用例.md" };
         openFile(map[item.dataset.file] || "文件.json");
       });
     });
@@ -1406,17 +1312,15 @@
 
     /* AI */
     const aiTitles = {
-      agents: ["平台小助手", "助手看板 + 任务列表"],
-      toolbox: ["AI工具箱", "装配台 · 两源目录"],
-      knowledge: ["知识库", "向量库状态与文档"],
-      evaluator: ["评测中心", "描述 → 生成 / 执行"],
+      agents: ["平台小助手", "助手看板 + 线路卡"],
+      tasks: ["任务清单", "任务卡 + 状态 + 设备"],
     };
 
     function showAiMain(key) {
       document.getElementById("ai-head-main").classList.remove("hidden");
       document.getElementById("ai-head-deep").classList.add("hidden");
       document.getElementById("ai-tabs").classList.remove("hidden");
-      ["agents", "toolbox", "knowledge", "evaluator", "task"].forEach((k) => {
+      ["agents", "tasks", "task"].forEach((k) => {
         document.getElementById("ai-view-" + k).classList.toggle("hidden", k !== key);
       });
       document.getElementById("ai-title").textContent = aiTitles[key][0];
@@ -1430,7 +1334,7 @@
       document.getElementById("ai-head-main").classList.add("hidden");
       document.getElementById("ai-head-deep").classList.remove("hidden");
       document.getElementById("ai-tabs").classList.add("hidden");
-      ["agents", "toolbox", "knowledge", "evaluator"].forEach((k) => {
+      ["agents", "tasks"].forEach((k) => {
         document.getElementById("ai-view-" + k).classList.add("hidden");
       });
       document.getElementById("ai-view-task").classList.remove("hidden");

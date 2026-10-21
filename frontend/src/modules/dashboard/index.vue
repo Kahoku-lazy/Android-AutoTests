@@ -120,7 +120,6 @@ useMidnightRefresh(refreshData)
             :value="stats.aiUsage.taskCount.total"
             color="gray"
             path="/tasks"
-            :show-enter="false"
             :loading="loading"
             :desc="`今日 ${stats.aiUsage.taskCount.today.toLocaleString()}`"
           >
@@ -158,8 +157,6 @@ useMidnightRefresh(refreshData)
               suffix="M"
               :decimals="2"
               color="sage"
-              path="/ai-assistant"
-              :show-enter="false"
               :loading="loading"
               desc="DeepSeek"
             >
@@ -171,8 +168,6 @@ useMidnightRefresh(refreshData)
               suffix="M"
               :decimals="2"
               color="cream"
-              path="/ai-assistant"
-              :show-enter="false"
               :loading="loading"
               desc="DeepSeek"
             >
@@ -184,8 +179,6 @@ useMidnightRefresh(refreshData)
               suffix="%"
               :decimals="1"
               color="deep"
-              path="/ai-assistant"
-              :show-enter="false"
               :loading="loading"
               desc="DeepSeek"
             >
@@ -197,8 +190,6 @@ useMidnightRefresh(refreshData)
               suffix=" 元"
               :significant-digits="3"
               color="dust"
-              path="/ai-assistant"
-              :show-enter="false"
               :loading="loading"
               desc="DeepSeek"
             >
@@ -210,8 +201,6 @@ useMidnightRefresh(refreshData)
               suffix=" 元"
               :significant-digits="3"
               color="dust"
-              path="/ai-assistant"
-              :show-enter="false"
               :loading="loading"
               desc="DeepSeek"
             >

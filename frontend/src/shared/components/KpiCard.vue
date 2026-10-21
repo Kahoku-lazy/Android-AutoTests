@@ -20,15 +20,13 @@ const props = withDefaults(
     variant?: "kpi" | "entry"
     /** entry：描述文案 */
     desc?: string
-    /** entry：显示「进入」并允许整卡激活 */
-    enterLabel?: string
     /** entry：live 指示点 */
     live?: boolean
     /** 装饰：无 / 图钉 / 胶带 */
     deco?: "none" | "pin" | "tape"
     /** 微倾角度（deg）；不传则用 CSS 默认 */
     tilt?: number
-    /** 是否可点击（kpi 默认可点；entry 在有 enterLabel 或显式 true 时可点） */
+    /** 是否可点击（kpi 默认可点；entry 默认不可点，必须显式传 true） */
     clickable?: boolean
   }>(),
   {
@@ -38,7 +36,6 @@ const props = withDefaults(
     shape: "diamond",
     variant: "kpi",
     desc: "",
-    enterLabel: "进入",
     live: false,
     deco: "none",
     tilt: undefined,
@@ -54,7 +51,8 @@ const isEntry = computed(() => props.variant === "entry")
 
 const isClickable = computed(() => {
   if (props.clickable !== undefined) return props.clickable
-  return isEntry.value ? Boolean(props.enterLabel) : true
+  // entry 卡默认只展示，可点性必须由调用方显式给出
+  return isEntry.value ? false : true
 })
 
 const rootStyle = computed(() => {
@@ -130,15 +128,6 @@ function onKeydown(e: KeyboardEvent) {
           <slot name="desc">{{ desc }}</slot>
         </div>
       </div>
-
-      <button
-        v-if="enterLabel && isClickable"
-        type="button"
-        class="kpi-card__enter"
-        @click.stop="onActivate"
-      >
-        {{ enterLabel }}
-      </button>
 
       <slot />
     </template>
@@ -400,27 +389,6 @@ function onKeydown(e: KeyboardEvent) {
   line-height: 1.4;
 }
 
-.kpi-card__enter {
-  align-self: center;
-  margin-top: 8px;
-  font-family: inherit;
-  font-size: var(--app-size-xs, 11px);
-  font-weight: 800;
-  color: var(--ink);
-  background: var(--c-dashboard);
-  border: 2px solid var(--ink);
-  border-radius: var(--kpi-radius);
-  padding: 3px 12px;
-  box-shadow: 2px 2px 0 0 var(--c-workflow);
-  cursor: pointer;
-  line-height: 1.2;
-}
-
-.kpi-card__enter:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 0 var(--c-workflow);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .kpi-card {
     transform: none;
@@ -431,9 +399,6 @@ function onKeydown(e: KeyboardEvent) {
   }
   .kpi-card__live {
     animation: none;
-  }
-  .kpi-card__enter:hover {
-    transform: none;
   }
 }
 </style>

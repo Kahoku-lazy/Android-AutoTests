@@ -132,6 +132,7 @@ class AgentRoleConfig:
         system_prompt: str,
         toolkit: Toolkit,
         vision: bool,
+        max_iters: int = 30,
     ):
 
         self.log = agent_event_log
@@ -144,6 +145,7 @@ class AgentRoleConfig:
         self.system_prompt = system_prompt
         self.toolkit = toolkit
         self.vision = vision
+        self.max_iters = max_iters
 
     def load_config(self):
 
@@ -159,6 +161,7 @@ class AgentRoleConfig:
                 system_prompt=self.system_prompt,
                 toolkit=self.toolkit,
                 vision=self.vision,
+                max_iters=self.max_iters,
             ),
         )
 

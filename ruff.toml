@@ -13,11 +13,9 @@ exclude = [
     "**/__pycache__/*",
     ".venv/*",
     "node_modules/*",
-    # vendored skill-creator 脚手架（.agents/skills、engines/ai/skills 与
-    # engines/agents/skills/common 各一份拷贝）：
+    # vendored skill-creator 脚手架（.agents/skills 与 engines/agents/skills 两份拷贝）：
     # 供应商产物，不适用本项目 lint 规范，改了会在下次 skill 更新时丢失
     ".agents/skills/skill-creator/**",
-    "engines/ai/skills/skill-creator/**",
     "engines/agents/skills/**/skill-creator/**",
 ]
 

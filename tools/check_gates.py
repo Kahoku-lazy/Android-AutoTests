@@ -151,7 +151,7 @@ def grep_gate(
 
 LOG_METHODS = {"debug", "info", "warning", "warn", "error", "exception", "critical", "log"}
 # 供应商产物：与 ruff.toml 的 exclude 一致，改了会在下次 skill 更新时丢失
-VENDORED = ("engines/ai/skills/skill-creator",)
+VENDORED = ("engines/agents/skills/common/skill-creator",)
 
 
 def _has_log_call(node: ast.AST) -> bool:

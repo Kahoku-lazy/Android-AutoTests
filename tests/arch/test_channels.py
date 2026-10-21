@@ -73,21 +73,20 @@ class TestAgentScopeChannel:
     def test_agent_scope_no_adapters_or_rag(self):
         """AgentScope 引擎不得自建数据库适配器（adapters/）或检索增强（rag/）。
 
-        引擎按「智能体 / 消息与事件 / 工具 / 工作流 / 费用计算」五部分分层后，
-        禁止项的范围随布局从 `agents/` 扩展到 `engines/ai` 全层（语义不变，不放宽）。
+        引擎层现行目录为 `engines/agents`（角色 / 消息与事件 / 工具 / 工作流 /
+        提示词 / 技能 / MCP 配置）；禁止项覆盖引擎根与其每个子包，语义不变。
         """
-        root = ROOT / "engines" / "ai"
-        scope = root / "agents"
-        assert scope.is_dir(), "engines/ai/agents 目录不存在"
+        root = ROOT / "engines" / "agents"
+        assert root.is_dir(), "engines/agents 引擎目录不存在"
         assert not (root / "agentscope").exists(), (
-            "引擎目录已改名为 engines/ai/agents，禁止再出现 engines/ai/agentscope"
+            "禁止再出现 engines/agents/agentscope（框架实现在 engines/agents/role）"
         )
-        assert not (root / "adapters").exists(), "engines/ai 下禁止新增 adapters/"
-        assert not (root / "rag").exists(), "engines/ai 下禁止新增 rag/"
-        for part in ("agents", "messaging", "tools", "workflow", "billing"):
+        assert not (root / "adapters").exists(), "engines/agents 下禁止新增 adapters/"
+        assert not (root / "rag").exists(), "engines/agents 下禁止新增 rag/"
+        for part in ("role", "messaging", "tools", "workflow", "prompts", "skills"):
             base = root / part
-            assert not (base / "adapters").exists(), f"engines/ai/{part} 下禁止新增 adapters/"
-            assert not (base / "rag").exists(), f"engines/ai/{part} 下禁止新增 rag/"
+            assert not (base / "adapters").exists(), f"engines/agents/{part} 下禁止新增 adapters/"
+            assert not (base / "rag").exists(), f"engines/agents/{part} 下禁止新增 rag/"
 
 
 class TestEngineChannel:

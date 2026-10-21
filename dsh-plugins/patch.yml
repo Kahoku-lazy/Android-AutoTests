@@ -14,7 +14,7 @@
     workspaceRoot: .
     toolNames: [write, edit]
     pathGlobs:
-      - apps/**/*.py
+      - backend/apps/**/*.py
     command: python
     args: [utils/gen_arch_stats.py, --check-boundaries]
     timeoutMs: 30000

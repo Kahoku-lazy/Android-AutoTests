@@ -49,11 +49,11 @@ jobs:
 
       # 2. Python 代码格式（ruff format）
       - name: Ruff format check
-        run: ruff format --check apps/ config/ gateway/ shared/ models/
+        run: ruff format --check backend/apps/ backend/config/ backend/gateway/ backend/shared/ backend/models/
 
       # 3. Python lint（ruff check）
       - name: Ruff lint
-        run: ruff check apps/ config/ gateway/ shared/ models/
+        run: ruff check backend/apps/ backend/config/ backend/gateway/ backend/shared/ backend/models/
 
       # 4. pytest 收集门禁（不跑用例，只保证整套测试可导入；防失效测试积压）
       - name: Pytest collect gate
@@ -175,7 +175,7 @@ jobs:
 
           # ── 规则 1: 硬编码密码 ──
           echo "▶ 检查：硬编码密码 (password = '...')"
-          PASSWORD_MATCHES=$(grep -rnE "password\s*=\s*'[^']+'" apps/ config/ gateway/ shared/ models/ \
+          PASSWORD_MATCHES=$(grep -rnE "password\s*=\s*'[^']+'" backend/apps/ backend/config/ backend/gateway/ backend/shared/ backend/models/ \
             --include="*.py" 2>/dev/null | grep -v "password\s*=\s*''" | grep -v "PASSWORD" || true)
           if [ -n "$PASSWORD_MATCHES" ]; then
             echo "❌ 发现硬编码密码："
@@ -189,7 +189,7 @@ jobs:
           # ── 规则 2: 明文 API Key ──
           echo "▶ 检查：明文 API Key (api_key = 'sk-...')"
           APIKEY_MATCHES=$(grep -rnE "(api_key|apikey|API_KEY)\s*=\s*'sk-[A-Za-z0-9]+'" \
-            apps/ config/ gateway/ shared/ --include="*.py" 2>/dev/null || true)
+            backend/apps/ backend/config/ backend/gateway/ backend/shared/ --include="*.py" 2>/dev/null || true)
           if [ -n "$APIKEY_MATCHES" ]; then
             echo "❌ 发现明文 API Key："
             echo "$APIKEY_MATCHES"
@@ -203,7 +203,7 @@ jobs:
           echo "▶ 检查：常见默认密码 (admin123 / password 等)"
           DEFAULT_PWD=$(grep -rnE \
             "'admin123'|'autotests2026'|'password'\s*[:=]" \
-            apps/ config/ gateway/ shared/ --include="*.py" 2>/dev/null \
+            backend/apps/ backend/config/ backend/gateway/ backend/shared/ --include="*.py" 2>/dev/null \
             | grep -v "PASSWORD" | grep -v "test" | grep -v "__pycache__" || true)
           if [ -n "$DEFAULT_PWD" ]; then
             echo "⚠️  发现疑似默认密码（请人工确认）："
@@ -215,7 +215,7 @@ jobs:
           # ── 规则 4: Token/Secret 硬编码 ──
           echo "▶ 检查：硬编码 Token/Secret"
           TOKEN_MATCHES=$(grep -rnE "(secret_key|SECRET_KEY|private_key)\s*=\s*'[^']+'" \
-            apps/ config/ gateway/ shared/ --include="*.py" 2>/dev/null | grep -v "os.environ" | grep -v "getenv" || true)
+            backend/apps/ backend/config/ backend/gateway/ backend/shared/ --include="*.py" 2>/dev/null | grep -v "os.environ" | grep -v "getenv" || true)
           if [ -n "$TOKEN_MATCHES" ]; then
             echo "❌ 发现硬编码密钥/Token："
             echo "$TOKEN_MATCHES"

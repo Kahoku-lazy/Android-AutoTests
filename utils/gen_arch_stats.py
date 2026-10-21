@@ -39,8 +39,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 def scan_django_apps():
-    """扫描 apps/ 下所有 Django App，返回结构化数据。"""
-    apps_dir = PROJECT_ROOT / "apps"
+    """扫描 backend/apps/ 下所有 Django App，返回结构化数据。"""
+    apps_dir = PROJECT_ROOT / "backend" / "apps"
     apps = []
     for d in sorted(apps_dir.iterdir()):
         if not d.is_dir() or d.name.startswith("_") or d.name.startswith("."):
@@ -96,7 +96,7 @@ def scan_django_apps():
 
 def scan_tools():
     """扫描 tools.py 的 TOOLS 注册表（AgentScope 工具的唯一事实源）。"""
-    registry_path = PROJECT_ROOT / "apps" / "ai_assistant" / "tools.py"
+    registry_path = PROJECT_ROOT / "backend" / "apps" / "ai_assistant" / "tools.py"
     if not registry_path.exists():
         return []
     tree = ast.parse(registry_path.read_text(encoding="utf-8"))
@@ -165,7 +165,7 @@ def scan_file_size_violations(py_limit=400, vue_limit=500):
     violations = []
 
     # Python 文件
-    apps_dir = PROJECT_ROOT / "apps"
+    apps_dir = PROJECT_ROOT / "backend" / "apps"
     for py_file in apps_dir.rglob("*.py"):
         if "migrations" in str(py_file) or "__pycache__" in str(py_file):
             continue
@@ -205,8 +205,8 @@ def scan_file_size_violations(py_limit=400, vue_limit=500):
 
 def scan_cross_app_imports():
     """扫描跨 App import 关系。"""
-    apps_dir = PROJECT_ROOT / "apps"
-    gateway_dir = PROJECT_ROOT / "gateway"
+    apps_dir = PROJECT_ROOT / "backend" / "apps"
+    gateway_dir = PROJECT_ROOT / "backend" / "gateway"
 
     # 从 INSTALLED_APPS 获取 App 列表
     settings_path = PROJECT_ROOT / "config" / "settings.py"
@@ -259,7 +259,7 @@ def scan_orm_write_violations():
     Returns (new_violations, known_violations) — new violations not yet whitelisted
     should fail CI.
     """
-    apps_dir = PROJECT_ROOT / "apps"
+    apps_dir = PROJECT_ROOT / "backend" / "apps"
     whitelist = _load_boundary_whitelist()
 
     # Build a mapping: model_class_name → app_name
@@ -379,7 +379,7 @@ def scan_cross_app_internal_imports():
     Extends to: no importing from other apps' non-api internals
     (e.g. runner.py internals, views.py private symbols like _active_runs).
     """
-    apps_dir = PROJECT_ROOT / "apps"
+    apps_dir = PROJECT_ROOT / "backend" / "apps"
 
     # Apps that have these internal modules
     INTERNAL_MODULES = ["service", "runner", "consumer", "callbacks", "state_machine"]
@@ -473,17 +473,17 @@ def scan_engine_leak_violations():
 
     Rule (engine boundary): only `engines/` may import third-party
     engine libs (uiautomator2) or touch concrete engine implementations.
-    Upper layers (apps/, gateway/) must consume device capability ONLY via
+    Upper layers (backend/apps/, backend/gateway/) must consume device capability ONLY via
     `engines.device.base.UiEngine` protocol (obtained through `engines.device.registry`).
 
     Detects 3 leak categories:
-      - engine_lib:  apps/gateway importing uiautomator2 directly
-      - engine_impl: apps/gateway importing engines.device.android concrete implementation
-      - raw_handle:  apps/gateway accessing .u2 raw engine handles（仅代码行）
+      - engine_lib:  backend/apps 或 backend/gateway importing uiautomator2 directly
+      - engine_impl: backend/apps 或 backend/gateway importing engines.device.android concrete implementation
+      - raw_handle:  backend/apps 或 backend/gateway accessing .u2 raw engine handles（仅代码行）
 
     Returns (new_violations, known_violations) — new violations fail CI.
     """
-    scan_dirs = [PROJECT_ROOT / "apps", PROJECT_ROOT / "gateway"]
+    scan_dirs = [PROJECT_ROOT / "backend" / "apps", PROJECT_ROOT / "backend" / "gateway"]
     whitelist = _load_boundary_whitelist()
 
     # 行首 import 模式：[ \t] 而非 \s，避免 \s 跨空行吞换行导致行号偏移
@@ -573,7 +573,7 @@ def scan_engine_leak_violations():
 
 def scan_device_statuses():
     """从 device_pool/models.py 提取设备状态定义。"""
-    models_path = PROJECT_ROOT / "apps" / "device_pool" / "models.py"
+    models_path = PROJECT_ROOT / "backend" / "apps" / "device_pool" / "models.py"
     if not models_path.exists():
         return {"count": 0, "statuses": []}
 

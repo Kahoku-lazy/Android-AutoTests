@@ -1,6 +1,6 @@
 {
   "name": "@android-autotests/dsh-plugin-arch-gate",
-  "description": "DSH hooks plugin: run cross-module boundary checks after filesystem writes to apps/**/*.py and inject violations into the session",
+  "description": "DSH hooks plugin: run cross-module boundary checks after filesystem writes to backend/apps/**/*.py and inject violations into the session",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",

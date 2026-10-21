@@ -58,7 +58,7 @@ def business_paths() -> set[str]:
     """URLconf 中的业务路径集合（去掉 format 变体与排除项）。"""
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.config.settings")
     import django
 
     django.setup()

@@ -70,7 +70,7 @@ const DEFAULTS: Required<Omit<ArchGateConfig, "enabled">> & { enabled: boolean }
   enabled: true,
   workspaceRoot: ".",
   toolNames: ["write", "edit"],
-  pathGlobs: ["apps/**/*.py"],
+  pathGlobs: ["backend/apps/**/*.py"],
   command: "python",
   args: ["utils/gen_arch_stats.py", "--check-boundaries"],
   timeoutMs: 30000,

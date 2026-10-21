@@ -1,5 +1,5 @@
 [tool.coverage.run]
-source = ["apps"]
+source = ["backend/apps"]
 omit = ["*/migrations/*", "*/tests/*"]
 
 [tool.coverage.report]

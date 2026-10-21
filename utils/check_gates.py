@@ -34,7 +34,13 @@ NPM = "npm.cmd" if IS_WIN else "npm"
 NPX = "npx.cmd" if IS_WIN else "npx"
 
 # CI 中 ruff 的作用域（既有拦截型步骤）
-PY_SCOPES = ["apps/", "config/", "gateway/", "shared/", "models/"]
+PY_SCOPES = [
+    "backend/apps/",
+    "backend/config/",
+    "backend/gateway/",
+    "backend/shared/",
+    "backend/models/",
+]
 # 走查文件时跳过的目录：不改变判定口径，只是避免扫进依赖与缓存
 SKIP_DIRS = {"node_modules", "__pycache__", ".venv", "venv", "dist", ".git", ".pytest_cache"}
 
@@ -59,7 +65,7 @@ class Gate:
 def _env(extra: dict[str, str] | None = None) -> dict[str, str]:
     env = os.environ.copy()
     env.setdefault("PYTHONUTF8", "1")
-    env.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+    env.setdefault("DJANGO_SETTINGS_MODULE", "backend.config.settings")
     if extra:
         env.update(extra)
     return env

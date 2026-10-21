@@ -32,7 +32,7 @@
                               │
                               ▼
                     Daphne :8766（ASGI，单进程）
-                    config/asgi.py: ProtocolTypeRouter
+                    backend/config/asgi.py: ProtocolTypeRouter
                        ├─ http      → Django（中间件链 → URLconf → DRF）
                        └─ websocket → URLRouter(websocket_urlpatterns)   ← 当前为空
                               │
@@ -51,28 +51,28 @@
 | 进程 | 端口 | 入口 | 说明 |
 |------|------|------|------|
 | Redis | 6379 | `redis-server` | JWT 吊销键、Channels layer；`run.py stop` **不**停 Redis |
-| Daphne | 8766 | `run_daphne.py` → `config.asgi:application` | 开发态 autoreload 双进程（父进程只监控），生产态单进程 |
+| Daphne | 8766 | `run_daphne.py` → `backend.config.asgi:application` | 开发态 autoreload 双进程（父进程只监控），生产态单进程 |
 | Vite | 5173 | `npx vite --host` | 代理 `/api`、`/media`；`/ws` 代理是遗留配置 |
 
 - 统一运维入口：`python run.py start|stop|restart|status|logs|check`（`run.py`）。
-- 启动副作用**受门控**：孤儿任务恢复、串口端口监听恢复只在 ASGI 服务进程的 daemon 线程里执行，条件是 `DJANGO_ASGI_SERVER=1` 或 argv 含 `daphne`/`runserver`（`apps/ai_assistant/apps.py`、`apps/serial_log/apps.py`）；`migrate`/`shell`/`pytest` 不触发。
+- 启动副作用**受门控**：孤儿任务恢复、串口端口监听恢复只在 ASGI 服务进程的 daemon 线程里执行，条件是 `DJANGO_ASGI_SERVER=1` 或 argv 含 `daphne`/`runserver`（`backend/apps/ai_assistant/apps.py`、`backend/apps/serial_log/apps.py`）；`migrate`/`shell`/`pytest` 不触发。
 - `run.py stop backend` 会先清理 MySQL `Sleep>5` 的孤儿连接（强制杀 Daphne 的副作用）。
 
-### 2.2 中间件链（`config/settings.py`）
+### 2.2 中间件链（`backend/config/settings.py`）
 
 ```
 Cors → Security → GZip → Session → Common → JWTAuthenticationMiddleware
      → CsrfViewMiddleware → Authentication → Message → XFrameOptions
 ```
 
-- `JWTAuthenticationMiddleware`（`gateway/middleware.py`）：对 `/api/*` 做前置 JWT 校验，注入 `request.user_id`；公开前缀仅 `/api/auth/{login,register,refresh}`、`/admin/`、`/static/`、`/media/`、`/api/schema/`、`/api/swagger/`。
+- `JWTAuthenticationMiddleware`（`backend/gateway/middleware.py`）：对 `/api/*` 做前置 JWT 校验，注入 `request.user_id`；公开前缀仅 `/api/auth/{login,register,refresh}`、`/admin/`、`/static/`、`/media/`、`/api/schema/`、`/api/swagger/`。
 - JWT 有效时置 `request._dont_enforce_csrf_checks = True`（浏览器无法跨站携带自定义 `Authorization` 头），后台 session 面仍受 CSRF 保护。
 - `APPEND_SLASH = False`：缺尾斜杠得到确定的 404，避免 301 丢 `Authorization` 头。
-- DRF：认证类 `shared.auth.drf_auth.JWTAuthentication`；权限 `IsAuthenticated`；渲染器 `shared.renderers.EnvelopeJSONRenderer`；schema `drf_spectacular`；`UNAUTHENTICATED_USER=None`。
+- DRF：认证类 `backend.shared.auth.drf_auth.JWTAuthentication`；权限 `IsAuthenticated`；渲染器 `backend.shared.renderers.EnvelopeJSONRenderer`；schema `drf_spectacular`；`UNAUTHENTICATED_USER=None`。
 
 ### 2.3 Channels
 
-`config/asgi.py` 保留 WebSocket 协议入口，`gateway/routing.py` 的 `websocket_urlpatterns` 为**空表**；`CHANNEL_LAYERS` 优先 Redis、异常降级 InMemory。当前无任何 WS 生产点，属"预留而非在用"。
+`backend/config/asgi.py` 保留 WebSocket 协议入口，`backend/gateway/routing.py` 的 `websocket_urlpatterns` 为**空表**；`CHANNEL_LAYERS` 优先 Redis、异常降级 InMemory。当前无任何 WS 生产点，属"预留而非在用"。
 
 ---
 
@@ -82,9 +82,9 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 前端（Vue 模块）
    │ 唯一 HTTP 出口 shared/api-client.ts
    ▼
-接口层：gateway 中间件 → config/urls.py → apps/*/urls.py → View/ViewSet → Serializer
+接口层：backend/gateway 中间件 → backend/config/urls.py → backend/apps/*/urls.py → View/ViewSet → Serializer
    ▼
-应用层：apps/*/api.py（唯一写库口）→ ORM
+应用层：backend/apps/*/api.py（唯一写库口）→ ORM
    ▼
 引擎层：engines/agents（SOP、工具、事件）· engines/device（adb）· engines/uart_log · engines/vision
    ▼
@@ -98,9 +98,9 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 | 3 | 跨 App 写只能调对方 `api.py` | 同上；AI 工具只调 `api.py` |
 | 4 | 上层不得 import `airtest` / `uiautomator2`，设备操作只经引擎 | `boundary-check` + `engines/device/action.py` 抽象 |
 | 5 | 前端只有一个 axios 实例 / HTTP 出口 | `frontend/.dependency-cruiser.cjs` 规则 `no-axios-except-client` |
-| 6 | `/api/` 尾斜杠、`{status,data}` 信封、snake_case | `pytest` 契约对拍 + `shared/renderers.py` |
+| 6 | `/api/` 尾斜杠、`{status,data}` 信封、snake_case | `pytest` 契约对拍 + `backend/shared/renderers.py` |
 
-**唯一信封特例**：`apps/report_generator` 的 `/api/reports/*` 为 legacy 平铺 JSON（含 `FileResponse` 下载），按既有决策保留、不新增同类。
+**信封特例**：无。`/api/reports/*` 与 `/api/tasks/{id}/report/` 已统一为全局 `{status, data}`；仅报告文件下载保持 `FileResponse` 附件语义。
 
 ---
 
@@ -140,7 +140,7 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 
 - 令牌：access TTL 1h、refresh TTL 7d（`JWT_ACCESS_TTL`/`JWT_REFRESH_TTL`），一次登录共享 `sid`。
 - 吊销：`jwt:blacklist:{jti}` 与 `jwt:session_revoked:{sid}`；**读侧 fail-open**（Redis 不可用放行并记 error），**写侧 fail-closed**（抛 `BlacklistUnavailableError`）。
-- 权限：AI 智能体写操作仅超管；读操作按 owner 或"超管拥有的共享智能体"过滤；`shared/users.py::is_superuser` 是跨 App 唯一实现。
+- 权限：AI 智能体写操作仅超管；读操作按 owner 或"超管拥有的共享智能体"过滤；`backend/shared/users.py::is_superuser` 是跨 App 唯一实现。
 
 ---
 
@@ -223,7 +223,7 @@ executor 动作 → 设备打日志 → TCP 采集落文件 → KeywordIndex 命
 | 健康检查 | `python run.py status`（Redis 探端口，前后端探 HTTP） |
 | 自愈 | 启动时把上次进程遗留的 `running` 任务置 `failed`；按开关恢复串口监听 |
 
-> 框架日志只走控制台（`config/settings.py` 的 `LOGGING` 仅 console handler），不写 `django.log`。
+> 框架日志只走控制台（`backend/config/settings.py` 的 `LOGGING` 仅 console handler），不写 `django.log`。
 
 ---
 

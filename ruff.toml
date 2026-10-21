@@ -1,5 +1,5 @@
 # Ruff configuration — Android-AutoTests
-# Encodes the team Python conventions (apps/AGENTS.md §1) as automated checks.
+# Encodes the team Python conventions (backend/apps/AGENTS.md §1) as automated checks.
 # Run: ruff check .        (lint)
 # Run: ruff format .       (format)
 # Run: ruff check --fix .  (auto-fix)
@@ -51,7 +51,7 @@ select = [
 
 # ── isort 配置 (§3 import 顺序) ────────────────────────
 [lint.isort]
-known-first-party = ["apps", "config", "gateway", "shared", "models", "tools", "engines"]
+known-first-party = ["backend", "engines", "utils"]
 lines-between-types = 1
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 
@@ -71,7 +71,7 @@ section-order = ["future", "standard-library", "third-party", "first-party", "lo
 "**/apps.py" = ["D100"]
 "**/admin.py" = ["D100"]
 # ─ settings.py / test_settings.py: 允许 *
-"config/settings.py" = ["F403", "F405"]
+"backend/config/settings.py" = ["F403", "F405"]
 "tests/test_settings.py" = ["F403", "F405"]
 # ─ conftest.py
 "**/conftest.py" = ["D100"]

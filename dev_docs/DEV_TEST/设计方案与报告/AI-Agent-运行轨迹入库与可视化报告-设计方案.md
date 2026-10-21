@@ -1,10 +1,10 @@
-# AI Agent 运行轨迹入库与可视化报告 · 设计方案
+﻿# AI Agent 运行轨迹入库与可视化报告 · 设计方案
 
 | 项 | 内容 |
 | --- | --- |
 | 版本 | v1.2（定稿） |
 | 状态 | 待评审 → 可立项 |
-| 涉及模块 | `engines/agents`、`apps/ai_assistant`、`apps/dashboard`、`frontend` |
+| 涉及模块 | `engines/agents`、`backend/apps/ai_assistant`、`backend/apps/dashboard`、`frontend` |
 | 目标 | 把 Agent 运行全过程按事件类型落库，前端据此渲染可视化流程报告 |
 | 本期范围 | **只做后端 + 数据库**（P1）；前端与读接口后续 |
 | 变更记录 | v1.1：`ai_usage_hourly` 增 `agent_id` 并纳入唯一键<br>v1.2：不存原图；保留期统一 90 天；不做报告快照表；范围收敛为后端 |
@@ -309,7 +309,7 @@ miss = input_tokens - hit
 
 ### 6.4 与现有任务级计费的差异
 
-`apps/ai_assistant/deepseek_billing.py::task_deepseek_cost` 现用 **`finished_at` 一个时刻**判高峰并实时重算。本方案按**每次调用时刻**分别判定：
+`backend/apps/ai_assistant/deepseek_billing.py::task_deepseek_cost` 现用 **`finished_at` 一个时刻**判高峰并实时重算。本方案按**每次调用时刻**分别判定：
 
 > **跨 12:00 / 14:00 / 18:00 边界的任务，两种算法结果不同。**
 
@@ -357,13 +357,13 @@ FROM ai_usage_hourly GROUP BY agent_id ORDER BY cost DESC;
 
 ### 8.1 归属结论
 
-**全部新增表、模型、写库、读接口都放 `apps/ai_assistant`。**
+**全部新增表、模型、写库、读接口都放 `backend/apps/ai_assistant`。**
 
 理由：
 - `AITask` 在 `ai_assistant`，事件/媒体/用量都是**任务的从属数据**，同库同 App 便于级联删除与事务
-- 平台侧唯一写入入口是 `apps/ai_assistant/task_runner.py`（它调用 `run_platform_sop`）
-- `apps/dashboard` 只做统计展示，**只读**，跨 App 读 Model 是项目允许的
-- `apps/report_generator` 只管报告导出，不存过程数据（P4 时从 ai_assistant 读）
+- 平台侧唯一写入入口是 `backend/apps/ai_assistant/task_runner.py`（它调用 `run_platform_sop`）
+- `backend/apps/dashboard` 只做统计展示，**只读**，跨 App 读 Model 是项目允许的
+- `backend/apps/report_generator` 只管报告导出，不存过程数据（P4 时从 ai_assistant 读）
 
 ### 8.2 边界：引擎只产事件，不碰 DB
 
@@ -372,8 +372,8 @@ FROM ai_usage_hourly GROUP BY agent_id ORDER BY cost DESC;
 ```
 engines/agents/event_sink.py        新增：EventSink 协议 + 默认空实现 + bind_sink()
 engines/agents/messaging/messages.py 改造：产出结构化事件 → 交给 sink
-apps/ai_assistant/event_store.py    新增：实现 sink（批量写库、缩略图、用量 upsert）
-apps/ai_assistant/task_runner.py    改造：任务启动前 bind_sink(DjangoEventSink(task_id, agent_id))
+backend/apps/ai_assistant/event_store.py    新增：实现 sink（批量写库、缩略图、用量 upsert）
+backend/apps/ai_assistant/task_runner.py    改造：任务启动前 bind_sink(DjangoEventSink(task_id, agent_id))
 ```
 
 ### 8.3 文件清单
@@ -385,15 +385,15 @@ apps/ai_assistant/task_runner.py    改造：任务启动前 bind_sink(DjangoEve
 | 引擎 | `engines/agents/messaging/billing.py` | 新增：未量化的费用计算入口 |
 | 引擎 | `engines/agents/workflow/platform_run.py` | 小改：把 `task_id` 传给 workflow |
 | 引擎 | `engines/agents/workflow/ui_auto_workflow.py` | 小改：按步注入 `step_seq` / `attempt`；结束 flush |
-| 后端 | `apps/ai_assistant/models.py` | 新增 3 个模型 + `AITask` 4 列 |
-| 后端 | `apps/ai_assistant/migrations/0058_*.py` | 新增迁移 |
-| 后端 | `apps/ai_assistant/event_store.py` | 新增：sink 实现、缩略图、去重、用量 upsert |
-| 后端 | `apps/ai_assistant/api.py` | 新增：事件/媒体/用量读写入口、任务费用回写 |
-| 后端 | `apps/ai_assistant/views_drf.py` | 新增 4~5 个只读端点 |
-| 后端 | `apps/ai_assistant/urls.py` | 新增路由 |
-| 后端 | `apps/ai_assistant/serializers.py` | 新增事件/媒体序列化 |
-| 后端 | `apps/ai_assistant/task_runner.py` | 小改：绑定 sink（带 `task_id` / `agent_id`） |
-| 后端 | `apps/dashboard/ai_usage.py` | 改造：改读 `ai_tasks.cost_*` 与 `ai_usage_hourly` |
+| 后端 | `backend/apps/ai_assistant/models.py` | 新增 3 个模型 + `AITask` 4 列 |
+| 后端 | `backend/apps/ai_assistant/migrations/0058_*.py` | 新增迁移 |
+| 后端 | `backend/apps/ai_assistant/event_store.py` | 新增：sink 实现、缩略图、去重、用量 upsert |
+| 后端 | `backend/apps/ai_assistant/api.py` | 新增：事件/媒体/用量读写入口、任务费用回写 |
+| 后端 | `backend/apps/ai_assistant/views_drf.py` | 新增 4~5 个只读端点 |
+| 后端 | `backend/apps/ai_assistant/urls.py` | 新增路由 |
+| 后端 | `backend/apps/ai_assistant/serializers.py` | 新增事件/媒体序列化 |
+| 后端 | `backend/apps/ai_assistant/task_runner.py` | 小改：绑定 sink（带 `task_id` / `agent_id`） |
+| 后端 | `backend/apps/dashboard/ai_usage.py` | 改造：改读 `ai_tasks.cost_*` 与 `ai_usage_hourly` |
 | 前端 | `frontend/src/modules/ai-assistant/` | 新增：泳道图、报告页、指标卡、api 层 |
 | 测试 | `tests/engines/agents/` | 新增：事件映射、B+ 聚合、费用精度、去重 |
 
@@ -475,8 +475,8 @@ apps/ai_assistant/task_runner.py    改造：任务启动前 bind_sink(DjangoEve
 
 | 影响 | 说明 |
 | --- | --- |
-| `apps/dashboard/ai_usage.py` | 改读冻结费用列，输出口径可能微调（跨边界任务金额变化） |
-| `apps/ai_assistant/deepseek_billing.py` | 退为兜底（历史无明细任务） |
+| `backend/apps/dashboard/ai_usage.py` | 改读冻结费用列，输出口径可能微调（跨边界任务金额变化） |
+| `backend/apps/ai_assistant/deepseek_billing.py` | 退为兜底（历史无明细任务） |
 | `AgentEventsShow` | 内部结构大改，外部调用方（2 处）签名不变 |
 | 数据库 | 3 张新表 + `ai_tasks` 4 列；无破坏性变更 |
 
@@ -524,3 +524,4 @@ apps/ai_assistant/task_runner.py    改造：任务启动前 bind_sink(DjangoEve
 ### 待定
 
 无。方案已闭环，可进入 OpenSpec 立项。
+

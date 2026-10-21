@@ -65,7 +65,7 @@ Vue SPA :5173 ──HTTP(/api)──▶ Vite 代理 ──▶ Daphne :8766 (ASGI
 | **AI 引擎** | AgentScope 2.0（Django 进程内） | SOP 双角色：`executor` 执行 + `verifier` 验收；11 个工具（含默认不装配的 OCR） |
 | **设备控制** | ADB（uiautomator2 仅探测与取 info） | 截图 / 点击 / 长按 / 滑动 / 输入 / 启停应用 / hierarchy |
 | **数据** | SQLite（开发）/ MySQL（生产）+ Redis | `ai_ cm_ dp_ rg_ sl_ task_ wf_` 七组前缀；Redis 承载 JWT 吊销与 Channels layer |
-| **实时性** | HTTP 轮询 | 当前**没有** WebSocket / SSE 生产点（`gateway/routing.py` 的 `websocket_urlpatterns` 为空表） |
+| **实时性** | HTTP 轮询 | 当前**没有** WebSocket / SSE 生产点（`backend/gateway/routing.py` 的 `websocket_urlpatterns` 为空表） |
 
 ### 模块地图
 
@@ -151,12 +151,16 @@ python run.py check      # 本地质量门禁（与 CI 同一批检查）
 
 | 目录 | 作用 |
 |------|------|
-| `apps/` | 9 个 Django App：纯 API，写库统一走各 App 的 `api.py` |
+| `backend/` | Django 后端根：项目配置、业务 App、网关、共享基础设施、模板与静态资源 |
+| `backend/config/` | Django settings / URLconf / ASGI / env 加载 |
+| `backend/apps/` | 9 个 Django App：纯 API，写库统一走各 App 的 `api.py` |
+| `backend/gateway/` | 网关中间件（JWT 鉴权、路由汇总） |
+| `backend/shared/` | 跨 App 基础设施：JWT、DRF 认证、响应信封、schema、用户工具 |
+| `backend/models/` | 跨模块共享的状态枚举与页面节点定义 |
+| `backend/templates/` | Django 模板覆盖（当前为 Swagger UI 主题） |
+| `backend/static/` | Django Admin / Swagger 静态资源 |
 | `engines/` | 引擎层：`agents/`（SOP 角色、工具、事件）、`device/`（adb 引擎、日志总线）、`uart_log/`（串口采集）、`vision/`（OCR） |
 | `frontend/` | Vue SPA：`src/modules/`（8 个业务模块）、`src/shared/`（共享件 / 令牌 / 请求出口） |
-| `shared/` | 跨 App 基础设施：JWT、DRF 认证、响应信封、schema、用户工具 |
-| `gateway/` | 网关中间件（JWT 鉴权、路由汇总） |
-| `models/` | 跨模块共享的状态枚举与页面节点定义 |
 | `utils/` | 公共基础设施包：`logs`（日志库）+ 质量门禁、架构统计、实时投屏等**开发脚本**（`python utils/xxx.py` 调用，业务代码不 import） |
 | `tests/` | 分层测试：`api/` · `graybox/` · `engines/` · `e2e/` · `arch/` |
 | `openspec/` | 能力规格（`specs/`）与变更归档（`changes/`） |

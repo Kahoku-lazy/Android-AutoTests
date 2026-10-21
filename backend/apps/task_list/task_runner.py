@@ -62,6 +62,7 @@ def run_task_async(task_id: int, agent_id: int) -> None:
             "summary": result.get("load_message") or "",
             "reason": result.get("reason") or "",
             "completed": result.get("completed") or [],
+            "failed": result.get("failed") or [],
         }
         api.finalize_task(
             task,

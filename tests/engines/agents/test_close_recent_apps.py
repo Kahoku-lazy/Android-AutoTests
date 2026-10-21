@@ -166,7 +166,7 @@ def test_each_finished_case_closes(tmp_path):
     assert result["completed"] == ["甲", "乙"]
 
 
-def test_failed_case_closes_once_and_stops(tmp_path):
+def test_failed_case_closes_and_next_case_still_runs(tmp_path):
     seen: list[str] = []
     closed: list[str] = []
 
@@ -175,10 +175,11 @@ def test_failed_case_closes_once_and_stops(tmp_path):
         return "fail"
 
     result = _run(tmp_path, runner, closer=closed.append)
-    assert seen == ["甲"]
-    assert closed == ["R5CT62RH88F"]
+    assert seen == ["甲", "乙"]
+    assert closed == ["R5CT62RH88F", "R5CT62RH88F"]
     assert result["status"] == "fail"
     assert result["completed"] == []
+    assert result["failed"] == ["甲", "乙"]
 
 
 def test_cancel_during_case_still_closes(tmp_path):

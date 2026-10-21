@@ -22,7 +22,13 @@ from engines.agents.role.base import AgentRoleConfig, BaseRole
 from engines.agents.role.config import ModelConfig
 from engines.agents.tools_config import build_executor_toolkit, build_verifier_toolkit
 from engines.agents.workflow.case_file import LOAD_FAIL, LOAD_OK, validate_platform_yaml
+from engines.agents.workflow.handover_guard import IncompleteHandoverGuard
 from engines.agents.workflow.ui_auto_workflow import AgentSOPWorkflow
+
+# 单步尝试的工具轮次预算：30 轮实测会被试错吃满，收尾那次点击反而轮不到。
+EXECUTOR_MAX_ITERS = 60
+# 验收者只截图 + 判卷，预算维持默认值。
+VERIFIER_MAX_ITERS = 30
 
 _cancel_events: dict[int, threading.Event] = {}
 _inflight: dict[int, tuple[asyncio.AbstractEventLoop, asyncio.Task]] = {}
@@ -83,7 +89,8 @@ def run_platform_sop(
         close_recent_apps: 收尾替身。省略时由引擎连设备关闭最近任务。
 
     Returns:
-        load_message、reason、status、completed。
+        load_message、reason、status、completed、failed。单条用例失败只记入 failed，
+        其余用例继续执行。
     """
     path = Path(yaml_path)
     if not path.is_file():
@@ -127,23 +134,25 @@ def _drive_stub(
     closer: AppCloser | None,
 ) -> dict:
     completed: list[str] = []
+    failed: list[str] = []
     try:
         for case in cases:
             if cancel_event is not None and cancel_event.is_set():
-                return _cancelled(completed)
+                return _cancelled(completed, failed)
             steps = [(step.action, step.expected) for step in case.steps]
             try:
                 phase = run_case(case.title, steps, opening)
             finally:
                 _close_after_case(device_serial, closer)
             if phase == "cancelled":
-                return _cancelled(completed)
+                return _cancelled(completed, failed)
             if phase != "completed":
-                return _case_failed(case.title, completed)
+                failed.append(case.title)
+                continue
             completed.append(case.title)
-        return _succeeded(completed)
+        return _finished(completed, failed)
     except asyncio.CancelledError:
-        return _cancelled(completed)
+        return _cancelled(completed, failed)
 
 
 async def _drive_real(
@@ -164,35 +173,48 @@ async def _drive_real(
         name="executor_role",
         system_prompt=EXECUTOR_PROMPT,
         toolkit=build_executor_toolkit(),
+        max_iters=EXECUTOR_MAX_ITERS,
     )
     verifier = _build_role(
         verifier_model,
         name="verifier_role",
         system_prompt=verifier_system_prompt(),
         toolkit=build_verifier_toolkit(),
+        max_iters=VERIFIER_MAX_ITERS,
     )
-    workflow = AgentSOPWorkflow(executor.agent, verifier.agent)
+    workflow = AgentSOPWorkflow(IncompleteHandoverGuard(executor.agent), verifier.agent)
     completed: list[str] = []
+    failed: list[str] = []
     try:
         for case in cases:
             if cancel_event is not None and cancel_event.is_set():
-                return _cancelled(completed)
+                return _cancelled(completed, failed)
             steps = [(step.action, step.expected) for step in case.steps]
             try:
                 phase = await workflow.run_workflow(case.title, steps, opening)
             finally:
                 _close_after_case(device_serial, closer)
+            if phase == "cancelled":
+                return _cancelled(completed, failed)
             if phase != "completed":
-                return _case_failed(case.title, completed)
+                failed.append(case.title)
+                continue
             completed.append(case.title)
-        return _succeeded(completed)
+        return _finished(completed, failed)
     except asyncio.CancelledError:
-        return _cancelled(completed)
+        return _cancelled(completed, failed)
     finally:
         _inflight.pop(task_id, None)
 
 
-def _build_role(model: ModelConfig, *, name: str, system_prompt: str, toolkit) -> BaseRole:
+def _build_role(
+    model: ModelConfig,
+    *,
+    name: str,
+    system_prompt: str,
+    toolkit,
+    max_iters: int,
+) -> BaseRole:
     secret = model.api_key
     api_key = secret.get_secret_value() if hasattr(secret, "get_secret_value") else str(secret)
     return BaseRole(
@@ -205,6 +227,7 @@ def _build_role(model: ModelConfig, *, name: str, system_prompt: str, toolkit) -
             system_prompt=system_prompt,
             toolkit=toolkit,
             vision=True,
+            max_iters=max_iters,
         ).load_config()
     )
 
@@ -226,12 +249,16 @@ def _close_after_case(device_serial: str, closer: AppCloser | None) -> None:
         write_line("-", f"收尾关闭应用失败：{exc}")
 
 
-def _case_failed(title: str, completed: list[str]) -> dict:
+def _finished(completed: list[str], failed: list[str]) -> dict:
+    """整轮结束的结果：有失败用例时状态为 fail，并汇总全部失败标题。"""
+    if not failed:
+        return _succeeded(completed)
     return {
         "load_message": LOAD_OK,
-        "reason": f"用例「{title}」未完成",
+        "reason": "；".join(f"用例「{title}」未完成" for title in failed),
         "status": "fail",
-        "completed": completed,
+        "completed": list(completed),
+        "failed": list(failed),
     }
 
 
@@ -240,7 +267,8 @@ def _succeeded(completed: list[str]) -> dict:
         "load_message": LOAD_OK,
         "reason": "",
         "status": "success",
-        "completed": completed,
+        "completed": list(completed),
+        "failed": [],
     }
 
 
@@ -250,15 +278,17 @@ def _fail(reason: str) -> dict:
         "reason": reason,
         "status": "fail",
         "completed": [],
+        "failed": [],
     }
 
 
-def _cancelled(completed: list[str]) -> dict:
+def _cancelled(completed: list[str], failed: list[str] | None = None) -> dict:
     return {
         "load_message": LOAD_OK,
         "reason": "用户关闭",
         "status": "cancelled",
-        "completed": completed,
+        "completed": list(completed),
+        "failed": list(failed or []),
     }
 
 

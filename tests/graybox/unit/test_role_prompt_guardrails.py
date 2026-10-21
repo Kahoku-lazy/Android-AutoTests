@@ -51,3 +51,16 @@ def test_verifier_prompt_rejection_is_executable():
     """驳回意见必须落在执行者工具集内。"""
     assert "驳回意见必须能在执行者工具集内执行" in VERIFIER_PROMPT
     assert "不要让它调用日志工具" in VERIFIER_PROMPT
+
+
+def test_executor_prompt_separates_connection_spinner_from_page_loading():
+    """长按后的设备连接加载圈不按页面加载超时判失败。"""
+    assert "属于设备连接/同步过程" in EXECUTOR_PROMPT
+    assert "**不是**页面加载" in EXECUTOR_PROMPT
+    assert "禁止**据此判本步失败" in EXECUTOR_PROMPT
+    assert "这类整体加载持续超过 10s 才可终止" in EXECUTOR_PROMPT
+
+
+def test_executor_prompt_forbids_incomplete_handover_wording():
+    """handover 出现“尚未/未完成/请下一步”即视为没做完。"""
+    assert "handover 里**禁止**出现“尚未”“未完成”“未点击”“请下一步”" in EXECUTOR_PROMPT

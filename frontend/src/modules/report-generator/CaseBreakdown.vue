@@ -78,9 +78,7 @@ async function loadData() {
       const payload = resp.data || {}
       data.value = payload
       expandedCases.value = new Set((payload.groups || []).map((g) => g.case_title))
-      expandedBugCases.value = new Set(
-        (payload.bug_summary?.cases || []).map((c) => c.case_title),
-      )
+      expandedBugCases.value = new Set((payload.bug_summary?.cases || []).map((c) => c.case_title))
     } else {
       data.value = null
     }

@@ -30,12 +30,12 @@
 - **THEN** 系统创建任务并返回「线路开发中」占位状态，不执行 reasoning
 
 ### Requirement: 任务列表与详情
-系统 SHALL 提供任务列表与详情。列表卡片 MUST 展示任务标题、状态、创建时间、设备名称（有型号则展示型号，否则展示设备 serial）与当前 AI 助手名称，MUST NOT 把任务目标作为卡片正文。任务卡「详情」MUST 打开该任务的事件流程报告 `/reports/task/:taskId`，MUST NOT 打开 `/ai-assistant/tasks/:taskId`。直接打开旧任务详情路由时，该页 MUST 仍可查看任务目标、执行状态与执行日志，并 MUST 按步骤展示该步的验收设备日志证据：摘要常显（命中等级与条数、关键词、命中的功能点），详情可折叠；无证据时 MUST 给出可读说明，MUST NOT 留空或报错。系统 MUST NOT 因日志证据的引入改变既有字段的含义。
+系统 SHALL 提供任务列表与详情。列表卡片 MUST 展示任务标题、状态、创建时间、设备名称（有型号则展示型号，否则展示设备 serial）与当前 AI 助手名称，MUST NOT 把任务目标作为卡片正文。任务卡「详情」MUST 打开该任务的事件流程报告 `/tasks/:taskId`，MUST NOT 打开 `/tasks/:taskId`。直接打开旧任务详情路由时，该页 MUST 仍可查看任务目标、执行状态与执行日志，并 MUST 按步骤展示该步的验收设备日志证据：摘要常显（命中等级与条数、关键词、命中的功能点），详情可折叠；无证据时 MUST 给出可读说明，MUST NOT 留空或报错。系统 MUST NOT 因日志证据的引入改变既有字段的含义。
 
 #### Scenario: 详情打开事件流程报告
 
 - **WHEN** 用户在任务卡片点击「详情」
-- **THEN** 浏览器进入 `/reports/task/` 加上该任务编号，不进入 `/ai-assistant/tasks/` 加上该编号
+- **THEN** 浏览器进入 `/tasks/` 加上该任务编号，不进入 `/tasks/` 加上该编号
 
 #### Scenario: 查看任务详情
 

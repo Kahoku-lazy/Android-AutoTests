@@ -5,6 +5,7 @@ import dpRoutes from "@/modules/device-pool/routes"
 import cmRoutes from "@/modules/case-manager/routes"
 import rgRoutes from "@/modules/report-generator/routes"
 import aiRoutes from "@/modules/ai-assistant/routes"
+import tlRoutes from "@/modules/task-list/routes"
 import wfRoutes from "@/modules/workflow/routes"
 import slRoutes from "@/modules/serial-log/routes"
 
@@ -15,6 +16,7 @@ const routes = [
   ...cmRoutes,
   ...rgRoutes,
   ...aiRoutes,
+  ...tlRoutes,
   ...wfRoutes,
   ...slRoutes,
   { path: "/", redirect: "/dashboard" },

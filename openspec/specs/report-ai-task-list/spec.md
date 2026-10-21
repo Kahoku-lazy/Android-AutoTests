@@ -7,7 +7,7 @@
 ## Requirements
 
 ### Requirement: Report list is sourced from assistant tasks
-`GET /api/reports` MUST return a flat envelope `{status, summary, trend, runs}` whose `runs` are the current user's visible `AITask` rows (one row per task). Visibility MUST match the assistant task board (same agent scope). The endpoint MUST remain read-only and MUST NOT write `ai_tasks` or other business tables.
+`GET /api/reports` MUST return a flat envelope `{status, summary, trend, runs}` whose `runs` are the current user's visible `task_list.Task` rows (one row per task). Visibility MUST match the assistant task board (same agent scope). The endpoint MUST remain read-only and MUST NOT write `task_tasks` or other business tables.
 
 #### Scenario: List includes a published task
 - **WHEN** the user has at least one visible assistant task
@@ -33,12 +33,12 @@ Each `runs[]` item MUST include: task id, device display (`device_label` if non-
 
 ### Requirement: Report workbench opens the task flow
 
-测试报告列表 MUST 把任务编号显示为纯文本，MUST NOT 链到 `/reports/:id`。KPI 的通过与失败卡片 MUST NOT 进入用例分解。点击列表中的一行 MUST 进入该任务的事件流程页 `/reports/task/:taskId`。
+测试报告列表 MUST 把任务编号显示为纯文本，MUST NOT 链到 `/reports/:id`。KPI 的通过与失败卡片 MUST NOT 进入用例分解。点击列表中的一行 MUST 进入该任务的事件流程页 `/tasks/:id`。
 
 #### Scenario: Clicking a row opens the task flow
 
 - **WHEN** 用户点击测试报告列表中的一行
-- **THEN** 浏览器进入 `/reports/task/` 加上该行的任务编号
+- **THEN** 浏览器进入 `/tasks/` 加上该行的任务编号
 
 #### Scenario: Task id is not a run detail link
 

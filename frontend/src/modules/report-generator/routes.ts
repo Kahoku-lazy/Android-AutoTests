@@ -14,12 +14,6 @@ const routes: RouteRecordRaw[] = [
     meta: { title: "用例细分" },
   },
   {
-    path: "/reports/task/:taskId",
-    name: "task-report",
-    component: () => import("@/modules/report-generator/TaskReport.vue"),
-    meta: { title: "任务报告" },
-  },
-  {
     path: "/reports/:runId",
     name: "report-detail",
     component: () => import("@/modules/report-generator/ReportDetail.vue"),

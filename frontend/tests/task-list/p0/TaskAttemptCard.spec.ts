@@ -1,0 +1,251 @@
+/**
+ * [P0] 必测 — 任务尝试卡片（执行结果常显 / 截图不折叠 / 不再展示 Agent 过程）
+ * 目录：tests/ai-assistant/p0/
+ */
+import { describe, expect, it } from "vitest"
+import { mount } from "@vue/test-utils"
+import TaskAttemptCard from "@/modules/task-list/components/TaskAttemptCard.vue"
+import type { TaskStepAttempt } from "@/modules/task-list/helpers/task-detail"
+
+const stubs = {
+  "el-collapse": {
+    template: '<div class="el-collapse" data-testid="collapse-stub"><slot /></div>',
+  },
+  "el-collapse-item": {
+    props: ["title", "name"],
+    template:
+      '<div class="el-collapse-item" :data-name="name">' +
+      '<span class="el-collapse-item__title">{{ title }}</span>' +
+      '<div class="el-collapse-item__wrap" style="display:none"><slot /></div>' +
+      "</div>",
+  },
+  "el-image": {
+    props: ["src"],
+    template: '<img class="el-image" :src="src" v-bind="$attrs" />',
+  },
+}
+
+function makeAttempt(overrides: Partial<TaskStepAttempt> = {}): TaskStepAttempt {
+  return {
+    loop: 1,
+    executorResult: "pass",
+    executorMessage: "已点击按钮",
+    verifierResult: "pass",
+    actual: "页面已跳转",
+    screenshotUrl: "/media/shots/verify-1.png",
+    ...overrides,
+  }
+}
+
+function mountCard(attempt?: Partial<TaskStepAttempt>, maxLoops = 3) {
+  return mount(TaskAttemptCard, {
+    props: {
+      attempt: makeAttempt(attempt),
+      maxLoops,
+    },
+    global: { stubs },
+  })
+}
+
+describe("[P0] TaskAttemptCard", () => {
+  it("执行结果常显：含执行/验收结论，且不在 collapse 内", () => {
+    const wrapper = mountCard()
+    const result = wrapper.find('[data-testid="attempt-result"]')
+    expect(result.exists()).toBe(true)
+    expect(result.text()).toContain("执行")
+    expect(result.text()).toContain("pass")
+    expect(result.text()).toContain("已点击按钮")
+    expect(result.text()).toContain("验收")
+    expect(result.text()).toContain("页面已跳转")
+    expect(result.find(".el-collapse").exists()).toBe(false)
+  })
+
+  it("有截图时 el-image 常显在结果区", () => {
+    const wrapper = mountCard()
+    const shot = wrapper.find('[data-testid="attempt-screenshot"]')
+    expect(shot.exists()).toBe(true)
+    expect(shot.attributes("src")).toBe("/media/shots/verify-1.png")
+    const inResult = wrapper.find(
+      '[data-testid="attempt-result"] [data-testid="attempt-screenshot"]',
+    )
+    expect(inResult.exists()).toBe(true)
+  })
+
+  it("新执行契约：点击前时间与点击后截图路径可见，截图可点开", () => {
+    const wrapper = mountCard({
+      executorClickTimer: "2026-09-28 17:01:12.645",
+      executorScreenshotPath: "ai_tasks/9/s1_l1.jpg",
+      executorScreenshotUrl: "/media/ai_tasks/9/s1_l1.jpg",
+    })
+    const result = wrapper.find('[data-testid="attempt-result"]')
+    expect(result.text()).toContain("点击前时间")
+    expect(result.text()).toContain("2026-09-28 17:01:12.645")
+    expect(result.text()).toContain("点击后截图")
+    expect(result.text()).toContain("ai_tasks/9/s1_l1.jpg")
+    const shot = wrapper.find('[data-testid="attempt-executor-screenshot"]')
+    expect(shot.exists()).toBe(true)
+    expect(shot.attributes("src")).toBe("/media/ai_tasks/9/s1_l1.jpg")
+  })
+
+  it("新执行契约未截图时如实标注，不渲染图片", () => {
+    const wrapper = mountCard({
+      executorClickTimer: "2026-09-28 17:01:12.645",
+      executorScreenshotPath: "",
+      executorScreenshotUrl: "",
+    })
+    const none = wrapper.find('[data-testid="attempt-executor-shot-none"]')
+    expect(none.exists()).toBe(true)
+    expect(none.text()).toBe("该步未截图")
+    expect(wrapper.find('[data-testid="attempt-executor-screenshot"]').exists()).toBe(false)
+  })
+
+  it("存量旧记录：没有点击证据行，说明文字照旧显示", () => {
+    const wrapper = mountCard()
+    const result = wrapper.find('[data-testid="attempt-result"]')
+    expect(result.text()).toContain("已点击按钮")
+    expect(result.find('[data-testid="attempt-executor-click-timer"]').exists()).toBe(false)
+    expect(result.find('[data-testid="attempt-executor-shot-path"]').exists()).toBe(false)
+    expect(result.find('[data-testid="attempt-executor-shot-none"]').exists()).toBe(false)
+  })
+
+  it("执行结果段只读：没有按钮与输入控件", () => {
+    const wrapper = mountCard({
+      executorClickTimer: "2026-09-28 17:01:12.645",
+      executorScreenshotPath: "a/b.jpg",
+      executorScreenshotUrl: "/media/a/b.jpg",
+    })
+    const result = wrapper.find('[data-testid="attempt-result"]')
+    expect(result.findAll("button").length).toBe(0)
+    expect(result.findAll("input").length).toBe(0)
+  })
+
+  it("新验收契约：日志断言（关键词 + 时间）与验证截图路径可见", () => {
+    const wrapper = mountCard({
+      verifierLogInfo: "switch_on",
+      verifierLogTimer: "2026-09-28 17:01:13.100",
+      verifierScreenshotPath: "ai_tasks/9/s1_verify.jpg",
+    })
+    const result = wrapper.find('[data-testid="attempt-result"]')
+    expect(result.find('[data-testid="attempt-verifier-log-info"]').text()).toBe("switch_on")
+    expect(result.text()).toContain("日志断言时间")
+    expect(result.text()).toContain("2026-09-28 17:01:13.100")
+    expect(result.text()).toContain("验证截图")
+    expect(result.text()).toContain("ai_tasks/9/s1_verify.jpg")
+  })
+
+  it("未检查日志时不渲染日志断言行", () => {
+    const wrapper = mountCard({ verifierLogInfo: "" })
+    const result = wrapper.find('[data-testid="attempt-result"]')
+    expect(result.find('[data-testid="attempt-verifier-log-info"]').exists()).toBe(false)
+  })
+
+  it("未检测到日志关键词时不渲染日志断言时间行", () => {
+    const wrapper = mountCard({ verifierLogTimer: "" })
+    const result = wrapper.find('[data-testid="attempt-result"]')
+    expect(result.find('[data-testid="attempt-verifier-log-timer"]').exists()).toBe(false)
+    expect(result.text()).not.toContain("日志断言时间")
+  })
+
+  it("只有模型回报的路径、没有落盘图时仍显示路径文本，不渲染图片", () => {
+    const wrapper = mountCard({
+      screenshotUrl: "",
+      verifierScreenshotPath: "ai_tasks/9/s1_verify.jpg",
+    })
+    const path = wrapper.find('[data-testid="attempt-verifier-shot-path"]')
+    expect(path.exists()).toBe(true)
+    expect(path.text()).toBe("ai_tasks/9/s1_verify.jpg")
+    expect(wrapper.find('[data-testid="attempt-screenshot"]').exists()).toBe(false)
+  })
+
+  it("存量旧验收记录：没有新坐标行，实际结果照旧显示", () => {
+    const wrapper = mountCard()
+    const result = wrapper.find('[data-testid="attempt-result"]')
+    expect(result.text()).toContain("页面已跳转")
+    expect(result.find('[data-testid="attempt-verifier-log-timer"]').exists()).toBe(false)
+    expect(result.find('[data-testid="attempt-verifier-shot-path"]').exists()).toBe(false)
+  })
+
+  it("不再渲染 Agent 过程区块（思考 / 工具明细已下线）", () => {
+    const wrapper = mountCard()
+    expect(wrapper.find(".el-collapse").exists()).toBe(false)
+    expect(wrapper.text()).not.toContain("Executor Agent Info")
+    expect(wrapper.text()).not.toContain("Verifier Agent Info")
+    expect(wrapper.text()).not.toContain("思考过程")
+  })
+
+  it("标题与正文 class 分离", () => {
+    const wrapper = mountCard()
+    expect(wrapper.find(".tac__title").exists()).toBe(true)
+    expect(wrapper.find(".tac-result__title").exists()).toBe(true)
+    expect(wrapper.find(".tac-result__row").exists()).toBe(true)
+    expect(wrapper.find(".tac-result__label").exists()).toBe(true)
+  })
+
+  it("日志证据摘要常显在尝试卡片内", () => {
+    const wrapper = mountCard({
+      logEvidence: {
+        conclusion: "hit",
+        window_line_count: 3,
+        hits: [
+          {
+            keyword: "switch_off",
+            grade: "strong",
+            count: 1,
+            features: [{ id: 1, module: "设备开关", feature: "关闭设备成功" }],
+          },
+        ],
+      },
+    })
+    const block = wrapper.find('[data-testid="step-log-evidence"]')
+    expect(block.exists()).toBe(true)
+    expect(block.text()).toContain("设备日志证据")
+    expect(block.text()).toContain("强证据")
+    expect(block.text()).toContain("switch_off")
+    expect(block.text()).toContain("关闭设备成功")
+    expect(block.find('[data-testid="log-evidence-summary"]').exists()).toBe(true)
+  })
+
+  it("无日志证据时给出一行可读说明", () => {
+    const wrapper = mountCard()
+    const empty = wrapper.find('[data-testid="log-evidence-empty"]')
+    expect(empty.exists()).toBe(true)
+    expect(empty.text()).toContain("未采集到设备日志证据")
+    expect(wrapper.find('[data-testid="log-evidence-summary"]').exists()).toBe(false)
+  })
+
+  it("未命中时摘要给出结论与窗口行数", () => {
+    const wrapper = mountCard({
+      logEvidence: { conclusion: "no_hit", window_line_count: 3 },
+    })
+    const conclusion = wrapper.find('[data-testid="log-evidence-conclusion"]')
+    expect(conclusion.exists()).toBe(true)
+    expect(conclusion.text()).toContain("未命中")
+    expect(conclusion.text()).toContain("3 行")
+  })
+
+  it("详情里同毫秒合并条按发生顺序换行呈现", () => {
+    const wrapper = mountCard({
+      logEvidence: {
+        conclusion: "hit",
+        hits: [{ keyword: "switch_off", grade: "strong", count: 1 }],
+        lines: [{ timestamp: "T", source: "tcp", text: "request\nstart\nswitch_off" }],
+      },
+    })
+    const rows = wrapper.findAll(".sle-row__text")
+    expect(rows.length).toBeGreaterThan(0)
+    expect(rows[rows.length - 1].text().split("\n")).toEqual(["request", "start", "switch_off"])
+  })
+
+  it("证据区块只读：没有按钮与输入控件", () => {
+    const wrapper = mountCard({
+      logEvidence: {
+        conclusion: "hit",
+        hits: [{ keyword: "switch_off", grade: "strong", count: 1 }],
+        lines: [{ timestamp: "T", source: "tcp", text: "x" }],
+      },
+    })
+    const block = wrapper.find('[data-testid="step-log-evidence"]')
+    expect(block.findAll("button").length).toBe(0)
+    expect(block.findAll("input").length).toBe(0)
+  })
+})

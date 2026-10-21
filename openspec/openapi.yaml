@@ -1,0 +1,2712 @@
+openapi: 3.0.3
+info:
+  title: Android-AutoTests API
+  version: 2.0.0
+  description: Android UI 自动化测试平台 — 覆盖设备管理、文档式用例、AI 任务执行与验收、串口日志、测试报告与仪表盘。
+paths:
+  /api/ai/agents/:
+    get:
+      operationId: ai_agents_list
+      description: Agent 资源 — 路径与旧函数视图一一对应（见模块 docstring）。
+      tags:
+      - ai
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgentDetail'
+          description: ''
+  /api/ai/agents/{id}/:
+    get:
+      operationId: ai_agents_retrieve
+      description: Agent 资源 — 路径与旧函数视图一一对应（见模块 docstring）。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 标识此 智能体 的 唯一整数值。
+        required: true
+      tags:
+      - ai
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentDetail'
+          description: ''
+  /api/ai/agents/{id}/delete/:
+    post:
+      operationId: ai_agents_delete_create
+      description: Agent 资源 — 路径与旧函数视图一一对应（见模块 docstring）。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 标识此 智能体 的 唯一整数值。
+        required: true
+      tags:
+      - ai
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentDetail'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AgentDetail'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AgentDetail'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentDetail'
+          description: ''
+  /api/ai/agents/{id}/reveal-key/:
+    post:
+      operationId: ai_agents_reveal_key_create
+      description: Agent 资源 — 路径与旧函数视图一一对应（见模块 docstring）。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 标识此 智能体 的 唯一整数值。
+        required: true
+      tags:
+      - ai
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentDetail'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AgentDetail'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AgentDetail'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentDetail'
+          description: ''
+  /api/ai/agents/{id}/update/:
+    post:
+      operationId: ai_agents_update_create
+      description: Agent 资源 — 路径与旧函数视图一一对应（见模块 docstring）。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 标识此 智能体 的 唯一整数值。
+        required: true
+      tags:
+      - ai
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentDetail'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AgentDetail'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AgentDetail'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentDetail'
+          description: ''
+  /api/ai/agents/create/:
+    post:
+      operationId: ai_agents_create_create
+      description: Agent 资源 — 路径与旧函数视图一一对应（见模块 docstring）。
+      tags:
+      - ai
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentDetail'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AgentDetail'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AgentDetail'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentDetail'
+          description: ''
+  /api/ai/upload-avatar/:
+    post:
+      operationId: ai_upload_avatar_create
+      description: POST /api/ai/upload-avatar — base64 头像 → data URI。
+      tags:
+      - ai
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/auth/login/:
+    post:
+      operationId: auth_login_create
+      description: POST /api/auth/login — 用户名密码登录，签发 access / refresh 令牌。
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Login'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Login'
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/auth/logout/:
+    post:
+      operationId: auth_logout_create
+      description: POST /api/auth/logout — 登出：吊销本次登录的整个会话（access + refresh）。
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/auth/me/:
+    get:
+      operationId: auth_me_retrieve
+      description: GET /api/auth/me — 当前登录用户信息。
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/auth/refresh/:
+    post:
+      operationId: auth_refresh_create
+      description: POST /api/auth/refresh — 用 refresh 令牌换取新的 access 令牌。
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Refresh'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Refresh'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Refresh'
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/auth/register/:
+    post:
+      operationId: auth_register_create
+      description: POST /api/auth/register — 注册新用户并直接签发令牌。
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Register'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Register'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Register'
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/cases/definitions/:
+    post:
+      operationId: cases_definitions_create
+      description: Document case CRUD + batch-delete.
+      tags:
+      - cases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/cases/definitions/{id}/:
+    get:
+      operationId: cases_definitions_retrieve
+      description: Document case CRUD + batch-delete.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: 标识此 用例定义 的 唯一值。
+        required: true
+      tags:
+      - cases
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    patch:
+      operationId: cases_definitions_partial_update
+      description: Document case CRUD + batch-delete.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: 标识此 用例定义 的 唯一值。
+        required: true
+      tags:
+      - cases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    delete:
+      operationId: cases_definitions_destroy
+      description: Document case CRUD + batch-delete.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: 标识此 用例定义 的 唯一值。
+        required: true
+      tags:
+      - cases
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/cases/definitions/batch-delete/:
+    post:
+      operationId: cases_definitions_batch_delete_create
+      description: Document case CRUD + batch-delete.
+      tags:
+      - cases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/cases/directories/:
+    post:
+      operationId: cases_directories_create
+      description: Directory create / update / delete.
+      tags:
+      - cases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/cases/directories/{id}/:
+    patch:
+      operationId: cases_directories_partial_update
+      description: Directory create / update / delete.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 标识此 用例目录 的 唯一整数值。
+        required: true
+      tags:
+      - cases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    delete:
+      operationId: cases_directories_destroy
+      description: Directory create / update / delete.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 标识此 用例目录 的 唯一整数值。
+        required: true
+      tags:
+      - cases
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/cases/files/:
+    post:
+      operationId: cases_files_create
+      description: Case sheet (tree file) CRUD + Excel rows payload.
+      tags:
+      - cases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/cases/files/{id}/:
+    get:
+      operationId: cases_files_retrieve
+      description: Case sheet (tree file) CRUD + Excel rows payload.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 标识此 用例文件 的 唯一整数值。
+        required: true
+      tags:
+      - cases
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    patch:
+      operationId: cases_files_partial_update
+      description: Case sheet (tree file) CRUD + Excel rows payload.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 标识此 用例文件 的 唯一整数值。
+        required: true
+      tags:
+      - cases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    delete:
+      operationId: cases_files_destroy
+      description: Case sheet (tree file) CRUD + Excel rows payload.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 标识此 用例文件 的 唯一整数值。
+        required: true
+      tags:
+      - cases
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/cases/move/:
+    post:
+      operationId: cases_move_create
+      description: Move directory or file within a project tree.
+      tags:
+      - cases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/cases/projects/:
+    get:
+      operationId: cases_projects_list
+      description: Project list / create / detail / update / delete / tree.
+      tags:
+      - cases
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: ''
+    post:
+      operationId: cases_projects_create
+      description: Project list / create / detail / update / delete / tree.
+      tags:
+      - cases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/cases/projects/{id}/:
+    get:
+      operationId: cases_projects_retrieve
+      description: Project list / create / detail / update / delete / tree.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 标识此 用例项目 的 唯一整数值。
+        required: true
+      tags:
+      - cases
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    patch:
+      operationId: cases_projects_partial_update
+      description: Project list / create / detail / update / delete / tree.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 标识此 用例项目 的 唯一整数值。
+        required: true
+      tags:
+      - cases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    delete:
+      operationId: cases_projects_destroy
+      description: Project list / create / detail / update / delete / tree.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 标识此 用例项目 的 唯一整数值。
+        required: true
+      tags:
+      - cases
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/cases/projects/{id}/tree/:
+    get:
+      operationId: cases_projects_tree_retrieve
+      description: Project list / create / detail / update / delete / tree.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: 标识此 用例项目 的 唯一整数值。
+        required: true
+      tags:
+      - cases
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/cases/stats/:
+    get:
+      operationId: cases_stats_retrieve
+      description: GET /api/cases/stats/ — document case summary.
+      tags:
+      - cases
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/dashboard/activities/:
+    get:
+      operationId: dashboard_activities_retrieve
+      description: |-
+        GET /api/dashboard/activities/ — recent events across the platform.
+
+        查询参数：limit（缺省 10，最大 50）、offset（缺省 0）。
+        data 仍为活动数组（非对象包裹）。
+      tags:
+      - dashboard
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: ''
+  /api/dashboard/stats/:
+    get:
+      operationId: dashboard_stats_retrieve
+      description: GET /api/dashboard/stats/ — platform-level statistics.
+      tags:
+      - dashboard
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/devices/:
+    get:
+      operationId: devices_retrieve
+      description: GET /api/devices/ — 设备列表 + 当前设备（含状态同步 + 可见性过滤）。
+      tags:
+      - devices
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/devices/{serial}/:
+    post:
+      operationId: devices_create
+      description: POST /api/devices/{serial} — 连接 + 采集信息 + 自动激活（observe 模式置使用中）。
+      parameters:
+      - in: path
+        name: serial
+        schema:
+          type: string
+        required: true
+      tags:
+      - devices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/devices/{serial}/activate/:
+    post:
+      operationId: devices_activate_create
+      description: POST /api/devices/{serial}/activate — 切换当前活动设备。
+      parameters:
+      - in: path
+        name: serial
+        schema:
+          type: string
+        required: true
+      tags:
+      - devices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/devices/{serial}/disconnect/:
+    post:
+      operationId: devices_disconnect_create
+      description: POST /api/devices/{serial}/disconnect — 删除设备（在线可删、使用中置灰、USB 无删除键）。
+      parameters:
+      - in: path
+        name: serial
+        schema:
+          type: string
+        required: true
+      tags:
+      - devices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/devices/{serial}/disconnect-observe/:
+    post:
+      operationId: devices_disconnect_observe_create
+      description: POST /api/devices/{serial}/disconnect-observe — 轻量断开（不删记录，释放观察占用为
+        ONLINE）。
+      parameters:
+      - in: path
+        name: serial
+        schema:
+          type: string
+        required: true
+      tags:
+      - devices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/devices/{serial}/lock/:
+    post:
+      operationId: devices_lock_create
+      description: POST /api/devices/{serial}/lock — 锁定 / 公开切换（可见性）。
+      parameters:
+      - in: path
+        name: serial
+        schema:
+          type: string
+        required: true
+      tags:
+      - devices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/devices/{serial}/release/:
+    post:
+      operationId: devices_release_create
+      description: POST /api/devices/{serial}/release — 释放设备检查器占用。
+      parameters:
+      - in: path
+        name: serial
+        schema:
+          type: string
+        required: true
+      tags:
+      - devices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/devices/current/:
+    get:
+      operationId: devices_current_retrieve
+      description: GET /api/devices/current — 当前活动设备信息。
+      tags:
+      - devices
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/devices/heartbeat/:
+    get:
+      operationId: devices_heartbeat_retrieve
+      description: GET /api/devices/heartbeat — 心跳同步。
+      tags:
+      - devices
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/devices/scan/:
+    post:
+      operationId: devices_scan_create
+      description: POST /api/devices/scan — ADB 扫描注册（全量 / USB / WiFi）。
+      tags:
+      - devices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/devices/stats/:
+    get:
+      operationId: devices_stats_retrieve
+      description: GET /api/devices/stats/ — device pool summary.
+      tags:
+      - devices
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/reports/:
+    get:
+      operationId: report_list
+      description: GET /api/reports — 当前用户可见的助手任务卡列表 / KPI / 趋势。
+      parameters:
+      - in: query
+        name: chart_range
+        schema:
+          type: string
+        description: 趋势天数
+      - in: query
+        name: creator
+        schema:
+          type: string
+        description: 按创建人过滤
+      - in: query
+        name: device_serial
+        schema:
+          type: string
+        description: 按设备序列号过滤
+      - in: query
+        name: end_date
+        schema:
+          type: string
+          format: date
+        description: 结束日期
+      - in: query
+        name: run_id
+        schema:
+          type: string
+        description: 按 run_id 过滤
+      - in: query
+        name: start_date
+        schema:
+          type: string
+          format: date
+        description: 起始日期
+      - in: query
+        name: task_name
+        schema:
+          type: string
+        description: 按任务名过滤
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/reports/{filename}/:
+    get:
+      operationId: report_download
+      description: GET /api/reports/{filename} — Download report file.
+      parameters:
+      - in: path
+        name: filename
+        schema:
+          type: string
+        required: true
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/reports/{filename}/content/:
+    get:
+      operationId: report_content
+      description: GET /api/reports/{filename}/content — Return file content for inline
+        viewing.
+      parameters:
+      - in: path
+        name: filename
+        schema:
+          type: string
+        required: true
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/reports/cases/:
+    get:
+      operationId: report_case_breakdown
+      description: GET /api/reports/cases — empty groups after execution engine removal.
+      parameters:
+      - in: query
+        name: result
+        schema:
+          type: string
+          enum:
+          - fail
+          - pass
+        required: true
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/reports/run/{run_id}/:
+    get:
+      operationId: report_run_detail
+      description: GET /api/reports/run/{run_id} — runs no longer exist.
+      parameters:
+      - in: path
+        name: run_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - reports
+      security:
+      - jwtAuth: []
+      responses:
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/schema/:
+    get:
+      operationId: schema_retrieve
+      description: |-
+        OpenApi3 schema for this API. Format can be selected via content negotiation.
+
+        - YAML: application/vnd.oai.openapi
+        - JSON: application/vnd.oai.openapi+json
+      parameters:
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum:
+          - json
+          - yaml
+      - in: query
+        name: lang
+        schema:
+          type: string
+          enum:
+          - af
+          - ar
+          - ar-dz
+          - ast
+          - az
+          - be
+          - bg
+          - bn
+          - br
+          - bs
+          - ca
+          - ckb
+          - cs
+          - cy
+          - da
+          - de
+          - dsb
+          - el
+          - en
+          - en-au
+          - en-gb
+          - eo
+          - es
+          - es-ar
+          - es-co
+          - es-mx
+          - es-ni
+          - es-ve
+          - et
+          - eu
+          - fa
+          - fi
+          - fr
+          - fy
+          - ga
+          - gd
+          - gl
+          - he
+          - hi
+          - hr
+          - hsb
+          - ht
+          - hu
+          - hy
+          - ia
+          - id
+          - ig
+          - io
+          - is
+          - it
+          - ja
+          - ka
+          - kab
+          - kk
+          - km
+          - kn
+          - ko
+          - ky
+          - lb
+          - lt
+          - lv
+          - mk
+          - ml
+          - mn
+          - mr
+          - ms
+          - my
+          - nb
+          - ne
+          - nl
+          - nn
+          - os
+          - pa
+          - pl
+          - pt
+          - pt-br
+          - ro
+          - ru
+          - sk
+          - sl
+          - sq
+          - sr
+          - sr-latn
+          - sv
+          - sw
+          - ta
+          - te
+          - tg
+          - th
+          - tk
+          - tr
+          - tt
+          - udm
+          - ug
+          - uk
+          - ur
+          - uz
+          - vi
+          - zh-hans
+          - zh-hant
+      tags:
+      - schema
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/vnd.oai.openapi:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/yaml:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/vnd.oai.openapi+json:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/serial-log/keywords/:
+    get:
+      operationId: serial_log_keywords_retrieve
+      description: GET /api/serial-log/keywords/ — 关键词对照表（只读，登录可读）。
+      tags:
+      - serial-log
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/serial-log/ports/:
+    get:
+      operationId: serial_log_ports_retrieve
+      description: GET /api/serial-log/ports/ — 端口列表（顺带按开关状态校正监听，幂等）。
+      tags:
+      - serial-log
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/serial-log/ports/{port}/lines/:
+    get:
+      operationId: serial_log_ports_lines_retrieve
+      description: |-
+        GET /api/serial-log/ports/<port>/lines/ — 当前日志文件尾部若干行（只读）。
+
+        query: `tail`（行数，默认 2000，夹紧到上限）；未登记端口与关闭态都返回可读结论。
+      parameters:
+      - in: path
+        name: port
+        schema:
+          type: integer
+        required: true
+      tags:
+      - serial-log
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/serial-log/ports/toggle/:
+    post:
+      operationId: serial_log_ports_toggle_create
+      description: |-
+        POST /api/serial-log/ports/toggle/ — 开关某端口的持续监听（仅超级管理员）。
+
+        body: `{"port": 7005, "enabled": true|false}`
+        开启即开始监听并落日志文件；关闭即停止监听并释放端口。
+      tags:
+      - serial-log
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/tasks/:
+    get:
+      operationId: tasks_retrieve
+      description: GET /api/tasks — 任务发布列表（Task）。
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/tasks/{task_id}/:
+    get:
+      operationId: ai_agent_task_detail
+      description: GET /api/tasks/{task_id} — 任务发布详情（过程日志）。
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/tasks/{task_id}/cancel/:
+    post:
+      operationId: tasks_cancel_create
+      description: POST /api/tasks/{task_id}/cancel — 关闭运行中的 SOP。
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/tasks/{task_id}/delete/:
+    post:
+      operationId: tasks_delete_create
+      description: POST /api/tasks/{task_id}/delete — 删除任务发布记录。
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/tasks/{task_id}/rerun/:
+    post:
+      operationId: tasks_rerun_create
+      description: POST /api/tasks/{task_id}/rerun — 失败任务克隆新建并调度。
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/tasks/clear/:
+    post:
+      operationId: tasks_clear_create
+      description: POST /api/tasks/clear — 调试：清空全部任务发布记录。
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/tasks/submit/:
+    post:
+      operationId: tasks_submit_create
+      description: POST /api/tasks/submit — 提交任务；按设备调度（同设备排队 / 异设备并行）。
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskSubmitInput'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TaskSubmitInput'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TaskSubmitInput'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/tasks/upload-file/:
+    post:
+      operationId: tasks_upload_file_create
+      description: POST /api/ai/upload-file — multipart 文件上传并解析。
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/workflow/directories/:
+    get:
+      operationId: workflow_directories_list
+      description: 目录 CRUD — list 同时返回 flat + tree，move 为 @action.
+      tags:
+      - workflow
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkflowDirectory'
+          description: ''
+    post:
+      operationId: workflow_directories_create
+      description: 目录 CRUD — list 同时返回 flat + tree，move 为 @action.
+      tags:
+      - workflow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowDirectory'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkflowDirectory'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkflowDirectory'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDirectory'
+          description: ''
+  /api/workflow/directories/{id}/:
+    get:
+      operationId: workflow_directories_retrieve
+      description: 目录 CRUD — list 同时返回 flat + tree，move 为 @action.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - workflow
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDirectory'
+          description: ''
+    put:
+      operationId: workflow_directories_update
+      description: 目录 CRUD — list 同时返回 flat + tree，move 为 @action.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - workflow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowDirectory'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkflowDirectory'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkflowDirectory'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDirectory'
+          description: ''
+    patch:
+      operationId: workflow_directories_partial_update
+      description: 目录 CRUD — list 同时返回 flat + tree，move 为 @action.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - workflow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkflowDirectory'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkflowDirectory'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkflowDirectory'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDirectory'
+          description: ''
+    delete:
+      operationId: workflow_directories_destroy
+      description: 返回 200 + 空 data，走信封 {status:true}；避免默认 204 空体让前端判失败。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - workflow
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/workflow/directories/{id}/move/:
+    post:
+      operationId: workflow_directories_move_create
+      description: 目录 CRUD — list 同时返回 flat + tree，move 为 @action.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - workflow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowDirectory'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkflowDirectory'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkflowDirectory'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDirectory'
+          description: ''
+  /api/workflow/documents/:
+    get:
+      operationId: workflow_documents_list
+      description: 文档 CRUD — doc_id 为 natural key，支持 import/export/move.
+      tags:
+      - workflow
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkflowDocumentList'
+          description: ''
+    post:
+      operationId: workflow_documents_create
+      description: 文档 CRUD — doc_id 为 natural key，支持 import/export/move.
+      tags:
+      - workflow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowDocumentDetail'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkflowDocumentDetail'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkflowDocumentDetail'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDocumentDetail'
+          description: ''
+  /api/workflow/documents/{doc_id}/:
+    get:
+      operationId: workflow_documents_retrieve
+      description: 文档 CRUD — doc_id 为 natural key，支持 import/export/move.
+      parameters:
+      - in: path
+        name: doc_id
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - workflow
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDocumentDetail'
+          description: ''
+    put:
+      operationId: workflow_documents_update
+      description: 文档 CRUD — doc_id 为 natural key，支持 import/export/move.
+      parameters:
+      - in: path
+        name: doc_id
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - workflow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowDocumentDetail'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkflowDocumentDetail'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkflowDocumentDetail'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDocumentDetail'
+          description: ''
+    patch:
+      operationId: workflow_documents_partial_update
+      description: 文档 CRUD — doc_id 为 natural key，支持 import/export/move.
+      parameters:
+      - in: path
+        name: doc_id
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - workflow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkflowDocumentDetail'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkflowDocumentDetail'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkflowDocumentDetail'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDocumentDetail'
+          description: ''
+    delete:
+      operationId: workflow_documents_destroy
+      description: 返回 200 + 空 data，走信封 {status:true}；避免默认 204 空体让前端判失败。
+      parameters:
+      - in: path
+        name: doc_id
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - workflow
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/workflow/documents/{doc_id}/export/:
+    get:
+      operationId: workflow_documents_export_retrieve
+      description: 文档 CRUD — doc_id 为 natural key，支持 import/export/move.
+      parameters:
+      - in: path
+        name: doc_id
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - workflow
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDocumentDetail'
+          description: ''
+  /api/workflow/documents/{doc_id}/move/:
+    post:
+      operationId: workflow_documents_move_create
+      description: 文档 CRUD — doc_id 为 natural key，支持 import/export/move.
+      parameters:
+      - in: path
+        name: doc_id
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - workflow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowDocumentDetail'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkflowDocumentDetail'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkflowDocumentDetail'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDocumentDetail'
+          description: ''
+  /api/workflow/documents/import/:
+    post:
+      operationId: workflow_documents_import_create
+      description: POST /api/workflow/documents/import — 导入 envelope；?overwrite=1
+        覆盖同 doc_id.
+      tags:
+      - workflow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowDocumentDetail'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkflowDocumentDetail'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkflowDocumentDetail'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowDocumentDetail'
+          description: ''
+  /api/workflow/prototypes/:
+    get:
+      operationId: workflow_prototypes_list
+      description: 原型 CRUD — 标准信封由 EnvelopeJSONRenderer 包裹.
+      tags:
+      - workflow
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkflowPrototype'
+          description: ''
+    post:
+      operationId: workflow_prototypes_create
+      description: 原型 CRUD — 标准信封由 EnvelopeJSONRenderer 包裹.
+      tags:
+      - workflow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowPrototype'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkflowPrototype'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkflowPrototype'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowPrototype'
+          description: ''
+  /api/workflow/prototypes/{id}/:
+    get:
+      operationId: workflow_prototypes_retrieve
+      description: 原型 CRUD — 标准信封由 EnvelopeJSONRenderer 包裹.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - workflow
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowPrototype'
+          description: ''
+    put:
+      operationId: workflow_prototypes_update
+      description: 原型 CRUD — 标准信封由 EnvelopeJSONRenderer 包裹.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - workflow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowPrototype'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkflowPrototype'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkflowPrototype'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowPrototype'
+          description: ''
+    patch:
+      operationId: workflow_prototypes_partial_update
+      description: 原型 CRUD — 标准信封由 EnvelopeJSONRenderer 包裹.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - workflow
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkflowPrototype'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkflowPrototype'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedWorkflowPrototype'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowPrototype'
+          description: ''
+    delete:
+      operationId: workflow_prototypes_destroy
+      description: 原型 CRUD — 标准信封由 EnvelopeJSONRenderer 包裹.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - workflow
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+components:
+  schemas:
+    AgentDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        avatar:
+          type: string
+        tags:
+          type: string
+        description:
+          type: string
+        model_provider:
+          type: string
+        model_name:
+          type: string
+        vision_model_name:
+          type: string
+        strong_model_name:
+          type: string
+        strong_enabled:
+          type: boolean
+        api_key:
+          type: string
+          readOnly: true
+        base_url:
+          type: string
+          readOnly: true
+        route_configs:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        max_loops:
+          type: integer
+        status:
+          type: string
+        created_at:
+          type: string
+      required:
+      - api_key
+      - avatar
+      - base_url
+      - created_at
+      - description
+      - id
+      - max_loops
+      - model_name
+      - model_provider
+      - name
+      - route_configs
+      - status
+      - strong_enabled
+      - strong_model_name
+      - tags
+      - vision_model_name
+    DocTypeEnum:
+      enum:
+      - page_flow
+      type: string
+      description: '* `page_flow` - 页面流'
+    Login:
+      type: object
+      properties:
+        username:
+          type: string
+          default: ''
+        password:
+          type: string
+          default: ''
+    PatchedWorkflowDirectory:
+      type: object
+      description: 目录序列化器 — 含文档数量.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        prototype_id:
+          type: integer
+          readOnly: true
+        parent_id:
+          type: integer
+          nullable: true
+        parent_name:
+          type: string
+          readOnly: true
+        sort_order:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        doc_count:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedWorkflowDocumentDetail:
+      type: object
+      description: 文档详情 — 含 config_json（前端字段名 config，读写均支持）.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        doc_id:
+          type: string
+          readOnly: true
+        title:
+          type: string
+          maxLength: 500
+        doc_type:
+          $ref: '#/components/schemas/DocTypeEnum'
+        prototype_id:
+          type: integer
+          readOnly: true
+        directory_id:
+          type: integer
+          nullable: true
+        description:
+          type: string
+        config: {}
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedWorkflowPrototype:
+      type: object
+      description: 原型序列化器 — 含文档数量.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        doc_count:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    Refresh:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+          default: ''
+    Register:
+      type: object
+      properties:
+        username:
+          type: string
+          default: ''
+        password:
+          type: string
+          default: ''
+        password2:
+          type: string
+          default: ''
+        email:
+          type: string
+          default: ''
+    TaskSubmitInput:
+      type: object
+      description: |-
+        任务提交入参 — title/agent_id/device_serial 必填；case_title 可选。
+
+        旧字段 goal / assistant_route / attachment 保留为可选，仅兼容历史客户端；
+        执行链不再使用它们。
+      properties:
+        title:
+          type: string
+        agent_id:
+          type: integer
+          minimum: 1
+        device_serial:
+          type: string
+        case_title:
+          type: string
+          default: ''
+        goal:
+          type: string
+          default: ''
+        assistant_route:
+          type: string
+          default: ''
+        device_label:
+          type: string
+          default: ''
+        attachment:
+          type: string
+          format: uri
+          nullable: true
+      required:
+      - agent_id
+      - device_serial
+      - title
+    WorkflowDirectory:
+      type: object
+      description: 目录序列化器 — 含文档数量.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        prototype_id:
+          type: integer
+          readOnly: true
+        parent_id:
+          type: integer
+          nullable: true
+        parent_name:
+          type: string
+          readOnly: true
+        sort_order:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        doc_count:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - doc_count
+      - id
+      - name
+      - parent_name
+      - prototype_id
+      - updated_at
+    WorkflowDocumentDetail:
+      type: object
+      description: 文档详情 — 含 config_json（前端字段名 config，读写均支持）.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        doc_id:
+          type: string
+          readOnly: true
+        title:
+          type: string
+          maxLength: 500
+        doc_type:
+          $ref: '#/components/schemas/DocTypeEnum'
+        prototype_id:
+          type: integer
+          readOnly: true
+        directory_id:
+          type: integer
+          nullable: true
+        description:
+          type: string
+        config: {}
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - doc_id
+      - doc_type
+      - id
+      - prototype_id
+      - title
+      - updated_at
+    WorkflowDocumentList:
+      type: object
+      description: 文档列表 — 不含 config_json（体积大）.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        doc_id:
+          type: string
+          readOnly: true
+        title:
+          type: string
+          maxLength: 500
+        doc_type:
+          $ref: '#/components/schemas/DocTypeEnum'
+        prototype_id:
+          type: integer
+          readOnly: true
+        directory_id:
+          type: integer
+          nullable: true
+          readOnly: true
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - directory_id
+      - doc_id
+      - doc_type
+      - id
+      - prototype_id
+      - title
+      - updated_at
+    WorkflowPrototype:
+      type: object
+      description: 原型序列化器 — 含文档数量.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        doc_count:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - doc_count
+      - id
+      - name
+      - updated_at
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+tags:
+- name: dashboard
+  description: 仪表盘：全平台只读聚合统计
+- name: devices
+  description: 设备管理：扫描 / 连接 / 断开 / 激活 / 心跳 / 占用释放
+- name: cases
+  description: 用例管理：项目 → 目录 → 文件 → 用例行
+- name: workflow
+  description: 页面流：原型目录、画布文档 CRUD 与导入导出
+- name: auth
+  description: 登录鉴权：登录 / 注册 / 刷新 / 登出 / 当前用户
+- name: ai
+  description: AI 助手：智能体配置、任务发布 / 重跑 / 取消、任务清单
+- name: tasks
+  description: 任务清单：任务提交、重跑、取消、事件流程报告
+- name: reports
+  description: 测试报告：任务报告列表、用例分解、报告文件下载与查看
+- name: serial-log
+  description: 串口日志：端口监听开关、当前日志查看与关键词对照表
+- name: schema
+  description: OpenAPI schema 端点（drf-spectacular 自带）

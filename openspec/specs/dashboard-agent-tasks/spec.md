@@ -8,7 +8,7 @@
 
 ### Requirement: Dashboard execution chart uses agent task cards
 
-系统 MUST 用当前用户可见智能体下的 `AITask` 填充仪表盘 `charts.execution`。近 7 个自然日 MUST 以 `created_at` 分桶；成功桶 MUST 计入 `status` 为 `completed` 或 `success` 的卡片，失败桶 MUST 计入 `status` 为 `failed` 的卡片。MUST NOT 再返回执行引擎下线后的恒零序列作为该图的业务含义。
+系统 MUST 用当前用户可见智能体下的 `task_list.Task` 填充仪表盘 `charts.execution`。近 7 个自然日 MUST 以 `created_at` 分桶；成功桶 MUST 计入 `status` 为 `completed` 或 `success` 的卡片，失败桶 MUST 计入 `status` 为 `failed` 的卡片。MUST NOT 再返回执行引擎下线后的恒零序列作为该图的业务含义。
 
 #### Scenario: Two successful cards appear on create day
 
@@ -18,7 +18,7 @@
 
 ### Requirement: Dashboard result panel lists agent task cards
 
-系统 MUST 用同一批 `AITask` 填充 `execution_summary`（成功数 / 失败数）与 `recent_tasks`（最近卡片，含 id、标题、状态、时间）。空列表时文案 MUST 引导前往任务清单新建任务，MUST NOT 再引导「执行引擎」。有 id 的条目被激活时 MUST 进入该任务详情（`/ai-assistant/tasks/:id`），MUST NOT 进入报告列表。
+系统 MUST 用同一批 `task_list.Task` 填充 `execution_summary`（成功数 / 失败数）与 `recent_tasks`（最近卡片，含 id、标题、状态、时间）。空列表时文案 MUST 引导前往任务清单新建任务，MUST NOT 再引导「执行引擎」。有 id 的条目被激活时 MUST 进入该任务详情（`/tasks/:id`），MUST NOT 进入报告列表。
 
 #### Scenario: Empty panel copy
 

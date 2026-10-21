@@ -95,8 +95,8 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
     loading.value = false
   }
 
-  function openAgent(_agent: AgentRecord) {
-    router.push("/ai-assistant/tasks")
+  function openAgent(agent: AgentRecord) {
+    router.push(agentDetailRoute(agent.id))
   }
   function editAgent(id: number, routeKey?: string) {
     router.push({ path: agentDetailRoute(id), query: routeKey ? { route: routeKey } : {} })

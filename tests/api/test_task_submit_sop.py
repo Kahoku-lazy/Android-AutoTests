@@ -8,9 +8,11 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from apps.ai_assistant import api
-from apps.ai_assistant.models import AIAgent, AITask
-from apps.ai_assistant.views_drf import TaskSubmitAPIView
+from apps.ai_assistant import api as agent_api
+from apps.ai_assistant.models import AIAgent
+from apps.task_list import api
+from apps.task_list.models import Task
+from apps.task_list.views import TaskSubmitAPIView
 
 pytestmark = [pytest.mark.django_db, pytest.mark.api]
 
@@ -35,7 +37,7 @@ def admin_user(db):
 
 @pytest.fixture
 def sop_agent(db):
-    key = api.encrypt_key("sk-test")
+    key = agent_api.encrypt_key("sk-test")
     route = {
         "device_control": {
             "name": "Agent-01号",
@@ -48,7 +50,7 @@ def sop_agent(db):
 
 def _submit(user, *, data: dict, files: dict | None = None):
     factory = APIRequestFactory()
-    request = factory.post("/api/ai/tasks/submit/", data, format="multipart")
+    request = factory.post("/api/tasks/submit/", data, format="multipart")
     if files:
         request.FILES.update(files)
     request.user_id = str(user.id)
@@ -116,7 +118,7 @@ def test_creates_task_with_case_title(admin_user, sop_agent):
         files={"config": _yaml_file()},
     )
     assert response.status_code == 200
-    task = AITask.objects.get(id=response.data["id"])
+    task = Task.objects.get(id=response.data["id"])
     assert task.case_title == "乙"
     assert task.device_serial == "R5CT62RH88F"
     assert task.agent_id == sop_agent.id
@@ -127,7 +129,7 @@ def test_creates_task_with_case_title(admin_user, sop_agent):
 
 
 def test_run_input_template_only_uses_device_serial():
-    task = AITask(device_serial="R5CT62RH88F")
+    task = Task(device_serial="R5CT62RH88F")
     assert (
         api.build_sop_run_input(task)
         == "本次要操作的设备 serial 是：R5CT62RH88F。每一步的设备动作都必须带上它。"

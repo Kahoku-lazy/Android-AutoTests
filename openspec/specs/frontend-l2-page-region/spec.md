@@ -85,7 +85,7 @@
 所有 L2 页头 SHALL 由 `shared/components/WorkbenchHeader.vue` 提供；系统 MUST NOT 保留第二套页头共享组件。
 
 #### Scenario: Report detail pages match the report list header
-- **WHEN** 依次打开 `/reports`、`/reports/{runId}`、`/reports/cases/{resultType}`、`/reports/task/{taskId}`
+- **WHEN** 依次打开 `/reports`、`/reports/{runId}`、`/reports/cases/{resultType}`、`/tasks/{id}`
 - **THEN** 四个页面都渲染 `.wb-header`，且页头高度同为 `var(--app-topbar-h)`
 
 #### Scenario: No second header component remains

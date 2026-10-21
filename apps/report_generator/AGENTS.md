@@ -10,15 +10,15 @@
 |------|------|
 | 报告只读列表/详情/分解 + 下载 | 写业务数据（跨 App 写必须走对方 api） |
 | `FileResponse` 下载报告文件 | 把文件内容塞进 JSON 信封 |
-| 列表只读聚合可见 `AITask`（`ai_task_reports.py`） | import dashboard / ai_assistant 的 service、views |
+| 列表只读聚合可见 `task_list.Task`（`task_list/task_reports.py`） | import dashboard / ai_assistant / task_list 的 service、views |
 
-- **列表数据源**：`GET /api/reports` 读当前用户可见的 `AITask`（成功 = `completed`/`success`，失败 = `failed`）；不写 `ai_tasks`。
-- **详情**：`GET /api/reports/task/{id}` 只读该用户可见任务的事件流程（`ai_task_events`）；`/reports/run|cases` 仍为空壳。
+- **列表数据源**：`GET /api/reports` 读当前用户可见的 `task_list.Task`（成功 = `completed`/`success`，失败 = `failed`）；不写 `task_tasks`。
+- **详情**：任务事件流程已迁至任务清单 `GET /api/tasks/{id}/report/`；`/reports/run|cases` 仍为空壳。
 - 下载/查看端点必须防路径穿越（`{filename}` 校验），现有 403/404 语义保持。
 
 ## 本 App 契约（特例 + 真相源）
 
-真相源：`apps/report_generator/urls.py`（6 端点：`""` / `cases` / `run/{run_id}` / `task/{task_id}` / `{filename}/content` / `{filename}`）+ `views.py` + `ai_task_reports.py` + `api.py`。
+真相源：`apps/report_generator/urls.py`（5 端点：`""` / `cases` / `run/{run_id}` / `{filename}/content` / `{filename}`）+ `views.py` + `api.py`（任务列表聚合读 `task_list.task_reports`）。
 
 **信封特例（legacy 平铺，禁止新增/改造）**：
 
@@ -34,7 +34,7 @@
 
 ```
 [ ] 无 ORM 写业务表；只读查询 + 文件读取
-[ ] 列表只读 AITask + ai_assistant.api 只读函数，无 service import
+[ ] 列表只读 task_list.Task + ai_assistant.api 只读函数，无 service import
 [ ] 路径穿越防护：恶意 filename 返回 403/404（不落盘、不泄漏）
 [ ] 平铺信封与 FileResponse 形态未变（前端按平铺/文本读取）
 ```

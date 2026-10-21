@@ -48,12 +48,12 @@ describe('[P1] TaskResultPanel', () => {
     expect(status.classes()).toContain('is-success')
   })
 
-  it('有 id 时点击进入助手任务详情', async () => {
+  it('有 id 时点击进入任务详情', async () => {
     const wrapper = mountPanel({
       tasks: [{ id: 12, status: 'success', title: '已完成任务' }],
     })
     await wrapper.find('.task-row').trigger('click')
-    expect(pushMock).toHaveBeenCalledWith('/ai-assistant/tasks/12')
+    expect(pushMock).toHaveBeenCalledWith('/tasks/12')
   })
 
   it('无任何 ID 的任务：点击不跳转', async () => {

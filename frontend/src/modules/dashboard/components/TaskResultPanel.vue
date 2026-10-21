@@ -48,7 +48,7 @@ function taskId(task: RecentTask): string | number | null {
 function openTask(task: RecentTask) {
   const id = taskId(task)
   if (!id) return
-  router.push(`/ai-assistant/tasks/${id}`)
+  router.push(`/tasks/${id}`)
 }
 </script>
 

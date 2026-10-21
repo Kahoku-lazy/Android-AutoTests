@@ -18,8 +18,8 @@ Django SHALL 通过 `TaskRequest` 传入规划用户输入（字段名仍为 `go
 
 #### Scenario: 组装请求
 
-- **WHEN** 前端提交任务（`POST /api/ai/tasks/submit`）且任务已落库
-- **THEN** `engine_adapter` 从 `AITask` 与 `route_configs`（解密后）组装 `TaskRequest`，模型 api_key 以明文传入引擎，且 `TaskRequest.goal` 为上述四键 JSON
+- **WHEN** 前端提交任务（`POST /api/tasks/submit`）且任务已落库
+- **THEN** `engine_adapter` 从 `task_list.Task` 与 `route_configs`（解密后）组装 `TaskRequest`，模型 api_key 以明文传入引擎，且 `TaskRequest.goal` 为上述四键 JSON
 
 #### Scenario: 规划模型收到结构化任务 JSON
 
@@ -37,11 +37,11 @@ Django SHALL 通过 `TaskRequest` 传入规划用户输入（字段名仍为 `go
 - **THEN** 引擎仍能完成执行，验收阶段标注「无日志证据」，MUST NOT 因缺少日志证据而中断任务
 
 ### Requirement: TaskResult 归一化
-引擎 SHALL 返回 `TaskResult`（`status`/`summary`/`completed`/`failed`/`log`/`usage`/`reason`）；两条线路（device_control / platform_task）结果同构，`summary` 落 `AITask.result`。
+引擎 SHALL 返回 `TaskResult`（`status`/`summary`/`completed`/`failed`/`log`/`usage`/`reason`）；两条线路（device_control / platform_task）结果同构，`summary` 落 `task_list.Task.result`。
 
 #### Scenario: 结果落库
 - **WHEN** 引擎返回 `TaskResult`
-- **THEN** Django 按 `status` 写 `AITask` 状态，`summary` 写 `result`（device_control 不再恒空）
+- **THEN** Django 按 `status` 写 `task_list.Task` 状态，`summary` 写 `result`（device_control 不再恒空）
 
 ### Requirement: 引擎零 apps 依赖
 `ai_engines` SHALL 不 import `apps.*` 内部实现；数据类业务工具经 `TaskRequest.tools` 注入，引擎只负责包装与调用；设备动作类工具 SHALL 由引擎自带（设备工具 + 登记清单），不再经注入，装配时 MUST 跳过注入清单里的同名设备动作工具。`ai_engines` 是唯一可触碰第三方 AI 框架的层。引擎 MUST NOT 直接引用具体设备实现（只能经设备引擎协议），也 MUST NOT 因设备动作而获得对设备池台账与设备日志的直接访问。

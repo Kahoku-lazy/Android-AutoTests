@@ -1,4 +1,4 @@
-"""GET /api/reports 以可见 AITask 为数据源。"""
+"""GET /api/reports 以可见 Task 为数据源。"""
 
 from __future__ import annotations
 
@@ -10,7 +10,8 @@ from django.contrib.auth import get_user_model
 from django.test import Client
 from django.utils import timezone
 
-from apps.ai_assistant.models import AIAgent, AITask
+from apps.ai_assistant.models import AIAgent
+from apps.task_list.models import Task
 from shared.auth.jwt_auth import create_access_token
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db, pytest.mark.report_generator]
@@ -57,7 +58,7 @@ def test_reports_lists_visible_task_and_kpis(auth_client):
     user, client, headers = auth_client
     agent = _agent(user)
     now = timezone.now()
-    task = AITask.objects.create(
+    task = Task.objects.create(
         agent=agent,
         title="登录冒烟",
         status="completed",
@@ -89,10 +90,10 @@ def test_reports_lists_visible_task_and_kpis(auth_client):
 def test_reports_pending_excluded_from_pass_fail(auth_client):
     user, client, headers = auth_client
     agent = _agent(user)
-    AITask.objects.create(agent=agent, title="wait", status="pending")
-    AITask.objects.create(agent=agent, title="ok", status="completed")
-    AITask.objects.create(agent=agent, title="ok-alias", status="success")
-    AITask.objects.create(agent=agent, title="bad", status="failed")
+    Task.objects.create(agent=agent, title="wait", status="pending")
+    Task.objects.create(agent=agent, title="ok", status="completed")
+    Task.objects.create(agent=agent, title="ok-alias", status="success")
+    Task.objects.create(agent=agent, title="bad", status="failed")
     body = client.get("/api/reports/", **headers).json()
     assert body["summary"]["total_runs"] == 4
     assert body["summary"]["total_pass"] == 2
@@ -103,7 +104,7 @@ def test_reports_pending_excluded_from_pass_fail(auth_client):
 def test_reports_device_falls_back_to_serial(auth_client):
     user, client, headers = auth_client
     agent = _agent(user)
-    AITask.objects.create(
+    Task.objects.create(
         agent=agent,
         title="无别名",
         status="failed",

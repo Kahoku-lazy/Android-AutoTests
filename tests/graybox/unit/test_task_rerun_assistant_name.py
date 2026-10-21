@@ -6,8 +6,9 @@ from unittest.mock import patch
 
 import pytest
 
-from apps.ai_assistant import api
+from apps.ai_assistant import api as agent_api
 from apps.ai_assistant.models import AIAgent
+from apps.task_list import api
 from models.constants import AgentStatus, TaskStatus
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db(transaction=True)]
@@ -17,7 +18,7 @@ def _role_cfg() -> dict:
     return {
         "provider": "deepseek",
         "model_name": "m1",
-        "api_key": api.encrypt_key("sk-test"),
+        "api_key": agent_api.encrypt_key("sk-test"),
         "base_url": "",
     }
 
@@ -53,7 +54,7 @@ def test_rerun_task_clones_without_mutating_original(platform_agent):
     original.refresh_from_db()
     assert original.status == TaskStatus.FAILED
 
-    with patch("apps.ai_assistant.api.dispatch_device"):
+    with patch("apps.task_list.api.dispatch_device"):
         cloned = api.rerun_task(original)
 
     original.refresh_from_db()

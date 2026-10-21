@@ -1,7 +1,7 @@
 """D4-1 不变量：ai_assistant 状态字面量收敛到 `models/` 枚举后，成员写库必须等价于写取值串。
 
 与设备域同一手法（见 `test_device_enum_literals.py`）：本 App 的 `AIAgent.status` /
-`AITask.status` 是前端轮询的依据，写库值必须仍是
+`Task.status` 是前端轮询的依据，写库值必须仍是
 `"active"` / `"running"` 这类取值串，而不是 `"TaskStatus.RUNNING"` 这类限定名。
 """
 
@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import pytest
 
-from apps.ai_assistant.models import AIAgent, AITask
+from apps.ai_assistant.models import AIAgent
+from apps.task_list.models import Task
 from models.constants import AgentStatus, MessageRole, TaskStatus
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
@@ -27,18 +28,18 @@ def test_agent_status_round_trip_and_filter():
 
 
 def test_task_status_round_trip_through_update_fields():
-    """`AITask.status`：`start_task` / `finalize_task` 的真实写形状（`update_fields`）。"""
+    """`Task.status`：`start_task` / `finalize_task` 的真实写形状（`update_fields`）。"""
     agent = AIAgent.objects.create(name="enum-agent-2")
-    task = AITask.objects.create(agent=agent, title="t", status=TaskStatus.PENDING)
-    assert AITask.objects.get(id=task.id).status == "pending"
+    task = Task.objects.create(agent=agent, title="t", status=TaskStatus.PENDING)
+    assert Task.objects.get(id=task.id).status == "pending"
 
     task.status = TaskStatus.RUNNING
     task.save(update_fields=["status"])
-    assert AITask.objects.get(id=task.id).status == "running"
+    assert Task.objects.get(id=task.id).status == "running"
 
     task.status = TaskStatus.FAILED
     task.save(update_fields=["status"])
-    refreshed = AITask.objects.get(id=task.id)
+    refreshed = Task.objects.get(id=task.id)
     assert refreshed.status == "failed"
     assert "TaskStatus" not in refreshed.status
 

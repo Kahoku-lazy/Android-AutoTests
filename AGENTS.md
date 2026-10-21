@@ -45,7 +45,7 @@ git push origin Kahoku             # 推送后确认 6 个 CI job 全绿
 
 ### 约定
 
-1. 表前缀 `dp_ di_ el_ cm_ tr_ rg_ ai_ ev_ wf_` 
+1. 表前缀 `dp_ di_ el_ cm_ tr_ rg_ ai_ task_ ev_ wf_` 
 2. 响应信封 `{status,data}`
 
 ### 文档位置
@@ -53,7 +53,7 @@ git push origin Kahoku             # 推送后确认 6 个 CI job 全绿
 1. 临时生成的代码与文件、临时生成的测试数据 **必须**放到 `temps/` 中，不要在项目根目录下生成临时文件
 2. 设计方案与报告，接口文档在 `dev_docs\DEV_TEST`目录中，文件名举例：XXX.md/XXX.html
 3. 需求文档与架构文档放在 `dev_docs\ARCH_PRD` 中，文件名举例：ARCH-XXX.md/ARCH-XXX.html 或 PRD-XXX.md/PRD-XXX.html
-4. **功能需求文档入口一律从 PRD 开始**：`dev_docs\ARCH_PRD\PRD-需求总纲.md` → 各模块 `PRD-*` → `ARCH-*`。除本文件与 `DEV_DOCS_README.md` 外，代码 / 技能 / 其它文档**不得**在文件中引用 dev_docs 路径
+4. **功能需求文档入口一律从 PRD 开始**：`dev_docs\ARCH_PRD\PRD-平台总需求.md` → 各模块 `PRD-*` → `ARCH-*`。除本文件与 `DEV_DOCS_README.md` 外，代码 / 技能 / 其它文档**不得**在文件中引用 dev_docs 路径
 
 
 ### 项目工具

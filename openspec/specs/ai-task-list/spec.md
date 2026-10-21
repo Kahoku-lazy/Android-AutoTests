@@ -35,7 +35,7 @@
 
 ### Requirement: Task list card content and actions
 
-任务清单页的单张任务卡 MUST 展示标题（无标题时用目标）、状态、创建时间、设备、助手名、费用、耗时与附件名。失败任务卡 MUST 提供「重新执行」，运行中任务卡 MUST 提供「关闭」，每张卡 MUST 提供「详情」，且「详情」MUST 进入 `/reports/task/:id`。任务卡 MUST NOT 展示目标全文。
+任务清单页的单张任务卡 MUST 展示标题（无标题时用目标）、状态、创建时间、设备、助手名、费用、耗时与附件名。失败任务卡 MUST 提供「重新执行」，运行中任务卡 MUST 提供「关闭」，每张卡 MUST 提供「详情」，且「详情」MUST 进入 `/tasks/:id`。任务卡 MUST NOT 展示目标全文。
 
 #### Scenario: Card fields
 
@@ -50,4 +50,4 @@
 #### Scenario: Detail navigation
 
 - **WHEN** 用户点击任务卡的「详情」
-- **THEN** 路由进入 `/reports/task/:id`
+- **THEN** 路由进入 `/tasks/:id`

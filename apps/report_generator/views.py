@@ -1,127 +1,198 @@
 """report-generator HTTP routes — endpoints under /api/reports/*.
 
-列表只读聚合可见 AITask；任务流程读 ai_task_events；run/cases 详情仍为空壳。
+列表只读聚合 task_list.Task；run/cases 详情仍为空壳。
 File download/view still read LOG_DIR if files exist.
+
+响应形态是 **legacy 平铺**（`{status, ...}`，非全局 `{status, data}`）：
+这些视图各自覆盖渲染器为 `JSONRenderer`，不回落到全局 `EnvelopeJSONRenderer`。
 """
 
 from pathlib import Path
 
 from django.conf import settings
-from django.http import FileResponse, JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.http import FileResponse
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework.renderers import JSONRenderer
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.report_generator.ai_task_reports import (
-    build_report_list,
-    build_task_flow,
-    parse_chart_range,
-)
+from apps.task_list.task_reports import build_report_list, parse_chart_range
+
+REPORT_TAG = "reports"
+
+LIST_PARAMETERS = [
+    OpenApiParameter(
+        "chart_range", OpenApiTypes.STR, OpenApiParameter.QUERY, description="趋势天数"
+    ),
+    OpenApiParameter(
+        "start_date", OpenApiTypes.DATE, OpenApiParameter.QUERY, description="起始日期"
+    ),
+    OpenApiParameter("end_date", OpenApiTypes.DATE, OpenApiParameter.QUERY, description="结束日期"),
+    OpenApiParameter(
+        "run_id", OpenApiTypes.STR, OpenApiParameter.QUERY, description="按 run_id 过滤"
+    ),
+    OpenApiParameter(
+        "task_name", OpenApiTypes.STR, OpenApiParameter.QUERY, description="按任务名过滤"
+    ),
+    OpenApiParameter(
+        "device_serial", OpenApiTypes.STR, OpenApiParameter.QUERY, description="按设备序列号过滤"
+    ),
+    OpenApiParameter(
+        "creator", OpenApiTypes.STR, OpenApiParameter.QUERY, description="按创建人过滤"
+    ),
+]
 
 
-def list_reports(request):
+class FlatJSONAPIView(APIView):
+    """报告端点的基类：保持 legacy 平铺响应，不用全局信封渲染器。"""
+
+    renderer_classes = [JSONRenderer]
+
+
+class ReportListAPIView(FlatJSONAPIView):
     """GET /api/reports — 当前用户可见的助手任务卡列表 / KPI / 趋势。"""
-    return JsonResponse(
-        build_report_list(
-            getattr(request, "user_id", None),
-            range_days=parse_chart_range(request.GET.get("chart_range")),
-            start_date=(request.GET.get("start_date") or "").strip(),
-            end_date=(request.GET.get("end_date") or "").strip(),
-            run_id=(request.GET.get("run_id") or "").strip(),
-            task_name=(request.GET.get("task_name") or "").strip(),
-            device_serial=(request.GET.get("device_serial") or "").strip(),
-            creator=(request.GET.get("creator") or "").strip(),
-        )
+
+    @extend_schema(
+        tags=[REPORT_TAG],
+        operation_id="report_list",
+        parameters=LIST_PARAMETERS,
+        responses=OpenApiTypes.OBJECT,
     )
+    def get(self, request):
+        query = request.query_params
+        return Response(
+            build_report_list(
+                getattr(request, "user_id", None),
+                range_days=parse_chart_range(query.get("chart_range")),
+                start_date=(query.get("start_date") or "").strip(),
+                end_date=(query.get("end_date") or "").strip(),
+                run_id=(query.get("run_id") or "").strip(),
+                task_name=(query.get("task_name") or "").strip(),
+                device_serial=(query.get("device_serial") or "").strip(),
+                creator=(query.get("creator") or "").strip(),
+            )
+        )
 
 
-@csrf_exempt
-def case_breakdown(request):
+class CaseBreakdownAPIView(FlatJSONAPIView):
     """GET /api/reports/cases — empty groups after execution engine removal."""
-    result_type = request.GET.get("result", "").strip().lower()
-    if result_type not in ("pass", "fail"):
-        return JsonResponse({"status": False, "message": "result 必须为 pass 或 fail"}, status=400)
 
-    payload = {
-        "status": True,
-        "result_type": result_type,
-        "total": 0,
-        "case_count": 0,
-        "groups": [],
-    }
-    if result_type == "fail":
-        payload["bug_summary"] = {}
-    return JsonResponse(payload)
-
-
-@csrf_exempt
-def run_report(request, run_id):
-    """GET /api/reports/run/{run_id} — runs no longer exist."""
-    return JsonResponse({"status": False, "message": "run not found"}, status=404)
-
-
-@csrf_exempt
-def task_report(request, task_id):
-    """GET /api/reports/task/{task_id} — 当前用户可见任务的事件流程。"""
-    payload = build_task_flow(getattr(request, "user_id", None), task_id)
-    if payload is None:
-        return JsonResponse({"status": False, "message": "task not found"}, status=404)
-    return JsonResponse(payload)
-
-
-@csrf_exempt
-def download_report(request, filename):
-    """GET /api/reports/{filename} — Download report file."""
-    safe_name = Path(filename).name
-    fp = settings.LOG_DIR / safe_name
-    if fp.exists():
-        suffix = fp.suffix.lower()
-        mt = (
-            "text/csv" if suffix == ".csv" else "text/markdown" if suffix == ".md" else "text/plain"
-        )
-        response = FileResponse(open(str(fp), "rb"), content_type=mt)
-        response["Content-Disposition"] = f'attachment; filename="{safe_name}"'
-        return response
-    return JsonResponse({"status": False, "message": "not found"}, status=404)
-
-
-@csrf_exempt
-def view_report(request, filename):
-    """GET /api/reports/{filename}/content — Return file content for inline viewing."""
-    safe_name = Path(filename).name
-    fp = settings.LOG_DIR / safe_name
-    if not fp.exists():
-        return JsonResponse({"status": False, "message": "not found"}, status=404)
-
-    try:
-        content = fp.read_text(encoding="utf-8-sig")
-    except Exception:
-        try:
-            content = fp.read_text(encoding="utf-8")
-        except Exception:
-            content = fp.read_text(encoding="latin-1")
-
-    suffix = fp.suffix.lower()
-    ftype = "csv" if suffix == ".csv" else "md" if suffix == ".md" else "log"
-
-    rows = []
-    if suffix == ".csv":
-        lines = content.strip().split("\n")
-        if lines:
-            headers = [h.strip() for h in lines[0].split(",")]
-            for line in lines[1:]:
-                cols = [c.strip() for c in line.split(",")]
-                if len(cols) == len(headers):
-                    rows.append(dict(zip(headers, cols)))
-
-    return JsonResponse(
-        {
-            "status": True,
-            "name": safe_name,
-            "type": ftype,
-            "size": fp.stat().st_size,
-            "content": content,
-            "rows": rows,
-            "headers": [h.strip() for h in content.split("\n")[0].split(",")]
-            if suffix == ".csv" and content
-            else [],
-        }
+    @extend_schema(
+        tags=[REPORT_TAG],
+        operation_id="report_case_breakdown",
+        parameters=[
+            OpenApiParameter(
+                "result",
+                OpenApiTypes.STR,
+                OpenApiParameter.QUERY,
+                required=True,
+                enum=["pass", "fail"],
+            )
+        ],
+        responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
     )
+    def get(self, request):
+        result_type = (request.query_params.get("result") or "").strip().lower()
+        if result_type not in ("pass", "fail"):
+            return Response({"status": False, "message": "result 必须为 pass 或 fail"}, status=400)
+
+        payload = {
+            "status": True,
+            "result_type": result_type,
+            "total": 0,
+            "case_count": 0,
+            "groups": [],
+        }
+        if result_type == "fail":
+            payload["bug_summary"] = {}
+        return Response(payload)
+
+
+class RunReportAPIView(FlatJSONAPIView):
+    """GET /api/reports/run/{run_id} — runs no longer exist."""
+
+    @extend_schema(
+        tags=[REPORT_TAG], operation_id="report_run_detail", responses={404: OpenApiTypes.OBJECT}
+    )
+    def get(self, request, run_id):
+        return Response({"status": False, "message": "run not found"}, status=404)
+
+
+class ReportDownloadAPIView(FlatJSONAPIView):
+    """GET /api/reports/{filename} — Download report file."""
+
+    @extend_schema(
+        tags=[REPORT_TAG],
+        operation_id="report_download",
+        responses={
+            (200, "application/octet-stream"): OpenApiTypes.BINARY,
+            404: OpenApiTypes.OBJECT,
+        },
+    )
+    def get(self, request, filename):
+        safe_name = Path(filename).name
+        fp = settings.LOG_DIR / safe_name
+        if fp.exists():
+            suffix = fp.suffix.lower()
+            mt = (
+                "text/csv"
+                if suffix == ".csv"
+                else "text/markdown"
+                if suffix == ".md"
+                else "text/plain"
+            )
+            response = FileResponse(open(str(fp), "rb"), content_type=mt)
+            response["Content-Disposition"] = f'attachment; filename="{safe_name}"'
+            return response
+        return Response({"status": False, "message": "not found"}, status=404)
+
+
+class ReportContentAPIView(FlatJSONAPIView):
+    """GET /api/reports/{filename}/content — Return file content for inline viewing."""
+
+    @extend_schema(
+        tags=[REPORT_TAG],
+        operation_id="report_content",
+        responses={200: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT},
+    )
+    def get(self, request, filename):
+        safe_name = Path(filename).name
+        fp = settings.LOG_DIR / safe_name
+        if not fp.exists():
+            return Response({"status": False, "message": "not found"}, status=404)
+
+        try:
+            content = fp.read_text(encoding="utf-8-sig")
+        except Exception:
+            try:
+                content = fp.read_text(encoding="utf-8")
+            except Exception:
+                content = fp.read_text(encoding="latin-1")
+
+        suffix = fp.suffix.lower()
+        ftype = "csv" if suffix == ".csv" else "md" if suffix == ".md" else "log"
+
+        rows = []
+        if suffix == ".csv":
+            lines = content.strip().split("\n")
+            if lines:
+                headers = [h.strip() for h in lines[0].split(",")]
+                for line in lines[1:]:
+                    cols = [c.strip() for c in line.split(",")]
+                    if len(cols) == len(headers):
+                        rows.append(dict(zip(headers, cols)))
+
+        return Response(
+            {
+                "status": True,
+                "name": safe_name,
+                "type": ftype,
+                "size": fp.stat().st_size,
+                "content": content,
+                "rows": rows,
+                "headers": [h.strip() for h in content.split("\n")[0].split(",")]
+                if suffix == ".csv" and content
+                else [],
+            }
+        )

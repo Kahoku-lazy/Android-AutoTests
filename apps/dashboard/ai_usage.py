@@ -12,7 +12,8 @@ from django.db.models import Sum
 from django.utils import timezone
 
 from apps.ai_assistant.api import filter_agents_for_user, resolve_assistant_name
-from apps.ai_assistant.models import AIAgent, AITask, AIUsageHourly
+from apps.ai_assistant.models import AIAgent
+from apps.task_list.models import Task, TaskUsageHourly
 
 
 def _agents(user_id):
@@ -21,13 +22,13 @@ def _agents(user_id):
 
 def _task_qs(user_id):
     """当前用户可见智能体产生的任务。任务数仍按任务表计。"""
-    return AITask.objects.filter(agent__in=_agents(user_id))
+    return Task.objects.filter(agent__in=_agents(user_id))
 
 
 def _hourly_qs(agent_ids):
     if not agent_ids:
-        return AIUsageHourly.objects.none()
-    return AIUsageHourly.objects.filter(agent_id__in=agent_ids)
+        return TaskUsageHourly.objects.none()
+    return TaskUsageHourly.objects.filter(agent_id__in=agent_ids)
 
 
 def _money(value) -> float:
@@ -117,7 +118,7 @@ def ai_usage_stats(user_id):
     """
     today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
     agents = _agents(user_id)
-    task_qs = AITask.objects.filter(agent__in=agents)
+    task_qs = Task.objects.filter(agent__in=agents)
     hourly = _hourly_qs([agent.id for agent in agents])
     today_hourly = hourly.filter(stat_date=today_start.date())
 

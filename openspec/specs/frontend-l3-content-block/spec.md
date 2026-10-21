@@ -17,7 +17,7 @@
 - **THEN** 页面主体为模块私有 `.inspector-section` + 分栏 `.workspace`，不出现 `.doc-section`，且不因此判为违规
 
 #### Scenario: Report detail pages use a data block, not a section
-- **WHEN** 打开 `/reports/{runId}` 与 `/reports/task/{taskId}`
+- **WHEN** 打开 `/reports/{runId}` 与 `/tasks/{id}`
 - **THEN** 页面主体是单个数据块（`.ac-card` 表格卡），不额外套一层 `.doc-section`
 
 ### Requirement: Reusable data blocks use AppCard inside the theme scope

@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     "apps.report_generator",
     "apps.accounts",
     "apps.ai_assistant",
+    "apps.task_list",
     "apps.serial_log",
     "apps.dashboard",
 ]
@@ -320,8 +321,8 @@ REST_FRAMEWORK = {
 SPECTACULAR_SETTINGS = {
     "TITLE": "Android-AutoTests API",
     "DESCRIPTION": (
-        "Android UI 自动化测试平台 — 覆盖设备管理、元素定位、用例编排、"
-        "测试执行、AI 助手、评测、报告生成全流程。"
+        "Android UI 自动化测试平台 — 覆盖设备管理、文档式用例、AI 任务执行与验收、"
+        "串口日志、测试报告与仪表盘。"
     ),
     "VERSION": "2.0.0",
     # 文档页资产随包分发（drf-spectacular-sidecar）：断网环境仍可渲染
@@ -331,20 +332,14 @@ SPECTACULAR_SETTINGS = {
     "TAGS": [
         {"name": "dashboard", "description": "仪表盘：全平台只读聚合统计"},
         {"name": "devices", "description": "设备管理：扫描 / 连接 / 断开 / 激活 / 心跳 / 占用释放"},
-        {
-            "name": "inspector",
-            "description": "设备检查器：快照抓取与页面回看（快照化，无 WS 截图流）",
-        },
-        {
-            "name": "elements",
-            "description": "元素定位：Android 页面 / Web 元素 / API 端点三类资产与目录",
-        },
         {"name": "cases", "description": "用例管理：项目 → 目录 → 文件 → 用例行"},
-        {"name": "workflow", "description": "工作流：编排文档 CRUD 与导入导出"},
+        {"name": "workflow", "description": "页面流：原型目录、画布文档 CRUD 与导入导出"},
         {"name": "auth", "description": "登录鉴权：登录 / 注册 / 刷新 / 登出 / 当前用户"},
-        {"name": "ai", "description": "AI 助手：智能体、会话、知识库与任务发布"},
+        {"name": "ai", "description": "AI 助手：智能体配置、任务发布 / 重跑 / 取消、任务清单"},
+        {"name": "tasks", "description": "任务清单：任务提交、重跑、取消、事件流程报告"},
+        {"name": "reports", "description": "测试报告：任务报告列表、用例分解、报告文件下载与查看"},
         {
-            "name": "serial_log",
+            "name": "serial-log",
             "description": "串口日志：端口监听开关、当前日志查看与关键词对照表",
         },
         {"name": "schema", "description": "OpenAPI schema 端点（drf-spectacular 自带）"},

@@ -14,9 +14,10 @@ import pytest
 
 from PIL import Image
 
-from apps.ai_assistant import api
-from apps.ai_assistant.event_store import TaskEventSink
-from apps.ai_assistant.models import AIAgent, AITask, AITaskEvent, AITaskMedia, AIUsageHourly
+from apps.ai_assistant.models import AIAgent
+from apps.task_list import api
+from apps.task_list.event_store import TaskEventSink
+from apps.task_list.models import Task, TaskEvent, TaskMedia, TaskUsageHourly
 from engines.agents.event_sink import (
     bind_run_context,
     bind_sink,
@@ -34,9 +35,9 @@ _CALLED = datetime(2026, 10, 20, 10, 0, tzinfo=_SHANGHAI)
 _MONEY = Decimal("0.00002000")
 
 
-def _task() -> AITask:
+def _task() -> Task:
     agent = AIAgent.objects.create(name="落库助手")
-    return AITask.objects.create(agent=agent, title="写入事件", case_title="卡片页")
+    return Task.objects.create(agent=agent, title="写入事件", case_title="卡片页")
 
 
 def _png(color: tuple[int, int, int]) -> str:
@@ -94,7 +95,7 @@ def test_writes_events_media_hourly_and_task_cost():
         reset_sink(sink_token)
         reset_run_context(run_token)
 
-    rows = list(AITaskEvent.objects.filter(task=task).order_by("seq"))
+    rows = list(TaskEvent.objects.filter(task=task).order_by("seq"))
     assert [row.seq for row in rows] == [1, 2, 3]
     assert rows[0].event_type == "ReplyEndEvent"
     assert rows[0].step_seq == 2
@@ -106,11 +107,11 @@ def test_writes_events_media_hourly_and_task_cost():
     assert rows[1].called_hour == 10
     assert rows[1].is_peak is True
     assert rows[2].media_id is not None
-    media = AITaskMedia.objects.get(id=rows[2].media_id)
+    media = TaskMedia.objects.get(id=rows[2].media_id)
     assert media.media_type == "image/jpeg"
     assert media.thumb_b64
     assert media.width <= 720
-    hourly = AIUsageHourly.objects.get(agent_id=task.agent_id, model="deepseek-flash")
+    hourly = TaskUsageHourly.objects.get(agent_id=task.agent_id, model="deepseek-flash")
     assert hourly.calls == 1
     assert hourly.cost_cache == _MONEY
     task.refresh_from_db()
@@ -134,8 +135,8 @@ def test_same_image_is_one_media_row():
         sink.flush()
     finally:
         reset_run_context(token)
-    assert AITaskMedia.objects.filter(task=task).count() == 1
-    ids = list(AITaskEvent.objects.filter(task=task).values_list("media_id", flat=True))
+    assert TaskMedia.objects.filter(task=task).count() == 1
+    ids = list(TaskEvent.objects.filter(task=task).values_list("media_id", flat=True))
     assert ids[0] == ids[1]
 
 
@@ -143,8 +144,8 @@ def test_skips_when_task_id_is_zero():
     sink = TaskEventSink()
     sink.emit(_model_end())
     sink.close()
-    assert AITaskEvent.objects.count() == 0
-    assert AIUsageHourly.objects.count() == 0
+    assert TaskEvent.objects.count() == 0
+    assert TaskUsageHourly.objects.count() == 0
 
 
 def test_media_cap_and_cascade_delete():
@@ -157,7 +158,7 @@ def test_media_cap_and_cascade_delete():
         )
         assert saved is not None
     assert api.store_task_media(task.id, "f" * 64, {"media_type": "image/jpeg"}) is None
-    AITaskEvent.objects.create(
+    TaskEvent.objects.create(
         task=task,
         seq=1,
         event_type="ReplyEndEvent",
@@ -165,8 +166,8 @@ def test_media_cap_and_cascade_delete():
         block_type="text",
     )
     task.delete()
-    assert AITaskEvent.objects.filter(task_id=task.id).count() == 0
-    assert AITaskMedia.objects.filter(task_id=task.id).count() == 0
+    assert TaskEvent.objects.filter(task_id=task.id).count() == 0
+    assert TaskMedia.objects.filter(task_id=task.id).count() == 0
 
 
 class ReplyEndEvent:
@@ -191,7 +192,7 @@ def test_show_event_from_running_loop_writes():
         reset_sink(sink_token)
         reset_run_context(run_token)
 
-    row = AITaskEvent.objects.get(task=task)
+    row = TaskEvent.objects.get(task=task)
     assert row.event_type == "ReplyEndEvent"
     assert row.step_seq == 2
     assert row.attempt == 1

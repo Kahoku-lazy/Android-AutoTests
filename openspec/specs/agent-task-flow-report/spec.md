@@ -8,7 +8,7 @@
 
 ### Requirement: 可见任务的事件流程
 
-系统 SHALL 通过 `GET /api/reports/task/{id}` 返回当前用户可见任务的事件流程，信封为平铺 `{status, task, rounds, cases, conclusion}`。`cases` MUST 按用例列出步骤、用例结果和该用例下的轮次。任务不存在、编号无效或当前用户不可见时 MUST 返回 404。该接口 MUST 只读，MUST NOT 写业务表。
+系统 SHALL 通过 `GET /api/tasks/{id}/report/` 返回当前用户可见任务的事件流程，信封为平铺 `{status, task, rounds, cases, conclusion}`。`cases` MUST 按用例列出步骤、用例结果和该用例下的轮次。任务不存在、编号无效或当前用户不可见时 MUST 返回 404。该接口 MUST 只读，MUST NOT 写业务表。
 
 #### Scenario: 返回已完成任务的流程
 

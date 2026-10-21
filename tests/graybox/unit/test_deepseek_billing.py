@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from apps.ai_assistant.deepseek_billing import deepseek_cost, task_deepseek_cost
+from apps.task_list.deepseek_billing import deepseek_cost, task_deepseek_cost
 
 # 官方现价（2026-10-08 价目页）：deepseek-flash 空闲命中 0.02 / 未命中 1 / 输出 4（元/百万）
 FLASH_HIT, FLASH_MISS, FLASH_OUT = 0.02, 1.0, 4.0

@@ -19,12 +19,6 @@ export function getRunReport(runId) {
   return client.get(`/reports/run/${encodeURIComponent(runId)}/`)
 }
 
-// ── 任务视角报告 ──
-
-export function getTaskReport(taskId) {
-  return client.get(`/reports/task/${encodeURIComponent(taskId)}/`)
-}
-
 // ── 文件下载 ──
 
 export function getReportContent(filename) {

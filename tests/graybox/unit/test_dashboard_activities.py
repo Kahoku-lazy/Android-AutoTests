@@ -6,7 +6,8 @@ import pytest
 
 from django.contrib.auth import get_user_model
 
-from apps.ai_assistant.models import AIAgent, AITask
+from apps.ai_assistant.models import AIAgent
+from apps.task_list.models import Task
 from shared.auth.jwt_auth import create_access_token
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db]
@@ -39,7 +40,7 @@ def visible_agent(db):
 def test_default_returns_at_most_ten(client, visible_agent):
     user, agent = visible_agent
     for i in range(12):
-        AITask.objects.create(agent=agent, title=f"t-{i}", status="success")
+        Task.objects.create(agent=agent, title=f"t-{i}", status="success")
 
     resp = client.get(ACTIVITIES_URL, **_auth_headers(user))
     assert resp.status_code == 200
@@ -53,7 +54,7 @@ def test_default_returns_at_most_ten(client, visible_agent):
 def test_offset_skips_board_page(client, visible_agent):
     user, agent = visible_agent
     for i in range(15):
-        AITask.objects.create(agent=agent, title=f"page-{i}", status="completed")
+        Task.objects.create(agent=agent, title=f"page-{i}", status="completed")
 
     first = client.get(ACTIVITIES_URL, **_auth_headers(user)).json()["data"]
     second = client.get(ACTIVITIES_URL, {"offset": 10, "limit": 50}, **_auth_headers(user)).json()[
@@ -84,7 +85,7 @@ def test_invalid_limit_rejected(client, visible_agent):
 @pytest.mark.unit
 def test_task_maps_to_run_and_agent_maps_to_agent(client, visible_agent):
     user, agent = visible_agent
-    AITask.objects.create(agent=agent, title="校准色温", status="success")
+    Task.objects.create(agent=agent, title="校准色温", status="success")
 
     rows = client.get(ACTIVITIES_URL, **_auth_headers(user)).json()["data"]
     types = {r["type"] for r in rows}

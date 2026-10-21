@@ -6,12 +6,13 @@ import pytest
 
 from django.contrib.auth import get_user_model
 
-from apps.ai_assistant.models import AIAgent, AITask
+from apps.ai_assistant.models import AIAgent
 from apps.dashboard.ai_usage import (
     ai_recent_tasks,
     ai_task_daily_execution,
     ai_task_execution_summary,
 )
+from apps.task_list.models import Task
 
 
 @pytest.fixture
@@ -29,10 +30,10 @@ def visible_agent(db):
 @pytest.mark.django_db
 def test_daily_execution_counts_success_and_failed_on_create_day(visible_agent):
     user, agent = visible_agent
-    AITask.objects.create(agent=agent, title="ok-1", status="success")
-    AITask.objects.create(agent=agent, title="ok-2", status="completed")
-    AITask.objects.create(agent=agent, title="fail-1", status="failed")
-    AITask.objects.create(agent=agent, title="wait", status="pending")
+    Task.objects.create(agent=agent, title="ok-1", status="success")
+    Task.objects.create(agent=agent, title="ok-2", status="completed")
+    Task.objects.create(agent=agent, title="fail-1", status="failed")
+    Task.objects.create(agent=agent, title="wait", status="pending")
 
     series = ai_task_daily_execution(str(user.id), days=12)
     assert series["success"][-1] == 2
@@ -48,7 +49,7 @@ def test_daily_execution_counts_success_and_failed_on_create_day(visible_agent):
 @pytest.mark.django_db
 def test_recent_tasks_maps_completed_to_success(visible_agent):
     user, agent = visible_agent
-    task = AITask.objects.create(agent=agent, title="已完成", goal="目标", status="completed")
+    task = Task.objects.create(agent=agent, title="已完成", goal="目标", status="completed")
 
     rows = ai_recent_tasks(str(user.id), limit=8)
     assert len(rows) == 1

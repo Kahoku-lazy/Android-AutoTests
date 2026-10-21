@@ -6,15 +6,16 @@ import pytest
 
 from django.contrib.auth import get_user_model
 
-from apps.ai_assistant.models import AIAgent, AITask, AITaskAttachment, AITaskEvent
-from apps.report_generator.ai_task_reports import build_task_flow
+from apps.ai_assistant.models import AIAgent
+from apps.task_list.models import Task, TaskAttachment, TaskEvent
+from apps.task_list.task_reports import build_task_flow
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 
 
-def _task(owner) -> AITask:
+def _task(owner) -> Task:
     agent = AIAgent.objects.create(name="报告助手", owner=owner)
-    return AITask.objects.create(
+    return Task.objects.create(
         agent=agent,
         title="流程任务",
         case_title="卡片页",
@@ -35,7 +36,7 @@ def _event(
     step_seq=1,
     attempt=1,
 ):
-    return AITaskEvent.objects.create(
+    return TaskEvent.objects.create(
         task=task,
         seq=seq,
         event_type=event_type,
@@ -146,9 +147,9 @@ def test_two_cases_keep_step_and_result():
     task = _task(owner)
     task.case_title = ""
     task.save(update_fields=["case_title"])
-    AITaskAttachment.objects.create(
+    TaskAttachment.objects.create(
         task=task,
-        kind=AITaskAttachment.KIND_CONFIG,
+        kind=TaskAttachment.KIND_CONFIG,
         body=(
             "- title: 卡片页\n"
             "  steps:\n"

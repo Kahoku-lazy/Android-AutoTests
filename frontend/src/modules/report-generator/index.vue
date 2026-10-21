@@ -164,7 +164,7 @@ function clearFilters() {
 
 function openTaskReport(row) {
   if (!row?.run_id) return
-  router.push(`/reports/task/${row.run_id}`)
+  router.push(`/tasks/${row.run_id}`)
 }
 </script>
 

@@ -20,14 +20,6 @@ export async function uploadAvatar(formData: FormData): Promise<AgentOpResponse>
   return data
 }
 
-/** 上传文件 / 图片（multipart；勿带默认 application/json） */
-export async function uploadFile(formData: FormData): Promise<AgentOpResponse> {
-  const { data } = await djangoClient.post<AgentOpResponse>("/ai/upload-file/", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  })
-  return data
-}
-
 /** 保存 Agent（新建或更新） */
 export async function saveAgent(
   isNew: boolean,

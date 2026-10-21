@@ -3,12 +3,6 @@ import type { RouteRecordRaw } from "vue-router"
 const routes: RouteRecordRaw[] = [
   { path: "/ai-assistant", redirect: "/ai-assistant/agents" },
   {
-    path: "/tasks",
-    name: "ai-task-list",
-    component: () => import("@/modules/ai-assistant/TaskListPage.vue"),
-    meta: { title: "任务清单" },
-  },
-  {
     path: "/ai-assistant/agents",
     name: "ai-assistant-agents",
     component: () => import("@/modules/ai-assistant/index.vue"),
@@ -19,12 +13,6 @@ const routes: RouteRecordRaw[] = [
     name: "ai-agent-detail",
     component: () => import("@/modules/ai-assistant/AgentDetail.vue"),
     meta: { title: "智能体详情" },
-  },
-  {
-    path: "/ai-assistant/tasks/:taskId",
-    name: "ai-task-detail",
-    component: () => import("@/modules/ai-assistant/TaskDetailPage.vue"),
-    meta: { title: "任务详情" },
   },
 ]
 

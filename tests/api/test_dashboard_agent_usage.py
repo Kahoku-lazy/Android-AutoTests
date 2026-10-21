@@ -9,8 +9,9 @@ import pytest
 
 from django.contrib.auth import get_user_model
 
-from apps.ai_assistant.models import AIAgent, AIUsageHourly
+from apps.ai_assistant.models import AIAgent
 from apps.dashboard.ai_usage import ai_usage_stats
+from apps.task_list.models import TaskUsageHourly
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 
@@ -28,7 +29,7 @@ def test_agent_usage_sums_roles_into_one_total():
         "agent_id": agent.id,
         "model": "deepseek-flash",
     }
-    AIUsageHourly.objects.create(
+    TaskUsageHourly.objects.create(
         **shared,
         role_name="executor_role",
         role_kind="executor",
@@ -37,7 +38,7 @@ def test_agent_usage_sums_roles_into_one_total():
         output_tokens=50,
         cost_total=Decimal("0.01000000"),
     )
-    AIUsageHourly.objects.create(
+    TaskUsageHourly.objects.create(
         **shared,
         role_name="verifier_role",
         role_kind="verifier",

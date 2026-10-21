@@ -26,26 +26,10 @@
   width: 100%;
 }
 
-.duty-section {
-  display: flex;
-  flex-direction: column;
-  padding: 12px var(--app-space-lg) var(--app-space-sm);
-  flex-shrink: 0;
-  min-height: 0;
-}
-
 /* 只保留本模块真实差异；display / justify-content / gap / margin-bottom 由全局 .doc-section__header 提供
    （frontend-l3-container「共享骨架块不得无作用域重定义」） */
 .ai-workbench .doc-section__header {
   align-items: baseline;
-  flex-shrink: 0;
-}
-
-.filter-count {
-  font-size: var(--app-size-sm);
-  color: var(--app-text-secondary);
-  font-weight: 600;
-  white-space: nowrap;
   flex-shrink: 0;
 }
 

@@ -75,53 +75,67 @@ const avatarBoxStyle = computed(() => {
       <div class="route-avatar" :style="avatarBoxStyle">
         <span v-if="!avatarIsImage">{{ displayAvatar }}</span>
       </div>
-      <div ref="textRef" class="route-identity-text">
+      <div
+        ref="textRef"
+        class="route-identity-text"
+        :class="{ 'route-identity-text--without-config': !canManage }"
+      >
         <div class="route-agent-name">{{ displayName }}</div>
         <div class="route-duty">{{ DUTY_LABEL }}</div>
+        <DoodleBtn v-if="canManage" tone="yellow" class="route-config-btn" @click="emit('edit')">
+          配置
+        </DoodleBtn>
       </div>
     </div>
-
-    <template v-if="canManage" #actions>
-      <DoodleBtn tone="yellow" @click="emit('edit')">配置</DoodleBtn>
-    </template>
   </DoodleNote>
 </template>
 
 <style scoped>
 .route-card {
-  width: fit-content;
+  width: 312px;
   max-width: 100%;
+}
+.route-card.doodle-note {
+  padding: var(--app-space-md);
 }
 .route-identity {
   display: flex;
   align-items: flex-start;
-  gap: var(--app-space-sm);
+  gap: var(--app-space-md);
 }
 .route-avatar {
   flex-shrink: 0;
   box-sizing: border-box;
   border-radius: 2px;
-  border: 2px solid var(--ink);
+  border: 3px solid var(--ink);
   background-color: var(--ai-warm-bg);
   background-size: cover;
   background-position: center;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--app-size-xl);
-  box-shadow: 2px 2px 0 0 color-mix(in srgb, var(--ink) 12%, transparent);
+  font-size: calc(var(--app-size-xl) * 2);
+  box-shadow: 3px 3px 0 0 color-mix(in srgb, var(--ink) 12%, transparent);
   overflow: hidden;
 }
 .route-identity-text {
-  min-width: 0;
-  flex: 0 1 auto;
+  width: 144px;
+  height: 120px;
+  flex: 0 0 144px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  gap: var(--app-space-xs);
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 0;
+  text-align: center;
+}
+.route-identity-text--without-config {
+  justify-content: center;
+  gap: var(--app-space-md);
 }
 .route-agent-name {
-  font-size: var(--app-size-md);
+  font-size: 18px;
+  line-height: 1.2;
   font-weight: 800;
   color: var(--ai-ink-soft);
   overflow: hidden;
@@ -129,11 +143,47 @@ const avatarBoxStyle = computed(() => {
   white-space: nowrap;
 }
 .route-duty {
-  font-size: var(--app-size-sm);
+  font-size: 15px;
+  line-height: 1.2;
   font-weight: 700;
   color: var(--ai-ink-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.route-card :deep(.route-config-btn) {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 var(--app-space-sm);
+  border-width: 2.5px;
+  font-size: 15px;
+  box-shadow: 3px 3px 0 0 var(--ink);
+}
+
+@media (max-width: 720px) {
+  .route-card {
+    width: 100%;
+  }
+  .route-identity {
+    gap: var(--app-space-sm);
+  }
+  .route-identity-text {
+    width: 120px;
+    height: 120px;
+    flex-basis: 120px;
+  }
+  .route-avatar {
+    font-size: var(--app-size-2xl);
+  }
+  .route-agent-name {
+    font-size: 15px;
+  }
+  .route-duty {
+    font-size: 13px;
+  }
+  .route-card :deep(.route-config-btn) {
+    min-height: 30px;
+    font-size: 13px;
+  }
 }
 </style>

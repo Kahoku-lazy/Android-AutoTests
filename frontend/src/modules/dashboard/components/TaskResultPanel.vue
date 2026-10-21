@@ -105,7 +105,7 @@ function openTask(task: RecentTask) {
         <div class="task-row__time">{{ task.time }}</div>
       </div>
     </div>
-    <div v-else class="task-result-panel__empty">暂无任务卡片，前往平台小助手新建</div>
+    <div v-else class="task-result-panel__empty">暂无任务卡片，前往任务清单新建</div>
   </div>
 </template>
 

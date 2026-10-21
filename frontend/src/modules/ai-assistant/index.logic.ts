@@ -9,7 +9,7 @@ import { agentDetailRoute } from "./constants"
 
 export const PAGE_HEADER = {
   title: "AI 助手",
-  subtitle: "智能体看板贴便签，新建任务并下发执行",
+  subtitle: "智能体看板贴便签，配置小助手身份与线路",
   icon: "bot" as const,
   iconGradient: "linear-gradient(135deg, var(--ai-teal), var(--ai-teal-hover))",
 }

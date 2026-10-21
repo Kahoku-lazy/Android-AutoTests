@@ -20,6 +20,7 @@ export const NAV_CATEGORIES = [
     key: "ai-tasks",
     label: "AI任务",
     items: [
+      { path: "/tasks", icon: "clipboard-list", label: "任务清单" },
       { path: "/cases", icon: "layers", label: "用例管理" },
       { path: "/reports", icon: "file-bar-chart", label: "测试报告" },
     ],
@@ -30,6 +31,7 @@ export const NAV_CATEGORIES = [
 export const MOD_COLORS = {
   "/dashboard": "var(--c-dashboard)",
   "/devices": "var(--c-device)",
+  "/tasks": "var(--c-ai)",
   "/cases": "var(--c-case)",
   "/reports": "var(--c-report)",
   "/ai-assistant": "var(--c-ai)",

@@ -20,7 +20,7 @@
 ## 契约
 
 - 任务列表/详情/写操作响应为全局 `{status, data}`。
-- 任务详情报告 `GET /api/tasks/{id}/report/` 为平铺 `{status, task, rounds, cases, conclusion}`，按端点结构读取。
+- 任务详情报告 `GET /api/tasks/{id}/report/` 为全局 `{status, data}` 信封，负载在 `data`（`task` / `rounds` / `cases` / `conclusion`）。
 - 任务卡「详情」、测试报告行点击、仪表盘任务点击统一进入 `/tasks/:id`。
 
 ## 快速验证

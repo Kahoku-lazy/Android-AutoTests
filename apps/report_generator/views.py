@@ -3,8 +3,8 @@
 列表只读聚合 task_list.Task；run/cases 详情仍为空壳。
 File download/view still read LOG_DIR if files exist.
 
-响应形态是 **legacy 平铺**（`{status, ...}`，非全局 `{status, data}`）：
-这些视图各自覆盖渲染器为 `JSONRenderer`，不回落到全局 `EnvelopeJSONRenderer`。
+成功响应统一走全局 `{status, data}` 信封（`shared/renderers.EnvelopeJSONRenderer`）；
+文件下载端点保持 `FileResponse` 附件语义，不套 JSON 信封。
 """
 
 from pathlib import Path
@@ -13,7 +13,7 @@ from django.conf import settings
 from django.http import FileResponse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework.renderers import JSONRenderer
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -44,13 +44,7 @@ LIST_PARAMETERS = [
 ]
 
 
-class FlatJSONAPIView(APIView):
-    """报告端点的基类：保持 legacy 平铺响应，不用全局信封渲染器。"""
-
-    renderer_classes = [JSONRenderer]
-
-
-class ReportListAPIView(FlatJSONAPIView):
+class ReportListAPIView(APIView):
     """GET /api/reports — 当前用户可见的助手任务卡列表 / KPI / 趋势。"""
 
     @extend_schema(
@@ -75,7 +69,7 @@ class ReportListAPIView(FlatJSONAPIView):
         )
 
 
-class CaseBreakdownAPIView(FlatJSONAPIView):
+class CaseBreakdownAPIView(APIView):
     """GET /api/reports/cases — empty groups after execution engine removal."""
 
     @extend_schema(
@@ -95,10 +89,9 @@ class CaseBreakdownAPIView(FlatJSONAPIView):
     def get(self, request):
         result_type = (request.query_params.get("result") or "").strip().lower()
         if result_type not in ("pass", "fail"):
-            return Response({"status": False, "message": "result 必须为 pass 或 fail"}, status=400)
+            raise ValidationError("result 必须为 pass 或 fail")
 
         payload = {
-            "status": True,
             "result_type": result_type,
             "total": 0,
             "case_count": 0,
@@ -109,17 +102,17 @@ class CaseBreakdownAPIView(FlatJSONAPIView):
         return Response(payload)
 
 
-class RunReportAPIView(FlatJSONAPIView):
+class RunReportAPIView(APIView):
     """GET /api/reports/run/{run_id} — runs no longer exist."""
 
     @extend_schema(
-        tags=[REPORT_TAG], operation_id="report_run_detail", responses={404: OpenApiTypes.OBJECT}
+        tags=[REPORT_TAG], operation_id="report_run_detail", responses=OpenApiTypes.OBJECT
     )
     def get(self, request, run_id):
-        return Response({"status": False, "message": "run not found"}, status=404)
+        raise NotFound("run not found")
 
 
-class ReportDownloadAPIView(FlatJSONAPIView):
+class ReportDownloadAPIView(APIView):
     """GET /api/reports/{filename} — Download report file."""
 
     @extend_schema(
@@ -133,22 +126,18 @@ class ReportDownloadAPIView(FlatJSONAPIView):
     def get(self, request, filename):
         safe_name = Path(filename).name
         fp = settings.LOG_DIR / safe_name
-        if fp.exists():
-            suffix = fp.suffix.lower()
-            mt = (
-                "text/csv"
-                if suffix == ".csv"
-                else "text/markdown"
-                if suffix == ".md"
-                else "text/plain"
-            )
-            response = FileResponse(open(str(fp), "rb"), content_type=mt)
-            response["Content-Disposition"] = f'attachment; filename="{safe_name}"'
-            return response
-        return Response({"status": False, "message": "not found"}, status=404)
+        if not fp.exists():
+            raise NotFound("not found")
+        suffix = fp.suffix.lower()
+        mt = (
+            "text/csv" if suffix == ".csv" else "text/markdown" if suffix == ".md" else "text/plain"
+        )
+        response = FileResponse(open(str(fp), "rb"), content_type=mt)
+        response["Content-Disposition"] = f'attachment; filename="{safe_name}"'
+        return response
 
 
-class ReportContentAPIView(FlatJSONAPIView):
+class ReportContentAPIView(APIView):
     """GET /api/reports/{filename}/content — Return file content for inline viewing."""
 
     @extend_schema(
@@ -160,7 +149,7 @@ class ReportContentAPIView(FlatJSONAPIView):
         safe_name = Path(filename).name
         fp = settings.LOG_DIR / safe_name
         if not fp.exists():
-            return Response({"status": False, "message": "not found"}, status=404)
+            raise NotFound("not found")
 
         try:
             content = fp.read_text(encoding="utf-8-sig")
@@ -185,7 +174,6 @@ class ReportContentAPIView(FlatJSONAPIView):
 
         return Response(
             {
-                "status": True,
                 "name": safe_name,
                 "type": ftype,
                 "size": fp.stat().st_size,

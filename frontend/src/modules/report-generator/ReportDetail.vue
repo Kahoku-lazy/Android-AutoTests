@@ -45,7 +45,7 @@ async function loadReport() {
   error.value = ""
   try {
     const { data } = await getRunReport(runId.value)
-    if (data.status) report.value = data.run
+    if (data.status) report.value = data.data?.run
     else error.value = data.message || "加载报告失败"
   } catch (e) {
     error.value = e?.response?.data?.message || e?.message || "加载报告失败"

@@ -20,11 +20,10 @@
 
 真相源：`apps/report_generator/urls.py`（5 端点：`""` / `cases` / `run/{run_id}` / `{filename}/content` / `{filename}`）+ `views.py` + `api.py`（任务列表聚合读 `task_list.task_reports`）。
 
-**信封特例（legacy 平铺，禁止新增/改造）**：
+**响应信封**：`/reports/*` 的列表/分解/内容/详情统一为全局 `{status, data}`，业务负载放在 `data` 中，不再自带 `status`；错误为 `{status: false, message}` + 400/404。
 
-- `/reports/*` 列表/详情响应为**平铺** `{status, ...}`（非全局 `{status, data}`），前端按平铺读取。
-- 下载走 `FileResponse`（`{filename}` 端点），前端用 `fetch().text()` 消费，**不是 JSON 信封**。
-- `{filename}/content` 为 HTML 内容查看端点。
+- 下载走 `FileResponse`（`{filename}` 端点），前端用 `fetch().text()` 消费，**不套 JSON 信封**（附件语义，不算信封特例）。
+- `{filename}/content` 为 JSON 内容查看端点（`data.content`）。
 
 ## 本 App 协议要点
 
@@ -36,5 +35,5 @@
 [ ] 无 ORM 写业务表；只读查询 + 文件读取
 [ ] 列表只读 task_list.Task + ai_assistant.api 只读函数，无 service import
 [ ] 路径穿越防护：恶意 filename 返回 403/404（不落盘、不泄漏）
-[ ] 平铺信封与 FileResponse 形态未变（前端按平铺/文本读取）
+[ ] 响应为 `{status, data}` 标准信封；FileResponse 下载形态未变（前端按附件/文本读取）
 ```

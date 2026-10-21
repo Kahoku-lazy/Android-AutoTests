@@ -6,6 +6,7 @@
 
 - 拥有任务、附件、事件、媒体、小时用量五张表：`task_tasks` / `task_attachments` / `task_events` / `task_media` / `task_usage_hourly`。
 - 提供 `/api/tasks/*`：提交、列表、详情、重跑、关闭、删除、清空、详情报告、文件上传。
+- 任务详情报告 `GET /api/tasks/{id}/report/` 返回全局 `{status, data}` 信封（`data` 含 `task` / `rounds` / `cases` / `conclusion`），由 DRF 视图提供并进入 OpenAPI。
 - 执行链：`task_runner` → `engine_adapter` → 引擎；事件写 `event_store`；计费 `deepseek_billing`。
 
 ## 红线

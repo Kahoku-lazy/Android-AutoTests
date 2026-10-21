@@ -26,7 +26,7 @@ async function loadReport() {
   flow.value = null
   try {
     const payload = await getTaskReport(Number(taskId.value))
-    if (payload.status) flow.value = payload
+    if (payload.status) flow.value = payload.data
     else error.value = payload.message || "加载报告失败"
   } catch (e) {
     error.value = e?.response?.data?.message || e?.message || "加载报告失败"

@@ -75,9 +75,12 @@ async function loadData() {
   try {
     const { data: resp } = await getCaseBreakdown(resultType.value, filterParamsFromQuery())
     if (resp.status) {
-      data.value = resp
-      expandedCases.value = new Set((resp.groups || []).map((g) => g.case_title))
-      expandedBugCases.value = new Set((resp.bug_summary?.cases || []).map((c) => c.case_title))
+      const payload = resp.data || {}
+      data.value = payload
+      expandedCases.value = new Set((payload.groups || []).map((g) => g.case_title))
+      expandedBugCases.value = new Set(
+        (payload.bug_summary?.cases || []).map((c) => c.case_title),
+      )
     } else {
       data.value = null
     }

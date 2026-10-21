@@ -174,7 +174,6 @@ def build_report_list(
         trend["rate"][i] = _pass_rate(p_count, f_count)
 
     return {
-        "status": True,
         "summary": {
             "total_runs": len(runs),
             "total_iterations": 0,
@@ -639,7 +638,6 @@ def build_task_flow(user_id: str | None, task_id: str) -> dict | None:
     events = list(TaskEvent.objects.filter(task_id=task.id).select_related("media").order_by("seq"))
     rounds = _rounds(_grouped(events))
     return {
-        "status": True,
         "task": {
             "id": task.id,
             "title": task.title or "",

@@ -1334,7 +1334,7 @@ paths:
       security:
       - jwtAuth: []
       responses:
-        '404':
+        '200':
           content:
             application/json:
               schema:
@@ -1642,6 +1642,28 @@ paths:
     post:
       operationId: tasks_delete_create
       description: POST /api/tasks/{task_id}/delete — 删除任务发布记录。
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/tasks/{task_id}/report/:
+    get:
+      operationId: task_flow_report
+      description: GET /api/tasks/{task_id}/report — 任务事件流程（标准 {status, data} 信封）。
       parameters:
       - in: path
         name: task_id

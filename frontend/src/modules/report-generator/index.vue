@@ -98,9 +98,10 @@ async function fetchReports() {
     params.chart_range = String(chartRange.value)
     const { data } = await listRuns(params)
     if (data.status) {
-      runs.value = data.runs || []
-      summary.value = data.summary || null
-      trend.value = data.trend || null
+      const payload = data.data || {}
+      runs.value = payload.runs || []
+      summary.value = payload.summary || null
+      trend.value = payload.trend || null
     }
   } catch (e) {
     error.value = "加载报告失败，请检查服务状态"

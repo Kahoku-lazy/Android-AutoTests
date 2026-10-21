@@ -17,7 +17,7 @@
 
 ## 本模块契约
 
-**信封特例（非全局 `{status, data}`）**：`/reports/*` 响应为**平铺**、各端点结构不同（列表 `{status, summary, trend, runs}`、详情 `{status, run:{}}`、任务流程 `{status, task, rounds}`），前端按端点结构读取。列表 `runs[]` 为任务卡字段（无 `case_count`/`passed`/`failed`/`rate`）。
+**响应信封（全局 `{status, data}`）**：`/reports/*` 的成功响应统一为 `{status, data}`，业务负载在 `data` 内（列表 `data.summary/trend/runs`、详情 `data.run`）；错误由拦截器按 `message` 处理。列表 `runs[]` 为任务卡字段（无 `case_count`/`passed`/`failed`/`rate`）。
 
 - 列表：`GET /reports`（数据源 `task_list.Task`）
 - 用例分解 / 任务视角：仍可请求，后端多为空壳

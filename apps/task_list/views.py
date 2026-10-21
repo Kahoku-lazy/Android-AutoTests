@@ -1,7 +1,5 @@
 """task-list views — task submit/list/detail/rerun/cancel/delete/clear."""
 
-from django.http import JsonResponse
-from django.views import View
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework.exceptions import NotFound, ValidationError
@@ -170,12 +168,13 @@ class AgentTaskDetailAPIView(APIView):
         return Response(api.serialize_agent_task_detail(task))
 
 
-class TaskReportAPIView(View):
-    """GET /api/tasks/{task_id}/report — 平铺任务事件流程（兼容报告页结构）。"""
+class TaskReportAPIView(APIView):
+    """GET /api/tasks/{task_id}/report — 任务事件流程（标准 {status, data} 信封）。"""
 
+    @extend_schema(responses=OpenApiTypes.OBJECT, operation_id="task_flow_report")
     def get(self, request, task_id: int):
         user_id = getattr(request, "user_id", None)
         payload = build_task_flow(user_id, task_id)
         if payload is None:
-            return JsonResponse({"status": False, "message": "task not found"}, status=404)
-        return JsonResponse(payload)
+            raise NotFound("任务不存在")
+        return Response(payload)

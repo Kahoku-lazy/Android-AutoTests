@@ -18,6 +18,12 @@ from utils.logs import backend_log
 from . import api, engine_adapter
 from .models import Task
 
+# 引擎终态 → 任务终态。收尾映射集中一处，供回归测试校验状态常量完整。
+RESULT_STATUS_MAP = {
+    "success": TaskStatus.COMPLETED,
+    "cancelled": TaskStatus.CANCELLED,
+}
+
 
 def run_task_async(task_id: int, agent_id: int) -> None:
     """后台线程入口：启动平台 SOP，并把加载结论与终态写回任务。"""
@@ -50,11 +56,7 @@ def run_task_async(task_id: int, agent_id: int) -> None:
             device_serial=task.device_serial or "",
         )
         api.set_config_load_message(task, result.get("load_message") or "")
-        status_map = {
-            "success": TaskStatus.COMPLETED,
-            "cancelled": TaskStatus.CANCELLED,
-        }
-        status = status_map.get(result.get("status") or "", TaskStatus.FAILED)
+        status = RESULT_STATUS_MAP.get(result.get("status") or "", TaskStatus.FAILED)
         payload = {
             "status": result.get("status") or "fail",
             "summary": result.get("load_message") or "",

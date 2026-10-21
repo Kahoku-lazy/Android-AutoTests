@@ -13,6 +13,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import socket
 import subprocess
@@ -272,7 +273,44 @@ def stop_redis() -> None:
 def stop_backend() -> None:
     port = SERVICES["backend"]
     print(f"[Backend] Stopping port {port}...")
+    _drain_backend(port)
+    cleanup_mysql_connections()
     kill_port(port)
+
+
+def _drain_backend(port: int) -> None:
+    """停机前停止派发并等待 running 归零；后端不可达时直接返回。"""
+    base = f"http://127.0.0.1:{port}/api/system/drain/"
+    try:
+        request = urllib.request.Request(base, method="POST", data=b"")
+        with urllib.request.urlopen(request, timeout=3) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        return
+    running = int((payload.get("data") or {}).get("running") or 0)
+    if running <= 0:
+        return
+
+    timeout = int(os.environ.get("STOP_DRAIN_TIMEOUT", "180"))
+    deadline = time.time() + timeout
+    print(f"  Waiting for {running} running task(s), up to {timeout}s...")
+    last_report = time.time()
+    while time.time() < deadline:
+        time.sleep(2)
+        try:
+            with urllib.request.urlopen(base, timeout=3) as resp:
+                data = json.loads(resp.read().decode("utf-8")).get("data") or {}
+        except Exception:
+            return
+        running = int(data.get("running") or 0)
+        if running <= 0:
+            print("  All tasks finished — stopping backend.")
+            return
+        if time.time() - last_report >= 10:
+            left = max(int(deadline - time.time()), 0)
+            print(f"  Still {running} running task(s), {left}s left...")
+            last_report = time.time()
+    print("  Drain timeout reached — forcing stop.")
 
 
 def stop_frontend() -> None:
@@ -318,8 +356,6 @@ def cmd_start(services: list[str]) -> None:
 
 def cmd_stop(services: list[str]) -> None:
     names = resolve_services(services)
-    if "backend" in names:
-        cleanup_mysql_connections()
     for s in names:
         _STOP[s]()
     print("Done.")
@@ -327,8 +363,6 @@ def cmd_stop(services: list[str]) -> None:
 
 def cmd_restart(services: list[str]) -> None:
     names = resolve_services(services)
-    if "backend" in names:
-        cleanup_mysql_connections()
     for s in names:
         if s != "redis":
             _STOP[s]()

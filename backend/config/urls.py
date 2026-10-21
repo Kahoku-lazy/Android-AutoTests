@@ -8,6 +8,8 @@ from django.http import JsonResponse
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+from backend.apps.task_list.views import TaskDrainAPIView
+
 urlpatterns = [
     path("", lambda r: JsonResponse({"status": True, "service": "Android-AutoTests API"})),
     # Dashboard stats (aggregated from all modules) — 见 apps/dashboard/urls.py
@@ -23,6 +25,8 @@ urlpatterns = [
     path("api/ai/", include("backend.apps.ai_assistant.urls")),
     path("api/tasks/", include("backend.apps.task_list.urls")),
     path("api/serial-log/", include("backend.apps.serial_log.urls")),
+    # ── 停机排空（仅本机回环可调用，见 gateway/middleware.py）──
+    path("api/system/drain/", TaskDrainAPIView.as_view(), name="system_drain"),
     # ── DRF API documentation (drf-spectacular + Swagger UI) ──
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/swagger/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger"),

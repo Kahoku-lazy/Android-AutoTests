@@ -35,6 +35,7 @@ const STATUS_LABEL_MAP = {
   completed: "通过",
   success: "通过",
   failed: "失败",
+  interrupted: "已中断",
   running: "运行中",
   stopped: "已停止",
   pending: "排队中",
@@ -47,6 +48,7 @@ export function statusLabel(status) {
 export function statusBadgeClass(status) {
   if (status === "completed" || status === "success") return "badge-pass"
   if (status === "failed") return "badge-fail"
+  if (status === "interrupted") return "badge-interrupted"
   if (status === "running") return "badge-running"
   return "badge-stopped"
 }

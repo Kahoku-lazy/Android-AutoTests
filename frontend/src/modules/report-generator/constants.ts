@@ -50,6 +50,7 @@ export const STATUS_KEYS = {
   ALL: "all",
   COMPLETED: "completed",
   FAILED: "failed",
+  INTERRUPTED: "interrupted",
   STOPPED: "stopped",
 }
 
@@ -58,6 +59,7 @@ export const STATUS_TAB_LABELS = {
   [STATUS_KEYS.ALL]: "全部",
   [STATUS_KEYS.COMPLETED]: "已完成",
   [STATUS_KEYS.FAILED]: "失败",
+  [STATUS_KEYS.INTERRUPTED]: "已中断",
   [STATUS_KEYS.STOPPED]: "已停止",
 }
 
@@ -66,6 +68,7 @@ export const STATUS_LABEL_MAP = {
   completed: "通过",
   success: "通过",
   failed: "失败",
+  interrupted: "已中断",
   running: "运行中",
   stopped: "已停止",
   pending: "排队中",
@@ -77,6 +80,7 @@ export const STATUS_BADGE_CLASS = {
   success: "badge-pass",
   passed: "badge-pass",
   failed: "badge-fail",
+  interrupted: "badge-interrupted",
   running: "badge-running",
   stopped: "badge-stopped",
   pending: "badge-stopped",

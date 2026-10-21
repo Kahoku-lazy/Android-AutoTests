@@ -42,7 +42,7 @@ class TaskListConfig(AppConfig):
             recovered = api.recover_orphaned_tasks()
             if recovered:
                 backend_log.info(
-                    "Startup recovery: %d orphaned running task(s) → failed", recovered
+                    "Startup recovery: %d orphaned running task(s) → interrupted", recovered
                 )
         except Exception as e:
             backend_log.exception("Startup recovery failed: %s", e)

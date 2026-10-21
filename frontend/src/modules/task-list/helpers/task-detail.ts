@@ -47,7 +47,14 @@ export interface TaskStepBlock {
   phase: TaskStepPhase
 }
 
-const TERMINAL_STATUSES = new Set(["completed", "success", "failed", "cancelled", "paused"])
+const TERMINAL_STATUSES = new Set([
+  "completed",
+  "success",
+  "failed",
+  "cancelled",
+  "paused",
+  "interrupted",
+])
 
 export function isTaskTerminal(status?: string): boolean {
   return TERMINAL_STATUSES.has((status || "").toLowerCase())

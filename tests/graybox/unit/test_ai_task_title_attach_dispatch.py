@@ -136,7 +136,7 @@ def test_recover_orphaned_then_dispatch_pending(platform_agent):
         assert n == 1
         running.refresh_from_db()
         pending.refresh_from_db()
-        assert running.status == TaskStatus.FAILED
+        assert running.status == TaskStatus.INTERRUPTED
         assert pending.status == TaskStatus.RUNNING
         spawn.assert_called_once_with(pending.id, platform_agent.id)
 

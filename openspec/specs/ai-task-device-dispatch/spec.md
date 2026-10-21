@@ -28,9 +28,10 @@
 - **WHEN** 用户提交时未选设备且存在在线设备
 - **THEN** 任务记录的设备 serial 等于提交时刻解析到的那台设备，调度按该 serial 排队
 
-### Requirement: 进程重启后恢复排队
-系统 SHALL 在服务进程启动时把遗留的 running 任务标记为失败，然后按设备尝试启动各设备上最早的 pending 任务。
+### Requirement: 重启后遗留任务记为中断并恢复排队
+系统 SHALL 在服务进程启动时把遗留的 running 任务标记为 `interrupted`（已中断），MUST NOT 标记为 `failed`；恢复 MUST 写入中断说明与 `finished_at`，MUST 用该任务的模型调用事件合计回写 `cost_total`，然后按设备尝试启动各设备上最早的 pending 任务。
 
-#### Scenario: 重启后遗留 running 失败并拉起 pending
+#### Scenario: 重启后遗留 running 变为已中断并拉起 pending
 - **WHEN** 服务重启时某设备存在一条遗留 running 与一条 pending
-- **THEN** 遗留 running 落 failed，该 pending 可被调度为 running
+- **THEN** 遗留 running 落 interrupted，`result` 说明服务重启导致中断
+- **AND** 该 pending 可被调度为 running

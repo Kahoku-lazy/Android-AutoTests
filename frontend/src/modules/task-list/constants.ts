@@ -40,18 +40,20 @@ export const TASK_FILTER_TABS = {
   all: { label: "全部任务" },
 } as const
 
-/** 任务卡片六态（待执行 / 执行中 / 任务成功 / 任务失败 / 任务取消 / 任务暂停） */
+/** 任务卡片七态（待执行 / 执行中 / 任务成功 / 任务失败 / 已中断 / 任务取消 / 任务暂停） */
 export const TASK_STATUS_LABELS: Record<string, string> = {
   pending: "待执行",
   running: "执行中",
   completed: "任务成功",
   success: "任务成功",
   failed: "任务失败",
+  interrupted: "已中断",
   cancelled: "任务取消",
   paused: "任务暂停",
 }
 
-export type TaskStatusTone = "pending" | "running" | "success" | "failed" | "cancelled" | "paused"
+export type TaskStatusTone =
+  "pending" | "running" | "success" | "failed" | "interrupted" | "cancelled" | "paused"
 
 /** 任务看板按状态分组的展示顺序（completed/success 合并为「任务成功」） */
 export const TASK_STATUS_GROUPS: { key: TaskStatusTone; label: string }[] = [
@@ -60,6 +62,7 @@ export const TASK_STATUS_GROUPS: { key: TaskStatusTone; label: string }[] = [
   { key: "paused", label: "任务暂停" },
   { key: "success", label: "任务成功" },
   { key: "failed", label: "任务失败" },
+  { key: "interrupted", label: "已中断" },
   { key: "cancelled", label: "任务取消" },
 ]
 
@@ -73,6 +76,7 @@ export function taskStatusTone(status: string): TaskStatusTone {
   if (key === "running") return "running"
   if (key === "completed" || key === "success") return "success"
   if (key === "failed") return "failed"
+  if (key === "interrupted") return "interrupted"
   if (key === "paused") return "paused"
   if (key === "cancelled") return "cancelled"
   return "pending"

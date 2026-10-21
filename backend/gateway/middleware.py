@@ -33,12 +33,22 @@ PUBLIC_PREFIXES = [
 ]
 
 
+# 停机排空端点：只允许本机回环调用（run.py stop 使用），因此不要求 JWT。
+DRAIN_PATH = "/api/system/drain/"
+_LOOPBACK_ADDRS = {"127.0.0.1", "::1"}
+
+
 def _is_public(path: str) -> bool:
     """Check if a request path is publicly accessible without JWT."""
     for prefix in PUBLIC_PREFIXES:
         if path.startswith(prefix):
             return True
     return False
+
+
+def _is_loopback(addr: str) -> bool:
+    """来源地址是否为 IPv4/IPv6 回环。"""
+    return str(addr or "").strip() in _LOOPBACK_ADDRS
 
 
 class JWTAuthenticationMiddleware:
@@ -59,6 +69,9 @@ class JWTAuthenticationMiddleware:
         path = request.path
 
         if path in RETIRED_AUTH_PATHS or _is_public(path):
+            return self.get_response(request)
+
+        if path == DRAIN_PATH and _is_loopback(request.META.get("REMOTE_ADDR", "")):
             return self.get_response(request)
 
         if not path.startswith("/api/"):

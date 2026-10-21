@@ -2,7 +2,8 @@
 
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -178,3 +179,37 @@ class TaskReportAPIView(APIView):
         if payload is None:
             raise NotFound("任务不存在")
         return Response(payload)
+
+
+class TaskDrainAPIView(APIView):
+    """GET/POST /api/system/drain — 停机排空：只允许本机回环调用。"""
+
+    permission_classes = [AllowAny]
+
+    @staticmethod
+    def _require_loopback(request) -> None:
+        """拒绝非回环来源，避免把停机开关暴露给局域网。"""
+        if request.META.get("REMOTE_ADDR", "") not in ("127.0.0.1", "::1"):
+            raise PermissionDenied("仅本机可调用")
+
+    @extend_schema(
+        tags=["tasks"],
+        operation_id="task_drain_status",
+        responses=OpenApiTypes.OBJECT,
+    )
+    def get(self, request):
+        """只读：返回 running 数与当前排空标志。"""
+        self._require_loopback(request)
+        return Response({"running": api.count_running_tasks(), "draining": api.is_draining()})
+
+    @extend_schema(
+        tags=["tasks"],
+        operation_id="task_drain_begin",
+        request=None,
+        responses=OpenApiTypes.OBJECT,
+    )
+    def post(self, request):
+        """置位排空标志；此后不再派发新任务。"""
+        self._require_loopback(request)
+        api.begin_drain()
+        return Response({"running": api.count_running_tasks(), "draining": api.is_draining()})

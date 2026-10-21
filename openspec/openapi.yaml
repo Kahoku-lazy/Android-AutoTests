@@ -1578,6 +1578,39 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/system/drain/:
+    get:
+      operationId: task_drain_status
+      description: 只读：返回 running 数与当前排空标志。
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    post:
+      operationId: task_drain_begin
+      description: 置位排空标志；此后不再派发新任务。
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/tasks/:
     get:
       operationId: tasks_retrieve

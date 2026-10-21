@@ -24,6 +24,9 @@ __all__ = [
     "delete_task",
     "clear_agent_tasks",
     "recover_orphaned_tasks",
+    "begin_drain",
+    "is_draining",
+    "count_running_tasks",
     "dispatch_device",
     "build_planner_user_input",
     "build_sop_run_input",
@@ -35,18 +38,40 @@ __all__ = [
     "task_deepseek_cost",
 ]
 
+# 停机排空标志：进程内生效，重启后自然复位。置位后不再领取新的 pending 任务。
+_DRAINING = False
+
+
+def begin_drain() -> None:
+    """置位停机排空标志：调用后 dispatch_device 不再领取新任务。"""
+    global _DRAINING
+    _DRAINING = True
+
+
+def is_draining() -> bool:
+    """当前进程是否处于停机排空状态。"""
+    return _DRAINING
+
+
+def count_running_tasks() -> int:
+    """当前进程可见的 running 任务数，供停机排空轮询。"""
+    return Task.objects.filter(status=TaskStatus.RUNNING).count()
+
 
 def recover_orphaned_tasks() -> int:
-    """启动恢复：遗留 running → failed，再按设备拉起 pending。返回失败行数。
+    """启动恢复：遗留 running → interrupted，回写费用后按设备拉起 pending。
 
-    仅服务进程启动时调用（见 apps.AiAssistantConfig._run_startup_recovery）；管理命令不触发。
+    仅服务进程启动时调用（见 apps.TaskListConfig._run_startup_recovery）；管理命令不触发。
     写库归口本模块（D3 契约：写操作只经 api.py）。
     """
-    recovered = Task.objects.filter(status=TaskStatus.RUNNING).update(
-        status=TaskStatus.FAILED,
-        result="执行中断：服务重启导致任务线程终止",
-        finished_at=timezone.now(),
-    )
+    running = list(Task.objects.filter(status=TaskStatus.RUNNING))
+    finished_at = timezone.now()
+    for task in running:
+        rollup_task_cost(task.id)
+        task.status = TaskStatus.INTERRUPTED
+        task.result = "执行中断：服务重启导致任务线程终止"
+        task.finished_at = finished_at
+        task.save(update_fields=["status", "result", "finished_at"])
     serials = (
         Task.objects.filter(status=TaskStatus.PENDING)
         .exclude(device_serial="")
@@ -55,7 +80,7 @@ def recover_orphaned_tasks() -> int:
     )
     for serial in serials:
         dispatch_device(serial)
-    return recovered
+    return len(running)
 
 
 def create_task(
@@ -209,7 +234,7 @@ def build_planner_user_input(task) -> str:
 def dispatch_device(serial: str) -> Task | None:
     """按设备抢槽：同 serial 至多一条 running；否则 start 最早 pending 并起线程。"""
     serial = (serial or "").strip()
-    if not serial:
+    if not serial or _DRAINING:
         return None
 
     with transaction.atomic():

@@ -73,6 +73,9 @@ function taskStatusText(status) {
   const key = String(status || "").toLowerCase()
   if (key === "pending" || key === "paused") return "待执行"
   if (key === "running") return "执行中"
+  if (key === "failed") return "失败"
+  if (key === "interrupted") return "已中断"
+  if (key === "cancelled") return "已取消"
   return "已完成"
 }
 

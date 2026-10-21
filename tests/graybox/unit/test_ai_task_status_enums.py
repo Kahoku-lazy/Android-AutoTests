@@ -50,11 +50,12 @@ def test_serializer_role_whitelist_matches_enum_members():
 
 
 def test_task_status_members_cover_polling_states():
-    """前端轮询依赖的任务态必须是 `TaskStatus` 的成员，含用户关闭后的 cancelled。"""
+    """前端轮询依赖的任务态必须是 `TaskStatus` 的成员，含用户关闭与重启中断。"""
     assert {m.value for m in TaskStatus} == {
         "pending",
         "running",
         "completed",
         "failed",
         "cancelled",
+        "interrupted",
     }

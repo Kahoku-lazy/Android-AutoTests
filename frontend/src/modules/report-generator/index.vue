@@ -130,6 +130,7 @@ const statusCounts = computed(() => {
     [STATUS_KEYS.ALL]: runs.value.length,
     [STATUS_KEYS.COMPLETED]: 0,
     [STATUS_KEYS.FAILED]: 0,
+    [STATUS_KEYS.INTERRUPTED]: 0,
     [STATUS_KEYS.STOPPED]: 0,
   }
   for (const run of runs.value) {
@@ -137,6 +138,8 @@ const statusCounts = computed(() => {
       counts[STATUS_KEYS.COMPLETED] += 1
     } else if (run.status === STATUS_KEYS.FAILED) {
       counts[STATUS_KEYS.FAILED] += 1
+    } else if (run.status === STATUS_KEYS.INTERRUPTED) {
+      counts[STATUS_KEYS.INTERRUPTED] += 1
     } else if (run.status === STATUS_KEYS.STOPPED) {
       counts[STATUS_KEYS.STOPPED] += 1
     }
@@ -145,7 +148,13 @@ const statusCounts = computed(() => {
 })
 
 const statusFilterTabs = computed(() =>
-  [STATUS_KEYS.ALL, STATUS_KEYS.COMPLETED, STATUS_KEYS.FAILED, STATUS_KEYS.STOPPED].map((key) => ({
+  [
+    STATUS_KEYS.ALL,
+    STATUS_KEYS.COMPLETED,
+    STATUS_KEYS.FAILED,
+    STATUS_KEYS.INTERRUPTED,
+    STATUS_KEYS.STOPPED,
+  ].map((key) => ({
     key,
     label: STATUS_TAB_LABELS[key],
     count: statusCounts.value[key],
@@ -675,6 +684,10 @@ function openTaskReport(row) {
 .badge-fail {
   background: var(--app-status-danger-bg);
   color: var(--app-status-danger-text);
+}
+.badge-interrupted {
+  background: var(--app-status-warning-bg);
+  color: var(--app-warning-text);
 }
 .badge-running {
   background: var(--app-pending);

@@ -471,7 +471,7 @@ def _iter_code_line_nos(content):
 def scan_engine_leak_violations():
     """Detect engine capability leak to upper layers (L1c boundary).
 
-    Rule (.agents/skills/boundary-check/SKILL.md §二 引擎边界): only `engines/` may import third-party
+    Rule (engine boundary): only `engines/` may import third-party
     engine libs (uiautomator2) or touch concrete engine implementations.
     Upper layers (apps/, gateway/) must consume device capability ONLY via
     `engines.device.base.UiEngine` protocol (obtained through `engines.device.registry`).

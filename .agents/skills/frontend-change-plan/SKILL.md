@@ -103,18 +103,11 @@ CSS 片段速查、JS 交互的五种写法，以及若干**已知坑**（`.wb` 
 - **不改业务、路由深度与 API**：方案针对版式与导航，业务链路不动。
 - **不把原型色值当规范**：原型的色值是示意，规范在 `tokens.css` 与 spec。
 
-## 与 html-report 的关系（格式优先级）
+## 原型 HTML 的格式口径
 
-`html-report` 声称是本项目「所有 HTML 报告 / 方案文档」的唯一权威设计规范（animal-island-ui）。**本技能产出的原型方案 HTML 是明确的例外**，理由：原型的职责是**镜像产品真实的 UI 语言**，让审阅者看到改动后界面长什么样；用一套与产品无关的报告皮肤去画界面原型，评审就失去意义。
+界面原型 MUST 用本技能模板（Doodle Craft DNA，与产品同源）：原型的职责是**镜像产品真实的 UI 语言**，让审阅者看到改动后界面长什么样；用一套与产品无关的皮肤去画界面原型，评审就失去意义。
 
-据此分工，不要混在一份文件里：
-
-| 产物 | 走哪套 |
-| --- | --- |
-| 界面原型 + 版式方案（本技能交付物，`temps/*-proto.html`） | 本技能模板（Doodle Craft DNA，与产品同源） |
-| 纯文字类报告：分析报告 / 质量报告 / 测试报告 / 架构图 | `html-report`（animal-island-ui） |
-
-一次交付里两者都有时，分成两个文件。
+纯文字类报告（分析 / 质量 / 测试报告、架构图）不由本技能产出；一次交付里两者都有时分两个文件。
 
 ## 参考文件
 
@@ -123,4 +116,4 @@ CSS 片段速查、JS 交互的五种写法，以及若干**已知坑**（`.wb` 
 | `assets/plan-prototype-template.html` | 1491 行自包含模版：侧栏章节导航 + 23 个 CSS 片段 + 五种 JS 交互（复制起点） |
 | `references/authoring-guide.md` | 章节契约、配色诚实标注、CSS 片段速查表、已知坑 6 条、JS 交互模式、交付自检 10 项 |
 
-视觉与令牌真相源在 `doodle-craft` skill；前端验收在 `vue-frontend-check` skill；落单流程在 `openspec-propose` skill。
+视觉与令牌真相源在 `doodle-craft` skill；前端验收跑 `cd frontend && npm run lint:styles && npm run typecheck`；落单流程在 `openspec-propose` skill。

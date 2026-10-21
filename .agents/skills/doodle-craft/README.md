@@ -54,4 +54,4 @@ doodle-craft/
 - 改令牌值：**先改 `tokens.css`**（唯一真相源），再同步 `references/tokens.md`；两者冲突时以代码为准。
 - 新增组件规格：写进 `references/components/` 对应类目；没有合适类目时先在本 README 的目录结构里登记新类目，再建文件。
 - 新增设计规则：只有当需求方**明确提出**新设计时才允许；落地后必须登记回 `references/tokens.md` + `tokens.css`，涉及组件或版式时同步对应参考文件。
-- 仓内其它技能（`frontend-change-plan`、`vue-frontend-check`）以**技能名**引用本技能，不深链内部文件——重组 references 不会断链，但仍应在重组后跑一次链接自检。
+- 仓内其它技能（`frontend-change-plan`）以**技能名**引用本技能，不深链内部文件——重组 references 不会断链，但仍应在重组后跑一次链接自检。

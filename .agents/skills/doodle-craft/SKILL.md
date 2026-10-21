@@ -126,4 +126,4 @@ Doodle Craft 是本平台前端的**默认设计方案**：极简几何 · 粗�
 [ ] 交付：新 .vue ≤ 500 行；说明里交代了采用的是哪套既有默认
 ```
 
-> 工程门禁（布局裁剪 / 契约 / 可达性 / 四态）另用 `vue-frontend-check` skill；前端编码规范（Vue / TS / 文件组织）遵循 `frontend/AGENTS.md`；验收契约见 `openspec/specs/frontend-l*`、`frontend-doodle-*`。
+> 工程门禁（布局裁剪 / 契约 / 可达性 / 四态）与前端编码规范（Vue / TS / 文件组织）遵循 `frontend/AGENTS.md`；样式硬门禁跑 `cd frontend && npm run lint:styles`；验收契约见 `openspec/specs/frontend-l*`、`frontend-doodle-*`。

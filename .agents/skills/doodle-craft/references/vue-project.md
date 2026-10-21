@@ -48,7 +48,7 @@ cd frontend && npx eslint src/          # 代码规范
 ```
 
 - 只跑与改动直接相关的最小测试集；全量回归需先向用户申请。
-- 工程门禁（布局裁剪 / 契约 / 可达性 / 四态）用 `vue-frontend-check` skill。
+- 工程门禁（布局裁剪 / 契约 / 可达性 / 四态）按 `frontend/AGENTS.md` 自查，样式硬门禁跑 `npm run lint:styles`。
 - 编码规范（Vue / TS / 文件组织 / 500 行上限）以 `frontend/AGENTS.md` 为准；本技能只管视觉与结构口径。
 
 ## 6. 交付前

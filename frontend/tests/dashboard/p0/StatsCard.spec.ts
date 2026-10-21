@@ -1,7 +1,7 @@
 /**
  * [P0] 必测 — 仪表盘统计卡主交互（数值展示 / 趋势文案 / loading 骨架 / 点击跳转）
  * 目录：tests/dashboard/p0/
- * StatsCard 现为 KpiCard entry 薄包装，交互节点落在 .kpi-card / .kpi-card__enter。
+ * StatsCard 现为 KpiCard entry 薄包装，交互只落在整卡 .kpi-card（无独立进入按钮）。
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
@@ -80,27 +80,15 @@ describe('[P0] StatsCard', () => {
     expect(pushMock).toHaveBeenCalledWith('/devices')
   })
 
-  it('点击「进入」按钮：同样跳转且不重复触发', async () => {
+  it('有 path：无进入按钮，点整卡仍跳转', async () => {
     const wrapper = mountCard({ value: 3, path: '/devices' })
-
-    expect(wrapper.find('.kpi-card__enter').exists()).toBe(true)
-    await wrapper.find('.kpi-card__enter').trigger('click')
-
-    expect(pushMock).toHaveBeenCalledTimes(1)
-    expect(pushMock).toHaveBeenCalledWith('/devices')
-  })
-
-  it('showEnter=false：有 path 时无进入按钮，点击整卡仍跳转', async () => {
-    const wrapper = mountCard({ value: 3, path: '/ai-assistant', showEnter: false })
     const card = wrapper.find('.kpi-card')
 
     expect(wrapper.find('.kpi-card__enter').exists()).toBe(false)
-    expect(card.attributes('role')).toBe('button')
-
     await card.trigger('click')
 
     expect(pushMock).toHaveBeenCalledTimes(1)
-    expect(pushMock).toHaveBeenCalledWith('/ai-assistant')
+    expect(pushMock).toHaveBeenCalledWith('/devices')
   })
 
   it('无 path：不可点、无进入按钮，点击不跳转', async () => {

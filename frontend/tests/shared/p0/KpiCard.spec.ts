@@ -27,7 +27,7 @@ describe('[P0] KpiCard', () => {
     expect(onClick).toHaveBeenCalledTimes(1)
   })
 
-  it('entry：展示标题/描述/进入，装饰不抢交互', async () => {
+  it('entry：展示标题/描述，无进入按钮，装饰不抢交互', async () => {
     const onClick = vi.fn()
     const wrapper = mount(KpiCard, {
       props: {
@@ -38,28 +38,41 @@ describe('[P0] KpiCard', () => {
         deco: 'tape',
         live: true,
         color: 'var(--c-workflow)',
+        clickable: true,
       },
       attrs: { onClick },
     })
     expect(wrapper.classes()).toContain('kpi-card--entry')
     expect(wrapper.find('.kpi-card__title').text()).toBe('工作流')
     expect(wrapper.find('.kpi-card__desc').text()).toBe('核心指标实时更新')
-    expect(wrapper.find('.kpi-card__enter').exists()).toBe(true)
+    expect(wrapper.find('.kpi-card__enter').exists()).toBe(false)
     expect(wrapper.find('.kpi-card__tape').exists()).toBe(true)
     expect(wrapper.find('.kpi-card__live').exists()).toBe(true)
 
-    await wrapper.find('.kpi-card__enter').trigger('click')
+    await wrapper.trigger('click')
     expect(onClick).toHaveBeenCalledTimes(1)
   })
 
-  it('entry：键盘 Enter 激活', async () => {
+  it('entry：clickable=true 时键盘 Enter 激活', async () => {
     const onClick = vi.fn()
     const wrapper = mount(KpiCard, {
-      props: { variant: 'entry', label: '设备', value: 12 },
+      props: { variant: 'entry', label: '设备', value: 12, clickable: true },
       attrs: { onClick },
     })
     await wrapper.trigger('keydown', { key: 'Enter' })
     expect(onClick).toHaveBeenCalledTimes(1)
+  })
+
+  it('entry：默认不可点，且无进入按钮', async () => {
+    const onClick = vi.fn()
+    const wrapper = mount(KpiCard, {
+      props: { variant: 'entry', label: '只读', value: 1 },
+      attrs: { onClick },
+    })
+    expect(wrapper.attributes('role')).toBeUndefined()
+    expect(wrapper.find('.kpi-card__enter').exists()).toBe(false)
+    await wrapper.trigger('click')
+    expect(onClick).not.toHaveBeenCalled()
   })
 
   it('entry：clickable=false 时不可点且无进入按钮', async () => {

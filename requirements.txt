@@ -2,7 +2,9 @@
 cryptography>=41.0
 
 # ── Django Core ──
-Django>=4.2
+# 固定 6.0.x：6.1 的模型字段检查会主动连接 MySQL 校验列类型，CI 无数据库时 check 直接失败；
+# 同时 OpenAPI 语言枚举在 6.1 有变化，固定版本可保证 schema 基线可复现。
+Django==6.0.6
 djangorestframework>=3.15
 # drf-spectacular-sidecar：Swagger UI/Redoc 静态资产随包分发，断网也能渲染文档页
 drf-spectacular>=0.28

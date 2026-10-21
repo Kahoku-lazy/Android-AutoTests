@@ -55,6 +55,18 @@ jobs:
       - name: Ruff lint
         run: ruff check apps/ config/ gateway/ shared/ models/
 
+      # 4. pytest 收集门禁（不跑用例，只保证整套测试可导入；防失效测试积压）
+      - name: Pytest collect gate
+        env:
+          DJANGO_SECRET_KEY: ci-pytest-collect-key-not-for-prod
+          OPENAI_API_KEY: ci-collect-placeholder
+          DEEPSEEK_API_KEY: ci-collect-placeholder
+        run: python -m pytest -c tests/pytest.ini --collect-only -q
+
+      # 5. OpenAPI 契约：生成 + 校验 + 基线一致 + 业务路径全覆盖（缺一即红）
+      - name: OpenAPI contract gate
+        run: python utils/check_gates.py --only openapi-schema,openapi-coverage
+
   # ═══════════════════════════════════════════
   # Job 2: 前端编译 + 格式检查
   # ═══════════════════════════════════════════
@@ -117,9 +129,9 @@ jobs:
       - name: Ruff lint engines
         run: ruff check engines/
 
-      # S3. 静默吞异常（AST 检查，见 tools/check_gates.py）
+      # S3. 静默吞异常（AST 检查，见 utils/check_gates.py）
       - name: Silent exception check
-        run: python tools/check_gates.py --only silent-except
+        run: python utils/check_gates.py --only silent-except
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -273,7 +285,7 @@ jobs:
           echo "║  防火墙 #2: 跨模块 ORM 直接写入   ║"
           echo "╚══════════════════════════════════╝"
           echo ""
-          python tools/gen_arch_stats.py --check-boundaries
+          python utils/gen_arch_stats.py --check-boundaries
 
   # ═══════════════════════════════════════════
   # Job 5: 前端质量检查（文件体积 + 硬编码数据）
@@ -296,7 +308,7 @@ jobs:
           echo "║  前端文件体积检查 (<500行)      ║"
           echo "╚══════════════════════════════════╝"
           echo ""
-          python tools/gen_arch_stats.py --check-frontend
+          python utils/gen_arch_stats.py --check-frontend
 
       - name: Check for hardcoded mock data
         run: |

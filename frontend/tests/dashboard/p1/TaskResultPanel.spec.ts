@@ -34,9 +34,9 @@ describe('[P1] TaskResultPanel', () => {
     expect(text).toContain('失败')
   })
 
-  it('任务为空：引导前往平台小助手', () => {
+  it('任务为空：引导前往任务清单', () => {
     const wrapper = mountPanel({ tasks: [] })
-    expect(wrapper.text()).toContain('暂无任务卡片，前往平台小助手新建')
+    expect(wrapper.text()).toContain('暂无任务卡片，前往任务清单新建')
   })
 
   it('completed 映射为成功 ✓', () => {

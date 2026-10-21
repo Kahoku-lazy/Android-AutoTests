@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════
-   仪表盘布局 — 章节钉板（暖纸底 · doodle 虚线壳 · 硬色偏移阴影）
+   仪表盘布局 — 章节钉板（暖纸底 · 墨色实线壳 · 硬色偏移阴影）
    对齐原型：dashboard-chapter-board-proto.html
    ═══════════════════════════════════════════ */
 
@@ -20,7 +20,6 @@
   --ch-accent: var(--c-dashboard);
   position: relative;
   background: var(--paper);
-  border: 2.5px dashed var(--ink);
   border-radius: 2px;
   box-shadow: 4px 4px 0 0 var(--ch-accent);
   padding: var(--app-space-md) var(--app-space-md) var(--app-space-sm);
@@ -49,7 +48,7 @@
   gap: var(--app-space-md);
   margin-bottom: var(--app-space-md);
   padding-bottom: var(--app-space-sm);
-  border-bottom: 2px dashed color-mix(in srgb, var(--ink) 28%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--ink) 28%, transparent);
 }
 .chapter-head__left {
   display: flex;
@@ -144,7 +143,7 @@
   content: "";
   flex: 1;
   height: 0;
-  border-bottom: 1.5px dashed color-mix(in srgb, var(--ink) 25%, transparent);
+  border-bottom: 1.5px solid color-mix(in srgb, var(--ink) 25%, transparent);
 }
 .subhead__tag {
   font-size: var(--app-size-xs);

@@ -4,7 +4,9 @@
    ═══════════════════════════════════════════ */
 
 .sidebar {
-  --sidebar-dash: var(--comp-sidebar-dash);
+  /* 线型由侧栏边界自持：全站不再用共享 --comp-* 令牌代持 dashed/solid 决定 */
+  --sidebar-line: solid;
+  --sidebar-border: var(--size-stroke-sketch) var(--sidebar-line) var(--ink);
   --sidebar-yellow: var(--comp-sidebar-yellow);
   --sidebar-teal: var(--comp-sidebar-teal);
   --sidebar-red: var(--comp-sidebar-red);
@@ -20,7 +22,7 @@
   overflow: hidden;
   position: relative;
   z-index: var(--z-raised);
-  border-right: var(--sidebar-dash);
+  border-right: var(--sidebar-border);
   box-shadow: none;
   color: var(--ink);
   font-family: var(--app-font);
@@ -155,7 +157,7 @@
   min-width: 0;
   margin: 0;
   padding: 0 16px;
-  border-bottom: var(--sidebar-dash);
+  border-bottom: var(--sidebar-border);
   letter-spacing: -0.02em;
   color: var(--ink);
   text-decoration: none;
@@ -290,7 +292,7 @@
   color: var(--ink);
   font-weight: 800;
   background: var(--sidebar-yellow);
-  border: var(--sidebar-dash);
+  border: var(--sidebar-border);
   border-radius: 2px;
   clip-path: none;
   box-shadow: 3px 3px 0 0 var(--mod-color, var(--sidebar-teal));
@@ -373,7 +375,7 @@
   gap: 2px;
   margin: 0 0 var(--app-space-xs) 12px;
   padding-left: 10px;
-  border-left: var(--sidebar-dash);
+  border-left: var(--sidebar-border);
 }
 .sidebar-menu__item--sub {
   min-height: 34px;
@@ -393,7 +395,7 @@
   position: relative;
   flex-shrink: 0;
   padding: 0;
-  border-top: var(--sidebar-dash);
+  border-top: var(--sidebar-border);
   display: flex;
   flex-direction: column;
   background: transparent;
@@ -404,7 +406,7 @@
   padding: 12px;
   background: #fff;
   border-radius: 2px;
-  border: var(--sidebar-dash);
+  border: var(--sidebar-border);
   box-shadow: 2px 2px 0 0 color-mix(in srgb, var(--sidebar-teal) 70%, transparent);
 }
 .sidebar__user-display {

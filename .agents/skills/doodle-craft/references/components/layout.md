@@ -27,9 +27,9 @@
 ## 3. AppSidebar 侧栏（L1，模块不许改）
 
 - **底色** `--paper`；**宽度** `var(--side-w)`：默认 **260px**，可拖拽 180–360，折叠 64px（`228px` 只是初始化前的兜底值）
-- **品牌区**：高 `--app-topbar-h`（96px）、底部虚线分隔；品牌块 28×28、2.5px 墨框、黄底、青绿硬影
+- **品牌区**：高 `--app-topbar-h`（96px）、底部实线分隔；品牌块 28×28、2.5px 墨框、黄底、青绿硬影
 - **导航项**：`min-height: 42px`、内边距 `10px 12px`、圆角 `2px`、框 `2.5px solid transparent`、字 `--app-size-sm` / 700
-- **激活项**：底 `--app-highlight`、字 `--ink`、字重 800、`2.5px` 虚线上边框、硬影 `3px 3px 0 0 <模块色>`、微倾 `-0.8deg`
+- **激活项**：底 `--app-highlight`、字 `--ink`、字重 800、`2.5px` 实线描边、硬影 `3px 3px 0 0 <模块色>`、微倾 `-0.8deg`
 - **hover**：底 `color-mix(--app-highlight 28%, transparent)`、微倾 `-0.4deg`
 - **未激活文字**：`--ink`（⚠️ **不是** `--app-nav-text`；那个令牌实际由设备管理卡片、AI 工具箱消费）
 - 图标块 22×22（子项 18×18）、2px 墨框、底 = 模块色
@@ -55,7 +55,7 @@ const NAV_ICONS = {
 
 ## 4. `.doc-section` 页面级分区
 
-带标题的一大段内容用 `.doc-section`（标题 + 可选提示 + 分隔虚线），**不要**用 `AppCard` 当分区外壳。分区内部的卡片网格见 [cards.md](cards.md)。页面层的完整骨架与滚动规则见 [../page-layout.md](../page-layout.md)。
+带标题的一大段内容用 `.doc-section`（标题 + 可选提示 + 分隔实线），**不要**用 `AppCard` 当分区外壳。分区内部的卡片网格见 [cards.md](cards.md)。页面层的完整骨架与滚动规则见 [../page-layout.md](../page-layout.md)。
 
 ## 5. AppTabs / FilterTabs
 

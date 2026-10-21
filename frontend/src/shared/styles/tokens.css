@@ -264,7 +264,6 @@
   --comp-paper-mark-red: var(--color-red-69);
   --comp-paper-mark-teal: var(--color-teal-49);
   --comp-paper-mark-yellow: var(--color-yellow-62);
-  --comp-sidebar-dash: 2.5px dashed var(--ink);
   --comp-sidebar-red: var(--color-red-69);
   --comp-sidebar-teal: var(--color-teal-49);
   --comp-sidebar-yellow: var(--app-highlight, var(--c-dashboard));

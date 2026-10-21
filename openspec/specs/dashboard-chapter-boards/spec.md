@@ -17,11 +17,13 @@
 - **THEN** 该章节只呈现用例类 KPI；不出现元素类 KPI、元素统计卡或「Android元素」文案
 
 ### Requirement: Chapter headers expose hierarchy with doodle cues
+
 每个章节头 SHALL 同时包含：模块色方标（或等价图标块）、英文 eyebrow、中文标题（可用 marker 高亮），MUST NOT 仅依赖灰色圆角 pill 作为主层级信号。
 
 #### Scenario: Chapter head is scannable
+
 - **WHEN** 用户浏览任一章节头
-- **THEN** 可见英文 eyebrow、中文标题与彩色方标；章节容器带虚线描边与硬色偏移阴影（钉板语义）
+- **THEN** 可见英文 eyebrow、中文标题与彩色方标；章节容器带实线描边与硬色偏移阴影（钉板语义）
 
 ### Requirement: Existing KPI cards and APIs remain the data surface
 章节重组 MUST NOT 把仪表盘改成可写运营台：KPI 入口卡、趋势 `AppCard`、活动时间线仍直映只读 stats/activities 接口。系统 MUST 继续只请求既有仪表盘统计与活动只读接口，MUST NOT 为展示测试资产而新增写操作或在前端推算业务指标。`cases.breakdown` SHALL 按当前用户的用例项目维度返回（每项含项目标识、名称与用例数）；MUST NOT 再要求该字段保持测试类型拆分或与重组前类型键一一对应。`cases.total` SHALL 仍为当前用户文档用例合计。元素类 KPI 的数据源字段随元素定位退役一并移除，统计响应 MUST NOT 再包含元素或元素页面计数。
@@ -73,3 +75,20 @@
 - **WHEN** 用户查看「在线设备」「活跃智能体」「运行中任务」「工作流」四张卡
 - **THEN** 四张卡内均不存在「进入」按钮（`.kpi-card__enter`）
 - **AND** 点击卡面仍分别进入设备页、智能体页、报告页、工作流页
+
+### Requirement: Chapter shells are solid while metric cards stay dashed
+
+仪表盘四个章节板（平台运营 / AI 用量 / 测试资产 / 趋势与动态）的外壳描边 SHALL 为墨色实线，MUST NOT 覆写全局 `.doc-section` 的实线线型；章节头分隔线与子标题分隔线 SHALL 同为实线。
+
+章节外壳内的 KPI 指标卡、智能体用量卡与趋势 `AppCard` SHALL 保留既有手绘虚线卡壳，MUST NOT 因章节外壳改线型而一起变成实线。
+
+#### Scenario: Chapter shells render solid borders
+
+- **WHEN** 用户打开仪表盘并查看四个章节板
+- **THEN** 每个章节外壳为墨色实线描边，仍保留模块色硬偏移阴影
+- **AND** 章节头与子标题的分隔线为实线
+
+#### Scenario: Metric cards keep their dashed shells
+
+- **WHEN** 用户查看「平台运营」的在线设备、活跃智能体等 KPI 卡，或「AI 用量」的累计用量、当天用量等 KPI 卡
+- **THEN** 这些卡片仍呈现虚线描边、近直角与硬偏移色阴影

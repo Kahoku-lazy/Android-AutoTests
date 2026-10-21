@@ -106,6 +106,8 @@ Blockly 等 JS 画布渲染不解析 CSS 变量，字体用字面量——改全
 **登记例外**（可写字面量）：真实圆形 `50%` · 近直角纸角 2px（`--comp-note-radius` / `--comp-kpi-radius` / `--comp-sheet-radius` = `2px 6px 2px 4px`）· 图形量 1px / 3px / 5px · `0` 重置 · 登录页已登记的独立造型。
 **禁止**：对称大圆角 `999px` / `8px` / `12px` / `50px`；与令牌等价的四值展开（`4px 8px 4px 8px`、`6px 10px 6px 10px`、`3px 6px 3px 6px`）——门禁直接拦截。
 
+**描边线型登记**：线型由消费边界自持，**不设共享线型令牌**。侧栏 `.sidebar` 声明 `--sidebar-line: solid`、组合为 `--sidebar-border`（`AppSidebar.style.css`）；登录页 `.login-page` 声明 `--login-line: dashed`（`LoginView.style.css`），是全站唯一保留虚线的边界。仪表盘章节板 `.doc-section--board` 不再覆写线型，沿用全局 `.doc-section` 的 `2.5px solid var(--ink)`；KPI 卡 / AppCard 等卡片壳仍为虚线，不受影响。
+
 ## 1.7 阴影层级 — 扁平硬偏移，**模糊半径必须为 0**
 
 | 层级 | CSS 变量 | 值 | 场景 |

@@ -91,7 +91,7 @@
 
 #### Scenario: 共享线型变化不波及登录页
 
-- **WHEN** 把侧栏线型令牌 `--comp-sidebar-dash` 的值临时改为实线
+- **WHEN** 把侧栏作用域令牌 `--sidebar-line` 从 `solid` 临时改为 `dashed`
 - **THEN** 登录页的 Meeting doodle 与「注册」次按钮仍渲染为虚线
 - **AND** 登录页样式无需任何改动
 

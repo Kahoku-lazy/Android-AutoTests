@@ -29,5 +29,5 @@
 - [x] 5.2 前端测试迁移：`TaskBoard`、`useTaskList`、`useTaskPublish`、`useTaskDetail`、任务详情、侧栏、路由测试全部改到新路径。验证：`npm test` 通过。
 - [x] 5.3 文档与 spec 清扫：`apps/task_list/AGENTS.md`、`apps/ai_assistant/AGENTS.md`、`apps/report_generator/AGENTS.md`、根 `AGENTS.md` 表前缀、相关 OpenSpec specs 全部改到 `Task` / `task_*` / `/api/tasks/*` / `/tasks/:id`。验证：`rg "AITask|ai_tasks|/api/ai/agent-tasks|/reports/task" apps frontend openspec` 无残留（历史归档除外）。
 - [ ] 5.4 本地门禁与迁移验收：`python manage.py check`、`makemigrations --check`、`ruff check`、`python run.py check`、前端 `npm run build:check`；在 MySQL/SQLite 副本各跑一次正向/反向迁移。验证：全部通过，五张表行数与备份一致。
-  - 已完成：`manage.py check`、`makemigrations --check`、`ruff check`、`npm run build:check`；MySQL 备份副本正向/反向迁移通过，真实库 7 任务 / 44176 事件 / 176 媒体 / 13 小时用量行数一致。
-  - 阻塞：`python run.py check` 仅剩非本任务文件（`engines/agents/role/base.py`、`assistant-cards.ts`）；SQLite 副本被既有 `ai_assistant.0021` 的 MySQL 专用 `ALTER COLUMN ... SET DEFAULT` 阻塞（非本次引入）。
+  - 已完成：`manage.py check`、`makemigrations --check`、`ruff check`、`npm run build:check`；MySQL 备份副本与 SQLite 空库均完成正向/反向迁移，五张表名与行数一致（真实库 7 任务 / 44176 事件 / 176 媒体 / 13 小时用量）。
+  - 阻塞：`python run.py check` 19/21，仅剩非本任务文件（`engines/agents/role/base.py`、`assistant-cards.ts`）的格式化项。

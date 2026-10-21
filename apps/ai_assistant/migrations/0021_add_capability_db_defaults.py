@@ -3,27 +3,38 @@
 from django.db import migrations
 
 
-class Migration(migrations.Migration):
+def _set_capability_defaults(apps, schema_editor):
+    """MySQL-only DB defaults; SQLite accepts the Python-side defaults."""
+    if schema_editor.connection.vendor != "mysql":
+        return
+    for column in (
+        "enable_workspace_tools",
+        "enable_business_tools",
+        "enable_mcp_tools",
+        "enable_skills",
+        "enable_knowledge_base",
+    ):
+        schema_editor.execute(f"ALTER TABLE ai_agents ALTER COLUMN {column} SET DEFAULT 0")
 
+
+def _drop_capability_defaults(apps, schema_editor):
+    if schema_editor.connection.vendor != "mysql":
+        return
+    for column in (
+        "enable_workspace_tools",
+        "enable_business_tools",
+        "enable_mcp_tools",
+        "enable_skills",
+        "enable_knowledge_base",
+    ):
+        schema_editor.execute(f"ALTER TABLE ai_agents ALTER COLUMN {column} DROP DEFAULT")
+
+
+class Migration(migrations.Migration):
     dependencies = [
-        ('ai_assistant', '0020_add_capability_toggles'),
+        ("ai_assistant", "0020_add_capability_toggles"),
     ]
 
     operations = [
-        migrations.RunSQL(
-            sql=[
-                "ALTER TABLE ai_agents ALTER COLUMN enable_workspace_tools SET DEFAULT 0",
-                "ALTER TABLE ai_agents ALTER COLUMN enable_business_tools SET DEFAULT 0",
-                "ALTER TABLE ai_agents ALTER COLUMN enable_mcp_tools SET DEFAULT 0",
-                "ALTER TABLE ai_agents ALTER COLUMN enable_skills SET DEFAULT 0",
-                "ALTER TABLE ai_agents ALTER COLUMN enable_knowledge_base SET DEFAULT 0",
-            ],
-            reverse_sql=[
-                "ALTER TABLE ai_agents ALTER COLUMN enable_workspace_tools DROP DEFAULT",
-                "ALTER TABLE ai_agents ALTER COLUMN enable_business_tools DROP DEFAULT",
-                "ALTER TABLE ai_agents ALTER COLUMN enable_mcp_tools DROP DEFAULT",
-                "ALTER TABLE ai_agents ALTER COLUMN enable_skills DROP DEFAULT",
-                "ALTER TABLE ai_agents ALTER COLUMN enable_knowledge_base DROP DEFAULT",
-            ],
-        ),
+        migrations.RunPython(_set_capability_defaults, _drop_capability_defaults),
     ]

@@ -19,11 +19,14 @@
 - **THEN** 测试用例子区出现以该项目名称命名的入口卡，主数值为 0
 
 ### Requirement: Case card enters the matching project workspace
-测试用例子区每张项目卡 SHALL 导航到该项目的用例工作台。MUST NOT 把所有项目卡统一指向无项目上下文的通用 `/cases` 列表（可作为空态入口，不得作为已有项目卡的目标）。
+
+测试用例子区每张项目卡 SHALL 通过**整卡激活**导航到该项目的用例工作台，MUST NOT 在卡内渲染独立「进入」按钮或同类进入控件。MUST NOT 把所有项目卡统一指向无项目上下文的通用 `/cases` 列表（可作为空态入口，不得作为已有项目卡的目标）。
 
 #### Scenario: Clicking a project card opens that project
+
 - **WHEN** 用户点击名称为某已存在项目的用例入口卡
 - **THEN** 进入该项目工作台（路径含该项目 id）
+- **AND** 卡片内不存在「进入」按钮
 
 ### Requirement: Cards stay in sync with project create and delete
 测试用例子区的卡片集合 SHALL 与当前用户的用例项目集合一致：新增项目后再次加载仪表盘统计 MUST 出现对应卡片；删除项目后再次加载 MUST 不再出现该项目卡片。同步 SHALL 通过既有仪表盘只读统计接口完成，MUST NOT 依赖前端在仪表盘页额外请求用例项目列表接口，MUST NOT 新增 WebSocket 写通道。

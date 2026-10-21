@@ -1,6 +1,6 @@
 {
   "source": "dev_docs/1.txt",
-  "description": "串口日志关键词 → 功能模块 / 功能点 对照表；由 tools/gen_device_log_keywords.py 生成，请勿手改",
+  "description": "串口日志关键词 → 功能模块 / 功能点 对照表；源表已下线，本文件为手工维护的唯一副本，修改请直接编辑",
   "feature_count": 56,
   "keyword_count": 67,
   "keywords": {

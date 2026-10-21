@@ -1,9 +1,8 @@
-"""D0 日志配置契约：`LOGGING` 必须真正生效（不再依赖从未设置的 DOCKER_CONTAINER）。"""
+"""D0 日志配置契约：`LOGGING` 必须真正生效（框架日志只留控制台）。"""
 
 from __future__ import annotations
 
 import logging
-import os
 
 import pytest
 
@@ -19,15 +18,11 @@ def test_root_logger_has_handlers():
     assert root["level"] == settings.LOG_LEVEL
 
 
-def test_local_slot_has_console_and_file():
-    """本地档位：控制台 + logs/django.log（容器档位只有 stdout）。"""
+def test_console_handler_is_the_only_frame_handler():
+    """框架日志只留控制台：不再有写 `logs/django.log` 的 file handler。"""
     handlers = settings.LOGGING["handlers"]
     assert "console" in handlers
-    is_container = os.environ.get("DOCKER_CONTAINER", "").lower() in ("true", "1", "yes")
-    if not is_container:
-        assert "file" in handlers
-        assert handlers["file"]["filename"].replace("\\", "/").endswith("logs/django.log")
-        assert handlers["file"].get("delay") is True
+    assert "file" not in handlers
 
 
 def test_django_and_daphne_loggers_configured():

@@ -18,20 +18,16 @@
 
 1. **单主干 `Kahoku`**：仓库只有这一个长期分支（`origin/HEAD -> origin/Kahoku`），不设 `develop` / `release/*`。临时分支按 `feat/<name>` / `fix/<name>` 命名，合并后删除。
 2. **提交规范**：Conventional Commits，`{type}({scope}): {描述}`，type 取 `feat` / `fix` / `refactor` / `docs` / `test` / `chore` / `style` / `security`。一次提交只做一件事；**禁止 `git add -A`** —— 历史上有一次退役提交用它把未申报的目录改名一起带进去，导致已删除的包复活。
-3. **合并一律走 PR，目标分支 `Kahoku`**，且必须同时满足：
-   - 1 个 approving review；
-   - 分支已与 `Kahoku` 同步（保护规则为 `strict`，落后时先 rebase）；
-   - 3 项必需状态检查全绿：`backend-check`、`frontend-check`、`security-scan`。
-4. **另外 3 个 CI job 不阻塞合并，但不许不看**：`static-checks`、`boundary-check`、`frontend-quality`。它们变红说明静默吞错 / 边界 / 文件体积门禁已破，不得以「不阻塞」为由放过。
-5. **提交前先跑本地门禁**：`python run.py check`（与 CI 同一批检查，阻塞项失败即退出码 1）。不跑全量回归。
-6. **管理员绕过直推不是流程的一部分**：分支保护当前 `enforce_admins=false`，管理员技术上能 `git push` 到 `Kahoku`。直推后必须立刻确认该提交的 6 个 CI job 全绿；出现红项要当场修掉并在下一次推送里补齐，不得积压。
+3. **没有 PR 流程**：改动直接推 `Kahoku`，不经 PR。不建长期分支、不设 `develop` / `release/*`；临时分支按 `feat/<name>` / `fix/<name>` 命名，用完即删。分支保护只保留「禁止强推 + 禁止删分支」，不再要求 PR 与状态检查。
+4. **CI 是唯一的质量闸门**：没有 PR 就没人替你看，推送后必须确认 `ci-phase1.yml` 的 6 个 job 全绿 —— `backend-check` / `frontend-check` / `static-checks` / `security-scan` / `boundary-check` / `frontend-quality`。出现红项要当场修掉并在下一次推送里补齐，不得积压。
+5. **禁止强推**：`Kahoku` 是唯一主干，禁止 `--force`。已推送的提交要改，用新提交修正，不改写历史。
+6. **提交前先跑本地门禁**：`python run.py check`（与 CI 同一批检查，阻塞项失败即退出码 1）。不跑全量回归。
 
 ```bash
-git checkout -b feat/<name>        # 临时分支（可选）
 python run.py check                # 本地门禁
 git add <具体文件>                  # 逐文件暂存，不用 -A
 git commit -m "feat(scope): ..."
-git push origin feat/<name>        # 到远程后开 PR，目标分支 Kahoku
+git push origin Kahoku             # 推送后确认 6 个 CI job 全绿
 ```
 
 ## 快速上手

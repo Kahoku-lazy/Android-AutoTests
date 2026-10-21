@@ -1,7 +1,7 @@
 // dsh-plugin-arch-gate — 移植自原 Claude 的 check-boundary 写后边界检查
 //
 // 在 tools/post-execute 观察文件写入：当写入目标匹配 apps/**/*.py 时，
-// 运行 `python tools/gen_arch_stats.py --check-boundaries`；
+// 运行 `python utils/gen_arch_stats.py --check-boundaries`；
 // 检查未通过时把输出作为 additionalContexts 注入会话（模型下一步可见），
 // 不阻塞写入本身（PostToolUse 同语义）。
 //
@@ -72,7 +72,7 @@ const DEFAULTS: Required<Omit<ArchGateConfig, "enabled">> & { enabled: boolean }
   toolNames: ["write", "edit"],
   pathGlobs: ["apps/**/*.py"],
   command: "python",
-  args: ["tools/gen_arch_stats.py", "--check-boundaries"],
+  args: ["utils/gen_arch_stats.py", "--check-boundaries"],
   timeoutMs: 30000,
   throttleMs: 30000,
   passMarker: "零违规",

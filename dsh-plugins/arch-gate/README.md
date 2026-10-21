@@ -6,7 +6,7 @@ DSH 原生 hooks 插件：把原 Claude 的 check-boundary 写后边界检查职
 
 - 挂载 `tools/post-execute`（DSH 官方 hooks 管线，PostToolUse 同语义）
 - 写入工具（`write`/`edit`）目标路径匹配 `apps/**/*.py` 时触发
-- 执行 `python tools/gen_arch_stats.py --check-boundaries`
+- 执行 `python utils/gen_arch_stats.py --check-boundaries`
 - **零违规 → 静默通过**；有违规/超时 → 输出注入 `additionalContexts`，模型下一步立即看到提醒（默认不阻塞写入；`mode: block` 可严格拦截）
 - 同一 agent 默认 30s 节流，防连续写文件刷屏；每个用户回合重置
 
@@ -18,7 +18,7 @@ DSH 原生 hooks 插件：把原 Claude 的 check-boundary 写后边界检查职
 | `workspaceRoot` | `.` | 检查命令工作目录（相对进程 cwd 解析） |
 | `toolNames` | `["write","edit"]` | 关注的写入工具 |
 | `pathGlobs` | `["apps/**/*.py"]` | 触发路径 glob |
-| `command` / `args` | `python` / `tools/gen_arch_stats.py --check-boundaries` | 检查命令 |
+| `command` / `args` | `python` / `utils/gen_arch_stats.py --check-boundaries` | 检查命令 |
 | `timeoutMs` | `30000` | 检查超时 |
 | `throttleMs` | `30000` | 节流间隔 |
 | `passMarker` | `零违规` | 输出含此标记视为通过 |

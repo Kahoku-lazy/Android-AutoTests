@@ -8,9 +8,9 @@ Architecture stats generator — 扫描代码库，输出当前架构的可度�
   - 也支持 --json 输出，供 CI/hook 消费
 
 用法:
-  python tools/gen_arch_stats.py                             # 输出 Markdown 片段
-  python tools/gen_arch_stats.py --json                      # 输出 JSON
-  python tools/gen_arch_stats.py --check-md --doc <文档路径>   # 对比架构文档，输出 drift 报告
+  python utils/gen_arch_stats.py                             # 输出 Markdown 片段
+  python utils/gen_arch_stats.py --json                      # 输出 JSON
+  python utils/gen_arch_stats.py --check-md --doc <文档路径>   # 对比架构文档，输出 drift 报告
 """
 
 import ast
@@ -237,8 +237,8 @@ def scan_cross_app_imports():
 
 # 已知违规白名单加载
 def _load_boundary_whitelist():
-    """Load known-violation whitelist from tools/boundary-whitelist.json."""
-    whitelist_path = PROJECT_ROOT / "tools" / "boundary-whitelist.json"
+    """Load known-violation whitelist from utils/boundary-whitelist.json."""
+    whitelist_path = PROJECT_ROOT / "utils" / "boundary-whitelist.json"
     if not whitelist_path.exists():
         return []
     try:
@@ -605,7 +605,7 @@ def generate_markdown():
     top_violations = violations[:10]
 
     lines = []
-    lines.append(f"<!-- ARCH_STATS — 由 tools/gen_arch_stats.py 自动生成，请勿手动编辑 -->")
+    lines.append(f"<!-- ARCH_STATS — 由 utils/gen_arch_stats.py 自动生成，请勿手动编辑 -->")
     lines.append(f"<!-- 最后更新: 见 git log -- -->")
     lines.append("")
 
@@ -1069,7 +1069,7 @@ if __name__ == "__main__":
                 )
                 out.append("")
 
-            out.append("  如果是有意豁免，请添加到 tools/boundary-whitelist.json")
+            out.append("  如果是有意豁免，请添加到 utils/boundary-whitelist.json")
             if verbose and total_known:
                 out.extend(_known_debt_lines(orm_known, imp_known, eng_known))
             exit_code = 1
@@ -1100,7 +1100,7 @@ if __name__ == "__main__":
             sys.exit(0)
 
         # Load frontend whitelist
-        fwl_path = PROJECT_ROOT / "tools" / "frontend-whitelist.json"
+        fwl_path = PROJECT_ROOT / "utils" / "frontend-whitelist.json"
         whitelist = set()
         if fwl_path.exists():
             try:
@@ -1117,7 +1117,7 @@ if __name__ == "__main__":
             for v in new_violations[:10]:
                 print(f"  {v['file']}: {v['lines']}行 (+{v['excess']})")
             print(f"\n  修复: CSS外置 / composable提取 / 常量外提 / 子组件拆分")
-            print(f"  如需豁免: 添加到 tools/frontend-whitelist.json")
+            print(f"  如需豁免: 添加到 utils/frontend-whitelist.json")
             sys.exit(1)
         else:
             known = len(vue_violations)
@@ -1125,7 +1125,7 @@ if __name__ == "__main__":
             sys.exit(0)
     elif "--check-md" in sys.argv:
         if "--doc" not in sys.argv or sys.argv.index("--doc") + 1 >= len(sys.argv):
-            print("用法: python tools/gen_arch_stats.py --check-md --doc <架构文档路径>")
+            print("用法: python utils/gen_arch_stats.py --check-md --doc <架构文档路径>")
             sys.exit(2)
         result = check_drift(Path(sys.argv[sys.argv.index("--doc") + 1]))
         if result["status"] == "drift":

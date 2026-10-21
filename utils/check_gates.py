@@ -5,8 +5,8 @@
 
 用法:
     python run.py check          # 推荐入口
-    python tools/check_gates.py  # 直接运行
-    python tools/check_gates.py --only silent-except   # 只跑指定门禁（供 CI 调用）
+    python utils/check_gates.py  # 直接运行
+    python utils/check_gates.py --only silent-except   # 只跑指定门禁（供 CI 调用）
 
 退出码:
     0  全部阻塞项通过（告警项失败不影响退出码）
@@ -242,6 +242,66 @@ def inline_style_gate() -> Gate:
     )
 
 
+# ── OpenAPI 契约（生成 + 校验 + 基线漂移） ────────────────────
+
+OPENAPI_BASELINE = ROOT / "openspec" / "openapi.yaml"
+OPENAPI_GENERATED = ROOT / "temps" / "openapi.generated.yaml"
+OPENAPI_ENV = {
+    "DJANGO_SECRET_KEY": "local-check-key-not-for-prod",
+    "OPENAI_API_KEY": "local-collect-placeholder",
+    "DEEPSEEK_API_KEY": "local-collect-placeholder",
+}
+
+
+def openapi_schema_gate() -> Gate:
+    """生成 OpenAPI 并与仓库基线对齐：schema 必须可校验，且与基线条目一致。
+
+    接口增删改后没更新基线时失败；更新命令写在失败信息里。
+    """
+
+    def _run() -> tuple[bool, list[str]]:
+        OPENAPI_GENERATED.parent.mkdir(parents=True, exist_ok=True)
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "manage.py",
+                "spectacular",
+                "--file",
+                str(OPENAPI_GENERATED),
+                "--validate",
+                "--fail-on-warn",
+            ],
+            cwd=str(ROOT),
+            env=_env(OPENAPI_ENV),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        lines = (proc.stdout + proc.stderr).strip().splitlines()[-TAIL_LINES:]
+        if proc.returncode != 0:
+            return False, ["OpenAPI 生成或校验失败：", *lines]
+        if not OPENAPI_BASELINE.exists():
+            return False, [
+                f"缺少契约基线 {OPENAPI_BASELINE.relative_to(ROOT)}",
+                "首次生成：python manage.py spectacular --file openspec/openapi.yaml --validate --fail-on-warn",
+            ]
+        if _openapi_text(OPENAPI_GENERATED) != _openapi_text(OPENAPI_BASELINE):
+            return False, [
+                "OpenAPI 与基线不一致：接口改了但基线没更新",
+                "更新基线：python manage.py spectacular --file openspec/openapi.yaml --validate --fail-on-warn",
+                "（基线变更要随本次接口改动一起提交）",
+            ]
+        return True, ["OpenAPI 与基线一致"]
+
+    return Gate("openapi-schema", "OpenAPI 契约（生成 + 校验 + 基线一致）", True, _run)
+
+
+def _openapi_text(path: Path) -> str:
+    """读 schema 文本并归一化换行：CRLF 与 LF 视为同一内容（跨平台检出差异不算漂移）。"""
+    return path.read_text(encoding="utf-8").replace("\r\n", "\n")
+
+
 # ── 检查清单（对应 CI 的 6 个 job） ───────────────────────────
 
 
@@ -267,6 +327,26 @@ def build_gates() -> list[Gate]:
             "Python lint（ruff check，平台范围）",
             [py, "-m", "ruff", "check", *PY_SCOPES],
             blocking=True,
+        ),
+        # pytest 收集门禁：不跑用例，只保证整套测试可导入（防再积压失效测试）
+        cmd_gate(
+            "pytest-collect",
+            "Python 测试收集（pytest --collect-only）",
+            [py, "-m", "pytest", "-c", "tests/pytest.ini", "--collect-only", "-q"],
+            blocking=True,
+            env={
+                "DJANGO_SECRET_KEY": "local-check-key-not-for-prod",
+                "OPENAI_API_KEY": "local-collect-placeholder",
+                "DEEPSEEK_API_KEY": "local-collect-placeholder",
+            },
+        ),
+        openapi_schema_gate(),
+        cmd_gate(
+            "openapi-coverage",
+            "OpenAPI 覆盖（业务路径必须全部已文档化）",
+            [py, "utils/check_openapi_coverage.py"],
+            blocking=True,
+            env=OPENAPI_ENV,
         ),
         # Job 2 frontend-check
         cmd_gate("vitest", "前端单元测试（P0/P1）", [NPM, "test"], blocking=True, cwd=FRONTEND),
@@ -355,7 +435,7 @@ def build_gates() -> list[Gate]:
         cmd_gate(
             "boundary",
             "模块边界检查（防火墙 #1/#2）",
-            [py, "tools/gen_arch_stats.py", "--check-boundaries"],
+            [py, "utils/gen_arch_stats.py", "--check-boundaries"],
             blocking=True,
             env={"DJANGO_SECRET_KEY": "local-check-key-not-for-prod"},
         ),
@@ -363,7 +443,7 @@ def build_gates() -> list[Gate]:
         cmd_gate(
             "vue-file-size",
             "Vue 文件体积（<500 行）",
-            [py, "tools/gen_arch_stats.py", "--check-frontend"],
+            [py, "utils/gen_arch_stats.py", "--check-frontend"],
             blocking=True,
         ),
         grep_gate(

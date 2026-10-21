@@ -61,7 +61,8 @@ section-order = ["future", "standard-library", "third-party", "first-party", "lo
 "**/management/commands/*.py" = ["T201"]
 # ─ CLI 入口 / 种子脚本: 允许 print() 输出
 "run.py" = ["T201"]
-"tools/**/*.py" = ["T201"]
+# utils/ 下只有这四个是 CLI 脚本（utils/logs.py 是库，不放开 print）
+"utils/{check_gates,gen_arch_stats,check_openapi_coverage,live_screen}.py" = ["T201"]
 # ─ tests/: 放宽限制
 "tests/**/*.py" = ["T201"]
 # ─ __init__.py: 允许未使用 import (re-export)
@@ -71,7 +72,7 @@ section-order = ["future", "standard-library", "third-party", "first-party", "lo
 "**/admin.py" = ["D100"]
 # ─ settings.py / test_settings.py: 允许 *
 "config/settings.py" = ["F403", "F405"]
-"config/test_settings.py" = ["F403", "F405"]
+"tests/test_settings.py" = ["F403", "F405"]
 # ─ conftest.py
 "**/conftest.py" = ["D100"]
 # ─ state_machine.py::_bg_sync → 延迟追溯，豁免裸 except

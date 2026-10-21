@@ -16,7 +16,7 @@
     pathGlobs:
       - apps/**/*.py
     command: python
-    args: [tools/gen_arch_stats.py, --check-boundaries]
+    args: [utils/gen_arch_stats.py, --check-boundaries]
     timeoutMs: 30000
     throttleMs: 30000
     passMarker: 零违规

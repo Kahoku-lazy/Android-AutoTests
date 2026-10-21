@@ -145,8 +145,8 @@ tmp_*.diff
 *_diff.txt
 skills-lock.json
 agent_scope_map.html
-tools/_tmp*/
-tools/_tmp_*.py
+utils/_tmp*/
+utils/_tmp_*.py
 .tmp-verify/
 
 # ── Runtime artifacts ──

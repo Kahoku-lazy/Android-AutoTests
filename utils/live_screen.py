@@ -2,10 +2,10 @@
 实时屏幕镜像 — 只读显示手机屏幕内容，不对设备做任何操作
 
 用法:
-  python -m tools.live_screen R5CT62RH88F              # 自动选后端
-  python -m tools.live_screen R5CT62RH88F --backend adb
-  python -m tools.live_screen R5CT62RH88F --scale 0.4  # 指定缩放
-  python -m tools.live_screen --list                   # 列出已连接设备
+  python -m utils.live_screen R5CT62RH88F              # 自动选后端
+  python -m utils.live_screen R5CT62RH88F --backend adb
+  python -m utils.live_screen R5CT62RH88F --scale 0.4  # 指定缩放
+  python -m utils.live_screen --list                   # 列出已连接设备
 
 按键:
   q / ESC  退出        f  切换 适应窗口 / 原始 1:1
@@ -239,7 +239,7 @@ def run_viewer(args: argparse.Namespace) -> int:
 
     serial = args.serial
     if not serial:
-        print("[错误] 缺少设备串号。用法：python -m tools.live_screen <手机ID>")
+        print("[错误] 缺少设备串号。用法：python -m utils.live_screen <手机ID>")
         print_devices(adb)
         return 1
 
@@ -345,7 +345,7 @@ def run_viewer(args: argparse.Namespace) -> int:
 def main() -> int:
     _fix_console_encoding()
     parser = argparse.ArgumentParser(
-        prog="python -m tools.live_screen",
+        prog="python -m utils.live_screen",
         description="实时显示手机屏幕内容（只读，不操作设备）",
     )
     parser.add_argument("serial", nargs="?", help="手机 ID / adb 串号，例如 R5CT62RH88F")

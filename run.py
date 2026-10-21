@@ -7,7 +7,7 @@ Usage:
     python run.py restart [...]
     python run.py status
     python run.py logs [redis|backend|frontend ...]
-    python run.py check          # 本地质量门禁（实现见 tools/check_gates.py）
+    python run.py check          # 本地质量门禁（实现见 utils/check_gates.py）
 """
 
 from __future__ import annotations
@@ -367,8 +367,8 @@ def cmd_logs(services: list[str]) -> None:
 
 
 def cmd_check() -> None:
-    """跑本地质量门禁；检查内容与 CI 一一对应，见 tools/check_gates.py。"""
-    result = subprocess.run([sys.executable, str(ROOT / "tools" / "check_gates.py")], cwd=str(ROOT))
+    """跑本地质量门禁；检查内容与 CI 一一对应，见 utils/check_gates.py。"""
+    result = subprocess.run([sys.executable, str(ROOT / "utils" / "check_gates.py")], cwd=str(ROOT))
     sys.exit(result.returncode)
 
 

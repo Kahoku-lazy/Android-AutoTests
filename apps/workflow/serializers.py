@@ -28,7 +28,7 @@ class WorkflowDirectorySerializer(serializers.ModelSerializer):
 
     doc_count = serializers.IntegerField(read_only=True)
     parent_name = serializers.CharField(source="parent.name", read_only=True)
-    # parent_id 为裸 ID（int/null，null = 移到根，见 API-工作流.md §3.4）；
+    # parent_id 为裸 ID（int/null，null = 移到根；契约见 openspec/specs/workflow-http-envelope）；
     # 存在性 / 跨原型判定属业务规则，归 api.py，故不用 PrimaryKeyRelatedField。
     parent_id = serializers.IntegerField(allow_null=True, required=False)
 

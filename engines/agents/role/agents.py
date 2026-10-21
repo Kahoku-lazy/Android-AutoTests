@@ -22,6 +22,7 @@ executor_config = {
     "system_prompt": EXECUTOR_PROMPT,
     "toolkit": build_executor_toolkit(),
     "vision": True,
+    "max_iters": 60,
 }
 
 executor = BaseRole(*AgentRoleConfig(**executor_config).load_config())

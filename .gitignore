@@ -1,4 +1,4 @@
-# ── Python ──
+﻿# 鈹€鈹€ Python 鈹€鈹€
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -18,12 +18,12 @@ htmlcov/
 coverage.xml
 coverage/
 
-# ── Django ──
+# 鈹€鈹€ Django 鈹€鈹€
 *.log
 staticfiles/
 media/
 
-# ── Database & Data (contains real user data, screenshots, device info) ──
+# 鈹€鈹€ Database & Data (contains real user data, screenshots, device info) 鈹€鈹€
 data/db.sqlite3
 data/db.sqlite3-shm
 data/db.sqlite3-wal
@@ -37,22 +37,22 @@ data/uploads/
 data/sop_*.json
 data
 
-# ── AgentScope Runtime ──
+# 鈹€鈹€ AgentScope Runtime 鈹€鈹€
 data/agentscope_workspaces/
 agentscope_workspaces/
 
-# ── Logs ──
+# 鈹€鈹€ Logs 鈹€鈹€
 logs/
 *.log
 
-# ── Test Exports & Results ──
+# 鈹€鈹€ Test Exports & Results 鈹€鈹€
 exports/
 result_*.csv
 result_*.md
 result_*.json
 result_*.log
 
-# ── Frontend ──
+# 鈹€鈹€ Frontend 鈹€鈹€
 node_modules
 .pnpm-store/
 frontend/node_modules/
@@ -65,21 +65,21 @@ frontend/test-results/
 frontend/tests/reports/
 !frontend/tests/reports/.gitignore
 
-# ── Environment ──
+# 鈹€鈹€ Environment 鈹€鈹€
 .env
 .env.local
 .env.*.local
 .env.docker
 .env.docker.example
 
-# ── Docker ──
+# 鈹€鈹€ Docker 鈹€鈹€
 Dockerfile*
 docker-compose*.yml
 .dockerignore
 docker/
 frontend/vite.config.docker.js
 
-# ── IDS & Editor ──
+# 鈹€鈹€ IDS & Editor 鈹€鈹€
 .vscode/
 .idea/
 *.swp
@@ -90,53 +90,53 @@ frontend/vite.config.docker.js
 *.rej
 .ruff_cache/
 
-# ── OS ──
+# 鈹€鈹€ OS 鈹€鈹€
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# ── Product-specific content (DO NOT upload to GitHub) ──
+# 鈹€鈹€ Product-specific content (DO NOT upload to GitHub) 鈹€鈹€
 dev_docs/H717D/
-apps/case_manager/management/commands/import_h717d_cases.py
+backend/apps/case_manager/management/commands/import_h717d_cases.py
 
-# ── Archived obsolete docs (已实现计划/被取代配套文档，不随仓库分发) ──
+# 鈹€鈹€ Archived obsolete docs (宸插疄鐜拌鍒?琚彇浠ｉ厤濂楁枃妗ｏ紝涓嶉殢浠撳簱鍒嗗彂) 鈹€鈹€
 dev_docs/_archive/
 
-# ── Claude Code sessions & Superpowers (auto-generated, DO NOT upload) ──
+# 鈹€鈹€ Claude Code sessions & Superpowers (auto-generated, DO NOT upload) 鈹€鈹€
 docs/
 .superpowers/
 .workbuddy/
 
-# ── 本地 AI 客户端 MCP 工具清单（个人环境配置，含本机绝对路径，不入库） ──
+# 鈹€鈹€ 鏈湴 AI 瀹㈡埛绔?MCP 宸ュ叿娓呭崟锛堜釜浜虹幆澧冮厤缃紝鍚湰鏈虹粷瀵硅矾寰勶紝涓嶅叆搴擄級 鈹€鈹€
 .mcp.json
 
-# ── Legacy frontend (pre-Vue migration, contains hardcoded device IDs) ──
+# 鈹€鈹€ Legacy frontend (pre-Vue migration, contains hardcoded device IDs) 鈹€鈹€
 frontend/_legacy/
 
-# ── Data migration (contains API keys + password hashes) ──
+# 鈹€鈹€ Data migration (contains API keys + password hashes) 鈹€鈹€
 data_migration.json
 
-# ── Test exports ──
+# 鈹€鈹€ Test exports 鈹€鈹€
 demo_test_*.yaml
 
-# ── Dev docs debug/design reports (HTML/PPT/生成的脚本等) ──
+# 鈹€鈹€ Dev docs debug/design reports (HTML/PPT/鐢熸垚鐨勮剼鏈瓑) 鈹€鈹€
 dev_docs/**/*.html
 dev_docs/**/*.pptx
 dev_docs/**/gen_ppt*.py
-dev_docs/**/问题记录.md
-dev_docs/**/前端笔记.md
+dev_docs/**/闂璁板綍.md
+dev_docs/**/鍓嶇绗旇.md
 
-# ── Debug snapshots & design reports (root-level) ──
+# 鈹€鈹€ Debug snapshots & design reports (root-level) 鈹€鈹€
 /device-page-snapshot.md
 /CODE_DEBT_REPORT.md
 /*.html
 /1.md
 frontend/login-module-architecture.html
 
-# ── Third-party project (not part of this repo) ──
+# 鈹€鈹€ Third-party project (not part of this repo) 鈹€鈹€
 PM-Project-main/
 
-# ── Temp files ──
+# 鈹€鈹€ Temp files 鈹€鈹€
 *.tmp
 *.tmp.*
 *.temp
@@ -149,19 +149,19 @@ utils/_tmp*/
 utils/_tmp_*.py
 .tmp-verify/
 
-# ── Runtime artifacts ──
+# 鈹€鈹€ Runtime artifacts 鈹€鈹€
 dump.rdb
 token.json
 
-# ── Accidentally committed Claude internal files ──
+# 鈹€鈹€ Accidentally committed Claude internal files 鈹€鈹€
 /C*Users*claude*stoken*
 
-# ── Screenshots & demo images (root-level) ──
+# 鈹€鈹€ Screenshots & demo images (root-level) 鈹€鈹€
 /aurora-*.png
 /perf-stats-visible.png
 /taskdetail-*.png
 
-# ── Tests（测试代码入库，报告产物不入库）──
+# 鈹€鈹€ Tests锛堟祴璇曚唬鐮佸叆搴擄紝鎶ュ憡浜х墿涓嶅叆搴擄級鈹€鈹€
 
 # Test reports / browser artifacts
 .playwright-mcp/
@@ -171,37 +171,37 @@ playwright-report/
 test-results/
 blob-report/
 
-# ── Workflow demo（已并入 frontend/src/modules/workflow，不再维护）──
+# 鈹€鈹€ Workflow demo锛堝凡骞跺叆 frontend/src/modules/workflow锛屼笉鍐嶇淮鎶わ級鈹€鈹€
 workflow-demo-*.png
 _agentscope_launcher.py
 .playwright-mcp/
 
-# ���� Vite cache ����
+# 锟斤拷锟斤拷 Vite cache 锟斤拷锟斤拷
 frontend/.vite/
 
 
-# ── Superpowers SDD worktree ──
+# 鈹€鈹€ Superpowers SDD worktree 鈹€鈹€
 .worktrees/
 
-# ── 本地缓存 / 调试截图 / 临时文件 ──
+# 鈹€鈹€ 鏈湴缂撳瓨 / 璋冭瘯鎴浘 / 涓存椂鏂囦欢 鈹€鈹€
 .npm-cache/
 govee_report/
 .tmp_*
 
-# ── 实验脚本（不入库）──
+# 鈹€鈹€ 瀹為獙鑴氭湰锛堜笉鍏ュ簱锛夆攢鈹€
 mobile_agent/
 
-# ── OpenSpec 本地工作流（自动生成，不入库）──
+# 鈹€鈹€ OpenSpec 鏈湴宸ヤ綔娴侊紙鑷姩鐢熸垚锛屼笉鍏ュ簱锛夆攢鈹€
 # openspec/
 plans/
 /package.json
 /package-lock.json
 
-# ── 本地测试数据 ──
-dev_docs\05-开发与测试\govee
+# 鈹€鈹€ 鏈湴娴嬭瘯鏁版嵁 鈹€鈹€
+dev_docs\05-寮€鍙戜笌娴嬭瘯\govee
 temps/
 
-# ── 测试产物（Allure / JUnit 报告，自动生成）──
+# 鈹€鈹€ 娴嬭瘯浜х墿锛圓llure / JUnit 鎶ュ憡锛岃嚜鍔ㄧ敓鎴愶級鈹€鈹€
 tests/reports/
 
 # Cursor

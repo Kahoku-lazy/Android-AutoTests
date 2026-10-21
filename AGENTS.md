@@ -14,7 +14,25 @@
 
 2. **禁止** 主动跑全量回归
 
+## 版本控制与提交
 
+1. **单主干 `Kahoku`**：仓库只有这一个长期分支（`origin/HEAD -> origin/Kahoku`），不设 `develop` / `release/*`。临时分支按 `feat/<name>` / `fix/<name>` 命名，合并后删除。
+2. **提交规范**：Conventional Commits，`{type}({scope}): {描述}`，type 取 `feat` / `fix` / `refactor` / `docs` / `test` / `chore` / `style` / `security`。一次提交只做一件事；**禁止 `git add -A`** —— 历史上有一次退役提交用它把未申报的目录改名一起带进去，导致已删除的包复活。
+3. **合并一律走 PR，目标分支 `Kahoku`**，且必须同时满足：
+   - 1 个 approving review；
+   - 分支已与 `Kahoku` 同步（保护规则为 `strict`，落后时先 rebase）；
+   - 3 项必需状态检查全绿：`backend-check`、`frontend-check`、`security-scan`。
+4. **另外 3 个 CI job 不阻塞合并，但不许不看**：`static-checks`、`boundary-check`、`frontend-quality`。它们变红说明静默吞错 / 边界 / 文件体积门禁已破，不得以「不阻塞」为由放过。
+5. **提交前先跑本地门禁**：`python run.py check`（与 CI 同一批检查，阻塞项失败即退出码 1）。不跑全量回归。
+6. **管理员绕过直推不是流程的一部分**：分支保护当前 `enforce_admins=false`，管理员技术上能 `git push` 到 `Kahoku`。直推后必须立刻确认该提交的 6 个 CI job 全绿；出现红项要当场修掉并在下一次推送里补齐，不得积压。
+
+```bash
+git checkout -b feat/<name>        # 临时分支（可选）
+python run.py check                # 本地门禁
+git add <具体文件>                  # 逐文件暂存，不用 -A
+git commit -m "feat(scope): ..."
+git push origin feat/<name>        # 到远程后开 PR，目标分支 Kahoku
+```
 
 ## 快速上手
 

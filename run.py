@@ -22,7 +22,7 @@ import urllib.request
 
 from pathlib import Path
 
-from config.env import load_dotenv
+from backend.config.env import load_dotenv
 
 ROOT = Path(__file__).parent
 LOG_DIR = ROOT / "logs"
@@ -31,7 +31,7 @@ SERVICE_ORDER = ("redis", "backend", "frontend")
 
 
 # ── .env（凭据只从这里来，BASE_ENV 不硬编码 DB_USER/DB_PASSWORD）；
-# 单一实现在 config/env.py，与 config.settings 共用 ──
+# 单一实现在 backend/config/env.py，与 backend.config.settings 共用 ──
 load_dotenv()
 
 SERVICES = {
@@ -46,7 +46,7 @@ BASE_ENV = {
     "DB_HOST": os.environ.get("DB_HOST", "127.0.0.1"),
     "DB_PORT": os.environ.get("DB_PORT", "3306"),
     "PYTHONUTF8": "1",
-    "DJANGO_SETTINGS_MODULE": "config.settings",
+    "DJANGO_SETTINGS_MODULE": "backend.config.settings",
     "SERVER_PORT": str(SERVICES["backend"]),
 }
 
@@ -241,7 +241,7 @@ def start_backend() -> bool:
             str(port),
             "-b",
             "0.0.0.0",
-            "config.asgi:application",
+            "backend.config.asgi:application",
         ],
         "backend.log",
         env=make_env({"DJANGO_ASGI_SERVER": "1"}),

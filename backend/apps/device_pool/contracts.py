@@ -9,7 +9,7 @@ from datetime import datetime
 
 # 枚举唯一真相源在 models/（D4 契约：设计方案-Django设计系统分层 行 269/331/375）；
 # 本模块只转发导出，不重复定义，避免同值枚举出现第二份。
-from models.constants import ConnectionType, DeviceStatus, LockReleaseReason, LockStatus
+from backend.models.constants import ConnectionType, DeviceStatus, LockReleaseReason, LockStatus
 
 # 本模块是设备域「数据契约」的唯一进口：显式声明对外转发面，
 # 既让 F401 不把未在本文件使用的转发名当死 import 删掉，也说明这些名字是契约的一部分。

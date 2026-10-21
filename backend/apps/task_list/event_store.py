@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 
 from PIL import Image
 
-from apps.task_list import api
+from backend.apps.task_list import api
 from engines.agents.event_sink import current_run
 
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
@@ -60,7 +60,7 @@ class TaskEventSink:
     def _ensure_task(self, task_id: int, agent_id: int) -> None:
         if self._ready:
             return
-        from apps.task_list.models import TaskEvent
+        from backend.apps.task_list.models import TaskEvent
 
         last = (
             TaskEvent.objects.filter(task_id=task_id)

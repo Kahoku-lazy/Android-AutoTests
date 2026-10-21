@@ -9,13 +9,13 @@ import pytest
 
 from django.contrib.auth import get_user_model
 
-from apps.ai_assistant.models import AIAgent
-from apps.dashboard.ai_usage import (
+from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.dashboard.ai_usage import (
     ai_daily_series,
     ai_task_daily_execution,
     ai_today_usage_slots,
 )
-from apps.task_list.models import TaskUsageHourly
+from backend.apps.task_list.models import TaskUsageHourly
 
 DAY = datetime(2026, 10, 21, 11, 5, 0)
 

@@ -18,7 +18,7 @@ from django.urls import resolve
 pytestmark = [pytest.mark.unit]
 
 MOUNT = "/api/elements/"
-APP_DIR = pathlib.Path(__file__).resolve().parents[3] / "apps" / "element_locator"
+APP_DIR = pathlib.Path(__file__).resolve().parents[3] / "backend/apps" / "element_locator"
 
 # (相对路径, url_name, 预期视图函数名 | None) —— 与 urls.py 逐条对齐。
 # 只覆盖**没有 router 对应**的手写路径：pages / items / move / files。

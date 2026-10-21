@@ -9,9 +9,9 @@ filter_agents_for_user 已移入 api.py（跨 App 合法通道），此处 re-ex
 
 from django.contrib.auth import get_user_model
 
-from apps.ai_assistant.api import filter_agents_for_user  # noqa: F401
-from apps.ai_assistant.models import AIAgent
-from shared.users import is_superuser
+from backend.apps.ai_assistant.api import filter_agents_for_user  # noqa: F401
+from backend.apps.ai_assistant.models import AIAgent
+from backend.shared.users import is_superuser
 
 User = get_user_model()
 

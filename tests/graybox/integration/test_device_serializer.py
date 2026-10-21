@@ -5,8 +5,8 @@
 
 import pytest
 
-from apps.device_pool.manager import DeviceSerializer
-from apps.device_pool.models import Device
+from backend.apps.device_pool.manager import DeviceSerializer
+from backend.apps.device_pool.models import Device
 
 
 @pytest.fixture

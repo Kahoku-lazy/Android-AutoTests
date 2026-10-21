@@ -11,8 +11,8 @@ from pathlib import Path
 
 from django.db import close_old_connections
 
-from apps.ai_assistant.models import AIAgent
-from models.constants import TaskStatus
+from backend.apps.ai_assistant.models import AIAgent
+from backend.models.constants import TaskStatus
 from utils.logs import backend_log
 
 from . import api, engine_adapter
@@ -21,7 +21,7 @@ from .models import Task
 
 def run_task_async(task_id: int, agent_id: int) -> None:
     """后台线程入口：启动平台 SOP，并把加载结论与终态写回任务。"""
-    from apps.task_list.event_store import TaskEventSink
+    from backend.apps.task_list.event_store import TaskEventSink
     from engines.agents.event_sink import bind_run_context, bind_sink, reset_run_context, reset_sink
     from engines.agents.workflow.platform_run import bind_cancel, run_platform_sop
 

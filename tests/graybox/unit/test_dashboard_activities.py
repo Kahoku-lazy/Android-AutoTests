@@ -6,9 +6,9 @@ import pytest
 
 from django.contrib.auth import get_user_model
 
-from apps.ai_assistant.models import AIAgent
-from apps.task_list.models import Task
-from shared.auth.jwt_auth import create_access_token
+from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.task_list.models import Task
+from backend.shared.auth.jwt_auth import create_access_token
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db]
 

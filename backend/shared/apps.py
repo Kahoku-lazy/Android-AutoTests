@@ -1,12 +1,12 @@
-"""`shared` 应用配置 — 在 app 就绪时注册 drf-spectacular 扩展。"""
+"""`backend.shared` 应用配置 — 在 app 就绪时注册 drf-spectacular 扩展。"""
 
 from django.apps import AppConfig
 
 
 class SharedConfig(AppConfig):
-    """`shared` 的 AppConfig：`ready()` 里导入 `schema` 模块完成扩展注册。"""
+    """`backend.shared` 的 AppConfig：`ready()` 里导入 `schema` 模块完成扩展注册。"""
 
-    name = "shared"
+    name = "backend.shared"
     verbose_name = "Shared 基础设施"
 
     def ready(self):

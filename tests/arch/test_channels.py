@@ -32,13 +32,13 @@ class TestHttpChannel:
 
     def test_all_app_includes_under_api_prefix(self):
         """后端所有业务 include 必须挂 /api/ 前缀（否则绕过 JWT 中间件）。"""
-        content = (ROOT / "config" / "urls.py").read_text(encoding="utf-8")
-        for m in re.finditer(r'path\("([^"]+)",\s*include\("apps\.', content):
+        content = (ROOT / "backend" / "config" / "urls.py").read_text(encoding="utf-8")
+        for m in re.finditer(r'path\("([^"]+)",\s*include\("backend\.apps\.', content):
             assert m.group(1).startswith("api/"), f"业务路由 {m.group(1)!r} 未挂 /api/ 前缀"
 
     def test_public_prefixes_no_business_routes(self):
         """JWT 白名单不得含业务路由（含业务前缀 = 认证绕过）。"""
-        from gateway.middleware import PUBLIC_PREFIXES
+        from backend.gateway.middleware import PUBLIC_PREFIXES
 
         business = [
             "/api/dashboard",
@@ -60,7 +60,7 @@ class TestWebSocketChannel:
 
     def test_ws_routing_has_no_case_editing(self):
         """用例编辑锁 WS 已下线；当前无 WS 生产点，禁止擅自新增。"""
-        from gateway.routing import websocket_urlpatterns
+        from backend.gateway.routing import websocket_urlpatterns
 
         assert len(websocket_urlpatterns) == 0, (
             f"WS 生产点应为 0 个，实际 {len(websocket_urlpatterns)}"
@@ -100,7 +100,7 @@ class TestEngineChannel:
             "from engines.device.android",
             "import engines.device.android",
         )
-        for scan_dir in ("apps", "gateway"):
+        for scan_dir in ("backend/apps", "backend/gateway"):
             for py in (ROOT / scan_dir).rglob("*.py"):
                 if "migrations" in str(py) or "__pycache__" in str(py):
                     continue

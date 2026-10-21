@@ -7,11 +7,11 @@ from drf_spectacular.utils import OpenApiTypes, extend_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.ai_assistant.api import filter_agents_for_user
-from apps.ai_assistant.models import AIAgent
-from apps.case_manager.api import list_projects
-from apps.case_manager.models import CaseProject, TestDefinition
-from apps.dashboard.ai_usage import (
+from backend.apps.ai_assistant.api import filter_agents_for_user
+from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.case_manager.api import list_projects
+from backend.apps.case_manager.models import CaseProject, TestDefinition
+from backend.apps.dashboard.ai_usage import (
     ai_daily_series,
     ai_recent_tasks,
     ai_task_daily_execution,
@@ -20,8 +20,8 @@ from apps.dashboard.ai_usage import (
     ai_usage_stats,
     platform_activities,
 )
-from apps.device_pool.models import Device
-from apps.workflow.models import WorkflowDocument
+from backend.apps.device_pool.models import Device
+from backend.apps.workflow.models import WorkflowDocument
 from utils.logs import backend_log
 
 

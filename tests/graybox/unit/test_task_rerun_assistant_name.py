@@ -6,10 +6,10 @@ from unittest.mock import patch
 
 import pytest
 
-from apps.ai_assistant import api as agent_api
-from apps.ai_assistant.models import AIAgent
-from apps.task_list import api
-from models.constants import AgentStatus, TaskStatus
+from backend.apps.ai_assistant import api as agent_api
+from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.task_list import api
+from backend.models.constants import AgentStatus, TaskStatus
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db(transaction=True)]
 
@@ -54,7 +54,7 @@ def test_rerun_task_clones_without_mutating_original(platform_agent):
     original.refresh_from_db()
     assert original.status == TaskStatus.FAILED
 
-    with patch("apps.task_list.api.dispatch_device"):
+    with patch("backend.apps.task_list.api.dispatch_device"):
         cloned = api.rerun_task(original)
 
     original.refresh_from_db()

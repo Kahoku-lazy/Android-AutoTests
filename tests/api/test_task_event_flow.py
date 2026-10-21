@@ -6,9 +6,9 @@ import pytest
 
 from django.contrib.auth import get_user_model
 
-from apps.ai_assistant.models import AIAgent
-from apps.task_list.models import Task, TaskAttachment, TaskEvent
-from apps.task_list.task_reports import build_task_flow
+from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.task_list.models import Task, TaskAttachment, TaskEvent
+from backend.apps.task_list.task_reports import build_task_flow
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 

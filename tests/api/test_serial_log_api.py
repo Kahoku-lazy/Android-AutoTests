@@ -14,15 +14,15 @@ from django.test import RequestFactory, override_settings
 from django.urls import Resolver404, resolve
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from apps.serial_log import port_service
-from apps.serial_log.models import LogPort
-from apps.serial_log.views import (
+from backend.apps.serial_log import port_service
+from backend.apps.serial_log.models import LogPort
+from backend.apps.serial_log.views import (
     LogKeywordCatalogAPIView,
     LogPortLinesAPIView,
     LogPortListAPIView,
     LogPortToggleAPIView,
 )
-from gateway.middleware import JWTAuthenticationMiddleware
+from backend.gateway.middleware import JWTAuthenticationMiddleware
 
 pytestmark = [pytest.mark.django_db, pytest.mark.api]
 

@@ -1,6 +1,6 @@
 # accounts — 模块约束
 
-> **AGENTS 层级**：二级约束 —— 根 `AGENTS.md` 与上级 `apps/AGENTS.md` 优先于本文件（本文件只写增量）。
+> **AGENTS 层级**：二级约束 —— 根 `AGENTS.md` 与上级 `backend/apps/AGENTS.md` 优先于本文件（本文件只写增量）。
 
 登录鉴权模块。**没有自有表**（无 `models.py`），直接使用 Django 内置 `auth_user`；
 写操作全部收敛在 `api.py`（`__all__ = ["create_user"]`）。

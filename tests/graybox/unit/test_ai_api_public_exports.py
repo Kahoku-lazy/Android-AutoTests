@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from apps.ai_assistant import api
-from apps.task_list import api as task_api
+from backend.apps.ai_assistant import api
+from backend.apps.task_list import api as task_api
 
 pytestmark = [pytest.mark.unit, pytest.mark.ai_assistant]
 

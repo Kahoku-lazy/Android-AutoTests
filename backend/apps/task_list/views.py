@@ -6,11 +6,11 @@ from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.ai_assistant import api as agent_api
-from apps.task_list import api, engine_adapter
-from apps.task_list.models import Task
-from apps.task_list.serializers import TaskSubmitInputSerializer
-from apps.task_list.task_reports import build_task_flow
+from backend.apps.ai_assistant import api as agent_api
+from backend.apps.task_list import api, engine_adapter
+from backend.apps.task_list.models import Task
+from backend.apps.task_list.serializers import TaskSubmitInputSerializer
+from backend.apps.task_list.task_reports import build_task_flow
 
 
 class TaskSubmitAPIView(APIView):
@@ -36,7 +36,7 @@ class TaskSubmitAPIView(APIView):
         device_label = (data.get("device_label") or "").strip()
         case_title = (data.get("case_title") or "").strip()
 
-        from apps.task_list.attachments import (
+        from backend.apps.task_list.attachments import (
             AttachmentError,
             collect_task_files,
             store_flat_upload,
@@ -124,7 +124,7 @@ class AgentTaskRerunAPIView(APIView):
 
     @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def post(self, request, task_id: int):
-        from models.constants import TaskStatus
+        from backend.models.constants import TaskStatus
 
         agent = agent_api.get_platform_agent()
         if agent is None:

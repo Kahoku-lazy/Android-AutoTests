@@ -12,14 +12,18 @@ from __future__ import annotations
 
 import importlib
 
-migration = importlib.import_module("apps.ai_assistant.migrations.0050_verifier_log_check_contract")
-fields_0048 = importlib.import_module("apps.ai_assistant.migrations.0048_verifier_output_fields")
-tool_0049 = importlib.import_module(
-    "apps.ai_assistant.migrations.0049_add_verifier_log_tool_guidance"
+migration = importlib.import_module(
+    "backend.apps.ai_assistant.migrations.0050_verifier_log_check_contract"
 )
-seed = importlib.import_module("apps.ai_assistant.migrations.0038_aiagent_device_prompts")
+fields_0048 = importlib.import_module(
+    "backend.apps.ai_assistant.migrations.0048_verifier_output_fields"
+)
+tool_0049 = importlib.import_module(
+    "backend.apps.ai_assistant.migrations.0049_add_verifier_log_tool_guidance"
+)
+seed = importlib.import_module("backend.apps.ai_assistant.migrations.0038_aiagent_device_prompts")
 guidance_0044 = importlib.import_module(
-    "apps.ai_assistant.migrations.0044_add_verifier_log_evidence_guidance"
+    "backend.apps.ai_assistant.migrations.0044_add_verifier_log_evidence_guidance"
 )
 
 ADMIN_REWRITTEN_VERIFIER = "## 角色\n你是验收模型。\n\n## 输出字段\n- result：结果\n"
@@ -31,7 +35,7 @@ def current_prompt() -> str:
     text = guidance_0044.with_log_evidence_guidance(text)
     # 0047 的 verifier 输入行替换（同一份纯函数）
     executor_fields = importlib.import_module(
-        "apps.ai_assistant.migrations.0047_executor_output_fields"
+        "backend.apps.ai_assistant.migrations.0047_executor_output_fields"
     )
     text = executor_fields.apply_contract(text, executor_fields._VERIFIER_PAIRS)
     assert executor_input  # 仅避免未使用变量告警

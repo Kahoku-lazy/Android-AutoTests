@@ -8,11 +8,11 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from apps.ai_assistant import api as agent_api
-from apps.ai_assistant.models import AIAgent
-from apps.task_list import api
-from apps.task_list.models import Task
-from apps.task_list.views import TaskSubmitAPIView
+from backend.apps.ai_assistant import api as agent_api
+from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.task_list import api
+from backend.apps.task_list.models import Task
+from backend.apps.task_list.views import TaskSubmitAPIView
 
 pytestmark = [pytest.mark.django_db, pytest.mark.api]
 

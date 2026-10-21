@@ -11,8 +11,8 @@ import os
 
 from pathlib import Path
 
-# 仓库根目录（config/env.py → config/ → 根）
-ROOT = Path(__file__).resolve().parent.parent
+# 仓库根目录（backend/config/env.py → backend/config → backend → 根）
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def load_dotenv(env_file: Path | None = None) -> None:

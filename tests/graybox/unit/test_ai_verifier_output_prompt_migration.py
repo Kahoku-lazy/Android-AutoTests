@@ -12,13 +12,15 @@ from __future__ import annotations
 
 import importlib
 
-migration = importlib.import_module("apps.ai_assistant.migrations.0048_verifier_output_fields")
-seed = importlib.import_module("apps.ai_assistant.migrations.0038_aiagent_device_prompts")
+migration = importlib.import_module(
+    "backend.apps.ai_assistant.migrations.0048_verifier_output_fields"
+)
+seed = importlib.import_module("backend.apps.ai_assistant.migrations.0038_aiagent_device_prompts")
 log_evidence_guidance = importlib.import_module(
-    "apps.ai_assistant.migrations.0044_add_verifier_log_evidence_guidance"
+    "backend.apps.ai_assistant.migrations.0044_add_verifier_log_evidence_guidance"
 )
 executor_fields = importlib.import_module(
-    "apps.ai_assistant.migrations.0047_executor_output_fields"
+    "backend.apps.ai_assistant.migrations.0047_executor_output_fields"
 )
 
 ADMIN_REWRITTEN_VERIFIER = "## 角色\n你是验收模型。\n\n## 输出字段\n- result：结果\n"

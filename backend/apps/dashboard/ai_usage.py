@@ -11,9 +11,9 @@ from django.db import OperationalError, ProgrammingError
 from django.db.models import Sum
 from django.utils import timezone
 
-from apps.ai_assistant.api import filter_agents_for_user, resolve_assistant_name
-from apps.ai_assistant.models import AIAgent
-from apps.task_list.models import Task, TaskUsageHourly
+from backend.apps.ai_assistant.api import filter_agents_for_user, resolve_assistant_name
+from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.task_list.models import Task, TaskUsageHourly
 
 
 def _agents(user_id):

@@ -12,8 +12,8 @@ from dataclasses import fields
 
 import pytest
 
-from apps.device_pool.contracts import ConnectionType, DeviceInfo, DeviceStatus
-from apps.device_pool.models import Device
+from backend.apps.device_pool.contracts import ConnectionType, DeviceInfo, DeviceStatus
+from backend.apps.device_pool.models import Device
 
 
 @pytest.mark.unit

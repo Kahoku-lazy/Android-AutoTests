@@ -1,6 +1,6 @@
 # report_generator App AGENTS.md
 
-> **AGENTS 层级**：二级约束 —— 根 `AGENTS.md` 与上级 `apps/AGENTS.md` 优先于本文件（本文件只写增量）。
+> **AGENTS 层级**：二级约束 —— 根 `AGENTS.md` 与上级 `backend/apps/AGENTS.md` 优先于本文件（本文件只写增量）。
 
 > 全局边界 / 协议要点 / 关单清单 → `../AGENTS.md`；本文只写本 App 增量，冲突以全局为准。
 
@@ -18,7 +18,7 @@
 
 ## 本 App 契约（特例 + 真相源）
 
-真相源：`apps/report_generator/urls.py`（5 端点：`""` / `cases` / `run/{run_id}` / `{filename}/content` / `{filename}`）+ `views.py` + `api.py`（任务列表聚合读 `task_list.task_reports`）。
+真相源：`backend/apps/report_generator/urls.py`（5 端点：`""` / `cases` / `run/{run_id}` / `{filename}/content` / `{filename}`）+ `views.py` + `api.py`（任务列表聚合读 `task_list.task_reports`）。
 
 **响应信封**：`/reports/*` 的列表/分解/内容/详情统一为全局 `{status, data}`，业务负载放在 `data` 中，不再自带 `status`；错误为 `{status: false, message}` + 400/404。
 

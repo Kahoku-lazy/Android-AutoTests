@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from apps.device_pool.manager import DeviceDetector, DeviceRegistry, DeviceStateMachine
+from backend.apps.device_pool.manager import DeviceDetector, DeviceRegistry, DeviceStateMachine
 
 
 @pytest.fixture

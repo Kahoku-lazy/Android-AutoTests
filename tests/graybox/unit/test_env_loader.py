@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from config.env import load_dotenv
+from backend.config.env import load_dotenv
 
 pytestmark = [pytest.mark.unit]
 

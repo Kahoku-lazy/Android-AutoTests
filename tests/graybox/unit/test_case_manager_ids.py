@@ -8,9 +8,9 @@ import pytest
 
 from django.utils import timezone
 
-from apps.case_manager.api_ids import next_case_id
-from apps.case_manager.models import CaseFile, CaseProject
-from apps.case_manager.models import TestDefinition as CaseDoc
+from backend.apps.case_manager.api_ids import next_case_id
+from backend.apps.case_manager.models import CaseFile, CaseProject
+from backend.apps.case_manager.models import TestDefinition as CaseDoc
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 

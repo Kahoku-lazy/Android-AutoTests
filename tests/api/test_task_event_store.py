@@ -14,10 +14,10 @@ import pytest
 
 from PIL import Image
 
-from apps.ai_assistant.models import AIAgent
-from apps.task_list import api
-from apps.task_list.event_store import TaskEventSink
-from apps.task_list.models import Task, TaskEvent, TaskMedia, TaskUsageHourly
+from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.task_list import api
+from backend.apps.task_list.event_store import TaskEventSink
+from backend.apps.task_list.models import Task, TaskEvent, TaskMedia, TaskUsageHourly
 from engines.agents.event_sink import (
     bind_run_context,
     bind_sink,

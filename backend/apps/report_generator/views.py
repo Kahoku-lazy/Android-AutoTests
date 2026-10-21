@@ -17,7 +17,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.task_list.task_reports import build_report_list, parse_chart_range
+from backend.apps.task_list.task_reports import build_report_list, parse_chart_range
 
 REPORT_TAG = "reports"
 

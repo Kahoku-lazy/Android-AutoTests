@@ -9,10 +9,10 @@ from decimal import Decimal
 
 from django.db.models import Q
 
-from apps.ai_assistant.api import filter_agents_for_user, resolve_assistant_name
-from apps.ai_assistant.models import AIAgent
-from apps.task_list.api import list_task_attachments
-from apps.task_list.models import Task, TaskAttachment, TaskEvent
+from backend.apps.ai_assistant.api import filter_agents_for_user, resolve_assistant_name
+from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.task_list.api import list_task_attachments
+from backend.apps.task_list.models import Task, TaskAttachment, TaskEvent
 from engines.agents.workflow.case_file import validate_platform_yaml
 
 PASS_STATUSES = frozenset({"completed", "success"})

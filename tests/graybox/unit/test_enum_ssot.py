@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from apps.device_pool import contracts as device_contracts
-from models import constants as models_constants
+from backend.apps.device_pool import contracts as device_contracts
+from backend.models import constants as models_constants
 
 pytestmark = [pytest.mark.unit]
 

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from apps.case_manager import api as case_api
-from apps.case_manager.api_projects import ConflictError
+from backend.apps.case_manager import api as case_api
+from backend.apps.case_manager.api_projects import ConflictError
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 

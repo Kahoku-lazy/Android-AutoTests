@@ -11,8 +11,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 
-from apps.ai_assistant.models import AIAgent
-from models.constants import AgentStatus
+from backend.apps.ai_assistant.models import AIAgent
+from backend.models.constants import AgentStatus
 from utils.logs import backend_log
 
 __all__ = [
@@ -234,6 +234,6 @@ def get_provider_config(provider: str, base_url: str = "", model_name: str = "")
     """获取模型 provider 的 API 配置（base_url + api_key 模式）。
     供管理命令等跨模块调用，避免直接导入 agent_scope.provider_registry。
     """
-    from apps.ai_assistant.provider_registry import get_provider_config as _get
+    from backend.apps.ai_assistant.provider_registry import get_provider_config as _get
 
     return _get(provider, base_url)

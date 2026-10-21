@@ -29,8 +29,8 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 AUTH_TYPES = REPO_ROOT / "frontend/src/shared/types/auth.ts"
 AUTH_API = REPO_ROOT / "frontend/src/shared/api/auth.ts"
 INTERCEPTORS = REPO_ROOT / "frontend/src/shared/api-auth-interceptors.ts"
-BACKEND_VIEWS = REPO_ROOT / "apps/accounts/views.py"
-BACKEND_JWT = REPO_ROOT / "shared/auth/jwt_auth.py"
+BACKEND_VIEWS = REPO_ROOT / "backend/apps/accounts/views.py"
+BACKEND_JWT = REPO_ROOT / "backend/shared/auth/jwt_auth.py"
 
 # 错误响应的唯一 key；除它之外的 Response 就是成功响应
 ERROR_KEY_SET = {"detail"}
@@ -144,12 +144,12 @@ def _interceptor_public_paths() -> set[str]:
     """前端拦截器声明的公开端点（相对 baseURL）。"""
     text = _read(INTERCEPTORS)
     match = re.search(r"PUBLIC_AUTH_PATHS\s*=\s*\[([^\]]*)\]", text)
-    return set(re.findall(r"'([^']+)'", match.group(1))) if match else set()
+    return set(re.findall(r"['\"]([^'\"]+)['\"]", match.group(1))) if match else set()
 
 
 def _gateway_public_auth_paths() -> set[str]:
     """网关 PUBLIC_PREFIXES 中 /api/auth/ 的那一部分（去掉 /api 前缀以便对拍）。"""
-    from gateway.middleware import PUBLIC_PREFIXES
+    from backend.gateway.middleware import PUBLIC_PREFIXES
 
     return {p[len("/api") :] for p in PUBLIC_PREFIXES if p.startswith("/api/auth/")}
 

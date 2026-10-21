@@ -14,8 +14,8 @@ import pytest
 from django.contrib.auth.models import User
 from django.test import Client
 
-from shared.auth import jwt_auth
-from shared.auth.jwt_auth import (
+from backend.shared.auth import jwt_auth
+from backend.shared.auth.jwt_auth import (
     create_access_token,
     create_token_pair,
     session_id_of,

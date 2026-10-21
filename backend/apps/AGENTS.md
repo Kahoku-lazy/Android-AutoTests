@@ -1,6 +1,6 @@
 # Backend AGENTS.md — AI 约束
 
-> **AGENTS 层级**：一级约束 —— 根 `AGENTS.md` 优先于本文件；本文件优先于 `apps/{app}/AGENTS.md`。
+> **AGENTS 层级**：一级约束 —— 根 `AGENTS.md` 优先于本文件；本文件优先于 `backend/apps/{app}/AGENTS.md`。
 
 **口诀**：View 只分发，写库走 api，跨模块不碰内部实现，JSON snake_case，错误要上报，重构先问值不值。  
 **完成定义**：`manage.py check` + ruff 通过 ≠ 完成；相关单测/集成测与契约要对齐。
@@ -34,13 +34,13 @@
 ## 2. 协议要点
 
 **HTTP / DRF**：`urls.py` 为路径真相源 → View/ViewSet → Serializer → `api.py`。  
-- 身份：`request.user_id`（JWTAuthenticationMiddleware 注入）；公开路径 `/api/ai/auth/*` `/admin/` `/static/`（真相源：`gateway/middleware.py` 的 `_is_public()`）。  
+- 身份：`request.user_id`（JWTAuthenticationMiddleware 注入）；公开路径 `/api/auth/*` `/admin/` `/static/`（真相源：`backend/gateway/middleware.py` 的 `_is_public()`）。  
 - 错误带 HTTP 状态码（400/401/403/404/409/500）。  
 - 契约对照：前端 api、本 App Serializer。
 
-**WS**：Consumer 必须在 `gateway/routing.py` 注册；事件 `type` 与前端一致；写库仍走 api。仅 1 生产点（§1.2 通道收敛）；事件表见 `apps/case_manager/AGENTS.md`（`case_updated`）。
+**WS**：Consumer 必须在 `backend/gateway/routing.py` 注册；事件 `type` 与前端一致；写库仍走 api。当前生产点为 0（`websocket_urlpatterns` 为空表），新增前先走 OpenSpec 变更。
 
-**AI**：Tool 只调各模块 `api.py`（同进程直调，无 SSE）；依赖 Redis（见 `config/env.py` / `config/settings.py`）。
+**AI**：Tool 只调各模块 `api.py`（同进程直调，无 SSE）；依赖 Redis（见 `backend/config/env.py` / `backend/config/settings.py`）。
 
 ---
 
@@ -50,11 +50,11 @@
 [ ] python manage.py check
 [ ] makemigrations --check（若动 Model）
 [ ] ruff check + ruff format --check（相关路径）
-[ ] pytest -m "unit or integration"（涉及接口再加 api）
+[ ] python -m pytest -c tests/pytest.ini -m "unit or integration"（涉及接口再加 api）
 [ ] 写库只经 api；无跨模块内部 import
 [ ] 信封与 snake_case；写失败有 message/日志（App 特例见其 AGENTS.md）
-[ ] 涉及跨模块 → gen_arch_stats.py --check-boundaries
+[ ] 涉及跨模块 → python utils/gen_arch_stats.py --check-boundaries
 [ ] 自评 3 问：① 删这个 App，其他 App 是否只经 api/Model 读受影响？② 写操作是否都能被 Tool 与 View 复用同一 api？③ diff 每行可追溯到需求？
 ```
 
-App 级附加项（delta）→ 各 `apps/{app}/AGENTS.md` 关单段。完整自测命令 → `apps/自测与检测指令.md`。
+App 级附加项（delta）→ 各 `backend/apps/{app}/AGENTS.md` 关单段。完整自测命令 → `backend/apps/自测与检测指令.md`。

@@ -17,7 +17,7 @@ pytestmark = [pytest.mark.unit]
 def _guidance_module():
     """迁移模块名以数字开头，只能经 importlib 取。"""
     return importlib.import_module(
-        "apps.ai_assistant.migrations.0041_add_planner_page_flow_guidance"
+        "backend.apps.ai_assistant.migrations.0041_add_planner_page_flow_guidance"
     )
 
 
@@ -53,7 +53,9 @@ def test_planner_guidance_is_reversible():
 def test_seed_planner_prompt_carries_guidance():
     """新装库的种子必须已含指引（与存量库迁移两条下发路径一致）。"""
     mod = _guidance_module()
-    seed = importlib.import_module("apps.ai_assistant.migrations.0038_aiagent_device_prompts")
+    seed = importlib.import_module(
+        "backend.apps.ai_assistant.migrations.0038_aiagent_device_prompts"
+    )
 
     assert mod._GUIDANCE in seed._SNAPSHOT_PLANNER
     assert mod._ANCHOR in seed._SNAPSHOT_PLANNER

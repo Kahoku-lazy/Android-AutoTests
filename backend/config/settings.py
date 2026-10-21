@@ -6,7 +6,7 @@ import os
 
 from pathlib import Path
 
-from config.env import load_dotenv
+from backend.config.env import load_dotenv
 
 # django-stubs：让 QuerySet/Manager 等在类型检查下更准确
 try:
@@ -18,9 +18,10 @@ except ImportError:
     pass
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = BASE_DIR.parent
 
 
-# ── Load .env into os.environ（单一实现在 config/env.py；manage.py 不会自动加载）──
+# ── Load .env into os.environ（单一实现在 backend/config/env.py；manage.py 不会自动加载）──
 load_dotenv()
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
@@ -72,18 +73,18 @@ INSTALLED_APPS = [
     # Swagger UI 静态资产（SIDECAR 来源；离线/内网环境不依赖 CDN）
     "drf_spectacular_sidecar",
     # Framework
-    "gateway",
-    "shared",
-    # Django Apps（8 个；test_runner、evaluator 已退役，卸载迁移随 app 一并删除）
-    "apps.device_pool",
-    "apps.case_manager",
-    "apps.workflow",
-    "apps.report_generator",
-    "apps.accounts",
-    "apps.ai_assistant",
-    "apps.task_list",
-    "apps.serial_log",
-    "apps.dashboard",
+    "backend.gateway",
+    "backend.shared",
+    # Django Apps（9 个；test_runner、evaluator 已退役，卸载迁移随 app 一并删除）
+    "backend.apps.device_pool",
+    "backend.apps.case_manager",
+    "backend.apps.workflow",
+    "backend.apps.report_generator",
+    "backend.apps.accounts",
+    "backend.apps.ai_assistant",
+    "backend.apps.task_list",
+    "backend.apps.serial_log",
+    "backend.apps.dashboard",
 ]
 
 MIDDLEWARE = [
@@ -92,7 +93,7 @@ MIDDLEWARE = [
     "django.middleware.gzip.GZipMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "gateway.middleware.JWTAuthenticationMiddleware",
+    "backend.gateway.middleware.JWTAuthenticationMiddleware",
     # CSRF 保护：必须排在 JWTAuthenticationMiddleware 之后——有效 JWT 的请求由该中间件
     # 置 request._dont_enforce_csrf_checks 豁免（浏览器无法跨站携带自定义 Authorization 头），
     # 后台 /admin/ 等 session 面则正常受保护。
@@ -102,14 +103,14 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "config.urls"
+ROOT_URLCONF = "backend.config.urls"
 
 # 路径约定：全部 /api/ 路由以 / 结尾（openspec/specs/api-path-convention）。
 # 关闭 APPEND_SLASH，使缺失尾斜杠得到**确定的 404**，而不是 CommonMiddleware 的 301
 # （301 会丢 Authorization 头 → 误报 401；可能把 POST 降级为 GET；且被浏览器长期缓存）。
 APPEND_SLASH = False
 
-ASGI_APPLICATION = "config.asgi.application"
+ASGI_APPLICATION = "backend.config.asgi.application"
 
 # Templates — Django Admin + drf-spectacular Swagger UI 主题覆盖（templates/drf_spectacular/）
 TEMPLATES = [
@@ -212,7 +213,7 @@ elif DB_ENGINE == "sqlite":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            "NAME": REPO_ROOT / "db.sqlite3",
         },
     }
 else:
@@ -294,7 +295,7 @@ DEVICE_LOG_KEYWORD_FILE = os.environ.get(
 )
 # ── 无线串口日志文件（不写库，只落本地文件，见 device-log-file-archive）──
 # 目录默认项目根目录 logs/；单文件上限 50MB，写满改名存档为 `{SKU}_{端口}_{YYYYMMDD}.log`。
-DEVICE_LOG_LOG_DIR = os.environ.get("DEVICE_LOG_LOG_DIR", str(BASE_DIR / "logs"))
+DEVICE_LOG_LOG_DIR = os.environ.get("DEVICE_LOG_LOG_DIR", str(REPO_ROOT / "logs"))
 DEVICE_LOG_FILE_MAX_BYTES = int(os.environ.get("DEVICE_LOG_FILE_MAX_BYTES", str(50 * 1024 * 1024)))
 # 端口管理页日志窗口默认读取的尾部行数与允许的上限。
 DEVICE_LOG_TAIL_LINES = int(os.environ.get("DEVICE_LOG_TAIL_LINES", "2000"))
@@ -303,14 +304,14 @@ DEVICE_LOG_TAIL_LINES_MAX = int(os.environ.get("DEVICE_LOG_TAIL_LINES_MAX", "200
 # ── Django REST Framework ──
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "shared.auth.drf_auth.JWTAuthentication",
+        "backend.shared.auth.drf_auth.JWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
     # BrowsableAPIRenderer 只在 DEBUG 下注册：生产不需要 HTML 可浏览 API（JSON 契约不变）
     "DEFAULT_RENDERER_CLASSES": [
-        "shared.renderers.EnvelopeJSONRenderer",
+        "backend.shared.renderers.EnvelopeJSONRenderer",
         *(["rest_framework.renderers.BrowsableAPIRenderer"] if DEBUG else []),
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
@@ -361,16 +362,16 @@ SERVER_PORT = int(os.environ.get("SERVER_PORT", "8766"))
 # uiautomator2 生效（两者原生读取该环境变量），无需在 settings 里二次转发。
 
 # Paths
-# 数据根目录：.env 的 DATA_DIR 可指向外部盘/卷（如 D:\Govee\data）；留空用项目内 data/。
-# 相对值按 BASE_DIR 解析，避免随进程 CWD 漂移。
+# 数据根目录：.env 的 DATA_DIR 可指向外部盘/卷（如 D:\Govee\data）；留空用仓库根 data/。
+# 相对值按 REPO_ROOT 解析，避免随进程 CWD 漂移。
 _data_dir_env = os.environ.get("DATA_DIR", "").strip()
-DATA_DIR = Path(_data_dir_env) if _data_dir_env else BASE_DIR / "data"
+DATA_DIR = Path(_data_dir_env) if _data_dir_env else REPO_ROOT / "data"
 if not DATA_DIR.is_absolute():
-    DATA_DIR = BASE_DIR / DATA_DIR
+    DATA_DIR = REPO_ROOT / DATA_DIR
 
 SCREENSHOT_DIR = DATA_DIR / "screenshots"
-EXPORT_DIR = BASE_DIR / "exports"
-LOG_DIR = BASE_DIR / "logs"
+EXPORT_DIR = REPO_ROOT / "exports"
+LOG_DIR = REPO_ROOT / "logs"
 
 # Internationalization
 LANGUAGE_CODE = "zh-hans"
@@ -382,7 +383,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ── Static files (Django Admin + jazzmin theme) ──
 # Django 5.1+ 默认 STATIC_URL=None，必须显式设置，否则 Admin 无样式
 STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
+STATIC_ROOT = REPO_ROOT / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]  # 项目自定义静态文件源目录
 
 # ── Media files (uploads) ──
@@ -402,9 +403,9 @@ JAZZMIN_SETTINGS = {
         "auth": "fas fa-users-cog",
         "auth.user": "fas fa-user",
         "auth.group": "fas fa-users",
-        "apps.device_pool": "fas fa-mobile-alt",
-        "apps.case_manager": "fas fa-clipboard-list",
-        "apps.report_generator": "fas fa-chart-bar",
+        "backend.apps.device_pool": "fas fa-mobile-alt",
+        "backend.apps.case_manager": "fas fa-clipboard-list",
+        "backend.apps.report_generator": "fas fa-chart-bar",
     },
     "default_icon_parents": "fas fa-chevron-circle-right",
     "default_icon_children": "fas fa-circle",

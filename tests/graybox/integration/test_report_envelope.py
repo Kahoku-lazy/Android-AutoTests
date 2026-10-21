@@ -11,7 +11,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.test import Client
 
-from shared.auth.jwt_auth import create_access_token
+from backend.shared.auth.jwt_auth import create_access_token
 
 pytestmark = [pytest.mark.django_db, pytest.mark.integration]
 
@@ -23,7 +23,7 @@ def client() -> Client:
 
 
 def test_report_list_uses_standard_envelope(client, monkeypatch):
-    from apps.report_generator import views
+    from backend.apps.report_generator import views
 
     monkeypatch.setattr(
         views,
@@ -91,7 +91,7 @@ def test_report_download_stays_attachment(client, monkeypatch, tmp_path):
 
 
 def test_task_flow_uses_standard_envelope(client, monkeypatch):
-    from apps.task_list import views
+    from backend.apps.task_list import views
 
     payload = {"task": {"id": 1}, "rounds": [], "cases": [], "conclusion": None}
     monkeypatch.setattr(views, "build_task_flow", lambda user_id, task_id: payload)
@@ -105,7 +105,7 @@ def test_task_flow_uses_standard_envelope(client, monkeypatch):
 
 
 def test_task_flow_missing_uses_error_envelope(client, monkeypatch):
-    from apps.task_list import views
+    from backend.apps.task_list import views
 
     monkeypatch.setattr(views, "build_task_flow", lambda user_id, task_id: None)
 

@@ -16,7 +16,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from shared.users import is_superuser
+from backend.shared.users import is_superuser
 from utils.logs import backend_log
 
 from . import keywords, port_service

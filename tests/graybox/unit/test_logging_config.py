@@ -42,7 +42,7 @@ def test_root_logger_is_live_at_runtime():
 
 def test_info_record_is_not_dropped(caplog):
     """应用级 logger 的 INFO 记录能被捕获（此前无 handler 时会被丢弃）。"""
-    logger = logging.getLogger("apps.logging_probe")
+    logger = logging.getLogger("backend.apps.logging_probe")
     with caplog.at_level(logging.INFO):
         logger.info("d0-log-probe")
     assert "d0-log-probe" in caplog.text

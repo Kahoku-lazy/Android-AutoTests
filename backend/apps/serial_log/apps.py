@@ -13,7 +13,7 @@ class SerialLogConfig(AppConfig):
     """串口日志模块的 App 配置。"""
 
     default_auto_field = "django.db.models.BigAutoField"
-    name = "apps.serial_log"
+    name = "backend.apps.serial_log"
     verbose_name = "串口日志"
 
     def ready(self):

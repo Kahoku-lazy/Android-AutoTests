@@ -12,7 +12,7 @@ from __future__ import annotations
 import importlib
 
 migration = importlib.import_module(
-    "apps.ai_assistant.migrations.0049_add_verifier_log_tool_guidance"
+    "backend.apps.ai_assistant.migrations.0049_add_verifier_log_tool_guidance"
 )
 
 CURRENT_VERIFIER = (

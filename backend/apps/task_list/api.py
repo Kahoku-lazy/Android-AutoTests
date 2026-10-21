@@ -5,11 +5,11 @@ import json
 from django.db import transaction
 from django.utils import timezone
 
-from apps.ai_assistant.api import resolve_assistant_name
-from apps.ai_assistant.models import AIAgent
-from apps.task_list.deepseek_billing import task_deepseek_cost
-from apps.task_list.models import Task, TaskAttachment
-from models.constants import TaskStatus
+from backend.apps.ai_assistant.api import resolve_assistant_name
+from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.task_list.deepseek_billing import task_deepseek_cost
+from backend.apps.task_list.models import Task, TaskAttachment
+from backend.models.constants import TaskStatus
 
 __all__ = [
     "create_task",
@@ -133,7 +133,7 @@ def materialize_config_file(task: Task) -> tuple[str, bool]:
     """
     import tempfile
 
-    from apps.task_list.upload_cleanup import UPLOAD_DIR
+    from backend.apps.task_list.upload_cleanup import UPLOAD_DIR
 
     config = next(
         (row for row in list_task_attachments(task) if row.kind == TaskAttachment.KIND_CONFIG),
@@ -231,7 +231,7 @@ def dispatch_device(serial: str) -> Task | None:
         agent_id = claimed.agent_id
 
         def _spawn() -> None:
-            from apps.task_list.task_runner import spawn_task_thread
+            from backend.apps.task_list.task_runner import spawn_task_thread
 
             spawn_task_thread(task_id, agent_id)
 
@@ -406,7 +406,7 @@ def dump_task_run_payload(payload: dict) -> str:
 
 def insert_task_events(task_id: int, rows: list[dict]) -> None:
     """批量写入任务事件。rows 已是模型字段。"""
-    from apps.task_list.models import TaskEvent
+    from backend.apps.task_list.models import TaskEvent
 
     if not rows:
         return
@@ -415,7 +415,7 @@ def insert_task_events(task_id: int, rows: list[dict]) -> None:
 
 def store_task_media(task_id: int, sha256: str, defaults: dict) -> int | None:
     """按任务内 sha256 去重保存缩略图。超过 40 张且不是重复图时不存。"""
-    from apps.task_list.models import TaskMedia
+    from backend.apps.task_list.models import TaskMedia
 
     found = TaskMedia.objects.filter(task_id=task_id, sha256=sha256).first()
     if found is not None:
@@ -432,7 +432,7 @@ def add_usage_hourly(slot: dict, delta: dict) -> None:
 
     from django.db import transaction
 
-    from apps.task_list.models import TaskUsageHourly
+    from backend.apps.task_list.models import TaskUsageHourly
 
     with transaction.atomic():
         row, created = TaskUsageHourly.objects.get_or_create(
@@ -465,7 +465,7 @@ def rollup_task_cost(task_id: int) -> None:
     """用模型调用结束行的费用合计回写任务。"""
     from django.db.models import Sum
 
-    from apps.task_list.models import Task, TaskEvent
+    from backend.apps.task_list.models import Task, TaskEvent
 
     totals = TaskEvent.objects.filter(task_id=task_id, event_type="ModelCallEndEvent").aggregate(
         cost_input=Sum("cost_input"),

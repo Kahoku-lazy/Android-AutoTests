@@ -26,7 +26,7 @@ VERIFIER_PROMPT = r"""
 
 def keyword_catalog_text() -> str:
     """把日志关键词表收成验收模型可读的对照文本。文件缺失时返回空串。"""
-    path = Path(__file__).resolve().parents[3] / "config" / "device_log_keywords.json"
+    path = Path(__file__).resolve().parents[3] / "backend" / "config" / "device_log_keywords.json"
     mapping = KeywordIndex.from_file(path).mapping
     if not mapping:
         return ""

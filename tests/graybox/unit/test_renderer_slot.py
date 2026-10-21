@@ -22,7 +22,7 @@ BROWSABLE = "rest_framework.renderers.BrowsableAPIRenderer"
 def test_browsable_renderer_follows_debug_flag():
     """信封渲染器永远第一；BrowsableAPIRenderer 仅当导入档位为 DEBUG 时注册。"""
     classes = settings.REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"]
-    assert classes[0] == "shared.renderers.EnvelopeJSONRenderer"
+    assert classes[0] == "backend.shared.renderers.EnvelopeJSONRenderer"
     import_debug = os.environ.get("DJANGO_DEBUG", "False").lower() in ("true", "1", "yes")
     assert (BROWSABLE in classes) is import_debug
 
@@ -30,7 +30,9 @@ def test_browsable_renderer_follows_debug_flag():
 def test_other_renderer_settings_untouched():
     """鉴权 / 权限 / schema / 未认证用户 四项不受本次分档影响。"""
     rest = settings.REST_FRAMEWORK
-    assert rest["DEFAULT_AUTHENTICATION_CLASSES"] == ["shared.auth.drf_auth.JWTAuthentication"]
+    assert rest["DEFAULT_AUTHENTICATION_CLASSES"] == [
+        "backend.shared.auth.drf_auth.JWTAuthentication"
+    ]
     assert rest["DEFAULT_PERMISSION_CLASSES"] == ["rest_framework.permissions.IsAuthenticated"]
     assert rest["DEFAULT_SCHEMA_CLASS"] == "drf_spectacular.openapi.AutoSchema"
     assert rest["UNAUTHENTICATED_USER"] is None

@@ -11,11 +11,11 @@ import inspect
 
 import pytest
 
-from apps.ai_assistant.models import AIAgent
-from apps.task_list import api as task_api
-from apps.task_list import apps as apps_module
-from apps.task_list.models import Task
-from models.constants import TaskStatus
+from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.task_list import api as task_api
+from backend.apps.task_list import apps as apps_module
+from backend.apps.task_list.models import Task
+from backend.models.constants import TaskStatus
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 

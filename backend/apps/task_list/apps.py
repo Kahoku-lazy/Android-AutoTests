@@ -6,7 +6,7 @@ from utils.logs import backend_log
 
 
 class TaskListConfig(AppConfig):
-    name = "apps.task_list"
+    name = "backend.apps.task_list"
     verbose_name = "任务清单"
 
     def ready(self):

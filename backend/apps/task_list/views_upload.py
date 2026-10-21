@@ -9,7 +9,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.task_list.upload_cleanup import ensure_upload_dir, remove_upload_file
+from backend.apps.task_list.upload_cleanup import ensure_upload_dir, remove_upload_file
 
 UPLOAD_DIR = ensure_upload_dir()
 

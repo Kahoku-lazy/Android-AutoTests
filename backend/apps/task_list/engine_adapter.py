@@ -6,8 +6,8 @@
 
 from __future__ import annotations
 
-from apps.ai_assistant import api
-from apps.ai_assistant.provider_registry import VALID_PROVIDERS, get_provider_config
+from backend.apps.ai_assistant import api
+from backend.apps.ai_assistant.provider_registry import VALID_PROVIDERS, get_provider_config
 from engines.agents.role.config import ModelConfig
 
 __all__ = ["resolve_device_serial", "sop_role_models"]
@@ -60,7 +60,7 @@ def resolve_device_serial(task_device_serial: str = "") -> str:
     if serial:
         return serial
 
-    from apps.device_pool.api import get_online_devices
+    from backend.apps.device_pool.api import get_online_devices
 
     devices = get_online_devices()
     if not devices:

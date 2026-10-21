@@ -1,6 +1,6 @@
 # task_list App AGENTS.md
 
-> **AGENTS 层级**：二级约束 —— 根 `AGENTS.md` 与上级 `apps/AGENTS.md` 优先于本文件。
+> **AGENTS 层级**：二级约束 —— 根 `AGENTS.md` 与上级 `backend/apps/AGENTS.md` 优先于本文件。
 
 ## 职责
 
@@ -28,7 +28,7 @@
 ```
 [ ] python manage.py check
 [ ] makemigrations --check
-[ ] pytest tests/api/test_task_*.py tests/graybox/unit/test_*task*.py
+[ ] python -m pytest -c tests/pytest.ini tests/api/test_task_*.py tests/graybox/unit/test_*task*.py
 [ ] 旧 /api/ai/tasks/*、/api/ai/agent-tasks/* 返回 404
 [ ] 迁移正向/反向均通过，五张表行数一致
 ```

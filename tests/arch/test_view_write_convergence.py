@@ -29,7 +29,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-VIEW_MODULES = sorted((ROOT / "apps").glob("*/views*.py"))
+VIEW_MODULES = sorted((ROOT / "backend" / "apps").glob("*/views*.py"))
 
 # 末位方法名 → 必须同时出现 objects 才判违规（这些名字也是 dict/set 的合法方法）
 ORM_MANAGER_WRITES = frozenset(
@@ -94,7 +94,7 @@ def find_orm_writes(source: str) -> list[tuple[int, str]]:
 
 def test_view_modules_discovered():
     """范围自检：通配失效时守卫会静默变成空测试，故必须断言真的发现了模块。"""
-    assert VIEW_MODULES, "未发现 apps/*/views*.py —— 守卫范围失效"
+    assert VIEW_MODULES, "未发现 backend/apps/*/views*.py —— 守卫范围失效"
     assert len(VIEW_MODULES) >= 10, f"仅发现 {len(VIEW_MODULES)} 个 views 模块，范围可疑"
 
 

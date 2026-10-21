@@ -4,8 +4,8 @@ import pytest
 
 from django.db import connection
 
-from apps.ai_assistant import models as ai_models
-from apps.task_list import models
+from backend.apps.ai_assistant import models as ai_models
+from backend.apps.task_list import models
 
 pytestmark = [pytest.mark.unit]
 

@@ -15,8 +15,8 @@ from django.contrib.auth.models import User
 from django.db import transaction
 from django.test import Client
 
-from apps.accounts import api
-from apps.accounts.serializers import RegisterSerializer
+from backend.apps.accounts import api
+from backend.apps.accounts.serializers import RegisterSerializer
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit, pytest.mark.auth]
 

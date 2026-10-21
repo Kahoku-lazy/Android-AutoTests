@@ -19,7 +19,7 @@ import re
 
 import pytest
 
-from apps.accounts.serializers import LoginSerializer, RegisterSerializer
+from backend.apps.accounts.serializers import LoginSerializer, RegisterSerializer
 
 pytestmark = pytest.mark.unit
 
@@ -27,7 +27,7 @@ NL = chr(10)
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 FRONTEND_FORM = REPO_ROOT / "frontend/src/shared/composables/useLoginForm.ts"
 AUTH_FLOW = REPO_ROOT / "frontend/src/views/composables/useAuthFlow.ts"
-BACKEND_SERIALIZERS = REPO_ROOT / "apps/accounts/serializers.py"
+BACKEND_SERIALIZERS = REPO_ROOT / "backend/apps/accounts/serializers.py"
 
 # 前端：errs.<字段> = '文案'   /   后端：ValidationError("文案")
 FE_MESSAGE_RX = re.compile(r"errs\.(\w+)\s*=\s*'([^']+)'")

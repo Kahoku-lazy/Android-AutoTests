@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from apps.task_list.upload_cleanup import cleanup_upload_dir
+from backend.apps.task_list.upload_cleanup import cleanup_upload_dir
 
 
 class Command(BaseCommand):

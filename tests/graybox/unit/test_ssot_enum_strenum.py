@@ -16,7 +16,7 @@ from enum import Enum
 
 import pytest
 
-from models import constants as models_constants
+from backend.models import constants as models_constants
 
 pytestmark = [pytest.mark.unit]
 

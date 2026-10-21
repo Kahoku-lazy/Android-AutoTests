@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parents[3]  # 仓库根（backend/apps/report_generator/service.py）
 LOG_DIR = BASE_DIR / "logs"
 EXPORT_DIR = BASE_DIR / "exports"
 

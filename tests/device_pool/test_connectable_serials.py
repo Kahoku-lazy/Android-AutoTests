@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from apps.device_pool.manager import DeviceDetector
+from backend.apps.device_pool.manager import DeviceDetector
 
 pytestmark = pytest.mark.unit
 

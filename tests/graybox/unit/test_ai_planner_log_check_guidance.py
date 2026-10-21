@@ -12,7 +12,7 @@ import importlib
 
 # 迁移模块名以数字开头，只能用 importlib 按字符串路径导入
 migration = importlib.import_module(
-    "apps.ai_assistant.migrations.0046_add_planner_log_check_guidance"
+    "backend.apps.ai_assistant.migrations.0046_add_planner_log_check_guidance"
 )
 
 SEEDED_PLANNER = (

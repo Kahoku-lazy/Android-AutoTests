@@ -2,7 +2,7 @@
 
 from django.db import models
 
-from apps.ai_assistant.models import AIAgent
+from backend.apps.ai_assistant.models import AIAgent
 
 
 class Task(models.Model):

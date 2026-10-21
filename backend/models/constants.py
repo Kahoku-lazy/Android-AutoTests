@@ -3,7 +3,7 @@
 所有模块的状态字符串统一使用此处的 Enum，避免硬编码散布各处。
 
 使用方式:
-    from models.constants import DeviceStatus
+    from backend.models.constants import DeviceStatus
     device.status = DeviceStatus.ONLINE
     if device.status == DeviceStatus.BUSY:
         ...

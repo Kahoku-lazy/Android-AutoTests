@@ -7,7 +7,7 @@
 - DEBUG：开启（测试中获取详细错误信息）
 """
 
-from config.settings import *  # noqa: F403
+from backend.config.settings import *  # noqa: F403
 
 # ── 数据库：SQLite 内存库 ──
 DATABASES = {

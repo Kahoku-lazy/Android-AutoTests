@@ -6,13 +6,13 @@ import pytest
 
 from django.contrib.auth import get_user_model
 
-from apps.ai_assistant.models import AIAgent
-from apps.dashboard.ai_usage import (
+from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.dashboard.ai_usage import (
     ai_recent_tasks,
     ai_task_daily_execution,
     ai_task_execution_summary,
 )
-from apps.task_list.models import Task
+from backend.apps.task_list.models import Task
 
 
 @pytest.fixture

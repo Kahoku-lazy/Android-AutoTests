@@ -11,7 +11,7 @@
 
 import pytest
 
-from apps.workflow.semantics import build_graph_digest
+from backend.apps.workflow.semantics import build_graph_digest
 
 pytestmark = [pytest.mark.unit, pytest.mark.workflow]
 

@@ -11,18 +11,18 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 urlpatterns = [
     path("", lambda r: JsonResponse({"status": True, "service": "Android-AutoTests API"})),
     # Dashboard stats (aggregated from all modules) — 见 apps/dashboard/urls.py
-    path("api/", include("apps.dashboard.urls")),
+    path("api/", include("backend.apps.dashboard.urls")),
     # Django Admin (管理员专用，不给普通用户)
     path("admin/", admin.site.urls),
     # ── Module routes (1 include() per app) ──
-    path("api/devices/", include("apps.device_pool.urls")),
-    path("api/cases/", include("apps.case_manager.urls")),
-    path("api/workflow/", include("apps.workflow.urls")),
-    path("api/reports/", include("apps.report_generator.urls")),
-    path("api/auth/", include("apps.accounts.urls")),
-    path("api/ai/", include("apps.ai_assistant.urls")),
-    path("api/tasks/", include("apps.task_list.urls")),
-    path("api/serial-log/", include("apps.serial_log.urls")),
+    path("api/devices/", include("backend.apps.device_pool.urls")),
+    path("api/cases/", include("backend.apps.case_manager.urls")),
+    path("api/workflow/", include("backend.apps.workflow.urls")),
+    path("api/reports/", include("backend.apps.report_generator.urls")),
+    path("api/auth/", include("backend.apps.accounts.urls")),
+    path("api/ai/", include("backend.apps.ai_assistant.urls")),
+    path("api/tasks/", include("backend.apps.task_list.urls")),
+    path("api/serial-log/", include("backend.apps.serial_log.urls")),
     # ── DRF API documentation (drf-spectacular + Swagger UI) ──
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/swagger/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger"),

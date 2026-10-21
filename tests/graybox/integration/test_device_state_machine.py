@@ -12,8 +12,8 @@ django_db + 注入 mock detector + 真实 registry。
 
 import pytest
 
-from apps.device_pool.manager import DeviceError
-from apps.device_pool.models import Device, DeviceLock
+from backend.apps.device_pool.manager import DeviceError
+from backend.apps.device_pool.models import Device, DeviceLock
 
 
 @pytest.mark.integration

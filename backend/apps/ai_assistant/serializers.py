@@ -8,7 +8,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from apps.ai_assistant.provider_registry import VALID_PROVIDERS, validate_base_url
+from backend.apps.ai_assistant.provider_registry import VALID_PROVIDERS, validate_base_url
 
 # ═══════════════════════════════════════════════════════════════════
 # Agent 输入（创建/更新共用；业务默认值仍在 api.py 应用，与旧视图一致）

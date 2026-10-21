@@ -10,9 +10,9 @@ django_db（SQLite :memory:）+ 注入 mock detector（隔离真实 ADB）。
 
 import pytest
 
-from apps.device_pool.contracts import DeviceInfo
-from apps.device_pool.manager import DeviceError
-from apps.device_pool.models import Device
+from backend.apps.device_pool.contracts import DeviceInfo
+from backend.apps.device_pool.manager import DeviceError
+from backend.apps.device_pool.models import Device
 
 
 @pytest.mark.integration

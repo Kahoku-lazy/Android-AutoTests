@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import pytest
 
-from apps.ai_assistant.models import AIAgent
-from apps.task_list.models import Task
-from models.constants import AgentStatus, MessageRole, TaskStatus
+from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.task_list.models import Task
+from backend.models.constants import AgentStatus, MessageRole, TaskStatus
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 

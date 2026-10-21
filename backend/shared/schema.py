@@ -14,9 +14,9 @@ from drf_spectacular.extensions import OpenApiAuthenticationExtension
 
 
 class JWTAuthenticationScheme(OpenApiAuthenticationExtension):
-    """`shared.auth.drf_auth.JWTAuthentication` → OpenAPI `http bearer` 方案。"""
+    """`backend.shared.auth.drf_auth.JWTAuthentication` → OpenAPI `http bearer` 方案。"""
 
-    target_class = "shared.auth.drf_auth.JWTAuthentication"
+    target_class = "backend.shared.auth.drf_auth.JWTAuthentication"
     name = "jwtAuth"
 
     def get_security_definition(self, auto_schema):

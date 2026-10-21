@@ -13,13 +13,13 @@ import pytest
 
 from django.utils import timezone
 
-from apps.device_pool.contracts import (
+from backend.apps.device_pool.contracts import (
     ConnectionType,
     DeviceStatus,
     LockReleaseReason,
     LockStatus,
 )
-from apps.device_pool.models import Device, DeviceLock
+from backend.apps.device_pool.models import Device, DeviceLock
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 

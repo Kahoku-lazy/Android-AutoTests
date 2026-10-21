@@ -11,9 +11,9 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from apps.case_manager import api as case_api
-from apps.case_manager import models as case_models
-from apps.case_manager import views_drf as case_views
+from backend.apps.case_manager import api as case_api
+from backend.apps.case_manager import models as case_models
+from backend.apps.case_manager import views_drf as case_views
 
 pytestmark = [pytest.mark.django_db, pytest.mark.api, pytest.mark.case_manager]
 

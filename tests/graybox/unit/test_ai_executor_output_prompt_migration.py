@@ -12,8 +12,10 @@ from __future__ import annotations
 import importlib
 
 # 迁移模块名以数字开头，只能用 importlib 按字符串路径导入
-migration = importlib.import_module("apps.ai_assistant.migrations.0047_executor_output_fields")
-seed = importlib.import_module("apps.ai_assistant.migrations.0038_aiagent_device_prompts")
+migration = importlib.import_module(
+    "backend.apps.ai_assistant.migrations.0047_executor_output_fields"
+)
+seed = importlib.import_module("backend.apps.ai_assistant.migrations.0038_aiagent_device_prompts")
 
 ADMIN_REWRITTEN_EXECUTOR = "## 角色\n你是执行模型。\n\n## 输出字段\n- result：结果\n"
 

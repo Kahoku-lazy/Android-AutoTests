@@ -16,8 +16,8 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.test import Client
 
-from apps.workflow.models import WorkflowPrototype
-from shared.auth.jwt_auth import create_access_token
+from backend.apps.workflow.models import WorkflowPrototype
+from backend.shared.auth.jwt_auth import create_access_token
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 

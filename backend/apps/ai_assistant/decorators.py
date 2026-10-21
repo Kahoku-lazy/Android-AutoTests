@@ -4,4 +4,4 @@ require_auth 为通用鉴权能力，已下沉 shared/auth/require_auth.py；此
 仅保本 App 内部兼容，跨 App 请直接 import shared.auth.require_auth。
 """
 
-from shared.auth.require_auth import require_auth  # noqa: F401
+from backend.shared.auth.require_auth import require_auth  # noqa: F401

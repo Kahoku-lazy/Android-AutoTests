@@ -10,8 +10,8 @@ import pytest
 from django.conf import settings
 from django.test import Client
 
-from shared.auth.drf_auth import JWTAuthentication
-from shared.auth.jwt_auth import get_config, verify_token
+from backend.shared.auth.drf_auth import JWTAuthentication
+from backend.shared.auth.jwt_auth import get_config, verify_token
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit, pytest.mark.auth]
 

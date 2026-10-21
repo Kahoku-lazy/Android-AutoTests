@@ -9,9 +9,9 @@ import pytest
 
 from django.contrib.auth import get_user_model
 
-from apps.ai_assistant.models import AIAgent
-from apps.dashboard.ai_usage import ai_usage_stats
-from apps.task_list.models import TaskUsageHourly
+from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.dashboard.ai_usage import ai_usage_stats
+from backend.apps.task_list.models import TaskUsageHourly
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 

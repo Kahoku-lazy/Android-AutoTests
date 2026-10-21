@@ -5,7 +5,7 @@ import logging
 from django.db import close_old_connections
 from django.http import JsonResponse
 
-from shared.auth.jwt_auth import verify_token
+from backend.shared.auth.jwt_auth import verify_token
 
 logger = logging.getLogger("gateway")
 

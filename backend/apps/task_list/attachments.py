@@ -132,7 +132,7 @@ def collect_task_files(configs: list, documents: list) -> list[PreparedUpload]:
 
 def store_flat_upload(filename: str, content: bytes) -> str:
     """把原件写成上传目录第一层的文件，返回相对文件名。"""
-    from apps.task_list.upload_cleanup import ensure_upload_dir
+    from backend.apps.task_list.upload_cleanup import ensure_upload_dir
 
     root = ensure_upload_dir()
     target = root / f"{uuid.uuid4().hex}_{_safe_name(filename)}"

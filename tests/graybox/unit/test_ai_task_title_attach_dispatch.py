@@ -11,12 +11,12 @@ import pytest
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from apps.ai_assistant import api as agent_api
-from apps.ai_assistant.models import AIAgent
-from apps.task_list import api
-from apps.task_list.attachments import AttachmentError, parse_task_attachment_bytes
-from apps.task_list.serializers import TaskSubmitInputSerializer
-from models.constants import AgentStatus, TaskStatus
+from backend.apps.ai_assistant import api as agent_api
+from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.task_list import api
+from backend.apps.task_list.attachments import AttachmentError, parse_task_attachment_bytes
+from backend.apps.task_list.serializers import TaskSubmitInputSerializer
+from backend.models.constants import AgentStatus, TaskStatus
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db(transaction=True)]
 
@@ -85,7 +85,7 @@ def test_dispatch_same_serial_queues(platform_agent):
     a = api.create_task(
         platform_agent, title="a", goal="g1", device_serial="DEV-A", device_label="PhoneA"
     )
-    with patch("apps.task_list.task_runner.spawn_task_thread") as spawn:
+    with patch("backend.apps.task_list.task_runner.spawn_task_thread") as spawn:
         started = api.dispatch_device("DEV-A")
         assert started is not None
         assert started.id == a.id
@@ -101,7 +101,7 @@ def test_dispatch_same_serial_queues(platform_agent):
 
 
 def test_dispatch_different_serial_parallel(platform_agent):
-    with patch("apps.task_list.task_runner.spawn_task_thread"):
+    with patch("backend.apps.task_list.task_runner.spawn_task_thread"):
         t1 = api.create_task(platform_agent, title="a", goal="g", device_serial="DEV-A")
         t2 = api.create_task(platform_agent, title="b", goal="g", device_serial="DEV-B")
         assert api.dispatch_device("DEV-A").id == t1.id
@@ -113,7 +113,7 @@ def test_dispatch_different_serial_parallel(platform_agent):
 
 
 def test_finalize_starts_next_pending(platform_agent):
-    with patch("apps.task_list.task_runner.spawn_task_thread") as spawn:
+    with patch("backend.apps.task_list.task_runner.spawn_task_thread") as spawn:
         first = api.create_task(platform_agent, title="1", goal="g", device_serial="DEV-A")
         second = api.create_task(platform_agent, title="2", goal="g", device_serial="DEV-A")
         api.dispatch_device("DEV-A")
@@ -131,7 +131,7 @@ def test_recover_orphaned_then_dispatch_pending(platform_agent):
     running = api.create_task(platform_agent, title="r", goal="g", device_serial="DEV-A")
     pending = api.create_task(platform_agent, title="p", goal="g", device_serial="DEV-A")
     api.start_task(running)
-    with patch("apps.task_list.task_runner.spawn_task_thread") as spawn:
+    with patch("backend.apps.task_list.task_runner.spawn_task_thread") as spawn:
         n = api.recover_orphaned_tasks()
         assert n == 1
         running.refresh_from_db()

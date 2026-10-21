@@ -21,7 +21,7 @@ from django.contrib.auth.models import User
 from django.test import Client
 from django.urls import get_resolver
 
-from shared.auth.jwt_auth import create_access_token
+from backend.shared.auth.jwt_auth import create_access_token
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 

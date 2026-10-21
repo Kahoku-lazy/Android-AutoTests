@@ -4,13 +4,13 @@
 避免改后端代码后手动 ``run.py restart backend``。
 
 用法（等价 ``python -m daphne ...``，额外带热重载）：
-    python run_daphne.py -p 8766 -b 0.0.0.0 config.asgi:application
+    python run_daphne.py -p 8766 -b 0.0.0.0 backend.config.asgi:application
 """
 
 import os
 import sys
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.config.settings")
 
 # autoreload 的父进程只做文件监控、不真正对外服务：标记出来，避免它在服务子进程之前
 # 占住设备日志端口（日志端口同一时刻只能有一个监听者）。子进程必须把这个标记摘掉，

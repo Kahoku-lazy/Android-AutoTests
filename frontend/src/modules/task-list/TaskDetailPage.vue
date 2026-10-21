@@ -162,7 +162,7 @@ function phaseClass(phase) {
     <div class="doc-body">
       <WorkbenchCrumbs
         back-to="/tasks"
-        back-label="返回列表"
+        back-label="返回任务清单"
         :items="[{ label: '任务清单', to: '/tasks' }, { label: '任务详情' }]"
       />
       <ErrorState :message="error" @retry="loadReport" />
@@ -179,7 +179,7 @@ function phaseClass(phase) {
     <div class="doc-body">
       <WorkbenchCrumbs
         back-to="/tasks"
-        back-label="返回列表"
+        back-label="返回任务清单"
         :items="[{ label: '任务清单', to: '/tasks' }, { label: task?.title || '任务详情' }]"
       />
 

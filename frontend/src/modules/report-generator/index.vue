@@ -4,7 +4,7 @@ import { useRouter } from "vue-router"
 import { animate, stagger } from "animejs"
 import AppCard from "@/shared/components/AppCard.vue"
 import AppTable from "@/shared/components/AppTable.vue"
-import AppTabs from "@/shared/components/AppTabs.vue"
+import FilterTabs from "@/shared/components/FilterTabs.vue"
 import { usePagination } from "@/shared/composables/usePagination"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import KpiCard from "@/shared/components/KpiCard.vue"
@@ -19,6 +19,8 @@ import {
   EMPTY_TEXT,
   PAGE_HEADER,
   PAGE_SIZE_OPTIONS,
+  STATUS_KEYS,
+  STATUS_TAB_LABELS,
   TABLE_COLUMNS,
 } from "./constants"
 
@@ -118,17 +120,42 @@ async function fetchReports() {
   })
 }
 
-const statusAppTabs = computed(() => [
-  { key: "all", label: `全部 (${runs.value.length})` },
-  { key: "completed", label: "已完成" },
-  { key: "failed", label: "失败" },
-  { key: "stopped", label: "已停止" },
-])
+/** 与 KPI 口径一致：completed 与历史 success 都算已完成。 */
+function isCompletedRun(run) {
+  return run.status === STATUS_KEYS.COMPLETED || run.status === "success"
+}
+
+const statusCounts = computed(() => {
+  const counts = {
+    [STATUS_KEYS.ALL]: runs.value.length,
+    [STATUS_KEYS.COMPLETED]: 0,
+    [STATUS_KEYS.FAILED]: 0,
+    [STATUS_KEYS.STOPPED]: 0,
+  }
+  for (const run of runs.value) {
+    if (isCompletedRun(run)) {
+      counts[STATUS_KEYS.COMPLETED] += 1
+    } else if (run.status === STATUS_KEYS.FAILED) {
+      counts[STATUS_KEYS.FAILED] += 1
+    } else if (run.status === STATUS_KEYS.STOPPED) {
+      counts[STATUS_KEYS.STOPPED] += 1
+    }
+  }
+  return counts
+})
+
+const statusFilterTabs = computed(() =>
+  [STATUS_KEYS.ALL, STATUS_KEYS.COMPLETED, STATUS_KEYS.FAILED, STATUS_KEYS.STOPPED].map((key) => ({
+    key,
+    label: STATUS_TAB_LABELS[key],
+    count: statusCounts.value[key],
+  })),
+)
 
 const filteredRuns = computed(() => {
-  if (activeFilter.value === "all") return runs.value
-  if (activeFilter.value === "completed") {
-    return runs.value.filter((r) => r.status === "completed" || r.status === "success")
+  if (activeFilter.value === STATUS_KEYS.ALL) return runs.value
+  if (activeFilter.value === STATUS_KEYS.COMPLETED) {
+    return runs.value.filter(isCompletedRun)
   }
   return runs.value.filter((r) => r.status === activeFilter.value)
 })
@@ -296,99 +323,95 @@ function openTaskReport(row) {
 
       <!-- 测试报告 -->
       <section class="doc-section report-table-section">
-        <div class="doc-section__header">
+        <div class="doc-section__header report-table-section__header">
           <h3 class="doc-section__title">测试报告 <span class="doc-tag">Reports</span></h3>
+          <FilterTabs class="report-status-tabs" :tabs="statusFilterTabs" v-model="activeFilter" />
         </div>
         <ErrorState v-if="error && !loading" :message="error" @retry="fetchReports" />
-        <AppTabs class="report-tabs" :items="statusAppTabs" v-model="activeFilter">
-          <template v-for="tab in statusAppTabs" #[tab.key] :key="tab.key">
-            <AppCard class="table-card">
-              <div class="table-toolbar">
-                <span class="toolbar-label">显示行数</span>
-                <div class="page-size-btns">
-                  <button
-                    v-for="n in PAGE_SIZE_OPTIONS"
-                    :key="n"
-                    type="button"
-                    class="page-size-btn"
-                    :class="{ active: pageSize === n }"
-                    @click="setPageSize(n)"
-                  >
-                    {{ n }}
-                  </button>
-                </div>
-                <span v-if="filteredRuns.length > 0" class="page-info"
-                  >第 {{ currentPage }} / {{ totalPages }} 页 · 共
-                  {{ filteredRuns.length }} 条</span
-                >
-                <div v-if="totalPages > 1" class="page-nav">
-                  <button
-                    class="page-nav-btn"
-                    :disabled="currentPage <= 1"
-                    @click="goPage(currentPage - 1)"
-                  >
-                    上一页
-                  </button>
-                  <button
-                    class="page-nav-btn"
-                    :disabled="currentPage >= totalPages"
-                    @click="goPage(currentPage + 1)"
-                  >
-                    下一页
-                  </button>
-                </div>
-              </div>
-              <AppTable
-                :columns="columns"
-                :data-source="pagedRuns"
-                row-key="run_id"
-                :striped="false"
-                :border="true"
-                :loading="loading"
-                :empty-text="EMPTY_TEXT.noData"
-                accent="var(--c-report)"
-                class="report-table report-table--flow"
-                @row-click="openTaskReport"
+        <AppCard class="table-card">
+          <div class="table-toolbar">
+            <span class="toolbar-label">显示行数</span>
+            <div class="page-size-btns">
+              <button
+                v-for="n in PAGE_SIZE_OPTIONS"
+                :key="n"
+                type="button"
+                class="page-size-btn"
+                :class="{ active: pageSize === n }"
+                @click="setPageSize(n)"
               >
-                <template #cell-run_id="{ record }">
-                  <code class="cell-run-id">{{ record.run_id }}</code>
-                </template>
+                {{ n }}
+              </button>
+            </div>
+            <span v-if="filteredRuns.length > 0" class="page-info"
+              >第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ filteredRuns.length }} 条</span
+            >
+            <div v-if="totalPages > 1" class="page-nav">
+              <button
+                class="page-nav-btn"
+                :disabled="currentPage <= 1"
+                @click="goPage(currentPage - 1)"
+              >
+                上一页
+              </button>
+              <button
+                class="page-nav-btn"
+                :disabled="currentPage >= totalPages"
+                @click="goPage(currentPage + 1)"
+              >
+                下一页
+              </button>
+            </div>
+          </div>
+          <AppTable
+            :columns="columns"
+            :data-source="pagedRuns"
+            row-key="run_id"
+            :striped="false"
+            :border="true"
+            :loading="loading"
+            :empty-text="EMPTY_TEXT.noData"
+            accent="var(--c-report)"
+            class="report-table report-table--flow"
+            @row-click="openTaskReport"
+          >
+            <template #cell-run_id="{ record }">
+              <code class="cell-run-id">{{ record.run_id }}</code>
+            </template>
 
-                <template #cell-device_serial="{ value }">
-                  <span class="cell-device">{{ value }}</span>
-                </template>
+            <template #cell-device_serial="{ value }">
+              <span class="cell-device">{{ value }}</span>
+            </template>
 
-                <template #cell-task_name="{ record }">
-                  <span class="cell-task-name">{{ record.task_name || "—" }}</span>
-                </template>
+            <template #cell-task_name="{ record }">
+              <span class="cell-task-name">{{ record.task_name || "—" }}</span>
+            </template>
 
-                <template #cell-creator="{ record }">
-                  <span class="cell-creator">{{ record.creator || "—" }}</span>
-                </template>
+            <template #cell-creator="{ record }">
+              <span class="cell-creator">{{ record.creator || "—" }}</span>
+            </template>
 
-                <!-- Status badge -->
-                <template #cell-status="{ record }">
-                  <span class="badge" :class="statusBadgeClass(record.status)">{{
-                    statusLabel(record.status)
-                  }}</span>
-                </template>
+            <!-- Status badge -->
+            <template #cell-status="{ record }">
+              <span class="badge" :class="statusBadgeClass(record.status)">{{
+                statusLabel(record.status)
+              }}</span>
+            </template>
 
-                <!-- Time -->
-                <template #cell-duration="{ value }">
-                  <span class="cell-duration">{{ value }}</span>
-                </template>
-                <template #cell-started_at="{ record }">
-                  <span class="cell-time">{{ formatTime(record.started_at) }}</span>
-                </template>
+            <!-- Time -->
+            <template #cell-duration="{ value }">
+              <span class="cell-duration">{{ value }}</span>
+            </template>
+            <template #cell-started_at="{ record }">
+              <span class="cell-time">{{ formatTime(record.started_at) }}</span>
+            </template>
 
-                <!-- Empty state -->
-                <template #empty>
-                  <EmptyState icon="📋" :text="EMPTY_TEXT.noRecords" :hint="EMPTY_TEXT.hint" />
-                </template>
-              </AppTable>
-            </AppCard>
-          </template>
-        </AppTabs>
+            <!-- Empty state -->
+            <template #empty>
+              <EmptyState icon="📋" :text="EMPTY_TEXT.noRecords" :hint="EMPTY_TEXT.hint" />
+            </template>
+          </AppTable>
+        </AppCard>
       </section>
     </div>
   </div>
@@ -440,8 +463,13 @@ function openTaskReport(row) {
   padding: 0;
 }
 .report-workbench .report-table-section .doc-section__header {
-  padding: var(--app-space-sm) var(--app-space-md) 0;
+  padding: var(--app-space-md);
   margin-bottom: 0;
+  align-items: center;
+  gap: var(--app-space-md);
+}
+.report-status-tabs {
+  flex: 0 1 auto;
 }
 
 /* KPI 网格 — 渲染由 shared/KpiCard.vue 接管 */
@@ -596,49 +624,6 @@ function openTaskReport(row) {
 }
 
 /* 报告表格 */
-.report-tabs {
-  flex: 1 1 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-.report-tabs :deep(.el-tabs__header) {
-  margin-bottom: 0;
-  padding: 0 var(--app-space-md);
-}
-.report-tabs :deep(.el-tabs__nav) {
-  border: none !important;
-  display: flex;
-  gap: var(--app-space-xs);
-}
-.report-tabs :deep(.el-tabs__item) {
-  padding: 5px 14px;
-  font-size: var(--app-size-xs);
-  font-weight: 700;
-  border-radius: var(--app-radius-sm);
-  border: 2px solid transparent;
-  color: var(--app-text-secondary);
-  height: auto;
-  line-height: 1.4;
-}
-.report-tabs :deep(.el-tabs__item:hover) {
-  color: var(--ink);
-}
-.report-tabs :deep(.el-tabs__item.is-active) {
-  color: var(--ink);
-  background: var(--c-report);
-  border-color: var(--ink);
-}
-.report-tabs :deep(.el-tabs__active-bar) {
-  display: none;
-}
-.report-tabs :deep(.el-tabs__content) {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 12px 0 0;
-}
 .table-card {
   background: var(--app-bg-card);
   border: 2.5px solid var(--c-report);

@@ -53,7 +53,7 @@ export const STATUS_KEYS = {
   STOPPED: "stopped",
 }
 
-// ── 状态筛选 Tabs（label 不含动态计数，由 computed 拼接） ──
+// ── 状态筛选项（count 由页面按当前查询结果计算） ──
 export const STATUS_TAB_LABELS = {
   [STATUS_KEYS.ALL]: "全部",
   [STATUS_KEYS.COMPLETED]: "已完成",

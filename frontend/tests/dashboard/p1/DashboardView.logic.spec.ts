@@ -6,7 +6,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises } from '@vue/test-utils'
 import { fetchDashboardStats, fetchRecentActivities } from '@/modules/dashboard/api'
-import { useDashboardView } from '@/modules/dashboard/DashboardView.logic'
+import { useDashboardView, toMillions } from '@/modules/dashboard/DashboardView.logic'
 import { mountComposable } from '../../helpers/mountComposable'
 import type { DashboardRawData } from '@/shared/types/dashboard'
 
@@ -48,6 +48,11 @@ function makeRaw(): DashboardRawData {
       execution: { labels: [], success: [], failed: [] },
       ai_tokens: { labels: [], total_tokens: [], cache_tokens: [] },
       deepseek_cost: { labels: [], cost: [] },
+      today_usage: {
+        tokens: [5, 10, ...Array<number | null>(22).fill(null)],
+        cost: [0.0001, 0.0002, ...Array<number | null>(22).fill(null)],
+        current: { hour: 3.5, tokens: 30, cost: 0.0003 },
+      },
     },
     execution_summary: { passed: 0, failed: 0 },
     recent_tasks: [],
@@ -115,5 +120,40 @@ describe('[P1] useDashboardView（编排）', () => {
   it('暴露展示配置：页头', async () => {
     const result = await mountView()
     expect(result.PAGE_HEADER.title).toBe('仪表盘')
+  })
+
+  it('toMillions：token 按百万换算并保留 2 位小数', () => {
+    expect(toMillions(12_345_678)).toBe(12.35)
+    expect(toMillions(0)).toBe(0)
+  })
+
+  it('todayUsageSeries：token 走左轴、费用走右轴，逐小时点只到当前时刻', async () => {
+    const result = await mountView()
+
+    expect(result.todayUsageChart.value.tokens).toHaveLength(24)
+    expect(result.todayUsageSeries.value).toEqual([
+      {
+        name: 'Token 消耗',
+        data: [
+          [1, 5],
+          [2, 10],
+          [3.5, 30],
+        ],
+        color: '#4ECDC4',
+        axisIndex: 0,
+        unit: 'token',
+      },
+      {
+        name: '费用',
+        data: [
+          [1, 0.0001],
+          [2, 0.0002],
+          [3.5, 0.0003],
+        ],
+        color: '#F7C948',
+        axisIndex: 1,
+        unit: 'cost',
+      },
+    ])
   })
 })

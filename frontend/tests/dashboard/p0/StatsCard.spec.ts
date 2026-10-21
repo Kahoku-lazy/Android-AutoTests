@@ -57,6 +57,12 @@ describe('[P0] StatsCard', () => {
     expect(wrapper.find('.kpi-card__desc').text()).toBe('核心指标实时更新')
   })
 
+  it('显式 desc：渲染该文案，不出现缺省文案', () => {
+    const wrapper = mountCard({ desc: 'DeepSeek' })
+    expect(wrapper.find('.kpi-card__desc').text()).toBe('DeepSeek')
+    expect(wrapper.text()).not.toContain('核心指标实时更新')
+  })
+
   it('loading=true：显示骨架屏，不显示数值', () => {
     const wrapper = mountCard({ value: 42, loading: true })
     expect(wrapper.find('[role="status"]').exists()).toBe(true)

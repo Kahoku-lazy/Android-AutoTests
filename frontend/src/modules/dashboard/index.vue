@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { useDashboardView, toMillions, toK } from "./DashboardView.logic"
-import { formatSignificant } from "@/shared/animations"
+import { useDashboardView, toMillions } from "./DashboardView.logic"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import StatsAppCard from "./components/StatsCard.vue"
@@ -8,6 +7,8 @@ import AppCard from "@/shared/components/AppCard.vue"
 import { sketchToneAt, sketchTiltAt } from "@/shared/helpers/sketchCard"
 import TrendBarChart from "./components/TrendBarChart.vue"
 import SeriesBarChart from "./components/SeriesBarChart.vue"
+import TodayUsageChart from "./components/TodayUsageChart.vue"
+import { useMidnightRefresh } from "./composables/useMidnightRefresh"
 import TaskResultPanel from "./components/TaskResultPanel.vue"
 import ActivityTimeline from "./components/ActivityTimeline.vue"
 import {
@@ -43,8 +44,11 @@ const {
   caseProjectCards,
   tokenSeries,
   costSeries,
-  roleBreakdown,
+  todayUsageSeries,
 } = useDashboardView()
+
+// 跨零点自动换天：刷新后「今日」系列与三张按日图都切到新的一天
+useMidnightRefresh(refreshData)
 </script>
 
 <template>
@@ -81,20 +85,6 @@ const {
               <p class="chapter-desc">核心入口指标 · 实时状态可点进模块</p>
             </div>
           </div>
-          <div class="chip-row">
-            <span class="chip chip--teal"
-              >设备 <b>{{ stats.devices.total }}</b></span
-            >
-            <span class="chip"
-              >智能体 <b>{{ stats.agents.total }}</b></span
-            >
-            <span class="chip chip--rose"
-              >任务 <b>{{ stats.runs.total }}</b></span
-            >
-            <span class="chip chip--yellow"
-              >工作流 <b>{{ stats.workflow.total }}</b></span
-            >
-          </div>
         </header>
         <div class="dashboard__stats-grid">
           <StatsAppCard
@@ -126,6 +116,17 @@ const {
             <template #icon><IconPlay :size="15" /></template>
           </StatsAppCard>
           <StatsAppCard
+            label="任务数量"
+            :value="stats.aiUsage.taskCount.total"
+            color="gray"
+            path="/tasks"
+            :show-enter="false"
+            :loading="loading"
+            :desc="`今日 ${stats.aiUsage.taskCount.today.toLocaleString()}`"
+          >
+            <template #icon><IconBrain :size="15" /></template>
+          </StatsAppCard>
+          <StatsAppCard
             label="工作流"
             :value="stats.workflow.total"
             color="pale"
@@ -148,100 +149,100 @@ const {
               <p class="chapter-desc">Token · 缓存 · DeepSeek 费用</p>
             </div>
           </div>
-          <div class="chip-row">
-            <span class="chip chip--violet">角色·累计 {{ roleBreakdown.total }}</span>
-            <span class="chip chip--violet">角色·今日 {{ roleBreakdown.today }}</span>
-          </div>
         </header>
-        <div class="dashboard__stats-grid">
-          <StatsAppCard
-            label="任务数量"
-            :value="stats.aiUsage.taskCount.total"
-            color="gray"
-            path="/ai-assistant"
-            :show-enter="false"
-            :loading="loading"
-            :desc="`今日 ${stats.aiUsage.taskCount.today.toLocaleString()}`"
-          >
-            <template #icon><IconBrain :size="15" /></template>
-          </StatsAppCard>
-          <StatsAppCard
-            label="累计 Token"
-            :value="toMillions(stats.aiUsage.totalTokens.total)"
-            suffix="M"
-            :decimals="2"
-            color="sage"
-            path="/ai-assistant"
-            :show-enter="false"
-            :loading="loading"
-            :desc="`今日 ${(stats.aiUsage.totalTokens.today / 1000000).toFixed(2)}M`"
-          >
-            <template #icon><IconTrendingUp :size="15" /></template>
-          </StatsAppCard>
-          <StatsAppCard
-            label="缓存命中率"
-            :value="stats.aiUsage.cacheHitRate.total"
-            suffix="%"
-            :decimals="1"
-            color="deep"
-            path="/ai-assistant"
-            :show-enter="false"
-            :loading="loading"
-            :desc="`今日 ${stats.aiUsage.cacheHitRate.today}%`"
-          >
-            <template #icon><IconTarget :size="15" /></template>
-          </StatsAppCard>
-          <StatsAppCard
-            label="平均每任务 Token"
-            :value="toK(stats.aiUsage.avgTokensPerTask.total)"
-            suffix="K"
-            :decimals="1"
-            color="cream"
-            path="/ai-assistant"
-            :show-enter="false"
-            :loading="loading"
-            :desc="`今日 ${(stats.aiUsage.avgTokensPerTask.today / 1000).toFixed(1)}K`"
-          >
-            <template #icon><IconLayers :size="15" /></template>
-          </StatsAppCard>
-          <StatsAppCard
-            label="DeepSeek 费用"
-            :value="stats.aiUsage.deepseekCost.total"
-            suffix=" 元"
-            :significant-digits="3"
-            color="dust"
-            path="/ai-assistant"
-            :show-enter="false"
-            :loading="loading"
-            :desc="`今日 ${formatSignificant(stats.aiUsage.deepseekCost.today, 3)} 元`"
-          >
-            <template #icon><IconZap :size="15" /></template>
-          </StatsAppCard>
-        </div>
-        <div v-if="stats.aiUsage.agents.length" class="agent-usage-list">
-          <AppCard
-            v-for="(agent, index) in stats.aiUsage.agents"
-            :key="agent.id"
-            class="agent-usage-card"
-            :tone="sketchToneAt(index)"
-            :tilt="sketchTiltAt(index)"
-          >
-            <h4 class="agent-usage-card__name">{{ agent.name || "智能体" }}</h4>
-            <ul class="agent-usage-card__stats">
-              <li>
-                <span>缓存命中</span><b>{{ agent.cache_hit_tokens.toLocaleString() }}</b>
-              </li>
-              <li>
-                <span>输入</span><b>{{ agent.input_tokens.toLocaleString() }}</b>
-              </li>
-              <li>
-                <span>输出</span><b>{{ agent.output_tokens.toLocaleString() }}</b>
-              </li>
-              <li>
-                <span>总费用</span><b>{{ agent.cost_total }} 元</b>
-              </li>
-            </ul>
-          </AppCard>
+        <div class="ch-ai__body" :class="{ 'ch-ai__body--solo': !stats.aiUsage.agents.length }">
+          <div class="ai-usage-kpis">
+            <StatsAppCard
+              label="累计用量"
+              :value="toMillions(stats.aiUsage.totalTokens.total)"
+              suffix="M"
+              :decimals="2"
+              color="sage"
+              path="/ai-assistant"
+              :show-enter="false"
+              :loading="loading"
+              desc="DeepSeek"
+            >
+              <template #icon><IconTrendingUp :size="15" /></template>
+            </StatsAppCard>
+            <StatsAppCard
+              label="当天用量"
+              :value="toMillions(stats.aiUsage.totalTokens.today)"
+              suffix="M"
+              :decimals="2"
+              color="cream"
+              path="/ai-assistant"
+              :show-enter="false"
+              :loading="loading"
+              desc="DeepSeek"
+            >
+              <template #icon><IconLayers :size="15" /></template>
+            </StatsAppCard>
+            <StatsAppCard
+              label="缓存命中率"
+              :value="stats.aiUsage.cacheHitRate.total"
+              suffix="%"
+              :decimals="1"
+              color="deep"
+              path="/ai-assistant"
+              :show-enter="false"
+              :loading="loading"
+              desc="DeepSeek"
+            >
+              <template #icon><IconTarget :size="15" /></template>
+            </StatsAppCard>
+            <StatsAppCard
+              label="总费用"
+              :value="stats.aiUsage.deepseekCost.total"
+              suffix=" 元"
+              :significant-digits="3"
+              color="dust"
+              path="/ai-assistant"
+              :show-enter="false"
+              :loading="loading"
+              desc="DeepSeek"
+            >
+              <template #icon><IconZap :size="15" /></template>
+            </StatsAppCard>
+            <StatsAppCard
+              label="当天费用"
+              :value="stats.aiUsage.deepseekCost.today"
+              suffix=" 元"
+              :significant-digits="3"
+              color="dust"
+              path="/ai-assistant"
+              :show-enter="false"
+              :loading="loading"
+              desc="DeepSeek"
+            >
+              <template #icon><IconClock :size="15" /></template>
+            </StatsAppCard>
+          </div>
+          <div v-if="stats.aiUsage.agents.length" class="agent-usage-list">
+            <AppCard
+              v-for="(agent, index) in stats.aiUsage.agents"
+              :key="agent.id"
+              class="agent-usage-card"
+              :tone="sketchToneAt(index)"
+              :tilt="sketchTiltAt(index)"
+            >
+              <h4 class="agent-usage-card__name">{{ agent.name || "智能体" }}</h4>
+              <ul class="agent-usage-card__stats">
+                <li>
+                  <span>缓存命中</span><b>{{ agent.cache_hit_tokens.toLocaleString() }}</b>
+                </li>
+                <li>
+                  <span>输入</span><b>{{ agent.input_tokens.toLocaleString() }}</b>
+                </li>
+                <li>
+                  <span>输出</span><b>{{ agent.output_tokens.toLocaleString() }}</b>
+                </li>
+                <li>
+                  <span>总费用</span><b>{{ agent.cost_total }} 元</b>
+                </li>
+              </ul>
+            </AppCard>
+          </div>
         </div>
       </section>
 
@@ -296,7 +297,7 @@ const {
             <div>
               <div class="chapter-eyebrow">Trends &amp; Activity</div>
               <h3 class="chapter-title"><span class="marker">趋势与动态</span></h3>
-              <p class="chapter-desc">近 12 日任务卡 · Token · 费用 · 活动流</p>
+              <p class="chapter-desc">近 7 日任务卡 · Token · 费用 · 今日进度 · 活动流</p>
             </div>
           </div>
         </header>
@@ -319,6 +320,12 @@ const {
           <AppCard class="trends-chart-card" :tone="sketchToneAt(3)" :tilt="sketchTiltAt(3)">
             <div class="trends-tasks-card__title">每日 DeepSeek 费用（元）</div>
             <SeriesBarChart :labels="deepseekCostChart.labels" :series="costSeries" />
+          </AppCard>
+        </div>
+        <div class="dashboard__trends dashboard__trends--single">
+          <AppCard class="trends-chart-card" :tone="sketchToneAt(4)" :tilt="sketchTiltAt(4)">
+            <div class="trends-tasks-card__title">今日 Token 与费用（逐小时）</div>
+            <TodayUsageChart :series="todayUsageSeries" />
           </AppCard>
         </div>
 
@@ -344,9 +351,25 @@ const {
 <style scoped>
 .agent-usage-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: 1fr;
   gap: var(--app-space-md);
-  margin-top: var(--app-space-md);
+  margin-top: 0;
+}
+
+@media (max-width: 1100px) {
+  .agent-usage-list {
+    margin-top: var(--app-space-md);
+  }
+}
+
+.agent-usage-card {
+  height: 100%;
+}
+
+.agent-usage-card :deep(.el-card__body) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .agent-usage-card__name {
@@ -355,8 +378,10 @@ const {
 }
 
 .agent-usage-card__stats {
+  flex: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
+  align-content: center;
   gap: var(--app-space-sm);
   margin: 0;
   padding: 0;

@@ -78,6 +78,27 @@ export interface DeepSeekCostChart {
   cost: number[]
 }
 
+/** 进行中的那一小时：hour 为当前时刻（0–24） */
+export interface TodayUsageCurrent {
+  hour: number
+  tokens: number
+  cost: number
+}
+
+/** 当天逐小时用量：24 项，未走完/未开始的小时为 null，进行中小时在 current */
+export interface TodayUsageChart {
+  tokens: (number | null)[]
+  cost: (number | null)[]
+  current: TodayUsageCurrent | null
+}
+
+/** GET /api/dashboard/stats/ charts.today_usage 原始字段 */
+export interface TodayUsageChartRaw {
+  tokens: (number | null)[]
+  cost: (number | null)[]
+  current?: TodayUsageCurrent | null
+}
+
 /** GET /api/dashboard/stats/ charts.ai_tokens 原始 snake_case 字段 */
 export interface AiTokenChartRaw {
   labels: string[]
@@ -147,6 +168,8 @@ export interface DashboardRawData {
     execution: ExecutionChart
     ai_tokens: AiTokenChartRaw
     deepseek_cost: DeepSeekCostChartRaw
+    /** 旧版接口无此字段时按空序列处理 */
+    today_usage?: TodayUsageChartRaw
   }
   execution_summary: ExecutionSummary
   recent_tasks: RecentTask[]

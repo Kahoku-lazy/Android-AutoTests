@@ -160,7 +160,7 @@ def ai_usage_stats(user_id):
     }
 
 
-def ai_daily_series(user_id, days=12):
+def ai_daily_series(user_id, days=7):
     """近 N 天逐日：总 token、缓存命中 token、DeepSeek 费用。
 
     返回 {labels, total_tokens, cache_tokens, deepseek_cost}，labels 与执行趋势同口径。
@@ -207,6 +207,69 @@ def ai_daily_series(user_id, days=12):
     }
 
 
+# ── 当日用量 ──
+# 数据按小时落桶（库里就是小时粒度）；横轴刻度每 4 小时一个，由前端按 0–24 渲染。
+_HOURS_PER_DAY = 24
+
+
+def ai_today_usage_slots(user_id, now=None):
+    """当天逐小时的 token 与费用消耗（按时间进度出数）。
+
+    `tokens[h]` 是第 h 小时（[h:00, h+1:00)）的用量：该小时走完才给值，
+    没走完或还没开始时为 None。进行中的那一小时由 `current` 单独返回，
+    MUST NOT 提前出数。
+    """
+    now = now or timezone.now()
+    now_hour = min(24.0, round(now.hour + now.minute / 60 + now.second / 3600, 2))
+    today = now.date()
+    hourly_tokens = [0] * _HOURS_PER_DAY
+    hourly_cost = [Decimal(0)] * _HOURS_PER_DAY
+    try:
+        rows = (
+            _hourly_qs([agent.id for agent in _agents(user_id)])
+            .filter(stat_date=today)
+            .values("stat_hour")
+            .annotate(
+                inp=Sum("input_tokens"),
+                out=Sum("output_tokens"),
+                spent=Sum("cost_total"),
+            )
+        )
+        for row in rows:
+            hour = int(row["stat_hour"] or 0)
+            if not 0 <= hour < _HOURS_PER_DAY:
+                # stat_hour 脏数据（<0 或 >23）丢弃，不让分桶越界
+                continue
+            hourly_tokens[hour] += int(row["inp"] or 0) + int(row["out"] or 0)
+            hourly_cost[hour] += Decimal(row["spent"] or 0)
+    except (OperationalError, ProgrammingError):
+        # 统计表缺失或迁移未完成时返回空序列，不阻断仪表盘
+        pass
+
+    tokens = []
+    cost = []
+    current = None
+    for hour in range(_HOURS_PER_DAY):
+        if hour + 1 <= now_hour:
+            tokens.append(hourly_tokens[hour])
+            cost.append(_money(hourly_cost[hour]))
+            continue
+        tokens.append(None)
+        cost.append(None)
+        if hour < now_hour < hour + 1:
+            current = {
+                "hour": now_hour,
+                "tokens": hourly_tokens[hour],
+                "cost": _money(hourly_cost[hour]),
+            }
+
+    return {
+        "tokens": tokens,
+        "cost": cost,
+        "current": current,
+    }
+
+
 # 助手任务卡：成功 / 失败（与前端 TaskBoard taskStatusTone 对齐）
 _TASK_SUCCESS = ("completed", "success")
 _TASK_FAILED = ("failed",)
@@ -235,7 +298,7 @@ def _day_labels(days: int):
     return first_day, labels
 
 
-def ai_task_daily_execution(user_id, days=12):
+def ai_task_daily_execution(user_id, days=7):
     """近 N 日按 created_at 分桶的助手任务卡成功 / 失败柱。"""
     first_day, labels = _day_labels(days)
     success = [0] * days

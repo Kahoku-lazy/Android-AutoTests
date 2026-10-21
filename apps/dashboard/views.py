@@ -16,6 +16,7 @@ from apps.dashboard.ai_usage import (
     ai_recent_tasks,
     ai_task_daily_execution,
     ai_task_execution_summary,
+    ai_today_usage_slots,
     ai_usage_stats,
     platform_activities,
 )
@@ -132,6 +133,7 @@ class DashboardStatsAPIView(APIView):
                         "labels": daily_ai["labels"],
                         "cost": daily_ai["deepseek_cost"],
                     },
+                    "today_usage": ai_today_usage_slots(user_id),
                 },
                 "execution_summary": ai_task_execution_summary(user_id),
                 "recent_tasks": ai_recent_tasks(user_id),

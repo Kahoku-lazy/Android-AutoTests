@@ -4,6 +4,8 @@ import { computed, onMounted, type ComputedRef } from "vue"
 
 import { useDashboardStats, type UseDashboardStatsReturn } from "./composables/useDashboardStats"
 
+import { toHourlyPoints, type HourlyPoint } from "./helpers/hourlyPoints"
+
 import type { CaseProjectCardDisplay } from "@/shared/types/dashboard"
 
 import { IconLayers } from "@/shared/icons/index"
@@ -24,18 +26,12 @@ export const PAGE_HEADER = {
 
 const PROJECT_CARD_COLORS = ["deep", "sage", "cream", "dust"] as const
 
-// ── 数值格式化助手（单位换算：累计 token → 百万 M；平均每任务 token → 千 K）──
+// ── 数值格式化助手（单位换算：token → 百万 M）──
 
-/** 累计 token 展示数值：百万（M）单位，保留 2 位小数（供 StatsCard value 计数用） */
+/** token 展示数值：百万（M）单位，保留 2 位小数（供 StatsCard value 计数用） */
 
 export function toMillions(n: number): number {
   return Number((n / 1_000_000).toFixed(2))
-}
-
-/** 平均每任务 token 展示数值：千（K）单位，保留 1 位小数 */
-
-export function toK(n: number): number {
-  return Number((n / 1_000).toFixed(1))
 }
 
 // ── 返回类型接口 ──
@@ -48,6 +44,20 @@ interface SeriesDisplay {
   color: string
 }
 
+/** 今日 4 小时槽系列：token 走左轴，费用走右轴，点为 [小时, 数值] */
+export interface TodayUsageSeriesDisplay {
+  name: string
+
+  data: HourlyPoint[]
+
+  color: string
+
+  /** 0 = 左轴（token）· 1 = 右轴（费用，元） */
+  axisIndex: 0 | 1
+
+  unit: "token" | "cost"
+}
+
 export interface DashboardViewState extends UseDashboardStatsReturn {
   PAGE_HEADER: typeof PAGE_HEADER
 
@@ -57,7 +67,7 @@ export interface DashboardViewState extends UseDashboardStatsReturn {
 
   costSeries: ComputedRef<SeriesDisplay[]>
 
-  roleBreakdown: ComputedRef<{ today: string; total: string }>
+  todayUsageSeries: ComputedRef<TodayUsageSeriesDisplay[]>
 }
 
 // ── Composable ──
@@ -93,29 +103,27 @@ export function useDashboardView(): DashboardViewState {
     { name: "费用", data: statsComposable.deepseekCostChart.value.cost, color: "#F7C948" },
   ])
 
-  const ROLE_LABELS: Record<string, string> = {
-    planner: "规划",
-    executor: "执行",
-    verifier: "验证",
-  }
+  // 今日用量折线：token 与费用同色于各自按日图（#4ECDC4=--c-case、#F7C948=--c-dashboard）
+  const todayUsageSeries = computed<TodayUsageSeriesDisplay[]>(() => {
+    const chart = statsComposable.todayUsageChart.value
+    const current = chart.current
+    return [
+      {
+        name: "Token 消耗",
+        data: toHourlyPoints(chart.tokens, current?.tokens, current?.hour),
+        color: "#4ECDC4",
+        axisIndex: 0,
+        unit: "token",
+      },
 
-  const roleBreakdown = computed(() => {
-    const byRole = statsComposable.stats.value.aiUsage.byRole ?? { today: {}, total: {} }
-
-    const fmt = (metric: Record<string, { input_tokens?: number }>) =>
-      ["planner", "executor", "verifier"]
-
-        .map((role) => {
-          const v = metric[role]
-
-          const m = ((v?.input_tokens ?? 0) / 1000000).toFixed(2)
-
-          return `${ROLE_LABELS[role] || role} ${m}M`
-        })
-
-        .join(" · ")
-
-    return { today: fmt(byRole.today ?? {}), total: fmt(byRole.total ?? {}) }
+      {
+        name: "费用",
+        data: toHourlyPoints(chart.cost, current?.cost, current?.hour),
+        color: "#F7C948",
+        axisIndex: 1,
+        unit: "cost",
+      },
+    ]
   })
 
   onMounted(() => {
@@ -133,6 +141,6 @@ export function useDashboardView(): DashboardViewState {
 
     costSeries,
 
-    roleBreakdown,
+    todayUsageSeries,
   }
 }

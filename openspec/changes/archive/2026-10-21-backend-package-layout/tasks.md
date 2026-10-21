@@ -15,7 +15,7 @@
 - [x] 3.1 将 `backend/` 内所有 `from apps|config|gateway|shared|models` / `import ...` 改为 `backend.` 前缀；相对 import（`from .` / `from ..`）不动；验证：`Select-String -Path backend -Include *.py -Recurse -Pattern '^\s*(from|import)\s+(apps|config|gateway|shared|models)\b'` 命中 0。
 - [x] 3.2 将 `tests/` 内所有五个顶层前缀改为 `backend.*`，`engines` 相关测试不动；验证：`Select-String -Path tests -Include *.py -Recurse -Pattern '^\s*(from|import)\s+(apps|config|gateway|shared|models)\b'` 命中 0。
 - [x] 3.3 将 `utils/` 内对五个顶层包的 import / settings 字符串改为 `backend.*`；验证：`Select-String -Path utils -Include *.py -Recurse -Pattern '^\s*(from|import)\s+(apps|config|gateway|shared|models)\b'` 命中 0。
-- [ ] 3.4 处理字符串引用：`settings.py` 的 `INSTALLED_APPS` / `MIDDLEWARE` / DRF 类、`config/urls.py` 的 `include()`、`shared/schema.py` 的 `target_class`、测试中的 `patch("apps...")` 与 `importlib.import_module("apps...")`；验证：全仓 `Select-String -Pattern '["''](apps|config|gateway|shared|models)\.'` 的剩余命中逐条说明（只允许历史归档/文档中的当时路径）。
+- [x] 3.4 处理字符串引用：`settings.py` 的 `INSTALLED_APPS` / `MIDDLEWARE` / DRF 类、`config/urls.py` 的 `include()`、`shared/schema.py` 的 `target_class`、测试中的 `patch("apps...")` 与 `importlib.import_module("apps...")`；验证：全仓 `Select-String -Pattern '["''](apps|config|gateway|shared|models)\.'` 的剩余命中逐条说明（只允许历史归档/文档中的当时路径）。
 - [x] 3.5 运行 `python -m ruff check --select I --fix backend tests utils` 统一 import 顺序；验证：`python -m ruff check --select I backend tests utils` 退出码 0，且 diff 只含 import 行。
 
 ## 4. Django 配置与入口
@@ -68,5 +68,5 @@
 - [x] 9.5 运行 `python utils/gen_arch_stats.py --check-boundaries` 与 `python utils/check_openapi_coverage.py`；验证：零违规、覆盖率与迁移前一致。
 - [x] 9.6 运行 `openspec validate 2026-10-21-backend-package-layout --strict`；验证：通过。
 - [x] 9.7 逐文件 `git add` 本变更文件（禁止 `git add -A`），按「目录移动 / import 与配置 / 工具链与文档」拆分提交；验证：`git status --short` 中无并发会话文件，`git log --stat` 与本变更 Impact 一致。
-- [ ] 9.8 推送 `Kahoku` 并确认 `ci-phase1.yml` 的 6 个 job 全绿；验证：`backend-check` / `frontend-check` / `static-checks` / `security-scan` / `boundary-check` / `frontend-quality` 全部 success；失败项当场修复后重推。
-- [ ] 9.9 CI 全绿后执行 `openspec archive 2026-10-21-backend-package-layout`，再跑 `openspec validate --all --strict`；验证：归档成功，全量 spec 校验通过。
+- [x] 9.8 推送 `Kahoku` 并确认 `ci-phase1.yml` 的 6 个 job 全绿；验证：`backend-check` / `frontend-check` / `static-checks` / `security-scan` / `boundary-check` / `frontend-quality` 全部 success；失败项当场修复后重推。
+- [x] 9.9 CI 全绿后执行 `openspec archive 2026-10-21-backend-package-layout`，再跑 `openspec validate --all --strict`；验证：归档成功，全量 spec 校验通过。

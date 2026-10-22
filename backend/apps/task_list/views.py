@@ -1,5 +1,8 @@
 """task-list views — task submit/list/detail/rerun/cancel/delete/clear."""
 
+import base64
+
+from django.http import HttpResponse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
@@ -179,6 +182,32 @@ class TaskReportAPIView(APIView):
         if payload is None:
             raise NotFound("任务不存在")
         return Response(payload)
+
+
+class TaskMediaAPIView(APIView):
+    """GET /api/tasks/{task_id}/media/{media_id} — 截图缩略图字节（JPEG，非信封）。"""
+
+    @extend_schema(
+        tags=["tasks"],
+        operation_id="task_media",
+        responses={(200, "image/jpeg"): OpenApiTypes.BINARY},
+    )
+    def get(self, request, task_id: int, media_id: int):
+        user_id = getattr(request, "user_id", None)
+        media = api.get_task_media(user_id, task_id, media_id)
+        if media is None or not (media.thumb_b64 or "").strip():
+            raise NotFound("图片不存在")
+        etag = f'"{media.sha256}"'
+        if request.headers.get("If-None-Match") == etag:
+            response = HttpResponse(status=304)
+        else:
+            response = HttpResponse(
+                base64.b64decode(media.thumb_b64),
+                content_type=media.media_type or "image/jpeg",
+            )
+            response["ETag"] = etag
+        response["Cache-Control"] = "private, max-age=31536000, immutable"
+        return response
 
 
 class TaskDrainAPIView(APIView):

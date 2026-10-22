@@ -324,12 +324,9 @@ def _detail(event: TaskEvent, payload: dict) -> str:
     return ""
 
 
-def _thumb(event: TaskEvent) -> str:
-    media = event.media
-    if media is None or not media.thumb_b64:
-        return ""
-    kind = (media.media_type or "image/jpeg").split(";")[0]
-    return f"data:{kind};base64,{media.thumb_b64}"
+def _media_ref(event: TaskEvent) -> int | None:
+    """事件关联的截图编号。图片字节走 /api/tasks/{id}/media/{media_id}/。"""
+    return event.media_id
 
 
 def _item(event: TaskEvent, count: int) -> dict:
@@ -347,7 +344,7 @@ def _item(event: TaskEvent, count: int) -> dict:
         "role_name": event.role_name or "",
         "role_kind": event.role_kind or "",
         "model": event.model or "",
-        "thumb": _thumb(event) if count == 1 else "",
+        "media_id": _media_ref(event) if count == 1 else None,
     }
     if event.event_type == "ToolCallEndEvent":
         args = _args(payload)
@@ -635,7 +632,7 @@ def build_task_flow(user_id: str | None, task_id: str) -> dict | None:
     task = _visible_task(user_id, task_id)
     if task is None:
         return None
-    events = list(TaskEvent.objects.filter(task_id=task.id).select_related("media").order_by("seq"))
+    events = list(TaskEvent.objects.filter(task_id=task.id).order_by("seq"))
     rounds = _rounds(_grouped(events))
     return {
         "task": {

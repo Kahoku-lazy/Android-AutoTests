@@ -150,7 +150,7 @@ def test_skips_when_task_id_is_zero():
 
 def test_media_cap_and_cascade_delete():
     task = _task()
-    for index in range(40):
+    for index in range(api.TASK_MEDIA_LIMIT):
         saved = api.store_task_media(
             task.id,
             f"{index:064x}",

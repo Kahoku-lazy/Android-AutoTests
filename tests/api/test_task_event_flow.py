@@ -7,7 +7,7 @@ import pytest
 from django.contrib.auth import get_user_model
 
 from backend.apps.ai_assistant.models import AIAgent
-from backend.apps.task_list.models import Task, TaskAttachment, TaskEvent
+from backend.apps.task_list.models import Task, TaskAttachment, TaskEvent, TaskMedia
 from backend.apps.task_list.task_reports import build_task_flow
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
@@ -224,3 +224,44 @@ def test_two_cases_keep_step_and_result():
     assert cases[1]["rounds"][0]["subject"] == "返回桌面"
     assert cases[1]["rounds"][1]["subject"] == "应用已关闭"
     assert cases[1]["rounds"][1]["verdict"] == {"passed": False, "message": "还在应用里"}
+
+
+def test_flow_reports_media_id_instead_of_inline_image():
+    """报告只给 media_id：不内联 base64、不带 thumb 字段。"""
+    import json
+
+    owner = get_user_model().objects.create_user(username="flow-owner-media", password="pass")
+    task = _task(owner)
+    media = TaskMedia.objects.create(
+        task=task,
+        sha256="b" * 64,
+        media_type="image/jpeg",
+        byte_size=3,
+        thumb_b64="AAA",
+    )
+    _event(task, 1, "ReplyStartEvent", "开始", step_seq=1)
+    TaskEvent.objects.create(
+        task=task,
+        seq=2,
+        event_type="ToolResultEndEvent",
+        phase="执行",
+        block_type="tool_result",
+        role_name="executor_role",
+        step_seq=1,
+        attempt=1,
+        payload={"tool_name": "screenshot_page", "status": "ok", "result": ""},
+        media=media,
+    )
+    _event(task, 3, "ReplyEndEvent", "结束", step_seq=1, payload={"finished_reason": "stop"})
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    items = [item for block in flow["rounds"][0]["blocks"] for item in block["items"]]
+    screenshot_item = next(item for item in items if item["event_type"] == "ToolResultEndEvent")
+
+    assert screenshot_item["media_id"] == media.id
+    assert "thumb" not in screenshot_item
+    dumped = json.dumps(flow, ensure_ascii=False)
+    assert "data:image" not in dumped
+    assert "AAA" not in dumped
+    plain_item = next(item for item in items if item["event_type"] == "ReplyStartEvent")
+    assert plain_item["media_id"] is None

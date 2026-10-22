@@ -5,7 +5,7 @@ import json
 from django.db import transaction
 from django.utils import timezone
 
-from backend.apps.ai_assistant.api import resolve_assistant_name
+from backend.apps.ai_assistant.api import filter_agents_for_user, resolve_assistant_name
 from backend.apps.ai_assistant.models import AIAgent
 from backend.apps.task_list.deepseek_billing import task_deepseek_cost
 from backend.apps.task_list.models import Task, TaskAttachment
@@ -36,10 +36,16 @@ __all__ = [
     "serialize_agent_task_detail",
     "dump_task_run_payload",
     "task_deepseek_cost",
+    "store_task_media",
+    "get_task_media",
 ]
 
 # 停机排空标志：进程内生效，重启后自然复位。置位后不再领取新的 pending 任务。
 _DRAINING = False
+
+# 每个任务最多保留的不同截图数。40 张对多用例任务不够（实测第 2 条用例起一张不剩），
+# 300 张覆盖 191 张截图的整轮任务；同画面按 sha256 去重，实际行数通常远小于截图次数。
+TASK_MEDIA_LIMIT = 300
 
 
 def begin_drain() -> None:
@@ -439,16 +445,26 @@ def insert_task_events(task_id: int, rows: list[dict]) -> None:
 
 
 def store_task_media(task_id: int, sha256: str, defaults: dict) -> int | None:
-    """按任务内 sha256 去重保存缩略图。超过 40 张且不是重复图时不存。"""
+    """按任务内 sha256 去重保存缩略图。超过上限且不是重复图时不存。"""
     from backend.apps.task_list.models import TaskMedia
 
     found = TaskMedia.objects.filter(task_id=task_id, sha256=sha256).first()
     if found is not None:
         return found.id
-    if TaskMedia.objects.filter(task_id=task_id).count() >= 40:
+    if TaskMedia.objects.filter(task_id=task_id).count() >= TASK_MEDIA_LIMIT:
         return None
     created = TaskMedia.objects.create(task_id=task_id, sha256=sha256, **defaults)
     return created.id
+
+
+def get_task_media(user_id: str | None, task_id: int, media_id: int):
+    """按可见性取一张截图缩略图；任务不可见或图片不属于该任务时返回 None。"""
+    from backend.apps.task_list.models import TaskMedia
+
+    if not user_id:
+        return None
+    agents = filter_agents_for_user(AIAgent.objects.all(), user_id)
+    return TaskMedia.objects.filter(task_id=task_id, id=media_id, task__agent__in=agents).first()
 
 
 def add_usage_hourly(slot: dict, delta: dict) -> None:

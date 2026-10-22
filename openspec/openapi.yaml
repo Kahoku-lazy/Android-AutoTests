@@ -1693,6 +1693,33 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/tasks/{task_id}/media/{media_id}/:
+    get:
+      operationId: task_media
+      description: GET /api/tasks/{task_id}/media/{media_id} — 截图缩略图字节（JPEG，非信封）。
+      parameters:
+      - in: path
+        name: media_id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+          description: ''
   /api/tasks/{task_id}/report/:
     get:
       operationId: task_flow_report

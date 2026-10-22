@@ -7,6 +7,7 @@ import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
 import { getTaskReport } from "./api/tasks"
+import TaskMediaThumb from "./components/TaskMediaThumb.vue"
 import { TASK_REPORT_HEADER_GRADIENT, TASK_REPORT_HEADER_ICON } from "./constants"
 
 const route = useRoute()
@@ -292,11 +293,10 @@ function phaseClass(phase) {
                         </span>
                       </div>
                       <p v-if="item.detail" class="flow-item__detail">{{ item.detail }}</p>
-                      <img
-                        v-if="item.thumb"
-                        class="flow-item__thumb"
-                        :src="item.thumb"
-                        alt="事件缩略图"
+                      <TaskMediaThumb
+                        v-if="item.media_id"
+                        :task-id="Number(taskId)"
+                        :media-id="item.media_id"
                       />
                     </div>
                   </li>

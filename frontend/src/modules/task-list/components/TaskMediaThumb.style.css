@@ -1,0 +1,20 @@
+.task-media-thumb {
+  display: block;
+  margin-top: var(--app-space-xs);
+}
+
+.task-media-thumb__image {
+  display: block;
+  max-width: 240px;
+  border: 2.5px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+}
+
+.task-media-thumb__placeholder {
+  display: block;
+  width: 240px;
+  height: 120px;
+  border: 2.5px dashed var(--ink);
+  border-radius: var(--app-radius-sm);
+  opacity: 0.35;
+}

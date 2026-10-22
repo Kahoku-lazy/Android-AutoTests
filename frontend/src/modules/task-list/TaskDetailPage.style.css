@@ -253,14 +253,6 @@
   color: var(--app-text-secondary);
 }
 
-.flow-item__thumb {
-  display: block;
-  max-width: 240px;
-  margin-top: var(--app-space-xs);
-  border: 2.5px solid var(--ink);
-  border-radius: var(--app-radius-sm);
-}
-
 .flow-missing {
   font-size: var(--app-size-sm);
 }

@@ -78,3 +78,11 @@ export async function getTaskReport(
   const { data } = await djangoClient.get(`/tasks/${taskId}/report/`)
   return data
 }
+
+/** 任务截图缩略图字节（JPEG blob；报告只给 media_id） */
+export async function getTaskMedia(taskId: number, mediaId: number): Promise<Blob> {
+  const { data } = await djangoClient.get<Blob>(`/tasks/${taskId}/media/${mediaId}/`, {
+    responseType: "blob",
+  })
+  return data
+}

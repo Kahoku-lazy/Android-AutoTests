@@ -22,7 +22,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-# 控制台输出统一 UTF-8：本脚本会打印 emoji（📝 / ✅ / 🔴）。
+# 控制台输出统一 UTF-8：本脚本会打印 emoji（📝 / ✅ / 🔴/❌）。
 # Windows 中文环境下 stdout 默认是 GBK，被管道/重定向捕获时 print 会抛
 # UnicodeEncodeError 并以退出码 1 结束——与「发现边界违规」无法区分，会让
 # CI 与 dsh-plugins/arch-gate（execFile 捕获 + passMarker "零违规"）误判失败。

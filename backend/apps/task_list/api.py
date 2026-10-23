@@ -43,10 +43,6 @@ __all__ = [
 # 停机排空标志：进程内生效，重启后自然复位。置位后不再领取新的 pending 任务。
 _DRAINING = False
 
-# 每个任务最多保留的不同截图数。40 张对多用例任务不够（实测第 2 条用例起一张不剩），
-# 300 张覆盖 191 张截图的整轮任务；同画面按 sha256 去重，实际行数通常远小于截图次数。
-TASK_MEDIA_LIMIT = 300
-
 
 def begin_drain() -> None:
     """置位停机排空标志：调用后 dispatch_device 不再领取新任务。"""
@@ -445,14 +441,12 @@ def insert_task_events(task_id: int, rows: list[dict]) -> None:
 
 
 def store_task_media(task_id: int, sha256: str, defaults: dict) -> int | None:
-    """按任务内 sha256 去重保存缩略图。超过上限且不是重复图时不存。"""
+    """按任务内 sha256 去重保存缩略图；不同图片不设张数上限。"""
     from backend.apps.task_list.models import TaskMedia
 
     found = TaskMedia.objects.filter(task_id=task_id, sha256=sha256).first()
     if found is not None:
         return found.id
-    if TaskMedia.objects.filter(task_id=task_id).count() >= TASK_MEDIA_LIMIT:
-        return None
     created = TaskMedia.objects.create(task_id=task_id, sha256=sha256, **defaults)
     return created.id
 

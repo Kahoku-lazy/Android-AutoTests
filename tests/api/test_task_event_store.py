@@ -148,16 +148,27 @@ def test_skips_when_task_id_is_zero():
     assert TaskUsageHourly.objects.count() == 0
 
 
-def test_media_cap_and_cascade_delete():
+def test_media_has_no_count_cap_and_cascade_delete():
     task = _task()
-    for index in range(api.TASK_MEDIA_LIMIT):
-        saved = api.store_task_media(
-            task.id,
-            f"{index:064x}",
-            {"media_type": "image/jpeg", "byte_size": 1, "thumb_b64": "aa"},
-        )
-        assert saved is not None
-    assert api.store_task_media(task.id, "f" * 64, {"media_type": "image/jpeg"}) is None
+    TaskMedia.objects.bulk_create(
+        [
+            TaskMedia(
+                task=task,
+                sha256=f"{index:064x}",
+                media_type="image/jpeg",
+                byte_size=1,
+                thumb_b64="aa",
+            )
+            for index in range(300)
+        ]
+    )
+    saved = api.store_task_media(
+        task.id,
+        "f" * 64,
+        {"media_type": "image/jpeg", "byte_size": 1, "thumb_b64": "aa"},
+    )
+    assert saved is not None
+    assert TaskMedia.objects.filter(task_id=task.id).count() == 301
     TaskEvent.objects.create(
         task=task,
         seq=1,

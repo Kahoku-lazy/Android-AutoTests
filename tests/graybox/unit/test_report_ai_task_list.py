@@ -43,15 +43,16 @@ def test_reports_empty_when_no_tasks(auth_client):
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] is True
-    assert body["runs"] == []
-    assert body["summary"]["total_runs"] == 0
-    assert body["summary"]["total_pass"] == 0
-    assert body["summary"]["total_fail"] == 0
-    assert body["summary"]["pass_rate"] == 0.0
-    assert body["trend"]["range_days"] == 7
-    assert body["trend"]["pass"] == [0] * 7
-    assert body["trend"]["fail"] == [0] * 7
-    assert body["trend"]["rate"] == [0] * 7
+    data = body["data"]
+    assert data["runs"] == []
+    assert data["summary"]["total_runs"] == 0
+    assert data["summary"]["total_pass"] == 0
+    assert data["summary"]["total_fail"] == 0
+    assert data["summary"]["pass_rate"] == 0.0
+    assert data["trend"]["range_days"] == 7
+    assert data["trend"]["pass"] == [0] * 7
+    assert data["trend"]["fail"] == [0] * 7
+    assert data["trend"]["rate"] == [0] * 7
 
 
 def test_reports_lists_visible_task_and_kpis(auth_client):
@@ -69,11 +70,11 @@ def test_reports_lists_visible_task_and_kpis(auth_client):
     )
     resp = client.get("/api/reports/", **headers)
     assert resp.status_code == 200
-    body = resp.json()
-    assert body["summary"]["total_runs"] == 1
-    assert body["summary"]["total_pass"] == 1
-    assert body["summary"]["total_fail"] == 0
-    row = body["runs"][0]
+    data = resp.json()["data"]
+    assert data["summary"]["total_runs"] == 1
+    assert data["summary"]["total_pass"] == 1
+    assert data["summary"]["total_fail"] == 0
+    row = data["runs"][0]
     assert row["run_id"] == str(task.id)
     assert row["task_name"] == "登录冒烟"
     assert row["device_serial"] == "Pixel"
@@ -94,11 +95,11 @@ def test_reports_pending_excluded_from_pass_fail(auth_client):
     Task.objects.create(agent=agent, title="ok", status="completed")
     Task.objects.create(agent=agent, title="ok-alias", status="success")
     Task.objects.create(agent=agent, title="bad", status="failed")
-    body = client.get("/api/reports/", **headers).json()
-    assert body["summary"]["total_runs"] == 4
-    assert body["summary"]["total_pass"] == 2
-    assert body["summary"]["total_fail"] == 1
-    assert body["summary"]["pass_rate"] == 66.7
+    data = client.get("/api/reports/", **headers).json()["data"]
+    assert data["summary"]["total_runs"] == 4
+    assert data["summary"]["total_pass"] == 2
+    assert data["summary"]["total_fail"] == 1
+    assert data["summary"]["pass_rate"] == 66.7
 
 
 def test_reports_device_falls_back_to_serial(auth_client):
@@ -111,5 +112,5 @@ def test_reports_device_falls_back_to_serial(auth_client):
         device_serial="ABC123",
         device_label="",
     )
-    row = client.get("/api/reports/", **headers).json()["runs"][0]
+    row = client.get("/api/reports/", **headers).json()["data"]["runs"][0]
     assert row["device_serial"] == "ABC123"

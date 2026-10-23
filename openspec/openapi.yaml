@@ -1720,6 +1720,33 @@ paths:
                 type: string
                 format: binary
           description: ''
+  /api/tasks/{task_id}/media/{media_id}/link/:
+    post:
+      operationId: task_media_link
+      description: POST /api/tasks/{task_id}/media/{media_id}/link — 签发短时直链。
+      parameters:
+      - in: path
+        name: media_id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/tasks/{task_id}/report/:
     get:
       operationId: task_flow_report
@@ -2397,6 +2424,45 @@ paths:
       responses:
         '204':
           description: No response body
+  /media/signed/{task_id}/{media_id}/{expires}/{signature}/:
+    get:
+      operationId: task_media_signed
+      description: GET /media/signed/{task_id}/{media_id}/{expires}/{signature} —
+        签名直链字节。
+      parameters:
+      - in: path
+        name: expires
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: media_id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: signature
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: task_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            image/webp:
+              schema:
+                type: string
+                format: binary
+          description: ''
 components:
   schemas:
     AgentDetail:

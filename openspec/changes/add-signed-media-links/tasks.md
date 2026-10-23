@@ -15,4 +15,4 @@
 
 - [x] 3.1 后端测试：`tests/api/test_task_media_links.py`（新增）与现有 `test_task_media.py` 全绿。验证：pytest。**验证结果**：19 passed。
 - [x] 3.2 手工直链：对本机一张图签发并 `curl` 打开，确认 `200 image/webp`；篡改 `403`。验证：命令输出。**验证结果**：`/media/signed/142/1541/<expires>/<sig>/` → `200 image/webp`；替换签名为全 0 → `403`。
-- [x] 3.3 静态与规格门禁：`ruff check` / `ruff format --check` / `openspec validate add-signed-media-links --strict`；OpenAPI 基线补上两个新端点。验证：退出码 0。**验证结果**：ruff 全过；openspec valid；基线新增 `link` 与 `signed` 两条路径，与生成文件逐字段一致。
+- [x] 3.3 静态与规格门禁：`ruff check` / `ruff format --check` / `openspec validate add-signed-media-links --strict`；OpenAPI 基线补上两个新端点。验证：退出码 0。**验证结果**：ruff 全过；openspec valid；基线新增 `link` 与 `signed` 两条路径。另发现新增非 `/api` 路由会让 drf-spectacular 重算公共前缀、改写全部 operationId/tag，已在 `SPECTACULAR_SETTINGS` 固定 `SCHEMA_PATH_PREFIX = "/api"`（独立提交 `fix(api)`），干净检出生成结果与基线逐字节一致。

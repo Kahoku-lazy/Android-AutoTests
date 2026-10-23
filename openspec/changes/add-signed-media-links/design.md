@@ -48,3 +48,4 @@
 - [密钥轮换失效] → 预期；文档说明。
 - [访问日志留下签名] → 短时且单图，风险有限；若不接受，可改为 Cookie 方案。
 - [签名路由与 DEBUG 静态 `/media/` 冲突] → 显式路由在 `static()` 追加之前注册，优先匹配。
+- [新增非 `/api` 路由改变 schema 公共前缀推断] → drf-spectacular 会因 `/media/signed/...` 把公共前缀从 `/api` 退成 `/`，连带改写所有 operationId 与 tag；已在 `SPECTACULAR_SETTINGS` 显式固定 `SCHEMA_PATH_PREFIX = "/api"`。

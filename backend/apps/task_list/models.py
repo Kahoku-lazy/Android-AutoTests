@@ -76,6 +76,7 @@ class TaskEvent(models.Model):
     phase = models.CharField(max_length=8)
     block_type = models.CharField(max_length=16)
     is_delta = models.BooleanField(default=False)
+    delta_count = models.PositiveIntegerField(default=1)
     role_name = models.CharField(max_length=64, default="", blank=True)
     role_kind = models.CharField(max_length=16, default="", blank=True)
     model = models.CharField(max_length=64, default="", blank=True)

@@ -18,24 +18,30 @@ class TaskEventSink:
 
     def __init__(self) -> None:
         self._rows: list[dict] = []
+        self._pending: dict | None = None
         self._seq = 0
         self._task_id = 0
         self._agent_id = 0
         self._ready = False
 
     def emit(self, record, image_b64: str = "") -> None:
-        """收一条记录。满 50 条就落库。"""
+        """收一条记录；连续增量先攒着，类型或步骤变化时落行。"""
         ctx = current_run()
         if not ctx.task_id:
             return
         self._ensure_task(ctx.task_id, ctx.agent_id)
+        if self._can_fold(record, image_b64, ctx):
+            self._fold(record)
+            return
+        self._close_pending()
+        if record.is_delta and not image_b64:
+            self._pending = _row(record, "", ctx, 0)
+            return
         self._seq += 1
-        self._rows.append(_row(record, image_b64, ctx, self._seq))
-        if len(self._rows) >= _BATCH:
-            self.flush()
+        self._append_row(_row(record, image_b64, ctx, self._seq))
 
     def flush(self) -> None:
-        """把缓冲写入数据库。"""
+        """把已结束的行写入数据库；未结束的增量段留在内存。"""
         if not self._rows or not self._task_id:
             self._rows.clear()
             return
@@ -46,10 +52,50 @@ class TaskEventSink:
             _add_usage(row, self._agent_id)
 
     def close(self) -> None:
-        """刷尾并回写任务费用。"""
+        """收尾未结束的增量段，刷尾并回写任务费用。"""
+        self._close_pending()
         self.flush()
         if self._task_id:
             api.rollup_task_cost(self._task_id)
+
+    def _can_fold(self, record, image_b64: str, ctx) -> bool:
+        """这条记录能否并入当前未结束的增量段。"""
+        pending = self._pending
+        if pending is None or not record.is_delta or image_b64:
+            return False
+        return (
+            pending["event_type"] == record.event_type[:48]
+            and pending["step_seq"] == ctx.step_seq
+            and pending["attempt"] == ctx.attempt
+        )
+
+    def _fold(self, record) -> None:
+        """累加当前增量段的条数与耗时。"""
+        pending = self._pending
+        if pending is None:
+            return
+        pending["delta_count"] += 1
+        pending["payload"] = {"delta_count": pending["delta_count"]}
+        ended = _naive(record.ended_at)
+        first = pending["ended_at"]
+        if ended is not None and first is not None:
+            pending["duration_ms"] = max(int((ended - first).total_seconds() * 1000), 0)
+
+    def _close_pending(self) -> None:
+        """把未结束的增量段落成一行，序号在此时分配。"""
+        pending = self._pending
+        if pending is None:
+            return
+        self._pending = None
+        self._seq += 1
+        pending["seq"] = self._seq
+        self._append_row(pending)
+
+    def _append_row(self, row: dict) -> None:
+        """收下一行；满一批就落库。"""
+        self._rows.append(row)
+        if len(self._rows) >= _BATCH:
+            self.flush()
 
     def _ensure_task(self, task_id: int, agent_id: int) -> None:
         if self._ready:
@@ -89,6 +135,7 @@ def _row(record, image_b64: str, ctx, seq: int) -> dict:
         "phase": record.phase[:8],
         "block_type": record.block_type[:16],
         "is_delta": bool(record.is_delta),
+        "delta_count": 1,
         "role_name": (record.role_name or "")[:64],
         "role_kind": (record.role_kind or "")[:16],
         "model": (record.model or "")[:64],

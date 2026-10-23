@@ -17,8 +17,8 @@ from backend.apps.task_list.api import list_task_attachments
 from backend.apps.task_list.models import Task, TaskAttachment, TaskEvent
 from engines.agents.workflow.case_file import validate_platform_yaml
 
-# 分组只需要这 5 列；阶段、展示与明细字段只补给每组的第一行。
-_SLIM_COLUMNS = ("seq", "event_type", "is_delta", "step_seq", "attempt")
+# 分组只需要这 6 列；阶段、展示与明细字段只补给每组的第一行。
+_SLIM_COLUMNS = ("seq", "event_type", "is_delta", "step_seq", "attempt", "delta_count")
 _DISPLAY_COLUMNS = ("role_name", "role_kind", "model", "media_id", "phase")
 _DETAIL_COLUMNS = (
     "duration_ms",
@@ -38,6 +38,7 @@ class _EventRow:
     is_delta: bool
     step_seq: int | None
     attempt: int | None
+    delta_count: int = 1
     phase: str = ""
     role_name: str = ""
     role_kind: str = ""
@@ -490,10 +491,12 @@ def _spans(events: list[_EventRow]) -> list[tuple[int, int]]:
 
 
 def _grouped(events: list[_EventRow]) -> list[tuple[dict, str]]:
-    """连续的同一类增量并成一条，阶段取该组第一条。"""
-    return [
-        (_item(events[start], count), events[start].phase or "") for start, count in _spans(events)
-    ]
+    """连续的同一类增量并成一条，阶段取该组第一条，次数取组内 delta_count 之和。"""
+    grouped: list[tuple[dict, str]] = []
+    for start, length in _spans(events):
+        count = sum(events[start + offset].delta_count for offset in range(length))
+        grouped.append((_item(events[start], count), events[start].phase or ""))
+    return grouped
 
 
 _ROLE_LABEL = {

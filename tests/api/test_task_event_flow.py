@@ -282,6 +282,31 @@ def test_detail_keeps_full_text_and_task_result_stays_short():
     assert flow["task"]["result"] == ("结果内容。" * 250)[:240] + "…"
 
 
+def test_folded_delta_count_is_used_directly():
+    """写库已折叠成一行时，报告直接采用 delta_count，不再按行数计算。"""
+    owner = get_user_model().objects.create_user(username="flow-owner-folded", password="pass")
+    task = _task(owner)
+    TaskEvent.objects.create(
+        task=task,
+        seq=1,
+        event_type="ToolCallDeltaEvent",
+        phase="推理",
+        block_type="tool_call",
+        is_delta=True,
+        delta_count=17447,
+        role_name="executor_role",
+        step_seq=1,
+        attempt=1,
+        payload={"delta_count": 17447},
+    )
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    items = [item for block in flow["rounds"][0]["blocks"] for item in block["items"]]
+
+    assert items[0]["count"] == 17447
+    assert items[0]["event_type"] == "ToolCallDeltaEvent"
+
+
 def test_flow_reports_media_id_instead_of_inline_image():
     """报告只给 media_id：不内联 base64、不带 thumb 字段。"""
     import json

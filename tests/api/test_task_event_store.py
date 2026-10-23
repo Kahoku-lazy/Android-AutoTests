@@ -204,6 +204,86 @@ def test_media_has_no_count_cap_and_cascade_delete():
     assert not (Path(django_settings.TASK_MEDIA_DIR) / str(task.id)).exists()
 
 
+def _delta(index: int) -> EventRecord:
+    return EventRecord(
+        event_type="ToolCallDeltaEvent",
+        phase="推理",
+        block_type="tool_call",
+        is_delta=True,
+        role_name="executor_role",
+        role_kind="executor",
+        payload={"delta": "x", "idx": index},
+        ended_at=datetime(2026, 10, 20, 10, 0, 0, index, tzinfo=_SHANGHAI),
+    )
+
+
+def test_consecutive_deltas_fold_into_one_row():
+    task = _task()
+    sink = TaskEventSink()
+    token = bind_run_context(task.id, task.agent_id, "卡片页")
+    try:
+        set_step_context(1, 1)
+        for index in range(3):
+            sink.emit(_delta(index))
+        sink.emit(
+            EventRecord(
+                event_type="ReplyEndEvent",
+                phase="结束",
+                block_type="reply",
+                payload={"finished_reason": "stop"},
+            )
+        )
+        sink.close()
+    finally:
+        reset_run_context(token)
+
+    rows = list(TaskEvent.objects.filter(task=task).order_by("seq"))
+    assert [row.event_type for row in rows] == ["ToolCallDeltaEvent", "ReplyEndEvent"]
+    assert [row.seq for row in rows] == [1, 2]
+    delta_row = rows[0]
+    assert delta_row.delta_count == 3
+    assert delta_row.payload == {"delta_count": 3}
+    assert delta_row.ended_at == datetime(2026, 10, 20, 10, 0, 0)
+
+
+def test_delta_run_survives_batch_flush():
+    task = _task()
+    sink = TaskEventSink()
+    token = bind_run_context(task.id, task.agent_id, "卡片页")
+    try:
+        set_step_context(1, 1)
+        for index in range(120):
+            sink.emit(_delta(index))
+        assert TaskEvent.objects.filter(task=task).count() == 0
+        sink.close()
+    finally:
+        reset_run_context(token)
+
+    rows = list(TaskEvent.objects.filter(task=task).order_by("seq"))
+    assert len(rows) == 1
+    assert rows[0].delta_count == 120
+
+
+def test_step_change_splits_delta_run():
+    task = _task()
+    sink = TaskEventSink()
+    token = bind_run_context(task.id, task.agent_id, "卡片页")
+    try:
+        set_step_context(1, 1)
+        sink.emit(_delta(0))
+        sink.emit(_delta(1))
+        set_step_context(2, 1)
+        sink.emit(_delta(2))
+        sink.emit(_delta(3))
+        sink.close()
+    finally:
+        reset_run_context(token)
+
+    rows = list(TaskEvent.objects.filter(task=task).order_by("seq"))
+    assert [row.delta_count for row in rows] == [2, 2]
+    assert [row.seq for row in rows] == [1, 2]
+
+
 class ReplyEndEvent:
     finished_reason = "completed"
 

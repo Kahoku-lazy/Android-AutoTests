@@ -8,10 +8,17 @@ from django.http import JsonResponse
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+from backend.apps.task_list.media_views import SignedTaskMediaAPIView
 from backend.apps.task_list.views import TaskDrainAPIView
 
 urlpatterns = [
     path("", lambda r: JsonResponse({"status": True, "service": "Android-AutoTests API"})),
+    # 截图签名直链：/media/ 已是公开前缀，视图内校验签名与过期。
+    path(
+        "media/signed/<int:task_id>/<int:media_id>/<int:expires>/<str:signature>/",
+        SignedTaskMediaAPIView.as_view(),
+        name="task_media_signed",
+    ),
     # Dashboard stats (aggregated from all modules) — 见 apps/dashboard/urls.py
     path("api/", include("backend.apps.dashboard.urls")),
     # Django Admin (管理员专用，不给普通用户)

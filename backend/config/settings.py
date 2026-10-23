@@ -263,6 +263,10 @@ CHANNEL_LAYERS = _channel_layers_config()
 JWT_ACCESS_TTL = int(os.environ.get("JWT_ACCESS_TTL", "3600"))  # 1 hour
 JWT_REFRESH_TTL = int(os.environ.get("JWT_REFRESH_TTL", "604800"))  # 7 days
 
+# 截图直链签名：缺省回退 DJANGO_SECRET_KEY；换密钥会让已签发的链接立即失效。
+MEDIA_LINK_SECRET = os.environ.get("MEDIA_LINK_SECRET", "").strip() or SECRET_KEY
+MEDIA_LINK_TTL_SECONDS = int(os.environ.get("MEDIA_LINK_TTL_SECONDS", "900"))
+
 # ── 设备日志证据（设备动作 → 日志证据窗口 → 验收模型）──
 # 采集常驻，不随动作开关；时间戳一律北京时间毫秒（固定 UTC+8，不依赖 tzdata）。
 DEVICE_LOG_ENABLED = os.environ.get("DEVICE_LOG_ENABLED", "1") not in ("0", "false", "False", "")

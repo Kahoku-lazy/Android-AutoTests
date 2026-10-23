@@ -489,6 +489,48 @@ def store_task_media(task_id: int, packed: dict, defaults: dict) -> int | None:
     return created.id
 
 
+def _visible_media(user_id: str | None, task_id: int, media_id: int):
+    """按用户可见性取图片行；不可见或未登录返回 None。"""
+    from backend.apps.task_list.models import TaskMedia
+
+    if not user_id:
+        return None
+    agents = filter_agents_for_user(AIAgent.objects.all(), user_id)
+    return TaskMedia.objects.filter(task_id=task_id, id=media_id, task__agent__in=agents).first()
+
+
+def media_payload(media) -> dict | None:
+    """
+    读取图片行的字节与元数据。
+
+    Args:
+        media: TaskMedia 行。
+
+    Returns:
+        {sha256, media_type, data}；文件与旧列都缺失时返回 None。
+    """
+    from backend.apps.task_list.media_storage import get_media_storage
+
+    storage = get_media_storage()
+    data = storage.open(media.storage_key) if media.storage_key else None
+    if data is None and (media.thumb_b64 or "").strip():
+        data = base64.b64decode(media.thumb_b64)
+    if not data:
+        return None
+    return {
+        "sha256": media.sha256,
+        "media_type": media.media_type or "image/webp",
+        "data": data,
+    }
+
+
+def get_media_by_id(task_id: int, media_id: int):
+    """按任务号与图片号取图片行（签名直链用，不做用户校验）。"""
+    from backend.apps.task_list.models import TaskMedia
+
+    return TaskMedia.objects.filter(task_id=task_id, id=media_id).first()
+
+
 def get_task_media(user_id: str | None, task_id: int, media_id: int) -> dict | None:
     """
     按可见性取一张截图的字节与元数据。
@@ -501,25 +543,37 @@ def get_task_media(user_id: str | None, task_id: int, media_id: int) -> dict | N
     Returns:
         {sha256, media_type, data}；任务不可见、图片不属于该任务或字节缺失时返回 None。
     """
-    from backend.apps.task_list.media_storage import get_media_storage
-    from backend.apps.task_list.models import TaskMedia
-
-    if not user_id:
-        return None
-    agents = filter_agents_for_user(AIAgent.objects.all(), user_id)
-    media = TaskMedia.objects.filter(task_id=task_id, id=media_id, task__agent__in=agents).first()
+    media = _visible_media(user_id, task_id, media_id)
     if media is None:
         return None
-    storage = get_media_storage()
-    data = storage.open(media.storage_key) if media.storage_key else None
-    if data is None and (media.thumb_b64 or "").strip():
-        data = base64.b64decode(media.thumb_b64)
-    if not data:
+    return media_payload(media)
+
+
+def create_task_media_link(user_id: str | None, task_id: int, media_id: int) -> dict | None:
+    """
+    为可见截图签发短时直链。
+
+    Args:
+        user_id: 当前用户编号。
+        task_id: 任务编号。
+        media_id: 图片行编号。
+
+    Returns:
+        {url, expires, expires_at}；不可见时返回 None。
+    """
+    from datetime import datetime
+    from datetime import timezone as dt_timezone
+
+    from backend.apps.task_list import media_links
+
+    media = _visible_media(user_id, task_id, media_id)
+    if media is None:
         return None
+    expires, signature = media_links.sign(task_id, media_id)
     return {
-        "sha256": media.sha256,
-        "media_type": media.media_type or "image/webp",
-        "data": data,
+        "url": media_links.build_path(task_id, media_id, expires, signature),
+        "expires": expires,
+        "expires_at": datetime.fromtimestamp(expires, tz=dt_timezone.utc).isoformat(),
     }
 
 

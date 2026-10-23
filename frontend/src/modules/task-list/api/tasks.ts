@@ -79,7 +79,30 @@ export async function getTaskReport(
   return data
 }
 
-/** 任务截图缩略图字节（JPEG blob；报告只给 media_id） */
+/** 任务截图短时直链 */
+export interface TaskMediaLink {
+  /** 相对路径，前端按当前 origin 补全 */
+  url: string
+  /** 过期时刻（Unix 秒） */
+  expires: number
+  /** 过期时刻（ISO 8601） */
+  expires_at: string
+}
+
+/** 为可见截图签发短时直链（浏览器新标签可直接打开） */
+export async function createTaskMediaLink(
+  taskId: number,
+  mediaId: number,
+): Promise<{ status: boolean; message?: string; data?: TaskMediaLink }> {
+  const { data } = await djangoClient.post<{
+    status: boolean
+    message?: string
+    data?: TaskMediaLink
+  }>(`/tasks/${taskId}/media/${mediaId}/link/`)
+  return data
+}
+
+/** 任务截图缩略图字节（WebP blob；报告只给 media_id） */
 export async function getTaskMedia(taskId: number, mediaId: number): Promise<Blob> {
   const { data } = await djangoClient.get<Blob>(`/tasks/${taskId}/media/${mediaId}/`, {
     responseType: "blob",

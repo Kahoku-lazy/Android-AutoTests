@@ -18,3 +18,26 @@
   border-radius: var(--app-radius-sm);
   opacity: 0.35;
 }
+
+.task-media-thumb__open {
+  display: inline-block;
+  margin-top: var(--app-space-xs);
+  padding: 2px 8px;
+  color: var(--app-text-secondary);
+  font: inherit;
+  font-size: var(--app-size-xs);
+  background: transparent;
+  border: 1px dashed var(--ink);
+  border-radius: var(--app-radius-sm);
+  cursor: pointer;
+}
+
+.task-media-thumb__open:hover {
+  color: var(--ink);
+  border-style: solid;
+}
+
+.task-media-thumb__open:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}

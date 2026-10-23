@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 import { scanModules } from './tests/module-scan.mjs'
+import { proxyOnError } from './vite-proxy.js'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
@@ -53,8 +54,15 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     proxy: {
-      '/api': `http://localhost:${process.env.SERVER_PORT || 8766}`,
-      '/media': `http://localhost:${process.env.SERVER_PORT || 8766}`,
+      // 后端热重载空窗期回 503 + JSON，避免前端把连接失败显示成业务 500。
+      '/api': {
+        target: `http://localhost:${process.env.SERVER_PORT || 8766}`,
+        configure: proxyOnError,
+      },
+      '/media': {
+        target: `http://localhost:${process.env.SERVER_PORT || 8766}`,
+        configure: proxyOnError,
+      },
       '/ws': {
         target: `ws://localhost:${process.env.SERVER_PORT || 8766}`,
         ws: true,

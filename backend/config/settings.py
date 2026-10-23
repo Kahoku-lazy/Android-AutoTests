@@ -330,6 +330,9 @@ SPECTACULAR_SETTINGS = {
         "串口日志、测试报告与仪表盘。"
     ),
     "VERSION": "2.0.0",
+    # 固定 API 路径前缀：否则新增非 /api 路由（如 /media 签名直链）会让
+    # drf-spectacular 重新推断公共前缀，连带改写所有 operationId 与 tag。
+    "SCHEMA_PATH_PREFIX": "/api",
     # 文档页资产随包分发（drf-spectacular-sidecar）：断网环境仍可渲染
     "SWAGGER_UI_DIST": "SIDECAR",
     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",

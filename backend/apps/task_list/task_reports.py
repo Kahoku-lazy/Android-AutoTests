@@ -317,14 +317,21 @@ _EVENT_LABEL = {
     "ReplyEndEvent": "生命周期事件：智能体完成回复",
 }
 
-_DETAIL_LIMIT = 240
+# 任务头部的 result 只下发摘要；事件明细走 _text，全文不截断。
+_RESULT_LIMIT = 240
 
 
-def _clip(text: object) -> str:
-    raw = str(text or "").replace("\r", " ").strip()
-    if len(raw) <= _DETAIL_LIMIT:
+def _text(text: object) -> str:
+    """去掉回车与首尾空白，供事件明细全文展示。"""
+    return str(text or "").replace("\r", " ").strip()
+
+
+def _result_summary(text: object) -> str:
+    """任务结果只给摘要，避免报告头部随长文本膨胀。"""
+    raw = _text(text)
+    if len(raw) <= _RESULT_LIMIT:
         return raw
-    return raw[:_DETAIL_LIMIT] + "…"
+    return raw[:_RESULT_LIMIT] + "…"
 
 
 def _money(value) -> str:
@@ -399,30 +406,30 @@ def _detail(event: _EventRow, payload: dict) -> str:
     if kind == "ReplyStartEvent":
         role = event.role_name or str(payload.get("role") or "")
         model = event.model or str(payload.get("model") or "")
-        return _clip(" · ".join(part for part in (role, model) if part and part != "-"))
+        return _text(" · ".join(part for part in (role, model) if part and part != "-"))
     if kind in ("TextBlockEndEvent", "ThinkingBlockEndEvent"):
-        text = _clip(payload.get("text"))
+        text = _text(payload.get("text"))
         count = payload.get("delta_count")
         if count:
-            return _clip(f"{text}（{count} 段增量）")
+            return _text(f"{text}（{count} 段增量）")
         return text
     if kind == "ToolCallEndEvent":
-        return _clip(f"{payload.get('tool_name') or '-'} · {payload.get('args') or ''}")
+        return _text(f"{payload.get('tool_name') or '-'} · {payload.get('args') or ''}")
     if kind == "ModelCallEndEvent":
         return (
             f"输入 {event.input_tokens} · 缓存 {event.cache_input_tokens} · "
             f"输出 {event.output_tokens} · 费用 {_money(event.cost_total)}"
         )
     if kind == "DataBlockEndEvent":
-        return _clip(payload.get("media_type") or "")
+        return _text(payload.get("media_type") or "")
     if kind == "ToolResultEndEvent":
-        return _clip(
+        return _text(
             f"{payload.get('tool_name') or '-'} · {payload.get('status') or ''} · "
             f"{payload.get('result') or ''}"
         )
     if kind == "ReplyEndEvent":
         reason = str(payload.get("finished_reason") or "")
-        return _clip(f"{reason} · {event.duration_ms} ms · 费用 {_money(event.cost_total)}")
+        return _text(f"{reason} · {event.duration_ms} ms · 费用 {_money(event.cost_total)}")
     return ""
 
 
@@ -751,7 +758,7 @@ def build_task_flow(user_id: str | None, task_id: str) -> dict | None:
             "started_at": _iso(task.started_at or task.created_at),
             "finished_at": _iso(task.finished_at),
             "cost_total": _money(task.cost_total),
-            "result": _clip(task.result),
+            "result": _result_summary(task.result),
         },
         "conclusion": _conclusion(task, events),
         "rounds": rounds,

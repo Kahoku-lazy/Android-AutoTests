@@ -252,6 +252,36 @@ def test_delta_events_load_without_payload():
     assert marker not in json.dumps(flow, ensure_ascii=False)
 
 
+def test_detail_keeps_full_text_and_task_result_stays_short():
+    """事件明细不截断；任务头部的 result 仍只给 240 字摘要。"""
+    owner = get_user_model().objects.create_user(username="flow-owner-full", password="pass")
+    task = _task(owner)
+    text = "文本块内容。" * 500
+    args = '{"handover": "' + "交" * 2800 + '"}'
+    task.result = "结果内容。" * 250
+    task.save(update_fields=["result"])
+    _event(task, 1, "TextBlockEndEvent", "推理", payload={"text": text})
+    _event(
+        task,
+        2,
+        "ToolCallEndEvent",
+        "推理",
+        payload={"tool_name": "GenerateStructuredOutput", "args": args},
+    )
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    items = [item for block in flow["rounds"][0]["blocks"] for item in block["items"]]
+    text_item = next(item for item in items if item["event_type"] == "TextBlockEndEvent")
+    call_item = next(item for item in items if item["event_type"] == "ToolCallEndEvent")
+
+    assert text_item["detail"] == text
+    assert call_item["detail"].endswith(args)
+    assert not text_item["detail"].endswith("…")
+    assert not call_item["detail"].endswith("…")
+
+    assert flow["task"]["result"] == ("结果内容。" * 250)[:240] + "…"
+
+
 def test_flow_reports_media_id_instead_of_inline_image():
     """报告只给 media_id：不内联 base64、不带 thumb 字段。"""
     import json

@@ -4,16 +4,118 @@ from __future__ import annotations
 
 import json
 
+from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db.models import Q
+from django.db.models import Case, F, JSONField, Q, Value, When
+from django.db.models.functions import Coalesce
 
 from backend.apps.ai_assistant.api import filter_agents_for_user, resolve_assistant_name
 from backend.apps.ai_assistant.models import AIAgent
 from backend.apps.task_list.api import list_task_attachments
 from backend.apps.task_list.models import Task, TaskAttachment, TaskEvent
 from engines.agents.workflow.case_file import validate_platform_yaml
+
+# 分组只需要这 5 列；阶段、展示与明细字段只补给每组的第一行。
+_SLIM_COLUMNS = ("seq", "event_type", "is_delta", "step_seq", "attempt")
+_DISPLAY_COLUMNS = ("role_name", "role_kind", "model", "media_id", "phase")
+_DETAIL_COLUMNS = (
+    "duration_ms",
+    "input_tokens",
+    "cache_input_tokens",
+    "output_tokens",
+    "cost_total",
+)
+
+
+@dataclass(slots=True)
+class _EventRow:
+    """聚合用的事件行：先只有分组字段，代表行再补展示与明细字段。"""
+
+    seq: int
+    event_type: str
+    is_delta: bool
+    step_seq: int | None
+    attempt: int | None
+    phase: str = ""
+    role_name: str = ""
+    role_kind: str = ""
+    model: str = ""
+    media_id: int | None = None
+    moment: object = None
+    payload: dict | None = None
+    duration_ms: int = 0
+    input_tokens: int = 0
+    cache_input_tokens: int = 0
+    output_tokens: int = 0
+    cost_total: object = 0
+
+
+def _load_details(task_id: int, seqs: list[int]) -> dict[int, dict]:
+    """
+    按 seq 批量取代表行的展示与明细字段；增量行的 payload 在库内即置空。
+
+    Args:
+        task_id: 任务编号。
+        seqs: 每组第一行的事件序号。
+
+    Returns:
+        序号到字段字典的映射；空列表时返回空映射。
+    """
+    if not seqs:
+        return {}
+    rows = (
+        TaskEvent.objects.filter(task_id=task_id, seq__in=seqs)
+        .annotate(
+            moment=Coalesce(F("ended_at"), F("started_at"), F("called_at")),
+            report_payload=Case(
+                When(is_delta=False, then=F("payload")),
+                default=Value(None, output_field=JSONField()),
+                output_field=JSONField(),
+            ),
+        )
+        .values("seq", *_DISPLAY_COLUMNS, "moment", "report_payload", *_DETAIL_COLUMNS)
+    )
+    return {row["seq"]: row for row in rows}
+
+
+def _load_events(task_id: int) -> list[_EventRow]:
+    """
+    加载报告所需事件：先取分组列，再只给每组第一行补展示与明细。
+
+    流式增量的 payload 全程不读——报告只用它们计数。
+
+    Args:
+        task_id: 任务编号。
+
+    Returns:
+        按 seq 升序的事件行；非代表行的展示字段为默认值。
+    """
+    rows = list(TaskEvent.objects.filter(task_id=task_id).values_list(*_SLIM_COLUMNS))
+    rows.sort(key=lambda row: row[0])
+    events = [_EventRow(*row) for row in rows]
+    spans = _spans(events)
+    details = _load_details(task_id, [events[start].seq for start, _ in spans])
+    for start, _ in spans:
+        event = events[start]
+        detail = details.get(event.seq)
+        if detail is None:
+            continue
+        event.role_name = detail["role_name"]
+        event.role_kind = detail["role_kind"]
+        event.model = detail["model"]
+        event.media_id = detail["media_id"]
+        event.phase = detail["phase"]
+        event.moment = detail["moment"]
+        event.payload = detail["report_payload"]
+        event.duration_ms = detail["duration_ms"]
+        event.input_tokens = detail["input_tokens"]
+        event.cache_input_tokens = detail["cache_input_tokens"]
+        event.output_tokens = detail["output_tokens"]
+        event.cost_total = detail["cost_total"]
+    return events
+
 
 PASS_STATUSES = frozenset({"completed", "success"})
 FAIL_STATUSES = frozenset({"failed"})
@@ -259,7 +361,7 @@ def _passed(value) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes"}
 
 
-def _conclusion(task: Task, events: list[TaskEvent]) -> dict:
+def _conclusion(task: Task, events: list[_EventRow]) -> dict:
     """从验收结构化输出取出判决。不读文本日志。"""
     verdicts: list[dict] = []
     delivery = ""
@@ -292,7 +394,7 @@ def _conclusion(task: Task, events: list[TaskEvent]) -> dict:
     return {"outcome": outcome, "verdicts": verdicts, "delivery": delivery}
 
 
-def _detail(event: TaskEvent, payload: dict) -> str:
+def _detail(event: _EventRow, payload: dict) -> str:
     kind = event.event_type
     if kind == "ReplyStartEvent":
         role = event.role_name or str(payload.get("role") or "")
@@ -324,14 +426,14 @@ def _detail(event: TaskEvent, payload: dict) -> str:
     return ""
 
 
-def _media_ref(event: TaskEvent) -> int | None:
+def _media_ref(event: _EventRow) -> int | None:
     """事件关联的截图编号。图片字节走 /api/tasks/{id}/media/{media_id}/。"""
     return event.media_id
 
 
-def _item(event: TaskEvent, count: int) -> dict:
+def _item(event: _EventRow, count: int) -> dict:
     payload = event.payload if isinstance(event.payload, dict) else {}
-    moment = event.ended_at or event.started_at or event.called_at
+    moment = event.moment
     row = {
         "seq": event.seq,
         "event_type": event.event_type,
@@ -358,29 +460,33 @@ def _item(event: TaskEvent, count: int) -> dict:
     return row
 
 
-def _grouped(events: list[TaskEvent]) -> list[tuple[dict, str]]:
-    """连续的同一类增量并成一条，阶段取该组第一条。"""
-    grouped: list[tuple[dict, str]] = []
+def _spans(events: list[_EventRow]) -> list[tuple[int, int]]:
+    """连续的同一类增量并成一段，返回每段的起始下标与条数。"""
+    spans: list[tuple[int, int]] = []
     index = 0
-    while index < len(events):
+    total = len(events)
+    while index < total:
         event = events[index]
-        count = 1
+        cursor = index + 1
         if event.is_delta:
-            cursor = index + 1
             while (
-                cursor < len(events)
+                cursor < total
                 and events[cursor].is_delta
                 and events[cursor].event_type == event.event_type
                 and events[cursor].step_seq == event.step_seq
                 and events[cursor].attempt == event.attempt
             ):
-                count += 1
                 cursor += 1
-            index = cursor
-        else:
-            index += 1
-        grouped.append((_item(event, count), event.phase or ""))
-    return grouped
+        spans.append((index, cursor - index))
+        index = cursor
+    return spans
+
+
+def _grouped(events: list[_EventRow]) -> list[tuple[dict, str]]:
+    """连续的同一类增量并成一条，阶段取该组第一条。"""
+    return [
+        (_item(events[start], count), events[start].phase or "") for start, count in _spans(events)
+    ]
 
 
 _ROLE_LABEL = {
@@ -498,7 +604,7 @@ def _split_round_groups(rounds: list[dict]) -> list[list[dict]]:
     return groups
 
 
-def _verdict_maps(events: list[TaskEvent]) -> list[dict]:
+def _verdict_maps(events: list[_EventRow]) -> list[dict]:
     """每条用例一张表：步骤序号 → 该步最后一次判决是否通过。"""
     maps: list[dict] = []
     current: dict = {}
@@ -579,7 +685,7 @@ def _annotate(group: list[dict], steps) -> list[dict]:
     return group
 
 
-def _flow_cases(task: Task, events: list[TaskEvent], rounds: list[dict]) -> list[dict]:
+def _flow_cases(task: Task, events: list[_EventRow], rounds: list[dict]) -> list[dict]:
     """把轮次按用例切开，并给出每条用例、每一步的结果。"""
     specs = _task_cases(task)
     groups = _split_round_groups(rounds)
@@ -632,7 +738,7 @@ def build_task_flow(user_id: str | None, task_id: str) -> dict | None:
     task = _visible_task(user_id, task_id)
     if task is None:
         return None
-    events = list(TaskEvent.objects.filter(task_id=task.id).order_by("seq"))
+    events = _load_events(task.id)
     rounds = _rounds(_grouped(events))
     return {
         "task": {

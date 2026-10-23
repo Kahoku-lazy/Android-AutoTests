@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 
 from backend.apps.ai_assistant.models import AIAgent
 from backend.apps.task_list.models import Task, TaskAttachment, TaskEvent, TaskMedia
-from backend.apps.task_list.task_reports import build_task_flow
+from backend.apps.task_list.task_reports import _load_events, build_task_flow
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 
@@ -224,6 +224,32 @@ def test_two_cases_keep_step_and_result():
     assert cases[1]["rounds"][0]["subject"] == "返回桌面"
     assert cases[1]["rounds"][1]["subject"] == "应用已关闭"
     assert cases[1]["rounds"][1]["verdict"] == {"passed": False, "message": "还在应用里"}
+
+
+def test_delta_events_load_without_payload():
+    """增量事件不取 payload：报告聚合只为非增量事件读载荷。"""
+    import json
+
+    owner = get_user_model().objects.create_user(username="flow-owner-delta", password="pass")
+    task = _task(owner)
+    marker = "x" * 100_000
+    _event(
+        task,
+        1,
+        "ToolCallDeltaEvent",
+        "推理",
+        is_delta=True,
+        payload={"delta": marker, "idx": 0},
+    )
+    _event(task, 2, "ToolCallEndEvent", "推理", payload={"tool_name": "tap", "args": "{}"})
+
+    rows = _load_events(task.id)
+    assert rows[0].is_delta is True
+    assert rows[0].payload is None
+    assert rows[1].payload["tool_name"] == "tap"
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    assert marker not in json.dumps(flow, ensure_ascii=False)
 
 
 def test_flow_reports_media_id_instead_of_inline_image():

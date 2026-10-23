@@ -2,17 +2,11 @@
 
 from __future__ import annotations
 
-import base64
-import hashlib
-
 from datetime import datetime
 from decimal import Decimal
-from io import BytesIO
 from zoneinfo import ZoneInfo
 
-from PIL import Image
-
-from backend.apps.task_list import api
+from backend.apps.task_list import api, media_storage
 from engines.agents.event_sink import current_run
 
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
@@ -150,47 +144,20 @@ def _add_usage(row: dict, agent_id: int) -> None:
 
 
 def _media_id(record, image_b64: str, ctx, seq: int) -> int | None:
-    """原图转长边 720 的 JPEG 缩略图后入库。坏图跳过。"""
-    packed = _thumbnail(image_b64)
+    """压成 720px WebP 后落盘并写元数据。坏图返回 None。"""
+    packed = media_storage.encode(image_b64)
     if packed is None:
         return None
     return api.store_task_media(
         ctx.task_id,
-        packed["sha256"],
+        packed,
         {
             "event_seq": seq,
             "role_name": (record.role_name or "")[:64],
             "step_seq": ctx.step_seq,
             "attempt": ctx.attempt,
-            "media_type": "image/jpeg",
-            "byte_size": packed["byte_size"],
-            "width": packed["width"],
-            "height": packed["height"],
-            "thumb_b64": packed["thumb_b64"],
         },
     )
-
-
-def _thumbnail(image_b64: str) -> dict | None:
-    """解码原图并压成缩略图。失败返回 None。"""
-    try:
-        raw = base64.b64decode(image_b64, validate=False)
-        image = Image.open(BytesIO(raw))
-        image = image.convert("RGB")
-        image.thumbnail((720, 720))
-        buffer = BytesIO()
-        image.save(buffer, format="JPEG", quality=80)
-    except Exception:
-        return None
-    if not raw:
-        return None
-    return {
-        "sha256": hashlib.sha256(raw).hexdigest(),
-        "byte_size": len(raw),
-        "width": image.size[0],
-        "height": image.size[1],
-        "thumb_b64": base64.b64encode(buffer.getvalue()).decode("ascii"),
-    }
 
 
 def _naive(moment: datetime | None) -> datetime | None:

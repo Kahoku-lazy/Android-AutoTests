@@ -370,6 +370,8 @@ if not DATA_DIR.is_absolute():
     DATA_DIR = REPO_ROOT / DATA_DIR
 
 SCREENSHOT_DIR = DATA_DIR / "screenshots"
+# 任务截图（WebP）落盘目录；可由 .env 的 TASK_MEDIA_DIR 覆盖，便于换盘/备份。
+TASK_MEDIA_DIR = Path(os.environ.get("TASK_MEDIA_DIR", "").strip() or DATA_DIR / "task_media")
 EXPORT_DIR = REPO_ROOT / "exports"
 LOG_DIR = REPO_ROOT / "logs"
 

@@ -1,5 +1,6 @@
 """task-list API — task creation, dispatch, billing and read models."""
 
+import base64
 import json
 
 from django.db import transaction
@@ -308,13 +309,23 @@ def cancel_running_task(task: Task) -> Task:
 
 
 def delete_task(task: Task) -> None:
-    """删除任务发布记录。"""
+    """删除任务发布记录及其截图文件。"""
+    from backend.apps.task_list.media_storage import get_media_storage
+
+    task_id = task.id
     task.delete()
+    get_media_storage().delete_task(task_id)
 
 
 def clear_agent_tasks(agent: AIAgent) -> int:
-    """调试：清空该智能体下全部任务发布记录，返回删除条数。"""
+    """调试：清空该智能体下全部任务发布记录及其截图文件，返回删除条数。"""
+    from backend.apps.task_list.media_storage import get_media_storage
+
+    task_ids = list(Task.objects.filter(agent=agent).values_list("id", flat=True))
     deleted, _ = Task.objects.filter(agent=agent).delete()
+    storage = get_media_storage()
+    for task_id in task_ids:
+        storage.delete_task(task_id)
     return deleted
 
 
@@ -440,25 +451,76 @@ def insert_task_events(task_id: int, rows: list[dict]) -> None:
     TaskEvent.objects.bulk_create([TaskEvent(task_id=task_id, **row) for row in rows])
 
 
-def store_task_media(task_id: int, sha256: str, defaults: dict) -> int | None:
-    """按任务内 sha256 去重保存缩略图；不同图片不设张数上限。"""
+def store_task_media(task_id: int, packed: dict, defaults: dict) -> int | None:
+    """
+    按任务内 sha256 去重保存缩略图：新图落盘后写元数据。
+
+    Args:
+        task_id: 任务编号。
+        packed: media_storage.encode 的结果（sha256/data/width/height/media_type）。
+        defaults: 事件关联字段（event_seq/role_name/step_seq/attempt）。
+
+    Returns:
+        TaskMedia 行编号；坏图返回 None。
+    """
+    from backend.apps.task_list.media_storage import get_media_storage
     from backend.apps.task_list.models import TaskMedia
 
+    sha256 = str(packed.get("sha256") or "")
+    data = packed.get("data") or b""
+    if not sha256 or not data:
+        return None
     found = TaskMedia.objects.filter(task_id=task_id, sha256=sha256).first()
     if found is not None:
         return found.id
-    created = TaskMedia.objects.create(task_id=task_id, sha256=sha256, **defaults)
+    storage = get_media_storage()
+    key = storage.save(task_id, sha256, data)
+    created = TaskMedia.objects.create(
+        task_id=task_id,
+        sha256=sha256,
+        media_type=str(packed.get("media_type") or "image/webp"),
+        byte_size=len(data),
+        width=packed.get("width"),
+        height=packed.get("height"),
+        storage_key=key,
+        thumb_b64="",
+        **defaults,
+    )
     return created.id
 
 
-def get_task_media(user_id: str | None, task_id: int, media_id: int):
-    """按可见性取一张截图缩略图；任务不可见或图片不属于该任务时返回 None。"""
+def get_task_media(user_id: str | None, task_id: int, media_id: int) -> dict | None:
+    """
+    按可见性取一张截图的字节与元数据。
+
+    Args:
+        user_id: 当前用户编号。
+        task_id: 任务编号。
+        media_id: 图片行编号。
+
+    Returns:
+        {sha256, media_type, data}；任务不可见、图片不属于该任务或字节缺失时返回 None。
+    """
+    from backend.apps.task_list.media_storage import get_media_storage
     from backend.apps.task_list.models import TaskMedia
 
     if not user_id:
         return None
     agents = filter_agents_for_user(AIAgent.objects.all(), user_id)
-    return TaskMedia.objects.filter(task_id=task_id, id=media_id, task__agent__in=agents).first()
+    media = TaskMedia.objects.filter(task_id=task_id, id=media_id, task__agent__in=agents).first()
+    if media is None:
+        return None
+    storage = get_media_storage()
+    data = storage.open(media.storage_key) if media.storage_key else None
+    if data is None and (media.thumb_b64 or "").strip():
+        data = base64.b64decode(media.thumb_b64)
+    if not data:
+        return None
+    return {
+        "sha256": media.sha256,
+        "media_type": media.media_type or "image/webp",
+        "data": data,
+    }
 
 
 def add_usage_hourly(slot: dict, delta: dict) -> None:

@@ -135,6 +135,7 @@ class TaskMedia(models.Model):
     byte_size = models.IntegerField(default=0)
     width = models.IntegerField(null=True, blank=True)
     height = models.IntegerField(null=True, blank=True)
+    storage_key = models.CharField(max_length=300, default="", blank=True)
     thumb_b64 = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

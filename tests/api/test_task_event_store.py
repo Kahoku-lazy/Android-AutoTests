@@ -8,14 +8,16 @@ import base64
 from datetime import datetime
 from decimal import Decimal
 from io import BytesIO
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
 
+from django.conf import settings as django_settings
 from PIL import Image
 
 from backend.apps.ai_assistant.models import AIAgent
-from backend.apps.task_list import api
+from backend.apps.task_list import api, media_storage
 from backend.apps.task_list.event_store import TaskEventSink
 from backend.apps.task_list.models import Task, TaskEvent, TaskMedia, TaskUsageHourly
 from engines.agents.event_sink import (
@@ -33,6 +35,15 @@ pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
 _CALLED = datetime(2026, 10, 20, 10, 0, tzinfo=_SHANGHAI)
 _MONEY = Decimal("0.00002000")
+
+
+@pytest.fixture(autouse=True)
+def _temp_media_dir(settings, tmp_path):
+    """截图落盘改到临时目录，避免测试写进真实 DATA_DIR。"""
+    settings.TASK_MEDIA_DIR = tmp_path / "task_media"
+    media_storage.reset_media_storage()
+    yield
+    media_storage.reset_media_storage()
 
 
 def _task() -> Task:
@@ -108,9 +119,11 @@ def test_writes_events_media_hourly_and_task_cost():
     assert rows[1].is_peak is True
     assert rows[2].media_id is not None
     media = TaskMedia.objects.get(id=rows[2].media_id)
-    assert media.media_type == "image/jpeg"
-    assert media.thumb_b64
+    assert media.media_type == "image/webp"
+    assert media.storage_key
+    assert not media.thumb_b64
     assert media.width <= 720
+    assert Path(django_settings.TASK_MEDIA_DIR, media.storage_key).is_file()
     hourly = TaskUsageHourly.objects.get(agent_id=task.agent_id, model="deepseek-flash")
     assert hourly.calls == 1
     assert hourly.cost_cache == _MONEY
@@ -136,6 +149,7 @@ def test_same_image_is_one_media_row():
     finally:
         reset_run_context(token)
     assert TaskMedia.objects.filter(task=task).count() == 1
+    assert len(list((Path(django_settings.TASK_MEDIA_DIR) / str(task.id)).iterdir())) == 1
     ids = list(TaskEvent.objects.filter(task=task).values_list("media_id", flat=True))
     assert ids[0] == ids[1]
 
@@ -155,7 +169,7 @@ def test_media_has_no_count_cap_and_cascade_delete():
             TaskMedia(
                 task=task,
                 sha256=f"{index:064x}",
-                media_type="image/jpeg",
+                media_type="image/webp",
                 byte_size=1,
                 thumb_b64="aa",
             )
@@ -164,11 +178,19 @@ def test_media_has_no_count_cap_and_cascade_delete():
     )
     saved = api.store_task_media(
         task.id,
-        "f" * 64,
-        {"media_type": "image/jpeg", "byte_size": 1, "thumb_b64": "aa"},
+        {
+            "sha256": "f" * 64,
+            "data": b"webp-bytes",
+            "width": 8,
+            "height": 8,
+            "media_type": "image/webp",
+        },
+        {},
     )
     assert saved is not None
     assert TaskMedia.objects.filter(task_id=task.id).count() == 301
+    media = TaskMedia.objects.get(id=saved)
+    assert Path(django_settings.TASK_MEDIA_DIR, media.storage_key).is_file()
     TaskEvent.objects.create(
         task=task,
         seq=1,
@@ -176,9 +198,10 @@ def test_media_has_no_count_cap_and_cascade_delete():
         phase="end",
         block_type="text",
     )
-    task.delete()
+    api.delete_task(task)
     assert TaskEvent.objects.filter(task_id=task.id).count() == 0
     assert TaskMedia.objects.filter(task_id=task.id).count() == 0
+    assert not (Path(django_settings.TASK_MEDIA_DIR) / str(task.id)).exists()
 
 
 class ReplyEndEvent:

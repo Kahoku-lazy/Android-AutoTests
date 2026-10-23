@@ -1696,7 +1696,7 @@ paths:
   /api/tasks/{task_id}/media/{media_id}/:
     get:
       operationId: task_media
-      description: GET /api/tasks/{task_id}/media/{media_id} — 截图缩略图字节（JPEG，非信封）。
+      description: GET /api/tasks/{task_id}/media/{media_id} — 截图缩略图字节（WebP，非信封）。
       parameters:
       - in: path
         name: media_id
@@ -1715,7 +1715,7 @@ paths:
       responses:
         '200':
           content:
-            image/jpeg:
+            image/webp:
               schema:
                 type: string
                 format: binary

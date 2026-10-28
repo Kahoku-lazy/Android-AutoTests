@@ -30,6 +30,13 @@ cnocr>=2.3.1,<3.0
 # ── HTTP ──
 requests>=2.30
 
+# ── Document parsing ──
+# 任务附件 PRD / Word / PDF：MarkItDown 的 .docx 转换需要 mammoth 可选依赖；
+# .pdf 在缺 MarkItDown 可选依赖时由 PyMuPDF 兜底，.docx 由 python-docx 兜底。
+markitdown[docx]>=0.1.5
+python-docx>=1.1.0
+PyMuPDF>=1.24.0
+
 # ── Testing ──
 pytest>=8.0
 pytest-django>=4.0

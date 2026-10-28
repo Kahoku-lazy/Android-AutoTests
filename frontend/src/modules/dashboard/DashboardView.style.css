@@ -292,3 +292,29 @@
   color: var(--app-text-secondary);
   stroke: var(--app-text-secondary);
 }
+
+/* ── 模型用量账本 ── */
+.voice-usage-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-sm);
+}
+
+.voice-usage-summary b {
+  color: var(--ink);
+  font-size: var(--app-size-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-empty {
+  margin: 0;
+  padding: var(--space-md);
+  border: 2px dashed var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-subtle);
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-sm);
+}

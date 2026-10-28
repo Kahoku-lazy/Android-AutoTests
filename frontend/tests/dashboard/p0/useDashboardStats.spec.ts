@@ -173,6 +173,42 @@ describe('[P0] useDashboardStats', () => {
     expect(s.refreshing.value).toBe(false)
     expect(s.stats.value.devices.online).toBe(3)
   })
+
+  it('refreshSilently：不点亮 loading / refreshing，成功后写数据', async () => {
+    const s = useDashboardStats()
+    await s.loadData()
+    expect(s.loading.value).toBe(false)
+
+    let resolveStats!: (v: unknown) => void
+    vi.mocked(fetchDashboardStats).mockReturnValue(
+      new Promise((r) => { resolveStats = r }) as never,
+    )
+
+    const p = s.refreshSilently()
+    expect(s.loading.value).toBe(false)
+    expect(s.refreshing.value).toBe(false)
+
+    resolveStats(makeStatsRes(true, makeRaw()))
+    await p
+
+    expect(s.loading.value).toBe(false)
+    expect(s.refreshing.value).toBe(false)
+    expect(s.stats.value.devices.online).toBe(3)
+  })
+
+  it('refreshSilently：失败时保留上次成功数据且不写错误态', async () => {
+    const s = useDashboardStats()
+    await s.loadData()
+    expect(s.stats.value.devices.online).toBe(3)
+
+    vi.mocked(fetchDashboardStats).mockRejectedValue(new Error('boom'))
+    vi.mocked(fetchRecentActivities).mockRejectedValue(new Error('boom'))
+
+    await s.refreshSilently()
+
+    expect(s.error.value).toBeNull()
+    expect(s.stats.value.devices.online).toBe(3)
+  })
 })
 
 describe('[P0] mapStatsResponse（纯映射）', () => {

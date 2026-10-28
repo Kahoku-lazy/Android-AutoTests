@@ -4,6 +4,8 @@ import { computed, onMounted, type ComputedRef } from "vue"
 
 import { useDashboardStats, type UseDashboardStatsReturn } from "./composables/useDashboardStats"
 
+import { useDashboardAutoRefresh } from "./composables/useDashboardAutoRefresh"
+
 import { toHourlyPoints, type HourlyPoint } from "./helpers/hourlyPoints"
 
 import type { CaseProjectCardDisplay } from "@/shared/types/dashboard"
@@ -129,6 +131,9 @@ export function useDashboardView(): DashboardViewState {
   onMounted(() => {
     statsComposable.loadData()
   })
+
+  // 页面停留期间静默跟进当日用量，避免图表停在进入页面那一刻
+  useDashboardAutoRefresh(statsComposable.refreshSilently)
 
   return {
     ...statsComposable,

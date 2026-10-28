@@ -5,6 +5,9 @@
 高峰：北京时间周一至周五 9:00–12:00、14:00–18:00，法定节假日全天除外。
 
 1. DeepSeekBilling: 只计算 deepseek-flash 与 deepseek-v4-pro 的费用。
+
+模型名取自 `engines.agents.config.models.DeepSeekModelConfig`；本模块只持有价目数值
+与「旧名按 Flash 计费」这一条官方口径。
 """
 
 from __future__ import annotations
@@ -15,13 +18,30 @@ from zoneinfo import ZoneInfo
 
 import chinese_calendar
 
+from engines.agents.config.models import DeepSeekModelConfig
+
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
 _MILLION = Decimal(1_000_000)
 _PEAK_MULTIPLIER = Decimal(2)
 
+_FLASH = DeepSeekModelConfig.FLASH
+_PRO = DeepSeekModelConfig.PRO
+
+# 官方价目页注 1：旧名仍被接受，但模型已下线，请求由 Flash-1017 提供并按 Flash 价计费。
+_MODEL_ALIASES = {
+    "deepseek-v4-flash": _FLASH,
+    "deepseek-v4-flash-vision-exp": _FLASH,
+}
+
 
 _EIGHT_DECIMAL = Decimal("0.00000001")
 _ZERO = Decimal("0.00000000")
+
+
+def _billed_model(model_name: str) -> str:
+    """把模型名归一到计费档：官方给定的旧名映射到 Flash，其余原样返回。"""
+    name = str(model_name or "").strip().lower()
+    return _MODEL_ALIASES.get(name, name)
 
 
 def _eight_decimal_places(amount: Decimal) -> Decimal:
@@ -34,12 +54,12 @@ class DeepSeekBilling:
 
     # 空闲时段单价（元 / 百万 tokens）
     PRICING: dict[str, dict[str, Decimal]] = {
-        "deepseek-flash": {
+        _FLASH: {
             "input_cache_hit": Decimal("0.02"),
             "input_cache_miss": Decimal("1"),
             "output": Decimal("4"),
         },
-        "deepseek-v4-pro": {
+        _PRO: {
             "input_cache_hit": Decimal("0.15"),
             "input_cache_miss": Decimal("4.5"),
             "output": Decimal("13.5"),
@@ -54,10 +74,13 @@ class DeepSeekBilling:
         cache_hit_tokens: int,
         created_at: datetime | None = None,
     ) -> tuple[Decimal, Decimal, Decimal]:
-        """按与用量相同的三项，返回费用（元，各保留小数点后 8 位、四舍五入）。
+        """
+
+        按与用量相同的三项，返回费用（元，各保留小数点后 8 位、四舍五入）。
 
         Args:
-            model_name: 模型名。只认 deepseek-flash、deepseek-v4-pro。
+            model_name: 模型名。取 `DeepSeekModelConfig.FLASH` 或 `PRO`；
+                官方旧名按 Flash 价计费；未登记模型三项为 0。
             input_tokens: 输入 token。
             output_tokens: 输出 token。
             cache_hit_tokens: 缓存命中 token。超过输入 token 时按输入 token 计。
@@ -67,7 +90,7 @@ class DeepSeekBilling:
             (输入费用, 输出费用, 缓存命中费用)。
             输入费用只计缓存未命中部分。未登记模型返回三项 0.00000000。
         """
-        price = self.PRICING.get(str(model_name or "").strip().lower())
+        price = self.PRICING.get(_billed_model(model_name))
         if price is None:
             return _ZERO, _ZERO, _ZERO
         multiplier = _PEAK_MULTIPLIER if self._is_peak_time(created_at) else Decimal(1)
@@ -89,16 +112,19 @@ class DeepSeekBilling:
         model_name: str,
         created_at: datetime | None = None,
     ) -> dict:
-        """本次取价快照：模型、三项单价、倍率、是否高峰。不计算费用。
+        """
+
+        本次取价快照：模型、三项单价、倍率、是否高峰。不计算费用。
 
         Args:
-            model_name: 模型名。未登记时三项单价为 0。
+            model_name: 模型名。旧名归一到计费档后取价；未登记时三项单价为 0。
             created_at: 调用时刻。None 按空闲时段。
 
         Returns:
             含 model、hit_price、miss_price、output_price、multiplier、peak 的字典。
+            model 是归一后的计费档（旧名会显示成 deepseek-flash）。
         """
-        name = str(model_name or "").strip().lower()
+        name = _billed_model(model_name)
         price = self.PRICING.get(name)
         peak = self._is_peak_time(created_at)
         multiplier = _PEAK_MULTIPLIER if peak else Decimal(1)
@@ -132,7 +158,9 @@ class DeepSeekBilling:
 
 
 def _is_statutory_holiday(moment: datetime) -> bool:
-    """该时刻所在日期是否为法定放假日。
+    """
+
+    该时刻所在日期是否为法定放假日。
 
     Args:
         moment: 已换算到北京时间的时刻。只在周一至周五调用。

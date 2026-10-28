@@ -1,6 +1,8 @@
 """Dashboard AI 用量聚合 — 只读小时用量表。
 
-任务数仍按可见任务计。token、缓存命中和费用按智能体整份合计，不按角色拆开。
+token、缓存命中和费用按平台全部小时用量合计：不限查看者的智能体可见范围，
+`agent_id = 0` 的自建运行也计入，平台费用才不会被少算。
+任务数、任务结果与活动流仍按可见任务计；按智能体拆分只列可见智能体。
 纯只读聚合，无任何写操作。
 """
 
@@ -25,10 +27,9 @@ def _task_qs(user_id):
     return Task.objects.filter(agent__in=_agents(user_id))
 
 
-def _hourly_qs(agent_ids):
-    if not agent_ids:
-        return TaskUsageHourly.objects.none()
-    return TaskUsageHourly.objects.filter(agent_id__in=agent_ids)
+def _hourly_qs():
+    """平台全部小时用量；不按智能体可见性过滤，`agent_id = 0` 也计入。"""
+    return TaskUsageHourly.objects.all()
 
 
 def _money(value) -> float:
@@ -79,10 +80,16 @@ def _agg_by_role(qs):
 
 
 def _agent_usage(agents):
-    """每个智能体一份合计，不按角色或模型拆开。"""
+    """每个可见智能体一份合计，不按角色或模型拆开。
+
+    平台合计走全表，这里只做可见智能体的拆分；不可见智能体的用量只进合计，
+    因此各卡片之和可以不等于平台总量。
+    """
+    agent_ids = [agent.id for agent in agents]
     try:
         grouped = (
-            _hourly_qs([agent.id for agent in agents])
+            _hourly_qs()
+            .filter(agent_id__in=agent_ids)
             .values("agent_id")
             .annotate(
                 inp=Sum("input_tokens"),
@@ -113,13 +120,14 @@ def _agent_usage(agents):
 def ai_usage_stats(user_id):
     """AI 用量聚合（今日/累计），含 DeepSeek 费用。
 
+    用量与费用取平台全部小时用量，任务数取当前用户可见任务。
     返回：任务数量、输入/输出 token、缓存命中 token/命中率、平均每任务 token、
     DeepSeek 费用，各指标分 today / total 两组口径。
     """
     today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
     agents = _agents(user_id)
     task_qs = Task.objects.filter(agent__in=agents)
-    hourly = _hourly_qs([agent.id for agent in agents])
+    hourly = _hourly_qs()
     today_hourly = hourly.filter(stat_date=today_start.date())
 
     def safe_count(qs):
@@ -164,6 +172,7 @@ def ai_usage_stats(user_id):
 def ai_daily_series(user_id, days=7):
     """近 N 天逐日：总 token、缓存命中 token、DeepSeek 费用。
 
+    按平台全部小时用量分桶；`user_id` 保留在签名里仅为与其它统计入口一致。
     返回 {labels, total_tokens, cache_tokens, deepseek_cost}，labels 与执行趋势同口径。
     """
     first_day = (timezone.now() - timedelta(days=days - 1)).replace(
@@ -179,7 +188,7 @@ def ai_daily_series(user_id, days=7):
     start_date = first_day.date()
     try:
         rows = (
-            _hourly_qs([agent.id for agent in _agents(user_id)])
+            _hourly_qs()
             .filter(stat_date__gte=start_date)
             .values("stat_date")
             .annotate(
@@ -216,6 +225,7 @@ _HOURS_PER_DAY = 24
 def ai_today_usage_slots(user_id, now=None):
     """当天逐小时的 token 与费用消耗（按时间进度出数）。
 
+    取平台全部小时用量，`user_id` 保留在签名里仅为与其它统计入口一致。
     `tokens[h]` 是第 h 小时（[h:00, h+1:00)）的用量：该小时走完才给值，
     没走完或还没开始时为 None。进行中的那一小时由 `current` 单独返回，
     MUST NOT 提前出数。
@@ -227,7 +237,7 @@ def ai_today_usage_slots(user_id, now=None):
     hourly_cost = [Decimal(0)] * _HOURS_PER_DAY
     try:
         rows = (
-            _hourly_qs([agent.id for agent in _agents(user_id)])
+            _hourly_qs()
             .filter(stat_date=today)
             .values("stat_hour")
             .annotate(

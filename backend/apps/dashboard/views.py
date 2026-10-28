@@ -21,6 +21,7 @@ from backend.apps.dashboard.ai_usage import (
     platform_activities,
 )
 from backend.apps.device_pool.models import Device
+from backend.apps.usage_ledger.api import usage_summary
 from backend.apps.workflow.models import WorkflowDocument
 from utils.logs import backend_log
 
@@ -122,6 +123,13 @@ class DashboardStatsAPIView(APIView):
                 "runs": {"total": run_total, "active": run_active},
                 "agents": {"total": agent_total, "active": agent_active},
                 "ai_usage": ai_usage_stats(user_id),
+                "usage_ledger": {
+                    "today": usage_summary("today", recent_limit=0),
+                    "total": usage_summary("all", recent_limit=0),
+                    "voice_today": usage_summary("today", recent_limit=0, source="voice"),
+                    "voice_total": usage_summary("all", recent_limit=0, source="voice"),
+                    "recent": usage_summary("today", recent_limit=20)["recent"],
+                },
                 "charts": {
                     "execution": ai_task_daily_execution(user_id),
                     "ai_tokens": {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue"
 import { useDashboardView, toMillions } from "./DashboardView.logic"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
@@ -49,6 +50,43 @@ const {
 
 // 跨零点自动换天：刷新后「今日」系列与三张按日图都切到新的一天
 useMidnightRefresh(refreshData)
+
+const VOICE_CATEGORY_ORDER = ["LLM", "TTS", "Realtime", "Embedding", "ASR"] as const
+
+const voiceUsageLabels = computed(() => {
+  const present = new Set([
+    ...stats.value.usageLedger.voiceToday.categories.map((item) => item.category),
+    ...stats.value.usageLedger.voiceTotal.categories.map((item) => item.category),
+  ])
+  return VOICE_CATEGORY_ORDER.filter((category) => present.has(category))
+})
+
+const voiceUsageSeries = computed(() => {
+  const today = new Map(
+    stats.value.usageLedger.voiceToday.categories.map((item) => [item.category, item.tokens]),
+  )
+  const total = new Map(
+    stats.value.usageLedger.voiceTotal.categories.map((item) => [item.category, item.tokens]),
+  )
+  return [
+    {
+      name: "当天总用量",
+      data: voiceUsageLabels.value.map((category) => today.get(category) ?? 0),
+      color: "#4ECDC4",
+    },
+    {
+      name: "累计用量",
+      data: voiceUsageLabels.value.map((category) => total.get(category) ?? 0),
+      color: "#F7C948",
+    },
+  ]
+})
+
+function formatUsageToken(tokens: number): string {
+  return tokens >= 1_000_000
+    ? `${(tokens / 1_000_000).toFixed(2)}M`
+    : `${(tokens / 1_000).toFixed(2)}K`
+}
 </script>
 
 <template>
@@ -315,6 +353,27 @@ useMidnightRefresh(refreshData)
           <AppCard class="trends-chart-card" :tone="sketchToneAt(4)" :tilt="sketchTiltAt(4)">
             <div class="trends-tasks-card__title">今日 Token 与费用（逐小时）</div>
             <TodayUsageChart :series="todayUsageSeries" />
+          </AppCard>
+        </div>
+        <div class="dashboard__trends dashboard__trends--single">
+          <AppCard class="trends-chart-card" :tone="sketchToneAt(5)" :tilt="sketchTiltAt(5)">
+            <div class="trends-tasks-card__title">Voice 来源 Token 消耗</div>
+            <div class="voice-usage-summary">
+              <span
+                >当天总用量
+                <b>{{ formatUsageToken(stats.usageLedger.voiceToday.total.tokens) }}</b></span
+              >
+              <span
+                >累计用量
+                <b>{{ formatUsageToken(stats.usageLedger.voiceTotal.total.tokens) }}</b></span
+              >
+            </div>
+            <SeriesBarChart
+              v-if="voiceUsageLabels.length"
+              :labels="voiceUsageLabels"
+              :series="voiceUsageSeries"
+            />
+            <p v-else class="usage-empty">暂无 Voice 用量</p>
           </AppCard>
         </div>
 

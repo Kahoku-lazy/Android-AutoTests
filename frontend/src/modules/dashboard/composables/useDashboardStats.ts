@@ -13,6 +13,8 @@ import type {
   AiTokenChart,
   DeepSeekCostChart,
   TodayUsageChart,
+  UsageLedger,
+  UsageSummary,
 } from "@/shared/types/dashboard"
 
 // ── 返回类型接口 ──
@@ -33,6 +35,8 @@ export interface UseDashboardStatsReturn {
   activities: Ref<ActivityItem[]>
   loadData: () => Promise<void>
   refreshData: () => Promise<void>
+  /** 轮询用：刷新成功才写数据，不动 loading / refreshing，失败保留上次成功数据 */
+  refreshSilently: () => Promise<void>
 }
 
 // ── 默认值 ──
@@ -53,6 +57,21 @@ const DEFAULT_AI_USAGE: AiUsage = {
   agents: [],
 }
 
+const emptyUsageSummary = (): UsageSummary => ({
+  period: "today",
+  total: { tokens: 0, cost: 0, calls: 0 },
+  categories: [],
+  recent: [],
+})
+
+const DEFAULT_USAGE_LEDGER: UsageLedger = {
+  today: emptyUsageSummary(),
+  total: { ...emptyUsageSummary(), period: "all" },
+  voiceToday: emptyUsageSummary(),
+  voiceTotal: { ...emptyUsageSummary(), period: "all" },
+  recent: [],
+}
+
 const DEFAULT_STATS: DashboardStats = {
   devices: { online: 0, total: 0 },
   cases: { total: 0, enabled: 0, breakdown: [] },
@@ -60,6 +79,7 @@ const DEFAULT_STATS: DashboardStats = {
   agents: { total: 0, active: 0 },
   workflow: { total: 0 },
   aiUsage: DEFAULT_AI_USAGE,
+  usageLedger: DEFAULT_USAGE_LEDGER,
 }
 
 const DEFAULT_CHART: ExecutionChart = { labels: [], success: [], failed: [] }
@@ -120,6 +140,18 @@ export function mapStatsResponse(raw: DashboardRawData): MappedData {
         byRole: raw.ai_usage?.by_role ?? { today: {}, total: {} },
         agents: raw.ai_usage?.agents ?? [],
       },
+      usageLedger: raw.usage_ledger
+        ? {
+            today: raw.usage_ledger.today,
+            total: raw.usage_ledger.total,
+            voiceToday: raw.usage_ledger.voice_today ?? emptyUsageSummary(),
+            voiceTotal: raw.usage_ledger.voice_total ?? {
+              ...emptyUsageSummary(),
+              period: "all",
+            },
+            recent: raw.usage_ledger.recent,
+          }
+        : DEFAULT_USAGE_LEDGER,
     },
     executionChart: raw.charts?.execution ?? DEFAULT_CHART,
     executionSummary: raw.execution_summary ?? DEFAULT_SUMMARY,
@@ -161,9 +193,13 @@ export function useDashboardStats(): UseDashboardStatsReturn {
   const systemStatus = ref("normal")
   const activities = ref<ActivityItem[]>([])
 
-  async function _fetchAndMap(setLoadingFlag: (v: boolean) => void) {
-    setLoadingFlag(true)
-    error.value = null
+  async function _fetchAndMap(
+    setLoadingFlag: (v: boolean) => void,
+    options: { silent?: boolean } = {},
+  ) {
+    const silent = options.silent === true
+    if (!silent) setLoadingFlag(true)
+    if (!silent) error.value = null
     try {
       const [statsRes, activitiesRes] = await Promise.allSettled([
         fetchDashboardStats(),
@@ -183,10 +219,11 @@ export function useDashboardStats(): UseDashboardStatsReturn {
           recentTasks.value = mapped.recentTasks
           lastUpdated.value = mapped.lastUpdated
           systemStatus.value = mapped.systemStatus
-        } else {
+          error.value = null
+        } else if (!silent) {
           error.value = body?.message || "统计数据加载失败，请检查网络连接"
         }
-      } else {
+      } else if (!silent) {
         error.value = "统计数据加载失败，请检查网络连接"
       }
 
@@ -195,13 +232,14 @@ export function useDashboardStats(): UseDashboardStatsReturn {
         if (body?.status) {
           activities.value = body.data || []
         }
-      } else {
-        if (!error.value) error.value = "活动记录加载失败，请检查网络连接"
+      } else if (!silent && !error.value) {
+        error.value = "活动记录加载失败，请检查网络连接"
       }
     } catch (e: unknown) {
-      error.value = "仪表盘数据加载失败，请稍后重试"
+      // 静默轮询失败时保留上一次成功的数据，不把错误态盖到已展示的统计上
+      if (!silent) error.value = "仪表盘数据加载失败，请稍后重试"
     } finally {
-      setLoadingFlag(false)
+      if (!silent) setLoadingFlag(false)
     }
   }
 
@@ -215,6 +253,10 @@ export function useDashboardStats(): UseDashboardStatsReturn {
     await _fetchAndMap((v) => {
       refreshing.value = v
     })
+  }
+
+  async function refreshSilently() {
+    await _fetchAndMap(() => {}, { silent: true })
   }
 
   return {
@@ -233,5 +275,6 @@ export function useDashboardStats(): UseDashboardStatsReturn {
     activities,
     loadData,
     refreshData,
+    refreshSilently,
   }
 }

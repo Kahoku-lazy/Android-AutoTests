@@ -1,0 +1,113 @@
+{
+  "currency": "CNY",
+  "note": "官方价目表快照；未列模型按 unpriced 记录。DeepSeek 单价为元/百万 tokens，Sambert 为元/万字符，Qwen-TTS 为按美元折算的元/万字符。",
+  "models": {
+    "deepseek-flash": {
+      "provider": "deepseek",
+      "category": "LLM",
+      "input_cache_hit": 0.02,
+      "input_cache_miss": 1,
+      "output": 4,
+      "peak_multiplier": 2,
+      "pricing_status": "priced",
+      "source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing"
+    },
+    "deepseek-v4-pro": {
+      "provider": "deepseek",
+      "category": "LLM",
+      "input_cache_hit": 0.15,
+      "input_cache_miss": 4.5,
+      "output": 13.5,
+      "peak_multiplier": 2,
+      "pricing_status": "priced",
+      "source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing"
+    },
+    "deepseek-v4-flash": {
+      "provider": "deepseek",
+      "category": "LLM",
+      "input_cache_hit": 0.02,
+      "input_cache_miss": 1,
+      "output": 4,
+      "peak_multiplier": 2,
+      "pricing_status": "priced",
+      "source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing"
+    },
+    "deepseek-v4-flash-vision-exp": {
+      "provider": "deepseek",
+      "category": "LLM",
+      "input_cache_hit": 0.02,
+      "input_cache_miss": 1,
+      "output": 4,
+      "peak_multiplier": 2,
+      "pricing_status": "priced",
+      "source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing"
+    },
+    "sambert-zhichu-v1": {
+      "provider": "dashscope",
+      "category": "TTS",
+      "per_10k_chars": 1.0,
+      "pricing_status": "priced",
+      "source": "https://help.aliyun.com/zh/model-studio/sambert"
+    },
+    "sambert-zhiting-v1": {
+      "provider": "dashscope",
+      "category": "TTS",
+      "per_10k_chars": 1.0,
+      "pricing_status": "priced",
+      "source": "https://help.aliyun.com/zh/model-studio/sambert"
+    },
+    "sambert-eva-v1": {
+      "provider": "dashscope",
+      "category": "TTS",
+      "per_10k_chars": 1.0,
+      "pricing_status": "priced",
+      "source": "https://help.aliyun.com/zh/model-studio/sambert"
+    },
+    "qwen3-tts-flash": {
+      "provider": "dashscope",
+      "category": "TTS",
+      "per_10k_chars": 0.8257,
+      "pricing_status": "estimated",
+      "source": "https://www.alibabacloud.com/help/zh/model-studio/qwen3-tts-flash"
+    },
+    "text-embedding-v4": {
+      "provider": "dashscope",
+      "category": "Embedding",
+      "input_per_million": 0.5,
+      "pricing_status": "estimated",
+      "source": "https://help.aliyun.com/zh/model-studio/text-embedding-v4"
+    },
+    "qwen3.8-livetranslate-flash-realtime": {
+      "provider": "dashscope",
+      "category": "Realtime",
+      "input_per_million": 40.7,
+      "output_per_million": 162.8,
+      "pricing_status": "estimated",
+      "source": "https://www.alibabacloud.com/help/zh/model-studio/qwen3-8-livetranslate-flash-realtime"
+    },
+    "qwen3.5-omni-plus-realtime": {
+      "provider": "dashscope",
+      "category": "Realtime",
+      "input_per_million": 0,
+      "output_per_million": 0,
+      "pricing_status": "unpriced",
+      "source": "https://help.aliyun.com/zh/model-studio/qwen3-5-omni-realtime"
+    },
+    "qwen3.5-omni-flash-realtime": {
+      "provider": "dashscope",
+      "category": "Realtime",
+      "input_per_million": 0,
+      "output_per_million": 0,
+      "pricing_status": "unpriced",
+      "source": "https://help.aliyun.com/zh/model-studio/qwen3-5-omni-realtime"
+    },
+    "qwen3-asr-flash-realtime": {
+      "provider": "dashscope",
+      "category": "ASR",
+      "input_per_million": 0,
+      "output_per_million": 0,
+      "pricing_status": "unpriced",
+      "source": "https://help.aliyun.com/zh/model-studio/qwen3-asr-flash-realtime"
+    }
+  }
+}

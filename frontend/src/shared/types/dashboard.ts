@@ -50,6 +50,51 @@ export interface AiUsage {
   agents: AgentUsage[]
 }
 
+export interface UsageMetric {
+  tokens: number
+  cost: number
+  calls: number
+}
+
+export interface UsageProvider extends UsageMetric {
+  provider: string
+}
+
+export interface UsageCategory extends UsageMetric {
+  category: string
+  providers: UsageProvider[]
+}
+
+export interface UsageRecord {
+  usage_id: string
+  event_id: string
+  execution_id: string
+  occurred_at: string
+  provider: string
+  category: string
+  model: string
+  source: string
+  tokens: number
+  characters: number
+  cost: string
+  pricing_status: string
+}
+
+export interface UsageSummary {
+  period: string
+  total: UsageMetric
+  categories: UsageCategory[]
+  recent: UsageRecord[]
+}
+
+export interface UsageLedger {
+  today: UsageSummary
+  total: UsageSummary
+  voiceToday: UsageSummary
+  voiceTotal: UsageSummary
+  recent: UsageRecord[]
+}
+
 export interface DashboardStats {
   devices: { online: number; total: number }
   cases: { total: number; enabled: number; breakdown: CaseBreakdownItem[] }
@@ -57,6 +102,7 @@ export interface DashboardStats {
   agents: { total: number; active: number }
   workflow: { total: number }
   aiUsage: AiUsage
+  usageLedger: UsageLedger
 }
 
 // ── 图表与摘要 ──
@@ -175,6 +221,16 @@ export interface DashboardRawData {
   recent_tasks: RecentTask[]
   last_updated: string
   system_status: string
+  /** 模型用量账本；旧版接口缺省时按空表处理 */
+  usage_ledger?: DashboardUsageLedgerRaw
+}
+
+export interface DashboardUsageLedgerRaw {
+  today: UsageSummary
+  total: UsageSummary
+  voice_today: UsageSummary
+  voice_total: UsageSummary
+  recent: UsageRecord[]
 }
 
 // ── 模板展示辅助 ──

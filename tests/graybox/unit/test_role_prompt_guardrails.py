@@ -30,6 +30,25 @@ def test_executor_prompt_declares_submission_checks():
         assert clause in EXECUTOR_PROMPT, clause
 
 
+def test_executor_prompt_requires_coordinate_marking_before_click():
+    """估算坐标与 xpath 返回坐标都必须先用 mark_dot 打红点核对，确认后才允许点击。"""
+    assert "mark_dot(serial, x, y)" in EXECUTOR_PROMPT
+    assert "无论来自自己看图估算还是 xpath_action 返回" in EXECUTOR_PROMPT
+    assert "红点没有落在目标元素上" in EXECUTOR_PROMPT
+    assert "禁止**在确认红点位置前执行点击" in EXECUTOR_PROMPT
+    assert "normalized=False" in EXECUTOR_PROMPT
+    assert "不需要再标记" not in EXECUTOR_PROMPT
+    assert "截图、坐标核对和返回键不用打开" in EXECUTOR_PROMPT
+
+
+def test_executor_prompt_declares_log_check_belongs_to_verifier():
+    """日志检查只属于验收模型，执行模型不得检查或声称检查过日志。"""
+    assert "设备日志不归你检查" in EXECUTOR_PROMPT
+    assert "只有验收模型有该权限" in EXECUTOR_PROMPT
+    assert "禁止**尝试检查、推测或声称检查过日志" in EXECUTOR_PROMPT
+    assert "在 handover 里写日志结论" in EXECUTOR_PROMPT
+
+
 def test_executor_prompt_no_longer_allows_half_done_submission():
     """旧的“没做完写出来即可交接”表述必须消失。"""
     assert "还没做完或没验证的部分，明确写出来，不要含糊过去" not in EXECUTOR_PROMPT

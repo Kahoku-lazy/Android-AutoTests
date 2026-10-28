@@ -1,7 +1,10 @@
-"""配置层：模型能力目录 + 智能体提示词。设备执行专用。"""
+"""配置层：模型能力目录 + 智能体提示词。设备执行与家电用例编写共用。"""
 
 from __future__ import annotations
 
+from .prompts.case_module_planner_prompt import CASE_MODULE_PLANNER_PROMPT
+from .prompts.case_verifier_prompt import CASE_VERIFIER_GOAL_PROMPT, CASE_VERIFIER_PROMPT
+from .prompts.case_writer_prompt import CASE_WRITER_GOAL_PROMPT, CASE_WRITER_PROMPT
 from .prompts.common_prompt import CHINESE_DEMAND
 from .prompts.executor_prompt import EXECUTOR_PROMPT
 from .prompts.verifier_prompt import VERIFIER_PROMPT
@@ -39,11 +42,19 @@ def model_supports_image(provider: str, model_name: str) -> bool | None:
 
 # 智能体提示词分配（正文在 prompts/，角色只从本模块取用）
 #
-# executor  → EXECUTOR_PROMPT    （执行角色唯一系统提示词）
-# verifier  → VERIFIER_PROMPT    （验收角色唯一系统提示词）
-# 共用片段  → CHINESE_DEMAND     （追加在每轮用户输入末尾）
+# executor      → EXECUTOR_PROMPT        （设备执行角色唯一系统提示词）
+# verifier      → VERIFIER_PROMPT        （设备验收角色唯一系统提示词）
+# case_writer   → CASE_WRITER_PROMPT     （家电用例编写角色唯一系统提示词）
+# case_verifier → CASE_VERIFIER_PROMPT   （家电用例验收角色唯一系统提示词）
+# case_planner  → CASE_MODULE_PLANNER_PROMPT（家电用例模块规划角色唯一系统提示词）
+# 共用片段      → CHINESE_DEMAND         （追加在每轮用户输入末尾）
 
 __all__ = [
+    "CASE_MODULE_PLANNER_PROMPT",
+    "CASE_VERIFIER_GOAL_PROMPT",
+    "CASE_VERIFIER_PROMPT",
+    "CASE_WRITER_GOAL_PROMPT",
+    "CASE_WRITER_PROMPT",
     "CHINESE_DEMAND",
     "DEEPSEEK_MODELS",
     "EXECUTOR_PROMPT",

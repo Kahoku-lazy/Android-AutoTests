@@ -12,7 +12,14 @@ from agentscope.skill import LocalSkillLoader, Skill, SkillLoaderBase
 from agentscope.tool import ToolGroup, Toolkit
 
 from .tools import build_toolkit
+from .tools.tool_case_module_store import (
+    ModuleStore,
+    build_verifier_store_tools,
+    build_writer_store_tools,
+)
+from .tools.tool_case_plan import build_case_plan_tools
 from .tools.tool_device import device_tool_specs
+from .tools.tool_img_b64 import img_b64_tool_specs
 from .tools.tool_serial import serial_tool_specs
 from .tools.tool_wrapper import PlatformFunctionTool
 
@@ -51,7 +58,10 @@ def select_tools(names: tuple[str, ...]):
     Raises:
         ValueError: 名字表里有未登记的工具（报错会列出可选名）。
     """
-    by_name = {spec.name: spec for spec in (*device_tool_specs(), *serial_tool_specs())}
+    by_name = {
+        spec.name: spec
+        for spec in (*device_tool_specs(), *serial_tool_specs(), *img_b64_tool_specs())
+    }
     missing = [name for name in names if name not in by_name]
     if missing:
         known = ", ".join(by_name)
@@ -102,9 +112,10 @@ def _assigned_tools(
     return owner
 
 
-# 执行角色常驻工具。截图和返回键始终交给模型。
+# 执行角色常驻工具。截图、坐标核对和返回键始终交给模型。
 EXECUTOR_BASIC_TOOL_NAMES = (
     "screenshot_page",
+    "mark_dot",
     "press_key",
 )
 
@@ -190,6 +201,45 @@ def build_executor_toolkit(
 def build_verifier_toolkit() -> Toolkit:
     """组装验收角色工具包：截图与日志检查常驻，不带设备操作。"""
     return build_executor_toolkit(VERIFIER_BASIC_TOOL_NAMES, ())
+
+
+def build_case_authoring_toolkit() -> Toolkit:
+    """组装规划/验收角色共用的空工具包：不操作设备，也不读写文件。
+
+    Returns:
+        只含 basic 组、不含任何工具的新 Toolkit。
+    """
+    return build_toolkit([])
+
+
+def build_case_writer_toolkit() -> Toolkit:
+    """组装写用例角色的工具包：只带计划模式四件套，不操作设备。
+
+    Returns:
+        basic 组内含 ``TaskCreate`` / ``TaskGet`` / ``TaskList`` / ``TaskUpdate``。
+    """
+    return Toolkit(tools=build_case_plan_tools())
+
+
+def build_case_module_store_tools(
+    store: ModuleStore,
+    module_key: str,
+    *,
+    read_only: bool = False,
+):
+    """组装 GoalPipeline 模块存储工具：编写角色可写，验收角色只读。
+
+    Args:
+        store: 本次任务共享的模块存储。
+        module_key: 当前模块 KEY，工具闭包固定该值。
+        read_only: 为真时只返回读取工具。
+
+    Returns:
+        可直接挂到角色 Toolkit 的 FunctionTool 列表。
+    """
+    if read_only:
+        return build_verifier_store_tools(store, module_key)
+    return build_writer_store_tools(store, module_key)
 
 
 # ── 技能注册（工具包 + 技能来源） ──

@@ -1,11 +1,11 @@
-/** token-storage — 单账号会话存储的唯一真相源。
+/**
+ * 当前登录会话：账号、访问凭证、续期凭证。一次只保留一个账号。
  *
- *  api-client 与页面都从这里读写，避免双源竞态。
- *
- *  存储格式：
- *    localStorage.access_token  = "<jwt>"
- *    localStorage.refresh_token = "<jwt>"
- *    localStorage.username      = "<账号名>"
+ * 业务：
+ * - 读取当前账号、访问凭证和续期凭证
+ * - 登录或注册成功后写入整段会话
+ * - 续期成功后只更换访问凭证
+ * - 登出或续期失败时清空会话
  */
 
 const ACCESS_KEY = "access_token"

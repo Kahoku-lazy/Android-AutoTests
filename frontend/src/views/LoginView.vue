@@ -1,3 +1,6 @@
+<!--
+登录页：按当前是登录还是注册展示对应表单，服务端出错时弹出提示。
+-->
 <script setup lang="ts">
 import { computed } from "vue"
 

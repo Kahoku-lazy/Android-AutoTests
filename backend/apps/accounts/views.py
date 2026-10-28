@@ -1,4 +1,13 @@
-"""Platform auth APIViews — login / register / refresh / logout / me."""
+"""
+平台认证接口：登录、注册、续期、登出、当前用户。
+
+业务：
+1. 登录：账号密码正确则发本次会话；账号或密码不对则拒绝进入。
+2. 注册：校验通过则创建用户并直接登录；用户名已有则拒绝。
+3. 续期：用续期凭证换新的访问凭证，仍属同一次登录。
+4. 登出：作废这次登录的访问凭证和续期凭证；服务暂不可用时拒绝登出，请稍后重试。
+5. 当前用户：返回账号，以及是否管理员。
+"""
 
 from typing import ClassVar
 
@@ -24,7 +33,7 @@ from .serializers import LoginSerializer, RefreshSerializer, RegisterSerializer
 
 
 class LoginView(APIView):
-    """POST /api/auth/login — 用户名密码登录，签发 access / refresh 令牌。"""
+    """POST /api/auth/login — 账号密码正确则发本次会话。"""
 
     permission_classes = [AllowAny]
     authentication_classes: ClassVar[list] = []
@@ -56,7 +65,7 @@ class LoginView(APIView):
 
 
 class RegisterView(APIView):
-    """POST /api/auth/register — 注册新用户并直接签发令牌。"""
+    """POST /api/auth/register — 创建用户并直接登录。用户名已有则拒绝。"""
 
     permission_classes = [AllowAny]
     authentication_classes: ClassVar[list] = []
@@ -96,7 +105,7 @@ class RegisterView(APIView):
 
 
 class RefreshView(APIView):
-    """POST /api/auth/refresh — 用 refresh 令牌换取新的 access 令牌。"""
+    """POST /api/auth/refresh — 用续期凭证换新的访问凭证，仍属同一次登录。"""
 
     permission_classes = [AllowAny]
     authentication_classes: ClassVar[list] = []
@@ -134,7 +143,7 @@ class RefreshView(APIView):
 
 
 class LogoutView(APIView):
-    """POST /api/auth/logout — 登出：吊销本次登录的整个会话（access + refresh）。"""
+    """POST /api/auth/logout — 作废这次登录。服务暂不可用时拒绝登出。"""
 
     permission_classes = [IsAuthenticated]
 
@@ -162,7 +171,7 @@ class LogoutView(APIView):
 
 
 class MeView(APIView):
-    """GET /api/auth/me — 当前登录用户信息。"""
+    """GET /api/auth/me — 当前登录用户，含是否管理员。"""
 
     permission_classes = [IsAuthenticated]
 
@@ -192,7 +201,7 @@ class MeView(APIView):
 
 
 def _first_error(errors) -> str:
-    """Extract first user-facing message from DRF error dict/list."""
+    """取出第一条给用户看的校验说明。"""
     if isinstance(errors, dict):
         non_field = errors.get("non_field_errors")
         if isinstance(non_field, list) and non_field:

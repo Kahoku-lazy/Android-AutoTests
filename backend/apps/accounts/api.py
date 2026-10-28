@@ -1,11 +1,9 @@
-"""accounts 写操作 — 用户创建收敛到本文件。
+"""
+注册时创建用户。
 
-写操作铁律：View 调用 api.py 函数写 DB，禁止直接 ORM INSERT/UPDATE/DELETE。
-
-唯一性权威：用户名的唯一性以**数据库唯一约束**为准。本文件负责把 `IntegrityError`
-翻译为领域错误 :class:`ConflictError`（视图映射为 409）；输入校验层不做唯一性保证。
-
-__all__ 白名单，供 views.py 调用。
+业务：
+1. 创建平台用户，并返回账号编号、用户名和邮箱。
+2. 用户名已存在时拒绝创建。
 """
 
 from django.contrib.auth.models import User

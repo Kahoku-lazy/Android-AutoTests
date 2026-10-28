@@ -1,3 +1,7 @@
+<!--
+注册表单：填写账号、邮箱、密码和确认密码，提交注册或改去登录。
+字段错误由父级传入，这里只展示。
+-->
 <script setup lang="ts">
 import { IconUser, IconLock, IconMail } from "@/shared/icons/index"
 import type { FieldErrors } from "@/shared/types/auth"

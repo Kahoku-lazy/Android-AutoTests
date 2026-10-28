@@ -1,3 +1,5 @@
+"""平台认证应用。用户存在 Django 内置用户表，本应用没有自有表。"""
+
 from django.apps import AppConfig
 
 

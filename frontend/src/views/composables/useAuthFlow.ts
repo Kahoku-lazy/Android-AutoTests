@@ -1,8 +1,11 @@
-/** useAuthFlow — 统一登录/注册 API 编排。
+/**
+ * 登录与注册的提交：发出认证请求，成功后进入工作台。
  *
- *  职责：调用 login/register API → 写 token → 跳转。
- *  校验逻辑在调用方（handleLogin / handleRegister）完成，
- *  本模块只处理网络层和状态副作用。
+ * 业务：
+ * - 登录或注册成功后记下本次会话，并进入工作台
+ * - 登录成功且勾选了记住账号时，留下账号名
+ * - 失败时留下服务端错误文案，供登录页弹出
+ * - 请求进行中处于加载中
  */
 import { ref, type Ref } from "vue"
 import { useRouter } from "vue-router"
@@ -13,7 +16,7 @@ import { saveSession } from "@/shared/auth/token-storage"
 import { getApiErrorMessage } from "@/shared/types/api-error"
 
 export interface UseAuthFlowParams {
-  /** useSavedUsername 返回值 */
+  /** 登录成功后，按「记住账号」留下或忘掉账号名 */
   saveUsername: (username: string) => void
 }
 
@@ -21,7 +24,7 @@ export interface UseAuthFlowReturn {
   loading: Ref<boolean>
   serverError: Ref<string>
   clearServerError: () => void
-  /** 统一认证入口。调用方应在调用前完成表单校验。 */
+  /** 提交一次登录或注册。调用前表单应已通过校验。 */
   authenticate: (params: {
     mode: "login" | "register"
     username: string

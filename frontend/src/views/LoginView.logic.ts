@@ -1,7 +1,12 @@
-/** LoginView 逻辑层 — 薄编排器，组合子 composable。
+/**
+ * 登录页逻辑：在登录与注册之间切换，收集表单并提交认证。
  *
- *  作为 composable 导出，LoginView.vue 的 <script setup> 调用 useLoginView()
- *  并解构所有返回值供模板绑定。
+ * 业务：
+ * - 登录：账号、密码、记住账号
+ * - 注册：账号、邮箱、密码、确认密码
+ * - 校验字段并决定能否提交；不通过时提示，通过后提交
+ * - 展示服务端错误，关闭后清除
+ * - 切换登录/注册时，清掉将进入的一侧表单和当前错误提示
  */
 import { ref, type Ref, type ComputedRef } from "vue"
 import { ElMessage } from "element-plus"

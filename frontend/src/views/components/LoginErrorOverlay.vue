@@ -1,14 +1,26 @@
+<!--
+LoginErrorOverlay — 登录页服务端错误提示（L5 覆盖层）
+
+职责：纯展示。文案和开关都由父级 LoginView 持有：
+serverError 有内容则打开，关闭后把清错交给父级。
+
+契约：
+- message: 原样展示的错误文案
+- visible: 对话框是否打开（受控，组件内不改这个值）
+- emit close: 无载荷。对话框关掉，或点「知道了」时发出
+
+交互：
+- el-dialog 且 append-to-body，盖在登录/注册表单之上
+- 只在 model-value 变为 false 时 emit；打开时不发
+- 蒙层、标题栏关闭、「知道了」都收成同一次 close
+
+展示：
+- 文案颜色 --ink，字号 --app-size-sm
+- 超长文案在 min(40vh, 240px) 内换行滚动
+- data-testid：login-error-message、login-error-dismiss
+-->
+
 <script setup lang="ts">
-/**
- * LoginErrorOverlay — 登录/注册错误浮层弹窗
- *
- * 覆盖层统一走 Element Plus（frontend/AGENTS.md「L5 覆盖层」口径）：遮罩、ESC、焦点与滚动锁
- * 由 el-dialog 提供；本组件只把「可见性 / 消息」映射到调用方状态，不再自建 backdrop。
- *
- * append-to-body 是必需的（见 frontend-l5-overlay「Blocking overlays escape transformed ancestors」）：
- * 挂载点 .meeting-doodle 带 transform: rotate(1.2deg)，而带 transform 的祖先会成为
- * position: fixed 后代的包含块 —— 不 Teleport 到 body，遮罩就只盖住那张便签卡（实测 424×403）。
- */
 defineProps<{
   message: string
   visible: boolean

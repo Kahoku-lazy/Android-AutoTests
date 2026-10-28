@@ -1,7 +1,11 @@
 /**
- * api-auth-interceptors — 可注入依赖的鉴权拦截器，便于单测。
+ * 已登录请求的凭证处理。
  *
- * api-client.ts 注入真实 token-storage / axios；测试注入 mock。
+ * 业务：
+ * - 发出请求时带上当前访问凭证
+ * - 访问凭证失效且还有续期凭证时，先续期再重试这一次请求
+ * - 续期请求出错时退出登录，回到登录页
+ * - 登录、注册、刷新这三处失败不走续期
  */
 import type { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "axios"
 import type { AuthResponse } from "@/shared/types/auth"
@@ -24,13 +28,8 @@ interface RetryableRequest extends InternalAxiosRequestConfig {
 }
 
 /**
- * 公开认证端点（相对 baseURL=/api 的写法）。
- *
- * 这些端点的 401 表示「凭证或令牌本身无效」，不是「access 已过期」—— 因此不得触发令牌刷新，
- * 否则一次密码错误会先白走一次刷新并换掉本地令牌。
- *
- * 该清单必须与网关 PUBLIC_PREFIXES 中的 /api/auth/* 部分一致，
- * 由 tests/graybox/unit/test_auth_frontend_contract.py 对拍。
+ * 登录、注册、刷新。这三处失败表示凭证本身无效，不能当成访问过期去续期，
+ * 否则一次密码错误会先换掉本地会话。清单需与网关公开认证路径一致。
  */
 export const PUBLIC_AUTH_PATHS = ["/auth/login", "/auth/register", "/auth/refresh"] as const
 

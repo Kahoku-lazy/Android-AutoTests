@@ -1,3 +1,11 @@
+/**
+ * 业务接口客户端：请求发往 /api，并带上当前登录凭证。
+ *
+ * 业务：
+ * - 已登录的请求自动带访问凭证
+ * - 访问凭证失效时向续期接口换新凭证，再重试刚才的请求
+ * - 续期失败则清空会话，整页回到登录页
+ */
 import axios from "axios"
 import { formatApiError } from "@/shared/types/api-error"
 import type { ApiError } from "@/shared/types/api-error"

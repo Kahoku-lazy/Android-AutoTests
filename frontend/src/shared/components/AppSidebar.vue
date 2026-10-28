@@ -1,3 +1,13 @@
+<!--
+侧栏：模块导航、当前账号，以及退出登录。
+
+业务：
+- 按模块进入各页面，可收起侧栏
+- 底部显示当前账号
+- 退出时通知服务端作废本次登录，再清掉本地会话回到登录页
+- 服务暂时不可用时保留登录态，并提示稍后重试
+- 网络中断或会话已失效时，仍清掉本地会话回到登录页
+-->
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick, watch } from "vue"
 import { useRouter, useRoute } from "vue-router"
@@ -22,12 +32,12 @@ async function logout() {
     await logoutApi()
   } catch (e) {
     const data = e?.response?.data
-    // Redis 不可用：保留本地登录态，提示稍后重试
+    // 服务暂时不可用：保留本地登录态，提示稍后重试
     if (e?.response?.status === 503 && data?.retry) {
       ElMessage.warning(data.message || "服务暂时异常，请稍后重试")
       return
     }
-    // 其它失败（网络/已失效）：仍清本地，避免用户卡在已失效会话
+    // 网络中断或会话已失效：仍清掉本地会话，回到登录页
   }
   clearSession()
   router.push("/login")

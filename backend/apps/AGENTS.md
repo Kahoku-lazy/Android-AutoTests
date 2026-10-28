@@ -38,7 +38,7 @@
 - 错误带 HTTP 状态码（400/401/403/404/409/500）。  
 - 契约对照：前端 api、本 App Serializer。
 
-**WS**：Consumer 必须在 `backend/gateway/routing.py` 注册；事件 `type` 与前端一致；写库仍走 api。当前生产点为 0（`websocket_urlpatterns` 为空表），新增前先走 OpenSpec 变更。
+**WS**：Consumer 必须在 `backend/gateway/routing.py` 注册；事件 `type` 与前端一致；写库仍走 api。当前生产点为 1：`/ws/knowledge-assistant/`（知识库助手实时语音，单连接、不接 channel layer）；新增前先走 OpenSpec 变更。
 
 **AI**：Tool 只调各模块 `api.py`（同进程直调，无 SSE）；依赖 Redis（见 `backend/config/env.py` / `backend/config/settings.py`）。
 

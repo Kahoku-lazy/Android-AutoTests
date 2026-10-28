@@ -1,0 +1,56 @@
+/* 知识库助手页面壳：两栏语音台 + 对话记录；纵向滚动只留在 .doc-body */
+
+.kb-workbench {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.kb-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.kb-notice-hint {
+  margin: 0;
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+}
+
+.kb-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+.kb-console-wrap {
+  position: sticky;
+  top: var(--space-md);
+  min-width: 0;
+}
+
+.kb-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.kb-bottom {
+  height: 1px;
+}
+
+@media (max-width: 1024px) {
+  .kb-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kb-console-wrap {
+    position: static;
+  }
+}

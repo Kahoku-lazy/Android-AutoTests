@@ -2,8 +2,8 @@
  * lucide 运行时图标子集（data-lucide 名 → 图标数据）
  *
  * 为什么不 import 整个 lucide：全量 1834 个图标（源码约 906 KB）会全部打进入口包；
- * 平台实际只用到下面这 15 个名字，来源两处：
- *   1. shared/components/sidebarNavConfig.ts 的 icon 字段（侧栏 13 个）
+ * 平台实际只用到下面这 18 个名字，来源两处：
+ *   1. shared/components/sidebarNavConfig.ts 的 icon 字段（侧栏 14 个）
  *   2. 各页 WorkbenchHeader 的 icon 属性（含 PAGE_HEADER.icon）
  *
  * 新增图标名时在这里补一行；漏登记不会静默 —— lucide 自己会打印
@@ -15,15 +15,18 @@ import {
   Activity,
   BookOpen,
   Bot,
+  Bug,
   ClipboardList,
   Crosshair,
   FileBarChart,
   GitBranch,
   Layers,
   LayoutDashboard,
+  Mic,
   Search,
   Settings,
   Smartphone,
+  Square,
   StickyNote,
   Terminal,
   Wrench,
@@ -34,15 +37,18 @@ export const lucideIconSubset = {
   Activity,
   BookOpen,
   Bot,
+  Bug,
   ClipboardList,
   Crosshair,
   FileBarChart,
   GitBranch,
   Layers,
   LayoutDashboard,
+  Mic,
   Search,
   Settings,
   Smartphone,
+  Square,
   StickyNote,
   Terminal,
   Wrench,

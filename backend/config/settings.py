@@ -83,8 +83,11 @@ INSTALLED_APPS = [
     "backend.apps.accounts",
     "backend.apps.ai_assistant",
     "backend.apps.task_list",
+    "backend.apps.bug_manager",
     "backend.apps.serial_log",
     "backend.apps.dashboard",
+    "backend.apps.usage_ledger",
+    "backend.apps.knowledge_assistant",
 ]
 
 MIDDLEWARE = [
@@ -345,10 +348,15 @@ SPECTACULAR_SETTINGS = {
         {"name": "auth", "description": "登录鉴权：登录 / 注册 / 刷新 / 登出 / 当前用户"},
         {"name": "ai", "description": "AI 助手：智能体配置、任务发布 / 重跑 / 取消、任务清单"},
         {"name": "tasks", "description": "任务清单：任务提交、重跑、取消、事件流程报告"},
+        {"name": "bugs", "description": "BUG 单管理：任务错误分类登记、检索与处理状态"},
         {"name": "reports", "description": "测试报告：任务报告列表、用例分解、报告文件下载与查看"},
         {
             "name": "serial-log",
             "description": "串口日志：端口监听开关、当前日志查看与关键词对照表",
+        },
+        {
+            "name": "knowledge-assistant",
+            "description": "知识库助手：实时语音会话的就绪状态",
         },
         {"name": "schema", "description": "OpenAPI schema 端点（drf-spectacular 自带）"},
     ],

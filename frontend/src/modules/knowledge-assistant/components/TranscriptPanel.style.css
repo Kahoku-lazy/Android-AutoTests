@@ -1,0 +1,163 @@
+/* 知识库助手 · 对话记录：消息气泡与流式状态 */
+
+.kb-transcript-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 360px;
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--ink);
+  border-radius: var(--app-radius-lg);
+  box-shadow: var(--app-shadow-md);
+}
+
+.kb-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 2px solid var(--ink);
+  background: var(--app-bg-subtle);
+}
+
+.kb-panel-title {
+  margin: 0;
+  font-size: var(--app-size-lg);
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.kb-panel-count {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+  font-weight: 700;
+}
+
+.kb-transcript {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+}
+
+.kb-composer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-md) var(--space-lg);
+  border-top: 2px solid var(--ink);
+  background: var(--app-bg-subtle);
+}
+
+.kb-composer__input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-xs) var(--space-sm);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--app-size-sm);
+}
+
+.kb-composer__input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.kb-msg {
+  max-width: 88%;
+  padding: var(--space-sm) var(--space-md);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-md);
+  box-shadow: var(--app-shadow-sm);
+}
+
+.kb-msg--user {
+  align-self: flex-end;
+  background: var(--color-yellow-94);
+}
+
+.kb-msg--assistant {
+  align-self: flex-start;
+  background: var(--app-bg-card);
+}
+
+.kb-msg--interrupted {
+  border-style: dashed;
+}
+
+.kb-msg--error {
+  border-color: var(--app-status-danger);
+  background: var(--app-error-bg);
+}
+
+.kb-msg__meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.kb-msg__role {
+  font-size: var(--app-size-xs);
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.kb-msg__status {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+  font-weight: 700;
+}
+
+.kb-msg__status--interrupted {
+  color: var(--color-orange-37);
+}
+
+.kb-msg__status--error {
+  color: var(--app-status-danger-text);
+}
+
+.kb-msg__text {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--app-size-sm);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.kb-msg--streaming .kb-msg__text::after {
+  content: "▍";
+  margin-left: 2px;
+  color: var(--c-element);
+  animation: kb-caret 1.4s steps(2, start) infinite;
+}
+
+@keyframes kb-caret {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 1024px) {
+  .kb-msg {
+    max-width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kb-msg--streaming .kb-msg__text::after {
+    animation: none;
+  }
+}

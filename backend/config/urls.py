@@ -31,7 +31,9 @@ urlpatterns = [
     path("api/auth/", include("backend.apps.accounts.urls")),
     path("api/ai/", include("backend.apps.ai_assistant.urls")),
     path("api/tasks/", include("backend.apps.task_list.urls")),
+    path("api/bugs/", include("backend.apps.bug_manager.urls")),
     path("api/serial-log/", include("backend.apps.serial_log.urls")),
+    path("api/knowledge-assistant/", include("backend.apps.knowledge_assistant.urls")),
     # ── 停机排空（仅本机回环可调用，见 gateway/middleware.py）──
     path("api/system/drain/", TaskDrainAPIView.as_view(), name="system_drain"),
     # ── DRF API documentation (drf-spectacular + Swagger UI) ──

@@ -1,0 +1,275 @@
+/* 知识库助手 · 语音控制台：纸面卡 + 圆形按键 + 状态灯 */
+
+.kb-console {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--ink);
+  border-radius: var(--app-radius-lg);
+  box-shadow: var(--app-shadow-md);
+}
+
+.kb-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  text-align: center;
+}
+
+.kb-device {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  width: 100%;
+  text-align: left;
+}
+
+.kb-device__label {
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+}
+
+.kb-device__select {
+  width: 100%;
+  padding: var(--space-xs) var(--space-sm);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--app-size-sm);
+  font-weight: 600;
+}
+
+.kb-device__select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.kb-orb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 168px;
+  height: 168px;
+}
+
+.kb-orb::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 2px dashed var(--color-orange-76);
+  border-radius: 50%;
+  opacity: 0.9;
+}
+
+.kb-orb.is-active::before {
+  border-color: var(--c-element);
+  animation: kb-pulse 1.5s var(--app-ease) infinite;
+}
+
+.kb-orb.is-speaking::before {
+  border-color: var(--c-ai);
+}
+
+.kb-voice-btn {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 132px;
+  height: 132px;
+  padding: 0;
+  border: 2.5px solid var(--ink);
+  border-radius: 50%;
+  background: var(--c-element);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 4px 4px 0 0 var(--ink);
+  transition:
+    transform var(--app-duration-fast) var(--app-ease),
+    box-shadow var(--app-duration-fast) var(--app-ease),
+    background-color var(--app-duration) var(--app-ease);
+}
+
+.kb-voice-btn.is-active {
+  background: var(--c-element);
+}
+
+.kb-voice-btn.is-speaking {
+  background: var(--c-ai);
+}
+
+.kb-voice-btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 0 var(--ink);
+}
+
+.kb-voice-btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 0 var(--ink);
+}
+
+.kb-voice-btn:focus-visible {
+  outline: 2px solid var(--c-dashboard);
+  outline-offset: 3px;
+}
+
+.kb-voice-btn:disabled {
+  background: var(--app-bg-subtle);
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: 2px 2px 0 0 var(--ink);
+}
+
+.kb-voice-btn :deep(svg) {
+  width: 38px;
+  height: 38px;
+  stroke: var(--ink);
+}
+
+.kb-status {
+  margin: var(--space-sm) 0 0;
+  font-size: var(--app-size-lg);
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.kb-status--error {
+  color: var(--app-status-danger-text);
+}
+
+.kb-status--connecting {
+  color: var(--app-text-secondary);
+}
+
+.kb-error {
+  max-width: 340px;
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 2px solid var(--app-status-danger);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-error-bg);
+  color: var(--app-status-danger-text);
+  font-size: var(--app-size-sm);
+  font-weight: 600;
+}
+
+.kb-notice {
+  max-width: 340px;
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 2px solid var(--color-orange-53);
+  border-radius: var(--app-radius-sm);
+  background: var(--color-yellow-94);
+  color: var(--color-orange-37);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.kb-hint {
+  max-width: 320px;
+  margin: 0;
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+  line-height: 1.6;
+}
+
+.kb-mic {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  width: 100%;
+  max-width: 300px;
+}
+
+.kb-mic__label {
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+}
+
+.kb-mic__meter {
+  height: 8px;
+  background: var(--app-bg-subtle);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+}
+
+.kb-mic__fill {
+  display: block;
+  height: 100%;
+  background: var(--c-element);
+  transition: width var(--app-duration-fast) var(--app-ease);
+}
+
+.kb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-sm);
+}
+
+.kb-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: 0;
+  padding-top: var(--space-sm);
+  border-top: 2px dotted var(--color-orange-76);
+}
+
+.kb-meta__row {
+  display: flex;
+  gap: var(--space-sm);
+  min-width: 0;
+  font-size: var(--app-size-xs);
+}
+
+.kb-meta__row dt {
+  flex: 0 0 auto;
+  color: var(--app-text-secondary);
+  font-weight: 700;
+}
+
+.kb-meta__row dd {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--app-font-mono);
+  overflow-wrap: anywhere;
+}
+
+@keyframes kb-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kb-voice-btn {
+    transition: none;
+  }
+  .kb-voice-btn:hover:not(:disabled),
+  .kb-voice-btn:active:not(:disabled) {
+    transform: none;
+  }
+  .kb-orb.is-active::before {
+    animation: none;
+  }
+  .kb-mic__fill {
+    transition: none;
+  }
+}

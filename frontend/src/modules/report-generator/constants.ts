@@ -7,6 +7,7 @@
 // ── 表格列定义 ──
 export const TABLE_COLUMNS = [
   { title: "任务 ID", dataIndex: "run_id", minWidth: 120 },
+  { title: "类型", dataIndex: "task_kind", minWidth: 100, align: "center" },
   { title: "设备", dataIndex: "device_serial", minWidth: 140 },
   { title: "任务名称", dataIndex: "task_name", minWidth: 220 },
   { title: "创建人", dataIndex: "creator", minWidth: 100 },
@@ -14,6 +15,16 @@ export const TABLE_COLUMNS = [
   { title: "耗时", dataIndex: "duration", minWidth: 90, align: "center" },
   { title: "时间", dataIndex: "started_at", minWidth: 150 },
 ]
+
+// ── 任务类型标签 ──
+export const TASK_KIND_LABELS: Record<string, string> = {
+  device_control: "设备执行",
+  case_authoring: "用例编写",
+}
+
+export function taskKindLabel(kind: string | undefined): string {
+  return TASK_KIND_LABELS[kind || "device_control"] || "设备执行"
+}
 
 // ── 分页配置 ──
 export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
@@ -138,14 +149,8 @@ export const LIST_ANIMATION = {
   ease: "outCubic",
 }
 
-// ── 路由路径 ──
-export const ROUTES = {
-  reportDetail: (id) => `/reports/${encodeURIComponent(id)}`,
-  caseBreakdown: (type) => `/reports/cases/${type}`,
-}
-
 // ── 页头配置 ──
-// 列表页与三个详情页共用同一图标与底纹，避免同一串颜色/图标名在四处硬编码
+// 列表页与页头共用同一图标与底纹，避免同一串颜色/图标名在多处硬编码
 export const REPORT_HEADER_ICON = "file-bar-chart"
 export const REPORT_HEADER_GRADIENT = "linear-gradient(135deg,#999,#8b7f8f)"
 

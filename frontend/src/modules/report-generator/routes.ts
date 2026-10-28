@@ -7,17 +7,6 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/modules/report-generator/index.vue"),
     meta: { title: "测试报告" },
   },
-  {
-    path: "/reports/cases/:resultType",
-    name: "case-breakdown",
-    component: () => import("@/modules/report-generator/CaseBreakdown.vue"),
-    meta: { title: "用例细分" },
-  },
-  {
-    path: "/reports/:runId",
-    name: "report-detail",
-    component: () => import("@/modules/report-generator/ReportDetail.vue"),
-    meta: { title: "报告详情" },
-  },
 ]
+
 export default routes

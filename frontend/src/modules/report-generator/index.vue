@@ -22,6 +22,7 @@ import {
   STATUS_KEYS,
   STATUS_TAB_LABELS,
   TABLE_COLUMNS,
+  taskKindLabel,
 } from "./constants"
 
 const router = useRouter()
@@ -388,8 +389,12 @@ function openTaskReport(row) {
               <code class="cell-run-id">{{ record.run_id }}</code>
             </template>
 
+            <template #cell-task_kind="{ record }">
+              <span class="cell-kind">{{ taskKindLabel(record.task_kind) }}</span>
+            </template>
+
             <template #cell-device_serial="{ value }">
-              <span class="cell-device">{{ value }}</span>
+              <span class="cell-device">{{ value || "—" }}</span>
             </template>
 
             <template #cell-task_name="{ record }">

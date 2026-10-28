@@ -9,18 +9,18 @@
 | 只做 | 禁止 |
 |------|------|
 | 报告列表/KPI/趋势（任务卡）/文件下载 | 写业务数据 / 下载走 JSON api（用 FileResponse `fetch().text()`） |
-| 列表行点击进入 `/tasks/:id` 事件流程；不跳 `/reports/:id` 或用例分解 | 直打 `/api/tasks/*`（详情归任务清单） |
+| 列表行点击进入 `/tasks/:id` 事件流程；不注册 `/reports/:id` 或用例分解路由 | 直打 `/api/tasks/*`（详情归任务清单） |
 
 - **报告下载是 FileResponse 非 JSON，必须用 `fetch().text()` 而非 `api()`**，否则报告内容乱码。
 - `STATUS_LABEL_MAP` 双口径（`api.ts` 与 `constants.ts` 各一份）是已登记收敛项，**禁止新增第三份映射**。
 - 列表一行 = 一张可见 AI 助手任务卡；点击行进入 `/tasks/:id` 事件流程报告（详情归任务清单模块）。
+- 本模块只有 `/reports` 一条路由；`/reports/:runId` 与 `/reports/cases/:type` 已于 2026-10-23 删除，**禁止复活**。
 
 ## 本模块契约
 
-**响应信封（全局 `{status, data}`）**：`/reports/*` 的成功响应统一为 `{status, data}`，业务负载在 `data` 内（列表 `data.summary/trend/runs`、详情 `data.run`）；错误由拦截器按 `message` 处理。列表 `runs[]` 为任务卡字段（无 `case_count`/`passed`/`failed`/`rate`）。
+**响应信封（全局 `{status, data}`）**：`/reports/*` 的成功响应统一为 `{status, data}`，业务负载在 `data` 内（列表 `data.summary/trend/runs`）；错误由拦截器按 `message` 处理。列表 `runs[]` 为任务卡字段（无 `case_count`/`passed`/`failed`/`rate`）。
 
 - 列表：`GET /reports`（数据源 `task_list.Task`）
-- 用例分解 / 任务视角：仍可请求，后端多为空壳
 - 内容（JSON api）：`GET /reports/{filename}/content`；**下载 URL**：`/api/reports/{filename}`（FileResponse，`fetch().text()`）
 
 ## 本模块特殊布局/样式（`constants.ts` 为唯一真相源）

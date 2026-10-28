@@ -1,6 +1,6 @@
 """report-generator HTTP routes — endpoints under /api/reports/*.
 
-列表只读聚合 task_list.Task；run/cases 详情仍为空壳。
+列表只读聚合 task_list.Task；报告详情归任务清单的 `/api/tasks/{id}/report/`。
 File download/view still read LOG_DIR if files exist.
 
 成功响应统一走全局 `{status, data}` 信封（`shared/renderers.EnvelopeJSONRenderer`）；
@@ -13,7 +13,7 @@ from django.conf import settings
 from django.http import FileResponse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -67,49 +67,6 @@ class ReportListAPIView(APIView):
                 creator=(query.get("creator") or "").strip(),
             )
         )
-
-
-class CaseBreakdownAPIView(APIView):
-    """GET /api/reports/cases — empty groups after execution engine removal."""
-
-    @extend_schema(
-        tags=[REPORT_TAG],
-        operation_id="report_case_breakdown",
-        parameters=[
-            OpenApiParameter(
-                "result",
-                OpenApiTypes.STR,
-                OpenApiParameter.QUERY,
-                required=True,
-                enum=["pass", "fail"],
-            )
-        ],
-        responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
-    )
-    def get(self, request):
-        result_type = (request.query_params.get("result") or "").strip().lower()
-        if result_type not in ("pass", "fail"):
-            raise ValidationError("result 必须为 pass 或 fail")
-
-        payload = {
-            "result_type": result_type,
-            "total": 0,
-            "case_count": 0,
-            "groups": [],
-        }
-        if result_type == "fail":
-            payload["bug_summary"] = {}
-        return Response(payload)
-
-
-class RunReportAPIView(APIView):
-    """GET /api/reports/run/{run_id} — runs no longer exist."""
-
-    @extend_schema(
-        tags=[REPORT_TAG], operation_id="report_run_detail", responses=OpenApiTypes.OBJECT
-    )
-    def get(self, request, run_id):
-        raise NotFound("run not found")
 
 
 class ReportDownloadAPIView(APIView):

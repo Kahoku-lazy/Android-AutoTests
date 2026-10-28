@@ -1,9 +1,9 @@
-"""
+﻿"""
 python -m 调试路径: engines.agents.rag.indexer
 
 本模块的业务功能如下：
 1. RagIndexer: 扫描 rag_data 的 .md/.txt，解析、切块并写入 KnowledgeBase。
-2. 按文件 mtime/size 做增量重建；未变化文件不重复嵌入。
+2. 按文件 mtime/size/切块策略版本做增量重建；未变化文件不重复嵌入。
 
 本模块不读后端、不写数据库，只使用 AgentScope 的解析器/切块器和本地索引。
 """
@@ -13,8 +13,9 @@ from __future__ import annotations
 import hashlib
 import json
 
-from agentscope.rag import ApproxTokenChunker, KnowledgeBase, TextParser
+from agentscope.rag import KnowledgeBase, TextParser
 
+from .chunker import CHUNKER_VERSION, MarkdownHeadingChunker
 from .config import RagConfig
 
 
@@ -39,8 +40,8 @@ class RagIndexer:
         self.knowledge_base = knowledge_base
         self._state_path = config.index_dir / "index_state.json"
         self._parser = TextParser()
-        self._chunker = ApproxTokenChunker(
-            parameters=ApproxTokenChunker.Parameters(
+        self._chunker = MarkdownHeadingChunker(
+            parameters=MarkdownHeadingChunker.Parameters(
                 chunk_size=config.chunk_size,
                 overlap=config.chunk_overlap,
             ),
@@ -64,14 +65,18 @@ class RagIndexer:
             document.document_id: document
             for document in await self.knowledge_base.list_documents()
         }
-        current: dict[str, list[int]] = {}
+        current: dict[str, list[int | str]] = {}
         reindexed = 0
 
         for path in sorted(self.config.data_dir.rglob("*")):
             if not path.is_file() or path.suffix.lower() not in (".md", ".txt"):
                 continue
             relative = path.relative_to(self.config.data_dir).as_posix()
-            signature = [path.stat().st_mtime_ns, path.stat().st_size]
+            signature = [
+                path.stat().st_mtime_ns,
+                path.stat().st_size,
+                CHUNKER_VERSION,
+            ]
             current[relative] = signature
             document_id = _document_id(relative)
             if state.get(relative) == signature and document_id in documents:
@@ -98,7 +103,7 @@ class RagIndexer:
         self._write_state(state)
         return reindexed
 
-    def _load_state(self) -> dict[str, list[int]]:
+    def _load_state(self) -> dict[str, list[int | str]]:
         """读取索引状态；损坏时按空状态处理。"""
         if not self._state_path.exists():
             return {}
@@ -108,13 +113,20 @@ class RagIndexer:
             return {}
         if not isinstance(data, dict):
             return {}
-        return {
-            str(key): [int(value[0]), int(value[1])]
-            for key, value in data.items()
-            if isinstance(value, list) and len(value) == 2
-        }
+        loaded: dict[str, list[int | str]] = {}
+        for key, value in data.items():
+            if not isinstance(value, list) or len(value) < 2:
+                continue
+            try:
+                mtime = int(value[0])
+                size = int(value[1])
+            except (TypeError, ValueError):
+                continue
+            version = str(value[2]) if len(value) >= 3 else ""
+            loaded[str(key)] = [mtime, size, version]
+        return loaded
 
-    def _write_state(self, state: dict[str, list[int]]) -> None:
+    def _write_state(self, state: dict[str, list[int | str]]) -> None:
         """写索引状态；失败不影响本次索引结果。"""
         try:
             self._state_path.write_text(

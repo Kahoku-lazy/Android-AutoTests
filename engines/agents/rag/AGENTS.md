@@ -1,4 +1,4 @@
-# rag 模块 AGENTS.md
+﻿# rag 模块 AGENTS.md
 
 > 二级约束：根 `AGENTS.md`、`engines/AGENTS.md`、`engines/agents/AGENTS.md` 优先。
 
@@ -10,7 +10,8 @@
 | --- | --- |
 | `config.py` | 数据目录、索引目录、嵌入模型、切块/检索参数 |
 | `store.py` | `SQLiteVectorStore`：AgentScope `VectorStoreBase` 的本地实现 |
-| `indexer.py` | `TextParser` + `ApproxTokenChunker` + `KnowledgeBase`，按文件增量重建 |
+| `chunker.py` | `MarkdownHeadingChunker`：按 `##+` 标题切块，过大段回退近似 token |
+| `indexer.py` | `TextParser` + `MarkdownHeadingChunker` + `KnowledgeBase`，按文件/切块版本增量重建 |
 | `service.py` | `RagService.search/build_context`，失败降级 |
 | `tool.py` | `build_rag_tool()`：Omni 的只读 `search_knowledge` 工具 |
 
@@ -30,3 +31,4 @@ python -c "from engines.agents.rag import RagService; print(RagService.from_env(
 ruff check engines/agents/rag
 python -m pytest -c tests/pytest.ini tests/graybox/unit/test_rag_*.py -q
 ```
+

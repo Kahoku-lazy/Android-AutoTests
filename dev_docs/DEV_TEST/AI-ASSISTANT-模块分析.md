@@ -124,11 +124,11 @@ ai_assistant ──► 零处 import task_list（已验证）
 
 **根因**：`ai_assistant` 暴露了 N 个 agent 的 CRUD，而 `task_list` 已按「平台唯一小助手」重写。两边的世界模型没对齐。
 
-### P1-3 测试面几乎为零，且现存一条红测、门禁看不见
+### P1-3 测试面几乎为零，且曾有一条红测（已清理）、门禁看不见
 
 - `tests/api/` 下 **0 个** `/api/ai/agents` 用例；`tests/AGENTS.md` 的模块映射表自己写着「AI 助手 接口测试脚本待补充」。
 - 与 App 相关的只有 `test_ai_api_public_exports.py`（断言 `__all__` 含 `filter_agents_for_user`）和 `test_task_model_ownership.py`（断言 App 不再拥有任务模型）——都不覆盖权限矩阵、reveal-key、上传、脱敏。
-- **实测**：`tests/graybox/unit/test_ai_tool_gateway_auth.py::test_correct_token_allowed` **失败**（期望 200，实际 401）。该用例打的 `/api/ai/tools/devices/list_all/`（`test_ai_tool_gateway_auth.py:12`）是本 App 早已退役的 `views/tool_gateway.py`，路由已不存在。
+- **实测**：`test_ai_tool_gateway_auth.py::test_correct_token_allowed` **失败**（期望 200，实际 401）。该用例打的 `/api/ai/tools/devices/list_all/` 是本 App 早已退役的 `views/tool_gateway.py`，路由已不存在；该过时用例已于 2026-10-28 删除。
 - 门禁为何没拦住：`utils/check_gates.py:337-341` 与 `.github/workflows/ci-phase1.yml:58-64` 都只跑 `pytest --collect-only`——**只收集、不执行**。因此「6 个 CI job 全绿」不代表任何用例通过。
 
 ---
@@ -251,10 +251,8 @@ ai_assistant ──► 零处 import task_list（已验证）
 python -m ruff check backend/apps/ai_assistant
 python -m ruff format --check backend/apps/ai_assistant
 
-# 本 App 相关单测（已跑：12 passed, 1 failed）
+# 本 App 相关单测（原含一条指向已退役网关的红测，该用例已删除）
 python -m pytest -c tests/pytest.ini \
   tests/graybox/unit/test_ai_api_public_exports.py \
-  tests/graybox/unit/test_task_model_ownership.py \
-  tests/graybox/unit/test_ai_tool_gateway_auth.py -q
-# → FAILED test_correct_token_allowed（指向已退役的 /api/ai/tools/devices/list_all/）
+  tests/graybox/unit/test_task_model_ownership.py -q
 ```

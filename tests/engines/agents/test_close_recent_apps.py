@@ -145,8 +145,6 @@ def _run(tmp_path, runner, *, serial="R5CT62RH88F", closer=None, task_id=0):
     return run_platform_sop(
         str(path),
         "本次要操作的设备 serial 是：R5CT62RH88F。每一步的设备动作都必须带上它。",
-        executor_model=None,
-        verifier_model=None,
         task_id=task_id,
         device_serial=serial,
         close_recent_apps=closer,

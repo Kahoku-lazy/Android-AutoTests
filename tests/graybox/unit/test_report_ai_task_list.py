@@ -114,3 +114,24 @@ def test_reports_device_falls_back_to_serial(auth_client):
     )
     row = client.get("/api/reports/", **headers).json()["data"]["runs"][0]
     assert row["device_serial"] == "ABC123"
+
+
+def test_reports_row_carries_task_kind(auth_client):
+    """用例编写任务也在报告列表里，并带 task_kind 供前端区分类型。"""
+    user, client, headers = auth_client
+    agent = AIAgent.objects.create(
+        name="Agent-02",
+        owner=user,
+        task_kind="case_authoring",
+        route_configs={"case_authoring": {"name": "Agent-02"}},
+    )
+    Task.objects.create(
+        agent=agent,
+        title="H717D 用例",
+        task_kind="case_authoring",
+        status="completed",
+    )
+    row = client.get("/api/reports/", **headers).json()["data"]["runs"][0]
+    assert row["task_kind"] == "case_authoring"
+    assert row["device_serial"] == ""
+    assert row["creator"] == "Agent-02"

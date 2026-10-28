@@ -2,15 +2,17 @@
 
 import base64
 import json
+import re
 
 from django.db import transaction
 from django.utils import timezone
 
 from backend.apps.ai_assistant.api import filter_agents_for_user, resolve_assistant_name
 from backend.apps.ai_assistant.models import AIAgent
-from backend.apps.task_list.deepseek_billing import task_deepseek_cost
 from backend.apps.task_list.models import Task, TaskAttachment
-from backend.models.constants import TaskStatus
+from backend.apps.task_list.task_cost import task_cost
+from backend.models.constants import TaskKind, TaskStatus
+from utils.logs import backend_log
 
 __all__ = [
     "create_task",
@@ -29,6 +31,9 @@ __all__ = [
     "is_draining",
     "count_running_tasks",
     "dispatch_device",
+    "dispatch_case_authoring",
+    "build_case_requirement",
+    "case_project_code",
     "build_planner_user_input",
     "build_sop_run_input",
     "parse_task_result",
@@ -36,7 +41,7 @@ __all__ = [
     "serialize_agent_task_row",
     "serialize_agent_task_detail",
     "dump_task_run_payload",
-    "task_deepseek_cost",
+    "task_cost",
     "store_task_media",
     "get_task_media",
 ]
@@ -75,6 +80,7 @@ def recover_orphaned_tasks() -> int:
         task.result = "执行中断：服务重启导致任务线程终止"
         task.finished_at = finished_at
         task.save(update_fields=["status", "result", "finished_at"])
+        _record_bug_safely(task)
     serials = (
         Task.objects.filter(status=TaskStatus.PENDING)
         .exclude(device_serial="")
@@ -83,6 +89,11 @@ def recover_orphaned_tasks() -> int:
     )
     for serial in serials:
         dispatch_device(serial)
+    # 用例编写任务没有设备，重启后单独把 pending 的重新拉起。
+    for case_task in Task.objects.filter(
+        status=TaskStatus.PENDING, task_kind=TaskKind.CASE_AUTHORING
+    ):
+        dispatch_case_authoring(case_task)
     return len(running)
 
 
@@ -96,11 +107,15 @@ def create_task(
     device_serial: str = "",
     device_label: str = "",
     case_title: str = "",
+    task_kind: str = TaskKind.DEVICE_CONTROL,
+    created_by: str = "",
 ) -> Task:
     """创建任务（任务发布）；device_serial 须已在提交时固化。"""
     return Task.objects.create(
         agent=agent,
         title=title,
+        task_kind=task_kind,
+        created_by=str(created_by or ""),
         goal=goal,
         attachment=attachment,
         attachment_filename=attachment_filename,
@@ -185,6 +200,35 @@ def build_sop_run_input(task: Task) -> str:
     return f"本次要操作的设备 serial 是：{serial}。每一步的设备动作都必须带上它。"
 
 
+def build_case_requirement(task: Task, limit: int = 80000) -> str:
+    """把任务文档拼成用例编写的需求正文；超长截断并留下标记。
+
+    Args:
+        task: 用例编写任务。
+        limit: 需求正文最大字符数。
+
+    Returns:
+        以「## 文件名」分节的正文；没有文档时返回空串。
+    """
+    rows = [
+        row
+        for row in list_task_attachments(task)
+        if row.kind == TaskAttachment.KIND_DOCUMENT and (row.body or "").strip()
+    ]
+    text = "\n\n".join(
+        f"## {row.filename or '需求文档'}\n{(row.body or '').strip()}" for row in rows
+    )
+    if len(text) > limit:
+        text = text[:limit] + f"\n\n[... 需求正文超过 {limit} 字，已截断 ...]"
+    return text
+
+
+def case_project_code(task: Task) -> str:
+    """从任务标题提取型号代号（如 H717D）；提取不到时用 PROJ。"""
+    found = re.search(r"[A-Z]{1,4}\d{3,}[A-Z0-9]*", task.title or "")
+    return found.group(0) if found else "PROJ"
+
+
 def set_config_load_message(task: Task, message: str) -> None:
     """把配置加载结论写到该任务的 YAML 附件行。"""
     (
@@ -208,6 +252,8 @@ def rerun_task(task: Task) -> Task:
         device_serial=task.device_serial or "",
         device_label=task.device_label or "",
         case_title=task.case_title or "",
+        task_kind=task.task_kind,
+        created_by=task.created_by,
     )
     copy_task_attachments(task, created)
     return created
@@ -267,6 +313,34 @@ def dispatch_device(serial: str) -> Task | None:
         return claimed
 
 
+def dispatch_case_authoring(task: Task) -> Task | None:
+    """用例编写任务不占设备：置 running 后直接起线程，同一条任务只派发一次。
+
+    Args:
+        task: 刚创建的用例编写任务。
+
+    Returns:
+        已领取并置 running 的任务；任务不存在或不在 pending 时返回 None。
+    """
+    if _DRAINING:
+        return None
+    with transaction.atomic():
+        locked = Task.objects.select_for_update().filter(pk=task.pk).first()
+        if locked is None or locked.status != TaskStatus.PENDING:
+            return None
+        claimed = start_task(locked)
+        task_id = claimed.id
+        agent_id = claimed.agent_id
+
+        def _spawn() -> None:
+            from backend.apps.task_list.task_runner import spawn_task_thread
+
+            spawn_task_thread(task_id, agent_id)
+
+        transaction.on_commit(_spawn)
+        return claimed
+
+
 def finalize_task(
     task: Task,
     *,
@@ -290,10 +364,30 @@ def finalize_task(
         task.by_role = usage.get("by_role") or {}
         fields += ["input_tokens", "output_tokens", "cache_input_tokens", "model_usage", "by_role"]
     task.save(update_fields=fields)
+    _record_bug_safely(task)
     serial = (task.device_serial or "").strip()
     if serial:
         dispatch_device(serial)
     return task
+
+
+def _record_bug_safely(task: Task) -> None:
+    """
+    Mirror a terminal task error into the BUG ledger without affecting the task.
+
+    Args:
+        task: Task that has already been saved in a terminal state.
+
+    Returns:
+        None. Any failure is logged and swallowed so BUG registration cannot
+        change the task outcome.
+    """
+    try:
+        from backend.apps.bug_manager.api import record_task_bugs
+
+        record_task_bugs(task)
+    except Exception:  # noqa: BLE001 - BUG 台账是后处理，不能影响任务终态
+        backend_log.exception("record bug tickets failed task=%s", task.id)
 
 
 def cancel_running_task(task: Task) -> Task:
@@ -371,6 +465,7 @@ def serialize_agent_task_row(task: Task) -> dict:
     return {
         "id": task.id,
         "title": task.title,
+        "task_kind": task.task_kind,
         "goal": task.goal,
         "status": task.status,
         "result": task_result_preview(task.result),
@@ -383,7 +478,7 @@ def serialize_agent_task_row(task: Task) -> dict:
         "created_at": str(task.created_at) if task.created_at else "",
         "started_at": str(task.started_at) if task.started_at else "",
         "finished_at": str(task.finished_at) if task.finished_at else "",
-        "deepseek_cost": task_deepseek_cost(task),
+        "deepseek_cost": task_cost(task),
     }
 
 
@@ -412,6 +507,7 @@ def serialize_agent_task_detail(task: Task) -> dict:
     return {
         "id": task.id,
         "title": task.title,
+        "task_kind": task.task_kind,
         "goal": task.goal,
         "status": task.status,
         "device_serial": task.device_serial,
@@ -432,7 +528,7 @@ def serialize_agent_task_detail(task: Task) -> dict:
         "output_tokens": task.output_tokens,
         "cache_input_tokens": task.cache_input_tokens,
         "model_usage": task.model_usage or {},
-        "deepseek_cost": task_deepseek_cost(task),
+        "deepseek_cost": task_cost(task),
         "run": parse_task_result(task.result),
     }
 

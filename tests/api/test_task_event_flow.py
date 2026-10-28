@@ -2,15 +2,63 @@
 
 from __future__ import annotations
 
+import asyncio
+
+from types import SimpleNamespace
+
 import pytest
 
 from django.contrib.auth import get_user_model
 
 from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.task_list.event_store import TaskEventSink
 from backend.apps.task_list.models import Task, TaskAttachment, TaskEvent, TaskMedia
 from backend.apps.task_list.task_reports import _load_events, build_task_flow
+from engines.agents.event_sink import (
+    bind_run_context,
+    bind_sink,
+    reset_run_context,
+    reset_sink,
+    set_step_context,
+)
+from engines.agents.middleware.model_retry import ModelRetryMiddleware
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
+
+
+class _NamedModel:
+    """只有 model 属性的假模型。"""
+
+    def __init__(self, name: str) -> None:
+        self.model = name
+
+
+class _Flaky(Exception):
+    """带状态码的假瞬态错误。"""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.status_code = 503
+
+
+class _SleepRecorder:
+    """把退避与警告记下来，避免测试真的等待。"""
+
+    def __init__(self) -> None:
+        self.delays: list[float] = []
+        self.warnings: list[str] = []
+
+    async def sleep(self, delay: float) -> None:
+        self.delays.append(delay)
+
+    def warning(self, message: str) -> None:
+        self.warnings.append(message)
+
+
+def _case_rounds(flow: dict, index: int) -> list[dict]:
+    """按 round_ids 取出某条用例的轮次（报告不再内嵌轮次副本）。"""
+    by_id = {round_row["round_id"]: round_row for round_row in flow["rounds"]}
+    return [by_id[round_id] for round_id in flow["cases"][index]["round_ids"]]
 
 
 def _task(owner) -> Task:
@@ -86,8 +134,64 @@ def test_flow_groups_phases_and_collapses_deltas():
     assert "tap" in reason_items[1]["detail"]
 
 
+@pytest.mark.django_db(transaction=True)
+def test_model_retry_and_fallback_events_reach_task_detail():
+    """重试与回退事件经接收方落库后，详情页能拿到中文标签与明细。"""
+    owner = get_user_model().objects.create_user(username="flow-owner-retry", password="pass")
+    task = _task(owner)
+    result = asyncio.run(_run_retrying_call(task))
+
+    assert result == "from-fallback"
+    rows = list(TaskEvent.objects.filter(task=task).order_by("seq"))
+    assert [row.event_type for row in rows] == ["ModelRetryEvent", "ModelFallbackEvent"]
+    assert rows[0].phase == "推理"
+    assert rows[0].block_type == "retry"
+    assert rows[0].step_seq == 1
+    assert rows[0].payload["attempt"] == 1
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    assert flow is not None
+    items = [item for block in flow["rounds"][0]["blocks"] for item in block["items"]]
+    assert [item["label"] for item in items] == ["模型调用重试", "模型回退到备用模型"]
+    assert "deepseek-flash" in items[0]["detail"]
+    assert "500 ms" in items[0]["detail"]
+    assert items[1]["detail"] == "deepseek-flash → deepseek-pro · 主模型重试用尽"
+
+
+async def _run_retrying_call(task):
+    """绑好接收方与运行上下文，跑一次「主模型失败 → 回退成功」的调用。"""
+    sink = TaskEventSink()
+    sink_token = bind_sink(sink)
+    run_token = bind_run_context(task.id, task.agent_id, task.case_title)
+    set_step_context(1, 1)
+    try:
+        recorder = _SleepRecorder()
+        middleware = ModelRetryMiddleware(
+            attempts=2,
+            base_delay=0.5,
+            fallback_model=_NamedModel("deepseek-pro"),
+            sleep=recorder.sleep,
+            log=recorder,
+        )
+
+        async def next_handler(**kwargs):
+            if kwargs["current_model"].model == "deepseek-pro":
+                return "from-fallback"
+            raise _Flaky("503 service unavailable")
+
+        return await middleware.on_model_call(
+            agent=SimpleNamespace(name="executor_role"),
+            input_kwargs={"current_model": _NamedModel("deepseek-flash")},
+            next_handler=next_handler,
+        )
+    finally:
+        reset_run_context(run_token)
+        reset_sink(sink_token)
+
+
 def test_conclusion_comes_from_verifier_output():
     owner = get_user_model().objects.create_user(username="flow-owner-pass", password="pass")
+
     task = _task(owner)
     _event(
         task,
@@ -127,7 +231,7 @@ def test_executor_round_keeps_handover():
     )
 
     flow = build_task_flow(str(owner.id), str(task.id))
-    round_row = flow["cases"][0]["rounds"][0]
+    round_row = _case_rounds(flow, 0)[0]
     assert round_row["handover"] == "已打开首页并停在设备列表"
     assert round_row["verdict"] is None
     leaked = [item.get("handover") for block in round_row["blocks"] for item in block["items"]]
@@ -209,21 +313,24 @@ def test_two_cases_keep_step_and_result():
     flow = build_task_flow(str(owner.id), str(task.id))
     cases = flow["cases"]
     assert [item["title"] for item in cases] == ["卡片页", "基础模式"]
+    assert "rounds" not in cases[0]
+    assert cases[0]["round_ids"] and cases[1]["round_ids"]
     assert cases[0]["outcome"] == "PASS"
     assert [step["outcome"] for step in cases[0]["steps"]] == ["PASS", "PASS"]
-    assert cases[0]["rounds"][0]["role_kind"] == "executor"
-    assert cases[0]["rounds"][0]["subject"] == "启动应用"
-    assert cases[0]["rounds"][0]["verdict"] is None
-    assert cases[0]["rounds"][0]["handover"] == ""
-    assert cases[0]["rounds"][1]["role_kind"] == "verifier"
-    assert cases[0]["rounds"][1]["subject"] == "进入主页"
-    assert cases[0]["rounds"][1]["verdict"] == {"passed": True, "message": "已进主页"}
-    assert cases[0]["rounds"][2]["subject"] == "点击开关"
+    first, second = _case_rounds(flow, 0), _case_rounds(flow, 1)
+    assert first[0]["role_kind"] == "executor"
+    assert first[0]["subject"] == "启动应用"
+    assert first[0]["verdict"] is None
+    assert first[0]["handover"] == ""
+    assert first[1]["role_kind"] == "verifier"
+    assert first[1]["subject"] == "进入主页"
+    assert first[1]["verdict"] == {"passed": True, "message": "已进主页"}
+    assert first[2]["subject"] == "点击开关"
     assert cases[1]["outcome"] == "FAIL"
     assert cases[1]["steps"][0]["outcome"] == "FAIL"
-    assert cases[1]["rounds"][0]["subject"] == "返回桌面"
-    assert cases[1]["rounds"][1]["subject"] == "应用已关闭"
-    assert cases[1]["rounds"][1]["verdict"] == {"passed": False, "message": "还在应用里"}
+    assert second[0]["subject"] == "返回桌面"
+    assert second[1]["subject"] == "应用已关闭"
+    assert second[1]["verdict"] == {"passed": False, "message": "还在应用里"}
 
 
 def test_delta_events_load_without_payload():

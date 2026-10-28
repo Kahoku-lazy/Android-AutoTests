@@ -16,19 +16,17 @@ from collections.abc import Callable
 from pathlib import Path
 
 from engines.agents.event_log import write_line
-from engines.agents.prompt_config import EXECUTOR_PROMPT
-from engines.agents.prompts.verifier_prompt import verifier_system_prompt
-from engines.agents.role.base import AgentRoleConfig, BaseRole
-from engines.agents.role.config import ModelConfig
-from engines.agents.tools_config import build_executor_toolkit, build_verifier_toolkit
+from engines.agents.event_sink import (
+    MAX_MODEL_CALLS,
+    MAX_RUN_SECONDS,
+    budget_exceeded,
+    set_case_title,
+    set_step_context,
+)
+from engines.agents.role.agents import build_executor, build_verifier
 from engines.agents.workflow.case_file import LOAD_FAIL, LOAD_OK, validate_platform_yaml
 from engines.agents.workflow.handover_guard import IncompleteHandoverGuard
 from engines.agents.workflow.ui_auto_workflow import AgentSOPWorkflow
-
-# 单步尝试的工具轮次预算：30 轮实测会被试错吃满，收尾那次点击反而轮不到。
-EXECUTOR_MAX_ITERS = 60
-# 验收者只截图 + 判卷，预算维持默认值。
-VERIFIER_MAX_ITERS = 30
 
 _cancel_events: dict[int, threading.Event] = {}
 _inflight: dict[int, tuple[asyncio.AbstractEventLoop, asyncio.Task]] = {}
@@ -67,24 +65,20 @@ def run_platform_sop(
     yaml_path: str,
     opening: str,
     *,
-    executor_model: ModelConfig,
-    verifier_model: ModelConfig,
     task_id: int = 0,
     case_title: str = "",
     run_case: CaseRunner | None = None,
     device_serial: str = "",
     close_recent_apps: AppCloser | None = None,
 ) -> dict:
-    """按 YAML 跑 SOP。工具由引擎代码装配，本函数不接收工具清单。
+    """按 YAML 跑 SOP。工具与模型都由引擎代码写死装配，本函数不接收工具清单与模型。
 
     Args:
         yaml_path: YAML 文件路径。
         opening: 开场说明。
-        executor_model: 后端注入的执行模型。
-        verifier_model: 后端注入的验收模型。
         task_id: 平台任务 id。0 表示不登记取消。
         case_title: 只跑该标题的用例；空串表示按文件顺序跑全部。
-        run_case: 替身。省略时用注入的模型与代码中的工具包跑真 SOP。
+        run_case: 替身。省略时用代码里写死的模型与工具包跑真 SOP。
         device_serial: 收尾时要关闭应用的设备。空串则跳过收尾。
         close_recent_apps: 收尾替身。省略时由引擎连设备关闭最近任务。
 
@@ -115,8 +109,6 @@ def run_platform_sop(
         _drive_real(
             cases,
             opening,
-            executor_model,
-            verifier_model,
             task_id,
             cancel_event,
             device_serial,
@@ -139,6 +131,8 @@ def _drive_stub(
         for case in cases:
             if cancel_event is not None and cancel_event.is_set():
                 return _cancelled(completed, failed)
+            set_case_title(case.title)
+            set_step_context(None, None)
             steps = [(step.action, step.expected) for step in case.steps]
             try:
                 phase = run_case(case.title, steps, opening)
@@ -158,8 +152,6 @@ def _drive_stub(
 async def _drive_real(
     cases,
     opening,
-    executor_model,
-    verifier_model,
     task_id,
     cancel_event,
     device_serial: str,
@@ -168,68 +160,37 @@ async def _drive_real(
     current = asyncio.current_task()
     if task_id and current is not None:
         _inflight[task_id] = (asyncio.get_running_loop(), current)
-    executor = _build_role(
-        executor_model,
-        name="executor_role",
-        system_prompt=EXECUTOR_PROMPT,
-        toolkit=build_executor_toolkit(),
-        max_iters=EXECUTOR_MAX_ITERS,
-    )
-    verifier = _build_role(
-        verifier_model,
-        name="verifier_role",
-        system_prompt=verifier_system_prompt(),
-        toolkit=build_verifier_toolkit(),
-        max_iters=VERIFIER_MAX_ITERS,
-    )
-    workflow = AgentSOPWorkflow(IncompleteHandoverGuard(executor.agent), verifier.agent)
     completed: list[str] = []
     failed: list[str] = []
     try:
         for case in cases:
             if cancel_event is not None and cancel_event.is_set():
                 return _cancelled(completed, failed)
+            # 用例名与步骤号逐条刷新：一个任务可以按序跑多条用例
+            set_case_title(case.title)
+            set_step_context(None, None)
+            # 每条用例新建角色，避免上一条用例的对话与工具返回污染下一条
+            executor = build_executor()
+            verifier = build_verifier()
+            workflow = AgentSOPWorkflow(IncompleteHandoverGuard(executor.agent), verifier.agent)
             steps = [(step.action, step.expected) for step in case.steps]
             try:
                 phase = await workflow.run_workflow(case.title, steps, opening)
             finally:
                 _close_after_case(device_serial, closer)
-            if phase == "cancelled":
+            if phase == "completed":
+                completed.append(case.title)
+            elif phase == "cancelled":
                 return _cancelled(completed, failed)
-            if phase != "completed":
+            else:
                 failed.append(case.title)
-                continue
-            completed.append(case.title)
+            if budget_exceeded():
+                return _budget_stop(completed, failed)
         return _finished(completed, failed)
     except asyncio.CancelledError:
         return _cancelled(completed, failed)
     finally:
         _inflight.pop(task_id, None)
-
-
-def _build_role(
-    model: ModelConfig,
-    *,
-    name: str,
-    system_prompt: str,
-    toolkit,
-    max_iters: int,
-) -> BaseRole:
-    secret = model.api_key
-    api_key = secret.get_secret_value() if hasattr(secret, "get_secret_value") else str(secret)
-    return BaseRole(
-        *AgentRoleConfig(
-            provider=model.provider,
-            model_name=model.model_name,
-            base_url=model.base_url,
-            api_key=api_key,
-            name=name,
-            system_prompt=system_prompt,
-            toolkit=toolkit,
-            vision=True,
-            max_iters=max_iters,
-        ).load_config()
-    )
 
 
 def _close_after_case(device_serial: str, closer: AppCloser | None) -> None:
@@ -269,6 +230,28 @@ def _succeeded(completed: list[str]) -> dict:
         "status": "success",
         "completed": list(completed),
         "failed": [],
+    }
+
+
+def _budget_stop(completed: list[str], failed: list[str]) -> dict:
+    """运行预算用尽：停止整轮，已完成的用例保留。
+
+    Args:
+        completed: 已完成的用例标题。
+        failed: 已判定失败的用例标题。
+
+    Returns:
+        status 为 fail 的结果，reason 写明命中的上限。
+    """
+    return {
+        "load_message": LOAD_OK,
+        "reason": (
+            f"运行预算超限（模型调用上限 {MAX_MODEL_CALLS} 次，"
+            f"运行时长上限 {MAX_RUN_SECONDS} 秒），已停止整轮"
+        ),
+        "status": "fail",
+        "completed": list(completed),
+        "failed": list(failed),
     }
 
 

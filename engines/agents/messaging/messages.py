@@ -11,7 +11,7 @@ from __future__ import annotations
 from utils.logs import agent_event_log
 
 from ..event_log import write_line
-from ..event_sink import current_sink
+from ..event_sink import budget_exceeded, count_model_call, current_sink, flush_sink
 from .fold import step
 
 __all__ = [
@@ -55,16 +55,22 @@ class AgentEventsShow:
     """把事件流写成文本日志，并把同一份折叠结果交给接收方。"""
 
     @staticmethod
-    def show(event, buf: dict, models: dict[str, str] | None = None) -> None:
+    def show(
+        event, buf: dict, models: dict[str, str] | None = None, *, flush: bool = False
+    ) -> None:
         """折叠一条事件：先写文本日志，再把记录交给当前接收方。
 
         Args:
             event: AgentScope 事件流里的一条事件。
             buf: 增量累积器。块碎片、工具入参与返回、本轮模型名和起点都攒在这里。
             models: 角色名到模型名。发言开始早于模型调用，用它填「开始」行。
+            flush: 交完这条后立即让接收方落库；实时过程需要，非实时调用保持默认。
 
         Returns:
             None。接收方失败时只记警告。
+
+        Raises:
+            RuntimeError: 本次运行已超过模型调用次数或运行时长上限。
         """
         result = step(event, buf, models)
         for model, action in result.log_lines:
@@ -73,5 +79,21 @@ class AgentEventsShow:
             sink = current_sink()
             for record in result.records:
                 sink.emit(record, record.image_b64)
+            if flush:
+                flush_sink()
         except Exception as exc:
             agent_event_log.warning(f"事件接收方失败：{type(exc).__name__}: {exc}")
+        _count_calls(result.records)
+        if budget_exceeded():
+            raise RuntimeError("运行预算超限：模型调用次数或运行时长超过上限")
+
+
+def _count_calls(records) -> None:
+    """把本轮记录里的模型调用计入运行预算。
+
+    Args:
+        records: 本轮折叠出的记录。
+    """
+    for record in records:
+        if record.event_type == "ModelCallEndEvent":
+            count_model_call()

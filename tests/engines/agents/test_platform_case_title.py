@@ -28,8 +28,6 @@ def _run(tmp_path, case_title: str):
     result = run_platform_sop(
         str(path),
         "本次要操作的设备 serial 是：R5CT62RH88F。每一步的设备动作都必须带上它。",
-        executor_model=None,
-        verifier_model=None,
         case_title=case_title,
         run_case=runner,
     )

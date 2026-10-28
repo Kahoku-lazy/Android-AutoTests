@@ -47,6 +47,27 @@ export interface TaskStepBlock {
   phase: TaskStepPhase
 }
 
+/** 轮次标题与序号拼装用到的报告字段（其余字段不参与） */
+export interface ReportRoundTitleInput {
+  /** 角色类别：executor / verifier / planner */
+  role_kind?: string
+  /** 该步在用例里的步骤号：执行轮序号按它去重 */
+  step_seq?: number
+  /** 同一用例内该步的第几次尝试 */
+  attempt?: number
+  /** 该轮要做的动作或要达成的结果 */
+  subject?: string
+  /** 验收轮的判决；无判决时为 null 或 undefined */
+  verdict?: { passed?: boolean } | null
+}
+
+/** 发号需要的最小字段：轮次编号、角色类别、步骤号 */
+export interface ExecutorRoundKey {
+  round_id: number
+  role_kind?: string
+  step_seq?: number
+}
+
 const TERMINAL_STATUSES = new Set([
   "completed",
   "success",
@@ -340,6 +361,126 @@ export function stepTagClass(phase: TaskStepPhase): string {
 export function taskPassCount(blocks: TaskStepBlock[]): string {
   if (!blocks.length) return "—"
   return `${blocks.filter((b) => b.passed).length} / ${blocks.length}`
+}
+
+/**
+ * 按 round_ids 从报告轮次里取该用例的轮次。
+ *
+ * Args:
+ *   rounds: 报告 data.rounds。
+ *   roundIds: 用例的 round_ids。
+ *
+ * Returns:
+ *   顺序与 round_ids 一致的轮次列表；找不到的 id 跳过。
+ */
+export function caseRoundsById<T extends { round_id: number }>(
+  rounds: T[],
+  roundIds: number[],
+): T[] {
+  const byId = new Map<number, T>()
+  for (const round of rounds) byId.set(round.round_id, round)
+  const picked: T[] = []
+  for (const id of roundIds || []) {
+    const round = byId.get(id)
+    if (round) picked.push(round)
+  }
+  return picked
+}
+
+/** 轮次分页的总页数，至少 1 页。 */
+export function reportPageCount(total: number, perPage: number): number {
+  if (!total || !perPage) return 1
+  return Math.max(1, Math.ceil(total / perPage))
+}
+
+/** 取第 page 页（从 1 起）的切片；页码越界时夹到有效范围。 */
+export function reportPageSlice<T>(items: T[], page: number, perPage: number): T[] {
+  if (!items.length) return []
+  const total = reportPageCount(items.length, perPage)
+  const current = Math.min(Math.max(1, Math.trunc(page) || 1), total)
+  const start = (current - 1) * perPage
+  return items.slice(start, start + perPage)
+}
+
+/** 执行步骤的序号键：同一 step_seq 归同一个号，缺失时退化为按轮次发号 */
+function stepKeyOf(round: ExecutorRoundKey): string {
+  const step = Number(round?.step_seq)
+  return step ? `step:${step}` : `round:${round?.round_id}`
+}
+
+/**
+ * 执行轮的序号表：只给执行轮发号，同一执行步骤的重试共用同一个号。
+ *
+ * Args:
+ *   rounds: 同一用例内按报告顺序排列的轮次。
+ *
+ * Returns:
+ *   round_id → 序号（从 1 起）。验收轮不占号；step_seq 缺失的旧数据按轮次各自发号。
+ */
+export function executorRoundNumbers(rounds: ExecutorRoundKey[]): Map<number, number> {
+  const numbers = new Map<number, number>()
+  const seen = new Map<string, number>()
+  let next = 0
+  for (const round of rounds || []) {
+    if (String(round?.role_kind || "") !== "executor") continue
+    const key = stepKeyOf(round)
+    let no = seen.get(key)
+    if (no === undefined) {
+      next += 1
+      no = next
+      seen.set(key, no)
+    }
+    numbers.set(round.round_id, no)
+  }
+  return numbers
+}
+
+/**
+ * 角色徽章前的固定标记。
+ *
+ * Args:
+ *   round: 报告轮次，只用到 role_kind 与 verdict。
+ *
+ * Returns:
+ *   执行轮「➡️ 」；有判决的验收轮「✅ 」或「❌ 」；无判决的验收轮与其它角色为空串。
+ */
+export function roundFlag(round?: ReportRoundTitleInput | null): string {
+  if (String(round?.role_kind || "") !== "verifier") return "➡️ "
+  const passed = round?.verdict?.passed
+  if (passed === true) return "✅ "
+  if (passed === false) return "❌ "
+  return ""
+}
+
+/**
+ * 轮次标题的起始段：序号 + 重试次数 + 固定标记。
+ *
+ * Args:
+ *   round: 报告轮次，只用到 attempt、role_kind 与 verdict。
+ *   execNo: 执行轮序号；验收轮不传（不占号）。
+ *
+ * Returns:
+ *   「2. ➡️ 」/「✅ 」/「第 2 次 ✅ 」这类起始文本，非空时末尾带空格。
+ */
+export function roundTitleLead(round?: ReportRoundTitleInput | null, execNo?: number): string {
+  const no = Number(execNo) > 0 ? `${execNo}. ` : ""
+  const attempt = Number(round?.attempt) || 1
+  const retry = attempt > 1 ? `第 ${attempt} 次 ` : ""
+  return `${no}${retry}${roundFlag(round)}`
+}
+
+/**
+ * 轮次标题的尾段：该步要做的动作或要达成的结果。
+ *
+ * Args:
+ *   round: 报告轮次，只用到 subject。
+ *
+ * Returns:
+ *   「：启动应用」；无 subject 时为空串（调用方据此不留分隔符）。
+ */
+export function roundTitleTail(round?: ReportRoundTitleInput | null): string {
+  const subject = (round?.subject || "").trim()
+  return subject ? `：${subject}` : ""
 }
 
 export function currentStepLabel(blocks: TaskStepBlock[]): string {

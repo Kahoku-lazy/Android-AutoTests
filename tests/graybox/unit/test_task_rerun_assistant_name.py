@@ -49,6 +49,7 @@ def test_rerun_task_clones_without_mutating_original(platform_agent):
         attachment_filename="a.pdf",
         device_serial="SER1",
         device_label="SM-S9010",
+        created_by="42",
     )
     api.finalize_task(original, status=TaskStatus.FAILED, result="执行异常: 402")
     original.refresh_from_db()
@@ -69,6 +70,7 @@ def test_rerun_task_clones_without_mutating_original(platform_agent):
     assert cloned.device_serial == original.device_serial
     assert cloned.device_label == original.device_label
     assert cloned.agent_id == original.agent_id
+    assert cloned.created_by == "42"
 
 
 def test_serialize_assistant_name_from_route_and_follows_rename(platform_agent):

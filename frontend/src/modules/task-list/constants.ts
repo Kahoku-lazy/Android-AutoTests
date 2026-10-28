@@ -7,6 +7,15 @@ export const TASK_DEVICE_POLL_INTERVAL_MS = 30000
 export const TASK_REPORT_HEADER_ICON = "file-bar-chart"
 export const TASK_REPORT_HEADER_GRADIENT = "linear-gradient(135deg,#999,#8b7f8f)"
 
+/** 任务详情：每个用例每页展示的轮次数 */
+export const ROUNDS_PER_PAGE = 20
+
+/** 用例编写任务运行中，报告页自动刷新间隔 */
+export const CASE_EVENT_POLL_MS = 3000
+
+/** 任务详情：默认只展开第一个用例 */
+export const DEFAULT_OPEN_CASE_INDEX = 0
+
 /** 任务详情全屏页 */
 export function taskDetailRoute(id: number | string): string {
   return `/tasks/${id}`

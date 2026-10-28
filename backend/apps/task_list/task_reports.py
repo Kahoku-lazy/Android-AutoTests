@@ -8,13 +8,14 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db.models import Case, F, JSONField, Q, Value, When
+from django.db.models import Case, F, JSONField, Max, Q, Value, When
 from django.db.models.functions import Coalesce
 
 from backend.apps.ai_assistant.api import filter_agents_for_user, resolve_assistant_name
 from backend.apps.ai_assistant.models import AIAgent
-from backend.apps.task_list.api import list_task_attachments
+from backend.apps.task_list.api import list_task_attachments, parse_task_result
 from backend.apps.task_list.models import Task, TaskAttachment, TaskEvent
+from backend.models.constants import TaskKind
 from engines.agents.workflow.case_file import validate_platform_yaml
 
 # 分组只需要这 6 列；阶段、展示与明细字段只补给每组的第一行。
@@ -264,6 +265,7 @@ def build_report_list(
         runs.append(
             {
                 "run_id": str(task.id),
+                "task_kind": task.task_kind,
                 "device_serial": _device_display(task),
                 "task_name": task.title or "",
                 "creator": assistant,
@@ -316,6 +318,11 @@ _EVENT_LABEL = {
     "ToolResultDataDeltaEvent": "工具结果流式事件：增量二进制数据到达",
     "ToolResultEndEvent": "工具结果流式事件：工具执行完成",
     "ReplyEndEvent": "生命周期事件：智能体完成回复",
+    "SOP_STEP_STARTED": "SOP 步骤开始",
+    "HintBlockEvent": "运行时注入提醒",
+    "ExceedMaxItersEvent": "模型推理轮次用尽",
+    "ModelRetryEvent": "模型调用重试",
+    "ModelFallbackEvent": "模型回退到备用模型",
 }
 
 # 任务头部的 result 只下发摘要；事件明细走 _text，全文不截断。
@@ -337,6 +344,24 @@ def _result_summary(text: object) -> str:
 
 def _money(value) -> str:
     return f"{Decimal(value or 0):.8f}"
+
+
+def report_cache_meta(user_id: str | None, task_id: str) -> tuple[str, int] | None:
+    """
+    缓存判定所需的轻量元信息：任务状态与该任务最大事件序号。
+
+    Args:
+        user_id: 当前用户编号。
+        task_id: 任务编号。
+
+    Returns:
+        (状态, 最大 seq)；任务不可见或编号非法时返回 None。
+    """
+    task = _visible_task(user_id, task_id)
+    if task is None:
+        return None
+    max_seq = TaskEvent.objects.filter(task_id=task.id).aggregate(top=Max("seq"))["top"] or 0
+    return (task.status or "").strip().lower(), int(max_seq)
 
 
 def _visible_task(user_id: str | None, task_id: str):
@@ -431,6 +456,27 @@ def _detail(event: _EventRow, payload: dict) -> str:
     if kind == "ReplyEndEvent":
         reason = str(payload.get("finished_reason") or "")
         return _text(f"{reason} · {event.duration_ms} ms · 费用 {_money(event.cost_total)}")
+    if kind == "SOP_STEP_STARTED":
+        step_text = _text(payload.get("step"))
+        attempt = int(payload.get("attempt") or 0)
+        return _text(f"{step_text} · 第 {attempt} 次尝试") if attempt else step_text
+    if kind == "HintBlockEvent":
+        return _text(payload.get("hint"))
+    if kind == "ExceedMaxItersEvent":
+        return "推理轮次用尽，模型被强制收尾"
+    if kind == "ModelRetryEvent":
+        attempt = int(payload.get("attempt") or 0)
+        total = int(payload.get("attempts") or 0)
+        delay_ms = int(payload.get("delay_ms") or 0)
+        reason = _text(payload.get("reason"))
+        head = f"{event.model or '-'} · 第 {attempt}/{total} 次"
+        if delay_ms:
+            head += f" · {delay_ms} ms 后重试"
+        return _text(f"{head} · {reason}") if reason else head
+    if kind == "ModelFallbackEvent":
+        source = _text(payload.get("from_model")) or "-"
+        target = _text(payload.get("to_model")) or "-"
+        return _text(f"{source} → {target} · 主模型重试用尽")
     return ""
 
 
@@ -454,6 +500,7 @@ def _item(event: _EventRow, count: int) -> dict:
         "role_name": event.role_name or "",
         "role_kind": event.role_kind or "",
         "model": event.model or "",
+        "status": str(payload.get("status") or ""),
         "media_id": _media_ref(event) if count == 1 else None,
     }
     if event.event_type == "ToolCallEndEvent":
@@ -503,6 +550,7 @@ _ROLE_LABEL = {
     "executor": "执行",
     "verifier": "验收",
     "planner": "规划",
+    "case_writer": "编写",
 }
 
 
@@ -513,6 +561,8 @@ def _role_kind(item: dict) -> str:
     name = str(item.get("role_name") or "").lower()
     if "verif" in name:
         return "verifier"
+    if "writer" in name:
+        return "case_writer"
     if "plan" in name:
         return "planner"
     if "execut" in name:
@@ -563,8 +613,9 @@ def _rounds(grouped: list[tuple[dict, str]]) -> list[dict]:
     rounds: list[dict] = []
     current: dict | None = None
     for item, phase in grouped:
-        if current is None or item["event_type"] == "ReplyStartEvent":
+        if current is None or item["event_type"] in ("ReplyStartEvent", "SOP_STEP_STARTED"):
             current = {
+                "round_id": len(rounds),
                 "role": "",
                 "role_name": "",
                 "model": "",
@@ -732,15 +783,87 @@ def _flow_cases(task: Task, events: list[_EventRow], rounds: list[dict]) -> list
                     }
                 )
         title = spec.title if spec else (task.case_title or f"用例 {index + 1}")
+        annotated = _annotate(group, step_defs)
         packed.append(
             {
                 "title": title,
                 "outcome": _case_outcome(steps, bool(group)),
                 "steps": steps,
-                "rounds": _annotate(group, step_defs),
+                "round_ids": [entry["round_id"] for entry in annotated],
             }
         )
     return packed
+
+
+def _case_events(events: list[_EventRow]) -> list[dict]:
+    """把用例编写任务的事件收成可读时间线。
+
+    Args:
+        events: 该任务的事件行，按 seq 升序。
+
+    Returns:
+        事件行列表。思考/文本等详情保留全文；结构化交付正文不在事件流里重复。
+    """
+    rows: list[dict] = []
+    for event in events:
+        row = _item(event, max(1, int(event.delta_count or 1)))
+        handover = row.pop("handover", "")
+        row["role_kind"] = _role_kind(row)
+        if handover:
+            row["detail"] = "结构化交付（完整文档不在此展开）"
+        rows.append(row)
+    return rows
+
+
+def _case_authoring_flow(task: Task) -> dict:
+    """用例编写任务的报告：入库结果 + 验收判决 + 模型事件流。
+
+    Args:
+        task: 用例编写任务。
+
+    Returns:
+        与设备任务同信封的流程数据，额外带 case_import、documents 与 events。
+    """
+    payload = parse_task_result(task.result)
+    passed = payload.get("passed")
+    status = (task.status or "").strip().lower()
+    if passed is True:
+        outcome = "PASS"
+    elif passed is False or status in {"failed", "cancelled", "stopped"}:
+        outcome = "FAIL"
+    else:
+        outcome = ""
+    case_import = payload.get("case_import")
+    if not isinstance(case_import, dict):
+        case_import = None
+    verdicts = payload.get("verdicts") if isinstance(payload.get("verdicts"), list) else []
+    documents = [
+        {"filename": row.filename}
+        for row in list_task_attachments(task)
+        if row.kind == TaskAttachment.KIND_DOCUMENT
+    ]
+    events = _load_events(task.id)
+    return {
+        "task": {
+            "id": task.id,
+            "title": task.title or "",
+            "task_kind": TaskKind.CASE_AUTHORING,
+            "case_title": task.case_title or "",
+            "status": task.status or "",
+            "device": "",
+            "assistant": resolve_assistant_name(getattr(task, "agent", None)),
+            "started_at": _iso(task.started_at or task.created_at),
+            "finished_at": _iso(task.finished_at),
+            "cost_total": _money(task.cost_total),
+            "result": str(payload.get("summary") or _result_summary(task.result)),
+        },
+        "conclusion": {"outcome": outcome, "verdicts": verdicts, "delivery": ""},
+        "rounds": [],
+        "cases": [],
+        "case_import": case_import,
+        "documents": documents,
+        "events": _case_events(events),
+    }
 
 
 def build_task_flow(user_id: str | None, task_id: str) -> dict | None:
@@ -748,12 +871,15 @@ def build_task_flow(user_id: str | None, task_id: str) -> dict | None:
     task = _visible_task(user_id, task_id)
     if task is None:
         return None
+    if task.task_kind == TaskKind.CASE_AUTHORING:
+        return _case_authoring_flow(task)
     events = _load_events(task.id)
     rounds = _rounds(_grouped(events))
     return {
         "task": {
             "id": task.id,
             "title": task.title or "",
+            "task_kind": task.task_kind,
             "case_title": task.case_title or "",
             "status": task.status or "",
             "device": _device_display(task),

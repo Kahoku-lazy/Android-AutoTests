@@ -4,10 +4,10 @@ from rest_framework import serializers
 
 
 class TaskSubmitInputSerializer(serializers.Serializer):
-    """任务提交入参 — title/agent_id/device_serial 必填；case_title 可选。
+    """任务提交入参 — title/agent_id 必填；设备由任务类型在视图层校验。
 
-    旧字段 goal / assistant_route / attachment 保留为可选，仅兼容历史客户端；
-    执行链不再使用它们。
+    device_control 任务必须有 device_serial；case_authoring 任务必须上传
+    documents（PRD/Word），不需要设备与 YAML。
     """
 
     title = serializers.CharField(required=True, allow_blank=False)
@@ -21,9 +21,10 @@ class TaskSubmitInputSerializer(serializers.Serializer):
         },
     )
     device_serial = serializers.CharField(
-        required=True,
-        allow_blank=False,
-        error_messages={"required": "请选择设备", "blank": "请选择设备"},
+        required=False,
+        allow_blank=True,
+        default="",
+        error_messages={"invalid": "请选择设备"},
     )
     case_title = serializers.CharField(required=False, allow_blank=True, default="")
     goal = serializers.CharField(required=False, allow_blank=True, default="")
@@ -47,10 +48,7 @@ class TaskSubmitInputSerializer(serializers.Serializer):
         return route
 
     def validate_device_serial(self, value):
-        serial = (value or "").strip()
-        if not serial:
-            raise serializers.ValidationError("请选择设备")
-        return serial
+        return (value or "").strip()
 
     def validate_case_title(self, value):
         return (value or "").strip()

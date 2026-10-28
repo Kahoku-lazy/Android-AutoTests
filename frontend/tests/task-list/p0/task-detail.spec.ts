@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest"
 import {
   currentStepLabel,
   defaultStepIndex,
+  executorRoundNumbers,
   formatTaskCost,
   formatTaskDuration,
+  roundFlag,
+  roundTitleLead,
+  roundTitleTail,
   stepBadgeText,
   taskPassCount,
   taskStepBlocks,
@@ -330,6 +334,102 @@ describe("taskStepBlocks", () => {
     expect(blocks[0].action).toBe("启动")
     expect(blocks[0].assert).toBe("前台包名正确")
     expect(blocks[0].phase).toBe("pass")
+  })
+})
+
+describe("executorRoundNumbers", () => {
+  it("只给执行轮发号，验收轮不占号", () => {
+    const rounds = [
+      { round_id: 0, role_kind: "executor", step_seq: 1 },
+      { round_id: 1, role_kind: "verifier", step_seq: 1 },
+      { round_id: 2, role_kind: "executor", step_seq: 2 },
+      { round_id: 3, role_kind: "verifier", step_seq: 2 },
+    ]
+    const numbers = executorRoundNumbers(rounds)
+    expect([...numbers.entries()]).toEqual([
+      [0, 1],
+      [2, 2],
+    ])
+  })
+
+  it("同一执行步骤的重试共用同一个号", () => {
+    const rounds = [
+      { round_id: 0, role_kind: "executor", step_seq: 1 },
+      { round_id: 1, role_kind: "verifier", step_seq: 1 },
+      { round_id: 2, role_kind: "executor", step_seq: 1 },
+    ]
+    const numbers = executorRoundNumbers(rounds)
+    expect(numbers.get(0)).toBe(1)
+    expect(numbers.get(2)).toBe(1)
+  })
+
+  it("step_seq 缺失的旧数据按轮次各自发号", () => {
+    const rounds = [
+      { round_id: 4, role_kind: "executor" },
+      { round_id: 5, role_kind: "executor" },
+    ]
+    expect([...executorRoundNumbers(rounds).entries()]).toEqual([
+      [4, 1],
+      [5, 2],
+    ])
+  })
+
+  it("没有执行轮时返回空表", () => {
+    expect(executorRoundNumbers([{ round_id: 0, role_kind: "verifier", step_seq: 1 }]).size).toBe(0)
+    expect(executorRoundNumbers([]).size).toBe(0)
+  })
+})
+
+describe("roundFlag", () => {
+  it("执行轮固定 ➡️，验收轮按判决给 ✅ / ❌", () => {
+    expect(roundFlag({ role_kind: "executor" })).toBe("➡️ ")
+    expect(roundFlag({ role_kind: "verifier", verdict: { passed: true } })).toBe("✅ ")
+    expect(roundFlag({ role_kind: "verifier", verdict: { passed: false } })).toBe("❌ ")
+  })
+
+  it("无判决的验收轮没有标记", () => {
+    expect(roundFlag({ role_kind: "verifier" })).toBe("")
+    expect(roundFlag({ role_kind: "verifier", verdict: null })).toBe("")
+  })
+})
+
+describe("roundTitleLead / roundTitleTail", () => {
+  it("执行轮：序号 + ➡️", () => {
+    expect(roundTitleLead({ role_kind: "executor", attempt: 1 }, 2)).toBe("2. ➡️ ")
+  })
+
+  it("验收轮不占号，只有标记", () => {
+    expect(roundTitleLead({ role_kind: "verifier", verdict: { passed: true } })).toBe("✅ ")
+    expect(roundTitleLead({ role_kind: "verifier", verdict: { passed: false } })).toBe("❌ ")
+  })
+
+  it("重试轮排在序号之后、标记之前", () => {
+    expect(roundTitleLead({ role_kind: "executor", attempt: 2 }, 1)).toBe("1. 第 2 次 ➡️ ")
+    expect(roundTitleLead({ role_kind: "verifier", attempt: 2, verdict: { passed: true } })).toBe(
+      "第 2 次 ✅ ",
+    )
+  })
+
+  it("尾段只有动作文本，缺省为空串", () => {
+    expect(roundTitleTail({ subject: "启动 govee 应用" })).toBe("：启动 govee 应用")
+    expect(roundTitleTail({ subject: "  " })).toBe("")
+    expect(roundTitleTail({})).toBe("")
+    expect(roundTitleTail(undefined)).toBe("")
+  })
+
+  it("标题不含角色类别文字、中文步骤序号与模型名", () => {
+    const round = {
+      role_kind: "executor",
+      role: "executor_role",
+      model: "deepseek-flash",
+      attempt: 1,
+      subject: "启动 govee 应用",
+    }
+    const title = `${roundTitleLead(round, 1)}${roundTitleTail(round)}`
+    expect(title).toBe("1. ➡️ ：启动 govee 应用")
+    for (const banned of ["执行模型", "验收模型", "步骤", "deepseek-flash"]) {
+      expect(title).not.toContain(banned)
+    }
   })
 })
 

@@ -73,6 +73,28 @@
   border: 2.5px dashed var(--ink);
   border-radius: 2px;
   box-shadow: 4px 4px 0 0 var(--c-ai);
+  content-visibility: auto;
+  contain-intrinsic-size: 640px;
+}
+
+.flow-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--app-space-sm);
+  padding: var(--app-space-sm) var(--app-space-md);
+}
+
+.flow-pager button {
+  border: 1.5px solid var(--ink);
+  background: var(--paper);
+  padding: 2px 10px;
+  cursor: pointer;
+}
+
+.flow-pager button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .flow-case + .flow-case {
@@ -135,7 +157,7 @@
 }
 
 .flow-round__title.is-verifier {
-  --round-accent: var(--c-report);
+  --round-accent: var(--c-workflow);
 }
 
 .flow-round__text {
@@ -287,6 +309,126 @@
 .badge-pending {
   background: var(--paper);
   color: var(--app-text-secondary);
+}
+
+/* 角色徽章：按角色分色（执行紫 / 验收蓝），与左侧强调色同源；紧跟序号或标记 */
+.badge-role {
+  color: var(--ink);
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.badge-role.is-executor {
+  background: var(--c-ai);
+}
+
+.badge-role.is-verifier {
+  background: var(--c-workflow);
+}
+
+.flow-case-notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+}
+
+.flow-verdict-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--app-size-sm);
+}
+
+.flow-live {
+  margin-left: var(--app-space-sm);
+  color: var(--c-workflow);
+  font-size: var(--app-size-sm);
+  font-weight: 600;
+}
+
+/* 用例编写任务：模型事件流（思考 / 工具调用 / 模型调用 / SOP 步骤） */
+.flow-event {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+  padding: var(--app-space-sm) var(--app-space-md);
+  background: var(--paper);
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+}
+
+.flow-event__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--app-space-xs) var(--app-space-sm);
+  font-size: var(--app-size-sm);
+}
+
+.flow-event__head time {
+  color: var(--app-text-secondary);
+}
+
+.flow-event__label {
+  color: var(--ink);
+}
+
+.flow-event__model {
+  color: var(--ai-ink-muted);
+  font-size: var(--app-size-xs);
+}
+
+.flow-event__count {
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+}
+
+.flow-event__detail {
+  max-height: 320px;
+  margin: 0;
+  padding: var(--app-space-sm);
+  overflow: auto;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--app-size-sm);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--app-bg-card);
+  border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
+  border-radius: 2px;
+}
+
+.flow-event__detail.is-expanded {
+  max-height: none;
+}
+
+.flow-event__toggle {
+  align-self: flex-start;
+  padding: 2px var(--app-space-sm);
+  color: var(--ink);
+  font-size: var(--app-size-xs);
+  background: var(--paper);
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.flow-note-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--app-space-sm);
+  padding: var(--app-space-sm) var(--app-space-md);
+  background: var(--paper);
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+}
+
+.flow-note-row .flow-note {
+  margin: 0;
+  white-space: pre-wrap;
 }
 
 @media (max-width: 960px) {

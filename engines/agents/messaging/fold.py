@@ -47,6 +47,8 @@ def step(event, state: dict, models: dict[str, str] | None = None) -> StepResult
     for handle in (
         _flow_boundary,
         _reply,
+        _hint,
+        _exceed_max_iters,
         _model_start,
         _content_delta,
         _content_end,
@@ -64,11 +66,47 @@ def step(event, state: dict, models: dict[str, str] | None = None) -> StepResult
 
 
 def _flow_boundary(event, state: dict, kind: str, models) -> StepResult | None:
-    """步骤边界不写日志，也不交出记录。"""
-    del event, state, models
+    """SOP 步骤起点交一条记录；其它自定义事件不落行。
+
+    只落起点、不落终点：终点等于下一个起点或任务结束，而落终点会与
+    `_stamp_step` 的步骤匹配错位（该步已 completed 时会算到下一步）。
+    """
+    del models
     if kind != "CustomEvent":
         return None
-    return StepResult()
+    if str(getattr(event, "name", "") or "") != "SOP_STEP_STARTED":
+        return StepResult()
+    value = getattr(event, "value", None) or {}
+    step_text = str(value.get("step") or "")
+    attempt = int(value.get("attempt") or 0)
+    # 步骤边界不属于任何一轮发言，角色与模型留空，避免贴上上一步的模型名
+    record = EventRecord(
+        event_type="SOP_STEP_STARTED",
+        phase="开始",
+        block_type="sop_step",
+        payload={"step": step_text, "attempt": attempt},
+    )
+    return _single(record, f"步骤开始 | {step_text}")
+
+
+def _hint(event, state: dict, kind: str, models) -> StepResult | None:
+    """运行时注入提醒：记下注入内容，用于解释模型行为突变。"""
+    del models
+    if kind != "HintBlockEvent":
+        return None
+    hint = str(getattr(event, "hint", "") or "")
+    source = str(getattr(event, "source", "") or "")
+    record = _record(state, kind, "推理", "hint", payload={"hint": hint, "source": source})
+    return _single(record, f"运行时提醒 | {hint[:200]}", str(state.get("_model") or "-"))
+
+
+def _exceed_max_iters(event, state: dict, kind: str, models) -> StepResult | None:
+    """推理轮次用尽：这是「为什么突然收尾」的直接证据。"""
+    del event, models
+    if kind != "ExceedMaxItersEvent":
+        return None
+    record = _record(state, kind, "结束", "hint", payload={})
+    return _single(record, "推理轮次用尽，强制收尾", str(state.get("_model") or "-"))
 
 
 def _reply(event, state: dict, kind: str, models) -> StepResult | None:
@@ -412,6 +450,24 @@ def _record(state: dict, kind: str, phase: str, block_type: str, **kwargs) -> Ev
         model=str(state.get("_model") or ""),
         **kwargs,
     )
+
+
+def _single(record: EventRecord, action: str = "", model: str = "-") -> StepResult:
+    """一条记录配一行日志；action 为空时只交记录。
+
+    Args:
+        record: 要交出的结构化记录。
+        action: 日志正文。空串表示不写日志。
+        model: 日志行前缀里的模型名。
+
+    Returns:
+        只含这一条记录与这一行日志的折叠结果。
+    """
+    result = StepResult()
+    if action:
+        result.log_lines.append((model, action))
+    result.records.append(record)
+    return result
 
 
 def _now() -> datetime:

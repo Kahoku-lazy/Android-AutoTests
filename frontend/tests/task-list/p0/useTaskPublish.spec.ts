@@ -1,19 +1,19 @@
 /**
  * [P0] 必测 — 任务发布表单：智能体必选、YAML 解析标题、提交五项
  */
-import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
-import { flushPromises } from '@vue/test-utils'
-import * as taskApi from '@/modules/task-list/api/tasks'
-import * as agentApi from '@/modules/ai-assistant/api/agents'
-import { useTaskPublish } from '@/modules/task-list/composables/useTaskPublish'
-import { mountComposable } from '../../helpers/mountComposable'
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest"
+import { flushPromises } from "@vue/test-utils"
+import * as taskApi from "@/modules/task-list/api/tasks"
+import * as agentApi from "@/modules/ai-assistant/api/agents"
+import { useTaskPublish } from "@/modules/task-list/composables/useTaskPublish"
+import { mountComposable } from "../../helpers/mountComposable"
 
-vi.mock('@/modules/task-list/api/tasks', () => ({
+vi.mock("@/modules/task-list/api/tasks", () => ({
   listDevices: vi.fn(),
   submitTask: vi.fn(),
 }))
 
-vi.mock('@/modules/ai-assistant/api/agents', () => ({
+vi.mock("@/modules/ai-assistant/api/agents", () => ({
   listAgents: vi.fn(),
 }))
 
@@ -28,18 +28,22 @@ const YAML_TEXT = `
       assert: d
 `
 
-function yamlFile(text = YAML_TEXT, name = 'case.yaml'): File {
-  return new File([text], name, { type: 'text/yaml' })
+function yamlFile(text = YAML_TEXT, name = "case.yaml"): File {
+  return new File([text], name, { type: "text/yaml" })
 }
 
-describe('[P0] useTaskPublish', () => {
+function markdownFile(name = "prd.md"): File {
+  return new File(["# 需求\n\n待机下单击 POWER 开机。"], name, { type: "text/markdown" })
+}
+
+describe("[P0] useTaskPublish", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(taskApi.listDevices).mockResolvedValue({
       status: true,
       data: {
         devices: [
-          { serial: 'S1', model: 'M1', status: 'ONLINE', connection_type: 'USB', last_seen: '' },
+          { serial: "S1", model: "M1", status: "ONLINE", connection_type: "USB", last_seen: "" },
         ],
       },
     })
@@ -49,9 +53,17 @@ describe('[P0] useTaskPublish', () => {
         agents: [
           {
             id: 10,
-            name: '自动化小助手',
-            status: 'active',
-            route_configs: { device_control: { name: 'Agent-01号' } },
+            name: "自动化小助手",
+            status: "active",
+            task_kind: "device_control",
+            route_configs: { device_control: { name: "Agent-01号" } },
+          },
+          {
+            id: 11,
+            name: "Agent-02",
+            status: "active",
+            task_kind: "case_authoring",
+            route_configs: { case_authoring: { name: "Agent-02" } },
           },
         ],
       },
@@ -62,12 +74,12 @@ describe('[P0] useTaskPublish', () => {
     vi.useRealTimers()
   })
 
-  it('智能体必选：未选时不可提交', async () => {
+  it("智能体必选：未选时不可提交", async () => {
     const { result, wrapper } = await mountComposable(() => useTaskPublish())
     await flushPromises()
 
-    result.form.value.title = '标题'
-    result.form.value.device_serial = 'S1'
+    result.form.value.title = "标题"
+    result.form.value.device_serial = "S1"
     await result.onConfigChange(yamlFile())
     expect(result.canSubmit()).toBe(false)
 
@@ -77,62 +89,110 @@ describe('[P0] useTaskPublish', () => {
     wrapper.unmount()
   })
 
-  it('选 YAML 后解析出用例标题，换文件清空已选用例', async () => {
+  it("选 YAML 后解析出用例标题，换文件清空已选用例", async () => {
     const { result, wrapper } = await mountComposable(() => useTaskPublish())
     await flushPromises()
 
     await result.onConfigChange(yamlFile())
-    expect(result.caseTitles.value).toEqual(['甲', '乙'])
-    result.form.value.case_title = '乙'
+    expect(result.caseTitles.value).toEqual(["甲", "乙"])
+    result.form.value.case_title = "乙"
 
-    await result.onConfigChange(yamlFile('- title: 丙\n  steps:\n    - action: a\n      assert: b\n'))
-    expect(result.caseTitles.value).toEqual(['丙'])
-    expect(result.form.value.case_title).toBe('')
+    await result.onConfigChange(
+      yamlFile("- title: 丙\n  steps:\n    - action: a\n      assert: b\n"),
+    )
+    expect(result.caseTitles.value).toEqual(["丙"])
+    expect(result.form.value.case_title).toBe("")
 
     wrapper.unmount()
   })
 
-  it('YAML 无法解析时给出可读错误且不生成选项', async () => {
+  it("YAML 无法解析时给出可读错误且不生成选项", async () => {
     const { result, wrapper } = await mountComposable(() => useTaskPublish())
     await flushPromises()
 
-    await result.onConfigChange(yamlFile('- steps: []\n'))
+    await result.onConfigChange(yamlFile("- steps: []\n"))
     expect(result.caseTitles.value).toEqual([])
-    expect(result.caseError.value).toContain('title')
+    expect(result.caseError.value).toContain("title")
 
     wrapper.unmount()
   })
 
-  it('提交只带 title/agent_id/device_serial/case_title/config', async () => {
+  it("提交只带 title/agent_id/device_serial/case_title/config", async () => {
     vi.mocked(taskApi.submitTask).mockResolvedValue({
       status: true,
-      data: { id: 1, status: 'pending' },
+      data: { id: 1, status: "pending" },
     })
     const { result, wrapper } = await mountComposable(() => useTaskPublish())
     await flushPromises()
 
-    result.form.value.title = '校准'
+    result.form.value.title = "校准"
     result.form.value.agent_id = 10
-    result.form.value.device_serial = 'S1'
+    result.form.value.device_serial = "S1"
     await result.onConfigChange(yamlFile())
-    result.form.value.case_title = '乙'
+    result.form.value.case_title = "乙"
     await result.submit()
     await flushPromises()
 
     expect(taskApi.submitTask).toHaveBeenCalledTimes(1)
     const fd = vi.mocked(taskApi.submitTask).mock.calls[0][0] as FormData
-    expect(fd.get('title')).toBe('校准')
-    expect(fd.get('agent_id')).toBe('10')
-    expect(fd.get('device_serial')).toBe('S1')
-    expect(fd.get('case_title')).toBe('乙')
-    expect(fd.get('config')).toBeInstanceOf(File)
-    expect(fd.get('goal')).toBeNull()
-    expect(fd.get('documents')).toBeNull()
+    expect(fd.get("title")).toBe("校准")
+    expect(fd.get("agent_id")).toBe("10")
+    expect(fd.get("device_serial")).toBe("S1")
+    expect(fd.get("case_title")).toBe("乙")
+    expect(fd.get("config")).toBeInstanceOf(File)
+    expect(fd.get("goal")).toBeNull()
+    expect(fd.get("documents")).toBeNull()
 
     wrapper.unmount()
   })
 
-  it('打开弹窗立即刷新设备，关闭后不再轮询', async () => {
+  it("Agent-02：上传 PRD/Word 后可提交，只带文档不带设备与 YAML", async () => {
+    vi.mocked(taskApi.submitTask).mockResolvedValue({
+      status: true,
+      data: { id: 2, status: "pending" },
+    })
+    const { result, wrapper } = await mountComposable(() => useTaskPublish())
+    await flushPromises()
+
+    result.form.value.title = "H717D 家电用例"
+    result.form.value.agent_id = 11
+    result.onDocumentChange({ raw: markdownFile("prd.md") } as never)
+    result.onDocumentChange({ raw: markdownFile("需求补充.docx") } as never)
+
+    expect(result.isCaseAuthoring.value).toBe(true)
+    expect(result.canSubmit()).toBe(true)
+
+    await result.submit()
+    await flushPromises()
+
+    const fd = vi.mocked(taskApi.submitTask).mock.calls[0][0] as FormData
+    expect(fd.get("agent_id")).toBe("11")
+    expect(fd.getAll("documents")).toHaveLength(2)
+    expect(fd.get("device_serial")).toBeNull()
+    expect(fd.get("config")).toBeNull()
+
+    wrapper.unmount()
+  })
+
+  it("切到 Agent-02 会清掉设备任务字段，切回设备 Agent 会清掉文档", async () => {
+    const { result, wrapper } = await mountComposable(() => useTaskPublish())
+    await flushPromises()
+
+    result.form.value.device_serial = "S1"
+    result.form.value.case_title = "乙"
+    result.form.value.agent_id = 11
+    expect(result.form.value.device_serial).toBe("")
+    expect(result.form.value.case_title).toBe("")
+
+    result.onDocumentChange({ raw: markdownFile() } as never)
+    expect(result.form.value.documents).toHaveLength(1)
+    result.form.value.agent_id = 10
+    expect(result.form.value.documents).toHaveLength(0)
+
+    wrapper.unmount()
+  })
+
+  it("打开弹窗立即刷新设备，关闭后不再轮询", async () => {
     vi.useFakeTimers()
     const { result, wrapper } = await mountComposable(() => useTaskPublish())
     await flushPromises()
@@ -146,14 +206,14 @@ describe('[P0] useTaskPublish', () => {
       status: true,
       data: {
         devices: [
-          { serial: 'S1', model: 'M1', status: 'ONLINE', connection_type: 'USB', last_seen: '' },
-          { serial: 'S2', model: 'M2', status: 'ONLINE', connection_type: 'USB', last_seen: '' },
+          { serial: "S1", model: "M1", status: "ONLINE", connection_type: "USB", last_seen: "" },
+          { serial: "S2", model: "M2", status: "ONLINE", connection_type: "USB", last_seen: "" },
         ],
       },
     })
     await vi.advanceTimersByTimeAsync(30000)
     await flushPromises()
-    expect(result.devices.value.some((d) => d.serial === 'S2')).toBe(true)
+    expect(result.devices.value.some((d) => d.serial === "S2")).toBe(true)
 
     const afterPoll = vi.mocked(taskApi.listDevices).mock.calls.length
     result.closeDialog()

@@ -16,7 +16,7 @@ from agentscope.sop import SOP, SOPEngine, SOPStep
 from engines.agents.event_log import write_line
 from engines.agents.event_sink import set_step_context
 from engines.agents.messaging.messages import AgentEventsShow
-from engines.agents.role.agents import executor, verifier
+from engines.agents.role.agents import build_executor, build_verifier
 from utils.logs import agent_event_log
 
 
@@ -122,19 +122,25 @@ class AgentSOPWorkflow:
         write_line(self.model_name, action)
 
 
-async def show_event(event, buf: dict, models: dict | None) -> None:
+async def show_event(event, buf: dict, models: dict | None, *, flush: bool = False) -> None:
     """在工作线程里折叠并交给接收方。事件循环里不查库。
 
     Django 未启动时仍在当前线程调用，供引擎本地调试使用。
+
+    Args:
+        event: 事件流里的一条事件。
+        buf: 增量累积器。
+        models: 角色名到模型名。
+        flush: 交完这条后让接收方立即落库；实时过程需要。
     """
     if _django_ready():
         from channels.db import database_sync_to_async
 
         await database_sync_to_async(AgentEventsShow.show, thread_sensitive=False)(
-            event, buf, models
+            event, buf, models, flush=flush
         )
         return
-    AgentEventsShow.show(event, buf, models)
+    AgentEventsShow.show(event, buf, models, flush=flush)
 
 
 def _django_ready() -> bool:
@@ -147,11 +153,15 @@ def _django_ready() -> bool:
 
 
 def _stamp_step(engine) -> None:
-    """把当前正在跑的步骤序号和尝试次数交给事件接收方。"""
+    """把当前正在跑的步骤序号和尝试次数交给事件接收方。
+
+    匹配集合含 pending：SOP 的步骤起点事件在这一步还是 pending 时到达，
+    只有把它也算进来，步骤起点行才挂得到正确的步骤上。
+    """
     steps = list(getattr(getattr(engine, "state", None), "steps", []) or [])
     for index, record in enumerate(steps, start=1):
         phase = getattr(getattr(record, "phase", None), "value", "")
-        if str(phase) in {"running", "awaiting"}:
+        if str(phase) in {"running", "awaiting", "pending"}:
             attempt = len(getattr(record, "verifications", []) or []) + 1
             set_step_context(index, attempt)
             return
@@ -212,5 +222,5 @@ def run_workflow(yml_path: str, run_input: str, case_title: str | None = None) -
         if case_title and title != case_title:
             continue
 
-        workflow = AgentSOPWorkflow(executor.agent, verifier.agent)
+        workflow = AgentSOPWorkflow(build_executor().agent, build_verifier().agent)
         asyncio.run(workflow.run_workflow(title, steps, run_input))

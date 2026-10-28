@@ -47,26 +47,32 @@ const {
   submitting,
   devices,
   agentOptions,
+  isCaseAuthoring,
   caseTitles,
   caseError,
   dialogVisible,
   CONFIG_ACCEPT,
+  DOCUMENT_ACCEPT,
   openDialog,
   closeDialog,
   submit,
   canSubmit,
   onConfigChange,
   clearConfig,
+  onDocumentChange,
+  onDocumentRemove,
 } = useTaskPublish()
 
 const selectableDevices = computed(() => devices.value.filter(isSelectableTaskDevice))
 
 const taskFormRef = ref<FormInstance>()
-const taskRules = {
+const taskRules = computed(() => ({
   title: [{ required: true, message: "请填写任务标题", trigger: "blur" }],
   agent_id: [{ required: true, message: "请选择智能体", trigger: "change" }],
-  device_serial: [{ required: true, message: "请选择设备", trigger: "change" }],
-}
+  ...(isCaseAuthoring.value
+    ? {}
+    : { device_serial: [{ required: true, message: "请选择设备", trigger: "change" }] }),
+}))
 const {
   tasks,
   loading,
@@ -90,7 +96,8 @@ function openDetail(taskId: number) {
 }
 
 function isFailed(t: TaskRecord): boolean {
-  return taskStatusTone(t.status) === "failed"
+  const tone = taskStatusTone(t.status)
+  return tone === "failed" || tone === "interrupted"
 }
 
 function attachmentNames(t: TaskRecord): string {
@@ -111,7 +118,7 @@ function onConfigPicked(file: UploadFile) {
   const raw = pickedFile(file)
   if (!raw) return
   if (!/\.(yaml|yml)$/i.test(raw.name || "")) {
-    ElMessage.error("配置仅支持 YAML；CSV 与 JSON 暂不可用")
+    ElMessage.error("配置只收 YAML（.yaml / .yml）")
     clearConfig()
     return
   }
@@ -189,53 +196,69 @@ async function onSubmit() {
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="配置">
-          <div class="task-format-row">
-            <span class="task-format is-off">CSV · 暂不可用</span>
-            <span class="task-format is-on">YAML</span>
-            <span class="task-format is-off">JSON · 暂不可用</span>
-          </div>
-          <el-upload
-            :accept="CONFIG_ACCEPT"
-            :limit="1"
-            :auto-upload="false"
-            :show-file-list="true"
-            :on-change="onConfigPicked"
-            :on-remove="clearConfig"
-          >
-            <el-button size="small">选择 YAML</el-button>
-          </el-upload>
-          <p v-if="form.configFile" class="task-attach-name">已选：{{ form.configFile.name }}</p>
-          <p v-if="caseError" class="task-case-error">{{ caseError }}</p>
-        </el-form-item>
-        <el-form-item label="设备" prop="device_serial">
-          <el-select
-            v-model="form.device_serial"
-            style="width: 100%"
-            clearable
-            filterable
-            placeholder="请选择设备"
-          >
-            <el-option
-              v-for="d in selectableDevices"
-              :key="d.serial"
-              :label="taskDeviceLabel(d)"
-              :value="taskDeviceAddress(d)"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="测试指定用例">
-          <el-select
-            v-model="form.case_title"
-            style="width: 100%"
-            clearable
-            placeholder="全部用例"
-            @clear="form.case_title = ''"
-          >
-            <el-option label="全部用例" value="" />
-            <el-option v-for="title in caseTitles" :key="title" :label="title" :value="title" />
-          </el-select>
-        </el-form-item>
+        <template v-if="isCaseAuthoring">
+          <el-form-item label="需求文档">
+            <el-upload
+              :accept="DOCUMENT_ACCEPT"
+              :limit="5"
+              multiple
+              :auto-upload="false"
+              :show-file-list="true"
+              :on-change="onDocumentChange"
+              :on-remove="onDocumentRemove"
+            >
+              <el-button size="small">选择 PRD / Word</el-button>
+            </el-upload>
+            <p class="task-attach-name">
+              支持 .docx / .pdf / .md；上传后由 Agent-02 解析需求并生成测试用例
+            </p>
+          </el-form-item>
+        </template>
+        <template v-else>
+          <el-form-item label="配置">
+            <el-upload
+              :accept="CONFIG_ACCEPT"
+              :limit="1"
+              :auto-upload="false"
+              :show-file-list="true"
+              :on-change="onConfigPicked"
+              :on-remove="clearConfig"
+            >
+              <el-button size="small">选择 YAML</el-button>
+            </el-upload>
+            <p class="task-attach-name">配置只收 YAML：.yaml / .yml，单份，上限 20MB</p>
+            <p v-if="form.configFile" class="task-attach-name">已选：{{ form.configFile.name }}</p>
+            <p v-if="caseError" class="task-case-error">{{ caseError }}</p>
+          </el-form-item>
+          <el-form-item label="设备" prop="device_serial">
+            <el-select
+              v-model="form.device_serial"
+              style="width: 100%"
+              clearable
+              filterable
+              placeholder="请选择设备"
+            >
+              <el-option
+                v-for="d in selectableDevices"
+                :key="d.serial"
+                :label="taskDeviceLabel(d)"
+                :value="taskDeviceAddress(d)"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="测试指定用例">
+            <el-select
+              v-model="form.case_title"
+              style="width: 100%"
+              clearable
+              placeholder="全部用例"
+              @clear="form.case_title = ''"
+            >
+              <el-option label="全部用例" value="" />
+              <el-option v-for="title in caseTitles" :key="title" :label="title" :value="title" />
+            </el-select>
+          </el-form-item>
+        </template>
       </el-form>
       <template #footer>
         <el-button @click="closeDialog">取消</el-button>
@@ -282,6 +305,10 @@ async function onSubmit() {
                 </template>
                 <ul class="task-card__meta">
                   <li><span class="task-card__meta-k">状态</span>{{ statusLabel(t.status) }}</li>
+                  <li>
+                    <span class="task-card__meta-k">类型</span
+                    >{{ t.task_kind === "case_authoring" ? "用例编写" : "设备执行" }}
+                  </li>
                   <li><span class="task-card__meta-k">创建</span>{{ t.created_at || "—" }}</li>
                   <li><span class="task-card__meta-k">设备</span>{{ deviceDisplay(t) }}</li>
                   <li><span class="task-card__meta-k">助手</span>{{ t.assistant_name || "—" }}</li>

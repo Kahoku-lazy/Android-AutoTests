@@ -7,25 +7,6 @@
 .task-board__body {
   min-height: var(--app-space-2xl);
 }
-.task-format-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--app-space-sm);
-  margin-bottom: var(--app-space-xs);
-}
-.task-format {
-  font-size: var(--app-size-xs);
-  padding: 2px var(--app-space-xs);
-  border: 1.5px solid var(--ink);
-  border-radius: var(--app-radius-sm);
-}
-.task-format.is-on {
-  background: var(--ai-sticky-bg);
-}
-.task-format.is-off {
-  color: var(--ai-ink-muted);
-  background: var(--app-bg-card);
-}
 .task-attach-name {
   margin: var(--app-space-xs) 0 0;
   font-size: var(--app-size-xs);

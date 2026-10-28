@@ -4,12 +4,9 @@ from __future__ import annotations
 
 import pytest
 
+from engines.agents.role.agents import EXECUTOR_MAX_ITERS, VERIFIER_MAX_ITERS
 from engines.agents.role.config import RoleSpecConfig
-from engines.agents.workflow.platform_run import (
-    EXECUTOR_MAX_ITERS,
-    VERIFIER_MAX_ITERS,
-    run_platform_sop,
-)
+from engines.agents.workflow.platform_run import run_platform_sop
 
 pytestmark = [pytest.mark.unit]
 
@@ -51,8 +48,6 @@ def _run(tmp_path, phases: dict[str, str]):
     result = run_platform_sop(
         str(path),
         "本次要操作的设备 serial 是：R5CT62RH88F。",
-        executor_model=None,
-        verifier_model=None,
         run_case=runner,
     )
     return seen, result

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 
+from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -159,12 +160,14 @@ def test_serialize_row_includes_device_label(platform_agent):
     assert row["finished_at"] == ""
     assert row["deepseek_cost"] == 0.0
 
+    # 费用只认事件侧汇总的 cost_total，不再按 token 重算
     task.input_tokens = 1000
     task.output_tokens = 100
-    task.save(update_fields=["input_tokens", "output_tokens"])
+    task.cost_total = Decimal("0.01234567")
+    task.save(update_fields=["input_tokens", "output_tokens", "cost_total"])
     billed = api.serialize_agent_task_row(task)
     assert isinstance(billed["deepseek_cost"], float)
-    assert billed["deepseek_cost"] > 0
+    assert billed["deepseek_cost"] == pytest.approx(0.01234567)
 
 
 # ── 入模可观察性：详情可见规划输入与附件正文，列表只给附件名 ──

@@ -4,6 +4,7 @@
 定义 L4 数据展示面（表格 / 卡片网格 / 表单）的实现口径：表格首选共享件并明确可绕过的能力边界、分页唯一实现、表单校验走 Element Plus 原生 `:rules` + `validate()`，以及卡片与网格的零件归属，使各模块的列表与表单读起来是同一套语言。
 
 ## Requirements
+
 ### Requirement: Shared AppTable is the default table implementation
 
 L4 多行多列列表 MUST 使用共享件 `AppTable`（`.ac-table`），列以 `{title, dataIndex, width, align}` 数组声明；系统 SHALL NOT 为同一场景另建第二套通用表格封装，也 SHALL NOT 直接使用原生 `el-table`。`AppTable` MUST 覆盖分组表头（`columns[].children`）、自定义表头（`#header-<prop>`）、底层实例取用（模板 ref 上的 `tableRef`）与属性透传（`$attrs`），使这些能力的诉求不再构成绕开共享件的理由。
@@ -32,15 +33,15 @@ L4 分页 MUST 由共享 `usePagination` composable 提供（`currentPage` / `to
 
 #### Scenario: Page size options come from a single source
 
-- **WHEN** 检查报告列表与报告详情的每页行数选项
-- **THEN** 两处取值相同，且都来自 `report-generator/constants.ts` 的 `PAGE_SIZE_OPTIONS`
+- **WHEN** 检查报告列表的每页行数选项
+- **THEN** 取值来自 `report-generator/constants.ts` 的 `PAGE_SIZE_OPTIONS`
 - **AND** 该模块内不存在内联或被本地重新声明的选项集
 
 #### Scenario: Registered exception does not multiply
 
 - **WHEN** 检查全仓分页实现
-- **THEN** 唯一实现是 `shared/composables/usePagination.ts`，消费方为 `device-pool`、`report-generator/index`、`report-generator/ReportDetail` 与 `case-manager`
-- **AND** 原 `report-generator/ReportDetail.vue` 的手写分页例外已于 2026-09-15 退役，全仓 SHALL NOT 重新引入自算 `totalPages` / 自写 `goPage` 的状态机
+- **THEN** 唯一实现是 `shared/composables/usePagination.ts`，消费方为 `device-pool`、`report-generator/index` 与 `case-manager`
+- **AND** 唯一的登记例外（已删除的 `report-generator/ReportDetail.vue` 手写分页）已于 2026-09-15 退役并随页面删除，全仓 SHALL NOT 重新引入自算 `totalPages` / 自写 `goPage` 的状态机
 
 #### Scenario: Fixed page size still comes from module constants
 

@@ -172,40 +172,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/AgentDetail'
           description: ''
-  /api/ai/upload-avatar/:
-    post:
-      operationId: ai_upload_avatar_create
-      description: POST /api/ai/upload-avatar — base64 头像 → data URI。
-      tags:
-      - ai
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: {}
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              additionalProperties: {}
-          multipart/form-data:
-            schema:
-              type: object
-              additionalProperties: {}
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
   /api/auth/login/:
     post:
       operationId: auth_login_create
-      description: POST /api/auth/login — 用户名密码登录，签发 access / refresh 令牌。
+      description: POST /api/auth/login — 账号密码正确则发本次会话。
       tags:
       - auth
       requestBody:
@@ -232,7 +202,7 @@ paths:
   /api/auth/logout/:
     post:
       operationId: auth_logout_create
-      description: POST /api/auth/logout — 登出：吊销本次登录的整个会话（access + refresh）。
+      description: POST /api/auth/logout — 作废这次登录。服务暂不可用时拒绝登出。
       tags:
       - auth
       security:
@@ -248,7 +218,7 @@ paths:
   /api/auth/me/:
     get:
       operationId: auth_me_retrieve
-      description: GET /api/auth/me — 当前登录用户信息。
+      description: GET /api/auth/me — 当前登录用户，含是否管理员。
       tags:
       - auth
       security:
@@ -264,7 +234,7 @@ paths:
   /api/auth/refresh/:
     post:
       operationId: auth_refresh_create
-      description: POST /api/auth/refresh — 用 refresh 令牌换取新的 access 令牌。
+      description: POST /api/auth/refresh — 用续期凭证换新的访问凭证，仍属同一次登录。
       tags:
       - auth
       requestBody:
@@ -291,7 +261,7 @@ paths:
   /api/auth/register/:
     post:
       operationId: auth_register_create
-      description: POST /api/auth/register — 注册新用户并直接签发令牌。
+      description: POST /api/auth/register — 创建用户并直接登录。用户名已有则拒绝。
       tags:
       - auth
       requestBody:
@@ -307,6 +277,105 @@ paths:
               $ref: '#/components/schemas/Register'
       security:
       - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/bugs/:
+    get:
+      operationId: bug_ticket_list
+      description: GET /api/bugs/ — visible BUG tickets with summary counters.
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+      - in: query
+        name: keyword
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+      tags:
+      - bugs
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/bugs/{bug_id}/:
+    get:
+      operationId: bug_ticket_detail
+      description: GET / PATCH /api/bugs/{id}/ — full detail or processing status.
+      parameters:
+      - in: path
+        name: bug_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - bugs
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    patch:
+      operationId: bug_ticket_update_status
+      description: GET / PATCH /api/bugs/{id}/ — full detail or processing status.
+      parameters:
+      - in: path
+        name: bug_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - bugs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBugStatusInput'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBugStatusInput'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBugStatusInput'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/bugs/sync/:
+    post:
+      operationId: bug_ticket_sync
+      description: POST /api/bugs/sync/ — backfill BUG tickets from visible task errors.
+      tags:
+      - bugs
+      security:
+      - jwtAuth: []
       responses:
         '200':
           content:
@@ -1174,6 +1243,22 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/knowledge-assistant/status/:
+    get:
+      operationId: knowledge_assistant_status_retrieve
+      description: 返回知识库助手是否启用、是否就绪、不可用原因、模型/音色与日志路径。
+      tags:
+      - knowledge-assistant
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/reports/:
     get:
       operationId: report_list
@@ -1281,60 +1366,6 @@ paths:
                 additionalProperties: {}
           description: ''
         '404':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-  /api/reports/cases/:
-    get:
-      operationId: report_case_breakdown
-      description: GET /api/reports/cases — empty groups after execution engine removal.
-      parameters:
-      - in: query
-        name: result
-        schema:
-          type: string
-          enum:
-          - fail
-          - pass
-        required: true
-      tags:
-      - reports
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-        '400':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-  /api/reports/run/{run_id}/:
-    get:
-      operationId: report_run_detail
-      description: GET /api/reports/run/{run_id} — runs no longer exist.
-      parameters:
-      - in: path
-        name: run_id
-        schema:
-          type: string
-        required: true
-      tags:
-      - reports
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
           content:
             application/json:
               schema:
@@ -1614,7 +1645,7 @@ paths:
   /api/tasks/:
     get:
       operationId: tasks_retrieve
-      description: GET /api/tasks — 任务发布列表（Task）。
+      description: GET /api/tasks — 当前用户可见的全部任务发布（设备执行 + 用例编写）。
       tags:
       - tasks
       security:
@@ -1750,7 +1781,10 @@ paths:
   /api/tasks/{task_id}/report/:
     get:
       operationId: task_flow_report
-      description: GET /api/tasks/{task_id}/report — 任务事件流程（标准 {status, data} 信封）。
+      description: |-
+        GET /api/tasks/{task_id}/report — 任务事件流程（标准 {status, data} 信封）。
+
+        终态任务的报告按「任务编号 + 最大事件序号」缓存，并给出 ETag；运行中任务每次重建。
       parameters:
       - in: path
         name: task_id
@@ -1769,10 +1803,12 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+        '304':
+          description: No response body
   /api/tasks/{task_id}/rerun/:
     post:
       operationId: tasks_rerun_create
-      description: POST /api/tasks/{task_id}/rerun — 失败任务克隆新建并调度。
+      description: POST /api/tasks/{task_id}/rerun — 失败/中断任务克隆新建并调度。
       parameters:
       - in: path
         name: task_id
@@ -1794,7 +1830,7 @@ paths:
   /api/tasks/clear/:
     post:
       operationId: tasks_clear_create
-      description: POST /api/tasks/clear — 调试：清空全部任务发布记录。
+      description: POST /api/tasks/clear — 调试：清空当前用户可见的全部任务发布记录。
       tags:
       - tasks
       security:
@@ -2482,6 +2518,8 @@ components:
           type: string
         model_name:
           type: string
+        task_kind:
+          type: string
         vision_model_name:
           type: string
         strong_model_name:
@@ -2520,6 +2558,7 @@ components:
       - strong_enabled
       - strong_model_name
       - tags
+      - task_kind
       - vision_model_name
     DocTypeEnum:
       enum:
@@ -2535,6 +2574,12 @@ components:
         password:
           type: string
           default: ''
+    PatchedBugStatusInput:
+      type: object
+      description: Body for PATCH /api/bugs/{id}/.
+      properties:
+        status:
+          $ref: '#/components/schemas/StatusEnum'
     PatchedWorkflowDirectory:
       type: object
       description: 目录序列化器 — 含文档数量.
@@ -2645,13 +2690,23 @@ components:
         email:
           type: string
           default: ''
+    StatusEnum:
+      enum:
+      - open
+      - resolved
+      - ignored
+      type: string
+      description: |-
+        * `open` - open
+        * `resolved` - resolved
+        * `ignored` - ignored
     TaskSubmitInput:
       type: object
       description: |-
-        任务提交入参 — title/agent_id/device_serial 必填；case_title 可选。
+        任务提交入参 — title/agent_id 必填；设备由任务类型在视图层校验。
 
-        旧字段 goal / assistant_route / attachment 保留为可选，仅兼容历史客户端；
-        执行链不再使用它们。
+        device_control 任务必须有 device_serial；case_authoring 任务必须上传
+        documents（PRD/Word），不需要设备与 YAML。
       properties:
         title:
           type: string
@@ -2660,6 +2715,7 @@ components:
           minimum: 1
         device_serial:
           type: string
+          default: ''
         case_title:
           type: string
           default: ''
@@ -2678,7 +2734,6 @@ components:
           nullable: true
       required:
       - agent_id
-      - device_serial
       - title
     WorkflowDirectory:
       type: object
@@ -2852,9 +2907,13 @@ tags:
   description: AI 助手：智能体配置、任务发布 / 重跑 / 取消、任务清单
 - name: tasks
   description: 任务清单：任务提交、重跑、取消、事件流程报告
+- name: bugs
+  description: BUG 单管理：任务错误分类登记、检索与处理状态
 - name: reports
   description: 测试报告：任务报告列表、用例分解、报告文件下载与查看
 - name: serial-log
   description: 串口日志：端口监听开关、当前日志查看与关键词对照表
+- name: knowledge-assistant
+  description: 知识库助手：实时语音会话的就绪状态
 - name: schema
   description: OpenAPI schema 端点（drf-spectacular 自带）

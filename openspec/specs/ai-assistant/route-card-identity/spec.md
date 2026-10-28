@@ -18,6 +18,8 @@
 
 头像 MUST 为正方形，其边长 MUST 等于右侧三行文字块的自然总高度（三行数据与头像宽度一致）。状态行过长时 MUST 在身份区内换行或截断，MUST NOT 撑破卡片水平边界。
 
+头像内容 MUST 是内置固定图标（见 `Assistant avatar is a fixed built-in icon`），MUST NOT 读取 `route_configs.{route}.avatar`、`AIAgent.avatar` 或 `avatar_url` 渲染。
+
 #### Scenario: Device-control card shows name duty and status
 
 - **WHEN** 用户打开 `/ai-assistant/agents` 且存在控制设备线路配置（名称为「测试助手」、连通为 `ready`）
@@ -41,3 +43,24 @@
 
 - **WHEN** 非超级管理员查看智能体看板线路卡
 - **THEN** 卡片仍展示头像与三行身份信息，MUST NOT 展示「校验」或「配置」
+
+### Requirement: Assistant avatar is a fixed built-in icon
+
+智能体头像 MUST 是产品内置的固定图标：看板线路卡与配置页 MUST 渲染同一枚内置图标，且 MUST NOT 因智能体记录或线路配置不同而改变。
+
+系统 MUST NOT 提供头像图片上传、图片外链、emoji 输入等任何修改入口；配置页「头像」区域只读展示该图标并附一行说明。后端 MUST NOT 再提供头像上传接口。
+
+#### Scenario: Card renders the built-in icon regardless of stored data
+
+- **WHEN** 智能体记录的 `avatar` 字段存有任意值（data URI、外链、emoji 或空）
+- **THEN** 看板线路卡左侧仍渲染内置图标，不出现该字段对应的图片或 emoji
+
+#### Scenario: Config page shows a read-only avatar
+
+- **WHEN** 超级管理员打开 `/ai-assistant/agent/:id`
+- **THEN** 「头像」项展示内置图标预览与「系统内置头像，不可修改」说明，且页面不存在上传按钮、文件选择器或头像输入框
+
+#### Scenario: Upload endpoint is gone
+
+- **WHEN** 客户端请求 `POST /api/ai/upload-avatar/`
+- **THEN** 返回 404，不产生任何头像写入

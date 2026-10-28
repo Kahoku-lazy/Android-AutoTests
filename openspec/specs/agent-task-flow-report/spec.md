@@ -23,12 +23,22 @@
 
 ### Requirement: 按回复分轮并按阶段分块
 
-系统 SHALL 以每条 `ReplyStartEvent` 开始一轮。一轮内 MUST 按事件顺序排列；阶段相对上一块发生变化时才新开一块。块标题 MUST 为「开始」「推理阶段」「执行阶段」「结束」。连续且同类型、同一步骤与尝试次数的增量 MUST 并成一条，并用 `count` 给出次数。
+系统 SHALL 以每条 `ReplyStartEvent` 或每条 SOP 步骤起点（事件类型名 `SOP_STEP_STARTED`）开始一轮。一轮内 MUST 按事件顺序排列；阶段相对上一块发生变化时才新开一块。块标题 MUST 为「开始」「推理阶段」「执行阶段」「结束」。连续且同类型、同一步骤与尝试次数的增量 MUST 并成一条，并用 `count` 给出次数；`count` MUST 取该段内所有增量事件的 `delta_count` 之和，写库时已经折叠成一行的事件 MUST 直接采用该行的 `delta_count`。`delta_count` 缺省为 1 的旧数据 MUST 表现与逐条增量合并时一致。步骤起点 MUST 落在它所开启的那一轮里，MUST NOT 被并入上一步骤的最后一轮。
 
 #### Scenario: 增量合并后阶段交替
 
 - **WHEN** 一轮中依次出现回复开始、三条工具参数增量、工具参数完成、工具结果完成、回复结束
 - **THEN** 该轮的块依次为开始、推理阶段、执行阶段、结束，推理阶段的增量条 `count` 为 3，其后仍保留参数完成
+
+#### Scenario: 步骤起点开启新的一轮
+
+- **WHEN** 上一步骤的最后一轮已结束，随后到达一条 `SOP_STEP_STARTED`
+- **THEN** 该步骤起点位于新的一轮内，其 `round_id` 大于上一步骤各轮的 `round_id`
+
+#### Scenario: 写库已折叠的增量直接采用存储条数
+
+- **WHEN** 一条工具参数增量行的 `delta_count` 为 17,447，且同段没有其它未折叠增量行
+- **THEN** 报告的该项 `count` 为 17,447，展示时刻为该段第一条增量的时刻
 
 ### Requirement: 报告页时间到秒并给出执行耗时
 
@@ -59,12 +69,44 @@
 
 ### Requirement: 步骤标题标明模型在做什么
 
-每一轮 MUST 可折叠，且默认收起。标题 MUST 含中文步骤序号、执行模型或验收模型、角色名与模型名，以及该步要做的动作或要达成的结果。验收轮在有判决时 MUST 在标题上标 PASS 或 FAIL。
+每一轮 MUST 可折叠，且默认收起。**执行轮**的标题 MUST 以行首数字序号开头，序号 MUST 按该用例内的**执行步骤**计：同一执行步骤的重试 MUST 共用同一个序号，换页后 MUST 不跳号。**验收轮**的标题 MUST NOT 带序号。标题 MUST NOT 出现中文步骤序号（「步骤一」…「步骤十」），MUST NOT 出现模型名，也 MUST NOT 出现「执行模型 / 验收模型 / 规划模型」这类角色类别文字。标题 MUST 含该步要做的动作或要达成的结果；重试轮 MUST 标明是第几次。
+
+角色名 MUST 以徽章形式呈现，且 MUST 按角色区分配色——执行角色与验收角色 MUST 使用不同底色。角色徽章之前 MUST 有一个固定标记：执行轮为 `➡️`，验收轮按其判决为 `✅`（PASS）或 `❌`（FAIL）；尚无判决的验收轮 MUST NOT 给该标记。验收轮的判决 MUST 只由该标记表示：MUST NOT 另渲染 PASS / FAIL 徽章，也 MUST NOT 另写判决文字。角色名为空的存量轮次 MUST NOT 渲染角色徽章，标题其余部分保持完整。
 
 #### Scenario: 执行轮标题带动作
 
-- **WHEN** 第一步由 `executor_role` 执行，动作为「启动应用」
-- **THEN** 该轮标题含「步骤一」「执行模型」「executor_role」和「启动应用」
+- **WHEN** 第一步由 `executor_role` 执行，模型为 `deepseek-flash`，动作为「启动应用」
+- **THEN** 该轮标题为「1.」+ `➡️` + `executor_role` 徽章 + 「：启动应用」，且不含「执行模型」，不含「步骤一」，也不含 `deepseek-flash`
+
+#### Scenario: 验收轮不占序号并以结果标记开头
+
+- **WHEN** 该轮的 `role` 为 `verifier_role` 且判 PASS，动作为「前台为 govee」
+- **THEN** 该轮标题不以数字序号开头，而是以 `✅` 开头，随后是 `verifier_role` 徽章与「：前台为 govee」，且标题里没有 PASS 徽章
+
+#### Scenario: 验收轮失败标记
+
+- **WHEN** 验收轮的判决为不通过
+- **THEN** 该轮标题以 `❌` 开头，且标题里没有 FAIL 徽章
+
+#### Scenario: 尚无判决的验收轮
+
+- **WHEN** 验收轮还没有判决，动作文本为「前台为 govee」
+- **THEN** 该轮标题不带 `✅` 或 `❌`，也不带序号，仍渲染 `verifier_role` 徽章与「：前台为 govee」
+
+#### Scenario: 角色名以徽章呈现
+
+- **WHEN** 同一用例里既有 `executor_role` 轮也有 `verifier_role` 轮
+- **THEN** 两个角色名都以徽章出现，且执行角色与验收角色的徽章底色不同，角色名不再以纯文本出现
+
+#### Scenario: 重试轮标明次数
+
+- **WHEN** 同一执行步骤的第 2 次尝试
+- **THEN** 该轮标题含「第 2 次」，且序号与首次尝试相同
+
+#### Scenario: 存量轮次没有角色名
+
+- **WHEN** 该轮的 `role` 为空且动作文本为「点击开关」
+- **THEN** 该轮不渲染角色徽章，标题仍含 `➡️` 与「：点击开关」
 
 ### Requirement: 结论与交付挂在对应步骤
 
@@ -117,3 +159,68 @@
 
 - **WHEN** 任务的 `result` 有 1,000 字
 - **THEN** `data.task.result` 仍为 240 字摘要，与事件明细的完整展示互不影响
+
+### Requirement: 报告轮次只下发一份
+
+`data.rounds[]` MUST 带稳定的 `round_id`（从 0 起、同一响应内唯一）。`data.cases[]` MUST 用 `round_ids` 引用轮次，MUST NOT 再内嵌 `rounds` 字段；`round_ids` 中每个值 MUST 能在 `data.rounds` 中找到 `round_id` 相同的项。同一轮次对象在响应里 MUST 只序列化一次。单任务 15 万级事件、156 轮的响应 MUST 小于 5MB（未压缩）。
+
+#### Scenario: 用例只引用不复制轮次
+
+- **WHEN** 请求一个 156 轮、12 个用例的终态任务报告
+- **THEN** `data.cases[]` 不含 `rounds` 字段，其 `round_ids` 合计 156 项
+- **AND** `data.rounds` 仍是 156 项
+
+#### Scenario: 轮次引用可解析且顺序一致
+
+- **WHEN** 校验任一用例的 `round_ids`
+- **THEN** 每个值都能在 `data.rounds[].round_id` 中找到唯一对应项
+- **AND** 按 `round_ids` 顺序取出的轮次与该用例实际执行顺序一致
+
+#### Scenario: 响应体积不因用例引用翻倍
+
+- **WHEN** 同一任务分别用改动前与改动后的实现生成报告
+- **THEN** 改动后响应小于改动前的 60%，且小于 5MB
+- **AND** `task`、`rounds`、`conclusion` 的字段与语义不变
+
+### Requirement: 终态任务报告缓存与条件请求
+
+状态为 `completed`、`failed`、`interrupted`、`cancelled` 或 `stopped` 的任务，其报告 MUST 被缓存，TTL MUST 不小于 10 分钟。缓存键 MUST 包含任务编号与该任务当前最大事件 `seq`；最大 `seq` 增大（重跑、补写事件）后 MUST 重新构建，MUST NOT 继续返回旧报告。非终态任务 MUST NOT 缓存。响应 MUST 带 `ETag`；请求带相同 `If-None-Match` 时 MUST 返回 `304` 且响应体为空。缓存命中时 MUST 在 300ms 内返回（本地开发机口径）。
+
+#### Scenario: 二次打开命中缓存
+
+- **WHEN** 对同一终态任务连续请求两次报告
+- **THEN** 第二次在 300ms 内返回，且 `data` 与第一次深度相等
+
+#### Scenario: ETag 命中返回 304
+
+- **WHEN** 客户端带上一次响应里的 `ETag` 再次请求
+- **THEN** 返回 304 且没有响应体
+
+#### Scenario: 重跑后不复用旧报告
+
+- **WHEN** 任务被重跑并写入新事件后再请求报告
+- **THEN** 响应包含新事件的轮次，MUST NOT 与重跑前缓存逐字段相等
+
+#### Scenario: 运行中任务不写缓存
+
+- **WHEN** 任务处于 `running`，连续请求两次报告，且期间新增了一轮事件
+- **THEN** 第二次响应的轮次数比第一次多 1
+
+### Requirement: 步骤起点与运行提醒可读
+
+事件项的展示文本 SHALL 覆盖新增的三类事件：步骤起点 MUST 展示步骤名与该步第几次尝试；运行时注入提醒 MUST 展示提醒全文，MUST NOT 截断；推理轮次用尽 MUST 给出一句可读说明。三类事件的标题 MUST 为可读中文，MUST NOT 直接暴露事件类型名。明细仍 MUST 只去掉回车符与首尾空白，MUST NOT 追加省略号。缺少步骤名或尝试次数时 MUST 只展示已有的部分，MUST NOT 打印 `None`。
+
+#### Scenario: 步骤起点给出步骤与尝试次数
+
+- **WHEN** 一条步骤起点事件的步骤名为「打开设置」、尝试次数为 2
+- **THEN** 该事件项的明细为「打开设置 · 第 2 次尝试」，标题为可读中文而非 `SOP_STEP_STARTED`
+
+#### Scenario: 运行提醒全文下发
+
+- **WHEN** 一条运行时注入提醒的正文为 500 字
+- **THEN** 该事件项的明细与该正文逐字相同，长度不小于 500，且不以省略号结尾
+
+#### Scenario: 推理轮次用尽有可读说明
+
+- **WHEN** 一条推理轮次用尽事件进入报告
+- **THEN** 该事件项有非空的可读明细，且标题为可读中文

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-约定仪表盘按今日与累计展示可见智能体的 token 与费用用量：累计用量、当天用量、缓存命中率、总费用、当天费用，以及每个智能体一份缓存命中、输入、输出和总费用；任务数量在平台运营章节展示。
+约定仪表盘按今日与累计展示平台全部模型调用的 token 与费用用量（不按智能体可见性过滤）：累计用量、当天用量、缓存命中率、总费用、当天费用，以及每个可见智能体一份缓存命中、输入、输出和总费用；任务数量在平台运营章节展示。
 
 ## Requirements
 
@@ -31,7 +31,7 @@
 
 ### Requirement: 仪表盘提供 AI 用量统计接口
 
-系统 SHALL 在仪表盘统计接口的 `ai_usage` 中提供任务数量、输入 token、输出 token、合计 token、缓存命中 token、缓存命中率、平均每任务 token 与 DeepSeek 费用，且均分「今日 / 累计」。输入、输出、缓存命中与费用 MUST 来自当前用户可见智能体的小时用量合计。今日 MUST 指统计日等于当前日期。任务数量 MUST 按可见任务计数，MUST NOT 改用小时记录的调用次数。DeepSeek 费用 MUST 为这些小时费用之和，精度到小数点后 8 位。MUST NOT 用任务上的 token 列，或按小数点后 4 位重算的费用，作为这组数字。`ai_usage.agents` MUST 为每个可见智能体给出一份整份用量。近 7 日的 Token 曲线与费用曲线 MUST 按同一小时用量、以统计日分桶。
+系统 SHALL 在仪表盘统计接口的 `ai_usage` 中提供任务数量、输入 token、输出 token、合计 token、缓存命中 token、缓存命中率、平均每任务 token 与 DeepSeek 费用，且均分「今日 / 累计」。输入、输出、缓存命中与费用 MUST 来自平台全部小时用量（`task_usage_hourly` 全表，含 `agent_id = 0` 的行），MUST NOT 按当前用户可见智能体过滤。今日 MUST 指统计日等于当前日期。任务数量 MUST 按可见任务计数，MUST NOT 改用小时记录的调用次数。DeepSeek 费用 MUST 为这些小时费用之和，精度到小数点后 8 位。MUST NOT 用任务上的 token 列，或按小数点后 4 位重算的费用，作为这组数字。`ai_usage.agents` MUST 为每个可见智能体给出一份整份用量。近 7 日的 Token 曲线与费用曲线 MUST 按同一小时用量、以统计日分桶。
 
 #### Scenario: 统计接口返回 AI 用量
 
@@ -47,6 +47,12 @@
 
 - **WHEN** 同一智能体在同一统计日有执行者与验收者两条小时用量
 - **THEN** 该日输入、输出、缓存命中与费用等于两条记录之和，且只对应这一份智能体用量
+
+#### Scenario: 不可见智能体的用量仍进平台合计
+
+- **WHEN** 平台上存在一条 `agent_id = 0` 或属于查看者不可见智能体的小时用量
+- **THEN** `ai_usage` 的 token 与 DeepSeek 费用合计包含该行
+- **AND** `ai_usage.agents` 不因此新增该智能体的卡片
 
 ### Requirement: 仪表盘展示 AI 用量区块
 
@@ -99,7 +105,7 @@
 
 ### Requirement: 今日用量按小时返回且不提前出数
 
-系统 SHALL 在统计接口的 `charts.today_usage` 返回当天逐小时的用量，字段为 `tokens`、`cost`（等长 24 项，下标即小时 0–23）与 `current`。`tokens[h]` MUST 为第 h 小时（`[h:00, h+1:00)`）内「输入 token + 输出 token」之和，`cost[h]` MUST 为该小时内 DeepSeek 费用之和（元，8 位小数）；该小时尚未走完或尚未开始时，对应项 MUST 为 `null`，MUST NOT 提前给出该小时的数据，MUST NOT 返回当天累计值。`current` MUST 描述正在进行中的那一小时：`hour` 为当前时刻（0–24，最多 2 位小数）、`tokens` 与 `cost` 为该小时从起点到当前时刻的消耗；当前时刻正好落在整点时 `current` MUST 为 `null`。所有数值 MUST 来自当前用户可见智能体的小时用量表，MUST NOT 取任务表上的 token 列或按任务回写的费用。当天没有用量或小时用量表不可用时，已走完的小时 MUST 为 `0`、未走完与未开始的小时 MUST 为 `null`，且 MUST 不报错。该字段 MUST NOT 包含缓存命中序列。
+系统 SHALL 在统计接口的 `charts.today_usage` 返回当天逐小时的用量，字段为 `tokens`、`cost`（等长 24 项，下标即小时 0–23）与 `current`。`tokens[h]` MUST 为第 h 小时（`[h:00, h+1:00)`）内「输入 token + 输出 token」之和，`cost[h]` MUST 为该小时内 DeepSeek 费用之和（元，8 位小数）；该小时尚未走完或尚未开始时，对应项 MUST 为 `null`，MUST NOT 提前给出该小时的数据，MUST NOT 返回当天累计值。`current` MUST 描述正在进行中的那一小时：`hour` 为当前时刻（0–24，最多 2 位小数）、`tokens` 与 `cost` 为该小时从起点到当前时刻的消耗；当前时刻正好落在整点时 `current` MUST 为 `null`。所有数值 MUST 来自平台全部小时用量表（含 `agent_id = 0` 的行），MUST NOT 按当前用户可见智能体过滤，MUST NOT 取任务表上的 token 列或按任务回写的费用。当天没有用量或小时用量表不可用时，已走完的小时 MUST 为 `0`、未走完与未开始的小时 MUST 为 `null`，且 MUST 不报错。该字段 MUST NOT 包含缓存命中序列。
 
 #### Scenario: 未到达的小时不出数
 
@@ -119,5 +125,5 @@
 
 #### Scenario: 当天无用量
 
-- **WHEN** 当前用户可见智能体当天没有任何小时用量
+- **WHEN** 平台当天没有任何小时用量
 - **THEN** 已走完的小时为 `0`，未走完与未开始的小时为 `null`，`current` 的 `tokens` 与 `cost` 为 0，接口仍返回成功

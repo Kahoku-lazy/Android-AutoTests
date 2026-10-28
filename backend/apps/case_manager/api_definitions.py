@@ -74,6 +74,8 @@ def serialize_definition(obj: TestDefinition) -> dict[str, Any]:
         "business_type": obj.business_type,
         "module": obj.module,
         "precondition": obj.precondition,
+        "source_case_id": obj.source_case_id,
+        "source_task_id": obj.source_task_id,
         "steps": steps,
         "step_count": len(steps),
         "sort_order": obj.sort_order,
@@ -190,6 +192,8 @@ def create_definition(
     precondition: str = "",
     steps: Any = None,
     sort_order: int = 0,
+    source_case_id: str = "",
+    source_task_id: str = "",
 ) -> dict[str, Any]:
     project = get_project(project_id=project_id, user_id=user_id)
     if project is None:
@@ -221,6 +225,8 @@ def create_definition(
                 business_type=business_type,
                 module=(module or "").strip(),
                 precondition=precondition or "",
+                source_case_id=(source_case_id or "").strip(),
+                source_task_id=(source_task_id or "").strip(),
                 sort_order=sort_order,
                 created_by=user_id,
                 updated_by=user_id,

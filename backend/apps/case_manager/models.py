@@ -158,6 +158,9 @@ class TestDefinition(models.Model):
     business_type = models.CharField(max_length=16, choices=BUSINESS_TYPE_CHOICES)
     module = models.CharField(max_length=200, default="", blank=True)
     precondition = models.TextField(default="", blank=True)
+    # 来源追溯：源文档用例编号与来源任务编号；平台用例编号仍由平台分配。
+    source_case_id = models.CharField(max_length=200, default="", blank=True, db_index=True)
+    source_task_id = models.CharField(max_length=64, default="", blank=True, db_index=True)
     sort_order = models.IntegerField(default=0)
     created_by = models.CharField(max_length=200, default="", blank=True)
     updated_by = models.CharField(max_length=200, default="", blank=True)

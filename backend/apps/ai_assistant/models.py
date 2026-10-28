@@ -33,6 +33,8 @@ class AIAgent(models.Model):
     max_loops = models.IntegerField(default=3)
     api_key = models.CharField(max_length=500, default="", blank=True)
     base_url = models.CharField(max_length=500, default="", blank=True)
+    # 任务类型：device_control=设备执行；case_authoring=家电测试用例编写。
+    task_kind = models.CharField(max_length=32, default="device_control")
     status = models.CharField(max_length=20, default="active")
     # AgentScope agent_id returned by POST /agent/ — needed to reference in chat/session calls
     agent_scope_id = models.CharField(max_length=100, default="", blank=True)

@@ -69,6 +69,8 @@ export interface CaseDefinition {
   business_type: BusinessType
   module: string
   precondition: string
+  source_case_id?: string
+  source_task_id?: string
   steps: CaseStep[]
   step_count: number
   sort_order: number

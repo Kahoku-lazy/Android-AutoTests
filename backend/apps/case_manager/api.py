@@ -25,6 +25,7 @@ from .api_files import (
     update_file,
 )
 from .api_ids import next_case_id
+from .api_import import PROJECT_NAME, import_case_rows
 from .api_projects import (
     ConflictError,
     create_project,
@@ -42,6 +43,7 @@ __all__ = [
     "CaseFile",
     "CaseProject",
     "ConflictError",
+    "PROJECT_NAME",
     "TestDefinition",
     "batch_delete_definitions",
     "create_definition",
@@ -57,6 +59,7 @@ __all__ = [
     "get_file_sheet",
     "get_project",
     "get_project_tree",
+    "import_case_rows",
     "list_file_cases",
     "list_projects",
     "move_item",

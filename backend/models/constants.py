@@ -84,6 +84,28 @@ class TaskStatus(StrEnum):
     INTERRUPTED = "interrupted"
 
 
+class TaskKind(StrEnum):
+    """任务类型 — task_tasks.task_kind / ai_agents.task_kind"""
+
+    DEVICE_CONTROL = "device_control"
+    CASE_AUTHORING = "case_authoring"
+
+
+class BugCategory(StrEnum):
+    """BUG 分类 — bug_tickets.category。"""
+
+    UI_AUTOMATION = "ui_automation"
+    CASE_AUTHORING = "case_authoring"
+
+
+class BugStatus(StrEnum):
+    """BUG 处理状态 — bug_tickets.status。"""
+
+    OPEN = "open"
+    RESOLVED = "resolved"
+    IGNORED = "ignored"
+
+
 class MemoryMode(StrEnum):
     """Agent 记忆模式 — ai_agents.memory_mode"""
 
@@ -107,4 +129,5 @@ ALL_STATUS_ENUMS = {
     "conversation": ConversationStatus,
     "sop": SOPStatus,
     "task": TaskStatus,
+    "bug": BugStatus,
 }

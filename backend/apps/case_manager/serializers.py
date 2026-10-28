@@ -63,6 +63,8 @@ class TestDefinitionSerializer(serializers.ModelSerializer):
             "business_type",
             "module",
             "precondition",
+            "source_case_id",
+            "source_task_id",
             "sort_order",
             "created_by",
             "updated_by",
@@ -79,6 +81,8 @@ class TestDefinitionSerializer(serializers.ModelSerializer):
             "updated_at",
             "created_at_display",
             "updated_at_display",
+            "source_case_id",
+            "source_task_id",
         ]
         extra_kwargs = {
             "priority": {"choices": PRIORITY_CHOICES},

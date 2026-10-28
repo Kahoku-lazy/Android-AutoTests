@@ -8,8 +8,6 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from backend.apps.ai_assistant.provider_registry import VALID_PROVIDERS, validate_base_url
-
 # ═══════════════════════════════════════════════════════════════════
 # Agent 输入（创建/更新共用；业务默认值仍在 api.py 应用，与旧视图一致）
 # ═══════════════════════════════════════════════════════════════════
@@ -30,35 +28,6 @@ class AgentInputSerializer(serializers.Serializer):
         return name
 
 
-class ModelDetectInputSerializer(serializers.Serializer):
-    """模型探测入参 — 规则对齐旧 validate_model_detect_input。"""
-
-    model_provider = serializers.CharField(required=False, allow_blank=True)
-    base_url = serializers.CharField(required=False, allow_blank=True)
-    api_key = serializers.CharField(required=True, allow_blank=False)
-
-    def validate_model_provider(self, value):
-        provider = (value or "").strip()
-        if provider and provider not in VALID_PROVIDERS:
-            raise serializers.ValidationError(f"不支持的模型提供商: {provider}")
-        return provider
-
-    def validate_base_url(self, value):
-        base_url = (value or "").strip()
-        provider = (self.initial_data.get("model_provider") or "").strip()
-        if base_url and provider:
-            ok, msg = validate_base_url(provider, base_url)
-            if not ok:
-                raise serializers.ValidationError(msg)
-        return base_url
-
-    def validate_api_key(self, value):
-        key = (value or "").strip()
-        if not key:
-            raise serializers.ValidationError("API Key 不能为空")
-        return key
-
-
 # ═══════════════════════════════════════════════════════════════════
 # Agent 输出 DTO（字段契约与需求一致）
 # ═══════════════════════════════════════════════════════════════════
@@ -72,6 +41,7 @@ class AgentListSerializer(serializers.Serializer):
     description = serializers.CharField()
     model_provider = serializers.CharField()
     model_name = serializers.CharField()
+    task_kind = serializers.CharField()
     route_configs = serializers.SerializerMethodField()
     status = serializers.CharField()
     created_at = serializers.CharField()
@@ -105,6 +75,7 @@ class AgentDetailSerializer(serializers.Serializer):
     description = serializers.CharField()
     model_provider = serializers.CharField()
     model_name = serializers.CharField()
+    task_kind = serializers.CharField()
     vision_model_name = serializers.CharField()
     strong_model_name = serializers.CharField()
     strong_enabled = serializers.BooleanField()

@@ -10,6 +10,10 @@ class Task(models.Model):
 
     agent = models.ForeignKey(AIAgent, on_delete=models.CASCADE, related_name="tasks")
     title = models.CharField(max_length=500)
+    # 任务类型快照：device_control=设备执行；case_authoring=家电测试用例编写。
+    task_kind = models.CharField(max_length=32, default="device_control")
+    # 任务发起人快照：用例入库按发起人隔离，不能回落到共享 Agent 的 owner。
+    created_by = models.CharField(max_length=64, default="", blank=True)
     goal = models.TextField(default="", blank=True)
     attachment = models.TextField(default="", blank=True)
     attachment_filename = models.CharField(max_length=255, default="", blank=True)

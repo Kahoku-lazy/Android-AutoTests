@@ -14,10 +14,12 @@ import os
 from agentscope.agent import Agent, ContextConfig, ReActConfig
 from agentscope.console import ConsoleRenderer
 from agentscope.message import Msg, UserMsg
+from agentscope.model import ChatModelBase
 from agentscope.tool import Toolkit
 
 from utils.logs import agent_event_log
 
+from ..middleware import build_agent_middlewares, load_retry_settings
 from .config import ChatModelFactory, ModelConfig, RoleSpecConfig
 
 
@@ -53,6 +55,7 @@ class BaseRole:
             react_config=self._react_config(),
             context_config=self._context_config(),
             toolkit=self.role.toolkit,
+            middlewares=self._middlewares(),
         )
 
         # self._reply_task: asyncio.Task[object] | None = None
@@ -111,6 +114,45 @@ class BaseRole:
             structured_output_grace_iters=self.role.structured_output_grace_iters,
             stop_on_reject=self.role.stop_on_reject,
         )
+
+    def _middlewares(self) -> list:
+        """装配引擎中间件：追踪 / 预算 / RAG / 语音 / 记忆入口 / 模型重试。
+
+        Returns:
+            交给 Agent 的中间件列表，最外层在前；未开启的能力不出现。
+        """
+        settings = load_retry_settings()
+        fallback = self._fallback_model(settings) if settings.enabled else None
+        return build_agent_middlewares(fallback_model=fallback)
+
+    def _fallback_model(self, settings) -> ChatModelBase | None:
+        """按设置构造备用模型；没配置模型名时不构造。
+
+        Args:
+            settings: 重试与回退参数。
+
+        Returns:
+            备用模型实例；未配置 `AGENT_FALLBACK_MODEL` 时为 None。
+
+        Raises:
+            ValueError: 备用模型的 provider 不在支持集合内。
+        """
+        if not settings.fallback_model_name:
+            return None
+        api_key = self.config.api_key
+        if hasattr(api_key, "get_secret_value"):
+            api_key = api_key.get_secret_value()
+        config = ModelConfig(
+            provider=settings.fallback_provider or self.config.provider,
+            model_name=settings.fallback_model_name,
+            api_key=settings.fallback_api_key or api_key,
+            base_url=settings.fallback_base_url or self.config.base_url,
+        )
+        return ChatModelFactory(
+            config,
+            stream=self.role.stream,
+            vision=self.role.vision,
+        ).create()
 
     def _context_config(self) -> ContextConfig:
         return ContextConfig(

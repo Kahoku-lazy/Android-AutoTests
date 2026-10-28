@@ -28,7 +28,6 @@ __all__ = [
     "mask_key",
     "decrypt_route_configs",
     "mask_route_configs",
-    "get_provider_config",
     "filter_agents_for_user",
 ]
 
@@ -228,12 +227,3 @@ def decrypt_route_configs(route_configs: dict) -> dict:
 def mask_route_configs(route_configs: dict) -> dict:
     """脱敏 route_configs 内 api_key。"""
     return _transform_route_configs(route_configs, mask_key)
-
-
-def get_provider_config(provider: str, base_url: str = "", model_name: str = "") -> dict:
-    """获取模型 provider 的 API 配置（base_url + api_key 模式）。
-    供管理命令等跨模块调用，避免直接导入 agent_scope.provider_registry。
-    """
-    from backend.apps.ai_assistant.provider_registry import get_provider_config as _get
-
-    return _get(provider, base_url)

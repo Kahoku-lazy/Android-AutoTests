@@ -1,4 +1,4 @@
-﻿"""
+"""
 python -m 调试路径: engines.agents.rag.indexer
 
 本模块的业务功能如下：
@@ -121,6 +121,7 @@ class RagIndexer:
                 mtime = int(value[0])
                 size = int(value[1])
             except (TypeError, ValueError):
+                # 状态文件里的非法条目视为已损坏，跳过该文件；下次索引会按缺失重建
                 continue
             version = str(value[2]) if len(value) >= 3 else ""
             loaded[str(key)] = [mtime, size, version]

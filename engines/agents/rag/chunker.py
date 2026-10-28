@@ -1,4 +1,4 @@
-﻿"""
+"""
 python -m 调试路径: engines.agents.rag.chunker
 
 本模块的业务功能如下：
@@ -85,11 +85,7 @@ class MarkdownHeadingChunker(ChunkerBase):
                 "MarkdownHeadingChunker.Parameters instance, got "
                 f"{type(parameters).__name__}.",
             )
-        legacy = {
-            key: kwargs[key]
-            for key in ("chunk_size", "overlap")
-            if key in kwargs
-        }
+        legacy = {key: kwargs[key] for key in ("chunk_size", "overlap") if key in kwargs}
         if legacy:
             base = parameters.model_dump() if parameters is not None else {}
             parameters = self.Parameters(**{**base, **legacy})
@@ -186,9 +182,7 @@ class MarkdownHeadingChunker(ChunkerBase):
             pieces.append(text[start:end])
             if end >= len(text):
                 break
-            next_start = (
-                bisect_right(byte_offsets, byte_offsets[end] - overlap_bytes) - 1
-            )
+            next_start = bisect_right(byte_offsets, byte_offsets[end] - overlap_bytes) - 1
             start = max(next_start, start + 1)
         return pieces
 

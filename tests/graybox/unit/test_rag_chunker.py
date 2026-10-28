@@ -1,4 +1,4 @@
-﻿"""RAG Markdown 标题切块单测：不联网。"""
+"""RAG Markdown 标题切块单测：不联网。"""
 
 from __future__ import annotations
 

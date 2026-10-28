@@ -1,6 +1,6 @@
 # 平台架构设计 — Android-AutoTests
 
-> 版本 v1.0 · 2026-10-21 · 基线：`Kahoku` 主干
+> 版本 v1.1 · 2026-10-28 · 基线：`Kahoku` 主干
 > 平台开发目标： 一切皆插件；实现 AI Model + Harness 模式，让用户可以通过这个平台自由创建 Agent 规划与完成任务。
 
 ---
@@ -34,7 +34,7 @@
                     Daphne :8766（ASGI，单进程）
                     backend/config/asgi.py: ProtocolTypeRouter
                        ├─ http      → Django（中间件链 → URLconf → DRF）
-                       └─ websocket → URLRouter(websocket_urlpatterns)   ← 当前为空
+                       └─ websocket → URLRouter(websocket_urlpatterns)   ← /ws/knowledge-assistant/
                               │
         ┌─────────────────────┼──────────────────────────┐
         ▼                     ▼                          ▼
@@ -52,7 +52,7 @@
 |------|------|------|------|
 | Redis | 6379 | `redis-server` | JWT 吊销键、Channels layer；`run.py stop` **不**停 Redis |
 | Daphne | 8766 | `run_daphne.py` → `backend.config.asgi:application` | 开发态 autoreload 双进程（父进程只监控），生产态单进程 |
-| Vite | 5173 | `npx vite --host` | 代理 `/api`、`/media`；`/ws` 代理是遗留配置 |
+| Vite | 5173 | `npx vite --host` | 代理 `/api`、`/media`、`/ws`（知识库助手实时语音） |
 
 - 统一运维入口：`python run.py start|stop|restart|status|logs|check`（`run.py`）。
 - 启动副作用**受门控**：孤儿任务恢复、串口端口监听恢复只在 ASGI 服务进程的 daemon 线程里执行，条件是 `DJANGO_ASGI_SERVER=1` 或 argv 含 `daphne`/`runserver`（`backend/apps/ai_assistant/apps.py`、`backend/apps/serial_log/apps.py`）；`migrate`/`shell`/`pytest` 不触发。
@@ -72,7 +72,9 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 
 ### 2.3 Channels
 
-`backend/config/asgi.py` 保留 WebSocket 协议入口，`backend/gateway/routing.py` 的 `websocket_urlpatterns` 为**空表**；`CHANNEL_LAYERS` 优先 Redis、异常降级 InMemory。当前无任何 WS 生产点，属"预留而非在用"。
+`backend/config/asgi.py` 同时挂 HTTP 与 WebSocket；`backend/gateway/routing.py` 当前只有一条生产路由 `/ws/knowledge-assistant/`（知识库助手实时语音）。该 consumer 用握手 query 的 `?token=<access_token>` 调既有 `verify_token` 鉴权，不经过 `JWTAuthenticationMiddleware`；鉴权失败直接 4401，不创建模型会话。`CHANNEL_LAYERS` 优先 Redis、异常降级 InMemory。
+
+通道只承载知识库助手的音频、转写、打断与播放进度；任务进度与列表仍走 HTTP 轮询。平台其它模块**不得**复用该通道承载任务、设备或写操作。
 
 ---
 
@@ -155,13 +157,14 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 | ai-assistant | `/ai-assistant`、`/ai-assistant/agents`、`/agent/:id` | `/api/ai/*` |
 | task-list | `/tasks`、`/tasks/:id` | `/api/tasks/*` |
 | case-manager | `/cases`、`/cases/projects/:id`、`/files/:fileId`、`/cases/:id/edit` 等 | `/api/cases/*` |
-| report-generator | `/reports`、`/reports/cases/:type`、`/reports/:runId` | `/api/reports/*` |
+| report-generator | `/reports` | `/api/reports/*` |
+| knowledge-assistant | `/knowledge-assistant` | `/api/knowledge-assistant/*`；语音走 `/ws/knowledge-assistant/` |
 
-- 侧栏三组：主区（仪表盘 / AI 助手）、数据（设备 / 页面流 / 串口日志）、AI 任务（任务清单 / 用例 / 报告）。
+- 侧栏四组：主区（仪表盘）、AI 功能（AI 助手 / 知识库助手）、数据（设备 / 页面流 / 串口日志）、AI 任务（任务清单 / 用例 / 报告）。
 - 请求：模块 `api.ts` → `shared/api-client.ts`（baseURL `/api`，2min 超时）；拦截器注 token、401 触发单飞刷新、公开端点不刷新（`shared/api-auth-interceptors.ts`）。
 - 状态：Pinia 仅 `workflow`（`workflowStore`、`libraryStore`）；token 直存 localStorage，无 auth store。
 - 设计系统：`shared/styles/tokens.css` 是令牌唯一真相源；L0 视口 → L1 侧栏/主区 → L2 页头/页面根 → L3 容器 → L4 数据面 → L5 覆盖层；模块只拥有自己页面的 L2–L5。
-- 实时性：无 WebSocket / SSE；任务进度靠页面轮询任务详情接口。
+- 实时性：任务进度靠页面轮询任务详情接口；唯一 WS 是知识库助手语音 `knowledge-assistant`（`audio/pcm.ts` 采集重采样 → WS → AgentScope `RealtimeAgent` → 下行音频与转写；对话落 `logs/knowledge_assistant/`）。
 
 ---
 

@@ -1,0 +1,244 @@
+/* Doodle Craft — BUG 单管理：纸面工作台 + 表格 + 详情抽屉 */
+.doc-page {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+}
+
+.bug-workbench .doc-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto !important;
+  padding: var(--app-space-md) var(--app-space-lg) var(--app-space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-md);
+}
+
+.bug-workbench {
+  --bug-hover-bg: var(--color-white);
+}
+
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--app-space-sm);
+}
+
+.bug-table-section {
+  padding: 0;
+}
+
+.bug-table-section__header {
+  padding: var(--app-space-md);
+  margin-bottom: 0;
+  align-items: center;
+  gap: var(--app-space-md);
+  flex-wrap: wrap;
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  flex-wrap: wrap;
+  padding: var(--app-space-sm) var(--app-space-md) 0;
+}
+
+.bug-filter-input {
+  width: 280px;
+}
+
+.bug-filter-status {
+  width: 150px;
+}
+
+.filter-hint {
+  margin-left: auto;
+  font-size: var(--app-size-xs);
+  font-weight: 600;
+  color: var(--app-text-secondary);
+  white-space: nowrap;
+}
+
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  flex-wrap: wrap;
+  padding: var(--app-space-sm) var(--app-space-md) 0;
+}
+
+.toolbar-label {
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--app-text-secondary);
+}
+
+.page-size-btns {
+  display: flex;
+  gap: var(--app-space-xs);
+}
+
+.page-size-btn {
+  padding: var(--app-space-xs) var(--app-space-sm);
+  font-family: inherit;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--app-text-secondary);
+  background: var(--app-bg-card);
+  border: 2px solid var(--app-border-light);
+  border-radius: var(--app-radius-sm);
+  cursor: pointer;
+  transition:
+    color var(--app-duration-fast),
+    border-color var(--app-duration-fast),
+    background var(--app-duration-fast);
+}
+
+.page-size-btn:hover,
+.page-size-btn.active {
+  color: var(--ink);
+  border-color: var(--ink);
+  background: var(--app-bg-subtle);
+}
+
+.page-info {
+  margin-left: auto;
+  font-size: var(--app-size-xs);
+  font-weight: 600;
+  color: var(--app-text-secondary);
+  white-space: nowrap;
+}
+
+.page-nav {
+  display: flex;
+  gap: var(--app-space-xs);
+}
+
+.page-nav-btn {
+  padding: var(--app-space-xs) var(--app-space-sm);
+  font-family: inherit;
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--app-bg-card);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  cursor: pointer;
+  transition: background var(--app-duration-fast);
+}
+
+.page-nav-btn:hover {
+  background: var(--c-runner);
+}
+
+.page-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.bug-table {
+  width: 100%;
+}
+
+.bug-table :deep(.el-table__body tr) {
+  cursor: pointer;
+}
+
+.bug-table :deep(.el-table__header th) {
+  background: var(--app-bg-subtle) !important;
+  color: var(--ink) !important;
+  font-size: var(--app-size-xs) !important;
+  font-weight: 700 !important;
+  border-bottom: 2.5px solid var(--ink) !important;
+}
+
+.bug-table :deep(.el-table__body td) {
+  color: var(--ink);
+  border-bottom: 1px solid var(--app-border-light) !important;
+}
+
+.bug-table :deep(.el-table__body tr:hover td) {
+  background: var(--bug-hover-bg) !important;
+}
+
+.bug-no {
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+}
+
+.bug-title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bug-time {
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+.bug-badge,
+.bug-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--app-space-xs);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+}
+
+.bug-badge.is-ui {
+  border-color: var(--c-ai);
+}
+
+.bug-badge.is-case {
+  border-color: var(--c-case);
+}
+
+.bug-status.is-open {
+  background: var(--app-status-warning-bg);
+  color: var(--app-warning-text);
+}
+
+.bug-status.is-resolved {
+  background: var(--app-status-success-bg);
+  color: var(--app-status-success-text);
+}
+
+.bug-status.is-ignored {
+  background: var(--app-offline);
+  color: var(--app-text-secondary);
+}
+
+.bug-task-link {
+  color: var(--ink);
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-style: wavy;
+  text-decoration-color: var(--c-runner);
+  text-underline-offset: 3px;
+}
+
+.bug-table :deep(.doodle-btn) {
+  min-height: 28px;
+  padding: 0 var(--app-space-sm);
+  font-size: var(--app-size-xs);
+}
+
+@media (max-width: 900px) {
+  .kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bug-filter-input {
+    width: 100%;
+  }
+}

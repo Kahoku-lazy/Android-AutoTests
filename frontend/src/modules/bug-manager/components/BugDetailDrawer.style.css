@@ -1,0 +1,129 @@
+/* BUG 单详情抽屉 — Doodle Craft 纸面细节 */
+.bug-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-md);
+}
+
+.bug-detail__head {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  flex-wrap: wrap;
+}
+
+.bug-detail__no {
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.bug-detail__title {
+  margin: 0;
+  font-family: var(--app-font-display);
+  font-size: var(--app-size-xl);
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.bug-badge,
+.bug-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--app-space-xs);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+}
+
+.bug-badge.is-ui {
+  border-color: var(--c-ai);
+}
+
+.bug-badge.is-case {
+  border-color: var(--c-case);
+}
+
+.bug-status.is-open {
+  background: var(--app-status-warning-bg);
+  color: var(--app-warning-text);
+}
+
+.bug-status.is-resolved {
+  background: var(--app-status-success-bg);
+  color: var(--app-status-success-text);
+}
+
+.bug-status.is-ignored {
+  background: var(--app-offline);
+  color: var(--app-text-secondary);
+}
+
+.bug-meta {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: var(--app-space-xs) var(--app-space-sm);
+  margin: 0;
+  padding: var(--app-space-sm);
+  background: var(--app-bg-subtle);
+  border: 1.5px solid var(--app-border-light);
+  border-radius: var(--app-radius-sm);
+  font-size: var(--app-size-sm);
+}
+
+.bug-meta dt {
+  color: var(--app-text-secondary);
+  font-weight: 700;
+}
+
+.bug-meta dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.bug-task-link {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-style: wavy;
+  text-decoration-color: var(--c-runner);
+  text-underline-offset: 3px;
+}
+
+.bug-detail__actions {
+  display: flex;
+  gap: var(--app-space-sm);
+  flex-wrap: wrap;
+}
+
+.bug-detail__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+}
+
+.bug-detail__subtitle {
+  margin: 0;
+  font-size: var(--app-size-sm);
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.bug-detail__body {
+  margin: 0;
+  max-height: 46vh;
+  overflow: auto;
+  padding: var(--app-space-sm);
+  background: var(--app-bg-card);
+  border: 1.5px solid var(--app-border-light);
+  border-radius: var(--app-radius-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-xs);
+  line-height: 1.65;
+  color: var(--ink);
+}

@@ -9,6 +9,10 @@ build/
 .venv/
 .pytest_cache/
 pytest-cache-files-*/
+# pytest 本地临时目录（仓库根下生成的 basetemp）
+.pytest-tmp/
+.testtmp/
+pytest-of-*/
 .mypy_cache/
 .hypothesis/
 .tox/

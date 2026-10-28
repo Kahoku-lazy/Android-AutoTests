@@ -1,14 +1,9 @@
 /** Shared constants for the AI Assistant module. */
 
-// ── Avatar / Image ──
+// ── Avatar ──
 
-export const DATA_IMAGE_PREFIX = "data:image/"
-
-/** Check whether an avatar string is an image URL (data URI). */
-export function isImageAvatar(av: string | null | undefined): boolean {
-  if (!av) return false
-  return av.startsWith(DATA_IMAGE_PREFIX)
-}
+/** 智能体内置头像（public/agent-avatar.svg）。全站唯一，不随智能体数据变化。 */
+export const AGENT_AVATAR_SRC = "/agent-avatar.svg"
 
 // ── Platform assistant fixed identity（当前写死，不落库） ──
 
@@ -17,6 +12,27 @@ export const ASSISTANT_DUTY = "UI自动化"
 
 /** 平台小助手使用的固定工作流 */
 export const ASSISTANT_WORKFLOW = "ui_auto_workflow"
+
+// ── 任务类型（AIAgent.task_kind / Task.task_kind） ──
+
+export const TASK_KIND_DEVICE_CONTROL = "device_control"
+export const TASK_KIND_CASE_AUTHORING = "case_authoring"
+
+/** Agent-02 的职责 */
+export const CASE_AUTHORING_DUTY = "测试用例编写"
+
+/** Agent-02 使用的工作流 */
+export const CASE_AUTHORING_WORKFLOW = "case_authoring_workflow"
+
+/** 按任务类型取展示职责。 */
+export function agentDuty(taskKind?: string): string {
+  return taskKind === TASK_KIND_CASE_AUTHORING ? CASE_AUTHORING_DUTY : ASSISTANT_DUTY
+}
+
+/** 按任务类型取展示工作流。 */
+export function agentWorkflow(taskKind?: string): string {
+  return taskKind === TASK_KIND_CASE_AUTHORING ? CASE_AUTHORING_WORKFLOW : ASSISTANT_WORKFLOW
+}
 
 // ── Built-in Tool Names ──
 

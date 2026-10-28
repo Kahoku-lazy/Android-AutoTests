@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 智能体内置头像：与用户头像同族的机器人头像，全站固定，不随数据变化 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none" role="img" aria-label="AI Agent 头像">
+  <title>AI Agent 头像</title>
+  <defs>
+    <!-- 机身暗面：本体 减去 右移 9、上移 2 的本体，得到贴左侧的月牙 -->
+    <mask id="agHeadShade" maskUnits="userSpaceOnUse" x="0" y="0" width="128" height="128">
+      <rect x="31" y="36" width="66" height="64" rx="22" fill="#ffffff" />
+      <rect x="40" y="34" width="66" height="64" rx="22" fill="#000000" />
+    </mask>
+  </defs>
+
+  <!-- 机身：亮面 → 左侧暗面 → 耳机侧舱 → 天线 → 描边 → 五官 -->
+  <rect x="31" y="36" width="66" height="64" rx="22" fill="#81d4fa" />
+  <rect x="31" y="36" width="66" height="64" rx="22" fill="#64c1e2" mask="url(#agHeadShade)" />
+  <rect x="20" y="59" width="8" height="18" rx="4" fill="#1b1464" />
+  <rect x="100" y="59" width="8" height="18" rx="4" fill="#1b1464" />
+  <path d="M64 32 V24" stroke="#1b1464" stroke-width="4" stroke-linecap="round" />
+  <circle cx="64" cy="19.5" r="4.5" fill="#1b1464" />
+  <rect x="31" y="36" width="66" height="64" rx="22" fill="none" stroke="#1b1464" stroke-width="8" />
+  <rect x="47" y="54" width="9" height="13" rx="4.5" fill="#1b1464" />
+  <rect x="72" y="54" width="9" height="13" rx="4.5" fill="#1b1464" />
+  <rect x="56" y="77" width="16" height="5" rx="2.5" fill="#1b1464" />
+</svg>

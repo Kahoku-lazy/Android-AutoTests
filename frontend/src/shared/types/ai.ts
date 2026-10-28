@@ -9,6 +9,8 @@ export interface AgentRecord {
   id: number
   name: string
   status: AgentStatus
+  /** 任务类型：device_control=设备执行；case_authoring=家电测试用例编写 */
+  task_kind?: string
   model_name?: string
   model_provider?: string
   strong_model_name?: string
@@ -40,6 +42,7 @@ export interface RouteConfig {
 
 export interface RouteConfigMap {
   device_control?: RouteConfig
+  case_authoring?: RouteConfig
 }
 
 export type AgentRoute = "device_control"
@@ -48,6 +51,7 @@ export type AgentRoute = "device_control"
 export interface TaskRecord {
   id: number
   title: string
+  task_kind?: string
   goal: string
   status: string
   result?: string
@@ -247,6 +251,7 @@ export interface TaskRunPayload {
 export interface TaskDetail {
   id: number
   title: string
+  task_kind?: string
   goal: string
   status: string
   device_serial?: string

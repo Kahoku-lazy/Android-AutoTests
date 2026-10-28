@@ -4,10 +4,8 @@ import { computed, onMounted, onUnmounted, ref } from "vue"
 import type { RouteConfig } from "@/shared/types/ai"
 import DoodleNote from "@/shared/components/DoodleNote.vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
-import { isImageAvatar } from "../constants"
+import { AGENT_AVATAR_SRC } from "../constants"
 
-/** 控制设备线路职责（看板唯一线路，写死） */
-const DUTY_LABEL = "职责：UI自动化"
 /** 测量前占位，避免首帧 0×0 */
 const AVATAR_FALLBACK_PX = 64
 /** 固定胶带/阴影强调色（校验下线后不再随连通状态变化） */
@@ -15,15 +13,16 @@ const NOTE_ACCENT = "var(--c-case)"
 
 const props = defineProps<{
   agentName?: string
-  agentAvatar?: string
   config?: RouteConfig
   canManage?: boolean
+  duty?: string
 }>()
 const emit = defineEmits<{ edit: [] }>()
 
 const displayName = computed(() => props.config?.name || props.agentName || "未命名助手")
-const displayAvatar = computed(() => props.config?.avatar || props.agentAvatar || "🤖")
-const avatarIsImage = computed(() => isImageAvatar(displayAvatar.value))
+
+/** 卡片职责：Agent-01 为 UI自动化，Agent-02 为测试用例编写 */
+const dutyLabel = computed(() => `职责：${props.duty || "UI自动化"}`)
 
 /** 头像边长 = 右两行自然总高（含边框；flex+aspect-ratio 会压成 0 宽） */
 const textRef = ref<HTMLElement | null>(null)
@@ -51,15 +50,14 @@ onUnmounted(() => {
   textRo = null
 })
 
+/** 头像容器尺寸：正方形，边长跟随右侧身份文字块总高 */
 const avatarBoxStyle = computed(() => {
   const size = `${avatarPx.value}px`
-  const style: Record<string, string> = {
+  return {
     width: size,
     height: size,
     boxSizing: "border-box",
-  }
-  if (avatarIsImage.value) style.backgroundImage = `url(${displayAvatar.value})`
-  return style
+  } as Record<string, string>
 })
 </script>
 
@@ -73,7 +71,7 @@ const avatarBoxStyle = computed(() => {
   >
     <div class="route-identity">
       <div class="route-avatar" :style="avatarBoxStyle">
-        <span v-if="!avatarIsImage">{{ displayAvatar }}</span>
+        <img class="route-avatar-img" :src="AGENT_AVATAR_SRC" alt="智能体头像" />
       </div>
       <div
         ref="textRef"
@@ -81,7 +79,7 @@ const avatarBoxStyle = computed(() => {
         :class="{ 'route-identity-text--without-config': !canManage }"
       >
         <div class="route-agent-name">{{ displayName }}</div>
-        <div class="route-duty">{{ DUTY_LABEL }}</div>
+        <div class="route-duty">{{ dutyLabel }}</div>
         <DoodleBtn v-if="canManage" tone="yellow" class="route-config-btn" @click="emit('edit')">
           配置
         </DoodleBtn>
@@ -106,17 +104,17 @@ const avatarBoxStyle = computed(() => {
 .route-avatar {
   flex-shrink: 0;
   box-sizing: border-box;
-  border-radius: 2px;
-  border: 3px solid var(--ink);
-  background-color: var(--ai-warm-bg);
-  background-size: cover;
-  background-position: center;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(var(--app-size-xl) * 2);
   box-shadow: 3px 3px 0 0 color-mix(in srgb, var(--ink) 12%, transparent);
   overflow: hidden;
+}
+.route-avatar-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .route-identity-text {
   width: 144px;
@@ -171,9 +169,6 @@ const avatarBoxStyle = computed(() => {
     width: 120px;
     height: 120px;
     flex-basis: 120px;
-  }
-  .route-avatar {
-    font-size: var(--app-size-2xl);
   }
   .route-agent-name {
     font-size: 15px;

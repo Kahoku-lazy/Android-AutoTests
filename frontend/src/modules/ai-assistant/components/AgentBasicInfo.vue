@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { ASSISTANT_DUTY, ASSISTANT_WORKFLOW, DATA_IMAGE_PREFIX } from "../constants"
+import { computed } from "vue"
+import { AGENT_AVATAR_SRC, agentDuty, agentWorkflow } from "../constants"
 
-defineProps<{
+const props = defineProps<{
   form: Record<string, any>
-  uploading?: boolean
+  taskKind?: string
 }>()
-const emit = defineEmits<{ "trigger-upload": [] }>()
+
+const duty = computed(() => agentDuty(props.taskKind))
+const workflow = computed(() => agentWorkflow(props.taskKind))
 </script>
 
 <template>
@@ -17,26 +20,10 @@ const emit = defineEmits<{ "trigger-upload": [] }>()
       </el-form-item>
       <el-form-item label="头像">
         <div class="avatar-row">
-          <div
-            class="avatar-preview"
-            :style="
-              form.avatar?.startsWith(DATA_IMAGE_PREFIX)
-                ? { backgroundImage: `url(${form.avatar})` }
-                : {}
-            "
-          >
-            <span v-if="!form.avatar?.startsWith(DATA_IMAGE_PREFIX)">{{
-              form.avatar || "🤖"
-            }}</span>
+          <div class="avatar-preview">
+            <img class="avatar-img" :src="AGENT_AVATAR_SRC" alt="智能体头像" />
           </div>
-          <el-button :loading="uploading" size="default" @click="emit('trigger-upload')">
-            {{ uploading ? "上传中..." : "上传图片" }}
-          </el-button>
-          <el-input
-            v-model="form.avatar"
-            placeholder="Emoji 或留空用默认"
-            style="max-width: 160px"
-          />
+          <span class="avatar-note">系统内置头像，不可修改</span>
         </div>
       </el-form-item>
       <el-form-item label="标签">
@@ -51,10 +38,10 @@ const emit = defineEmits<{ "trigger-upload": [] }>()
         />
       </el-form-item>
       <el-form-item label="职责">
-        <el-input :model-value="ASSISTANT_DUTY" readonly />
+        <el-input :model-value="duty" readonly />
       </el-form-item>
       <el-form-item label="工作流">
-        <el-input :model-value="ASSISTANT_WORKFLOW" readonly />
+        <el-input :model-value="workflow" readonly />
       </el-form-item>
     </el-form>
   </div>
@@ -74,22 +61,20 @@ const emit = defineEmits<{ "trigger-upload": [] }>()
 .avatar-row {
   display: flex;
   align-items: center;
-  gap: var(--app-space-md);
-  flex-wrap: wrap;
+  gap: var(--app-space-sm);
 }
 .avatar-preview {
   width: 64px;
   height: 64px;
-  border-radius: var(--app-radius-lg);
-  background-size: cover;
-  background-position: center;
-  background-color: var(--ai-warm-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--app-size-2xl);
-  border: 2px solid var(--ai-warm-border);
   flex-shrink: 0;
-  box-shadow: var(--app-shadow-sm);
+}
+.avatar-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.avatar-note {
+  font-size: var(--app-size-sm);
+  color: var(--ai-ink-muted);
 }
 </style>

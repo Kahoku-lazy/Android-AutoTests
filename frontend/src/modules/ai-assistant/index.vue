@@ -16,15 +16,8 @@ const { agents, loading, agentsError, PAGE_HEADER, loadAgents, editAgent } =
 const { isSuperuser } = useAuthUser()
 const isAdmin = computed(() => isSuperuser.value === true)
 
-// 两条助手线路（每条线路独立 name/avatar，存于 route_configs）
-const routeCards = computed(() =>
-  displayedAssistantCards(agents.value[0]).map((card) => ({
-    key: card.key,
-    config: card.config,
-    agentName: card.name,
-    agentAvatar: card.avatar,
-  })),
-)
+// 助手卡片：每个可见 Agent 一张（Agent-01 设备执行 / Agent-02 用例编写）
+const routeCards = computed(() => displayedAssistantCards(agents.value))
 
 // ── 视图（AI 助手只有一个入口：平台小助手线路看板）──
 </script>
@@ -33,7 +26,7 @@ const routeCards = computed(() =>
   <div class="doc-page doc-page--fixed wb-shell ai-workbench">
     <WorkbenchHeader
       title="平台小助手"
-      subtitle="助手看板：配置两条线路与身份卡"
+      subtitle="助手看板：查看身份、职责与配置入口"
       :icon="PAGE_HEADER.icon"
       :icon-gradient="PAGE_HEADER.iconGradient"
     />
@@ -48,10 +41,10 @@ const routeCards = computed(() =>
           v-for="rc in routeCards"
           :key="rc.key"
           :config="rc.config"
-          :agent-name="rc.agentName"
-          :agent-avatar="rc.agentAvatar"
+          :agent-name="rc.name"
+          :duty="rc.duty"
           :can-manage="isAdmin"
-          @edit="editAgent(agents[0]?.id ?? 0, rc.key)"
+          @edit="editAgent(rc.agentId)"
         />
         <EmptyState
           v-if="!agents.length && !loading"

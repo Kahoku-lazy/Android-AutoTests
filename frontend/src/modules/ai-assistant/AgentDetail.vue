@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import { getAgentDetail, uploadAvatar, saveAgent } from "./api/agents"
+import { getAgentDetail, saveAgent } from "./api/agents"
 import { formatApiError } from "@/shared/api-client"
 import { ElMessage } from "element-plus"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
@@ -18,13 +18,11 @@ const isNew = computed(() => agentId.value === "new")
 const agent = ref(null)
 const loading = ref(false)
 const loadError = ref("")
-const uploading = ref(false)
-const fileInput = ref(null)
 
 // 配置页只维护基本信息；模型/线路由后台维护，执行链仍读 route_configs。
+// 头像固定为内置图标，不参与表单与保存。
 const form = ref({
   name: "",
-  avatar: "🤖",
   tags: "",
   description: "",
 })
@@ -37,10 +35,10 @@ async function loadAgentDetail() {
     const data = await getAgentDetail(agentId.value)
     if (data?.status && data.data?.agent) {
       const payload = data.data.agent
-      const routeConfig = payload.route_configs?.device_control || {}
+      const routeConfig =
+        payload.route_configs?.device_control || payload.route_configs?.case_authoring || {}
       form.value = {
         name: routeConfig.name || payload.name || "",
-        avatar: routeConfig.avatar || payload.avatar || "🤖",
         tags: payload.tags || "",
         description: payload.description || "",
       }
@@ -57,34 +55,9 @@ onMounted(() => {
   loadAgentDetail()
 })
 
-function triggerUpload() {
-  fileInput.value?.click()
-}
-
-async function handleAvatarUpload(e) {
-  const file = e.target.files?.[0]
-  if (!file) return
-  uploading.value = true
-  const reader = new FileReader()
-  reader.onload = async () => {
-    try {
-      const data = await uploadAvatar({ image: reader.result })
-      if (data.status) {
-        form.value.avatar = data.data?.url || ""
-      }
-    } catch (err) {
-      console.error("Failed to upload avatar:", err)
-      ElMessage.error("头像上传失败，请稍后重试")
-    }
-    uploading.value = false
-  }
-  reader.readAsDataURL(file)
-}
-
 async function save() {
   const payload = {
-    name: (form.value.name || "").trim() || "平台小助手",
-    avatar: form.value.avatar || "",
+    name: (form.value.name || "").trim() || (isNew.value ? "新智能体" : "平台小助手"),
     tags: form.value.tags || "",
     description: form.value.description || "",
   }
@@ -124,14 +97,7 @@ async function save() {
       />
       <ErrorState v-if="loadError" :message="loadError" @retry="loadAgentDetail" />
       <template v-else>
-        <input
-          type="file"
-          ref="fileInput"
-          accept="image/*"
-          style="display: none"
-          @change="handleAvatarUpload"
-        />
-        <AgentBasicInfo :form="form" :uploading="uploading" @trigger-upload="triggerUpload" />
+        <AgentBasicInfo :form="form" :task-kind="agent?.task_kind" />
         <AgentFormFooter :is-new="isNew" @save="save" />
       </template>
     </div>

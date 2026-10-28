@@ -8,9 +8,12 @@ Architecture stats generator — 扫描代码库，输出当前架构的可度�
   - 也支持 --json 输出，供 CI/hook 消费
 
 用法:
-  python utils/gen_arch_stats.py                             # 输出 Markdown 片段
-  python utils/gen_arch_stats.py --json                      # 输出 JSON
-  python utils/gen_arch_stats.py --check-md --doc <文档路径>   # 对比架构文档，输出 drift 报告
+  python utils/gen_arch_stats.py                              # 输出 Markdown 片段
+  python utils/gen_arch_stats.py --json                       # 输出 JSON（供 CI/hook 消费）
+  python utils/gen_arch_stats.py --check-md --doc <文档路径>    # 对比架构文档，输出 drift 报告
+  python utils/gen_arch_stats.py --check-boundaries [--verbose] # 模块边界检查（CI Job 4）
+  python utils/gen_arch_stats.py --check-frontend             # 前端文件体积检查（CI Job 5）
+  python utils/gen_arch_stats.py --update-agents-md           # 同步 AGENTS.md 的 AUTO_STATS 区块
 """
 
 import ast
@@ -34,13 +37,101 @@ for _stream in (sys.stdout, sys.stderr):
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
+# ── 仓库布局常量 ──
+# 源码位于 `backend/` 下，跨 App import 统一写作 `backend.apps.<app>`。
+# 早期版本的脚本按「根目录即 Django 项目、import 写作 apps.<app>」写死了路径与正则，
+# 迁目录后所有扫描都会静默返回空结果——集中在这里，改目录只改这一处。
+BACKEND_DIR = PROJECT_ROOT / "backend"
+APPS_DIR = BACKEND_DIR / "apps"
+GATEWAY_DIR = BACKEND_DIR / "gateway"
+SETTINGS_PATH = BACKEND_DIR / "config" / "settings.py"
+# 供 re 使用的「跨 App import」前缀（不含结尾点，调用方自行拼接）
+APP_IMPORT_PREFIX = r"backend\.apps"
+# 表前缀归属：App 名 → 表名前缀。新增 App 时在此登记，未登记会显示 "??"。
+TABLE_PREFIX = {
+    "device_pool": "dp_",
+    "case_manager": "cm_",
+    "task_list": "task_",
+    "bug_manager": "bug_",
+    "ai_assistant": "ai_",
+    "report_generator": "rg_",
+    "workflow": "wf_",
+    "serial_log": "sl_",
+    "accounts": "auth_",
+    "dashboard": "—",
+}
+
 
 # ── 1. Django App 扫描 ──
 
 
+def _viewset_actions(app_dir: Path, class_name: str):
+    """找出 ViewSet 类上的 `@action` 装饰器。
+
+    Args:
+        app_dir: App 目录。
+        class_name: ViewSet 类名。
+
+    Returns:
+        [(detail, url_path), ...]；detail 为 True 表示挂在详情路由下。
+        找不到类时返回空表。
+    """
+    for view_file in sorted(app_dir.glob("views*.py")):
+        try:
+            tree = ast.parse(view_file.read_text(encoding="utf-8"))
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if not (isinstance(node, ast.ClassDef) and node.name == class_name):
+                continue
+            actions = []
+            for member in node.body:
+                if not isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                for dec in member.decorator_list:
+                    if not (isinstance(dec, ast.Call) and getattr(dec.func, "id", "") == "action"):
+                        continue
+                    detail = False
+                    url_path = member.name.replace("_", "-")
+                    for kw in dec.keywords:
+                        if kw.arg == "detail":
+                            detail = isinstance(kw.value, ast.Constant) and kw.value.value is True
+                        elif kw.arg == "url_path" and isinstance(kw.value, ast.Constant):
+                            url_path = kw.value.value
+                    actions.append((detail, url_path))
+            return actions
+    return []
+
+
+def count_app_endpoints(app_dir: Path):
+    """统计一个 App 的端点数量。
+
+    口径：唯一 URL 路径，同一路径多方法计 1。字面 `path()` / `re_path()` 各计 1；
+    `router.register()` 按其 ViewSet 展开为「集合路由 + 详情路由 + 每个 @action」，
+    与 DefaultRouter 实际生成的路径一致。
+
+    Args:
+        app_dir: App 目录。
+
+    Returns:
+        端点条数。
+    """
+    urls_path = app_dir / "urls.py"
+    if not urls_path.exists():
+        return 0
+    content = urls_path.read_text(encoding="utf-8")
+
+    count = len(re.findall(r"^\s*(?:path|re_path)\(", content, re.MULTILINE))
+    for match in re.finditer(r"router\.register\(\s*r?[\"']([^\"']+)[\"']\s*,\s*(\w+)", content):
+        prefix, viewset = match.group(1), match.group(2)
+        count += 2  # 集合路由 `{prefix}/` + 详情路由 `{prefix}/{lookup}/`
+        count += len(_viewset_actions(app_dir, viewset))
+    return count
+
+
 def scan_django_apps():
     """扫描 backend/apps/ 下所有 Django App，返回结构化数据。"""
-    apps_dir = PROJECT_ROOT / "backend" / "apps"
+    apps_dir = APPS_DIR
     apps = []
     for d in sorted(apps_dir.iterdir()):
         if not d.is_dir() or d.name.startswith("_") or d.name.startswith("."):
@@ -68,14 +159,8 @@ def scan_django_apps():
             app["table_count"] += len(re.findall(r"db_table\s*=\s*['\"](\w+)['\"]", content))
             app["tables"].extend(re.findall(r"db_table\s*=\s*['\"](\w+)['\"]", content))
 
-        # 统计端点数量（path() 与 re_path() 均计；path("", ...) 空串根路径亦计）
-        app["endpoint_count"] = 0
-        if app["has_urls"]:
-            urls_path = d / "urls.py"
-            urls_content = urls_path.read_text(encoding="utf-8")
-            app["endpoint_count"] = len(
-                re.findall(r"^\s*(?:path|re_path)\(", urls_content, re.MULTILINE)
-            )
+        # 统计端点数量（字面 path() + DRF Router 生成的路由）
+        app["endpoint_count"] = count_app_endpoints(d)
 
         # 统计代码行数
         app["total_lines"] = 0
@@ -91,40 +176,101 @@ def scan_django_apps():
     return apps
 
 
-# ── 2. AgentScope Tool 扫描 ──
+# ── 2. Agent 工具扫描 ──
+
+TOOLS_CONFIG_PATH = PROJECT_ROOT / "engines" / "agents" / "tools_config.py"
+TOOLS_DIR = PROJECT_ROOT / "engines" / "agents" / "tools"
+
+
+def _literal_str_tuple(node):
+    """把 ast.Tuple / ast.List 里的字符串常量取成 list；非字面量返回空表。"""
+    if not isinstance(node, (ast.Tuple, ast.List)):
+        return []
+    return [e.value for e in node.elts if isinstance(e, ast.Constant) and isinstance(e.value, str)]
+
+
+def _tool_source_index():
+    """建立 工具名 → 定义文件（相对仓库根）的索引。
+
+    Returns:
+        dict[str, str]：函数名映射到 `engines/agents/tools/tool_*.py` 的相对路径。
+    """
+    index = {}
+    if not TOOLS_DIR.exists():
+        return index
+    for path in sorted(TOOLS_DIR.glob("tool_*.py")):
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except SyntaxError:
+            continue
+        rel = path.relative_to(PROJECT_ROOT).as_posix()
+        # 先收模块级函数，再补 build_*_tools() 内部的闭包工具（如 screenshot_page）
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                index.setdefault(node.name, rel)
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                index.setdefault(node.name, rel)
+    return index
 
 
 def scan_tools():
-    """扫描 tools.py 的 TOOLS 注册表（AgentScope 工具的唯一事实源）。"""
-    registry_path = PROJECT_ROOT / "backend" / "apps" / "ai_assistant" / "tools.py"
-    if not registry_path.exists():
+    """扫描工具注册表 `engines/agents/tools_config.py`，返回已装配给角色的工具。
+
+    常驻工具来自 `EXECUTOR_BASIC_TOOL_NAMES` / `VERIFIER_BASIC_TOOL_NAMES`，
+    可开关工具来自 `EXECUTOR_TOOL_GROUPS` 里每个 `ToolGroupSpec` 的 `tool_names`。
+    同一工具只登记一次，角色列累计所有引用它的角色。
+
+    Returns:
+        工具列表，元素含 name / group / roles / file。
+    """
+    if not TOOLS_CONFIG_PATH.exists():
         return []
-    tree = ast.parse(registry_path.read_text(encoding="utf-8"))
+    try:
+        tree = ast.parse(TOOLS_CONFIG_PATH.read_text(encoding="utf-8"))
+    except SyntaxError:
+        return []
+
+    files = _tool_source_index()
+    tools = {}  # name → 记录；dict 保序，保证输出稳定
+
+    def add(name, group, role):
+        """登记一个工具；重复出现时只补角色，不覆盖首次出现的位置。"""
+        item = tools.setdefault(
+            name,
+            {"name": name, "group": group, "roles": [], "file": files.get(name, "")},
+        )
+        if role not in item["roles"]:
+            item["roles"].append(role)
+
     for node in tree.body:
-        if isinstance(node, ast.Assign):
-            target, value = node.targets[0], node.value
-        elif isinstance(node, ast.AnnAssign):
-            target, value = node.target, node.value
-        else:
+        is_assign = isinstance(node, ast.Assign)
+        if not is_assign and not isinstance(node, ast.AnnAssign):
             continue
-        if isinstance(target, ast.Name) and target.id == "TOOLS" and isinstance(value, ast.Dict):
-            tools = []
-            for key, val in zip(value.keys, value.values):
-                name = ast.literal_eval(key)
-                # val 是 (func_ref, is_read_only_bool) 元组
-                read_only = False
-                if isinstance(val, ast.Tuple) and len(val.elts) == 2:
-                    read_only = bool(ast.literal_eval(val.elts[1]))
-                tools.append(
-                    {
-                        "name": name,
-                        "class": name,
-                        "file": str(registry_path.relative_to(PROJECT_ROOT)).replace("\\", "/"),
-                        "is_read_only": read_only,
-                    }
-                )
-            return tools
-    return []
+        target = node.targets[0] if is_assign else node.target
+        if not isinstance(target, ast.Name) or node.value is None:
+            continue
+
+        if target.id == "EXECUTOR_BASIC_TOOL_NAMES":
+            for name in _literal_str_tuple(node.value):
+                add(name, "basic", "executor")
+        elif target.id == "VERIFIER_BASIC_TOOL_NAMES":
+            for name in _literal_str_tuple(node.value):
+                add(name, "basic", "verifier")
+        elif target.id == "EXECUTOR_TOOL_GROUPS" and isinstance(node.value, ast.Tuple):
+            for call in node.value.elts:
+                if not isinstance(call, ast.Call):
+                    continue
+                group_name, names = "", []
+                for kw in call.keywords:
+                    if kw.arg == "name" and isinstance(kw.value, ast.Constant):
+                        group_name = kw.value.value
+                    elif kw.arg == "tool_names":
+                        names = _literal_str_tuple(kw.value)
+                for name in names:
+                    add(name, group_name, "executor")
+
+    return list(tools.values())
 
 
 # ── 3. 前端模块扫描 ──
@@ -165,7 +311,7 @@ def scan_file_size_violations(py_limit=400, vue_limit=500):
     violations = []
 
     # Python 文件
-    apps_dir = PROJECT_ROOT / "backend" / "apps"
+    apps_dir = APPS_DIR
     for py_file in apps_dir.rglob("*.py"):
         if "migrations" in str(py_file) or "__pycache__" in str(py_file):
             continue
@@ -204,28 +350,30 @@ def scan_file_size_violations(py_limit=400, vue_limit=500):
 
 
 def scan_cross_app_imports():
-    """扫描跨 App import 关系。"""
-    apps_dir = PROJECT_ROOT / "backend" / "apps"
-    gateway_dir = PROJECT_ROOT / "backend" / "gateway"
-
-    # 从 INSTALLED_APPS 获取 App 列表
-    settings_path = PROJECT_ROOT / "config" / "settings.py"
-    settings_content = settings_path.read_text(encoding="utf-8")
-    app_names = re.findall(r"'apps\.(\w+)'", settings_content)
+    """扫描跨 App import 关系（被依赖 App → 依赖来源文件）。"""
+    # 从 INSTALLED_APPS 获取 App 列表（条目形如 "backend.apps.device_pool"）
+    app_names = list(
+        dict.fromkeys(
+            re.findall(
+                rf"['\"]{APP_IMPORT_PREFIX}\.(\w+)['\"]",
+                SETTINGS_PATH.read_text(encoding="utf-8"),
+            )
+        )
+    )  # 去重：settings 里另有菜单图标字典会重复出现 App 名
 
     # 按目标 App 分组
     targets = defaultdict(set)  # {target_app: {source_file1, source_file2, ...}}
 
-    for scan_dir in [apps_dir, gateway_dir]:
+    for scan_dir in [APPS_DIR, GATEWAY_DIR]:
         for py_file in scan_dir.rglob("*.py"):
             if "migrations" in str(py_file) or "__pycache__" in str(py_file):
                 continue
             content = py_file.read_text(encoding="utf-8")
             for app_name in app_names:
-                pattern = rf"from apps\.{app_name}\."
+                pattern = rf"from\s+{APP_IMPORT_PREFIX}\.{app_name}\."
                 if re.search(pattern, content):
                     # 排除同 App 内的 import
-                    rel_path = str(py_file.relative_to(PROJECT_ROOT)).replace("\\", "/")
+                    rel_path = py_file.relative_to(PROJECT_ROOT).as_posix()
                     if f"apps/{app_name}/" not in rel_path:
                         targets[app_name].add(rel_path)
 
@@ -259,7 +407,7 @@ def scan_orm_write_violations():
     Returns (new_violations, known_violations) — new violations not yet whitelisted
     should fail CI.
     """
-    apps_dir = PROJECT_ROOT / "backend" / "apps"
+    apps_dir = APPS_DIR
     whitelist = _load_boundary_whitelist()
 
     # Build a mapping: model_class_name → app_name
@@ -310,7 +458,7 @@ def scan_orm_write_violations():
             # Find which models this file imports from OTHER apps
             imported_models = {}  # {ModelName: source_app}
             for m in re.finditer(
-                r"from\s+apps\.(\w+)\s*\.\s*models\s+import\s+([^#\n]+)",
+                rf"from\s+{APP_IMPORT_PREFIX}\.(\w+)\s*\.\s*models\s+import\s+([^#\n]+)",
                 content,
             ):
                 source_app = m.group(1)
@@ -379,7 +527,7 @@ def scan_cross_app_internal_imports():
     Extends to: no importing from other apps' non-api internals
     (e.g. runner.py internals, views.py private symbols like _active_runs).
     """
-    apps_dir = PROJECT_ROOT / "backend" / "apps"
+    apps_dir = APPS_DIR
 
     # Apps that have these internal modules
     INTERNAL_MODULES = ["service", "runner", "consumer", "callbacks", "state_machine"]
@@ -398,10 +546,10 @@ def scan_cross_app_internal_imports():
             except Exception:
                 continue
 
-            # Detect: from apps.X.{internal} import ...
+            # Detect: from backend.apps.X.{internal} import ...
             for mod in INTERNAL_MODULES:
                 for m in re.finditer(
-                    rf"from\s+apps\.(\w+)\.{mod}\s+import\s+([^#\n]+)",
+                    rf"from\s+{APP_IMPORT_PREFIX}\.(\w+)\.{mod}\s+import\s+([^#\n]+)",
                     content,
                 ):
                     source_app = m.group(1)
@@ -483,7 +631,7 @@ def scan_engine_leak_violations():
 
     Returns (new_violations, known_violations) — new violations fail CI.
     """
-    scan_dirs = [PROJECT_ROOT / "backend" / "apps", PROJECT_ROOT / "backend" / "gateway"]
+    scan_dirs = [APPS_DIR, GATEWAY_DIR]
     whitelist = _load_boundary_whitelist()
 
     # 行首 import 模式：[ \t] 而非 \s，避免 \s 跨空行吞换行导致行号偏移
@@ -573,7 +721,7 @@ def scan_engine_leak_violations():
 
 def scan_device_statuses():
     """从 device_pool/models.py 提取设备状态定义。"""
-    models_path = PROJECT_ROOT / "backend" / "apps" / "device_pool" / "models.py"
+    models_path = APPS_DIR / "device_pool" / "models.py"
     if not models_path.exists():
         return {"count": 0, "statuses": []}
 
@@ -631,28 +779,19 @@ def generate_markdown():
     lines.append(f"| 前缀 | App | 表名 |")
     lines.append(f"|------|-----|------|")
     for a in apps:
-        prefix_map = {
-            "device_pool": "dp_",
-            "case_manager": "cm_",
-            "report_generator": "rg_",
-            "ai_assistant": "ai_",
-            "workflow": "wf_",
-            "dashboard": "—",
-        }
-        prefix = prefix_map.get(a["name"], "??")
+        prefix = TABLE_PREFIX.get(a["name"], "??")
         for t in a["tables"]:
             lines.append(f"| `{prefix}` | `{a['name']}` | `{t}` |")
     lines.append("")
 
-    # AgentScope Tool
-    lines.append("### AgentScope Tool 清单")
+    # Agent 工具
+    lines.append("### Agent 工具清单（已装配给角色）")
     lines.append("")
-    lines.append(f"| Tool 名称 | 标识 (module.action) | 文件 | 只读 |")
-    lines.append(f"|-----------|------|------|:--:|")
+    lines.append(f"| Tool 名称 | 工具组 | 角色 | 定义文件 |")
+    lines.append(f"|-----------|--------|------|----------|")
     for t in tools:
-        lines.append(
-            f"| `{t['name']}` | `{t['class']}` | `{t['file']}` | {'✅' if t['is_read_only'] else '❌'} |"
-        )
+        roles = "/".join(t["roles"])
+        lines.append(f"| `{t['name']}` | `{t['group']}` | {roles} | `{t['file']}` |")
     lines.append(f"| **合计 {len(tools)} 个** | | | |")
     lines.append("")
 
@@ -837,19 +976,11 @@ def generate_agents_md_sections():
     sections["app-table"] = "\n".join(lines)
 
     # ── DB table list ──
-    prefix_map = {
-        "device_pool": "dp_",
-        "case_manager": "cm_",
-        "report_generator": "rg_",
-        "ai_assistant": "ai_",
-        "workflow": "wf_",
-        "dashboard": "—",
-    }
     lines = []
     lines.append(f"| 前缀 | App | 表名 |")
     lines.append(f"|------|-----|------|")
     for a in apps:
-        prefix = prefix_map.get(a["name"], "??")
+        prefix = TABLE_PREFIX.get(a["name"], "??")
         for t in a["tables"]:
             lines.append(f"| `{prefix}` | `{a['name']}` | `{t}` |")
     lines.append(f"| **合计** | **{len(apps)} App** | **{total_tables} 张表** |")
@@ -857,11 +988,12 @@ def generate_agents_md_sections():
 
     # ── Tool list ──
     lines = []
-    lines.append(f"| Tool 名称 | 文件 | 只读 |")
-    lines.append(f"|-----------|------|:--:|")
+    lines.append(f"| Tool 名称 | 工具组 | 角色 | 定义文件 |")
+    lines.append(f"|-----------|--------|------|----------|")
     for t in tools:
-        lines.append(f"| `{t['name']}` | `{t['file']}` | {'✅' if t['is_read_only'] else '❌'} |")
-    lines.append(f"| **合计 {len(tools)} 个** | | |")
+        roles = "/".join(t["roles"])
+        lines.append(f"| `{t['name']}` | `{t['group']}` | {roles} | `{t['file']}` |")
+    lines.append(f"| **合计 {len(tools)} 个** | | | |")
     sections["tool-list"] = "\n".join(lines)
 
     # ── Frontend module list ──
@@ -935,15 +1067,24 @@ def update_agents_md():
 
 
 def _setup_boundary_logger():
-    """配置边界检查日志到 logs/boundary-check.log，返回 (logger, log_path)。"""
+    """配置边界检查日志到 logs/boundary-check.log。
+
+    Returns:
+        (logger, log_path)：日志已落盘时 log_path 为文件路径；只读检出无法写盘时为空串。
+    """
     log_dir = PROJECT_ROOT / "logs"
-    log_dir.mkdir(exist_ok=True)
-    log_path = log_dir / "boundary-check.log"
     logger = logging.getLogger("boundary-check")
     for h in list(logger.handlers):
         logger.removeHandler(h)
         h.close()
-    handler = logging.FileHandler(log_path, encoding="utf-8")
+    log_path = log_dir / "boundary-check.log"
+    try:
+        log_dir.mkdir(exist_ok=True)
+        handler = logging.FileHandler(log_path, encoding="utf-8")
+    except OSError:
+        # 只读检出（沙箱 / 受限 CI 容器）无法落盘日志，退化为仅控制台输出；
+        # 检查结果与退出码不受影响，但明确告知日志没写成功，避免静默。
+        return logger, ""
     handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
@@ -981,7 +1122,7 @@ def _known_debt_lines(orm_known, imp_known, eng_known):
                 "防火墙 #1: 跨模块内部实现 import",
                 [
                     (
-                        f"  {v['file']}:{v['line']}  from apps.{v['source_app']}.{v['module']} import {v['imports']}",
+                        f"  {v['file']}:{v['line']}  from backend.apps.{v['source_app']}.{v['module']} import {v['imports']}",
                         v["snippet"],
                         _note(v),
                     )
@@ -1086,7 +1227,10 @@ if __name__ == "__main__":
         logger.info("\n".join(out))
 
         # 控制台：首行说明日志路径，再打印明细
-        print(f"📝 详细日志: {log_path}")
+        if log_path:
+            print(f"📝 详细日志: {log_path}")
+        else:
+            print("⚠️  logs/ 不可写，本次未落盘日志（仅控制台输出）")
         print()
         for line in out:
             print(line)

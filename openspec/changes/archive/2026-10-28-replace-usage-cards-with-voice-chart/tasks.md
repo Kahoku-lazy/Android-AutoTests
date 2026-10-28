@@ -1,9 +1,17 @@
-﻿## 1. 鍚庣
+﻿## 1. 后端
 
-- [x] 1.1 `usage_summary` 鏀寔 source 杩囨护銆?- [x] 1.2 dashboard stats 杩斿洖 `voice_today` / `voice_total`銆?
-## 2. 鍓嶇
+- [x] 1.1 `usage_summary` 支持 source 过滤
+- [x] 1.2 dashboard stats 返回 `voice_today` / `voice_total`
 
-- [x] 2.1 绉婚櫎鐙珛妯″瀷鐢ㄩ噺鍗＄墖/鏄庣粏琛ㄣ€?- [x] 2.2 瓒嬪娍鍖烘柊澧炪€孷oice 鏉ユ簮 Token 娑堣€椼€嶅浘琛ㄣ€?- [x] 2.3 鍥捐〃鍒嗗綋澶╂€荤敤閲?绱鐢ㄩ噺涓や釜绯诲垪锛屽苟鎸夊垎绫诲睍绀恒€?- [x] 2.4 姹囨€?chips 鏄剧ず褰撳ぉ/绱 K/M 鍊笺€?
-## 3. 楠岃瘉
+## 2. 前端
 
-- [x] 3.1 source 杩囨护鍗曟祴銆?- [x] 3.2 typecheck / build / 鎴浘鏍稿銆?- [x] 3.3 `openspec validate` 骞跺綊妗ｃ€?
+- [x] 2.1 移除独立模型用量卡片/明细表
+- [x] 2.2 趋势区新增「Voice 来源 Token 消耗」图表
+- [x] 2.3 图表分当天总用量/累计用量两个系列，并按分类展示
+- [x] 2.4 汇总 chips 显示当天/累计 K/M 值
+
+## 3. 验证
+
+- [x] 3.1 source 过滤单测
+- [x] 3.2 typecheck / build / 截图核对
+- [x] 3.3 `openspec validate` 并归档

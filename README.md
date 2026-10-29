@@ -9,6 +9,7 @@
 [![Vue](https://img.shields.io/badge/Vue-3.4-brightgreen.svg)](https://vuejs.org/)
 [![AgentScope](https://img.shields.io/badge/AgentScope-2.0.9%2B-orange.svg)](https://docs.agentscope.io/)
 ![Theme](https://img.shields.io/badge/theme-Doodle%20Craft-f5a623.svg)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 </div>
 
@@ -147,7 +148,6 @@ User.objects.filter(username='admin').exists() or User.objects.create_superuser(
 
 `admin` / `admin123` 只用于本机引导。共享或生产环境请改掉，不要把口令写进仓库。
 
-`.env.example` 里的 `AI_TOOL_GATEWAY_TOKEN` 没有运行时读取方（`/api/ai/tools/*` 已退役），留空即可。
 
 数据库默认 MySQL（`DB_ENGINE=mysql`）。改成 `DB_ENGINE=sqlite` 时，库文件是仓库根目录的 `db.sqlite3`，不是 `data/` 下面那个历史路径。
 

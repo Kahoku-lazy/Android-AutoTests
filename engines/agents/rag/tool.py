@@ -1,10 +1,25 @@
 """
-python -m 调试路径: engines.agents.rag.tool
-
-本模块的业务功能如下：
+文件名: ➡️ tool.py 🏁
+路径: ➡️ engines/agents/rag/tool.py 🏁
+模块功能：➡️ Omni 直连没有可注入的文本 LLM，因此通过工具调用把检索结果交回实时模型 🏁
+Python 调试：➡️ python -m engines.agents.rag.tool 🏁
+时间：➡️ 2026-10-28 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Harness 配置模块 🏁
+简介说明：➡️
 1. build_rag_tool(): 把 RagService 包装成 RealtimeAgent 可调用的 search_knowledge 工具。
-
-Omni 直连没有可注入的文本 LLM，因此通过工具调用把检索结果交回实时模型。
+🏁
+关联模块：➡️
+1. 暂无本地 engines/utils 依赖
+🏁
+测试：➡️
+1. tests/graybox/unit/test_case_plan_tools.py: 计划模式工具：装配四件套，并验证它们读写同一份 AgentState
+2. tests/graybox/unit/test_forced_handover_thinking.py: 强制交卷时关闭思考，未满轮次的请求保持原样
+3. tests/graybox/unit/test_model_retry_middleware.py: 模型重试与回退中间件：分类判定、退避序列、回退、流式首块、环境变量解析
+4. tests/graybox/unit/test_rag_store.py: RAG 本地向量库与上下文格式化单测：不联网、不依赖 rag_data
+🏁
 """
 
 from __future__ import annotations

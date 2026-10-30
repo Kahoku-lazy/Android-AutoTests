@@ -1,12 +1,27 @@
 """
-python -m 调试路径: engines.agents.workflow.case_module_plan
-
-本模块的业务功能如下：
+文件名: ➡️ case_module_plan.py 🏁
+路径: ➡️ engines/agents/workflow/case_module_plan.py 🏁
+模块功能：➡️ 2. ModuleRange: 一个模块的行号区间与切出的需求正文 🏁
+Python 调试：➡️ python -m engines.agents.workflow.case_module_plan 🏁
+时间：➡️ 2026-10-30 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Agent 能力模块 🏁
+简介说明：➡️
 1. ModulePlan / ModuleSpec: 模块规划角色输出的结构化契约。
 2. ModuleRange: 一个模块的行号区间与切出的需求正文。
 3. plan_case_modules: 让规划角色切分需求；输出非法时按标题或固定行数回退。
 4. split_module: 输出截断时把一个模块区间一分为二。
 5. build_module_document: 把逐模块结果拼成一份带模块标题的 Markdown。
+🏁
+关联模块：➡️
+1. engines.agents.agent_builders: 导入 build_case_planner
+2. engines.agents.workflow.ui_auto_workflow: 导入 show_event
+🏁
+测试：➡️
+1. tests/graybox/unit/test_case_authoring_modules.py: 模块化用例编写：规划切分、截断拆分、文本拼装与整份模式回退
+🏁
 """
 
 from __future__ import annotations
@@ -18,7 +33,7 @@ from dataclasses import dataclass
 from agentscope.message import Msg, UserMsg
 from pydantic import BaseModel, Field
 
-from engines.agents.role.case_roles import build_case_planner
+from engines.agents.agent_builders import build_case_planner
 from engines.agents.workflow.ui_auto_workflow import show_event
 
 # 规划输出的硬边界：低于该行数不拆；高于该值的单块按回退策略再切。
@@ -242,12 +257,12 @@ async def _ask_planner(
 ) -> list[ModuleSpec]:
     """调一次规划角色，返回原始模块列表；模型或解析失败时抛异常。"""
     planner = planner_factory()
-    role = getattr(planner, "role", None)
-    agent = getattr(planner, "agent", None)
-    if agent is None:
-        raise ValueError("规划角色缺少 agent")
+    # planner 即为 agentscope.Agent（不再包 BaseRole）
+    agent = getattr(planner, "agent", None) or planner
+    if not hasattr(agent, "reply_stream"):
+        raise ValueError("规划角色缺少 Agent.reply_stream")
     models = {
-        str(getattr(role, "name", "") or "case_planner_role"): str(
+        str(getattr(agent, "name", "") or "case_planner_role"): str(
             getattr(getattr(agent, "model", None), "model", "") or ""
         )
     }

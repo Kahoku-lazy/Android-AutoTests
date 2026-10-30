@@ -2,7 +2,7 @@
  * 语音会话编排：麦克风、WebSocket、播放器与消息列表。
  *
  * 组件只调用 start / stop / interrupt；本 composable 负责浏览器资源
- * 的建立与释放，并把服务端事件转成页面状态。
+ * 的建立与释放，并把服务端事件转成页面状态。仅 Omni + 知识库问答。
  */
 import { computed, ref } from "vue"
 import { getToken } from "@/shared/auth/token-storage"
@@ -44,8 +44,6 @@ export function useVoiceSession() {
   let mic: MicCapture | null = null
   let player: AudioPlayer | null = null
   let closing = false
-  let readyResolve: (() => void) | null = null
-  let readyReject: ((reason?: unknown) => void) | null = null
 
   const isActive = computed(() => ACTIVE_STATES.includes(state.value))
   const canInterrupt = computed(() => state.value === "speaking" || state.value === "thinking")
@@ -54,22 +52,7 @@ export function useVoiceSession() {
     devices.value = await listMicrophoneDevices()
   }
 
-  function settleReady(error?: Error): void {
-    if (error) readyReject?.(error)
-    else readyResolve?.()
-    readyResolve = null
-    readyReject = null
-  }
-
-  function waitReady(): Promise<void> {
-    if (session.value) return Promise.resolve()
-    return new Promise((resolve, reject) => {
-      readyResolve = resolve
-      readyReject = reject
-    })
-  }
-
-  async function start(mode = "omni", withMic = true): Promise<void> {
+  async function start(): Promise<void> {
     if (isActive.value) return
     errorMessage.value = ""
     noticeMessage.value = ""
@@ -95,22 +78,17 @@ export function useVoiceSession() {
           sendControl({ type: "played", item_id: itemId, played_ms: playedMs })
         },
       })
-      if (withMic) {
-        mic = new MicCapture()
-        await mic.start({
-          targetRate: inputRate.value,
-          deviceId: selectedDeviceId.value || undefined,
-          onFrame: (pcm) => sendAudio(pcm),
-          onLevel: (level) => {
-            micLevel.value = level
-          },
-        })
-        void loadDevices()
-      } else {
-        mic = null
-      }
-      openSocket(token, mode)
-      if (!withMic) await waitReady()
+      mic = new MicCapture()
+      await mic.start({
+        targetRate: inputRate.value,
+        deviceId: selectedDeviceId.value || undefined,
+        onFrame: (pcm) => sendAudio(pcm),
+        onLevel: (level) => {
+          micLevel.value = level
+        },
+      })
+      void loadDevices()
+      openSocket(token)
     } catch (error) {
       const message =
         error instanceof DOMException && error.name === "NotAllowedError"
@@ -122,24 +100,7 @@ export function useVoiceSession() {
     }
   }
 
-  async function sendText(text: string, mode = "pipeline"): Promise<void> {
-    const value = text.trim()
-    if (!value) return
-    try {
-      if (!isActive.value) {
-        await start(mode, false)
-      } else if (!session.value) {
-        await waitReady()
-      }
-      if (state.value === "error") return
-      sendControl({ type: "text", text: value })
-    } catch {
-      // fail() 已把可读错误写到页面；这里不重复抛给组件
-    }
-  }
-
   function stop(): void {
-    settleReady(new Error("会话已结束"))
     settleStreaming("interrupted")
     cleanup()
     state.value = "idle"
@@ -156,14 +117,13 @@ export function useVoiceSession() {
   }
 
   function dispose(): void {
-    settleReady(new Error("会话已释放"))
     cleanup()
     state.value = "idle"
   }
 
-  function openSocket(token: string, mode: string): void {
+  function openSocket(token: string): void {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-    const params = new URLSearchParams({ token, mode })
+    const params = new URLSearchParams({ token })
     const url = `${protocol}//${window.location.host}${KB_WS_PATH}?${params}`
     socket = new WebSocket(url)
     socket.binaryType = "arraybuffer"
@@ -198,11 +158,9 @@ export function useVoiceSession() {
           model: event.model,
           voice: event.voice,
           mode: event.mode,
-          translationLanguage: event.translation_language,
           logPath: event.log_path,
         }
         state.value = "listening"
-        settleReady()
         break
       case "audio_item":
         player?.setItem(event.item_id)
@@ -243,7 +201,6 @@ export function useVoiceSession() {
 
   function fail(message: string): void {
     if (state.value === "error") return
-    settleReady(new Error(message))
     settleStreaming("error")
     errorMessage.value = message
     state.value = "error"
@@ -296,7 +253,6 @@ export function useVoiceSession() {
     isActive,
     canInterrupt,
     start,
-    sendText,
     stop,
     interrupt,
     dispose,

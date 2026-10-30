@@ -1,8 +1,22 @@
 """
-python -m 调试路径: engines.agents.middleware.assembly
-
-本模块的业务功能如下：
+文件名: ➡️ assembly.py 🏁
+路径: ➡️ engines/agents/middleware/assembly.py 🏁
+模块功能：➡️ 按固定顺序装配中间件：最外层在前 🏁
+Python 调试：➡️ python -m engines.agents.middleware.assembly 🏁
+时间：➡️ 2026-10-28 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Harness 配置模块 🏁
+简介说明：➡️
 1. build_agent_middlewares: 按固定顺序装配全部中间件，单项失败只跳过该项。
+🏁
+关联模块：➡️
+1. utils.logs: 导入 agent_event_log
+🏁
+测试：➡️
+1. 暂无专门单测
+🏁
 """
 
 from __future__ import annotations

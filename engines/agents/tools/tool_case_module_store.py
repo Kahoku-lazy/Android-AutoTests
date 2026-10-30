@@ -1,10 +1,24 @@
 """
-python -m 调试路径: engines.agents.workflow.case_module_store
-
-本模块的业务功能如下：
+文件名: ➡️ tool_case_module_store.py 🏁
+路径: ➡️ engines/agents/tools/tool_case_module_store.py 🏁
+模块功能：➡️ 2. build_writer_store_tools: 给编写角色装配「保存/读取当前模块文档」工具 🏁
+Python 调试：➡️ python -m engines.agents.workflow.case_module_store 🏁
+时间：➡️ 2026-10-28 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ 工具模块 🏁
+简介说明：➡️
 1. ModuleStore: 一次任务内按模块 KEY 保存用例文档与报告。
 2. build_writer_store_tools: 给编写角色装配「保存/读取当前模块文档」工具。
 3. build_verifier_store_tools: 给验收角色装配「读取当前模块文档」工具。
+🏁
+关联模块：➡️
+1. 暂无本地 engines/utils 依赖
+🏁
+测试：➡️
+1. tests/graybox/unit/test_case_goal_workflow.py: GoalPipeline 模块池：模块存储、单模块判定与截断兜底
+🏁
 """
 
 from __future__ import annotations

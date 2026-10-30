@@ -1,11 +1,23 @@
 """
-python -m 调试路径: engines.agents.rag.config
-
-本模块的业务功能如下：
+文件名: ➡️ config.py 🏁
+路径: ➡️ engines/agents/rag/config.py 🏁
+模块功能：➡️ 2. load_rag_config(): 从环境变量读取并做基本归一化 🏁
+Python 调试：➡️ python -m engines.agents.rag.config 🏁
+时间：➡️ 2026-10-29 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Harness 配置模块 🏁
+简介说明：➡️
 1. RagConfig: RAG 数据目录、索引目录、嵌入模型、切块与检索参数。
 2. load_rag_config(): 从环境变量读取并做基本归一化。
-
-本模块只读配置，不创建索引、不调用模型。
+🏁
+关联模块：➡️
+1. engines.agents.config.models: 导入 get_embedding
+🏁
+测试：➡️
+1. tests/graybox/unit/test_rag_store.py: RAG 本地向量库与上下文格式化单测：不联网、不依赖 rag_data
+🏁
 """
 
 from __future__ import annotations
@@ -17,12 +29,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Final
 
+from engines.agents.config.models import get_embedding
+
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
 DEFAULT_DATA_DIR: Final[str] = r"D:\Govee\data\rag_data"
 DEFAULT_INDEX_DIR: Final[str] = "data/rag_index"
 DEFAULT_COLLECTION: Final[str] = "voice_knowledge"
-DEFAULT_EMBEDDING_MODEL: Final[str] = "text-embedding-v4"
-DEFAULT_EMBEDDING_DIMENSIONS: Final[int] = 1024
+_EMBEDDING = get_embedding("text_embedding_v4")
+DEFAULT_EMBEDDING_MODEL: Final[str] = _EMBEDDING.model
+DEFAULT_EMBEDDING_DIMENSIONS: Final[int] = _EMBEDDING.dimensions
 DEFAULT_CHUNK_SIZE: Final[int] = 400
 DEFAULT_CHUNK_OVERLAP: Final[int] = 60
 DEFAULT_TOP_K: Final[int] = 4

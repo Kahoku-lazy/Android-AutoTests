@@ -63,6 +63,8 @@ section-order = ["future", "standard-library", "third-party", "first-party", "lo
 "run.py" = ["T201"]
 # utils/ 下只有这四个是 CLI 脚本（utils/logs.py 是库，不放开 print）
 "utils/{check_gates,gen_arch_stats,check_openapi_coverage,live_screen}.py" = ["T201"]
+# ─ engines AGENTS style checker (skill scripts CLI): allow print()
+".agents/skills/engines-agents-style-check/scripts/check_engines_agents_style.py" = ["T201"]
 # ─ tests/: 放宽限制
 "tests/**/*.py" = ["T201"]
 # ─ __init__.py: 允许未使用 import (re-export)

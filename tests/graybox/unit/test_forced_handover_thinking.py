@@ -6,8 +6,8 @@ import pytest
 
 from agentscope.tool import ToolChoice
 
-from engines.agents.role.config import (
-    RoleSpecConfig,
+from engines.agents.agent_builders import ReActConfig
+from engines.agents.config.models import (
     apply_forced_handover_kwargs,
     bind_forced_handover,
 )
@@ -20,8 +20,8 @@ class _Model:
 
 
 def test_role_keeps_thirty_free_rounds_and_five_grace():
-    assert RoleSpecConfig.__dataclass_fields__["max_iters"].default == 30
-    assert RoleSpecConfig.__dataclass_fields__["structured_output_grace_iters"].default == 5
+    assert ReActConfig.__dataclass_fields__["max_iters"].default == 30
+    assert ReActConfig.__dataclass_fields__["structured_output_grace_iters"].default == 5
 
 
 def test_forced_handover_disables_thinking_and_keeps_other_keys():

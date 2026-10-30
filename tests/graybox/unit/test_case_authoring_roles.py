@@ -7,47 +7,39 @@ import pytest
 from agentscope.message import TextBlock
 from agentscope.sop import SOPStepRunState
 
-import engines.agents.workflow as workflow_package
-
-from engines.agents.prompt_config import (
-    CASE_MODULE_PLANNER_PROMPT,
-    CASE_VERIFIER_GOAL_PROMPT,
-    CASE_VERIFIER_PROMPT,
-    CASE_WRITER_GOAL_PROMPT,
-    CASE_WRITER_PROMPT,
-)
-from engines.agents.role.case_roles import (
-    CASE_PLANNER_MAX_ITERS,
-    CASE_PLANNER_MODEL,
-    CASE_PLANNER_NAME,
-    CASE_VERIFIER_MAX_ITERS,
-    CASE_VERIFIER_MODEL,
-    CASE_VERIFIER_NAME,
-    CASE_WRITER_MAX_ITERS,
-    CASE_WRITER_MODEL,
-    CASE_WRITER_NAME,
+from engines.agents.role_sys_prompts import CaseAuthoringPrompts
+from engines.agents.agent_builders import (
     build_case_planner,
     build_case_verifier,
     build_case_verifier_goal,
     build_case_writer,
     build_case_writer_goal,
 )
-from engines.agents.workflow.case_authoring_workflow import (
-    CaseAuthoringResult,
-    CaseAuthoringWorkflow,
-    _DraftRecordingStep,
-    build_run_input,
-    run_case_authoring_modules,
-)
+from engines.agents.config.models import load_role_config
 
 pytestmark = [pytest.mark.unit]
 
 PLAN_TOOL_NAMES = {"TaskCreate", "TaskGet", "TaskList", "TaskUpdate"}
 
+_WRITER_KEY = "CASE_WRITER_ROLE_CONFIG"
+_VERIFIER_KEY = "CASE_VERIFIER_ROLE_CONFIG"
+_PLANNER_KEY = "CASE_PLANNER_ROLE_CONFIG"
 
-def _tool_names(role) -> set[str]:
-    """取角色 basic 组的工具名。"""
-    return {tool.name for tool in role.role.toolkit.tool_groups[0].tools}
+
+def _bundle(key: str):
+    return load_role_config(key)
+
+
+def _case_authoring_workflow():
+    """延迟导入，避免缺 config.yaml 时拖垮用例角色装配测试。"""
+    from engines.agents.workflow import case_authoring_workflow as m
+
+    return m
+
+
+def _tool_names(agent) -> set[str]:
+    """取 Agent basic 组的工具名。"""
+    return {tool.name for tool in agent.toolkit.tool_groups[0].tools}
 
 
 @pytest.fixture(autouse=True)
@@ -58,57 +50,61 @@ def _dummy_key(monkeypatch):
 
 def test_build_case_writer_uses_writer_prompt_and_text_model():
     """编写角色：纯文本、FLASH 模型、编写提示词、计划模式工具。"""
-    role = build_case_writer()
-    assert role.role.name == CASE_WRITER_NAME
-    assert role.role.system_prompt == CASE_WRITER_PROMPT
-    assert role.role.vision is False
-    assert role.role.max_iters == CASE_WRITER_MAX_ITERS
-    assert role.model.model == CASE_WRITER_MODEL
-    assert CASE_WRITER_MODEL == "deepseek-flash"
-    assert [group.name for group in role.role.toolkit.tool_groups] == ["basic"]
-    assert _tool_names(role) == PLAN_TOOL_NAMES
+    mc, role, _tools, _ctx, react = _bundle(_WRITER_KEY)
+    agent = build_case_writer()
+    assert agent.name == role.name == "case_writer_role"
+    assert agent._system_prompt == CaseAuthoringPrompts.writer()
+    assert agent.react_config.max_iters == react.max_iters == 20
+    assert agent.model.model == mc.model_name == "deepseek-flash"
+    assert [group.name for group in agent.toolkit.tool_groups] == ["basic"]
+    assert _tool_names(agent) == PLAN_TOOL_NAMES
 
 
 def test_build_case_planner_uses_planner_prompt_and_text_model():
     """规划角色：纯文本、FLASH 模型、规划提示词、空工具包。"""
-    role = build_case_planner()
-    assert role.role.name == CASE_PLANNER_NAME
-    assert role.role.system_prompt == CASE_MODULE_PLANNER_PROMPT
-    assert role.role.vision is False
-    assert role.role.max_iters == CASE_PLANNER_MAX_ITERS
-    assert role.model.model == CASE_PLANNER_MODEL
-    assert _tool_names(role) == set()
+    mc, role, _tools, _ctx, react = _bundle(_PLANNER_KEY)
+    agent = build_case_planner()
+    assert agent.name == role.name == "case_planner_role"
+    assert agent._system_prompt == CaseAuthoringPrompts.planner()
+    assert agent.react_config.max_iters == react.max_iters == 2
+    assert agent.model.model == mc.model_name
+    assert _tool_names(agent) == set()
 
 
 def test_build_case_verifier_uses_verifier_prompt_and_text_model():
     """验收角色：纯文本、FLASH 模型、验收提示词、空工具包。"""
-    role = build_case_verifier()
-    assert role.role.name == CASE_VERIFIER_NAME
-    assert role.role.system_prompt == CASE_VERIFIER_PROMPT
-    assert role.role.vision is False
-    assert role.role.max_iters == CASE_VERIFIER_MAX_ITERS
-    assert role.model.model == CASE_VERIFIER_MODEL
-    assert CASE_VERIFIER_MODEL == "deepseek-flash"
-    assert _tool_names(role) == set()
+    mc, role, _tools, _ctx, react = _bundle(_VERIFIER_KEY)
+    agent = build_case_verifier()
+    assert agent.name == role.name == "case_verifier_role"
+    assert agent._system_prompt == CaseAuthoringPrompts.verifier()
+    assert agent.react_config.max_iters == react.max_iters == 4
+    assert agent.model.model == mc.model_name == "deepseek-flash"
+    assert _tool_names(agent) == set()
 
 
 def test_build_goal_roles_use_goal_prompts():
     """GoalPipeline 角色沿用同名，但提示词切换为存储工具协议。"""
     writer = build_case_writer_goal()
     verifier = build_case_verifier_goal()
+    w_mc, w_role, *_ = _bundle("CASE_WRITER_GOAL_ROLE_CONFIG")
+    v_mc, v_role, *_ = _bundle("CASE_VERIFIER_GOAL_ROLE_CONFIG")
 
-    assert writer.role.name == CASE_WRITER_NAME
-    assert writer.role.system_prompt == CASE_WRITER_GOAL_PROMPT
-    assert verifier.role.name == CASE_VERIFIER_NAME
-    assert verifier.role.system_prompt == CASE_VERIFIER_GOAL_PROMPT
-    assert writer.model.model == CASE_WRITER_MODEL
-    assert verifier.model.model == CASE_VERIFIER_MODEL
+    assert writer.name == w_role.name
+    assert writer._system_prompt == CaseAuthoringPrompts.writer_goal()
+    assert verifier.name == v_role.name
+    assert verifier._system_prompt == CaseAuthoringPrompts.verifier_goal()
+    assert writer.model.model == w_mc.model_name
+    assert verifier.model.model == v_mc.model_name
     assert _tool_names(writer) == PLAN_TOOL_NAMES
     assert _tool_names(verifier) == set()
 
 
 def test_build_run_input_contains_requirement_and_project_meta():
     """开场输入四段齐全，空白项落到默认值。"""
+    try:
+        build_run_input = _case_authoring_workflow().build_run_input
+    except FileNotFoundError as exc:
+        pytest.skip(f"缺 config.yaml，跳过 workflow 辅助测试: {exc}")
     text = build_run_input(
         "  待机下单击 POWER 开机  ",
         project_code="H717D",
@@ -128,23 +124,32 @@ def test_build_run_input_contains_requirement_and_project_meta():
 
 def test_build_run_input_rejects_blank_requirement():
     """空需求不能开跑。"""
+    try:
+        build_run_input = _case_authoring_workflow().build_run_input
+    except FileNotFoundError as exc:
+        pytest.skip(f"缺 config.yaml，跳过 workflow 辅助测试: {exc}")
     with pytest.raises(ValueError, match="需求正文不能为空"):
         build_run_input("   \n  ")
 
 
 def test_case_authoring_result_passed_follows_last_verdict():
     """整轮是否通过只看最后一次判决；没有判决视为未通过。"""
+    try:
+        CaseAuthoringResult = _case_authoring_workflow().CaseAuthoringResult
+    except FileNotFoundError as exc:
+        pytest.skip(f"缺 config.yaml，跳过 workflow 辅助测试: {exc}")
+    name = _bundle(_VERIFIER_KEY)[1].name
     passed = CaseAuthoringResult(
         phase="completed",
         document="用例文档",
-        verdicts=((False, "先修覆盖", CASE_VERIFIER_NAME), (True, "通过", CASE_VERIFIER_NAME)),
+        verdicts=((False, "先修覆盖", name), (True, "通过", name)),
     )
     assert passed.passed is True
 
     failed = CaseAuthoringResult(
         phase="failed",
         document="",
-        verdicts=((False, "仍有阻断", CASE_VERIFIER_NAME),),
+        verdicts=((False, "仍有阻断", name),),
     )
     assert failed.passed is False
     assert CaseAuthoringResult(phase="failed", document="", verdicts=()).passed is False
@@ -152,6 +157,10 @@ def test_case_authoring_result_passed_follows_last_verdict():
 
 def test_draft_recording_step_keeps_rejected_draft():
     """SOP 驳回会清空 submission，草稿副本仍要保留。"""
+    try:
+        _DraftRecordingStep = _case_authoring_workflow()._DraftRecordingStep
+    except FileNotFoundError as exc:
+        pytest.skip(f"缺 config.yaml，跳过 workflow 辅助测试: {exc}")
     step = _DraftRecordingStep("子任务", "交文档", executor=object(), verifier=object())
     state = SOPStepRunState()
     state.submission = [TextBlock(text="第一版")]
@@ -167,6 +176,10 @@ def test_draft_recording_step_keeps_rejected_draft():
 
 def test_draft_step_marks_tag_only_submission_truncated():
     """只有 <submission> 标签、没有正文的交付按截断处理，不再送验收。"""
+    try:
+        _DraftRecordingStep = _case_authoring_workflow()._DraftRecordingStep
+    except FileNotFoundError as exc:
+        pytest.skip(f"缺 config.yaml，跳过 workflow 辅助测试: {exc}")
     step = _DraftRecordingStep("子任务", "交文档", executor=object(), verifier=object())
     step.drafts = ["<submission></submission>"]
 
@@ -177,6 +190,10 @@ def test_draft_step_marks_tag_only_submission_truncated():
 
 def test_draft_step_keeps_long_incomplete_document_for_verifier():
     """有正文但缺第六/七节时只记不完整，不按截断拆分。"""
+    try:
+        _DraftRecordingStep = _case_authoring_workflow()._DraftRecordingStep
+    except FileNotFoundError as exc:
+        pytest.skip(f"缺 config.yaml，跳过 workflow 辅助测试: {exc}")
     step = _DraftRecordingStep("子任务", "交文档", executor=object(), verifier=object())
     step.drafts = ["## 一、需求原子表\n" + "用例正文" * 100]
 
@@ -188,7 +205,13 @@ def test_draft_step_keeps_long_incomplete_document_for_verifier():
 
 def test_workflow_package_exports_case_authoring_entry():
     """新增入口能从 workflow 包直接取用。"""
-    assert workflow_package.CaseAuthoringWorkflow is CaseAuthoringWorkflow
-    assert workflow_package.build_run_input is build_run_input
+    try:
+        import engines.agents.workflow as workflow_package
+
+        m = _case_authoring_workflow()
+    except FileNotFoundError as exc:
+        pytest.skip(f"缺 config.yaml，跳过 workflow 包导出测试: {exc}")
+    assert workflow_package.CaseAuthoringWorkflow is m.CaseAuthoringWorkflow
+    assert workflow_package.build_run_input is m.build_run_input
     assert callable(workflow_package.run_case_authoring)
-    assert workflow_package.run_case_authoring_modules is run_case_authoring_modules
+    assert workflow_package.run_case_authoring_modules is m.run_case_authoring_modules

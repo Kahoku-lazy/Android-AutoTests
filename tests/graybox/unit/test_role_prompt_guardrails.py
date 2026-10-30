@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import pytest
 
-from engines.agents.prompts.executor_prompt import EXECUTOR_PROMPT
-from engines.agents.prompts.verifier_prompt import VERIFIER_PROMPT
+from engines.agents.role_sys_prompts import EXECUTOR_PROMPT
+from engines.agents.role_sys_prompts import VERIFIER_PROMPT
 
 pytestmark = [pytest.mark.unit]
 

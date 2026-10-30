@@ -1,8 +1,23 @@
 """
-python -m 调试路径: engines.agents.messaging.fold
-
-本模块的业务功能如下：
+文件名: ➡️ fold.py 🏁
+路径: ➡️ engines/agents/messaging/fold.py 🏁
+模块功能：➡️ 一次折叠的产出：日志行、记录 🏁
+Python 调试：➡️ python -m engines.agents.messaging.fold 🏁
+时间：➡️ 2026-10-26 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Agent 能力模块 🏁
+简介说明：➡️
 1. step: 把一条事件折成文本日志行和结构化记录。不写文件，不写库。
+🏁
+关联模块：➡️
+1. 暂无本地 engines/utils 依赖
+🏁
+测试：➡️
+1. tests/engines/agents/test_event_fold.py: 事件折叠：增量合并、工具逐条、角色继承、8 位费用与图片
+2. tests/graybox/unit/test_sop_event_stream.py: SOP 事件流的完整性：用例名刷新、步骤起点、超轮次提醒、运行预算
+🏁
 """
 
 from __future__ import annotations

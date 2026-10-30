@@ -1,11 +1,26 @@
 """
-python -m 调试路径: engines.agents.realtime_vocie.session
-
-本模块的业务功能如下：
-1. RealtimeVoiceSession.run(): 连接 AgentScope 实时模型，跑一轮语音会话的事件循环。
-2. 把 ready / 转写 / 状态事件写给浏览器，并在会话收尾写 session_end。
-
-会话不写数据库；模型、传输与日志都由调用方注入，便于替换与测试。
+文件名: ➡️ session.py 🏁
+路径: ➡️ engines/agents/realtime_vocie/session.py 🏁
+模块功能：➡️ 2. 在 Omni 会话上注入知识库 RAG 工具（启用时） 🏁
+Python 调试：➡️ python -m engines.agents.realtime_vocie.session 🏁
+时间：➡️ 2026-10-30 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Agent 能力模块 🏁
+简介说明：➡️
+1. RealtimeVoiceSession.run(): 连接 AgentScope Omni 实时模型，跑一轮语音会话的事件循环。
+2. 在 Omni 会话上注入知识库 RAG 工具（启用时）。
+3. 把 ready / 转写 / 状态事件写给浏览器，并在会话收尾写 session_end。
+🏁
+关联模块：➡️
+1. engines.agents.rag.service: 导入 RagService
+2. engines.agents.rag.tool: 导入 build_rag_tool
+3. utils.logs: 导入 agent_event_log
+🏁
+测试：➡️
+1. 暂无专门单测
+🏁
 """
 
 from __future__ import annotations
@@ -20,7 +35,7 @@ from engines.agents.rag.service import RagService
 from engines.agents.rag.tool import build_rag_tool
 from utils.logs import agent_event_log
 
-from .config import OMNI_MODE, RealtimeVoiceConfig, create_realtime_model
+from .config import RealtimeVoiceConfig, create_realtime_model
 from .events import TranscriptBridge, VoiceLogSink
 from .transport import WebSocketAudioTransport
 
@@ -29,7 +44,7 @@ SendJson = Callable[[dict], Awaitable[None]]
 
 class RealtimeVoiceSession:
     """
-    一次实时语音会话。
+    一次 Omni 实时语音 + 知识库问答会话。
 
     Attributes:
         config: 会话配置。
@@ -74,7 +89,7 @@ class RealtimeVoiceSession:
         rag = RagService.from_env()
         toolkit: Toolkit | None = None
         system_prompt = self.config.system_prompt
-        if self.config.mode == OMNI_MODE and rag.enabled:
+        if rag.enabled:
             toolkit = Toolkit(tools=[build_rag_tool(rag)])
             system_prompt = (
                 f"{system_prompt}\n"
@@ -104,7 +119,6 @@ class RealtimeVoiceSession:
                         "voice": self.config.voice,
                         "turn_detection": self.config.turn_detection,
                         "mode": self.config.mode,
-                        "translation_language": self.config.translation_language,
                         "rag_enabled": rag.enabled,
                         "input_sample_rate": model.input_sample_rate,
                         "output_sample_rate": model.output_sample_rate,

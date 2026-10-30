@@ -9,38 +9,26 @@ from __future__ import annotations
 
 import pytest
 
-from engines.agents.prompt_config import (
+from engines.agents.role_sys_prompts import (
     CASE_MODULE_PLANNER_PROMPT,
     CASE_VERIFIER_GOAL_PROMPT,
     CASE_VERIFIER_PROMPT,
     CASE_WRITER_GOAL_PROMPT,
     CASE_WRITER_PROMPT,
+    CaseAuthoringPrompts,
 )
-from engines.agents.prompt_config import __all__ as PROMPT_EXPORTS
-from engines.agents.prompts.case_module_planner_prompt import (
-    CASE_MODULE_PLANNER_PROMPT as PLANNER_BODY,
-)
-from engines.agents.prompts.case_verifier_prompt import (
-    CASE_VERIFIER_GOAL_PROMPT as VERIFIER_GOAL_BODY,
-)
-from engines.agents.prompts.case_verifier_prompt import (
-    CASE_VERIFIER_PROMPT as VERIFIER_BODY,
-)
-from engines.agents.prompts.case_writer_prompt import (
-    CASE_WRITER_GOAL_PROMPT as WRITER_GOAL_BODY,
-)
-from engines.agents.prompts.case_writer_prompt import CASE_WRITER_PROMPT as WRITER_BODY
+from engines.agents.role_sys_prompts import __all__ as PROMPT_EXPORTS
 
 pytestmark = [pytest.mark.unit]
 
 
-def test_prompt_config_exports_case_prompts():
-    """用例提示词经 prompt_config 统一分配，正文与模块常量一致。"""
-    assert CASE_WRITER_PROMPT == WRITER_BODY
-    assert CASE_VERIFIER_PROMPT == VERIFIER_BODY
-    assert CASE_MODULE_PLANNER_PROMPT == PLANNER_BODY
-    assert CASE_WRITER_GOAL_PROMPT == WRITER_GOAL_BODY
-    assert CASE_VERIFIER_GOAL_PROMPT == VERIFIER_GOAL_BODY
+def test_role_sys_prompts_exports_case_prompts():
+    """用例提示词经 role_sys_prompts 统一分配，与类加载器一致。"""
+    assert CASE_WRITER_PROMPT == CaseAuthoringPrompts.writer()
+    assert CASE_VERIFIER_PROMPT == CaseAuthoringPrompts.verifier()
+    assert CASE_MODULE_PLANNER_PROMPT == CaseAuthoringPrompts.planner()
+    assert CASE_WRITER_GOAL_PROMPT == CaseAuthoringPrompts.writer_goal()
+    assert CASE_VERIFIER_GOAL_PROMPT == CaseAuthoringPrompts.verifier_goal()
     assert "CASE_WRITER_PROMPT" in PROMPT_EXPORTS
     assert "CASE_VERIFIER_PROMPT" in PROMPT_EXPORTS
     assert "CASE_MODULE_PLANNER_PROMPT" in PROMPT_EXPORTS

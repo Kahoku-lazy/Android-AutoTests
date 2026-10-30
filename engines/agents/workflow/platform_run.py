@@ -1,9 +1,30 @@
 """
-python -m 调试路径: engines.agents.workflow.platform_run
-
-本模块的业务功能如下：
+文件名: ➡️ platform_run.py 🏁
+路径: ➡️ engines/agents/workflow/platform_run.py 🏁
+模块功能：➡️ 2. request_cancel: 取消正在跑的 SOP 事件流 🏁
+Python 调试：➡️ python -m engines.agents.workflow.platform_run 🏁
+时间：➡️ 2026-10-30 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Agent 能力模块 🏁
+简介说明：➡️
 1. run_platform_sop: 平台启动 SOP。校验 YAML，按序跑用例，不接收工具清单。
 2. request_cancel: 取消正在跑的 SOP 事件流。
+🏁
+关联模块：➡️
+1. engines.agents.agent_builders: 导入 build_executor, build_verifier
+2. engines.agents.event_log: 导入 write_line
+3. engines.agents.event_sink: 导入 MAX_MODEL_CALLS, MAX_RUN_SECONDS, budget_exceeded, set_case_title, set_step_context
+4. engines.agents.workflow.case_file: 导入 LOAD_FAIL, LOAD_OK, validate_platform_yaml
+5. engines.agents.workflow.handover_guard: 导入 IncompleteHandoverGuard
+6. engines.agents.workflow.ui_auto_workflow: 导入 AgentSOPWorkflow
+🏁
+测试：➡️
+1. tests/engines/agents/test_close_recent_apps.py: 用例结束后关闭最近任务里的非桌面应用。不连真机
+2. tests/engines/agents/test_platform_case_title.py: 平台 SOP 指定用例：空=全部、指定=只跑一条、不存在=可读失败
+3. tests/graybox/unit/test_case_run_continuity.py: 一批用例的执行连续性：单条失败继续跑、结果区分清单、取消不追加失败
+🏁
 """
 
 from __future__ import annotations
@@ -23,7 +44,7 @@ from engines.agents.event_sink import (
     set_case_title,
     set_step_context,
 )
-from engines.agents.role.agents import build_executor, build_verifier
+from engines.agents.agent_builders import build_executor, build_verifier
 from engines.agents.workflow.case_file import LOAD_FAIL, LOAD_OK, validate_platform_yaml
 from engines.agents.workflow.handover_guard import IncompleteHandoverGuard
 from engines.agents.workflow.ui_auto_workflow import AgentSOPWorkflow
@@ -172,7 +193,7 @@ async def _drive_real(
             # 每条用例新建角色，避免上一条用例的对话与工具返回污染下一条
             executor = build_executor()
             verifier = build_verifier()
-            workflow = AgentSOPWorkflow(IncompleteHandoverGuard(executor.agent), verifier.agent)
+            workflow = AgentSOPWorkflow(IncompleteHandoverGuard(executor), verifier)
             steps = [(step.action, step.expected) for step in case.steps]
             try:
                 phase = await workflow.run_workflow(case.title, steps, opening)

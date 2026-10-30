@@ -1,6 +1,23 @@
-"""引擎侧设备日志工具：按型号和端口检查当前抓取文件里有没有关键词。
-
-`check_device_log` 只读 `logs/serial_logs/{SKU}_{端口}.log` 这一份当前文件。
+"""
+文件名: ➡️ tool_serial.py 🏁
+路径: ➡️ engines/agents/tools/tool_serial.py 🏁
+模块功能：➡️ 引擎侧设备日志工具：按型号和端口检查当前抓取文件里有没有关键词 🏁
+Python 调试：➡️ python -m engines.agents.tools.tool_serial 🏁
+时间：➡️ 2026-10-20 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ 工具模块 🏁
+简介说明：➡️
+1. check_device_log: 在指定端口的当前抓取文件里检查关键词是否出现在起点之后的 5 秒内
+2. serial_tool_specs: 按固定顺序产出日志工具的 `ToolSpec` 列表
+🏁
+关联模块：➡️
+1. utils.logs: 导入 capture_file_path
+🏁
+测试：➡️
+1. 暂无专门单测
+🏁
 """
 
 from __future__ import annotations

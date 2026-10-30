@@ -1,9 +1,25 @@
 """
-python -m 调试路径: engines.agents.messaging.messages
-
-本模块的业务功能如下：
+文件名: ➡️ messages.py 🏁
+路径: ➡️ engines/agents/messaging/messages.py 🏁
+模块功能：➡️ 2. AgentEventsShow: 把事件流写成文本日志，并把结构化记录交给接收方 🏁
+Python 调试：➡️ python -m engines.agents.messaging.messages 🏁
+时间：➡️ 2026-10-27 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Agent 能力模块 🏁
+简介说明：➡️
 1. ReplyStreamParser: 从流式模型调用结束事件解析用量三元组。
 2. AgentEventsShow: 把事件流写成文本日志，并把结构化记录交给接收方。
+🏁
+关联模块：➡️
+1. utils.logs: 导入 agent_event_log
+🏁
+测试：➡️
+1. tests/engines/agents/test_agent_event.py: 把一轮折叠结果按表字段写入 CSV，再读回断言字段与类型
+2. tests/engines/agents/test_event_fold.py: 事件折叠：增量合并、工具逐条、角色继承、8 位费用与图片
+3. tests/graybox/unit/test_sop_event_stream.py: SOP 事件流的完整性：用例名刷新、步骤起点、超轮次提醒、运行预算
+🏁
 """
 
 from __future__ import annotations

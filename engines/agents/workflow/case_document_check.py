@@ -1,10 +1,24 @@
 """
-python - 调试路径: engines.agents.workflow.case_document_check
-
-本模块的业务功能如下：
+文件名: ➡️ case_document_check.py 🏁
+路径: ➡️ engines/agents/workflow/case_document_check.py 🏁
+模块功能：➡️ python - 调试路径: engines.agents.workflow.case_document_check 🏁
+Python 调试：➡️ python -m engines.agents.workflow.case_document_check 🏁
+时间：➡️ 2026-10-28 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Agent 能力模块 🏁
+简介说明：➡️
 1. ParsedCaseDocument: 从 Markdown 用例文档解析原子表、用例表与 E2E 数。
 2. check_case_document: 用代码核对 ID、13 字段、方法数门槛、优先级比例、覆盖率与模糊词。
 3. fix_case_statistics: 用代码重算并回写第六节统计，避免模型自检数字与表格不一致。
+🏁
+关联模块：➡️
+1. 暂无本地 engines/utils 依赖
+🏁
+测试：➡️
+1. tests/graybox/unit/test_case_document_check.py: 确定性校验：解析用例表、核对 ID/字段/方法数/比例，并回写第六节统计
+🏁
 """
 
 from __future__ import annotations

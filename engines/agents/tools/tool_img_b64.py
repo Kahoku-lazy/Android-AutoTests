@@ -1,12 +1,25 @@
 """
-python -m 调试路径: engines.agents.tools.tool_img_b64
-
-本模块的业务功能如下：
+文件名: ➡️ tool_img_b64.py 🏁
+路径: ➡️ engines/agents/tools/tool_img_b64.py 🏁
+模块功能：➡️ 2. mark_dot_b64: 纯函数，在 base64 图片上画圆点，base64 进、base64 出 🏁
+Python 调试：➡️ python -m engines.agents.tools.tool_img_b64 🏁
+时间：➡️ 2026-10-22 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ 工具模块 🏁
+简介说明：➡️
 1. mark_dot: 平台工具，截取设备当前屏幕并在坐标处画红点，返回标记后的图片。
 2. mark_dot_b64: 纯函数，在 base64 图片上画圆点，base64 进、base64 出。
 3. build_img_b64_tools / img_b64_tool_specs: 工具函数表与 `ToolSpec` 产出。
-
-执行模型先用它核对点击坐标，确认红点落在目标上后再执行点击；图片不落盘。
+🏁
+关联模块：➡️
+1. engines.device.action: 导入 Screenshot, System, open_device
+2. utils.logs: 导入 agent_event_log
+🏁
+测试：➡️
+1. tests/engines/agents/test_tool_img_b64.py: 单文件调试指令：python -m pytest tests/engines/agents/test_tool_img_b64.py -vv --tb=shor
+🏁
 """
 
 from __future__ import annotations

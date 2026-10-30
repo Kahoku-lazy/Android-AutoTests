@@ -8,25 +8,9 @@ import type { VoiceState } from "./types"
 export const KB_ROUTE_PATH = "/knowledge-assistant"
 export const KB_WS_PATH = "/ws/knowledge-assistant/"
 export const KB_PAGE_TITLE = "知识库助手"
-export const KB_PAGE_SUBTITLE = "语音问答 · 对话实时写入本地日志"
-export const KB_PAGE_SUBTITLE_TRANSLATE = "实时翻译 · 对话实时写入本地日志"
-export const KB_PAGE_SUBTITLE_PIPELINE = "ASR + DeepSeek Flash + TTS · 对话实时写入本地日志"
-export const KB_MODE_LIVETRANSLATE = "实时翻译"
+export const KB_PAGE_SUBTITLE = "Omni 语音问答 · 知识库检索 · 对话实时写入本地日志"
 export const KB_MODE_OMNI = "语音问答"
-export const KB_MODE_PIPELINE = "ASR + DeepSeek + TTS"
 
-export const KB_ROUTE_OPTIONS = [
-  {
-    value: "omni",
-    label: "Omni 直连 · qwen3.5-omni-plus-realtime · Tina",
-  },
-  {
-    value: "pipeline",
-    label: "ASR + DeepSeek Flash + TTS",
-  },
-] as const
-
-export type KbRoute = (typeof KB_ROUTE_OPTIONS)[number]["value"]
 export const KB_PAGE_ICON = "book-open"
 export const KB_ICON_GRADIENT = "linear-gradient(135deg,var(--c-element),var(--c-ai))"
 
@@ -71,4 +55,3 @@ export const KB_SOCKET_ERROR = "语音连接已断开，请重新开始"
 export const KB_MIC_IDLE = "麦克风：未采集到音频"
 export const KB_MIC_WAITING = "麦克风：有信号，等待说话"
 export const KB_MIC_ACTIVE = "麦克风：有输入"
-export const KB_MIC_TEXT = "麦克风：未使用（文本提问）"

@@ -1,10 +1,34 @@
 """
-调试运行入口：python -m engines.agents.tools.tool_device
-
-
-功能说明：引擎侧设备工具：工具函数本体与 `ToolSpec` 产出。
-动作经 `engines.device.action` 执行；截图只回传 base64，不落盘。
-
+文件名: ➡️ tool_device.py 🏁
+路径: ➡️ engines/agents/tools/tool_device.py 🏁
+模块功能：➡️ 引擎侧设备工具：工具函数本体与 `ToolSpec` 产出 🏁
+Python 调试：➡️ python -m engines.agents.tools.tool_device 🏁
+时间：➡️ 2026-10-20 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ 工具模块 🏁
+简介说明：➡️
+1. click_ratio: 按归一化坐标点击（视觉模型看图后输出相对位置，工具换算成屏幕像素坐标）；返回实际点击的像素坐标 x、y 与点击时间
+2. tap_screen: 按像素坐标点击或长按设备屏幕；返回实际点击的像素坐标 x、y 与点击时间
+3. xpath_action: 获取页面 xpath 元素的文本与中心坐标（只查询，不点击）；未命中时 count 为 0、items 为空
+4. swipe_screen: 按方向滑动设备屏幕；只返回动作时间
+5. drag_ratio: 按归一化坐标拖动（视觉模型看图后输出起终点相对位置，工具换算成屏幕像素坐标）；只返回动作时间
+6. input_text: 向设备当前输入框输入文本（支持中文等非 ASCII 字符）；只返回动作时间
+7. press_key: 按设备返回键（BACK）返回上一页；只返回动作时间
+8. app_control: 启动或停止指定设备上的 App；返回启动/关闭时间点、包名与启停前后的前台应用
+9. build_device_tools: 按固定顺序产出工具函数表
+10. device_tool_specs: 按工具函数表产出 `ToolSpec` 列表
+🏁
+关联模块：➡️
+1. engines.device.action: 导入 AppControl, Click, Drag, InputText, LongClick, PressKey 等
+2. utils.logs: 导入 agent_event_log, logging_now_stamp
+🏁
+测试：➡️
+1. tests/engines/agents/test_tool_device.py: 单文件调试指令：python -m pytest tests/engines/agents/test_tool_device.py -vv -s --tb=sh
+2. tests/engines/agents/test_tool_device_e2e.py: 单文件调试指令：python -m pytest tests/engines/agents/test_tool_device_e2e.py -vv -s --t
+3. tests/engines/agents/test_xpath_action_coords.py: xpath_action 只返回文本与中心坐标，不点击
+🏁
 """
 
 from __future__ import annotations

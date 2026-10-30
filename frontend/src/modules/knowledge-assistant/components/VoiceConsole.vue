@@ -11,13 +11,11 @@ import {
   KB_INTERRUPT_LABEL,
   KB_MIC_ACTIVE,
   KB_MIC_IDLE,
-  KB_MIC_TEXT,
   KB_MIC_WAITING,
   KB_START_LABEL,
   KB_STOP_LABEL,
 } from "../constants"
 import type { MicrophoneDevice } from "../audio/micCapture"
-import type { KbRoute } from "../constants"
 import type { VoiceState } from "../types"
 
 const props = defineProps<{
@@ -31,12 +29,9 @@ const props = defineProps<{
   sentFrames: number
   devices: MicrophoneDevice[]
   selectedDeviceId: string
-  route: KbRoute
-  routes: readonly { value: KbRoute; label: string }[]
   modeLabel: string
   modelLabel: string
   logPath: string
-  showTextInput: boolean
 }>()
 
 const emit = defineEmits<{
@@ -44,16 +39,12 @@ const emit = defineEmits<{
   stop: []
   interrupt: []
   deviceChange: [deviceId: string]
-  routeChange: [route: KbRoute]
 }>()
 
 const isActive = computed(() => props.state !== "idle" && props.state !== "error")
 const buttonTitle = computed(() => (isActive.value ? KB_STOP_LABEL : KB_START_LABEL))
 const levelPercent = computed(() => Math.min(100, Math.round(props.micLevel * 400)))
 const micStatusText = computed(() => {
-  if (props.sentFrames === 0 && props.showTextInput && isActive.value) {
-    return KB_MIC_TEXT
-  }
   if (props.sentFrames === 0) return KB_MIC_IDLE
   if (props.micLevel < 0.005) return KB_MIC_WAITING
   return KB_MIC_ACTIVE
@@ -70,10 +61,6 @@ async function onVoiceClick() {
 
 function onDeviceChange(event: Event) {
   emit("deviceChange", (event.target as HTMLSelectElement).value)
-}
-
-function onRouteChange(event: Event) {
-  emit("routeChange", (event.target as HTMLSelectElement).value as KbRoute)
 }
 
 onMounted(async () => {
@@ -93,21 +80,6 @@ watch(
 <template>
   <section class="kb-console" data-testid="kb-console">
     <div class="kb-stage">
-      <label class="kb-device">
-        <span class="kb-device__label">路线</span>
-        <select
-          class="kb-device__select"
-          data-testid="kb-route"
-          :value="route"
-          :disabled="isActive"
-          @change="onRouteChange"
-        >
-          <option v-for="option in routes" :key="option.value" :value="option.value">
-            {{ option.label }}
-          </option>
-        </select>
-      </label>
-
       <label class="kb-device">
         <span class="kb-device__label">麦克风</span>
         <select

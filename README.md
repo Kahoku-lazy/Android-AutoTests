@@ -17,7 +17,7 @@
 
 ## 📖 项目简介
 
-> 面向 Android 测试工程师的 AI 自动化平台：把用例写成文档，把任务交给 AI 双角色（**执行 + 验收**）跑完，结果回到**任务事件时间线**与**测试报告**，全过程可回看、可取证。
+> 面向 Android 测试工程师的 **AI Agent 平台**：**前端展示 · 后端通道与记账 · `engines/` 能力核心**。Agent **角色** = **Model + Harness**。当前主场景：把用例写成文档，交给 SOP 双角色（**执行 + 验收**）跑完，结果回到**任务事件时间线**与**测试报告**；这是首个落地场景，不是平台上限。详见根 `AGENTS.md`「平台架构定位」与 `dev_docs/ARCH_PRD/GUIDE-创建Agent清单.md`。
 
 ### 价值主张
 
@@ -54,7 +54,7 @@ Vue SPA :5173 ──HTTP(/api,/media)──▶ Vite 代理 ──▶ Daphne :876
                                     MySQL / SQLite ＋ Redis
                                                 │
                        ┌────────────────────────┴────────────────────────┐
-                       │  AgentScope（Django 进程内，SOP 写死在引擎）       │
+                       │  engines/agents（Model+Harness；Django 进程内 SOP） │
                        │  设备执行：executor 操作设备 → verifier 截图+查日志  │
                        │  用例编写：planner → writer → verifier             │
                        │  模型 / 工具 / 密钥：engines/agents + DEEPSEEK_API_KEY │
@@ -68,7 +68,7 @@ Vue SPA :5173 ──HTTP(/api,/media)──▶ Vite 代理 ──▶ Daphne :876
 |----|------|------|
 | **前端** | Vue 3.4 + Vite 5 + Element Plus + Pinia | 10 个业务模块，Doodle Craft 手绘主题，唯一 HTTP 出口 `frontend/src/shared/api-client.ts` |
 | **后端** | Django 6.0.x（锁定 `Django==6.0.6`）+ DRF + Daphne | 12 个 App、21 张业务表；契约基线 `openspec/openapi.yaml`（当前 71 条 path、93 个 operation） |
-| **AI 引擎** | AgentScope ≥ 2.0.9，跑在 Django 进程内 | 角色在 `engines/agents/role/`。平台只传任务与 YAML，**不注入**模型、密钥或工具清单 |
+| **AI 引擎** | AgentScope 2.0（经 `engines/`，同进程） | **Model + Harness → 角色**；当前主场景 SOP：`executor` + `verifier`（及用例编写 planner/writer）；工具经 `tools_config` 装配；密钥 `DEEPSEEK_API_KEY` |
 | **设备控制** | ADB 为主 | `AndroidControl` 继承纯 adb 控制；uiautomator2 只在 xpath 查找和非 ASCII 输入时按需连接。上层不得直接 import `uiautomator2` |
 | **数据** | MySQL（默认）/ SQLite + Redis | 自有表前缀 `ai_ bug_ cm_ dp_ rg_ sl_ task_ wf_`。Redis 承载 JWT 吊销与 Channels layer |
 | **实时性** | 任务走 HTTP 轮询 | 唯一 WebSocket 生产点是知识库助手 `/ws/knowledge-assistant/`（单连接，不走 channel layer）。任务进度不得复用这条通道 |
@@ -182,7 +182,7 @@ python run.py check      # 本地质量门禁（与 CI 同一批检查，不跑�
 | 目录 | 作用 |
 |------|------|
 | `backend/` | Django 项目：`config/`（settings、ASGI、env）、`apps/`（12 个 App）、`gateway/`（JWT 与 WebSocket 路由）、`shared/`（JWT、响应信封、schema）、`models/`（跨模块枚举） |
-| `engines/agents/` | SOP 唯一装配处：`role/` 角色与模型、`tools/` + `tools_config.py` 工具、`prompts/` 提示词、`workflow/` 单次运行、`messaging/` 事件与费用、`middleware/`、`rag/`、`realtime_vocie/` 知识库语音 |
+| `engines/agents/` | **Model+Harness** 角色装配：`config/`（models / role_types）、`agent_builders`、`tools/` + `tools_config.py`、`workflow/`、`messaging/`、`middleware/`、`rag/`、`realtime_vocie/`；密钥只读环境变量 |
 | `engines/device/` | Android 设备连接与 adb 控制。业务代码只经 `engines.device.action` |
 | `engines/uart_log/` · `engines/vision/` | 串口采集 · OCR（`ocr_page` 默认不装配给角色） |
 | `frontend/` | Vue SPA。业务在 `src/modules/`（10 个模块），共享件与设计令牌在 `src/shared/` |
@@ -254,10 +254,10 @@ python -m pytest -c tests/pytest.ini   # 全量用例；check 不会跑这个
 | 文档 | 位置 | 说明 |
 |------|------|------|
 | 需求总纲 | `dev_docs/ARCH_PRD/PRD-平台总需求.md` | 功能定位、用户旅程、模块职责 |
-| 架构设计 | `dev_docs/ARCH_PRD/ARCH-平台架构设计.md` | 运行时拓扑、分层、数据模型。与本 README 冲突时，以代码和本 README 的引擎装配说明为准 |
+| 架构设计 | `dev_docs/ARCH_PRD/ARCH-平台架构设计.md` | 运行时拓扑、分层、数据模型；北极星 Model+Harness。与本 README 冲突时，以代码和本 README 的引擎装配说明为准 |
 | 能力规格 | `openspec/specs/` | 每个能力的可验收需求与场景 |
 | 变更记录 | `openspec/changes/archive/` | 已归档变更 |
-| 开发规范 | 根目录 `AGENTS.md`，以及 `backend/`、`frontend/`、`engines/` 下的 `AGENTS.md` | 分层、模块防火墙、提交与 CI |
+| 开发规范 | 根目录 `AGENTS.md`，以及 `backend/`、`frontend/`、`engines/` 下的 `AGENTS.md` | 分层、模块防火墙、提交与 CI；创建角色见 `dev_docs/ARCH_PRD/GUIDE-创建Agent清单.md` |
 | 门禁清单 | `utils/check_gates.py` | 检查项与判定口径 |
 | 环境变量样例 | `.env.example` | 数据库、Redis、JWT、DeepSeek、知识库助手、可选的模型重试与 RAG |
 

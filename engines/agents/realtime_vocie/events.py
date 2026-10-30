@@ -1,12 +1,23 @@
 """
-python -m 调试路径: engines.agents.realtime_vocie.events
-
-本模块的业务功能如下：
+文件名: ➡️ events.py 🏁
+路径: ➡️ engines/agents/realtime_vocie/events.py 🏁
+模块功能：➡️ 2. TranscriptBridge: 把 AgentScope 的 AgentEvent 翻译成前端线格式，并落最终 🏁
+Python 调试：➡️ python -m engines.agents.realtime_vocie.events 🏁
+时间：➡️ 2026-10-28 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Agent 能力模块 🏁
+简介说明：➡️
 1. VoiceLogSink: 引擎对对话日志写入方的最小协议（message / event）。
 2. TranscriptBridge: 把 AgentScope 的 AgentEvent 翻译成前端线格式，并落最终文本。
-
-桥接层只做事件翻译与落日志，不持有模型或传输；日志写入方由调用方注入，
-因此引擎不依赖 backend.apps。
+🏁
+关联模块：➡️
+1. 暂无本地 engines/utils 依赖
+🏁
+测试：➡️
+1. tests/graybox/unit/test_knowledge_assistant_events.py: 知识库助手事件桥单测：AgentScope 事件 → 前端消息 + 落日志
+🏁
 """
 
 from __future__ import annotations

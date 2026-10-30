@@ -1,12 +1,34 @@
 """
-python -m 调试路径: engines.agents.workflow.case_authoring_workflow
-
-本模块的业务功能如下：
+文件名: ➡️ case_authoring_workflow.py 🏁
+路径: ➡️ engines/agents/workflow/case_authoring_workflow.py 🏁
+模块功能：➡️ 2. CaseAuthoringResult: 一次用例编写运行的阶段、交付文档、历次判决与模块清单 🏁
+Python 调试：➡️ python -m engines.agents.workflow.case_authoring_workflow 🏁
+时间：➡️ 2026-10-30 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Agent 能力模块 🏁
+简介说明：➡️
 1. ModuleOutcome: 一个模块的验收结果（键、名称、行区间、是否通过、是否截断）。
 2. CaseAuthoringResult: 一次用例编写运行的阶段、交付文档、历次判决与模块清单。
 3. CaseAuthoringWorkflow: 单个模块内「编写角色写文档、验收角色判卷」，驳回后重写。
 4. run_case_authoring_modules: 先规划模块，再逐块编写/验收，截断时继续拆分并拼装文档。
 5. run_case_authoring: 同步装配并跑完一次模块化用例编写。
+🏁
+关联模块：➡️
+1. engines.agents.agent_builders: 导入 build_case_verifier, build_case_writer
+2. engines.agents.event_log: 导入 write_line
+3. engines.agents.event_sink: 导入 set_case_title
+4. engines.agents.tools.tool_case_module_store: 导入 ModuleStore
+5. engines.agents.workflow.case_goal_workflow: 导入 run_goal_module
+6. engines.agents.workflow.case_module_plan: 导入 ModuleRange, build_module_document, plan_case_modules, split_module
+7. engines.agents.workflow.ui_auto_workflow: 导入 show_event
+🏁
+测试：➡️
+1. tests/graybox/unit/test_case_authoring_modules.py: 模块化用例编写：规划切分、截断拆分、文本拼装与整份模式回退
+2. tests/graybox/unit/test_case_authoring_roles.py: 家电测试用例编写/验收角色的装配与成对运行入口
+3. tests/graybox/unit/test_case_authoring_task_runner.py: 用例编写任务的后台执行：文档拼装、工作流结果映射与失败兜底
+🏁
 """
 
 from __future__ import annotations
@@ -23,7 +45,7 @@ from agentscope.sop import SOP, SOPEngine, SOPStep, SOPStepRunState
 
 from engines.agents.event_log import write_line
 from engines.agents.event_sink import set_case_title
-from engines.agents.role.case_roles import build_case_verifier, build_case_writer
+from engines.agents.agent_builders import build_case_verifier, build_case_writer
 from engines.agents.tools.tool_case_module_store import ModuleStore
 from engines.agents.workflow.case_goal_workflow import run_goal_module
 from engines.agents.workflow.case_module_plan import (
@@ -407,8 +429,8 @@ async def run_case_authoring_modules(
         set_case_title(f"{module.name}（{module.key}）")
         if os.getenv("CASE_AUTHORING_ENGINE", "goal").lower() == "sop":
             workflow = CaseAuthoringWorkflow(
-                build_case_writer().agent,
-                build_case_verifier().agent,
+                build_case_writer(),
+                build_case_verifier(),
             )
             result = await workflow.run(run_input)
         else:

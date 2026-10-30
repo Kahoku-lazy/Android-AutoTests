@@ -1,170 +1,244 @@
 # 平台架构设计 — Android-AutoTests
 
-> 版本 v1.1 · 2026-10-28 · 基线：`Kahoku` 主干
-> 平台开发目标： 一切皆插件；实现 AI Model + Harness 模式，让用户可以通过这个平台自由创建 Agent 规划与完成任务。
+> 版本 v1.2 · 2026-10-29 · 基线：`Kahoku` 主干  
+> **平台开发目标：** 一切皆插件；实现 **AI Model + Harness**，让用户可通过本平台自由创建 Agent，规划并完成任务。  
+> **与 AGENTS 的关系：** 总思路与强制阅读落点见根 [`AGENTS.md`](../../AGENTS.md)；engines 落地红线见 [`engines/AGENTS.md`](../../engines/AGENTS.md)。本文是架构说明书：给 AI 与人对齐「为什么这样分」和「现状如何接线」。
 
 ---
 
 ## 1. 系统定位与边界
 
-### 技术栈
+### 1.1 一句话定位
 
-1. 后端，纯 API: Django 4.2 + DRF + Channels
-2. 前端，纯 SPA：Vue 3.4 + Vite + Element Plus
-3. AGENT 框架：AgentScope 2.0
-4. 其它: uiautomator2/ADB（设备）· MySQL/SQLite + Redis
+Android 自动化测试与智能体平台：**前端只展示，后端只做通道与记账，`engines/` 承载平台全部可执行能力**；核心产品形态是可配置的 **Agent 角色**。
 
-### 请求链路
+### 1.2 技术栈
 
- **请求链路**：前端模块 `api.ts` → `djangoClient`(/api) → Vite 代理 → `JWTAuthenticationMiddleware` → DRF View → `EnvelopeJSONRenderer`（`{status,data}`）→ ORM。
+1. 后端，纯 API：Django 4.2 + DRF + Channels  
+2. 前端，纯 SPA：Vue 3.4 + Vite + Element Plus  
+3. AGENT 框架：AgentScope 2.0  
+4. 其它：uiautomator2/ADB（设备）· MySQL/SQLite + Redis  
 
-### 约定
+### 1.3 请求链路
 
-1. 表前缀 `dp_ di_ el_ cm_ tr_ rg_ ai_ task_ ev_ wf_` 
-2. 响应信封 `{status,data}`
+前端模块 `api.ts` → `djangoClient`(`/api`) → Vite 代理 → `JWTAuthenticationMiddleware` → DRF View → `EnvelopeJSONRenderer`（`{status,data}`）→ ORM。
+
+### 1.4 约定
+
+1. 表前缀：`dp_` `cm_` `ai_` `task_` `rg_` `wf_` `sl_` 等（以各 App Model 为准）  
+2. 响应信封：`{status,data}`  
+3. `APPEND_SLASH = False`：缺尾斜杠确定 404，避免 301 丢 `Authorization`
 
 ---
 
-## 2. 运行时拓扑
+## 2. 平台核心：Agent = Model + Harness
+
+**结论先行：** 平台能力不是散落在各个 Django App 里的业务函数，而是 **Model + Harness 组合成的 Agent 角色**。用户（与 AI 实现时）应围绕「创建/配置角色、装配 Harness、下发任务、计量展示」推进，而不是把自动化逻辑写进 View。
+
+### 2.1 三层分工
+
+| 层 | 位置 | 职责 | 不该做的事 |
+| --- | --- | --- | --- |
+| 展示 | `frontend/` | 任务、花费、能力、运行状态可视化 | 不直连设备/模型，不承载 SOP 逻辑 |
+| 通道与记账 | `backend/`（`apps` + gateway） | 鉴权、任务下发、会话/WS 接入；把花费、能力与任务写入数据库 | 不实现设备控制/OCR/串口采集内核；不旁路 engines 绑工具 |
+| 能力核心 | `engines/` | Agent 运行时 + Harness + device/uart_log/vision 支撑 | 不 `import apps.*` / `django.*`；不写业务库 |
+
+依赖方向：**backend →（注入）→ engines**。
+
+### 2.2 Model、Harness、角色
+
+- **Model**：推理与生成（DeepSeek、Dashscope / Omni 等），由角色配置选用。  
+- **Harness**（集中在 `engines/agents/`）：角色跑起来所需外围能力  
+  - 工具：`tools/tool_*.py` + **唯一分配入口** `tools_config.py`  
+  - 技能：`skills/`  
+  - 知识库：`rag/`（MCP 等见 `mcp_config/`）  
+  - 记忆与上下文：会话/历史与当轮上下文（messaging、语音 session/pipeline 等；RAG 只注入当轮，不进长期历史）  
+  - 提示词：`prompts/` + **唯一配置入口** `prompt_config.py`  
+- **角色**：`role/`，继承 `base.BaseRole`，把选定 Model 与 Harness 装配成可下发、可计量的 Agent。  
+- **工作流**：`workflow/` 管 SOP 步骤与单次运行；**禁止**在此创建角色或旁路绑定工具/提示词。
+
+### 2.3 Harness 的控制与数据底座
+
+| 包 | 给 Harness 提供什么 |
+| --- | --- |
+| `engines/device` | 设备动作（对外入口 `action`） |
+| `engines/uart_log` | 串口日志采集与处理 |
+| `engines/vision` | 页面 OCR，供引擎侧工具调用 |
+
+上述能力经 `tool_*.py` 暴露给角色，**禁止**上层直接 import `airtest` / `uiautomator2` 绕过引擎。
+
+### 2.4 花费、任务与展示闭环
+
+1. 后端下发任务 / 建立会话 → 注入配置与密钥（解密后交给 engines）  
+2. engines 执行 Agent（SOP / 语音等）→ 产生事件与用量（messaging / billing、`model_usage` 等）  
+3. 后端写入 DB（任务事件、用量、费用汇总）  
+4. 前端展示时间线、仪表盘与报告  
+
+**一切皆插件（目标态）：** 新能力优先以 Harness 插件（工具/技能/知识/MCP）或可替换 engines 子包进入，而不是在某个 App 的 View 里堆协议细节。现状仍以代码目录与配置入口约束为主；插件市场级热插拔不在本文承诺范围。
+
+### 2.5 AI 实现时的优先顺序
+
+1. 改展示/API/表结构 → 读本文 §3–§8 + 对应 App  
+2. 改 Agent / 工具 / 提示词 / RAG / 语音 → 根 `AGENTS.md` §平台架构 + `engines/**/AGENTS.md` + style rules  
+3. 不要把「本该是 tool/skill」的逻辑写进 DRF View 或前端
+
+---
+
+## 3. 运行时拓扑
 
 ```
-浏览器 :5173 ──HTTP──▶ Vite dev server（/api、/media 代理）
+浏览器 :5173 ──HTTP──→ Vite（/api、/media、/ws 代理）
                               │
                               ▼
-                    Daphne :8766（ASGI，单进程）
+                    Daphne :8766（ASGI）
                     backend/config/asgi.py: ProtocolTypeRouter
-                       ├─ http      → Django（中间件链 → URLconf → DRF）
-                       └─ websocket → URLRouter(websocket_urlpatterns)   ← /ws/knowledge-assistant/
+                       ├─ http      → Django（中间件 → URLconf → DRF）
+                       └─ websocket → /ws/knowledge-assistant/
                               │
         ┌─────────────────────┼──────────────────────────┐
         ▼                     ▼                          ▼
-   MySQL / SQLite        Redis :6379              AgentScope（同进程）
-   （业务数据）      （JWT 吊销 / Channels layer）   SOP: executor ↔ verifier
+   MySQL / SQLite          Redis :6379              engines（同进程）
+   （业务数据）        （JWT 吊销 / Channels）    AgentScope + device/uart/vision
                                                           │
-                                                   engines/device → adb
-                                                          │
-                                              Android 设备 / 串口日志 :7005
+                                              Android 设备 / 串口日志
 ```
 
-### 2.1 进程与入口
+### 3.1 进程与入口
 
 | 进程 | 端口 | 入口 | 说明 |
 |------|------|------|------|
-| Redis | 6379 | `redis-server` | JWT 吊销键、Channels layer；`run.py stop` **不**停 Redis |
-| Daphne | 8766 | `run_daphne.py` → `backend.config.asgi:application` | 开发态 autoreload 双进程（父进程只监控），生产态单进程 |
-| Vite | 5173 | `npx vite --host` | 代理 `/api`、`/media`、`/ws`（知识库助手实时语音） |
+| Redis | 6379 | `redis-server` | JWT 吊销、Channels layer；`run.py stop` **不**停 Redis |
+| Daphne | 8766 | `run_daphne.py` → `backend.config.asgi:application` | 开发态 autoreload 双进程；生产态单进程 |
+| Vite | 5173 | `npx vite --host` | 代理 `/api`、`/media`、`/ws` |
 
-- 统一运维入口：`python run.py start|stop|restart|status|logs|check`（`run.py`）。
-- 启动副作用**受门控**：孤儿任务恢复、串口端口监听恢复只在 ASGI 服务进程的 daemon 线程里执行，条件是 `DJANGO_ASGI_SERVER=1` 或 argv 含 `daphne`/`runserver`（`backend/apps/ai_assistant/apps.py`、`backend/apps/serial_log/apps.py`）；`migrate`/`shell`/`pytest` 不触发。
-- `run.py stop backend` 会先清理 MySQL `Sleep>5` 的孤儿连接（强制杀 Daphne 的副作用）。
+- 统一运维：`python run.py start|stop|restart|status|logs|check`  
+- 启动副作用受门控：孤儿任务恢复、串口监听恢复仅在 ASGI 服务进程（`DJANGO_ASGI_SERVER=1` 或 argv 含 `daphne`/`runserver`）；`migrate`/`shell`/`pytest` 不触发  
+- `run.py stop backend` 会清理 MySQL `Sleep>5` 孤儿连接  
 
-### 2.2 中间件链（`backend/config/settings.py`）
+### 3.2 中间件链（`backend/config/settings.py`）
 
 ```
 Cors → Security → GZip → Session → Common → JWTAuthenticationMiddleware
      → CsrfViewMiddleware → Authentication → Message → XFrameOptions
 ```
 
-- `JWTAuthenticationMiddleware`（`backend/gateway/middleware.py`）：对 `/api/*` 做前置 JWT 校验，注入 `request.user_id`；公开前缀仅 `/api/auth/{login,register,refresh}`、`/admin/`、`/static/`、`/media/`、`/api/schema/`、`/api/swagger/`。
-- JWT 有效时置 `request._dont_enforce_csrf_checks = True`（浏览器无法跨站携带自定义 `Authorization` 头），后台 session 面仍受 CSRF 保护。
-- `APPEND_SLASH = False`：缺尾斜杠得到确定的 404，避免 301 丢 `Authorization` 头。
-- DRF：认证类 `backend.shared.auth.drf_auth.JWTAuthentication`；权限 `IsAuthenticated`；渲染器 `backend.shared.renderers.EnvelopeJSONRenderer`；schema `drf_spectacular`；`UNAUTHENTICATED_USER=None`。
+- `JWTAuthenticationMiddleware`（`backend/gateway/middleware.py`）：`/api/*` 前置 JWT，注入 `request.user_id`；公开前缀含登录注册刷新、`/admin/`、`/static/`、`/media/`、schema/swagger  
+- JWT 有效时置 `_dont_enforce_csrf_checks`；后台 session 面仍受 CSRF  
+- DRF：`JWTAuthentication` + `IsAuthenticated` + `EnvelopeJSONRenderer`；`UNAUTHENTICATED_USER=None`  
 
-### 2.3 Channels
+### 3.3 Channels
 
-`backend/config/asgi.py` 同时挂 HTTP 与 WebSocket；`backend/gateway/routing.py` 当前只有一条生产路由 `/ws/knowledge-assistant/`（知识库助手实时语音）。该 consumer 用握手 query 的 `?token=<access_token>` 调既有 `verify_token` 鉴权，不经过 `JWTAuthenticationMiddleware`；鉴权失败直接 4401，不创建模型会话。`CHANNEL_LAYERS` 优先 Redis、异常降级 InMemory。
-
-通道只承载知识库助手的音频、转写、打断与播放进度；任务进度与列表仍走 HTTP 轮询。平台其它模块**不得**复用该通道承载任务、设备或写操作。
+仅生产路由 `/ws/knowledge-assistant/`（知识库助手实时语音）。握手 `?token=` 调 `verify_token`，失败 4401。通道只承载音频/转写/打断/播放进度；**任务进度仍走 HTTP 轮询**。其它模块不得复用该通道做任务/设备/写操作。
 
 ---
 
-## 3. 分层与依赖规则
+## 4. 分层与依赖规则
 
 ```
 前端（Vue 模块）
    │ 唯一 HTTP 出口 shared/api-client.ts
    ▼
-接口层：backend/gateway 中间件 → backend/config/urls.py → backend/apps/*/urls.py → View/ViewSet → Serializer
+接口层：gateway 中间件 → urls → View/ViewSet → Serializer
    ▼
 应用层：backend/apps/*/api.py（唯一写库口）→ ORM
    ▼
-引擎层：engines/agents（SOP、工具、事件）· engines/device（adb）· engines/uart_log · engines/vision
+引擎层：engines/agents（角色/Harness/SOP）· device · uart_log · vision
    ▼
-外部：Android 设备、串口日志 TCP、模型 API（DeepSeek / 百炼）、Redis、MySQL
+外部：Android、串口、模型 API、Redis、MySQL
 ```
 
 | # | 规则 | 强制手段 |
 |---|------|---------|
-| 1 | View 只分发；写库必须经本 App `api.py` | `utils/gen_arch_stats.py --check-boundaries`（防火墙 #2） |
-| 2 | 跨 App **禁止** import 内部实现（读 Model 允许） | 同上（防火墙 #1）+ code review |
-| 3 | 跨 App 写只能调对方 `api.py` | 同上；AI 工具只调 `api.py` |
-| 4 | 上层不得 import `airtest` / `uiautomator2`，设备操作只经引擎 | `boundary-check` + `engines/device/action.py` 抽象 |
-| 5 | 前端只有一个 axios 实例 / HTTP 出口 | `frontend/.dependency-cruiser.cjs` 规则 `no-axios-except-client` |
-| 6 | `/api/` 尾斜杠、`{status,data}` 信封、snake_case | `pytest` 契约对拍 + `backend/shared/renderers.py` |
+| 1 | View 只分发；写库必须经本 App `api.py` | `utils/gen_arch_stats.py --check-boundaries` |
+| 2 | 跨 App **禁止** import 内部实现（读 Model 允许） | 同上 + review |
+| 3 | 跨 App 写只能调对方 `api.py` | 同上 |
+| 4 | 上层不得 import `airtest` / `uiautomator2`，设备只经引擎 | boundary-check + `engines/device/action.py` |
+| 5 | 前端只有一个 axios / HTTP 出口 | `frontend/.dependency-cruiser.cjs` |
+| 6 | `/api/` 无强制尾斜杠、`{status,data}`、snake_case | pytest 契约 + `EnvelopeJSONRenderer` |
+| 7 | agents 工具/提示词必须经 `tools_config` / `prompt_config` | `engines/**/AGENTS.md` + style-check 技能 |
 
-**信封特例**：无。`/api/reports/*` 与 `/api/tasks/{id}/report/` 已统一为全局 `{status, data}`；仅报告文件下载保持 `FileResponse` 附件语义。
+信封特例：无。报告文件下载保持 `FileResponse` 附件语义。
 
 ---
 
-## 4. 后端：模块、端点与数据
+## 5. engines 能力地图（落地索引）
 
-### 4.1 模块总览
+| 路径 | 职责 | 详细约束 |
+|------|------|----------|
+| `engines/AGENTS.md` | engines 必读入口、红线、何时读 rules/跑检查 | 本文不重复全文 |
+| `engines/agents/` | Agent 运行时与 Harness | `engines/agents/AGENTS.md` |
+| `engines/agents/rag/` | 本地知识检索 | `engines/agents/rag/AGENTS.md` |
+| `engines/agents/realtime_vocie/` | 实时语音引擎（目录名为历史拼写） | `engines/agents/realtime_vocie/AGENTS.md` |
+| `engines/device/` | 设备引擎，`action` 对外 | 尚无独立 AGENTS；遵守上层红线 |
+| `engines/uart_log/` | 串口采集 | 同上 |
+| `engines/vision/` | OCR | 同上 |
 
-| App | API 前缀 | 端点（估算） | 表 | 职责 |
-|-----|----------|:---:|----|------|
-| `accounts` | `/api/auth/` | 5 | 复用 `auth_user` | JWT 双令牌 + Redis 吊销（`jti` 黑名单、`sid` 整组作废） |
-| `dashboard` | `/api/` | 4 | 无（聚合） | KPI、执行趋势、任务结果、模型用量与费用、活动时间线 |
-| `device_pool` | `/api/devices/` | 10 | `dp_`×2 | 扫描/连接/断开/激活/心跳 + 占用锁审计 |
-| `case_manager` | `/api/cases/` | 11 | `cm_`×5 | 项目→目录→文件→用例→步骤 五层树；移动/批量删/导入导出 |
-| `task_list` | `/api/tasks/` | 9 | `task_`×5 | 任务提交/重跑/取消/清空、事件入库、用量与费用、任务流程报告 |
-| `ai_assistant` | `/api/ai/` | 7 | `ai_`×1 | 智能体配置、模型线路、一次性揭示密钥 |
-| `report_generator` | `/api/reports/` | 5 | `rg_`×2 | 报告列表/用例分解/文件下载（legacy 平铺信封） |
-| `serial_log` | `/api/serial-log/` | 4 | `sl_`×1 | 端口监听开关、当前日志只读、关键词对照表 |
-| `workflow` | `/api/workflow/` | 10 | `wf_`×3 | 页面流原型、目录、JSON 文档、导入导出 |
+风格正文：`.agents/rules/engines-code-style.md`。机械化检查：`.agents/skills/engines-agents-style-check/`。
 
-> 端点口径：**唯一业务路径**（同一路径多方法计 1），不含 Router 根、`schema`/`swagger` 与 DRF format 变体。当前 **65 条**；OpenAPI 基线 `openspec/openapi.yaml` 收录 **66 条**（含 `/api/schema/` 自述）、**86 个 operations**，由 `openapi-schema` 门禁校验。
+---
 
-### 4.2 数据模型（19 张表 / 7 组前缀）
+## 6. 后端：模块、端点与数据
 
-| 分组 | 表 | 关键设计 |
-|------|----|---------|
-| `dp_` | `dp_devices`、`dp_device_locks` | 设备仅 `ONLINE/BUSY` 两态，离线即删行；锁只追加不删，`UNIQUE(device) WHERE status='active'` 保证同设备单活跃锁 |
-| `cm_` | `cm_case_projects`、`cm_case_directories`、`cm_case_files`、`cm_test_definitions`、`cm_case_steps` | 项目/目录/文件三层有唯一约束（同项目、同父目录下名称唯一）；用例与步骤按 `sort_order` 排序，步骤顺序由服务端按提交顺序重排 |
-| `ai_` | `ai_agents` | 智能体配置与模型线路；`route_configs` 内密钥 Fernet 加密 |
-| `task_` | `task_tasks`、`task_attachments`、`task_events`、`task_media`、`task_usage_hourly` | 事件表 `UNIQUE(task,seq)` + 三索引；图片只存 720 缩略图（`UNIQUE(task,sha256)`）；小时用量表 `UNIQUE(date,hour,model,role,agent)` |
-| `rg_` | `rg_reports`、`rg_report_templates` | 报告文件落盘 + 元信息入库 |
-| `wf_` | `wf_prototypes`、`wf_directories`、`wf_documents` | 文档以 JSON 存画布，目录树与用例管理同构 |
-| `sl_` | `sl_log_ports` | 只存"开关"，端口/SKU/波特率以 `DEVICE_LOG_*` 配置为真相源 |
+### 6.1 模块总览
 
-**模型配置与密钥**：`ai_agents.route_configs["device_control"].{executor,verifier}` 存模型名/provider/base_url 与 Fernet 加密的 `api_key`；读取时脱敏，`reveal-key` 一次性揭示（`key_revealed` 标记）。
+> 端点数量随迭代变化；接口真值以 `openspec/openapi.yaml` 与 `openspec/specs/` 为准。下表侧重**职责**，便于 AI 选型。
 
-### 4.3 鉴权与身份
+| App | API 前缀（典型） | 职责 |
+|-----|------------------|------|
+| `accounts` | `/api/auth/` | JWT 双令牌 + Redis 吊销 |
+| `dashboard` | `/api/dashboard/` 等 | KPI、趋势、用量费用、活动时间线（聚合） |
+| `device_pool` | `/api/devices/` | 设备扫描/连接/占用/心跳 |
+| `case_manager` | `/api/cases/` | 用例项目/目录/文件/步骤 |
+| `task_list` | `/api/tasks/` | 任务提交/控制/事件/报告入口 |
+| `ai_assistant` | `/api/ai/` | 智能体配置、模型线路、密钥 |
+| `knowledge_assistant` | `/api/knowledge-assistant/` + WS | 知识库助手接入（通道）；引擎在 `engines` |
+| `report_generator` | `/api/reports/` | 报告列表/详情/下载 |
+| `serial_log` | `/api/serial-log/` | 串口端口开关与日志相关 API |
+| `workflow` | `/api/workflow/` | 页面流原型/目录/文档 |
+| `bug_manager` | （按 urls） | BUG 单管理 |
+| `usage_ledger` | （按 urls） | 用量记账相关 |
 
-- 令牌：access TTL 1h、refresh TTL 7d（`JWT_ACCESS_TTL`/`JWT_REFRESH_TTL`），一次登录共享 `sid`。
-- 吊销：`jwt:blacklist:{jti}` 与 `jwt:session_revoked:{sid}`；**读侧 fail-open**（Redis 不可用放行并记 error），**写侧 fail-closed**（抛 `BlacklistUnavailableError`）。
-- 权限：AI 智能体写操作仅超管；读操作按 owner 或"超管拥有的共享智能体"过滤；`backend/shared/users.py::is_superuser` 是跨 App 唯一实现。
+### 6.2 数据模型要点
+
+| 分组 | 关键设计 |
+|------|----------|
+| `dp_` | 设备 `ONLINE/BUSY`；锁只追加；同设备单活跃锁 |
+| `cm_` | 项目/目录/文件唯一约束；用例步骤 `sort_order` |
+| `ai_` | 智能体与线路；`route_configs` 内密钥 Fernet 加密 |
+| `task_` | 事件 `UNIQUE(task,seq)`；缩略图去重；小时用量表 |
+| `rg_` | 报告文件落盘 + 元信息 |
+| `wf_` | 画布 JSON；目录树与用例管理同构 |
+| `sl_` | 端口开关；端口/SKU/波特率以配置为真相源 |
+
+模型配置：`ai_agents.route_configs` 存模型名/provider/base_url 与加密 `api_key`；读取脱敏，`reveal-key` 一次性揭示。
+
+### 6.3 鉴权与身份
+
+- access TTL 1h、refresh TTL 7d；同登录共享 `sid`  
+- 吊销：`jwt:blacklist:{jti}`、`jwt:session_revoked:{sid}`；读侧 fail-open，写侧 fail-closed  
+- AI 智能体写操作仅超管；读按 owner 或共享规则过滤；`backend/shared/users.py::is_superuser` 为跨 App 唯一实现  
 
 ---
 
 ## 7. 前端架构
 
-| 模块 | 路由 | 后端前缀 |
-|------|------|---------|
-| dashboard | `/dashboard` | `/api/dashboard/*` |
+| 模块 | 路由（典型） | 后端 |
+|------|--------------|------|
+| dashboard | `/dashboard` | dashboard API |
 | device-pool | `/devices` | `/api/devices/*` |
-| workflow | `/workflow`、`/workflow/prototypes/:id` | `/api/workflow/*` |
+| workflow | `/workflow`… | `/api/workflow/*` |
 | serial-log | `/serial-log` | `/api/serial-log/*` |
-| ai-assistant | `/ai-assistant`、`/ai-assistant/agents`、`/agent/:id` | `/api/ai/*` |
-| task-list | `/tasks`、`/tasks/:id` | `/api/tasks/*` |
-| case-manager | `/cases`、`/cases/projects/:id`、`/files/:fileId`、`/cases/:id/edit` 等 | `/api/cases/*` |
+| ai-assistant | `/ai-assistant`… | `/api/ai/*` |
+| task-list | `/tasks`… | `/api/tasks/*` |
+| case-manager | `/cases`… | `/api/cases/*` |
 | report-generator | `/reports` | `/api/reports/*` |
-| knowledge-assistant | `/knowledge-assistant` | `/api/knowledge-assistant/*`；语音走 `/ws/knowledge-assistant/` |
+| knowledge-assistant | `/knowledge-assistant` | HTTP + `/ws/knowledge-assistant/` |
 
-- 侧栏四组：主区（仪表盘）、AI 功能（AI 助手 / 知识库助手）、数据（设备 / 页面流 / 串口日志）、AI 任务（任务清单 / 用例 / 报告）。
-- 请求：模块 `api.ts` → `shared/api-client.ts`（baseURL `/api`，2min 超时）；拦截器注 token、401 触发单飞刷新、公开端点不刷新（`shared/api-auth-interceptors.ts`）。
-- 状态：Pinia 仅 `workflow`（`workflowStore`、`libraryStore`）；token 直存 localStorage，无 auth store。
-- 设计系统：`shared/styles/tokens.css` 是令牌唯一真相源；L0 视口 → L1 侧栏/主区 → L2 页头/页面根 → L3 容器 → L4 数据面 → L5 覆盖层；模块只拥有自己页面的 L2–L5。
-- 实时性：任务进度靠页面轮询任务详情接口；唯一 WS 是知识库助手语音 `knowledge-assistant`（`audio/pcm.ts` 采集重采样 → WS → AgentScope `RealtimeAgent` → 下行音频与转写；对话落 `logs/knowledge_assistant/`）。
+- 侧栏：主区 / AI 功能 / 数据 / AI 任务  
+- 请求：模块 `api.ts` → `shared/api-client.ts`；401 单飞刷新  
+- 状态：Pinia 主要在 workflow；token 在 localStorage  
+- 设计令牌：`shared/styles/tokens.css`  
+- 实时性：任务轮询；唯一 WS 为知识库语音  
 
 ---
 
@@ -173,43 +247,35 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 ### 8.1 设备接入与占用
 
 ```
-/scan → DeviceDetector(adb devices) → dp_devices 落库
-/lock → dp_device_locks(active)  ── 唯一约束挡并发
-/heartbeat → 巡逻 → 超时则 released(timeout)
+/scan → DeviceDetector(adb devices) → dp_devices
+/lock → dp_device_locks(active)（唯一约束挡并发）
+/heartbeat → 超时 released(timeout)
 /disconnect → 删设备行 + 锁转 disconnect
 ```
 
 ### 8.2 用例 → 任务装配
 
 ```
-cm_case_projects → directories → files → test_definitions → case_steps
-      │ 选中用例/文件
-      ▼
-POST /api/tasks/submit/（含 device_serial / case_title / 附件）
-      ▼
-api.create_task → materialize_config_file（物化 YAML）→ dispatch_device(serial)
+cm_* 用例树 → POST /api/tasks/submit/
+  → api.create_task → 物化配置 → dispatch_device(serial)
 ```
 
-### 8.3 任务执行与回看
+### 8.3 任务执行与回看（Agent 闭环）
 
 ```
-daemon thread: task_runner.run_task_async
-  → engine_adapter.sop_role_models（解密密钥）
-  → run_platform_sop → SOPEngine（executor ↔ verifier）
-  → 事件批量入库 task_events / media / usage
-  → finalize_task（状态 + 费用汇总）
-                        │
-                        ▼
-      GET /api/tasks/{id}/            → 任务详情时间线
-      GET /api/tasks/{id}/report/     → 任务流程报告（legacy 平铺）
-      GET /api/dashboard/*            → 趋势与用量聚合
+daemon: task_runner
+  → 解密角色/模型配置（通道）
+  → engines：SOP / Agent（Model + Harness）
+  → 事件与用量回传 → 入库 task_events / media / usage
+  → finalize_task（状态 + 费用）
+  → 前端任务详情 / 报告 / dashboard
 ```
 
 ### 8.4 证据闭环
 
 ```
-executor 动作 → 设备打日志 → TCP 采集落文件 → KeywordIndex 命中
-      → verifier 判决（passed/message）→ 事件入库 → 失败原因回灌 executor
+executor 动作 → 设备/串口日志 → 关键词命中
+  → verifier 判决 → 事件入库 → 失败原因回灌 executor
 ```
 
 ---
@@ -218,31 +284,55 @@ executor 动作 → 设备打日志 → TCP 采集落文件 → KeywordIndex 命
 
 | 面 | 实现 |
 |----|------|
-| 后端日志 | `logs/backend.log`（业务 `backend_log` + daphne stdout 捕获） |
-| 智能体日志 | `logs/agents/agent_events.log`（事件时间线与运行汇总同一份） |
-| 设备日志 | `logs/device.log`（引擎动作与错误） |
-| 串口日志 | `logs/serial.log`（采集通道本身）+ `logs/serial_logs/{SKU}_{port}.log`（原文） |
-| 轮转 | 统一 10MB×3；串口原文单文件 50MB 后改名归档 |
-| 健康检查 | `python run.py status`（Redis 探端口，前后端探 HTTP） |
-| 自愈 | 启动时把上次进程遗留的 `running` 任务置 `failed`；按开关恢复串口监听 |
+| 后端 | `logs/backend.log` |
+| 智能体 | `logs/agents/agent_events.log` |
+| 设备 | `logs/device.log` |
+| 串口 | `logs/serial.log` + `logs/serial_logs/{SKU}_{port}.log` |
+| 轮转 | 通常 10MB×3；串口原文更大后归档 |
+| 健康 | `python run.py status` |
+| 自愈 | 启动将遗留 `running` 置 `failed`；按开关恢复串口监听 |
 
-> 框架日志只走控制台（`backend/config/settings.py` 的 `LOGGING` 仅 console handler），不写 `django.log`。
+框架日志默认走控制台，不写独立 `django.log`。
 
 ---
 
 ## 10. 质量治理
 
+| 手段 | 用途 |
+|------|------|
+| `python run.py check` | 本地门禁（与 CI 同批阻塞项） |
+| `ci-phase1.yml` | 推送后质量闸门 |
+| OpenSpec + `openspec/openapi.yaml` | 能力/接口契约 |
+| boundary-check | App/引擎依赖防火墙 |
+| `engines-agents-style` 技能/门禁 | agents 可自动化风格子集（非阻塞告警） |
+| 根 `AGENTS.md` Git 约定 | 单主干 Kahoku、禁止强推、禁止 `git add -A` |
+
+---
+
+## 11. 文档与 AI 阅读指引
+
+| 场景 | 先读 |
+|------|------|
+| 理解平台总思路（Model + Harness） | 根 `AGENTS.md`「平台架构定位」+ **本文 §2** |
+| 新建 Agent 角色 | [GUIDE-创建Agent清单.md](GUIDE-创建Agent清单.md) |
+| Harness 硬约束（OpenSpec） | [../../openspec/specs/agent-harness/spec.md](../../openspec/specs/agent-harness/spec.md) |
+| 改 engines / Agent / Harness | `engines/AGENTS.md` → 子 AGENTS → `.agents/rules/engines-code-style.md` |
+| 改 API / 表 / 鉴权 / 拓扑 | **本文 §3–§6、§8** + 对应 App |
+| 改前端模块与路由 | **本文 §7** + 模块目录 |
+| 接口字段真值 | `openspec/specs/`、`openspec/openapi.yaml` |
+| 临时文件 | 必须进 `temps/`；设计稿在 `dev_docs/` |
+
 ---
 
 ## 12. 已知限制与技术债
 
-1. **无实时推送**：任务进度靠轮询，长任务的前端体验与请求量都受此限制。
-2. **设备无连接复用**：每次工具调用新建 adb 连接，高并发下的开销与稳定性尚未量化。
-3. **`report_generator` 的 legacy 平铺信封**：全平台唯一特例，且数据来自 `task_tasks` 聚合而非独立执行链。
-4. **前端信封拆包不统一**：有的模块返回 `DjangoResponse` 类型，有的直接返回 `AxiosResponse`，`status:false` 走 HTTP 200。
-5. **pytest marker 残留**：`pytest.ini` 仍声明 `device_inspector` / `element_locator`，缺 `dashboard` / `serial_log`。
-6. **CI 只保证"测试可导入"**：`pytest --collect-only` 门禁不跑用例，后端运行期回归仍无 CI 守护。
-7. **文档真值**：能力规格（92 份）是可信契约；独立接口文档已下线，接口以 `openspec/specs/` 与 `openspec/openapi.yaml` 为准，README / 本文与代码同步靠约定而非工具强制。
-8. **单 SKU 日志形态**：默认 `H6810 / 7005` 单端口；多设备需在 `DEVICE_LOG_SOURCES` 显式登记。
+1. **无通用实时推送**：任务进度靠轮询。  
+2. **设备连接复用不足**：工具调用侧连接开销尚未量化。  
+3. **前端信封拆包不统一**：部分模块类型/错误处理不一致。  
+4. **pytest marker / CI 深度**：收集门禁不等于运行期全量回归。  
+5. **文档真值**：能力规格与 OpenAPI 是接口契约；README/本文/AGENTS 靠约定同步。  
+6. **单 SKU 日志默认形态**：多设备需在 `DEVICE_LOG_SOURCES` 显式登记。  
+7. **「一切皆插件」仍是目标态**：当前以目录 + 配置入口约束 Harness，而非热插拔插件市场。  
+8. **`device` / `uart_log` / `vision` 尚无独立 AGENTS**：改这些包时以 `engines/AGENTS.md` 为准。
 
 ---

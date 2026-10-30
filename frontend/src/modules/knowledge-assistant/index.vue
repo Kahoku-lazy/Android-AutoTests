@@ -3,7 +3,7 @@
  * 知识库助手页面：语音按键 + 实时对话记录 + 本地日志落点。
  *
  * 页面只做三态取数与事件编排；音频、WS 与消息归并分别在 audio/、
- * composables/ 与 helpers/ 中。
+ * composables/ 与 helpers/ 中。仅 Omni + 知识库问答。
  */
 import {
   computed,
@@ -25,15 +25,10 @@ import { useVoiceSession } from "./composables/useVoiceSession"
 import { fetchKnowledgeAssistantStatus } from "./api"
 import {
   KB_ICON_GRADIENT,
-  KB_MODE_LIVETRANSLATE,
   KB_MODE_OMNI,
-  KB_MODE_PIPELINE,
   KB_PAGE_ICON,
   KB_PAGE_SUBTITLE,
-  KB_PAGE_SUBTITLE_PIPELINE,
   KB_PAGE_TITLE,
-  KB_ROUTE_OPTIONS,
-  type KbRoute,
   KB_READY_FALLBACK,
   KB_STATUS_LOAD_ERROR,
   KB_STATUS_TEXT,
@@ -44,7 +39,6 @@ const status = ref<KnowledgeAssistantStatus | null>(null)
 const statusError = ref("")
 const loading = ref(true)
 const bottomRef = ref<HTMLElement | null>(null)
-const selectedRoute = ref<KbRoute>("omni")
 
 const {
   messages,
@@ -59,32 +53,16 @@ const {
   loadDevices,
   canInterrupt,
   start,
-  sendText,
   stop,
   interrupt,
   dispose,
 } = useVoiceSession()
 
 const canStart = computed(() => status.value?.ready === true)
-const showTextInput = computed(() => selectedRoute.value === "pipeline")
 const statusText = computed(() => KB_STATUS_TEXT[state.value])
-const pageSubtitle = computed(() =>
-  selectedRoute.value === "pipeline" ? KB_PAGE_SUBTITLE_PIPELINE : KB_PAGE_SUBTITLE,
-)
-const modeLabel = computed(() => {
-  const mode = session.value?.mode || selectedRoute.value
-  if (mode === "pipeline") return KB_MODE_PIPELINE
-  if (mode === "livetranslate") return KB_MODE_LIVETRANSLATE
-  return KB_MODE_OMNI
-})
+const modeLabel = computed(() => KB_MODE_OMNI)
 const modelLabel = computed(() => {
   if (session.value) return `${session.value.model} · ${session.value.voice}`
-  if (selectedRoute.value === "pipeline") {
-    const llm = status.value?.pipeline_llm_model || "deepseek-flash"
-    const tts = status.value?.pipeline_tts_model || "sambert-zhichu-v1"
-    const voice = status.value?.pipeline_tts_voice || "知厨"
-    return `${llm} + ${tts} · ${voice}`
-  }
   if (status.value) return `${status.value.model} · ${status.value.voice}`
   return "—"
 })
@@ -107,30 +85,12 @@ async function loadStatus(): Promise<void> {
 
 function onStart(): void {
   if (!canStart.value) return
-  void start(selectedRoute.value)
+  void start()
 }
 
 function onDeviceChange(deviceId: string): void {
   selectedDeviceId.value = deviceId
 }
-
-function onRouteChange(route: KbRoute): void {
-  selectedRoute.value = route
-}
-
-function onTextSubmit(text: string): void {
-  if (!canStart.value) return
-  void sendText(text, selectedRoute.value)
-}
-
-watch(
-  status,
-  (value) => {
-    if (value?.mode === "pipeline") selectedRoute.value = "pipeline"
-    else if (value?.mode === "omni") selectedRoute.value = "omni"
-  },
-  { immediate: true },
-)
 
 onMounted(loadStatus)
 onMounted(loadDevices)
@@ -157,7 +117,7 @@ watch(
   >
     <WorkbenchHeader
       :title="KB_PAGE_TITLE"
-      :subtitle="pageSubtitle"
+      :subtitle="KB_PAGE_SUBTITLE"
       :icon="KB_PAGE_ICON"
       :icon-gradient="KB_ICON_GRADIENT"
     />
@@ -186,14 +146,10 @@ watch(
               :sent-frames="sentFrames"
               :devices="devices"
               :selected-device-id="selectedDeviceId"
-              :route="selectedRoute"
-              :routes="KB_ROUTE_OPTIONS"
               :mode-label="modeLabel"
               :model-label="modelLabel"
               :log-path="logPath"
-              :show-text-input="showTextInput"
               @device-change="onDeviceChange"
-              @route-change="onRouteChange"
               @start="onStart"
               @stop="stop"
               @interrupt="interrupt"
@@ -201,12 +157,7 @@ watch(
           </div>
 
           <div class="kb-column">
-            <TranscriptPanel
-              :messages="messages"
-              :show-composer="showTextInput"
-              :can-send="canStart"
-              @text-submit="onTextSubmit"
-            />
+            <TranscriptPanel :messages="messages" :show-composer="false" :can-send="false" />
             <div ref="bottomRef" class="kb-bottom" aria-hidden="true"></div>
           </div>
         </div>

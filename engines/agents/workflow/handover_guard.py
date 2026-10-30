@@ -1,9 +1,23 @@
 """
-python -m 调试路径: engines.agents.workflow.handover_guard
-
-本模块的业务功能如下：
+文件名: ➡️ handover_guard.py 🏁
+路径: ➡️ engines/agents/workflow/handover_guard.py 🏁
+模块功能：➡️ 2. IncompleteHandoverGuard: 包装执行者，自述未完成时在原尝试内回灌“继续执行” 🏁
+Python 调试：➡️ python -m engines.agents.workflow.handover_guard 🏁
+时间：➡️ 2026-10-21 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Agent 能力模块 🏁
+简介说明：➡️
 1. handover_self_declares_incomplete: 判断执行者的 handover 是否自述未完成。
 2. IncompleteHandoverGuard: 包装执行者，自述未完成时在原尝试内回灌“继续执行”。
+🏁
+关联模块：➡️
+1. engines.agents.event_log: 导入 write_line
+🏁
+测试：➡️
+1. tests/graybox/unit/test_handover_guard.py: 交卷拦截：自述未完成的 handover 在同一尝试内被退回继续
+🏁
 """
 
 from __future__ import annotations

@@ -3,11 +3,12 @@ python -m 调试路径: backend.apps.knowledge_assistant.consumer
 
 本模块的业务功能如下：
 1. KnowledgeAssistantConsumer: 知识库助手唯一的 WebSocket 入口。
-2. connect(): 校验 JWT，接受连接并启动一次语音会话任务。
-3. receive(): 只处理 interrupt、played 与 Pipeline text 三类白名单消息。
+2. connect(): 校验 JWT，接受连接并启动一次 Omni 语音会话任务。
+3. receive(): 只处理 interrupt 与 played 两类白名单消息。
 4. disconnect(): 取消会话任务、关闭音频传输并释放模型会话。
 
-WS 路径：/ws/knowledge-assistant/?token=<access_token>&mode=<omni|pipeline>
+WS 路径：/ws/knowledge-assistant/?token=<access_token>
+产品路径仅保留 omni + 知识库 RAG。
 """
 
 from __future__ import annotations
@@ -25,35 +26,12 @@ from channels.utils import await_many_dispatch
 
 from backend.apps.usage_ledger.api import record_voice_event
 from backend.shared.auth.jwt_auth import verify_token
-from engines.agents.realtime_vocie.config import (
-    PIPELINE_MODE,
-    load_config,
-    select_mode,
-)
-from engines.agents.realtime_vocie.pipeline import PipelineVoiceSession
-from engines.agents.realtime_vocie.session import RealtimeVoiceSession
+from engines.agents.realtime_vocie.config import load_config
 from engines.agents.realtime_vocie.transport import WebSocketAudioTransport
 from utils.logs import backend_log
 
 from .runtime import session_log_dir
 from .transcript_log import DialogueLog
-
-
-def mode_from_scope(scope: dict) -> str:
-    """
-    从 WebSocket 握手 query string 里取出路线（omni / pipeline）。
-
-    Args:
-        scope: Channels 连接作用域。
-
-    Returns:
-        路线字符串；未携带时返回空字符串，由后端配置决定。
-    """
-    raw = scope.get("query_string") or b""
-    if isinstance(raw, bytes):
-        raw = raw.decode("utf-8", errors="replace")
-    values = parse_qs(raw).get("mode") or [""]
-    return str(values[0]).strip()
 
 
 def token_from_scope(scope: dict) -> str:
@@ -98,9 +76,7 @@ class KnowledgeAssistantConsumer(AsyncWebsocketConsumer):
         """校验登录态、接受连接并启动会话任务。"""
         self._closed = False
         self._session_task: asyncio.Task | None = None
-        self._pipeline_session: PipelineVoiceSession | None = None
         self._user_id = ""
-        self._requested_mode = mode_from_scope(self.scope)
         self._session_id = uuid.uuid4().hex
         self._transport = WebSocketAudioTransport(self._send_json, self._send_bytes)
 
@@ -154,16 +130,6 @@ class KnowledgeAssistantConsumer(AsyncWebsocketConsumer):
         kind = payload.get("type")
         if kind == "interrupt":
             self._transport.push_interrupt()
-        elif kind == "text":
-            text = str(payload.get("text") or "").strip()
-            if not text:
-                return
-            if self._pipeline_session is None:
-                await self._send_json(
-                    {"type": "error", "message": "当前路线不支持文本输入"},
-                )
-                return
-            await self._pipeline_session.submit_text(text)
         elif kind == "played":
             self._transport.report_played(
                 str(payload.get("item_id") or ""),
@@ -174,13 +140,11 @@ class KnowledgeAssistantConsumer(AsyncWebsocketConsumer):
             backend_log.debug("知识库助手 WS 忽略消息类型: %s", kind)
 
     async def _run_session(self) -> None:
-        """读取配置并运行一次语音会话。"""
+        """读取配置并运行一次 Omni 语音会话。"""
         try:
             try:
                 config = load_config()
-                if self._requested_mode:
-                    config = select_mode(config, self._requested_mode)
-            except (RuntimeError, ValueError) as exc:
+            except RuntimeError as exc:
                 # 引擎配置错误（缺 Key/关闭/非法 VAD）直接给用户可读原因；
                 # 模型连接错误走下面的通用提示，避免把技术细节透给前端。
                 backend_log.warning("知识库助手配置不可用: %s", exc)
@@ -193,17 +157,14 @@ class KnowledgeAssistantConsumer(AsyncWebsocketConsumer):
                 self._user_id,
                 usage_sink=self._enqueue_usage,
             )
-            session_class = (
-                PipelineVoiceSession if config.mode == PIPELINE_MODE else RealtimeVoiceSession
-            )
-            session = session_class(
+            from engines.agents.realtime_vocie.session import RealtimeVoiceSession
+
+            session = RealtimeVoiceSession(
                 config,
                 self._transport,
                 self._send_json,
                 log,
             )
-            if isinstance(session, PipelineVoiceSession):
-                self._pipeline_session = session
             await session.run()
         except asyncio.CancelledError:
             raise
@@ -213,7 +174,6 @@ class KnowledgeAssistantConsumer(AsyncWebsocketConsumer):
                 {"type": "error", "message": "语音服务异常，请稍后重试"},
             )
         finally:
-            self._pipeline_session = None
             await self._send_json({"type": "closed"})
             await self._transport.close()
 

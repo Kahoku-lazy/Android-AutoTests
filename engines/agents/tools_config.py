@@ -1,4 +1,33 @@
-"""角色工具与技能选择。改下面的名字表即可。"""
+"""
+文件名: ➡️ tools_config.py 🏁
+路径: ➡️ engines/agents/tools_config.py 🏁
+模块功能：➡️ 角色工具与技能选择。改下面的名字表即可 🏁
+Python 调试：➡️ python -m engines.agents.tools_config 🏁
+时间：➡️ 2026-10-30 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Harness 配置模块 🏁
+简介说明：➡️
+1. ToolGroupSpec: 一个可开关工具组的标识、说明和成员
+2. select_tools: 按名字表取出 ToolSpec，顺序与名字表一致。未知名字直接报错
+3. resolve_skill_dirs: 把技能目录收成绝对路径。相对路径按仓库根目录解析，空字符串跳过
+4. build_executor_toolkit: 按组表组装一份新的执行角色工具包
+5. build_verifier_toolkit: 组装验收角色工具包：截图与日志检查常驻，不带设备操作
+6. build_case_authoring_toolkit: 组装规划/验收角色共用的空工具包：不操作设备，也不读写文件
+7. build_case_writer_toolkit: 组装写用例角色的工具包：只带计划模式四件套，不操作设备
+8. build_case_module_store_tools: 组装 GoalPipeline 模块存储工具：编写角色可写，验收角色只读
+9. register_skills: 把 skill 来源追加到工具包的指定组
+🏁
+关联模块：➡️
+1. 暂无本地 engines/utils 依赖
+🏁
+测试：➡️
+1. tests/engines/agents/test_ocr_tool.py: 引擎 OCR 工具：实现存在、只读、且不装配给任何角色
+2. tests/engines/agents/test_tool_img_b64.py: 单文件调试指令：python -m pytest tests/engines/agents/test_tool_img_b64.py -vv --tb=shor
+3. tests/graybox/unit/test_case_plan_tools.py: 计划模式工具：装配四件套，并验证它们读写同一份 AgentState
+🏁
+"""
 
 from __future__ import annotations
 

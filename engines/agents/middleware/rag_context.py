@@ -1,9 +1,23 @@
 """
-python -m 调试路径: engines.agents.middleware.rag_context
-
-本模块的业务功能如下：
+文件名: ➡️ rag_context.py 🏁
+路径: ➡️ engines/agents/middleware/rag_context.py 🏁
+模块功能：➡️ 2. build_rag_middleware: 按环境变量装配上述中间件，复用现有 rag 索引 🏁
+Python 调试：➡️ python -m engines.agents.middleware.rag_context 🏁
+时间：➡️ 2026-10-28 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Harness 配置模块 🏁
+简介说明：➡️
 1. RagContextMiddleware: 用上下文里最后一条用户消息检索本地知识库，把命中片段追加到系统提示词。
 2. build_rag_middleware: 按环境变量装配上述中间件，复用现有 rag 索引。
+🏁
+关联模块：➡️
+1. utils.logs: 导入 agent_event_log
+🏁
+测试：➡️
+1. tests/graybox/unit/test_agent_middleware_assembly.py: 中间件装配：默认集合、顺序、各能力开关与单项失败隔离
+🏁
 """
 
 from __future__ import annotations

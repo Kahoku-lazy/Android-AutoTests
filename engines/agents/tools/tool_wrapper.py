@@ -1,4 +1,24 @@
-"""AgentScope 工具包装层 — 把 TaskRequest.tools 的 ToolSpec 包装成 AgentScope FunctionTool。"""
+"""
+文件名: ➡️ tool_wrapper.py 🏁
+路径: ➡️ engines/agents/tools/tool_wrapper.py 🏁
+模块功能：➡️ AgentScope 工具包装层 — 把 TaskRequest.tools 的 ToolSpec 包装成 AgentS 🏁
+Python 调试：➡️ python -m engines.agents.tools.tool_wrapper 🏁
+时间：➡️ 2026-10-30 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ 工具模块 🏁
+简介说明：➡️
+1. PlatformFunctionTool: 平台工具：构造时绑定 user_id，只读/自动放行，其余写操作 ASK
+2. build_toolkit: 把常驻工具包装成 Toolkit，可开关组另挂
+🏁
+关联模块：➡️
+1. utils.logs: 导入 agent_event_log
+🏁
+测试：➡️
+1. 暂无专门单测
+🏁
+"""
 
 from __future__ import annotations
 

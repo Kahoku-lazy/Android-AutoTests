@@ -1,14 +1,25 @@
 """
-python -m 调试路径: engines.agents.realtime_vocie.transport
-
-本模块的业务功能如下：
+文件名: ➡️ transport.py 🏁
+路径: ➡️ engines/agents/realtime_vocie/transport.py 🏁
+模块功能：➡️ 音频只做透传，不重采样；采样率由模型卡决定，前端按 ready 事件里的 🏁
+Python 调试：➡️ python -m engines.agents.realtime_vocie.transport 🏁
+时间：➡️ 2026-10-28 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Agent 能力模块 🏁
+简介说明：➡️
 1. WebSocketAudioTransport: TransportBase 的浏览器实现。
-   - incoming(): 把浏览器二进制音频与控制帧交给 RealtimeAgent。
-   - send_audio(): 把模型音频按二进制帧下发，并在条目变化时先发 audio_item。
-   - clear_audio() / playout(): 用浏览器回报的播放进度截断被打断的回复。
-
-音频只做透传，不重采样；采样率由模型卡决定，前端按 ready 事件里的
-采样率采集与播放。
+- incoming(): 把浏览器二进制音频与控制帧交给 RealtimeAgent。
+- send_audio(): 把模型音频按二进制帧下发，并在条目变化时先发 audio_item。
+- clear_audio() / playout(): 用浏览器回报的播放进度截断被打断的回复。
+🏁
+关联模块：➡️
+1. 暂无本地 engines/utils 依赖
+🏁
+测试：➡️
+1. tests/graybox/unit/test_knowledge_assistant_transport.py: 知识库助手浏览器音频传输单测：不启服务、不用声卡
+🏁
 """
 
 from __future__ import annotations

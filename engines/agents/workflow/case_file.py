@@ -1,9 +1,23 @@
 """
-python -m 调试路径: engines.agents.workflow.case_file
-
-本模块的业务功能如下：
+文件名: ➡️ case_file.py 🏁
+路径: ➡️ engines/agents/workflow/case_file.py 🏁
+模块功能：➡️ 2. load_manual_cases: 手工入口读取用例，缺少 agent 时按 sop 🏁
+Python 调试：➡️ python -m engines.agents.workflow.case_file 🏁
+时间：➡️ 2026-10-28 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Agent 能力模块 🏁
+简介说明：➡️
 1. validate_platform_yaml: 平台提交与执行前检查 YAML，要求唯一智能体 sop。
 2. load_manual_cases: 手工入口读取用例，缺少 agent 时按 sop。
+🏁
+关联模块：➡️
+1. 暂无本地 engines/utils 依赖
+🏁
+测试：➡️
+1. 暂无专门单测
+🏁
 """
 
 from __future__ import annotations

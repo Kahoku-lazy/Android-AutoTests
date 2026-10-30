@@ -1,10 +1,27 @@
 """
-python -m 调试路径: engines.agents.workflow.case_goal_workflow
-
-本模块的业务功能如下：
+文件名: ➡️ case_goal_workflow.py 🏁
+路径: ➡️ engines/agents/workflow/case_goal_workflow.py 🏁
+模块功能：➡️ 2. run_goal_module: 用 GoalPipeline 跑单模块，编写角色把全文存入 ModuleStor 🏁
+Python 调试：➡️ python -m engines.agents.workflow.case_goal_workflow 🏁
+时间：➡️ 2026-10-30 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Agent 能力模块 🏁
+简介说明：➡️
 1. GoalModuleResult: 一个模块经 GoalPipeline 编写/验收后的结果。
 2. run_goal_module: 用 GoalPipeline 跑单模块，编写角色把全文存入 ModuleStore，
-   验收角色从存储读取文档并给出 result/message；外层按驳回意见重跑。
+🏁
+关联模块：➡️
+1. engines.agents.agent_builders: 导入 build_case_verifier_goal, build_case_writer_goal
+2. engines.agents.tools.tool_case_module_store: 导入 ModuleStore
+3. engines.agents.tools_config: 导入 build_case_module_store_tools
+4. engines.agents.workflow.case_document_check: 导入 check_and_fix_document
+5. engines.agents.workflow.ui_auto_workflow: 导入 show_event
+🏁
+测试：➡️
+1. tests/graybox/unit/test_case_goal_workflow.py: GoalPipeline 模块池：模块存储、单模块判定与截断兜底
+🏁
 """
 
 from __future__ import annotations
@@ -14,7 +31,7 @@ from dataclasses import dataclass
 from agentscope.message import Msg, UserMsg
 from agentscope.pipeline import GoalPipeline
 
-from engines.agents.role.case_roles import build_case_verifier_goal, build_case_writer_goal
+from engines.agents.agent_builders import build_case_verifier_goal, build_case_writer_goal
 from engines.agents.tools.tool_case_module_store import ModuleStore
 from engines.agents.tools_config import build_case_module_store_tools
 from engines.agents.workflow.case_document_check import check_and_fix_document
@@ -101,23 +118,23 @@ async def run_goal_module(
     for _round in range(CASE_GOAL_MAX_ITERS):
         writer = build_case_writer_goal()
         verifier = build_case_verifier_goal()
-        await writer.agent.toolkit.add_tool(build_case_module_store_tools(store, module_key))
-        await verifier.agent.toolkit.add_tool(
+        await writer.toolkit.add_tool(build_case_module_store_tools(store, module_key))
+        await verifier.toolkit.add_tool(
             build_case_module_store_tools(store, module_key, read_only=True)
         )
 
         captured: list[dict] = []
-        _capture_verdict(verifier.agent, captured)
+        _capture_verdict(verifier, captured)
         pipeline = GoalPipeline(
-            executor=writer.agent,
-            verifier=verifier.agent,
+            executor=writer,
+            verifier=verifier,
             verifier_reset_context=True,
             max_iters=1,
             max_retries=CASE_GOAL_MAX_RETRIES,
         )
         models = {
-            writer.agent.name: writer.model.model,
-            verifier.agent.name: verifier.model.model,
+            writer.name: writer.model.model,
+            verifier.name: verifier.model.model,
         }
         buf: dict = {}
         async for event in pipeline.reply_stream(UserMsg(name="user", content=current_input)):
@@ -142,7 +159,7 @@ async def run_goal_module(
             break
         verdict = captured[-1] if captured else {"result": "fail", "message": ""}
         passed = verdict.get("result") == "pass" and not issues
-        verdicts.append((passed, str(verdict.get("message") or ""), verifier.agent.name))
+        verdicts.append((passed, str(verdict.get("message") or ""), verifier.name))
         deterministic = ""
         if issues:
             deterministic = "【确定性问题】" + "；".join(issues[:20])

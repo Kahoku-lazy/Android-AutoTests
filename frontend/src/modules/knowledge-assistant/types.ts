@@ -26,10 +26,6 @@ export interface KnowledgeAssistantStatus {
   model: string
   voice: string
   agent_name: string
-  translation_language: string
-  pipeline_llm_model?: string
-  pipeline_tts_model?: string
-  pipeline_tts_voice?: string
   log_dir: string
   log_file: string
 }
@@ -42,10 +38,10 @@ export interface ReadyEvent {
   voice: string
   turn_detection: string
   mode: string
-  translation_language: string
   input_sample_rate: number
   output_sample_rate: number
   log_path: string
+  rag_enabled?: boolean
 }
 
 export interface ReplyStartEvent {
@@ -122,6 +118,5 @@ export interface SessionInfo {
   model: string
   voice: string
   mode: string
-  translationLanguage: string
   logPath: string
 }

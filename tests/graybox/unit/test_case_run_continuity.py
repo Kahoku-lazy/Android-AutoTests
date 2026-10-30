@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from engines.agents.role.agents import EXECUTOR_MAX_ITERS, VERIFIER_MAX_ITERS
-from engines.agents.role.config import RoleSpecConfig
+from engines.agents.config.models import ui_executor_role_config, ui_verifier_role_config
+from engines.agents.agent_builders import ReActConfig
 from engines.agents.workflow.platform_run import run_platform_sop
 
 pytestmark = [pytest.mark.unit]
@@ -97,6 +97,6 @@ def test_cancel_keeps_earlier_failures(tmp_path):
 
 
 def test_executor_budget_is_double_the_default():
-    assert EXECUTOR_MAX_ITERS == 60
-    assert VERIFIER_MAX_ITERS == 30
-    assert RoleSpecConfig.__dataclass_fields__["max_iters"].default == 30
+    assert ui_executor_role_config()[4].max_iters == 60
+    assert ui_verifier_role_config()[4].max_iters == 30
+    assert ReActConfig.__dataclass_fields__["max_iters"].default == 30

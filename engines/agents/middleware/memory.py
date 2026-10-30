@@ -1,13 +1,22 @@
 """
-python -m 调试路径: engines.agents.middleware.memory
-
-本模块的业务功能如下：
+文件名: ➡️ memory.py 🏁
+路径: ➡️ engines/agents/middleware/memory.py 🏁
+模块功能：➡️ 接入点（TODO，另行立单）： 🏁
+Python 调试：➡️ python -m engines.agents.middleware.memory 🏁
+时间：➡️ 2026-10-28 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Harness 配置模块 🏁
+简介说明：➡️
 1. build_memory_middleware: 长期记忆的装配入口（当前只留入口，不实现）。
-
-接入点（TODO，另行立单）：
-- 记忆中间件应在 `on_reply` 前检索历史事实、在 `on_reply` 后写入本轮新增事实；
-- 存储位置建议 `data/agent_memory/`，与资料目录、索引目录分开；
-- 未实现前 MUST NOT 读取或写入任何外部存储，也 MUST NOT 引入新依赖。
+🏁
+关联模块：➡️
+1. utils.logs: 导入 agent_event_log
+🏁
+测试：➡️
+1. 暂无专门单测
+🏁
 """
 
 from __future__ import annotations

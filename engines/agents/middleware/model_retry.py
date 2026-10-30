@@ -1,11 +1,26 @@
 """
-python -m 调试路径: engines.agents.middleware.model_retry
-
-本模块的业务功能如下：
+文件名: ➡️ model_retry.py 🏁
+路径: ➡️ engines/agents/middleware/model_retry.py 🏁
+模块功能：➡️ 2. RetrySettings / load_retry_settings: 从环境变量读出重试与回退参数 🏁
+Python 调试：➡️ python -m engines.agents.middleware.model_retry 🏁
+时间：➡️ 2026-10-28 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Harness 配置模块 🏁
+简介说明：➡️
 1. is_transient_model_error: 判定一次模型调用失败是否值得重试。
 2. RetrySettings / load_retry_settings: 从环境变量读出重试与回退参数。
 3. ModelRetryMiddleware: 模型调用失败时按退避重试，用尽后切备用模型再试。
 4. build_model_retry_middleware: 按设置装配中间件，未启用时返回 None。
+🏁
+关联模块：➡️
+1. utils.logs: 导入 agent_event_log
+🏁
+测试：➡️
+1. tests/api/test_task_event_flow.py: 任务报告：按时间把事件折成开始 / 推理 / 执行 / 结束
+2. tests/graybox/unit/test_model_retry_middleware.py: 模型重试与回退中间件：分类判定、退避序列、回退、流式首块、环境变量解析
+🏁
 """
 
 from __future__ import annotations

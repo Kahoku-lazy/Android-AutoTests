@@ -1,8 +1,22 @@
 """
-python -m 调试路径: engines.agents.middleware.budget
-
-本模块的业务功能如下：
+文件名: ➡️ budget.py 🏁
+路径: ➡️ engines/agents/middleware/budget.py 🏁
+模块功能：➡️ 按环境变量装配单次回复的 token 预算中间件 🏁
+Python 调试：➡️ python -m engines.agents.middleware.budget 🏁
+时间：➡️ 2026-10-28 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Harness 配置模块 🏁
+简介说明：➡️
 1. build_budget_middleware: 按环境变量装配「单次回复 token 预算」中间件。
+🏁
+关联模块：➡️
+1. 暂无本地 engines/utils 依赖
+🏁
+测试：➡️
+1. 暂无专门单测
+🏁
 """
 
 from __future__ import annotations

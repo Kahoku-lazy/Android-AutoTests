@@ -1,8 +1,28 @@
 """
-python -m 调试路径: engines.agents.workflow.ui_auto_workflow
-
-本模块的业务功能如下：
+文件名: ➡️ ui_auto_workflow.py 🏁
+路径: ➡️ engines/agents/workflow/ui_auto_workflow.py 🏁
+模块功能：➡️ AgentSOPWorkflow 🏁
+Python 调试：➡️ python -m engines.agents.workflow.ui_auto_workflow 🏁
+时间：➡️ 2026-10-30 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Agent 能力模块 🏁
+简介说明：➡️
 1. AgentSOPWorkflow: 把一份 SOP 跑一次 UI 自动化, 事件与运行汇总都写入同一份事件日志。
+🏁
+关联模块：➡️
+1. engines.agents.agent_builders: 导入 build_executor, build_verifier
+2. engines.agents.event_log: 导入 write_line
+3. engines.agents.event_sink: 导入 set_step_context
+4. engines.agents.messaging.messages: 导入 AgentEventsShow
+5. utils.logs: 导入 agent_event_log
+🏁
+测试：➡️
+1. tests/api/test_task_event_store.py: 任务事件落库：事件、缩略图、小时用量和任务费用
+2. tests/engines/agents/test_agent_event_live.py: 真机跑一轮工作流，把模型事件写入 tests/reports/agent_events_live.csv
+3. tests/engines/agents/test_agents_workflow.py: 调试代码，功能不完善 ~ 禁止修改此文件代码
+🏁
 """
 
 import asyncio
@@ -16,7 +36,7 @@ from agentscope.sop import SOP, SOPEngine, SOPStep
 from engines.agents.event_log import write_line
 from engines.agents.event_sink import set_step_context
 from engines.agents.messaging.messages import AgentEventsShow
-from engines.agents.role.agents import build_executor, build_verifier
+from engines.agents.agent_builders import build_executor, build_verifier
 from utils.logs import agent_event_log
 
 
@@ -222,5 +242,5 @@ def run_workflow(yml_path: str, run_input: str, case_title: str | None = None) -
         if case_title and title != case_title:
             continue
 
-        workflow = AgentSOPWorkflow(build_executor().agent, build_verifier().agent)
+        workflow = AgentSOPWorkflow(build_executor(), build_verifier())
         asyncio.run(workflow.run_workflow(title, steps, run_input))

@@ -1,11 +1,23 @@
 """
-python -m 调试路径: engines.agents.rag.store
-
-本模块的业务功能如下：
+文件名: ➡️ store.py 🏁
+路径: ➡️ engines/agents/rag/store.py 🏁
+模块功能：➡️ 2. 支持 create/delete/has_collection、insert/delete、search/list 🏁
+Python 调试：➡️ python -m engines.agents.rag.store 🏁
+时间：➡️ 2026-10-28 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Harness 配置模块 🏁
+简介说明：➡️
 1. SQLiteVectorStore: AgentScope VectorStoreBase 的本地 SQLite 实现。
 2. 支持 create/delete/has_collection、insert/delete、search/list_documents。
-
-只用于小规模本地 RAG（当前 rag_data 为 Markdown 文档）；不依赖外部向量库。
+🏁
+关联模块：➡️
+1. 暂无本地 engines/utils 依赖
+🏁
+测试：➡️
+1. tests/graybox/unit/test_rag_store.py: RAG 本地向量库与上下文格式化单测：不联网、不依赖 rag_data
+🏁
 """
 
 from __future__ import annotations

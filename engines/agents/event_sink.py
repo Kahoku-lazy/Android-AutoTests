@@ -1,13 +1,34 @@
 """
-python -m 调试路径: engines.agents.event_sink
-
-本模块的业务功能如下：
+文件名: ➡️ event_sink.py 🏁
+路径: ➡️ engines/agents/event_sink.py 🏁
+模块功能：➡️ 2. bind_sink / current_sink: 绑定与取出当前接收方。默认实现丢弃记录，不写库 🏁
+Python 调试：➡️ python -m engines.agents.event_sink 🏁
+时间：➡️ 2026-10-28 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Agent 能力模块 🏁
+简介说明：➡️
 1. EventSink: 结构化事件的接收方协议。
 2. bind_sink / current_sink: 绑定与取出当前接收方。默认实现丢弃记录，不写库。
 3. flush_sink / emit_record: 让接收方写出事件；Django 已启动时改在工作线程里交记录。
 4. RunContext / bind_run_context: 一次运行盖在每条事件上的上下文，引擎不写库。
 5. set_case_title / set_step_context: 运行途中刷新当前用例名与当前步骤。
 6. count_model_call / budget_exceeded: 运行预算（模型调用次数与时长）的计数与判定。
+🏁
+关联模块：➡️
+1. 暂无本地 engines/utils 依赖
+🏁
+测试：➡️
+1. tests/api/test_task_event_flow.py: 任务报告：按时间把事件折成开始 / 推理 / 执行 / 结束
+2. tests/api/test_task_event_store.py: 任务事件落库：事件、缩略图、小时用量和任务费用
+3. tests/engines/agents/test_agent_event.py: 把一轮折叠结果按表字段写入 CSV，再读回断言字段与类型
+4. tests/engines/agents/test_agent_event_live.py: 真机跑一轮工作流，把模型事件写入 tests/reports/agent_events_live.csv
+5. tests/engines/agents/test_event_fold.py: 事件折叠：增量合并、工具逐条、角色继承、8 位费用与图片
+6. tests/graybox/unit/test_event_store_resilience.py: 事件落库的韧性：整批失败降级逐行、按字节分片、截图失败留痕
+7. tests/graybox/unit/test_model_retry_middleware.py: 模型重试与回退中间件：分类判定、退避序列、回退、流式首块、环境变量解析
+8. tests/graybox/unit/test_sop_event_stream.py: SOP 事件流的完整性：用例名刷新、步骤起点、超轮次提醒、运行预算
+🏁
 """
 
 from __future__ import annotations

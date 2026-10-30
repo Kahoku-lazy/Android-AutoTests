@@ -1,13 +1,22 @@
-"""DeepSeek 模型费用。只计算官方当前两个模型。
-
-价目：https://api-docs.deepseek.com/zh-cn/quick_start/pricing
-空闲时段单价（元 / 百万 tokens）；高峰时段 = 空闲 × 2。
-高峰：北京时间周一至周五 9:00–12:00、14:00–18:00，法定节假日全天除外。
-
+"""
+文件名: ➡️ billing.py 🏁
+路径: ➡️ engines/agents/messaging/billing.py 🏁
+模块功能：➡️ DeepSeek 模型费用。只计算官方当前两个模型 🏁
+Python 调试：➡️ python -m engines.agents.messaging.billing 🏁
+时间：➡️ 2026-10-26 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Agent 能力模块 🏁
+简介说明：➡️
 1. DeepSeekBilling: 只计算 deepseek-flash 与 deepseek-v4-pro 的费用。
-
-模型名取自 `engines.agents.config.models.DeepSeekModelConfig`；本模块只持有价目数值
-与「旧名按 Flash 计费」这一条官方口径。
+🏁
+关联模块：➡️
+1. engines.agents.config.models: 导入 DeepSeekModelConfig
+🏁
+测试：➡️
+1. tests/engines/agents/test_billing_eight_decimals.py: DeepSeek 费用保留小数点后 8 位
+🏁
 """
 
 from __future__ import annotations

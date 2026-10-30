@@ -1,7 +1,24 @@
-"""引擎侧 OCR 工具：读取当前页面文本与坐标（不装配给任何角色）。
-
-截图经 `engines.device.action.Screenshot`，识别经 `engines.vision.ocr`；
-本模块只被测试与人工调用，MUST NOT 进入任何角色的工具集。
+"""
+文件名: ➡️ tool_ocr.py 🏁
+路径: ➡️ engines/agents/tools/tool_ocr.py 🏁
+模块功能：➡️ 引擎侧 OCR 工具：读取当前页面文本与坐标（不装配给任何角色） 🏁
+Python 调试：➡️ python -m engines.agents.tools.tool_ocr 🏁
+时间：➡️ 2026-10-20 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ 工具模块 🏁
+简介说明：➡️
+1. build_ocr_tools: 按固定顺序产出 OCR 工具函数表
+2. ocr_tool_specs: 按工具函数表产出 `ToolSpec` 列表（只读；不装配给任何角色）
+🏁
+关联模块：➡️
+1. engines.device.action: 导入 Screenshot, System, open_device
+2. utils.logs: 导入 agent_event_log
+🏁
+测试：➡️
+1. tests/engines/agents/test_ocr_tool.py: 引擎 OCR 工具：实现存在、只读、且不装配给任何角色
+🏁
 """
 
 from __future__ import annotations

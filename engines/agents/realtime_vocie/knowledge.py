@@ -1,28 +1,34 @@
 """
-python -m 调试路径: engines.agents.realtime_vocie.knowledge
-
-本模块的业务功能如下：
-1. SYSTEM_PROMPT: 参考 realtime_voice_demo 的简短中文语音助手提示词。
-2. build_system_prompt(): 返回该提示词，供实时语音会话直接使用。
-
-这里不注入平台知识速览、固定答案或关键词匹配话术；助手回复完全由
-实时模型根据用户语音与通用对话提示生成。
+文件名: ➡️ knowledge.py 🏁
+路径: ➡️ engines/agents/realtime_vocie/knowledge.py 🏁
+模块功能：➡️ 语音助手系统提示词：实现已迁至 engines.agents.role_sys_prompts.VoiceKnowled 🏁
+Python 调试：➡️ python -m engines.agents.realtime_vocie.knowledge 🏁
+时间：➡️ 2026-10-30 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Agent 能力模块 🏁
+简介说明：➡️
+1. （模块无公开类/函数，见源码）
+🏁
+关联模块：➡️
+1. engines.agents.role_sys_prompts: 导入 SYSTEM_PROMPT, VoiceKnowledgePrompts, build_system_prompt
+🏁
+测试：➡️
+1. 暂无专门单测
+🏁
 """
 
 from __future__ import annotations
 
-from typing import Final
-
-SYSTEM_PROMPT: Final[str] = (
-    "你是一个中文语音助手，正在通过语音和用户直接对话。回答尽量简短、口语化，通常不超过三句话。"
+from engines.agents.role_sys_prompts import (
+    SYSTEM_PROMPT,
+    VoiceKnowledgePrompts,
+    build_system_prompt,
 )
 
-
-def build_system_prompt() -> str:
-    """
-    返回实时语音助手的直接对话系统提示词。
-
-    Returns:
-        简短中文语音助手提示词。
-    """
-    return SYSTEM_PROMPT
+__all__ = [
+    "SYSTEM_PROMPT",
+    "VoiceKnowledgePrompts",
+    "build_system_prompt",
+]

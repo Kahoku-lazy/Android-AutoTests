@@ -1,9 +1,23 @@
 """
-python -m 调试路径: engines.agents.middleware.tracing
-
-本模块的业务功能如下：
+文件名: ➡️ tracing.py 🏁
+路径: ➡️ engines/agents/middleware/tracing.py 🏁
+模块功能：➡️ 2. build_tracing_middleware: 配了端点才装配框架的 TracingMiddleware 🏁
+Python 调试：➡️ python -m engines.agents.middleware.tracing 🏁
+时间：➡️ 2026-10-28 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Harness 配置模块 🏁
+简介说明：➡️
 1. setup_tracing: 进程内注册一次 TracerProvider 与 OTLP/HTTP 导出器。
 2. build_tracing_middleware: 配了端点才装配框架的 TracingMiddleware。
+🏁
+关联模块：➡️
+1. utils.logs: 导入 agent_event_log
+🏁
+测试：➡️
+1. tests/graybox/unit/test_agent_middleware_assembly.py: 中间件装配：默认集合、顺序、各能力开关与单项失败隔离
+🏁
 """
 
 from __future__ import annotations

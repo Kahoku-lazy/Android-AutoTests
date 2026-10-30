@@ -375,44 +375,39 @@ def test_enabled_settings_build_middleware_with_fallback() -> None:
 # ── 角色装配 ──────────────────────────────────────────────
 
 
-def _build_role():
-    """用假密钥建一个最小角色，只在构造期验证装配，不发请求。"""
+def _build_agent():
+    """用假密钥建一个最小 Agent，只在构造期验证装配，不发请求。"""
     from agentscope.tool import Toolkit
 
-    from engines.agents.role.base import AgentRoleConfig, BaseRole
+    from engines.agents.agent_builders import AgentRoleFactory, RoleConfig, ToolsConfig
+    from engines.agents.config.models import ModelConfig
 
-    config, role = AgentRoleConfig(
-        provider="deepseek",
-        model_name="deepseek-flash",
-        base_url="https://api.deepseek.com/v1",
-        api_key="test-key",
-        name="probe_role",
-        system_prompt="probe",
-        toolkit=Toolkit(),
-        vision=False,
-    ).load_config()
-    return BaseRole(config, role)
+    return AgentRoleFactory(
+        ModelConfig(
+            provider="deepseek",
+            model_name="deepseek-flash",
+            base_url="https://api.deepseek.com/v1",
+            api_key="test-key",
+            vision=False,
+        ),
+        RoleConfig(name="probe_role", system_prompt="probe"),
+        tools=ToolsConfig(toolkit=Toolkit()),
+    ).create()
 
 
-def test_base_role_wires_middleware_when_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_agent_factory_wires_middleware_when_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_MODEL_RETRY_ATTEMPTS", "2")
     monkeypatch.setenv("AGENT_FALLBACK_MODEL", "deepseek-pro")
 
-    role = _build_role()
-    middlewares = role._middlewares()
-
-    assert [type(item).__name__ for item in middlewares] == [
-        "ReplyBudgetControlMiddleware",
-        "ModelRetryMiddleware",
-    ]
-    assert middlewares[-1].fallback_model.model == "deepseek-pro"
+    agent = _build_agent()
     # Agent 只把实现了 on_model_call 的中间件放进模型调用链，预算中间件不在其中
-    assert [type(item).__name__ for item in role.agent._model_call_middlewares] == [
+    assert [type(item).__name__ for item in agent._model_call_middlewares] == [
         "ModelRetryMiddleware"
     ]
+    assert agent._model_call_middlewares[0].fallback_model.model == "deepseek-pro"
 
 
-def test_base_role_skips_middleware_when_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_agent_factory_skips_middleware_when_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_MODEL_RETRY_ATTEMPTS", "1")
     monkeypatch.setenv("AGENT_REPLY_TOKEN_BUDGET", "0")
     monkeypatch.delenv("AGENT_FALLBACK_MODEL", raising=False)
@@ -420,7 +415,8 @@ def test_base_role_skips_middleware_when_disabled(monkeypatch: pytest.MonkeyPatc
     monkeypatch.delenv("AGENT_RAG_ENABLED", raising=False)
     monkeypatch.delenv("AGENT_TRACING_OTLP_ENDPOINT", raising=False)
 
-    assert _build_role()._middlewares() == []
+    agent = _build_agent()
+    assert agent._model_call_middlewares == []
 
 
 # ── 任务事件流 ────────────────────────────────────────────

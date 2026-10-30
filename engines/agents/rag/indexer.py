@@ -1,11 +1,23 @@
 """
-python -m 调试路径: engines.agents.rag.indexer
-
-本模块的业务功能如下：
+文件名: ➡️ indexer.py 🏁
+路径: ➡️ engines/agents/rag/indexer.py 🏁
+模块功能：➡️ 2. 按文件 mtime/size/切块策略版本做增量重建；未变化文件不重复嵌入 🏁
+Python 调试：➡️ python -m engines.agents.rag.indexer 🏁
+时间：➡️ 2026-10-29 🏁
+作者：➡️ kahoku 🏁
+版本：➡️ 1.0.0 🏁
+修改时间: ➡️ 2026-10-30 🏁
+类型: ➡️ Harness 配置模块 🏁
+简介说明：➡️
 1. RagIndexer: 扫描 rag_data 的 .md/.txt，解析、切块并写入 KnowledgeBase。
 2. 按文件 mtime/size/切块策略版本做增量重建；未变化文件不重复嵌入。
-
-本模块不读后端、不写数据库，只使用 AgentScope 的解析器/切块器和本地索引。
+🏁
+关联模块：➡️
+1. 暂无本地 engines/utils 依赖
+🏁
+测试：➡️
+1. 暂无专门单测
+🏁
 """
 
 from __future__ import annotations

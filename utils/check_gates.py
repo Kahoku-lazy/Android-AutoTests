@@ -462,6 +462,14 @@ def build_gates() -> list[Gate]:
         inline_style_gate(),
         # 本次新增（不在 CI 内联项中）
         silent_except_gate(),
+        # engines 风格检查（告警项：先看效果，暂不阻塞；正文 .agents/rules/engines-code-style.md，流程 engines/AGENTS.md）
+        cmd_gate(
+            "engines-agents-style",
+            "engines 风格（docstring / Raises / tool 命名；见 engines-code-style.md）",
+            [py, "-m", "scripts.check_engines_agents_style"],
+            blocking=False,
+            cwd=ROOT / ".agents" / "skills" / "engines-agents-style-check",
+        ),
     ]
 
 

@@ -1,0 +1,33 @@
+# ── 换行统一为 LF ────────────────────────────────────────────────
+# 为什么：Windows 工作区若把文本检出成 CRLF，prettier --check 与 ruff format
+# 会报「格式不符」，而 CI（Linux/LF）却是绿的 —— 这类假失败会反复消耗排查时间。
+# 这里用 text=auto 让 Git 自动识别文本，并在检出时统一写 LF。
+* text=auto eol=lf
+
+# ── 二进制：禁止任何换行转换 ──────────────────────────────────────
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.bmp binary
+*.pdf binary
+*.zip binary
+*.7z binary
+*.gz binary
+*.xlsx binary
+*.xls binary
+*.docx binary
+*.pptx binary
+*.sqlite3 binary
+*.db binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.mp3 binary
+*.wav binary
+*.webm binary
+*.mp4 binary
+*.pyc binary

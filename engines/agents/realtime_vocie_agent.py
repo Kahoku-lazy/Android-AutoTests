@@ -40,6 +40,7 @@ try:
 
     load_dotenv(_REPO_ROOT / ".env")
 except ImportError:
+    # python-dotenv 是可选依赖：未安装时跳过 .env 加载，改由调用方自行 export 环境变量
     pass
 
 

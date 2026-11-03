@@ -33,10 +33,10 @@ from agentscope.agent import Agent
 from agentscope.message import UserMsg
 from agentscope.sop import SOP, SOPEngine, SOPStep
 
+from engines.agents.agent_builders import build_executor, build_verifier
 from engines.agents.event_log import write_line
 from engines.agents.event_sink import set_step_context
 from engines.agents.messaging.messages import AgentEventsShow
-from engines.agents.agent_builders import build_executor, build_verifier
 from utils.logs import agent_event_log
 
 

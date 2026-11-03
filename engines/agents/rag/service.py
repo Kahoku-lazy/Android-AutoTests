@@ -27,14 +27,12 @@ from __future__ import annotations
 import asyncio
 
 from collections.abc import Callable, Mapping
-
 from dataclasses import dataclass
 
 from agentscope.rag import KnowledgeBase
 
-from utils.logs import agent_event_log
-
 from engines.agents.models import get_embedding_model
+from utils.logs import agent_event_log
 
 from .config import RagConfig, load_rag_config
 from .indexer import RagIndexer

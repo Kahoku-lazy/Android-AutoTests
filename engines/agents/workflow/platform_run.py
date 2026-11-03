@@ -36,6 +36,7 @@ import threading
 from collections.abc import Callable
 from pathlib import Path
 
+from engines.agents.agent_builders import build_executor, build_verifier
 from engines.agents.event_log import write_line
 from engines.agents.event_sink import (
     MAX_MODEL_CALLS,
@@ -44,7 +45,6 @@ from engines.agents.event_sink import (
     set_case_title,
     set_step_context,
 )
-from engines.agents.agent_builders import build_executor, build_verifier
 from engines.agents.workflow.case_file import LOAD_FAIL, LOAD_OK, validate_platform_yaml
 from engines.agents.workflow.handover_guard import IncompleteHandoverGuard
 from engines.agents.workflow.ui_auto_workflow import AgentSOPWorkflow

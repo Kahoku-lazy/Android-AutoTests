@@ -43,9 +43,9 @@ from agentscope.agent import Agent
 from agentscope.message import UserMsg
 from agentscope.sop import SOP, SOPEngine, SOPStep, SOPStepRunState
 
+from engines.agents.agent_builders import build_case_verifier, build_case_writer
 from engines.agents.event_log import write_line
 from engines.agents.event_sink import set_case_title
-from engines.agents.agent_builders import build_case_verifier, build_case_writer
 from engines.agents.tools.tool_case_module_store import ModuleStore
 from engines.agents.workflow.case_goal_workflow import run_goal_module
 from engines.agents.workflow.case_module_plan import (

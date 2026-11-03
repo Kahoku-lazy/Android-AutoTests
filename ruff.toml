@@ -17,6 +17,8 @@ exclude = [
     # 供应商产物，不适用本项目 lint 规范，改了会在下次 skill 更新时丢失
     ".agents/skills/skill-creator/**",
     "engines/agents/skills/**/skill-creator/**",
+    # 同上：skill-creator 已随 skills 数据迁到 config/data/skills 下
+    "engines/agents/config/data/skills/**/skill-creator/**",
 ]
 
 # ── Formatter ──────────────────────────────────────────
@@ -65,6 +67,10 @@ section-order = ["future", "standard-library", "third-party", "first-party", "lo
 "utils/{check_gates,gen_arch_stats,check_openapi_coverage,live_screen}.py" = ["T201"]
 # ─ engines AGENTS style checker (skill scripts CLI): allow print()
 ".agents/skills/engines-agents-style-check/scripts/check_engines_agents_style.py" = ["T201"]
+# ─ engines docstring 读写 CLI（同一类技能脚本）: allow print()
+".agents/skills/engines-docstring-check/scripts/*.py" = ["T201"]
+# ─ Omni 本地 S2S 演示入口（run_local_s2s / main）: 用 print 输出，属 CLI 而非库代码
+"engines/agents/realtime_vocie_agent.py" = ["T201"]
 # ─ tests/: 放宽限制
 "tests/**/*.py" = ["T201"]
 # ─ __init__.py: 允许未使用 import (re-export)

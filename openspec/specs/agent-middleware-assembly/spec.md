@@ -6,19 +6,28 @@ TBD - created by archiving change add-agent-middleware-suite. Update Purpose aft
 ## Requirements
 
 ### Requirement: 中间件统一装配入口
-引擎 SHALL 通过单一入口为每个角色装配中间件，并按固定顺序挂载：链路追踪在最外层，其后依次为回复预算、RAG 上下文、语音合成，模型重试与回退在最内层。每个能力 MUST 由独立开关控制；开关未开启时 MUST NOT 出现在装配结果里。装配入口 MUST NOT 抛错阻断角色创建：某个能力配置非法时 MUST 记一条警告并跳过该能力。
+
+引擎 SHALL 通过单一入口为每个角色装配中间件，并按固定顺序挂载：链路追踪在最外层，其后依次为 RAG 上下文、语音合成，模型重试与回退在最内层。每个能力 MUST 由独立开关控制；开关未开启时 MUST NOT 出现在装配结果里。装配入口 MUST NOT 抛错阻断角色创建：某个能力配置非法时 MUST 记一条警告并跳过该能力。装配结果里 MUST NOT 包含按 token 量禁用工具或注入收尾提示的中间件；角色单次答复的收敛 MUST 只由轮次上限决定。
 
 #### Scenario: 默认只装重试
+
 - **WHEN** 只保留默认环境变量创建角色
 - **THEN** 装配结果里只有模型重试中间件，没有追踪、RAG、语音与记忆
 
 #### Scenario: 顺序固定
-- **WHEN** 同时开启追踪、预算、RAG、语音与重试
-- **THEN** 装配顺序为「追踪 → 预算 → RAG → 语音 → 重试」
+
+- **WHEN** 同时开启追踪、RAG、语音与重试
+- **THEN** 装配顺序为「追踪 → RAG → 语音 → 重试」
 
 #### Scenario: 单项配置非法不影响创建
-- **WHEN** 某个能力的配置无法解析（例如预算写成非数字）
+
+- **WHEN** 某个能力的配置无法解析（例如语音开关写成非数字）
 - **THEN** 角色照常创建，被跳过的那项留下一条警告
+
+#### Scenario: 不再装配 token 预算
+
+- **WHEN** 环境里仍残留旧的 token 预算变量（`AGENT_REPLY_TOKEN_BUDGET` 等）并创建角色
+- **THEN** 装配结果里没有任何按 token 量干预工具选择的中间件，该变量不产生影响
 
 ### Requirement: 链路追踪按端点启用
 配置了 OTLP 端点时，引擎 SHALL 在进程内注册一次 `TracerProvider` 并装配 `TracingMiddleware`，把一次回复、每次模型调用、每次工具执行记成三层 span。未配置端点、或缺少 OpenTelemetry 依赖时 MUST NOT 装配，且 MUST NOT 影响回复流程。
@@ -30,21 +39,6 @@ TBD - created by archiving change add-agent-middleware-suite. Update Purpose aft
 #### Scenario: 未配置端点
 - **WHEN** 没有设置端点
 - **THEN** 不装配追踪中间件，也不注册 `TracerProvider`
-
-### Requirement: 单次回复的 token 预算
-引擎 SHALL 对每次回复累计所有 reasoning 步骤的加权 token 消耗（输入权重 × 输入 + 输出权重 × 输出），达到上限时向上下文注入收尾提示并把工具选择强制为「不调用工具」。预算 MUST 可按环境变量配置，配成 0 时 MUST 关闭该护栏。该预算 MUST 按回复重置，MUST NOT 跨回复累计。
-
-#### Scenario: 超出预算后收尾
-- **WHEN** 单次回复累计加权 token 达到上限
-- **THEN** 下一次推理收到收尾提示，且被禁止继续调用工具
-
-#### Scenario: 预算为 0
-- **WHEN** 预算配置为 0
-- **THEN** 不装配预算中间件，回复不受该护栏限制
-
-#### Scenario: 下一条回复重新计数
-- **WHEN** 上一条回复已超出预算，随后开始新回复
-- **THEN** 新回复从 0 开始计数
 
 ### Requirement: RAG 以中间件注入检索上下文
 RAG 中间件 MUST 默认不装配：只有调用方显式声明该角色属于知识类或语音类、并且全局开关（`AGENT_RAG_ENABLED`）打开、索引可用时，才装配。装配后，引擎 SHALL 在组装系统提示词时，用上下文里最后一条用户消息检索本地知识库，并把命中的片段按固定标题追加到系统提示词末尾。同一条用户消息 MUST 只检索一次（其结果在后续推理步骤复用）。检索未启用、索引失败或无命中时 MUST 原样返回系统提示词，MUST NOT 中断本轮回复。设备控制类角色 MUST NOT 装配该中间件。

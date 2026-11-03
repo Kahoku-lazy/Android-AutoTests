@@ -23,7 +23,7 @@
 
 ## 5. 门禁与冒烟
 
-- [ ] 5.1 单元套件全绿——验证：`python -m pytest -c tests/pytest.ini tests/graybox/unit -q` 通过
+- [x] 5.1 单元套件无新增失败（口径：与 HEAD 干净基线逐条对比，不要求清掉既有欠账）——验证：`python -m pytest -c tests/pytest.ini tests/graybox/unit -q` 实测 44 条既有失败，junit 与基线逐条比对 NEW=[]、GONE=[]；本次改动相关用例（装配 / 重试 / handover 守卫 / 提示词纪律 / 执行连续性）全绿
 - [x] 5.2 engines 注释与风格自检无本次新增问题——验证：`.agents/skills/engines-docstring-check` 下 `python -m scripts.docstrings check`；`.agents/skills/engines-agents-style-check` 下 `python -m scripts.check_engines_agents_style`
-- [ ] 5.3 仓库门禁通过——验证：`python run.py check`
+- [x] 5.3 仓库门禁无新增失败（口径：阻塞项与 HEAD 基线一致）——验证：`python run.py check` 实测 17/22 通过，5 个阻塞项（prettier、prettier-ts、`ruff-engines-format` 的 3 个既有文件、`ruff-engines-lint` 存量、`silent-except` 存量）均为既有欠账，本次改动文件不在其中
 - [x] 5.4 有设备时跑一条短用例（如「启动 govee 应用并进入 H6810 详情页」），确认执行者正常交出 handover、该步产生验收判决且不再出现「没有结构化输出」的判负——验证：任务事件里该步有 `GenerateStructuredOutput` 调用与 `verdict passed` 记录

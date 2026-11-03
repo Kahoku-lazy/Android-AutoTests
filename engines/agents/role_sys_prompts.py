@@ -32,9 +32,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Final
 
-_PROMPTS_DIR: Final[Path] = (
-    Path(__file__).resolve().parent / "config" / "data" / "prompts"
-)
+_PROMPTS_DIR: Final[Path] = Path(__file__).resolve().parent / "config" / "data" / "prompts"
 
 
 def load_prompt_md(token: str) -> str:
@@ -137,8 +135,7 @@ class VoiceKnowledgePrompts:
     """知识库 Omni 语音助手系统提示词。"""
 
     SYSTEM_PROMPT: Final[str] = (
-        "你是一个中文语音助手，正在通过语音和用户直接对话。"
-        "回答尽量简短、口语化，通常不超过三句话。"
+        "你是一个中文语音助手，正在通过语音和用户直接对话。回答尽量简短、口语化，通常不超过三句话。"
     )
 
     @classmethod
@@ -170,9 +167,7 @@ def _deepseek_models() -> dict[str, bool]:
     from .config.models import TEXT_MODELS
 
     return {
-        cfg.model_name: cfg.multimodal
-        for cfg in TEXT_MODELS.values()
-        if cfg.provider == "deepseek"
+        cfg.model_name: cfg.multimodal for cfg in TEXT_MODELS.values() if cfg.provider == "deepseek"
     }
 
 

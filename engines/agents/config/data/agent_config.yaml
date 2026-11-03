@@ -1,0 +1,183 @@
+# UI 控制执行角色（设备操作）
+UI_EXECUTOR_ROLE_CONFIG:
+  ModelConfig:
+    api_key: DEEPSEEK_API_KEY
+    base_url: https://api.deepseek.com/v1
+    provider: deepseek
+    model_name: deepseek-flash
+    vision: true
+    stream: false
+
+  RoleConfig:
+    name: ui_executor_role
+    system_prompt: UI_EXECUTOR_PROMPT
+
+  ToolsConfig:
+
+  ContextConfig:
+    trigger_ratio: 0.7
+    reserve_ratio: 0.2
+    tool_result_limit: 400000
+    max_image_num: 5
+
+  ReActConfig:
+    max_iters: 60
+    structured_output_grace_iters: 5
+    stop_on_reject: true
+
+
+# UI 控制验收角色
+UI_VERIFIER_ROLE_CONFIG:
+  ModelConfig:
+    api_key: DEEPSEEK_API_KEY
+    base_url: https://api.deepseek.com/v1
+    provider: deepseek
+    model_name: deepseek-flash
+    vision: true
+    stream: false
+
+  RoleConfig:
+    name: ui_verifier_role
+    system_prompt: UI_VERIFIER_PROMPT
+
+  ToolsConfig:
+
+  ContextConfig:
+
+  ReActConfig:
+    max_iters: 30
+    structured_output_grace_iters: 5
+    stop_on_reject: true
+
+
+# 用例编写执行角色
+CASE_WRITER_ROLE_CONFIG:
+  ModelConfig:
+    api_key: DEEPSEEK_API_KEY
+    base_url: https://api.deepseek.com/v1
+    provider: deepseek
+    model_name: deepseek-flash
+    vision: false
+    stream: true
+
+  RoleConfig:
+    name: case_writer_role
+    system_prompt: CASE_WRITER_PROMPT
+
+  ToolsConfig:
+
+  ContextConfig:
+
+  ReActConfig:
+    max_iters: 20
+    structured_output_grace_iters: 5
+    stop_on_reject: true
+
+
+# 用例编写验收角色
+CASE_VERIFIER_ROLE_CONFIG:
+  ModelConfig:
+    api_key: DEEPSEEK_API_KEY
+    base_url: https://api.deepseek.com/v1
+    provider: deepseek
+    model_name: deepseek-flash
+    vision: false
+    stream: true
+
+  RoleConfig:
+    name: case_verifier_role
+    system_prompt: CASE_VERIFIER_PROMPT
+
+  ToolsConfig:
+
+  ContextConfig:
+
+  ReActConfig:
+    max_iters: 4
+    structured_output_grace_iters: 5
+    stop_on_reject: true
+
+
+# 用例模块规划角色
+CASE_PLANNER_ROLE_CONFIG:
+  ModelConfig:
+    api_key: DEEPSEEK_API_KEY
+    base_url: https://api.deepseek.com/v1
+    provider: deepseek
+    model_name: deepseek-flash
+    vision: false
+    stream: true
+
+  RoleConfig:
+    name: case_planner_role
+    system_prompt: CASE_MODULE_PLANNER_PROMPT
+
+  ToolsConfig:
+
+  ContextConfig:
+
+  ReActConfig:
+    max_iters: 2
+    structured_output_grace_iters: 5
+    stop_on_reject: true
+
+
+# 用例编写 Goal 变体
+CASE_WRITER_GOAL_ROLE_CONFIG:
+  ModelConfig:
+    api_key: DEEPSEEK_API_KEY
+    base_url: https://api.deepseek.com/v1
+    provider: deepseek
+    model_name: deepseek-flash
+    vision: false
+    stream: true
+
+  RoleConfig:
+    name: case_writer_role
+    system_prompt: CASE_WRITER_GOAL_PROMPT
+
+  ToolsConfig:
+
+  ContextConfig:
+
+  ReActConfig:
+    max_iters: 20
+    structured_output_grace_iters: 5
+    stop_on_reject: true
+
+
+CASE_VERIFIER_GOAL_ROLE_CONFIG:
+  ModelConfig:
+    api_key: DEEPSEEK_API_KEY
+    base_url: https://api.deepseek.com/v1
+    provider: deepseek
+    model_name: deepseek-flash
+    vision: false
+    stream: true
+
+  RoleConfig:
+    name: case_verifier_role
+    system_prompt: CASE_VERIFIER_GOAL_PROMPT
+
+  ToolsConfig:
+
+  ContextConfig:
+
+  ReActConfig:
+    max_iters: 4
+    structured_output_grace_iters: 5
+    stop_on_reject: true
+
+
+OMNI_ROLE_CONFIG:
+  ModelConfig:
+    provider: dashscope
+    model_name: qwen3.5-omni-plus-realtime
+    api_key: DASHSCOPE_API_KEY
+    base_url: ""
+    voice: Tina
+
+  RoleConfig:
+    name: realtime_vocie_agent
+    system_prompt: |
+      你是实时语音助手。用简洁自然的中文回答用户问题；不确定时如实说明。

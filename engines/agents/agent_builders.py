@@ -76,7 +76,6 @@ __all__ = [
 ]
 
 
-
 def _as_react_config(react: ReActConfig) -> AsReActConfig:
     """role 侧 ReActConfig → agentscope.ReActConfig。"""
     return AsReActConfig(

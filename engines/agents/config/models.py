@@ -29,6 +29,7 @@ Python 调试：➡️python -m engines.agents.config.models 🏁
 4. tests/engines/agents/test_agents.py: 经 ui_*_role_config 装配 Agent 连通性
 🏁
 """
+
 from __future__ import annotations
 
 import os
@@ -298,7 +299,6 @@ def _build_tools_config(raw: object, *, where: str):
 def load_role_config(
     config_key: str,
 ) -> tuple[ModelConfig, RoleConfig, ToolsConfig, ContextConfig, ReActConfig]:
-
     """从 agent_config.yaml 装一整包：ModelConfig + Role/Tools/Context/ReAct。
 
     RoleConfig / ToolsConfig / ContextConfig / ReActConfig：
@@ -347,22 +347,30 @@ def verifier_model() -> ChatModelFactory:
     return _build_chat_model_factory("UI_VERIFIER_ROLE_CONFIG")
 
 
-def ui_executor_role_config() -> tuple[ModelConfig, RoleConfig, ToolsConfig, ContextConfig, ReActConfig]:
+def ui_executor_role_config() -> tuple[
+    ModelConfig, RoleConfig, ToolsConfig, ContextConfig, ReActConfig
+]:
     """装 UI_EXECUTOR_ROLE_CONFIG（UI 控制执行）。"""
     return load_role_config("UI_EXECUTOR_ROLE_CONFIG")
 
 
-def ui_verifier_role_config() -> tuple[ModelConfig, RoleConfig, ToolsConfig, ContextConfig, ReActConfig]:
+def ui_verifier_role_config() -> tuple[
+    ModelConfig, RoleConfig, ToolsConfig, ContextConfig, ReActConfig
+]:
     """装 UI_VERIFIER_ROLE_CONFIG（UI 控制验收）。"""
     return load_role_config("UI_VERIFIER_ROLE_CONFIG")
 
 
-def case_writer_role_config() -> tuple[ModelConfig, RoleConfig, ToolsConfig, ContextConfig, ReActConfig]:
+def case_writer_role_config() -> tuple[
+    ModelConfig, RoleConfig, ToolsConfig, ContextConfig, ReActConfig
+]:
     """装 CASE_WRITER_ROLE_CONFIG（用例编写执行）。"""
     return load_role_config("CASE_WRITER_ROLE_CONFIG")
 
 
-def case_verifier_role_config() -> tuple[ModelConfig, RoleConfig, ToolsConfig, ContextConfig, ReActConfig]:
+def case_verifier_role_config() -> tuple[
+    ModelConfig, RoleConfig, ToolsConfig, ContextConfig, ReActConfig
+]:
     """装 CASE_VERIFIER_ROLE_CONFIG（用例编写验收）。"""
     return load_role_config("CASE_VERIFIER_ROLE_CONFIG")
 
@@ -405,8 +413,7 @@ def _import_dashscope_realtime():
         from agentscope.realtime import DashScopeRealtimeModel
     except ImportError as exc:
         raise RuntimeError(
-            "创建实时语音模型需要 agentscope realtime 额外依赖："
-            'pip install "agentscope[realtime]"'
+            '创建实时语音模型需要 agentscope realtime 额外依赖：pip install "agentscope[realtime]"'
         ) from exc
     return DashScopeRealtimeModel
 
@@ -434,7 +441,9 @@ def _build_realtime_model_config(section: dict, *, config_key: str) -> RealtimeM
     return RealtimeModelConfig(**fields_map)
 
 
-def load_omni_role_spec(config_key: str = "OMNI_ROLE_CONFIG") -> tuple[RealtimeModelConfig, RoleConfig]:
+def load_omni_role_spec(
+    config_key: str = "OMNI_ROLE_CONFIG",
+) -> tuple[RealtimeModelConfig, RoleConfig]:
     """从 agent_config.yaml 装 Omni 实时角色：RealtimeModelConfig + RoleConfig。"""
     section = load_agent_config(config_key) or {}
     if not isinstance(section, dict) or not section:
@@ -469,9 +478,7 @@ def omni_realtime_model(config: RealtimeModelConfig | None = None):
             raise ValueError("agent_config 缺少节 'OMNI_ROLE_CONFIG'")
         config = _build_realtime_model_config(section, config_key="OMNI_ROLE_CONFIG")
     if config.provider != "dashscope":
-        raise ValueError(
-            f"Omni 实时路径仅支持 provider=dashscope，收到: {config.provider!r}"
-        )
+        raise ValueError(f"Omni 实时路径仅支持 provider=dashscope，收到: {config.provider!r}")
     if config.base_url:
         credential = DashScopeCredential(api_key=config.api_key, base_url=config.base_url)
     else:
@@ -481,6 +488,7 @@ def omni_realtime_model(config: RealtimeModelConfig | None = None):
         credential=credential,
         parameters=DashScopeRealtimeModel.Parameters(voice=config.voice),
     )
+
 
 # ── 现成命名目录（可选 config.yaml；缺失时用与 agent_config 对齐的内置默认）──
 
@@ -674,11 +682,16 @@ def _builtin_catalog() -> tuple[
     return text, realtime, embedding
 
 
-def _load_catalog_from_yaml(path: Path) -> tuple[
-    dict[str, TextModelReady],
-    dict[str, RealtimeModelReady],
-    dict[str, EmbeddingModelReady],
-] | None:
+def _load_catalog_from_yaml(
+    path: Path,
+) -> (
+    tuple[
+        dict[str, TextModelReady],
+        dict[str, RealtimeModelReady],
+        dict[str, EmbeddingModelReady],
+    ]
+    | None
+):
     """若存在 config.yaml 则装载；失败或缺失返回 None。"""
     if not path.is_file():
         return None

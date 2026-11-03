@@ -8,7 +8,7 @@
 版本：➡️ 1.0.0 🏁
 修改时间：➡️ 2026-10-29 🏁
 类型: ➡️ 工具模块 🏁
-简介说明:➡️ 
+简介说明:➡️
 1. YAMLFileIO: YAML 文件读写
 2. IniFileIO: INI 文件读取（configparser）
 🏁
@@ -147,6 +147,3 @@ class IniFileIO:
         if not parser.has_section(section) or not parser.has_option(section, option):
             return fallback
         return parser.get(section, option)
-
-
-

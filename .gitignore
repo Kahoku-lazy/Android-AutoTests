@@ -39,7 +39,7 @@ data/screenshots/
 data/avatars/
 data/uploads/
 data/sop_*.json
-data
+/data
 
 # ── AgentScope Runtime ──
 data/agentscope_workspaces/

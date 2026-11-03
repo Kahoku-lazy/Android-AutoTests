@@ -19,6 +19,7 @@ Python 调试：➡️ python -m engines.agents.realtime_vocie_agent 🏁
 1. 暂无专门单测
 🏁
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -70,8 +71,7 @@ async def run_local_s2s() -> None:
         from agentscope.realtime import LocalAudioTransport
     except ImportError as exc:
         raise RuntimeError(
-            '本地音频传输需要 agentscope realtime 额外依赖：'
-            'pip install "agentscope[realtime]"'
+            '本地音频传输需要 agentscope realtime 额外依赖：pip install "agentscope[realtime]"'
         ) from exc
 
     agent, model = build_realtime_vocie_agent()

@@ -8,7 +8,6 @@ import pytest
 
 from engines.agents.middleware import (
     build_agent_middlewares,
-    build_budget_middleware,
     build_memory_middleware,
     build_rag_middleware,
     build_tracing_middleware,
@@ -22,9 +21,6 @@ pytestmark = [pytest.mark.unit]
 _ENV_NAMES = (
     "AGENT_MODEL_RETRY_ATTEMPTS",
     "AGENT_FALLBACK_MODEL",
-    "AGENT_REPLY_TOKEN_BUDGET",
-    "AGENT_REPLY_INPUT_WEIGHT",
-    "AGENT_REPLY_OUTPUT_WEIGHT",
     "AGENT_TRACING_OTLP_ENDPOINT",
     "AGENT_TRACING_SERVICE_NAME",
     "AGENT_RAG_ENABLED",
@@ -78,50 +74,22 @@ class _FakeRag:
 # ── 默认集合与顺序 ────────────────────────────────────────
 
 
-def test_defaults_are_budget_plus_retry() -> None:
-    assert _names(build_agent_middlewares()) == [
-        "ReplyBudgetControlMiddleware",
-        "ModelRetryMiddleware",
-    ]
+def test_defaults_are_retry_only() -> None:
+    names = _names(build_agent_middlewares())
 
-
-def test_budget_on_by_default() -> None:
-    middleware = build_budget_middleware()
-
-    assert middleware is not None
-    assert middleware.token_budget == 600_000
-    assert middleware.output_token_weight == 2.0
-
-
-def test_budget_zero_disables_it(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENT_REPLY_TOKEN_BUDGET", "0")
-
-    assert build_budget_middleware() is None
-
-
-def test_budget_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENT_REPLY_TOKEN_BUDGET", "1234")
-    monkeypatch.setenv("AGENT_REPLY_INPUT_WEIGHT", "1")
-    monkeypatch.setenv("AGENT_REPLY_OUTPUT_WEIGHT", "3")
-
-    middleware = build_budget_middleware()
-
-    assert middleware is not None
-    assert middleware.token_budget == 1234
-    assert middleware.input_token_weight == 1.0
-    assert middleware.output_token_weight == 3.0
+    assert names == ["ModelRetryMiddleware"]
+    assert not any("Budget" in name for name in names)
 
 
 def test_order_is_fixed(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TRACING_OTLP_ENDPOINT", "http://127.0.0.1:4318/v1/traces")
     monkeypatch.setenv("AGENT_TTS_MIDDLEWARE", "1")
     monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
-    monkeypatch.setenv("AGENT_REPLY_TOKEN_BUDGET", "1000")
 
     names = _names(build_agent_middlewares())
 
     assert names[0] == "TracingMiddleware"
-    assert names.index("ReplyBudgetControlMiddleware") < names.index("TTSMiddleware")
+    assert names.index("TracingMiddleware") < names.index("TTSMiddleware")
     assert names[-1] == "ModelRetryMiddleware"
 
 

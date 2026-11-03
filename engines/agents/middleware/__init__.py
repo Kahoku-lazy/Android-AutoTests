@@ -11,7 +11,7 @@ Python 调试：➡️ python -m engines.agents.middleware 🏁
 简介说明：➡️
 1. ModelRetryMiddleware: 模型调用的退避重试、备用模型回退与流式不重放。
 2. RagContextMiddleware: 复用本地索引，把检索片段追加到系统提示词。
-3. build_agent_middlewares: 按固定顺序装配追踪 / 预算 / RAG / 语音 / 记忆入口 / 重试。
+3. build_agent_middlewares: 按固定顺序装配追踪 / RAG / 语音 / 记忆入口 / 重试。
 🏁
 关联模块：➡️
 1. 暂无本地 engines/utils 依赖
@@ -23,7 +23,6 @@ Python 调试：➡️ python -m engines.agents.middleware 🏁
 """
 
 from .assembly import build_agent_middlewares
-from .budget import build_budget_middleware
 from .memory import build_memory_middleware
 from .model_retry import (
     ModelRetryMiddleware,
@@ -41,7 +40,6 @@ __all__ = [
     "RagContextMiddleware",
     "RetrySettings",
     "build_agent_middlewares",
-    "build_budget_middleware",
     "build_memory_middleware",
     "build_model_retry_middleware",
     "build_rag_middleware",

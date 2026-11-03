@@ -20,7 +20,7 @@ def test_executor_prompt_declares_submission_checks():
     """执行提示词六项硬约束齐全。"""
     clauses = [
         "逐条核对",
-        "在未达成时声称已完成",
+        "在未达成时声称达成",
         "先逐步执行上一条驳回说明",
         "必须原样使用该坐标",
         "手势完成后必须重新截图核对",
@@ -47,6 +47,22 @@ def test_executor_prompt_declares_log_check_belongs_to_verifier():
     assert "只有验收模型有该权限" in EXECUTOR_PROMPT
     assert "禁止**尝试检查、推测或声称检查过日志" in EXECUTOR_PROMPT
     assert "在 handover 里写日志结论" in EXECUTOR_PROMPT
+
+
+def test_executor_prompt_handover_is_two_blocks():
+    """handover 只写两块：操作步骤（含 action_time 原文）与最终结果。"""
+    assert "只需写两块" in EXECUTOR_PROMPT
+    assert "本步做了什么" in EXECUTOR_PROMPT
+    assert "最终结果：以「达成」或「未达成」开头" in EXECUTOR_PROMPT
+    assert "点击类工具返回原文" in EXECUTOR_PROMPT
+    assert "不要写过程分析、逐条证据、日志结论、阻塞说明或下一步建议" in EXECUTOR_PROMPT
+
+
+def test_executor_prompt_allows_honest_undone_result():
+    """如实写「未达成」是合法交卷口径，不再要求逐条证据与阻塞建议。"""
+    assert "结果写「未达成」" in EXECUTOR_PROMPT
+    assert "「未达成」时在同一句里写清卡在哪里" in EXECUTOR_PROMPT
+    assert "逐条写明哪一条没达成" not in EXECUTOR_PROMPT
 
 
 def test_executor_prompt_no_longer_allows_half_done_submission():

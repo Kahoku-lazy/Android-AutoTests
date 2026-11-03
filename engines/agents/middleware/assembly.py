@@ -10,6 +10,7 @@ Python 调试：➡️ python -m engines.agents.middleware.assembly 🏁
 类型: ➡️ Harness 配置模块 🏁
 简介说明：➡️
 1. build_agent_middlewares: 按固定顺序装配全部中间件，单项失败只跳过该项。
+2. 单步收敛只由 ReAct 轮次上限决定，装配链里不含任何按 token 量禁工具的护栏。
 🏁
 关联模块：➡️
 1. utils.logs: 导入 agent_event_log
@@ -28,7 +29,6 @@ from agentscope.model import ChatModelBase
 
 from utils.logs import agent_event_log
 
-from .budget import build_budget_middleware
 from .memory import build_memory_middleware
 from .model_retry import build_model_retry_middleware, load_retry_settings
 from .rag_context import build_rag_middleware
@@ -62,9 +62,14 @@ def build_agent_middlewares(
 ) -> list[MiddlewareBase]:
     """按固定顺序装配中间件：最外层在前。
 
-    顺序：链路追踪 → 回复预算 → RAG 上下文 → 语音合成 → 长期记忆入口 → 模型重试。
-    追踪放最外，才能把预算触发的收尾也算进同一棵 span；重试放最内，才能只重发
+    顺序：链路追踪 → RAG 上下文 → 语音合成 → 长期记忆入口 → 模型重试。
+    追踪放最外，才能把整次回复（含收尾）算进同一棵 span；重试放最内，才能只重发
     那一次模型调用、不重放已产出的事件。
+
+    单步收敛只由 ReAct 轮次上限决定（执行者 `max_iters=60`，另有 5 轮结构化
+    输出宽限）。这里 MUST NOT 再装配按 token 量把 `tool_choice` 改成 `none` 的
+    护栏：它与 SOP「必须用 GenerateStructuredOutput 交卷」互斥，会让模型把工具
+    调用写进正文并空转到轮次上限（见变更 executor-budget-and-handover-simplify）。
 
     RAG 默认不装配：`data/rag_index` 是产品资料，只有知识类／语音类角色才该带上，
     设备控制角色拿到这些片段只会被带偏。调用方要显式传 `with_rag=True`。
@@ -80,7 +85,6 @@ def build_agent_middlewares(
     """
     middlewares = [
         _safe(build_tracing_middleware, "链路追踪"),
-        _safe(build_budget_middleware, "回复预算"),
         _safe(build_rag_middleware, "RAG 上下文") if with_rag else None,
         _safe(build_tts_middleware, "语音合成") if with_tts else None,
         _safe(build_memory_middleware, "长期记忆"),

@@ -12,7 +12,8 @@
 | `config/role_types.py` | Harness 四分段类型（`RoleConfig`/`ToolsConfig`/`ContextConfig`/`ReActConfig`）；装载与装配单向依赖，拆环 |
 | `agent_builders.py` | **LLM agents**：`AgentRoleFactory` + `build_*`（再导出四分段类型，过渡期） |
 | `realtime_vocie_agent.py` | **Voice agents**：Omni 实时语音角色装配 |
-| `config/models.py` | 模型与角色 YAML 装载（`ModelConfig` / `ChatModelFactory` / `load_role_config` / Omni） |
+| `models/` | **模型唯一归属**：连接参数类型、命名目录、按 provider 造模型（聊天 / Omni / 嵌入 / 合成）、备用模型；包外只经包入口，细则见 [`models/AGENTS.md`](models/AGENTS.md) |
+| `config/role_loader.py` | 角色四分段 YAML 装载（`load_role_spec` → `RoleBundle`）；不碰模型连接参数 |
 | `config/data/agent_config.yaml` | 角色 ModelConfig + 四分段配置数据 |
 | `config/data/prompts/` | 角色系统提示词正文（`*.md`） |
 | `config/data/skills/` | 角色 skill |
@@ -34,15 +35,15 @@
 
 三节点边界（OpenSpec `simplify-basic-agent-role-create` / `agent-basic-role-create`）：
 
-1. **N1 ModelConfig**：YAML 校验 → `ChatModelFactory` → **仅把 `ChatModelBase` 交给 Agent**；`Agent` MUST NOT 接收/持有 `ModelConfig`。
+1. **N1 ModelConfig**：YAML 数据 → `engines.agents.models` 门面 → **仅把 `ChatModelBase` 交给 Agent**；`Agent` MUST NOT 接收/持有 `ModelConfig`，包外 MUST NOT 直接构造模型实例。
 2. **N2 Harness 1:1**：`RoleConfig`=name+system_prompt；`ToolsConfig`=toolkit（**skills 延后**）；`ContextConfig`；`ReActConfig`。类型定义在 `config/role_types.py`（非长期公共 API；`agent_builders` 过渡期再导出）。
 3. **N3 Agent vs workflow**：Agent 只提供已装配角色；workflow 编排消费 `build_*`；**本期不清理** workflow `tool_*` 旁路。
 
 步骤：
 
 1. **模型配置**  
-   - 在 `config/data/agent_config.yaml` 增加角色节（`ModelConfig` + 下方四分段）。  
-   - 由 `config/models.py` 的 `load_role_config` / `ChatModelFactory` / Omni 装载器读取；密钥只存环境变量名。
+   - 在 `config/data/agent_config.yaml` 增加角色节（`ModelConfig` + 下方四分段）；**数据只在 config/data**。  
+   - 运行时经 `engines.agents.models` 包入口取模型（`get_chat_model(角色键)` / `get_realtime_model(...)`）；密钥只存环境变量名，连接参数与工厂都在 `models/`。
 
 2. **系统提示词**  
    - 正文写入 `config/data/prompts/<TOKEN>.md`。  
@@ -55,7 +56,7 @@
    - `ContextConfig` / `ReActConfig`（可空，用默认）
 
 4. **创建运行实例**  
-   - **LLM**：`AgentRoleFactory(model_config, role, tools, context, react).create()` → `agentscope.agent.Agent`（内部只传 `model=` 实例）；对外暴露 `build_*() -> Agent`（每次新实例）。实现落点：`agent_builders.py`。  
+   - **LLM**：`AgentRoleFactory(model, role, tools, context, react).create()` → `agentscope.agent.Agent`（`model` 由 `engines.agents.models` 门面提供，Agent 内部只持有实例）；对外暴露 `build_*() -> Agent`（每次新实例）。实现落点：`agent_builders.py`。  
    - **Voice（Omni）**：`realtime_vocie_agent.build_realtime_vocie_agent()`；会话路径走 `realtime_vocie/`（含 RAG 工具注入）。
 
 5. **工具与技能**  

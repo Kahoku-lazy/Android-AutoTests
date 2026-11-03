@@ -13,7 +13,7 @@ Python 调试：➡️ python -m engines.agents.rag.config 🏁
 2. load_rag_config(): 从环境变量读取并做基本归一化。
 🏁
 关联模块：➡️
-1. engines.agents.config.models: 导入 get_embedding
+1. engines.agents.models: 导入 get_embedding，取嵌入模型默认名与维度
 🏁
 测试：➡️
 1. tests/graybox/unit/test_rag_store.py: RAG 本地向量库与上下文格式化单测：不联网、不依赖 rag_data
@@ -29,7 +29,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Final
 
-from engines.agents.config.models import get_embedding
+from engines.agents.models import get_embedding
 
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
 DEFAULT_DATA_DIR: Final[str] = r"D:\Govee\data\rag_data"

@@ -11,11 +11,11 @@ Python 调试：➡️ python -m engines.agents.role_sys_prompts 🏁
 简介说明：➡️
 1. load_prompt_md: 按 token 读取 config/data/prompts/{token}.md（UTF-8）
 2. resolve_system_prompt: 解析 RoleConfig.system_prompt：多行正文原样；短 token 读 md
-3. UiControlPrompts: UI 控制（设备操作）提示词：执行 / 验收
-4. CaseAuthoringPrompts: 用例编写提示词：规划 / 编写 / 验收（含 Goal 变体）
-5. VoiceKnowledgePrompts: 知识库 Omni 语音助手系统提示词
-6. build_system_prompt: 兼容 realtime_vocie.knowledge：返回语音助手系统提示词
-7. model_supports_image: 按 provider + 模型名是否支持图片输入
+3. load_app_info_md / with_app_info: 按 token 读 config/data/app_info/{token}.md，追加「被测应用短卡」
+4. UiControlPrompts: UI 控制（设备操作）提示词：执行 / 验收
+5. CaseAuthoringPrompts: 用例编写提示词：规划 / 编写 / 验收（含 Goal 变体）
+6. VoiceKnowledgePrompts: 知识库 Omni 语音助手系统提示词
+7. build_system_prompt: 兼容 realtime_vocie.knowledge：返回语音助手系统提示词
 🏁
 关联模块：➡️
 1. 暂无本地 engines/utils 依赖
@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import Final
 
 _PROMPTS_DIR: Final[Path] = Path(__file__).resolve().parent / "config" / "data" / "prompts"
+_APP_INFO_DIR: Final[Path] = Path(__file__).resolve().parent / "config" / "data" / "app_info"
 
 
 def load_prompt_md(token: str) -> str:
@@ -78,6 +79,52 @@ def resolve_system_prompt(raw: object, *, where: str = "system_prompt") -> str:
         ) from exc
 
 
+def load_app_info_md(token: str) -> str:
+    """按 token 读取 config/data/app_info/{token}.md（UTF-8）。
+
+    Args:
+        token: 无路径分隔符的文件名主干，如 govee_home。
+
+    Returns:
+        文件正文。
+
+    Raises:
+        ValueError: token 非法。
+        FileNotFoundError: 对应 md 不存在。
+    """
+    if not isinstance(token, str) or not token.strip():
+        raise ValueError("app_info token 缺失或为空")
+    text = token.strip()
+    if "/" in text or "\\" in text or "\n" in text:
+        raise ValueError(f"app_info token 非法: {text!r}")
+    name = text if text.endswith(".md") else f"{text}.md"
+    path = _APP_INFO_DIR / name
+    if not path.is_file():
+        raise FileNotFoundError(f"未找到应用短卡文件: {path}")
+    return path.read_text(encoding="utf-8")
+
+
+def with_app_info(system_prompt: str, app_info_token: object | None) -> str:
+    """若配置了 app_info token，在系统提示词末尾追加「被测应用短卡」正文。
+
+    Args:
+        system_prompt: 已解析的角色系统提示词正文。
+        app_info_token: YAML RoleConfig.app_info；None / 空则原样返回。
+
+    Returns:
+        原提示词，或追加短卡后的提示词。
+    """
+    if app_info_token is None:
+        return system_prompt
+    if not isinstance(app_info_token, str) or not app_info_token.strip():
+        return system_prompt
+    card = load_app_info_md(app_info_token).strip()
+    if not card:
+        return system_prompt
+    base = system_prompt.rstrip()
+    return f"{base}\n\n## 被测应用短卡\n{card}\n"
+
+
 # 每轮用户输入末尾追加的硬要求：系统提示词约束一次，逐轮再提醒一次。
 CHINESE_DEMAND = (
     "\n\n（硬性要求：本次的思考过程与回复必须使用中文；输出契约里的 JSON 字段名保持英文。）"
@@ -112,22 +159,27 @@ class CaseAuthoringPrompts:
 
     @classmethod
     def planner(cls) -> str:
+        """用例编写规划角色系统提示词。"""
         return load_prompt_md(cls.PLANNER_TOKEN)
 
     @classmethod
     def writer(cls) -> str:
+        """用例编写角色系统提示词。"""
         return load_prompt_md(cls.WRITER_TOKEN)
 
     @classmethod
     def writer_goal(cls) -> str:
+        """用例编写角色目标提示词。"""
         return load_prompt_md(cls.WRITER_GOAL_TOKEN)
 
     @classmethod
     def verifier(cls) -> str:
+        """用例验收角色系统提示词。"""
         return load_prompt_md(cls.VERIFIER_TOKEN)
 
     @classmethod
     def verifier_goal(cls) -> str:
+        """用例验收角色目标提示词。"""
         return load_prompt_md(cls.VERIFIER_GOAL_TOKEN)
 
 
@@ -162,63 +214,7 @@ VERIFIER_PROMPT = UiControlPrompts.verifier()
 
 
 # ── DeepSeek 模型目录（正式模型名 → 是否支持图片输入）──
-def _deepseek_models() -> dict[str, bool]:
-    """延迟加载，避免 import 时强制依赖 config.yaml。"""
-    from .config.models import TEXT_MODELS
-
-    return {
-        cfg.model_name: cfg.multimodal for cfg in TEXT_MODELS.values() if cfg.provider == "deepseek"
-    }
-
-
-class _DeepSeekModelsProxy(dict):
-    """兼容旧 DEEPSEEK_MODELS[model] 访问。"""
-
-    def _data(self) -> dict[str, bool]:
-        return _deepseek_models()
-
-    def __getitem__(self, key):
-        return self._data()[key]
-
-    def __contains__(self, key):
-        return key in self._data()
-
-    def get(self, key, default=None):
-        return self._data().get(key, default)
-
-    def keys(self):
-        return self._data().keys()
-
-    def values(self):
-        return self._data().values()
-
-    def items(self):
-        return self._data().items()
-
-    def __iter__(self):
-        return iter(self._data())
-
-    def __len__(self):
-        return len(self._data())
-
-
-DEEPSEEK_MODELS = _DeepSeekModelsProxy()
-
-
-def model_supports_image(provider: str, model_name: str) -> bool | None:
-    """按 provider + 模型名是否支持图片输入。
-
-    Args:
-        provider: 模型提供商（只认 deepseek）。
-        model_name: 模型名（只认 `DEEPSEEK_MODELS` 已登记的名字）。
-
-    Returns:
-        True / False 表示已登记模型的图片输入能力；非 deepseek 或未登记的模型名返回 None。
-    """
-    if str(provider or "").strip().lower() != "deepseek":
-        return None
-    name = str(model_name or "").strip().lower()
-    return DEEPSEEK_MODELS.get(name)
+# 已迁至 engines.agents.models.catalog：提示词模块只负责提示词，不再持有模型元数据。
 
 
 __all__ = [
@@ -229,14 +225,14 @@ __all__ = [
     "CASE_WRITER_PROMPT",
     "CHINESE_DEMAND",
     "CaseAuthoringPrompts",
-    "DEEPSEEK_MODELS",
     "EXECUTOR_PROMPT",
     "SYSTEM_PROMPT",
     "UiControlPrompts",
     "VERIFIER_PROMPT",
     "VoiceKnowledgePrompts",
     "build_system_prompt",
+    "load_app_info_md",
     "load_prompt_md",
-    "model_supports_image",
     "resolve_system_prompt",
+    "with_app_info",
 ]

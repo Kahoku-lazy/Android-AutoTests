@@ -323,7 +323,6 @@ def test_settings_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
         "AGENT_MODEL_RETRY_ATTEMPTS",
         "AGENT_MODEL_RETRY_BASE_DELAY_MS",
         "AGENT_MODEL_RETRY_MAX_DELAY_MS",
-        "AGENT_FALLBACK_MODEL",
     ):
         monkeypatch.delenv(name, raising=False)
 
@@ -339,16 +338,31 @@ def test_settings_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_MODEL_RETRY_ATTEMPTS", "4")
     monkeypatch.setenv("AGENT_MODEL_RETRY_BASE_DELAY_MS", "1000")
     monkeypatch.setenv("AGENT_MODEL_RETRY_MAX_DELAY_MS", "4000")
-    monkeypatch.setenv("AGENT_FALLBACK_MODEL", "deepseek-pro")
-    monkeypatch.setenv("AGENT_FALLBACK_PROVIDER", "deepseek")
 
     settings = load_retry_settings()
 
     assert settings.attempts == 4
     assert settings.base_delay == 1.0
     assert settings.max_delay == 4.0
-    assert settings.fallback_model_name == "deepseek-pro"
-    assert "secret" not in repr(RetrySettings(attempts=1, fallback_api_key="secret"))
+    # 备用模型连接参数已迁出重试设置（engines.agents.models.fallback）
+    assert not hasattr(settings, "fallback_model_name")
+
+
+def test_fallback_settings_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """备用模型连接参数在 models 侧解析，密钥不进 repr。"""
+    from engines.agents.models.fallback import FallbackModelSettings, load_fallback_settings
+
+    monkeypatch.setenv("AGENT_FALLBACK_MODEL", "deepseek-pro")
+    monkeypatch.setenv("AGENT_FALLBACK_PROVIDER", "deepseek")
+    monkeypatch.setenv("AGENT_FALLBACK_BASE_URL", "https://api.deepseek.com/v1")
+    monkeypatch.setenv("AGENT_FALLBACK_API_KEY", "secret")
+
+    settings = load_fallback_settings()
+
+    assert settings.model_name == "deepseek-pro"
+    assert settings.provider == "deepseek"
+    assert settings.enabled is True
+    assert "secret" not in repr(FallbackModelSettings(api_key="secret"))
 
 
 def test_disabled_settings_build_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -362,36 +376,34 @@ def test_disabled_settings_build_nothing(monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 def test_enabled_settings_build_middleware_with_fallback() -> None:
-    settings = RetrySettings(attempts=3, fallback_model_name="backup-model")
+    """只配了备用模型、不重试时，仍要装配中间件（回退本身有意义）。"""
+    settings = RetrySettings(attempts=1)
     fallback = _Model("backup")
 
     middleware = build_model_retry_middleware(settings, fallback_model=fallback)
 
     assert middleware is not None
-    assert middleware.attempts == 3
+    assert middleware.attempts == 1
     assert middleware.fallback_model is fallback
 
 
 # ── 角色装配 ──────────────────────────────────────────────
 
 
-def _build_agent():
+def _build_agent(monkeypatch: pytest.MonkeyPatch):
     """用假密钥建一个最小 Agent，只在构造期验证装配，不发请求。"""
     from agentscope.tool import Toolkit
 
     from engines.agents.agent_builders import AgentRoleFactory, RoleConfig, ToolsConfig
-    from engines.agents.config.models import ModelConfig
+    from engines.agents.models import get_chat_model, get_fallback_chat_model
 
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    role_key = "UI_EXECUTOR_ROLE_CONFIG"
     return AgentRoleFactory(
-        ModelConfig(
-            provider="deepseek",
-            model_name="deepseek-flash",
-            base_url="https://api.deepseek.com/v1",
-            api_key="test-key",
-            vision=False,
-        ),
+        get_chat_model(role_key),
         RoleConfig(name="probe_role", system_prompt="probe"),
         tools=ToolsConfig(toolkit=Toolkit()),
+        fallback_model=get_fallback_chat_model(role_key),
     ).create()
 
 
@@ -399,8 +411,8 @@ def test_agent_factory_wires_middleware_when_enabled(monkeypatch: pytest.MonkeyP
     monkeypatch.setenv("AGENT_MODEL_RETRY_ATTEMPTS", "2")
     monkeypatch.setenv("AGENT_FALLBACK_MODEL", "deepseek-pro")
 
-    agent = _build_agent()
-    # Agent 只把实现了 on_model_call 的中间件放进模型调用链，预算中间件不在其中
+    agent = _build_agent(monkeypatch)
+    # Agent 只把实现了 on_model_call 的中间件放进模型调用链
     assert [type(item).__name__ for item in agent._model_call_middlewares] == [
         "ModelRetryMiddleware"
     ]
@@ -409,13 +421,12 @@ def test_agent_factory_wires_middleware_when_enabled(monkeypatch: pytest.MonkeyP
 
 def test_agent_factory_skips_middleware_when_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_MODEL_RETRY_ATTEMPTS", "1")
-    monkeypatch.setenv("AGENT_REPLY_TOKEN_BUDGET", "0")
     monkeypatch.delenv("AGENT_FALLBACK_MODEL", raising=False)
     monkeypatch.delenv("AGENT_TTS_MIDDLEWARE", raising=False)
     monkeypatch.delenv("AGENT_RAG_ENABLED", raising=False)
     monkeypatch.delenv("AGENT_TRACING_OTLP_ENDPOINT", raising=False)
 
-    agent = _build_agent()
+    agent = _build_agent(monkeypatch)
     assert agent._model_call_middlewares == []
 
 

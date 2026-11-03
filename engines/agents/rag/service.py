@@ -13,7 +13,8 @@ Python 调试：➡️ python -m engines.agents.rag.service 🏁
 2. format_context(): 控制注入上下文的来源、相关度与长度。
 🏁
 关联模块：➡️
-1. utils.logs: 导入 agent_event_log
+1. engines.agents.models: 导入 get_embedding_model，取嵌入模型实例
+2. utils.logs: 导入 agent_event_log
 🏁
 测试：➡️
 1. tests/graybox/unit/test_agent_middleware_assembly.py: 中间件装配：默认集合、顺序、各能力开关与单项失败隔离
@@ -26,17 +27,14 @@ from __future__ import annotations
 import asyncio
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
-from typing import Any
 
-from agentscope.credential import DashScopeCredential
-from agentscope.embedding import (
-    DashScopeEmbeddingModel,
-    EmbeddingResponse,
-)
+from dataclasses import dataclass
+
 from agentscope.rag import KnowledgeBase
 
 from utils.logs import agent_event_log
+
+from engines.agents.models import get_embedding_model
 
 from .config import RagConfig, load_rag_config
 from .indexer import RagIndexer
@@ -125,9 +123,9 @@ class RagService:
             if self._failed:
                 return 0
             try:
-                embedding = _UsageEmbeddingModel(
-                    credential=DashScopeCredential(api_key=self.config.api_key),
-                    model=self.config.embedding_model,
+                embedding = get_embedding_model(
+                    self.config.api_key,
+                    model_name=self.config.embedding_model,
                     dimensions=self.config.embedding_dimensions,
                     usage_sink=self._usage_sink,
                 )
@@ -244,26 +242,6 @@ def format_context(hits: list[RagHit], max_chars: int) -> str:
         if used >= max_chars:
             break
     return "\n\n".join(lines) if len(lines) > 1 else ""
-
-
-class _UsageEmbeddingModel(DashScopeEmbeddingModel):
-    """在 DashScope 嵌入模型上旁路记录 token 用量。"""
-
-    def __init__(
-        self,
-        *args: Any,
-        usage_sink: Callable[[int], None] | None = None,
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(*args, **kwargs)
-        self._usage_sink = usage_sink
-
-    async def __call__(self, *args: Any, **kwargs: Any) -> EmbeddingResponse:
-        response = await super().__call__(*args, **kwargs)
-        tokens = getattr(getattr(response, "usage", None), "tokens", None)
-        if tokens and self._usage_sink is not None:
-            self._usage_sink(int(tokens))
-        return response
 
 
 __all__ = ["RagHit", "RagService", "format_context"]

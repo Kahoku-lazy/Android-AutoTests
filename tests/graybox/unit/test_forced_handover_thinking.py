@@ -7,7 +7,7 @@ import pytest
 from agentscope.tool import ToolChoice
 
 from engines.agents.agent_builders import ReActConfig
-from engines.agents.config.models import (
+from engines.agents.models.chat_model import (
     apply_forced_handover_kwargs,
     bind_forced_handover,
 )

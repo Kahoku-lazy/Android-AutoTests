@@ -16,7 +16,8 @@ import pytest
 from agentscope.message import UserMsg
 
 from engines.agents.agent_builders import AgentRoleFactory
-from engines.agents.config.models import ui_executor_role_config, ui_verifier_role_config
+from engines.agents.config.role_loader import load_role_spec
+from engines.agents.models import get_chat_model
 
 try:
     from dotenv import load_dotenv
@@ -28,14 +29,14 @@ except ImportError:
 pytestmark = [pytest.mark.e2e, pytest.mark.slow]
 
 
-def _create_from_bundle(bundle) -> object:
-    model_config, role, tools, context, react = bundle
+def _create_from_spec(role_key: str) -> object:
+    bundle = load_role_spec(role_key)
     return AgentRoleFactory(
-        model_config,
-        role,
-        tools=tools,
-        context=context,
-        react=react,
+        get_chat_model(role_key),
+        bundle.role,
+        tools=bundle.tools,
+        context=bundle.context,
+        react=bundle.react,
         middlewares=[],
     ).create()
 
@@ -53,12 +54,12 @@ async def _assert_agent_replies(label: str, agent) -> None:
 @pytest.mark.asyncio
 async def test_executor_agent_connectivity() -> None:
     """执行 Agent：UI_EXECUTOR_ROLE_CONFIG 能建 Agent 并返回内容。"""
-    agent = _create_from_bundle(ui_executor_role_config())
+    agent = _create_from_spec("UI_EXECUTOR_ROLE_CONFIG")
     await _assert_agent_replies("executor_agent", agent)
 
 
 @pytest.mark.asyncio
 async def test_verifier_agent_connectivity() -> None:
     """验收 Agent：UI_VERIFIER_ROLE_CONFIG 能建 Agent 并返回内容。"""
-    agent = _create_from_bundle(ui_verifier_role_config())
+    agent = _create_from_spec("UI_VERIFIER_ROLE_CONFIG")
     await _assert_agent_replies("verifier_agent", agent)

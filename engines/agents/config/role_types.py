@@ -20,7 +20,7 @@ Python 调试：➡️python -m engines.agents.config.role_types 🏁
 🏁
 测试：➡️
 1. tests/engines/agents/test_agents.py: 经 Factory 消费四分段类型
-2. tests/graybox/unit/test_case_authoring_roles.py: load_role_config 装配用例角色
+2. tests/graybox/unit/test_case_authoring_roles.py: load_role_spec 装配用例角色
 🏁
 """
 

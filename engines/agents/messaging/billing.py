@@ -12,7 +12,7 @@ Python 调试：➡️ python -m engines.agents.messaging.billing 🏁
 1. DeepSeekBilling: 只计算 deepseek-flash 与 deepseek-v4-pro 的费用。
 🏁
 关联模块：➡️
-1. engines.agents.config.models: 导入 DeepSeekModelConfig
+1. engines.agents.models: 导入 DeepSeekModelConfig，取计费档名
 🏁
 测试：➡️
 1. tests/engines/agents/test_billing_eight_decimals.py: DeepSeek 费用保留小数点后 8 位
@@ -27,7 +27,7 @@ from zoneinfo import ZoneInfo
 
 import chinese_calendar
 
-from engines.agents.config.models import DeepSeekModelConfig
+from engines.agents.models import DeepSeekModelConfig
 
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
 _MILLION = Decimal(1_000_000)

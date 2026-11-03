@@ -13,7 +13,8 @@ Python 调试：➡️ python -m engines.agents.realtime_vocie_agent 🏁
 2. run_local_s2s: LocalAudioTransport + reply_stream 本地麦克风演示（AgentScope S2S 教程）
 🏁
 关联模块：➡️
-1. engines.agents.config.models: 导入 omni_realtime_model, omni_role_config
+1. engines.agents.models: 导入 get_realtime_model，取 Omni 实时语音模型实例
+2. engines.agents.config.role_loader: 导入 load_role_spec，取 OMNI_ROLE_CONFIG 的角色名与提示词
 🏁
 测试：➡️
 1. 暂无专门单测
@@ -24,11 +25,13 @@ from __future__ import annotations
 
 import asyncio
 import os
+
 from pathlib import Path
 
 from agentscope.agent import RealtimeAgent
 
-from engines.agents.config.models import omni_realtime_model, omni_role_config
+from engines.agents.config.role_loader import load_role_spec
+from engines.agents.models import get_realtime_model
 
 # 仓库根 .env（engines/agents/本文件 → parents[3]）
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -55,8 +58,8 @@ def build_realtime_vocie_agent() -> tuple[RealtimeAgent, object]:
             "未设置 DASHSCOPE_API_KEY：请在仓库根 .env 写入该键，"
             "或先 export / 设置环境变量（需要 python-dotenv 时请 pip install python-dotenv）"
         )
-    model_config, role_config = omni_role_config()
-    model = omni_realtime_model(model_config)
+    role_config = load_role_spec("OMNI_ROLE_CONFIG").role
+    model = get_realtime_model(role_key="OMNI_ROLE_CONFIG")
     agent = RealtimeAgent(
         name=role_config.name,
         system_prompt=role_config.system_prompt,

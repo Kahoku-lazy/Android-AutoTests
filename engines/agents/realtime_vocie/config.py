@@ -15,7 +15,8 @@ Python 调试：➡️ python -m engines.agents.realtime_vocie.config 🏁
 4. create_realtime_model(): 按配置构造 AgentScope 的 DashScope Omni 实时语音模型。
 🏁
 关联模块：➡️
-1. 暂无本地 engines/utils 依赖
+1. engines.agents.models: 导入 get_realtime，取 Omni 模型名、密钥变量名与模型实例
+2. engines.agents.realtime_vocie.knowledge: 导入 build_system_prompt，语音助手系统提示词
 🏁
 测试：➡️
 1. tests/graybox/unit/test_knowledge_assistant_config.py: 知识库助手 Omni 配置单测：不联网
@@ -29,22 +30,17 @@ import importlib.util
 import os
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from typing import Final
 
-# 目录可能因缺 config.yaml 不可用；本包仍应能用硬编码默认 + 环境变量跑 Omni。
-try:
-    from engines.agents.config.models import DEFAULT_OMNI_MODEL as _CATALOG_OMNI
-    from engines.agents.config.models import get_realtime as _get_realtime
-except Exception:  # pragma: no cover - 缺目录时的兜底
-    _CATALOG_OMNI = "qwen3.5-omni-plus-realtime"
-    _get_realtime = None  # type: ignore[assignment]
+# 模型连接参数与模型实例统一由 engines.agents.models 提供。
+from engines.agents.models import get_realtime as _get_realtime
 
 from .knowledge import build_system_prompt
 
 OMNI_MODE: Final[str] = "omni"
 DEFAULT_MODE: Final[str] = OMNI_MODE
-DEFAULT_OMNI_MODEL: Final[str] = _CATALOG_OMNI
+DEFAULT_OMNI_MODEL: Final[str] = _get_realtime("omni").model
 DEFAULT_MODEL: Final[str] = DEFAULT_OMNI_MODEL
 DEFAULT_VOICE: Final[str] = "Tina"
 DEFAULT_TURN_DETECTION: Final[str] = "server_vad"
@@ -141,12 +137,10 @@ def _parse_int(
 
 def _resolve_api_key(environ: Mapping[str, str] | None) -> str:
     """解析 DashScope API Key（优先目录 api_key_env，否则 DASHSCOPE_API_KEY）。"""
-    if _get_realtime is not None:
-        try:
-            return _read(environ, _get_realtime("omni").api_key_env)
-        except Exception:
-            pass
-    return _read(environ, "DASHSCOPE_API_KEY")
+    try:
+        return _read(environ, _get_realtime("omni").api_key_env)
+    except KeyError:
+        return _read(environ, "DASHSCOPE_API_KEY")
 
 
 def _resolve_model(environ: Mapping[str, str] | None) -> str:
@@ -310,37 +304,13 @@ def create_realtime_model(config: RealtimeVoiceConfig):
     Raises:
         RuntimeError: AgentScope 实时依赖缺失，或模型/音色不受支持。
     """
-    from agentscope.realtime import DashScopeRealtimeModel
+    from engines.agents.models import get_realtime_model
 
-    parameters = DashScopeRealtimeModel.Parameters(
+    return get_realtime_model(
+        api_key=config.api_key,
+        model_name=config.model,
         voice=config.voice,
         turn_detection=config.turn_detection,
         vad_threshold=config.vad_threshold,
         vad_silence_duration_ms=config.vad_silence_ms,
-    )
-
-    if _get_realtime is not None:
-        try:
-            ready = _get_realtime("omni")
-            ready_for_call = (
-                ready if ready.model == config.model else replace(ready, model=config.model)
-            )
-            return ready_for_call.create_realtime_model(
-                api_key=config.api_key,
-                parameters=parameters,
-            )
-        except Exception:
-            pass
-
-    try:
-        from agentscope.credential import DashScopeCredential
-    except ImportError as exc:
-        raise RuntimeError(
-            '缺少 AgentScope 实时语音依赖，请执行：pip install "agentscope[realtime]"',
-        ) from exc
-
-    return DashScopeRealtimeModel(
-        model=config.model,
-        credential=DashScopeCredential(api_key=config.api_key),
-        parameters=parameters,
     )

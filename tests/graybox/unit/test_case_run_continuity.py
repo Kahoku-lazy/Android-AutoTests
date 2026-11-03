@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from engines.agents.config.models import ui_executor_role_config, ui_verifier_role_config
+from engines.agents.config.role_loader import load_role_spec
 from engines.agents.agent_builders import ReActConfig
 from engines.agents.workflow.platform_run import run_platform_sop
 
@@ -97,6 +97,6 @@ def test_cancel_keeps_earlier_failures(tmp_path):
 
 
 def test_executor_budget_is_double_the_default():
-    assert ui_executor_role_config()[4].max_iters == 60
-    assert ui_verifier_role_config()[4].max_iters == 30
+    assert load_role_spec("UI_EXECUTOR_ROLE_CONFIG").react.max_iters == 60
+    assert load_role_spec("UI_VERIFIER_ROLE_CONFIG").react.max_iters == 30
     assert ReActConfig.__dataclass_fields__["max_iters"].default == 30

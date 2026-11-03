@@ -15,7 +15,8 @@ from engines.agents.agent_builders import (
     build_case_writer,
     build_case_writer_goal,
 )
-from engines.agents.config.models import load_role_config
+from engines.agents.config.role_loader import load_role_spec
+from engines.agents.models import get_chat_model
 
 pytestmark = [pytest.mark.unit]
 
@@ -27,7 +28,7 @@ _PLANNER_KEY = "CASE_PLANNER_ROLE_CONFIG"
 
 
 def _bundle(key: str):
-    return load_role_config(key)
+    return load_role_spec(key)
 
 
 def _case_authoring_workflow():
@@ -50,51 +51,54 @@ def _dummy_key(monkeypatch):
 
 def test_build_case_writer_uses_writer_prompt_and_text_model():
     """编写角色：纯文本、FLASH 模型、编写提示词、计划模式工具。"""
-    mc, role, _tools, _ctx, react = _bundle(_WRITER_KEY)
+    bundle = _bundle(_WRITER_KEY)
     agent = build_case_writer()
-    assert agent.name == role.name == "case_writer_role"
+    assert agent.name == bundle.role.name == "case_writer_role"
     assert agent._system_prompt == CaseAuthoringPrompts.writer()
-    assert agent.react_config.max_iters == react.max_iters == 20
-    assert agent.model.model == mc.model_name == "deepseek-flash"
+    assert agent.react_config.max_iters == bundle.react.max_iters == 20
+    assert agent.model.model == get_chat_model(_WRITER_KEY).model == "deepseek-flash"
     assert [group.name for group in agent.toolkit.tool_groups] == ["basic"]
     assert _tool_names(agent) == PLAN_TOOL_NAMES
 
 
 def test_build_case_planner_uses_planner_prompt_and_text_model():
     """规划角色：纯文本、FLASH 模型、规划提示词、空工具包。"""
-    mc, role, _tools, _ctx, react = _bundle(_PLANNER_KEY)
+    bundle = _bundle(_PLANNER_KEY)
     agent = build_case_planner()
-    assert agent.name == role.name == "case_planner_role"
+    assert agent.name == bundle.role.name == "case_planner_role"
     assert agent._system_prompt == CaseAuthoringPrompts.planner()
-    assert agent.react_config.max_iters == react.max_iters == 2
-    assert agent.model.model == mc.model_name
+    assert agent.react_config.max_iters == bundle.react.max_iters == 2
+    assert agent.model.model == get_chat_model(_PLANNER_KEY).model
     assert _tool_names(agent) == set()
 
 
 def test_build_case_verifier_uses_verifier_prompt_and_text_model():
     """验收角色：纯文本、FLASH 模型、验收提示词、空工具包。"""
-    mc, role, _tools, _ctx, react = _bundle(_VERIFIER_KEY)
+    bundle = _bundle(_VERIFIER_KEY)
     agent = build_case_verifier()
-    assert agent.name == role.name == "case_verifier_role"
+    assert agent.name == bundle.role.name == "case_verifier_role"
     assert agent._system_prompt == CaseAuthoringPrompts.verifier()
-    assert agent.react_config.max_iters == react.max_iters == 4
-    assert agent.model.model == mc.model_name == "deepseek-flash"
+    assert agent.react_config.max_iters == bundle.react.max_iters == 4
+    assert agent.model.model == get_chat_model(_VERIFIER_KEY).model == "deepseek-flash"
     assert _tool_names(agent) == set()
 
 
 def test_build_goal_roles_use_goal_prompts():
-    """GoalPipeline 角色沿用同名，但提示词切换为存储工具协议。"""
+    """GoalPipeline 角色与普通变体使用不同角色名（事件/判决可区分），提示词切换为存储工具协议。"""
     writer = build_case_writer_goal()
     verifier = build_case_verifier_goal()
-    w_mc, w_role, *_ = _bundle("CASE_WRITER_GOAL_ROLE_CONFIG")
-    v_mc, v_role, *_ = _bundle("CASE_VERIFIER_GOAL_ROLE_CONFIG")
+    w_bundle = _bundle("CASE_WRITER_GOAL_ROLE_CONFIG")
+    v_bundle = _bundle("CASE_VERIFIER_GOAL_ROLE_CONFIG")
 
-    assert writer.name == w_role.name
+    assert writer.name == w_bundle.role.name
     assert writer._system_prompt == CaseAuthoringPrompts.writer_goal()
-    assert verifier.name == v_role.name
+    assert verifier.name == v_bundle.role.name
     assert verifier._system_prompt == CaseAuthoringPrompts.verifier_goal()
-    assert writer.model.model == w_mc.model_name
-    assert verifier.model.model == v_mc.model_name
+    # 回归护栏：Goal 变体不得与普通变体重名，否则事件流与判决记录分不清是哪个角色
+    assert writer.name == "case_writer_goal_role"
+    assert verifier.name == "case_verifier_goal_role"
+    assert writer.model.model == get_chat_model("CASE_WRITER_GOAL_ROLE_CONFIG").model
+    assert verifier.model.model == get_chat_model("CASE_VERIFIER_GOAL_ROLE_CONFIG").model
     assert _tool_names(writer) == PLAN_TOOL_NAMES
     assert _tool_names(verifier) == set()
 
@@ -138,7 +142,7 @@ def test_case_authoring_result_passed_follows_last_verdict():
         CaseAuthoringResult = _case_authoring_workflow().CaseAuthoringResult
     except FileNotFoundError as exc:
         pytest.skip(f"缺 config.yaml，跳过 workflow 辅助测试: {exc}")
-    name = _bundle(_VERIFIER_KEY)[1].name
+    name = _bundle(_VERIFIER_KEY).role.name
     passed = CaseAuthoringResult(
         phase="completed",
         document="用例文档",

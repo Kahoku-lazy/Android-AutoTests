@@ -10,7 +10,7 @@ Python 调试：➡️ python -m engines.agents.middleware.model_retry 🏁
 类型: ➡️ Harness 配置模块 🏁
 简介说明：➡️
 1. is_transient_model_error: 判定一次模型调用失败是否值得重试。
-2. RetrySettings / load_retry_settings: 从环境变量读出重试与回退参数。
+2. RetrySettings / load_retry_settings: 从环境变量读出重试次数与退避参数。
 3. ModelRetryMiddleware: 模型调用失败时按退避重试，用尽后切备用模型再试。
 4. build_model_retry_middleware: 按设置装配中间件，未启用时返回 None。
 🏁
@@ -30,7 +30,7 @@ import inspect
 import os
 
 from collections.abc import AsyncGenerator, Awaitable, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from agentscope.middleware import MiddlewareBase
@@ -87,10 +87,6 @@ _NON_RETRYABLE_TYPES = (
 _ATTEMPTS_ENV = "AGENT_MODEL_RETRY_ATTEMPTS"
 _BASE_DELAY_ENV = "AGENT_MODEL_RETRY_BASE_DELAY_MS"
 _MAX_DELAY_ENV = "AGENT_MODEL_RETRY_MAX_DELAY_MS"
-_FALLBACK_MODEL_ENV = "AGENT_FALLBACK_MODEL"
-_FALLBACK_PROVIDER_ENV = "AGENT_FALLBACK_PROVIDER"
-_FALLBACK_BASE_URL_ENV = "AGENT_FALLBACK_BASE_URL"
-_FALLBACK_API_KEY_ENV = "AGENT_FALLBACK_API_KEY"
 
 DEFAULT_ATTEMPTS = 2
 """同一个模型默认最多调用几次（含第一次）；模型层已 provider 感知重试，这里只补一层。"""
@@ -193,16 +189,15 @@ def _env_float(name: str, default: float) -> float:
 @dataclass(frozen=True)
 class RetrySettings:
     """
-    重试与回退的运行参数，全部来自环境变量。
+    重试的运行参数，全部来自环境变量。
+
+    备用模型的连接参数不在这里：由 `engines.agents.models` 造好实例后传进来，
+    本模块只管「重试几次、等多久」。
 
     Attributes:
         attempts: 同一个模型最多调用几次（含第一次）；1 表示不重试。
         base_delay: 首次重试前的等待秒数。
         max_delay: 单次等待的秒数上限。
-        fallback_model_name: 备用模型名；空串表示不启用回退。
-        fallback_provider: 备用模型 provider；空串表示沿用主模型。
-        fallback_base_url: 备用模型 base_url；空串表示沿用主模型。
-        fallback_api_key: 备用模型密钥；空串表示沿用主模型。
 
     Raises:
         FrozenInstanceError: 参数不可变。
@@ -211,26 +206,22 @@ class RetrySettings:
     attempts: int = DEFAULT_ATTEMPTS
     base_delay: float = DEFAULT_BASE_DELAY_MS / 1000
     max_delay: float = DEFAULT_MAX_DELAY_MS / 1000
-    fallback_model_name: str = ""
-    fallback_provider: str = ""
-    fallback_base_url: str = ""
-    fallback_api_key: str = field(default="", repr=False)
 
     @property
     def enabled(self) -> bool:
-        """是否需要装配中间件：会重试或配置了备用模型。
+        """是否需要装配中间件：会重试（或有备用模型时由装配入口另行判断）。
 
         Returns:
-            会重试或配了备用模型时返回 True。
+            尝试次数大于 1 时返回 True。
         """
-        return self.attempts > 1 or bool(self.fallback_model_name)
+        return self.attempts > 1
 
 
 def load_retry_settings() -> RetrySettings:
-    """从环境变量装配重试与回退参数，非法值回落默认。
+    """从环境变量装配重试参数，非法值回落默认。
 
     Returns:
-        本次运行的参数；默认允许同模型重试一次、不启用备用模型。
+        本次运行的参数；默认允许同模型重试一次。
     """
     attempts = max(1, _env_int(_ATTEMPTS_ENV, DEFAULT_ATTEMPTS))
     base_delay = max(0.0, _env_float(_BASE_DELAY_ENV, DEFAULT_BASE_DELAY_MS) / 1000)
@@ -239,10 +230,6 @@ def load_retry_settings() -> RetrySettings:
         attempts=attempts,
         base_delay=base_delay,
         max_delay=max_delay,
-        fallback_model_name=os.environ.get(_FALLBACK_MODEL_ENV, "").strip(),
-        fallback_provider=os.environ.get(_FALLBACK_PROVIDER_ENV, "").strip(),
-        fallback_base_url=os.environ.get(_FALLBACK_BASE_URL_ENV, "").strip(),
-        fallback_api_key=os.environ.get(_FALLBACK_API_KEY_ENV, "").strip(),
     )
 
 
@@ -506,7 +493,7 @@ def build_model_retry_middleware(
         ValueError: 参数非法（次数小于 1 或退避为负）。
     """
     resolved = settings if settings is not None else load_retry_settings()
-    if not resolved.enabled:
+    if not resolved.enabled and fallback_model is None:
         return None
     return ModelRetryMiddleware(
         attempts=resolved.attempts,

@@ -19,8 +19,8 @@
 对照现有：`agent_builders.py`（UI / 用例 `build_*`）、`realtime_vocie_agent.py`（Omni）。
 
 1. **模型**  
-   - 在 `config/data/agent_config.yaml` 增加角色节的 `ModelConfig`（及四分段）。  
-   - 经 `engines.agents.config.models.load_role_config` / `ChatModelFactory` 装载；密钥只写环境变量名。
+   - 在 `config/data/agent_config.yaml` 增加角色节的 `ModelConfig`（及四分段）；数据只留在 `config/data`。  
+   - 运行时经 `engines.agents.models` 包入口取模型（`get_chat_model("角色键")`）；密钥只写环境变量名，连接参数与工厂都在 `models/`。
 
 2. **提示词**  
    - 新增 `engines/agents/config/data/prompts/<TOKEN>.md`。  
@@ -70,7 +70,7 @@ python run.py check
 人工核对：
 
 - [ ] 提示词只经 `role_sys_prompts` + `config/data/prompts`  
-- [ ] 模型只经 `config/models` + `agent_config.yaml`  
+- [ ] 模型只经 `engines.agents.models` 包入口 + `agent_config.yaml`（数据在 `config/data`）  
 - [ ] 工具只经 `tools_config` + `tool_*.py`  
 - [ ] LLM 经 `AgentRoleFactory` / `build_*`；Voice 经 `realtime_vocie_agent`  
 - [ ] 无 `import apps` / `django` 出现在本次 engines 改动  
@@ -92,5 +92,5 @@ python run.py check
 | 用例规划/编写/验收 | `agent_builders.build_case_*` |
 | Omni 语音 | `realtime_vocie_agent` + `realtime_vocie` |
 | 提示词登记 | `role_sys_prompts.py` + `config/data/prompts/*.md` |
-| 模型登记 | `config/models.py` + `config/data/agent_config.yaml` |
+| 模型登记 | `engines/agents/models/` + `config/data/agent_config.yaml` |
 | 工具登记 | `tools_config.py` + `tools/tool_*.py` |

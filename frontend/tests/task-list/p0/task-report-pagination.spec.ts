@@ -1,47 +1,118 @@
-import { describe, expect, it } from "vitest"
-import {
-  caseRoundsById,
-  reportPageCount,
-  reportPageSlice,
-} from "@/modules/task-list/helpers/task-detail"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+import { flushPromises, mount } from "@vue/test-utils"
 
-const round = (round_id: number) => ({ round_id, title: `r${round_id}` })
+/**
+ * 任务详情：步骤全量渲染，页面不再分页。
+ *
+ * 原用例断言「每页 20 个轮次」；折叠单位改成步骤后分页取消，
+ * 这里改为断言 25 个步骤全部出现、且没有任何翻页控件。
+ */
 
-describe("caseRoundsById", () => {
-  it("按 round_ids 顺序取轮次", () => {
-    const rounds = [round(0), round(1), round(2)]
-    expect(caseRoundsById(rounds, [2, 0]).map((r) => r.round_id)).toEqual([2, 0])
+const mocks = vi.hoisted(() => ({
+  getTaskReport: vi.fn(),
+  push: vi.fn(),
+}))
+
+vi.mock("@/modules/task-list/api/tasks", () => ({
+  getTaskReport: mocks.getTaskReport,
+}))
+
+vi.mock("vue-router", () => ({
+  useRoute: () => ({ params: { id: "1" } }),
+  useRouter: () => ({ push: mocks.push }),
+}))
+
+import TaskDetailPage from "@/modules/task-list/TaskDetailPage.vue"
+
+const STEP_COUNT = 25
+
+function buildSteps() {
+  return Array.from({ length: STEP_COUNT }, (_, index) => ({
+    seq: index + 1,
+    action: `第 ${index + 1} 步动作`,
+    expected: `第 ${index + 1} 步预期`,
+    outcome: "PASS",
+  }))
+}
+
+function buildRounds() {
+  return Array.from({ length: STEP_COUNT * 2 }, (_, index) => {
+    const seq = Math.floor(index / 2) + 1
+    const isVerifier = index % 2 === 1
+    return {
+      round_id: index,
+      role: isVerifier ? "verifier_role" : "executor_role",
+      role_kind: isVerifier ? "verifier" : "executor",
+      model: "deepseek-flash",
+      step_seq: seq,
+      attempt: 1,
+      subject: `第 ${seq} 步动作`,
+      handover: "",
+      verdict: isVerifier ? { passed: true, message: "通过" } : null,
+      blocks: [],
+    }
+  })
+}
+
+function reportData() {
+  const rounds = buildRounds()
+  return {
+    status: true,
+    data: {
+      task: { id: 1, title: "T", status: "completed", cost_total: 0 },
+      rounds,
+      cases: [
+        {
+          title: "长用例",
+          outcome: "PASS",
+          steps: buildSteps(),
+          round_ids: rounds.map((item) => item.round_id),
+        },
+      ],
+      conclusion: { outcome: "PASS" },
+    },
+  }
+}
+
+describe("任务详情步骤不分页", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
   })
 
-  it("找不到的 id 跳过，不报错", () => {
-    expect(caseRoundsById([round(0)], [0, 9]).map((r) => r.round_id)).toEqual([0])
-    expect(caseRoundsById([], [1])).toEqual([])
-  })
-})
+  it("25 个步骤全部渲染，且没有翻页控件", async () => {
+    mocks.getTaskReport.mockResolvedValue(reportData())
+    const wrapper = mount(TaskDetailPage)
+    await flushPromises()
 
-describe("reportPageCount", () => {
-  it("向上取整且至少 1 页", () => {
-    expect(reportPageCount(60, 20)).toBe(3)
-    expect(reportPageCount(0, 20)).toBe(1)
-    expect(reportPageCount(21, 20)).toBe(2)
-  })
-})
-
-describe("reportPageSlice", () => {
-  const items = Array.from({ length: 60 }, (_, i) => i)
-
-  it("第 1 页 20 条", () => {
-    expect(reportPageSlice(items, 1, 20)).toHaveLength(20)
-    expect(reportPageSlice(items, 1, 20)[0]).toBe(0)
+    expect(wrapper.findAll(".flow-step")).toHaveLength(STEP_COUNT)
+    expect(wrapper.text()).not.toContain("上一页")
+    expect(wrapper.text()).not.toContain("下一页")
+    expect(wrapper.find(".flow-pager").exists()).toBe(false)
   })
 
-  it("第 2 页是 21–40 条", () => {
-    const page2 = reportPageSlice(items, 2, 20)
-    expect(page2[0]).toBe(20)
-    expect(page2[19]).toBe(39)
+  it("每个步骤的折叠目标都存在，且默认关闭", async () => {
+    mocks.getTaskReport.mockResolvedValue(reportData())
+    const wrapper = mount(TaskDetailPage)
+    await flushPromises()
+
+    const titles = wrapper.findAll(".flow-step__title")
+    expect(titles).toHaveLength(STEP_COUNT)
+    for (const title of titles) {
+      expect(title.attributes("aria-expanded")).toBe("false")
+      expect(title.attributes("aria-controls")).toMatch(/^flow-step-body-/)
+    }
+    expect(wrapper.findAll(".flow-step__body")).toHaveLength(0)
   })
 
-  it("越界页码夹到最后一页", () => {
-    expect(reportPageSlice(items, 99, 20)[0]).toBe(40)
+  it("展开某一步只出现该步的展开体", async () => {
+    mocks.getTaskReport.mockResolvedValue(reportData())
+    const wrapper = mount(TaskDetailPage)
+    await flushPromises()
+
+    await wrapper.findAll(".flow-step__title")[1].trigger("click")
+    expect(wrapper.findAll(".flow-step__body")).toHaveLength(1)
+    expect(wrapper.findAll(".flow-step__body")[0].attributes("id")).toBe(
+      wrapper.findAll(".flow-step__title")[1].attributes("aria-controls"),
+    )
   })
 })

@@ -5,6 +5,7 @@ import type {
   TaskDeleteResponse,
   TaskDetailResponse,
   TaskListResponse,
+  TaskReportResponse,
   TaskSubmitResponse,
 } from "@/shared/types/ai"
 
@@ -72,10 +73,8 @@ export async function uploadTaskFile(
 }
 
 /** 任务事件流程报告（详情页） */
-export async function getTaskReport(
-  taskId: number,
-): Promise<{ status: boolean; message?: string; [key: string]: unknown }> {
-  const { data } = await djangoClient.get(`/tasks/${taskId}/report/`)
+export async function getTaskReport(taskId: number): Promise<TaskReportResponse> {
+  const { data } = await djangoClient.get<TaskReportResponse>(`/tasks/${taskId}/report/`)
   return data
 }
 

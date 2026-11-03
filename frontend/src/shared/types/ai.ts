@@ -288,6 +288,142 @@ export interface TaskDetailResponse {
   message?: string
 }
 
+// ── 任务详情报告（GET /api/tasks/{id}/report/）──
+// 只读展示：轮次按 step_seq 归到用例步骤，页面不再自行拼接轮次标题。
+
+/** 报告轮次里的一个阶段块 */
+export interface TaskReportBlock {
+  /** 开始 / 推理 / 执行 / 结束 */
+  phase?: string
+  /** 块标题（后端已转中文） */
+  title?: string
+  items?: TaskReportBlockItem[]
+}
+
+/** 阶段块里的一条事件 */
+export interface TaskReportBlockItem {
+  seq: number
+  event_type?: string
+  label?: string
+  detail?: string
+  time?: string
+  /** 连续同类增量的合并条数 */
+  count?: number
+  step_seq?: number | null
+  attempt?: number | null
+  role_name?: string
+  role_kind?: string
+  model?: string
+  status?: string
+  /** 截图编号；图片字节走 /tasks/{id}/media/{media_id}/ */
+  media_id?: number | null
+  handover?: string
+  verdict?: TaskReportRoundVerdict | null
+}
+
+/** 一次验收判决 */
+export interface TaskReportRoundVerdict {
+  passed?: boolean | null
+  message?: string
+}
+
+/** 一轮：一条 ReplyStartEvent 或一条 SOP 步骤起点开启 */
+export interface TaskReportRound {
+  round_id: number
+  /** 角色名（徽章文本），存量数据可能为空 */
+  role?: string
+  role_name?: string
+  /** executor / verifier / planner 等 */
+  role_kind?: string
+  model?: string
+  step_seq?: number | null
+  /** 该步第几次尝试 */
+  attempt?: number | null
+  /** 该轮要做的动作或要达成的结果 */
+  subject?: string
+  duty?: string
+  handover?: string
+  verdict?: TaskReportRoundVerdict | null
+  blocks?: TaskReportBlock[]
+}
+
+/** 用例步骤：动作、预期与结果（结果由后端算好） */
+export interface TaskReportStep {
+  seq: number
+  action?: string
+  expected?: string
+  /** PASS / FAIL / 未完成 / 未执行 */
+  outcome?: string
+}
+
+/** 一条用例：步骤轴 + 轮次引用 */
+export interface TaskReportCase {
+  title?: string
+  outcome?: string
+  steps?: TaskReportStep[]
+  round_ids?: number[]
+}
+
+/** 报告里的任务摘要（字段比 TaskDetail 窄） */
+export interface TaskReportTask {
+  id?: number
+  title?: string
+  status?: string
+  task_kind?: string
+  assistant?: string
+  device?: string
+  case_title?: string
+  started_at?: string
+  finished_at?: string
+  cost_total?: number
+  result?: string
+}
+
+/** 报告里的最终判决 */
+export interface TaskReportConclusion {
+  outcome?: string
+  delivery?: string
+  verdicts?: Array<{
+    passed?: boolean
+    message?: string
+    role_name?: string
+    step_seq?: number | null
+    attempt?: number | null
+  }>
+}
+
+/** 用例编写任务的模型事件行 */
+export interface TaskReportEvent {
+  seq?: number
+  time?: string
+  role_kind?: string
+  role_name?: string
+  event_type?: string
+  label?: string
+  detail?: string
+  model?: string
+  status?: string
+  count?: number
+}
+
+/** 报告负载：data 字段 */
+export interface TaskReportPayload {
+  task?: TaskReportTask
+  rounds?: TaskReportRound[]
+  cases?: TaskReportCase[]
+  conclusion?: TaskReportConclusion | null
+  /** 用例编写任务的事件流 */
+  events?: TaskReportEvent[]
+  /** 用例编写任务的入库结果 */
+  case_import?: Record<string, unknown> | null
+}
+
+export interface TaskReportResponse {
+  status?: boolean
+  message?: string
+  data?: TaskReportPayload
+}
+
 export interface TaskDeleteResponse {
   status?: boolean
   message?: string

@@ -1,0 +1,188 @@
+/* 任务详情：一轮模型过程的样式（执行紫 / 验收蓝，与步骤左边线同源） */
+.flow-proc {
+  margin-top: var(--app-space-sm);
+  padding: var(--app-space-sm) var(--app-space-md);
+  border: 2px solid var(--ink);
+  border-radius: 3px;
+  background: var(--paper);
+}
+
+.flow-proc.is-executor {
+  border-color: var(--c-ai);
+}
+
+.flow-proc.is-verifier {
+  border-color: var(--c-workflow);
+}
+
+.flow-proc__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--app-space-xs) var(--app-space-sm);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.flow-proc__head:hover {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+}
+
+.flow-proc__mark {
+  flex: 0 0 auto;
+  font-size: var(--app-size-xs);
+}
+
+/* 收起时的结论摘要：单行省略，完整结论在展开体里 */
+.flow-proc__summary {
+  flex: 1 1 100%;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flow-proc__body {
+  margin-top: var(--app-space-xs);
+}
+
+.flow-proc__role {
+  display: inline-block;
+  padding: 0 var(--app-space-xs);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  font-size: var(--app-size-xs);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.flow-proc__role.is-executor {
+  background: var(--c-ai);
+}
+
+.flow-proc__role.is-verifier {
+  background: var(--c-workflow);
+}
+
+.flow-proc__meta {
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+  font-weight: 400;
+}
+
+.flow-proc__verdict {
+  font-size: var(--app-size-sm);
+}
+
+.flow-proc__note {
+  margin-top: var(--app-space-sm);
+  padding: var(--app-space-xs) var(--app-space-sm);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--paper);
+}
+
+.flow-proc__note.is-handover {
+  border-color: var(--c-ai);
+}
+
+.flow-proc__note.is-verdict {
+  border-color: var(--c-element);
+}
+
+.flow-proc__note-title {
+  margin: 0 0 var(--app-space-xs);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+}
+
+.flow-note {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: var(--app-size-sm);
+  line-height: 1.6;
+}
+
+.flow-timeline {
+  margin: var(--app-space-sm) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.flow-phase {
+  margin: 0;
+  padding: 0;
+}
+
+.flow-phase + .flow-phase {
+  margin-top: var(--app-space-sm);
+}
+
+.flow-phase__title {
+  margin: 0 0 var(--app-space-xs);
+  color: var(--phase-accent, var(--ink));
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+}
+
+.flow-phase.is-start {
+  --phase-accent: var(--c-dashboard);
+}
+
+.flow-phase.is-reason {
+  --phase-accent: var(--c-device);
+}
+
+.flow-phase.is-execute {
+  --phase-accent: var(--c-ai);
+}
+
+.flow-phase.is-end {
+  --phase-accent: var(--c-element);
+}
+
+.flow-item {
+  padding: var(--app-space-xs) 0;
+}
+
+.flow-item + .flow-item {
+  border-top: 1px dashed var(--ink);
+}
+
+.flow-item__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-space-xs) var(--app-space-sm);
+  align-items: baseline;
+  font-size: var(--app-size-sm);
+}
+
+.flow-item__head time {
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+}
+
+.flow-item__count {
+  font-weight: 700;
+}
+
+.flow-item__detail {
+  margin: var(--app-space-xs) 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: var(--app-size-sm);
+  color: var(--app-text-secondary);
+}

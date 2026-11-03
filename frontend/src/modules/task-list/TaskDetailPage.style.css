@@ -77,26 +77,6 @@
   contain-intrinsic-size: 640px;
 }
 
-.flow-pager {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--app-space-sm);
-  padding: var(--app-space-sm) var(--app-space-md);
-}
-
-.flow-pager button {
-  border: 1.5px solid var(--ink);
-  background: var(--paper);
-  padding: 2px 10px;
-  cursor: pointer;
-}
-
-.flow-pager button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
 .flow-case + .flow-case {
   margin-top: var(--app-space-md);
 }
@@ -129,73 +109,10 @@
   border-top: 2.5px dashed var(--ink);
 }
 
-.flow-round {
-  margin-top: var(--app-space-sm);
-}
-
-.flow-round__title {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--app-space-xs);
-  width: 100%;
-  margin: 0;
-  padding: var(--app-space-sm);
-  border: 0;
-  border-left: 4px solid var(--round-accent, var(--c-ai));
-  background: transparent;
-  color: var(--ink);
-  font: inherit;
-  font-size: var(--app-size-sm);
-  font-weight: 700;
-  line-height: 1.5;
-  text-align: left;
-  cursor: pointer;
-}
-
-.flow-round__title.is-executor {
-  --round-accent: var(--c-ai);
-}
-
-.flow-round__title.is-verifier {
-  --round-accent: var(--c-workflow);
-}
-
-.flow-round__text {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.flow-round__mark {
+/* 用例折叠标记：步骤的折叠标记在 CaseStepList 内 */
+.flow-case__mark {
   flex: 0 0 auto;
   font-size: var(--app-size-xs);
-}
-
-.flow-round__body {
-  margin: 0 0 0 var(--app-space-md);
-  padding: var(--app-space-sm) 0 var(--app-space-sm) var(--app-space-md);
-  border-left: 2px dashed var(--ink);
-}
-
-.flow-lead {
-  margin-bottom: var(--app-space-sm);
-  padding: var(--app-space-sm) var(--app-space-md);
-  border: 2.5px solid var(--ink);
-  border-radius: var(--app-radius-md);
-  background: var(--paper);
-}
-
-.flow-lead.is-handover {
-  border-color: var(--c-ai);
-}
-
-.flow-lead.is-verdict {
-  border-color: var(--c-element);
-}
-
-.flow-lead__title {
-  margin: 0 0 var(--app-space-xs);
-  font-size: var(--app-size-sm);
-  font-weight: 700;
 }
 
 .flow-note {
@@ -204,75 +121,6 @@
   word-break: break-word;
   font-size: var(--app-size-sm);
   line-height: 1.6;
-}
-
-.flow-timeline {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.flow-phase {
-  margin: 0;
-  padding: 0;
-}
-
-.flow-phase + .flow-phase {
-  margin-top: var(--app-space-sm);
-}
-
-.flow-phase__title {
-  margin: 0 0 var(--app-space-xs);
-  color: var(--phase-accent, var(--ink));
-  font-size: var(--app-size-xs);
-  font-weight: 700;
-}
-
-.flow-phase.is-start {
-  --phase-accent: var(--c-dashboard);
-}
-.flow-phase.is-reason {
-  --phase-accent: var(--c-device);
-}
-.flow-phase.is-execute {
-  --phase-accent: var(--c-ai);
-}
-.flow-phase.is-end {
-  --phase-accent: var(--c-element);
-}
-
-.flow-item {
-  padding: var(--app-space-xs) 0;
-}
-
-.flow-item + .flow-item {
-  border-top: 1px dashed var(--ink);
-}
-
-.flow-item__head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--app-space-xs) var(--app-space-sm);
-  align-items: baseline;
-  font-size: var(--app-size-sm);
-}
-
-.flow-item__head time,
-.flow-item__step {
-  color: var(--app-text-secondary);
-  font-size: var(--app-size-xs);
-}
-
-.flow-item__count {
-  font-weight: 700;
-}
-
-.flow-item__detail {
-  margin: var(--app-space-xs) 0 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-size: var(--app-size-sm);
-  color: var(--app-text-secondary);
 }
 
 .flow-missing {

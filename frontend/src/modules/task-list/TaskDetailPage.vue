@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue"
+import { computed, onMounted, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import WorkbenchCrumbs from "@/shared/components/WorkbenchCrumbs.vue"
@@ -7,19 +7,12 @@ import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
 import { getTaskReport } from "./api/tasks"
-import TaskMediaThumb from "./components/TaskMediaThumb.vue"
 import CaseImportCard from "./components/CaseImportCard.vue"
-import {
-  executorRoundNumbers,
-  reportPageCount,
-  reportPageSlice,
-  roundTitleLead,
-  roundTitleTail,
-} from "./helpers/task-detail"
+import CaseStepList from "./components/CaseStepList.vue"
+import { caseStepViews } from "./helpers/report-steps"
 import {
   CASE_EVENT_POLL_MS,
   DEFAULT_OPEN_CASE_INDEX,
-  ROUNDS_PER_PAGE,
   TASK_REPORT_HEADER_GRADIENT,
   TASK_REPORT_HEADER_ICON,
 } from "./constants"
@@ -121,13 +114,12 @@ function formatElapsed(start, end) {
 
 const elapsed = computed(() => formatElapsed(task.value?.started_at, task.value?.finished_at))
 const openCases = ref(new Set([DEFAULT_OPEN_CASE_INDEX]))
-const openRounds = ref(new Set())
-const casePages = reactive({})
+/** 已展开的步骤：键为 `用例下标:步骤键`，默认空集（只展开用例，步骤全收起） */
+const openSteps = ref(new Set())
 
 watch(cases, () => {
   openCases.value = new Set([DEFAULT_OPEN_CASE_INDEX])
-  openRounds.value = new Set()
-  for (const key of Object.keys(casePages)) delete casePages[key]
+  openSteps.value = new Set()
 })
 
 /** 轮次编号 → 轮次对象；用例只存 round_ids，避免复制整份轮次。 */
@@ -137,39 +129,16 @@ const roundsById = computed(() => {
   return map
 })
 
-/** 某用例按 round_ids 取到的轮次，顺序与接口一致。 */
-function caseRounds(caseItem) {
-  const picked = []
-  for (const roundId of caseItem?.round_ids || []) {
-    const round = roundsById.value.get(roundId)
-    if (round) picked.push(round)
-  }
-  return picked
-}
+/** 每条用例的步骤视图：执行/验收已按 step_seq 与角色归并好 */
+const caseSteps = computed(() =>
+  cases.value.map((caseItem) => caseStepViews(caseItem, roundsById.value)),
+)
 
-/** 轮次编号 → 执行步骤序号；验收轮不入表，号在整份用例上算，换页不跳号。 */
-const execNoById = computed(() => {
-  const map = new Map()
-  for (const caseItem of cases.value) {
-    for (const [roundId, no] of executorRoundNumbers(caseRounds(caseItem))) map.set(roundId, no)
-  }
-  return map
-})
-
-function pageCount(caseItem) {
-  return reportPageCount(caseRounds(caseItem).length, ROUNDS_PER_PAGE)
-}
-
-function pageOf(caseIndex) {
-  return casePages[caseIndex] || 1
-}
-
-function pagedRounds(caseIndex, caseItem) {
-  return reportPageSlice(caseRounds(caseItem), pageOf(caseIndex), ROUNDS_PER_PAGE)
-}
-
-function setPage(caseIndex, page, total) {
-  casePages[caseIndex] = Math.min(Math.max(1, page), total)
+function toggleStep(key) {
+  const next = new Set(openSteps.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  openSteps.value = next
 }
 
 function taskStatusText(status) {
@@ -193,46 +162,10 @@ function toggleCase(index) {
   openCases.value = next
 }
 
-function leadCount(round) {
-  return (round.handover ? 1 : 0) + (round.verdict ? 1 : 0)
-}
-
-function blockNo(round, blockIndex) {
-  return leadCount(round) + blockIndex + 1
-}
-
-function roundKey(caseIndex, roundIndex) {
-  return `${caseIndex}-${roundIndex}`
-}
-
-function roundOpen(index) {
-  return openRounds.value.has(index)
-}
-
-function toggleRound(index) {
-  const next = new Set(openRounds.value)
-  if (next.has(index)) next.delete(index)
-  else next.add(index)
-  openRounds.value = next
-}
-
 function outcomeClass(outcome) {
   if (outcome === "PASS") return "badge-pass"
   if (outcome === "FAIL") return "badge-fail"
   return "badge-pending"
-}
-
-function phaseClass(phase) {
-  if (phase === "开始") return "is-start"
-  if (phase === "推理") return "is-reason"
-  if (phase === "执行") return "is-execute"
-  if (phase === "结束") return "is-end"
-  return "is-other"
-}
-
-/** 角色类别对应的配色类（执行 / 验收两色，与左侧强调色同源）。 */
-function roundKindClass(round) {
-  return round?.role_kind === "verifier" ? "is-verifier" : "is-executor"
 }
 </script>
 
@@ -375,7 +308,7 @@ function roundKindClass(round) {
 
           <section v-for="(caseItem, caseIndex) in cases" :key="caseIndex" class="flow-case">
             <button type="button" class="flow-case__title" @click="toggleCase(caseIndex)">
-              <span class="flow-round__mark">{{ caseOpen(caseIndex) ? "▾" : "▸" }}</span>
+              <span class="flow-case__mark">{{ caseOpen(caseIndex) ? "▾" : "▸" }}</span>
               <span class="flow-case__name"
                 >{{ caseIndex + 1 }}. 测试用例：{{ caseItem.title || "未命名用例" }}</span
               >
@@ -384,88 +317,13 @@ function roundKindClass(round) {
               }}</span>
             </button>
             <div v-if="caseOpen(caseIndex)" class="flow-case__body">
-              <article
-                v-for="(round, roundIndex) in pagedRounds(caseIndex, caseItem)"
-                :key="roundKey(caseIndex, round.round_id)"
-                class="flow-round"
-              >
-                <button
-                  type="button"
-                  class="flow-round__title"
-                  :class="roundKindClass(round)"
-                  @click="toggleRound(roundKey(caseIndex, round.round_id))"
-                >
-                  <span class="flow-round__mark">{{
-                    roundOpen(roundKey(caseIndex, round.round_id)) ? "▾" : "▸"
-                  }}</span>
-                  <span class="flow-round__text"
-                    >{{ roundTitleLead(round, execNoById.get(round.round_id))
-                    }}<span
-                      v-if="round.role"
-                      class="badge badge-role"
-                      :class="roundKindClass(round)"
-                      >{{ round.role }}</span
-                    >{{ roundTitleTail(round) }}</span
-                  >
-                </button>
-                <div v-if="roundOpen(roundKey(caseIndex, round.round_id))" class="flow-round__body">
-                  <section v-if="round.handover" class="flow-lead is-handover">
-                    <h4 class="flow-lead__title">交付</h4>
-                    <p class="flow-note">{{ round.handover }}</p>
-                  </section>
-                  <section v-if="round.verdict" class="flow-lead is-verdict">
-                    <h4 class="flow-lead__title">结论</h4>
-                    <p class="flow-note">{{ round.verdict.message }}</p>
-                  </section>
-                  <ol class="flow-timeline">
-                    <li
-                      v-for="(block, blockIndex) in round.blocks"
-                      :key="`${caseIndex}-${roundIndex}-${blockIndex}`"
-                      class="flow-phase"
-                      :class="phaseClass(block.phase)"
-                    >
-                      <h4 class="flow-phase__title">
-                        {{ blockNo(round, blockIndex) }}. {{ block.title }}
-                      </h4>
-                      <div v-for="item in block.items" :key="item.seq" class="flow-item">
-                        <div class="flow-item__head">
-                          <time>{{ formatDateTime(item.time) }}</time>
-                          <strong>{{ item.label }}</strong>
-                          <span v-if="item.count > 1" class="flow-item__count"
-                            >×{{ item.count }}</span
-                          >
-                          <span v-if="item.step_seq" class="flow-item__step">
-                            步骤 {{ item.step_seq }} · 第 {{ item.attempt || 1 }} 次
-                          </span>
-                        </div>
-                        <p v-if="item.detail" class="flow-item__detail">{{ item.detail }}</p>
-                        <TaskMediaThumb
-                          v-if="item.media_id"
-                          :task-id="Number(taskId)"
-                          :media-id="item.media_id"
-                        />
-                      </div>
-                    </li>
-                  </ol>
-                </div>
-              </article>
-              <div v-if="pageCount(caseItem) > 1" class="flow-pager">
-                <button
-                  type="button"
-                  :disabled="pageOf(caseIndex) <= 1"
-                  @click="setPage(caseIndex, pageOf(caseIndex) - 1, pageCount(caseItem))"
-                >
-                  上一页
-                </button>
-                <span>第 {{ pageOf(caseIndex) }} / {{ pageCount(caseItem) }} 页</span>
-                <button
-                  type="button"
-                  :disabled="pageOf(caseIndex) >= pageCount(caseItem)"
-                  @click="setPage(caseIndex, pageOf(caseIndex) + 1, pageCount(caseItem))"
-                >
-                  下一页
-                </button>
-              </div>
+              <CaseStepList
+                :steps="caseSteps[caseIndex] || []"
+                :open-keys="openSteps"
+                :key-prefix="`${caseIndex}:`"
+                :task-id="Number(taskId)"
+                @toggle="toggleStep"
+              />
             </div>
           </section>
         </template>

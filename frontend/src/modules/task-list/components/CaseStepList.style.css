@@ -1,0 +1,141 @@
+/* 任务详情：步骤清单（步骤行 + 按次分块） */
+.flow-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+}
+
+.flow-steps__empty {
+  margin: 0;
+  padding: var(--app-space-sm) 0;
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-sm);
+}
+
+.flow-step {
+  border-left: 4px solid var(--c-ai);
+}
+
+.flow-step.is-fail {
+  border-left-color: var(--c-runner);
+}
+
+.flow-step__title {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--app-space-xs);
+  width: 100%;
+  margin: 0;
+  padding: var(--app-space-sm);
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+}
+
+.flow-step__title:hover,
+.flow-step__title[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--c-ai) 10%, transparent);
+}
+
+.flow-step.is-fail .flow-step__title:hover,
+.flow-step.is-fail .flow-step__title[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--c-runner) 10%, transparent);
+}
+
+.flow-step__mark {
+  flex: 0 0 auto;
+  font-size: var(--app-size-xs);
+  padding-top: 2px;
+}
+
+.flow-step__text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.flow-step__badge {
+  flex: 0 0 auto;
+  padding: 0 var(--app-space-xs);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+}
+
+.flow-step__badge.is-pass {
+  background: var(--app-status-success-bg);
+}
+
+.flow-step__badge.is-fail {
+  background: var(--c-runner);
+}
+
+.flow-step__badge.is-pending {
+  background: var(--paper);
+  color: var(--app-text-secondary);
+}
+
+.flow-step__body {
+  margin: 0 0 var(--app-space-sm) var(--app-space-md);
+  padding: 0 0 0 var(--app-space-md);
+  border-left: 2px dashed var(--ink);
+}
+
+.flow-attempt + .flow-attempt {
+  margin-top: var(--app-space-md);
+  padding-top: var(--app-space-sm);
+  border-top: 2px dashed var(--ink);
+}
+
+.flow-attempt__head {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+  width: 100%;
+  margin: 0;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.flow-attempt__head:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.flow-attempt__mark {
+  flex: 0 0 auto;
+  font-size: var(--app-size-xs);
+}
+
+.flow-attempt__body {
+  padding-left: var(--app-space-md);
+}
+
+.flow-attempt__tag {
+  display: inline-block;
+  padding: 0 var(--app-space-sm);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--c-dashboard);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.flow-attempt__tag.is-retry {
+  background: var(--c-device);
+}
+
+.flow-attempt__tag.is-fail {
+  background: var(--c-runner);
+}

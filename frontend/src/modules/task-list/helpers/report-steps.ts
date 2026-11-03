@@ -1,0 +1,222 @@
+/**
+ * 任务详情：把报告里的轮次按步骤归并成「步骤 → 尝试 → 执行/验收」。
+ *
+ * 数据全部来自 `GET /api/tasks/{id}/report/`，本模块只做纯函数分组：
+ * 1. caseStepViews: 用具例的步骤轴挂载轮次，产出可直接渲染的 StepView 列表。
+ * 2. formatClock: 事件时间只取时分秒，供步骤展开体内的时间线使用。
+ */
+import type { TaskReportCase, TaskReportRound, TaskReportStep } from "@/shared/types/ai"
+
+export type RoundKind = "executor" | "verifier"
+
+/** 一步里的一次尝试：该次执行轮与验收轮 */
+export interface StepRun {
+  roundId: number
+  attempt: number
+  roleKind: RoundKind
+  round: TaskReportRound
+}
+
+/** 一次尝试：块头是次数标签，块内执行在前、验收在后 */
+export interface AttemptView {
+  attempt: number
+  executor: StepRun[]
+  verifier: StepRun[]
+}
+
+/** 一个步骤：步骤行只渲染序号、动作与结果，展开体渲染 attempts */
+export interface StepView {
+  /** 折叠状态用的稳定键：有 step_seq 用序号，退化时用轮次号 */
+  key: string
+  seq: number
+  action: string
+  expected: string
+  /** PASS / FAIL / 未完成 / 未执行 */
+  outcome: string
+  attempts: AttemptView[]
+}
+
+const OUTCOME_PASS = "PASS"
+const OUTCOME_FAIL = "FAIL"
+const OUTCOME_UNFINISHED = "未完成"
+const OUTCOME_UNEXECUTED = "未执行"
+
+/** 轮次所属角色：优先 role_kind，缺失时按角色名兜底（存量数据） */
+function roundKind(round: TaskReportRound): RoundKind {
+  const kind = String(round?.role_kind || "").toLowerCase()
+  if (kind === "verifier") return "verifier"
+  if (kind === "executor") return "executor"
+  const name = String(round?.role || round?.role_name || "").toLowerCase()
+  return name.includes("verif") ? "verifier" : "executor"
+}
+
+/** 轮次的尝试次数：缺失按第 1 次 */
+function attemptOf(round: TaskReportRound): number {
+  const attempt = Number(round?.attempt)
+  return attempt > 0 ? attempt : 1
+}
+
+/** 报告里的步骤轴；空值统一成空串，避免模板里再判一次 */
+function normalizeSteps(steps?: TaskReportStep[]): TaskReportStep[] {
+  return (steps || [])
+    .filter((step) => Number(step?.seq) > 0)
+    .map((step) => ({
+      seq: Number(step.seq),
+      action: String(step.action || "").trim(),
+      expected: String(step.expected || "").trim(),
+      outcome: String(step.outcome || "").trim(),
+    }))
+}
+
+/** 无步骤定义时的结果：看该步最后一次带判决的验收 */
+function derivedOutcome(group: TaskReportRound[]): string {
+  if (!group.length) return OUTCOME_UNEXECUTED
+  const judged = group.filter(
+    (round) => roundKind(round) === "verifier" && typeof round?.verdict?.passed === "boolean",
+  )
+  const last = judged[judged.length - 1]
+  if (!last) return OUTCOME_UNFINISHED
+  return last.verdict?.passed ? OUTCOME_PASS : OUTCOME_FAIL
+}
+
+/** 一次尝试的验收是否通过：用于次数标签配色，无判决时为 null */
+export function attemptVerdict(attempt: AttemptView): boolean | null {
+  const judged = attempt.verifier.filter((run) => typeof run.round?.verdict?.passed === "boolean")
+  const last = judged[judged.length - 1]
+  if (!last) return null
+  return Boolean(last.round.verdict?.passed)
+}
+
+/** 把同一步骤的轮次按 attempt 分组，组内执行在前、验收在后 */
+function buildAttempts(group: TaskReportRound[]): AttemptView[] {
+  const byAttempt = new Map<number, AttemptView>()
+  for (const round of group) {
+    const attempt = attemptOf(round)
+    let view = byAttempt.get(attempt)
+    if (!view) {
+      view = { attempt, executor: [], verifier: [] }
+      byAttempt.set(attempt, view)
+    }
+    const run: StepRun = {
+      roundId: round.round_id,
+      attempt,
+      roleKind: roundKind(round),
+      round,
+    }
+    if (run.roleKind === "verifier") view.verifier.push(run)
+    else view.executor.push(run)
+  }
+  return [...byAttempt.values()].sort((a, b) => a.attempt - b.attempt)
+}
+
+/** 组装一个步骤视图；outcome 优先用后端算好的，缺失时由轮次推导 */
+function buildStep(
+  key: string,
+  seq: number,
+  step: { action?: string; expected?: string; outcome?: string } | null,
+  group: TaskReportRound[],
+): StepView {
+  return {
+    key,
+    seq,
+    action: String(step?.action || "").trim(),
+    expected: String(step?.expected || "").trim(),
+    outcome: String(step?.outcome || "").trim() || derivedOutcome(group),
+    attempts: buildAttempts(group),
+  }
+}
+
+/** 把落不进任何声明步骤的轮次补在末尾，各自成一步（不丢内容） */
+function appendOrphans(steps: StepView[], rounds: TaskReportRound[], placed: Set<number>) {
+  let extra = Math.max(0, ...steps.map((step) => step.seq))
+  for (const round of rounds) {
+    if (placed.has(round.round_id)) continue
+    extra += 1
+    steps.push(buildStep(`r${round.round_id}`, extra, { action: round.subject || "" }, [round]))
+  }
+}
+
+/**
+ * 把一条用例的轮次按步骤归并。
+ *
+ * Args:
+ *   caseItem: 报告 `data.cases[]` 的一项，`round_ids` 指向 `data.rounds`。
+ *   roundsById: `round_id → 轮次` 的索引。
+ *
+ * Returns:
+ *   按步骤号升序的步骤视图；用例没有任何步骤与轮次时返回空数组。
+ *
+ * 分组口径（见 openspec/specs/agent-task-flow-report）：
+ *   1. 步骤轴优先取 `cases[].steps`，缺失时按轮次的 `step_seq` 去重升序生成；
+ *   2. 两者都没有时每个轮次各自成一步（存量数据退化）；
+ *   3. 轮次一律按 `step_seq` 归入步骤、按角色分流，不依赖事件先后顺序。
+ */
+export function caseStepViews(
+  caseItem: TaskReportCase | null | undefined,
+  roundsById: Map<number, TaskReportRound>,
+): StepView[] {
+  const rounds = (caseItem?.round_ids || [])
+    .map((roundId) => roundsById.get(roundId))
+    .filter((round): round is TaskReportRound => Boolean(round))
+
+  const bySeq = new Map<number, TaskReportRound[]>()
+  for (const round of rounds) {
+    const seq = Number(round?.step_seq)
+    if (!(seq > 0)) continue
+    const group = bySeq.get(seq)
+    if (group) group.push(round)
+    else bySeq.set(seq, [round])
+  }
+
+  const declared = normalizeSteps(caseItem?.steps)
+  const steps: StepView[] = []
+  const placed = new Set<number>()
+
+  if (declared.length) {
+    for (const step of declared) {
+      const group = bySeq.get(step.seq) || []
+      for (const round of group) placed.add(round.round_id)
+      steps.push(buildStep(String(step.seq), step.seq, step, group))
+    }
+    appendOrphans(steps, rounds, placed)
+    return steps
+  }
+
+  const seqs = [...bySeq.keys()].sort((a, b) => a - b)
+  if (seqs.length) {
+    for (const seq of seqs) {
+      const group = bySeq.get(seq) || []
+      for (const round of group) placed.add(round.round_id)
+      const executor = group.find((round) => roundKind(round) === "executor")
+      steps.push(buildStep(String(seq), seq, { action: executor?.subject || "" }, group))
+    }
+  }
+
+  if (!rounds.length) return steps
+
+  if (!seqs.length) {
+    return rounds.map((round, index) =>
+      buildStep(`r${round.round_id}`, index + 1, { action: round.subject || "" }, [round]),
+    )
+  }
+
+  appendOrphans(steps, rounds, placed)
+  return steps
+}
+
+/**
+ * 事件时间取时分秒。
+ *
+ * Args:
+ *   iso: 报告里的 ISO 时间串。
+ *
+ * Returns:
+ *   `HH:mm:ss`；无法解析时返回空串，由调用方决定是否隐藏。
+ */
+export function formatClock(iso?: string): string {
+  if (!iso) return ""
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ""
+  const pad = (value: number) => String(value).padStart(2, "0")
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}

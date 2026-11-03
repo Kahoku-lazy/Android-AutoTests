@@ -41,7 +41,7 @@
 ```python
 from engines.agents.models import get_chat_model, get_fallback_chat_model
 
-model = get_chat_model("UI_EXECUTOR_ROLE_CONFIG")            # ChatModelBase
+model = get_chat_model("UI_EXECUTOR_ROLE_CONFIG")  # ChatModelBase
 fallback = get_fallback_chat_model("UI_EXECUTOR_ROLE_CONFIG")  # ChatModelBase | None
 ```
 

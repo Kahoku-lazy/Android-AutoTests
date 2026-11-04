@@ -7,8 +7,14 @@ export const TASK_DEVICE_POLL_INTERVAL_MS = 30000
 export const TASK_REPORT_HEADER_ICON = "file-bar-chart"
 export const TASK_REPORT_HEADER_GRADIENT = "linear-gradient(135deg,#999,#8b7f8f)"
 
-/** 任务详情：用例编写任务运行中，报告页自动刷新间隔 */
-export const CASE_EVENT_POLL_MS = 3000
+/** 任务详情：运行中任务（执行类与用例编写类）的报告自动刷新间隔；<=0 视为关闭自动刷新 */
+export const TASK_REPORT_POLL_MS = 3000
+
+/** 任务详情：自动刷新连续失败时的退避序列（末项封顶） */
+export const REPORT_POLL_BACKOFF_MS = [3000, 6000, 12000, 30000]
+
+/** 任务详情：允许的连续失败次数；超过该次数（即第 6 次失败）停止自动刷新，改为手动重试 */
+export const REPORT_POLL_MAX_FAILURES = 5
 
 /** 任务详情：默认只展开第一个用例 */
 export const DEFAULT_OPEN_CASE_INDEX = 0

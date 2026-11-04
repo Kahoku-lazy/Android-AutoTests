@@ -72,9 +72,17 @@ export async function uploadTaskFile(
   return data
 }
 
-/** 任务事件流程报告（详情页） */
+/**
+ * 任务事件流程报告（详情页）。
+ *
+ * 详情页按 3 秒轮询本接口，所以显式带 `Cache-Control: no-cache` 强制浏览器重验证：
+ * 服务端对终态任务给出 ETag/304，而运行中任务的响应带 `max-age=60`，
+ * 不强制重验证会把 3 秒轮询拖成 60 秒轮询。不加时间戳参数，避免 304 永远落空。
+ */
 export async function getTaskReport(taskId: number): Promise<TaskReportResponse> {
-  const { data } = await djangoClient.get<TaskReportResponse>(`/tasks/${taskId}/report/`)
+  const { data } = await djangoClient.get<TaskReportResponse>(`/tasks/${taskId}/report/`, {
+    headers: { "Cache-Control": "no-cache" },
+  })
   return data
 }
 

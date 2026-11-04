@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from "vue"
+import { computed, onMounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import WorkbenchCrumbs from "@/shared/components/WorkbenchCrumbs.vue"
@@ -9,9 +9,9 @@ import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
 import { getTaskReport } from "./api/tasks"
 import CaseImportCard from "./components/CaseImportCard.vue"
 import CaseStepList from "./components/CaseStepList.vue"
-import { caseStepViews } from "./helpers/report-steps"
+import { useReportPoll } from "./composables/useReportPoll"
+import { caseStepViews, formatClock } from "./helpers/report-steps"
 import {
-  CASE_EVENT_POLL_MS,
   DEFAULT_OPEN_CASE_INDEX,
   TASK_REPORT_HEADER_GRADIENT,
   TASK_REPORT_HEADER_ICON,
@@ -25,46 +25,58 @@ const flow = ref(null)
 const loading = ref(false)
 const error = ref("")
 
+const {
+  failed: pollFailed,
+  lastUpdatedAt,
+  start: startPoll,
+  restart: restartPoll,
+  stop: stopPoll,
+} = useReportPoll(refreshReport, () => isRunning.value)
+
 onMounted(() => loadReport())
 watch(taskId, () => loadReport())
-onUnmounted(stopPoll)
 
-let pollTimer = null
-
-function stopPoll() {
-  if (pollTimer) {
-    clearTimeout(pollTimer)
-    pollTimer = null
-  }
-}
-
-function schedulePoll() {
+/**
+ * 首屏加载：清空旧报告，失败时给出错误态。
+ *
+ * 成功且任务仍在运行时接上自动刷新。
+ */
+async function loadReport() {
+  loading.value = true
+  error.value = ""
+  flow.value = null
   stopPoll()
-  if (task.value?.task_kind !== "case_authoring") return
-  if (task.value?.status !== "running" && task.value?.status !== "pending") return
-  pollTimer = setTimeout(() => loadReport(false), CASE_EVENT_POLL_MS)
-}
-
-async function loadReport(initial = true) {
-  if (initial) {
-    loading.value = true
-    error.value = ""
-    flow.value = null
-    stopPoll()
-  }
   try {
     const payload = await getTaskReport(Number(taskId.value))
-    if (payload.status) {
+    if (payload.status && payload.data) {
       flow.value = payload.data
       error.value = ""
-    } else if (initial) {
+    } else {
       error.value = payload.message || "加载报告失败"
     }
   } catch (e) {
-    if (initial) error.value = e?.response?.data?.message || e?.message || "加载报告失败"
+    error.value = e?.response?.data?.message || e?.message || "加载报告失败"
   }
-  if (initial) loading.value = false
-  schedulePoll()
+  loading.value = false
+  if (flow.value && isRunning.value) startPoll()
+}
+
+/**
+ * 静默刷新：只替换报告数据，不动骨架与错误态。
+ *
+ * Returns:
+ *   true 表示本轮成功；失败交给轮询按退避重试。
+ */
+async function refreshReport() {
+  if (!isRunning.value) return false
+  try {
+    const payload = await getTaskReport(Number(taskId.value))
+    if (!payload.status || !payload.data) return false
+    flow.value = payload.data
+    return true
+  } catch {
+    return false
+  }
 }
 
 const task = computed(() => flow.value?.task || null)
@@ -117,7 +129,18 @@ const openCases = ref(new Set([DEFAULT_OPEN_CASE_INDEX]))
 /** 已展开的步骤：键为 `用例下标:步骤键`，默认空集（只展开用例，步骤全收起） */
 const openSteps = ref(new Set())
 
-watch(cases, () => {
+/**
+ * 用例签名：用例数量 + 标题序列。
+ *
+ * 自动刷新每轮都会给出新的 `cases` 数组引用，直接 watch 数组会把用户展开的用例、
+ * 已展开的步骤全部重置；只有真正出现新用例时才回到默认展开态。
+ */
+const caseSignature = computed(
+  () =>
+    `${cases.value.length}|${cases.value.map((caseItem) => caseItem.title || "").join("\u0000")}`,
+)
+
+watch(caseSignature, () => {
   openCases.value = new Set([DEFAULT_OPEN_CASE_INDEX])
   openSteps.value = new Set()
 })
@@ -221,6 +244,9 @@ function outcomeClass(outcome) {
             <p class="flow-fact__extra">
               {{ formatDateTime(task.started_at) }} → {{ formatDateTime(task.finished_at) }}
             </p>
+            <p v-if="lastUpdatedAt" class="flow-fact__extra">
+              更新于 {{ formatClock(lastUpdatedAt.toISOString()) }}
+            </p>
           </div>
           <div class="flow-fact">
             <p class="flow-fact__label">3. 执行环境</p>
@@ -297,7 +323,18 @@ function outcomeClass(outcome) {
           </section>
         </template>
         <template v-else>
-          <h2 class="flow-section-title">用例执行详情</h2>
+          <h2 class="flow-section-title">
+            用例执行详情
+            <span v-if="isRunning && !pollFailed" class="flow-live">运行中 · 自动刷新</span>
+            <button
+              v-else-if="isRunning && pollFailed"
+              type="button"
+              class="flow-live flow-live--paused"
+              @click="restartPoll"
+            >
+              自动刷新已暂停 · 点击重试
+            </button>
+          </h2>
 
           <EmptyState
             v-if="cases.length === 0 && rounds.length === 0"

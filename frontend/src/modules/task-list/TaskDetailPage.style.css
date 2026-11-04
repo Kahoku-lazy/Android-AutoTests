@@ -196,6 +196,16 @@
   font-weight: 600;
 }
 
+/* 自动刷新连续失败：暂停提示兼手动重试入口，只在运行中任务上出现 */
+.flow-live--paused {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--app-text-secondary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* 用例编写任务：模型事件流（思考 / 工具调用 / 模型调用 / SOP 步骤） */
 .flow-event {
   display: flex;

@@ -665,6 +665,8 @@ def _fold_round_time(span: dict, item: dict, times: dict[int, "_EventRow"]) -> N
         span["end"] = end
     if item.get("event_type") == "ModelCallEndEvent":
         span["model_ms"] += int(event.duration_ms or 0)
+    elif item.get("event_type") == "ToolResultEndEvent":
+        span["tool_ms"] += int(event.duration_ms or 0)
 
 
 def _rounds(
@@ -700,6 +702,7 @@ def _rounds(
                 "start": None,
                 "end": None,
                 "model_ms": 0,
+                "tool_ms": 0,
                 "has_end": False,
             }
         _fold_round_time(spans[current["round_id"]], item, times)
@@ -839,19 +842,30 @@ def _group_span(group: list[dict], spans: dict[int, dict]) -> tuple[object, obje
 
 def _step_span(group: list[dict], seq: int, spans: dict[int, dict]) -> dict:
     """
-    某一步骤在该用例内的耗时与运行标记。
+    某一步骤在该用例内的耗时构成与运行标记。
 
     Args:
         group: 该用例的全部轮次。
         seq: 步骤序号。
-        spans: 轮次编号 → 起止与模型耗时。
+        spans: 轮次编号 → 起止、模型耗时与工具耗时。
 
     Returns:
-        含 `duration_ms` 与 `running` 的字段字典；该步没有轮次时为 0 / False。
+        含 `duration_ms`（步骤墙钟）、`model_ms`（该步模型调用合计）、
+        `tool_ms`（该步工具返回合计）、`idle_ms`（墙钟减去两者，不为负）与
+        `running` 的字段字典；该步没有轮次时各项为 0。
     """
     rows = [row for row in group if int(row.get("step_seq") or 0) == int(seq)]
     start, end, running = _group_span(rows, spans)
-    return {"duration_ms": _span_ms(start, end), "running": running}
+    duration = _span_ms(start, end)
+    model = sum(int((spans.get(row.get("round_id")) or {}).get("model_ms") or 0) for row in rows)
+    tool = sum(int((spans.get(row.get("round_id")) or {}).get("tool_ms") or 0) for row in rows)
+    return {
+        "duration_ms": duration,
+        "model_ms": model,
+        "tool_ms": tool,
+        "idle_ms": max(duration - model - tool, 0),
+        "running": running,
+    }
 
 
 def _annotate(group: list[dict], steps, spans: dict[int, dict]) -> list[dict]:

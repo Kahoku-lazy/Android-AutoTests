@@ -9,8 +9,8 @@ Python 调试：➡️ python -m engines.agents.tools.tool_device 🏁
 修改时间: ➡️ 2026-10-30 🏁
 类型: ➡️ 工具模块 🏁
 简介说明：➡️
-1. click_ratio: 按归一化坐标点击（视觉模型看图后输出相对位置，工具换算成屏幕像素坐标）；返回实际点击的像素坐标 x、y 与点击时间
-2. tap_screen: 按像素坐标点击或长按设备屏幕；返回实际点击的像素坐标 x、y 与点击时间
+1. click_ratio: 按归一化坐标点击（视觉模型看图后输出相对位置，工具换算成屏幕像素坐标）；可凭核对帧标识复用同一帧、不重新截屏，并回传点击后的页面图
+2. tap_screen: 按像素坐标点击或长按设备屏幕；同样支持核对帧标识与点击后回图
 3. xpath_action: 获取页面 xpath 元素的文本与中心坐标（只查询，不点击）；未命中时 count 为 0、items 为空
 4. swipe_screen: 按方向滑动设备屏幕；只返回动作时间
 5. drag_ratio: 按归一化坐标拖动（视觉模型看图后输出起终点相对位置，工具换算成屏幕像素坐标）；只返回动作时间
@@ -22,7 +22,8 @@ Python 调试：➡️ python -m engines.agents.tools.tool_device 🏁
 🏁
 关联模块：➡️
 1. engines.device.action: 导入 AppControl, Click, Drag, InputText, LongClick, PressKey 等
-2. utils.logs: 导入 agent_event_log, logging_now_stamp
+2. engines/agents/tools/tool_frame_cache.py: 点击类工具凭 token 复用核对过的那一帧
+3. utils.logs: 导入 agent_event_log, logging_now_stamp
 🏁
 测试：➡️
 1. tests/engines/agents/test_tool_device.py: 单文件调试指令：python -m pytest tests/engines/agents/test_tool_device.py -vv -s --tb=sh
@@ -53,6 +54,7 @@ from engines.device.action import (
 )
 from utils.logs import agent_event_log, logging_now_stamp
 
+from . import tool_frame_cache as _frame_cache
 from .tool_base import ToolSpec
 
 __all__ = [
@@ -154,6 +156,30 @@ def _execute(
     Returns:
         JSON 字符串；失败时是 {"error": 可读原因}。
     """
+    payload, error = _run_device(serial, body, side_effect=side_effect, watch_app=watch_app)
+    if error:
+        return error
+    return json.dumps(payload, ensure_ascii=False, default=str)
+
+
+def _run_device(
+    serial: str,
+    body: Callable[[Any, Any], dict],
+    *,
+    side_effect: bool = False,
+    watch_app: tuple[str, str] | None = None,
+) -> tuple[dict, str]:
+    """执行一次动作，把「成功字段」与「失败原因」分开返回，供需要回图的工具使用。
+
+    Args:
+        serial: 设备序列号。
+        body: 在设备会话里执行的动作，返回要回传给模型的字段。
+        side_effect: 有副作用时补 `action_time`（工具调用起始时刻）。
+        watch_app: 监控前台切换时传 `(目标包名, enter|leave)`。
+
+    Returns:
+        (字段字典, 错误 JSON 串)；成功时错误为空串，失败时字段为空字典。
+    """
     stamp = logging_now_stamp() if (side_effect or watch_app) else ""
     opened = False
     try:
@@ -167,47 +193,155 @@ def _execute(
                 target, mode = watch_app
                 payload["before_app"] = before
                 payload["after_app"] = _wait_app(info, target, mode)
-            return json.dumps(payload, ensure_ascii=False, default=str)
+            return payload, ""
     except Exception as exc:  # noqa: BLE001 - 设备侧失败一律转可读结论
         if opened:
             agent_event_log.warning(f"设备动作执行失败：{exc}")
-            return _error(f"动作执行失败：{exc}")
+            return {}, _error(f"动作执行失败：{exc}")
         agent_event_log.warning(f"打开设备失败：{exc}")
-        return _error(f"连接设备失败：{exc}")
+        return {}, _error(f"连接设备失败：{exc}")
 
 
-def click_ratio(serial: str, nx: float, ny: float) -> str:
-    """按归一化坐标点击（视觉模型看图后输出相对位置，工具换算成屏幕像素坐标）；返回实际点击的像素坐标 x、y 与点击时间。
+def _frame_pixels(frame: _frame_cache.Frame, nx: float, ny: float) -> tuple[int, int]:
+    """按核对帧的图片尺寸把归一化坐标换成像素坐标；换算口径与坐标核对一致。
+
+    Args:
+        frame: 已核对的帧。
+        nx: 横向相对位置 0~1。
+        ny: 纵向相对位置 0~1。
+
+    Returns:
+        落在该帧图片内的像素坐标 (x, y)。
+    """
+    left = min(max(float(nx), 0.0), 1.0)
+    top = min(max(float(ny), 0.0), 1.0)
+    return min(int(left * frame.width), frame.width - 1), min(
+        int(top * frame.height), frame.height - 1
+    )
+
+
+def _gesture(
+    serial: str,
+    body: Callable[[Any], dict],
+    *,
+    shot_after: bool,
+) -> dict | str:
+    """执行一次手势；需要时把点击后的页面图与动作时间一起回给模型。
+
+    Args:
+        serial: 设备序列号。
+        body: 拿到设备控制对象后执行手势，返回要回传给模型的字段。
+        shot_after: 是否在动作后截一张当前页面图。
+
+    Returns:
+        带图时为 {"image": {...}, "summary": {...}}；不出图时是 JSON 字符串；
+        失败时是 {"error": 可读原因} 的 JSON 字符串。
+    """
+
+    def run(_info: Any, control: Any) -> dict:
+        payload = dict(body(control) or {})
+        if shot_after:
+            shot = Screenshot(control).capture()
+            payload["image"] = {
+                "base64": shot["image_base64"],
+                "media_type": shot["media_type"],
+            }
+        return payload
+
+    payload, error = _run_device(serial, run, side_effect=True)
+    if error:
+        return error
+    if not shot_after:
+        return json.dumps(payload, ensure_ascii=False, default=str)
+    image = payload.pop("image")
+    return {"image": image, "summary": payload}
+
+
+def _frame_or_error(serial: str, token: str) -> tuple[_frame_cache.Frame | None, str]:
+    """取核对帧；没给 token 时返回 (None, 空串)，token 失效时返回空帧与错误串。
+
+    Args:
+        serial: 设备序列号。
+        token: 坐标核对工具签发的帧标识，可为空。
+
+    Returns:
+        (帧或 None, 错误 JSON 串或空串)。
+    """
+    key = str(token or "").strip()
+    if not key:
+        return None, ""
+    frame = _frame_cache.get(serial, key)
+    if frame is None:
+        return None, _error("标记帧已过期或不属于该设备，请重新调用 mark_dot 核对坐标后再点击")
+    return frame, ""
+
+
+def click_ratio(
+    serial: str,
+    nx: float,
+    ny: float,
+    token: str = "",
+    shot_after: bool = True,
+) -> str | dict:
+    """按归一化坐标点击（视觉模型看图后输出相对位置，工具换算成屏幕像素坐标）。
+
     Args:
         serial: 设备序列号
         nx: 横向相对位置 0~1（0=最左，1=最右）
         ny: 纵向相对位置 0~1（0=最上，1=最下）
+        token: 坐标核对工具返回的帧标识；给出时用该帧的尺寸换算、不重新截屏
+        shot_after: 是否回传点击后的页面图，默认回传
+
+    Returns:
+        带图时为 {"image": {...}, "summary": {"x", "y", "action_time"}}；
+        不出图或失败时是 JSON 字符串。
     """
-    return _execute(
-        serial,
-        lambda info, control: Click(control).by_img(float(nx), float(ny)),
-        side_effect=True,
-    )
+    frame, error = _frame_or_error(serial, token)
+    if error:
+        return error
+
+    def body(control: Any) -> dict:
+        if frame is None:
+            return Click(control).by_img(float(nx), float(ny))
+        return Click(control).by_coord(*_frame_pixels(frame, nx, ny))
+
+    return _gesture(serial, body, shot_after=shot_after)
 
 
-def tap_screen(serial: str, mode: str = "click", x: int = 0, y: int = 0) -> str:
-    """按像素坐标点击或长按设备屏幕；返回实际点击的像素坐标 x、y 与点击时间。
-    mode 只接受 click 与 long_click，其它值直接返回错误，不会退回点击；x/y 不传即为 0，会点到屏幕左上角。
+def tap_screen(
+    serial: str,
+    mode: str = "click",
+    x: int = 0,
+    y: int = 0,
+    token: str = "",
+    shot_after: bool = True,
+) -> str | dict:
+    """按像素坐标点击或长按设备屏幕。
+
     Args:
         serial: 设备序列号（由上游任务给出）
         mode: click 点击 / long_click 长按；其它值报错
         x: 坐标 x（像素）
         y: 坐标 y（像素）
+        token: 坐标核对工具返回的帧标识；给出时只校验该帧仍然有效，不重新截屏
+        shot_after: 是否回传动作后的页面图，默认回传
+
+    Returns:
+        带图时为 {"image": {...}, "summary": {"x", "y", "action_time"}}；
+        不出图或失败时是 JSON 字符串。
     """
     chosen = str(mode or "").strip()
     if chosen not in _TAP_MODES:
         return _error(f"不支持的点击模式: {chosen or '(空)'}；可用：click / long_click")
+    _frame, error = _frame_or_error(serial, token)
+    if error:
+        return error
     px, py = int(x or 0), int(y or 0)
     actions = {
-        "long_click": lambda info, control: LongClick(control).by_coord(px, py),
-        "click": lambda info, control: Click(control).by_coord(px, py),
+        "long_click": lambda control: LongClick(control).by_coord(px, py),
+        "click": lambda control: Click(control).by_coord(px, py),
     }
-    return _execute(serial, actions[chosen], side_effect=True)
+    return _gesture(serial, actions[chosen], shot_after=shot_after)
 
 
 def _xpath_payload(found: list[dict] | None) -> dict:

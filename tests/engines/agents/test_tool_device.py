@@ -150,6 +150,7 @@ def _fast_app_poll(monkeypatch: pytest.MonkeyPatch) -> None:
     """启停 App 的等待改短，避免用例等 6 秒。"""
     monkeypatch.setattr(tool_device, "_APP_SETTLE_TIMEOUT", 0.2)
     monkeypatch.setattr(tool_device, "_APP_POLL_INTERVAL", 0.01)
+    tool_device._frame_cache.clear()
 
 
 def _install(
@@ -167,8 +168,14 @@ def _install(
 
 
 def _run(name: str, *args, **kwargs) -> dict:
-    """调用工具并解析返回的 JSON。"""
-    return json.loads(getattr(tool_device, name)("serial-1", *args, **kwargs))
+    """调用工具并统一成 dict：带图结果原样返回，文本结果按 JSON 解析。"""
+    result = getattr(tool_device, name)("serial-1", *args, **kwargs)
+    return result if isinstance(result, dict) else json.loads(result)
+
+
+def _summary(payload: dict) -> dict:
+    """带图结果的可读字段在 summary 里；不带图的就是它本身。"""
+    return payload["summary"] if "image" in payload else payload
 
 
 def _assert_stamp(payload: dict) -> None:
@@ -214,7 +221,7 @@ def test_every_action_returns_action_time(monkeypatch: pytest.MonkeyPatch, name:
     _install(monkeypatch)
     payload = _run(name, **_ACTION_CALLS[name])
     assert "error" not in payload, payload
-    _assert_stamp(payload)
+    _assert_stamp(_summary(payload))
 
 
 @pytest.mark.parametrize("name", list(_ACTION_CALLS))
@@ -231,28 +238,32 @@ def test_every_action_closes_the_connection(monkeypatch: pytest.MonkeyPatch, nam
 
 
 def test_click_ratio_returns_clicked_pixel(monkeypatch: pytest.MonkeyPatch) -> None:
-    """归一化 0.5/0.5 在 1080×2340 上即 (540, 1170)，返回体恰好是坐标 + 时间。"""
+    """归一化 0.5/0.5 在 1080×2340 上即 (540, 1170)，并回传点击后的页面图。"""
     _conn, _info, control = _install(monkeypatch)
 
     payload = _run("click_ratio", nx=0.5, ny=0.5)
+    summary = _summary(payload)
     _show(
         "click_ratio(nx=0.5, ny=0.5)｜1080×2340",
-        "{x: 540, y: 1170, action_time: YYYY-MM-DD HH:MM:SS,mmm}，恰好这三个键",
-        payload,
+        "{image, summary: {x: 540, y: 1170, action_time}}",
+        summary,
     )
 
-    assert (payload["x"], payload["y"]) == (540, 1170)
-    assert set(payload) == {"x", "y", "action_time"}
+    assert (summary["x"], summary["y"]) == (540, 1170)
+    assert set(summary) == {"x", "y", "action_time"}
+    assert payload["image"]["media_type"] == "image/png"
+    assert payload["image"]["base64"]
     assert ("click_img", 540, 1170) in control.calls
+    assert control.calls.count(("screenshot_bytes",)) == 1
 
 
 def test_click_ratio_clamps_to_screen(monkeypatch: pytest.MonkeyPatch) -> None:
     """越界归一化坐标按屏幕边界夹取，回传的必须是真正点到的位置。"""
     _install(monkeypatch)
 
-    payload = _run("click_ratio", nx=1.5, ny=-0.2)
+    summary = _summary(_run("click_ratio", nx=1.5, ny=-0.2))
 
-    assert (payload["x"], payload["y"]) == (1079, 0)
+    assert (summary["x"], summary["y"]) == (1079, 0)
 
 
 def test_click_ratio_does_not_read_foreground(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -265,18 +276,20 @@ def test_click_ratio_does_not_read_foreground(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_tap_screen_click_returns_pixel(monkeypatch: pytest.MonkeyPatch) -> None:
-    """像素点击回传的坐标与入参一致。"""
+    """像素点击回传的坐标与入参一致，并回图片。"""
     _conn, _info, control = _install(monkeypatch)
 
     payload = _run("tap_screen", mode="click", x=12, y=34)
+    summary = _summary(payload)
     _show(
         "tap_screen(mode=click, x=12, y=34)",
-        "{x: 12, y: 34, action_time: YYYY-MM-DD HH:MM:SS,mmm}",
-        payload,
+        "{image, summary: {x: 12, y: 34, action_time}}",
+        summary,
     )
 
-    assert (payload["x"], payload["y"]) == (12, 34)
-    assert set(payload) == {"x", "y", "action_time"}
+    assert (summary["x"], summary["y"]) == (12, 34)
+    assert set(summary) == {"x", "y", "action_time"}
+    assert payload["image"]["base64"]
     assert ("click_coord", 12, 34) in control.calls
 
 
@@ -284,9 +297,9 @@ def test_tap_screen_long_click_returns_pixel(monkeypatch: pytest.MonkeyPatch) ->
     """长按同样回传坐标，且走的是长按实现而不是点击。"""
     _conn, _info, control = _install(monkeypatch)
 
-    payload = _run("tap_screen", mode="long_click", x=12, y=34)
+    summary = _summary(_run("tap_screen", mode="long_click", x=12, y=34))
 
-    assert (payload["x"], payload["y"]) == (12, 34)
+    assert (summary["x"], summary["y"]) == (12, 34)
     assert ("long_click_coord", 12, 34) in control.calls
     assert ("click_coord", 12, 34) not in control.calls
 
@@ -298,6 +311,85 @@ def test_tap_screen_default_mode_is_click(monkeypatch: pytest.MonkeyPatch) -> No
     _run("tap_screen", x=1, y=2)
 
     assert control.calls[0] == ("click_coord", 1, 2)
+
+
+# ══════════════════════════════════════════════════════════════════
+# 核对帧复用：带 token 的点击不再重新截屏
+# ══════════════════════════════════════════════════════════════════
+
+
+def _put_frame(serial: str = "serial-1", width: int = 1080, height: int = 2340) -> str:
+    """放一帧已核对截图，返回它的 token。"""
+    return tool_device._frame_cache.put(
+        serial,
+        width=width,
+        height=height,
+        point_x=540,
+        point_y=1170,
+        image_b64="frame",
+        media_type="image/png",
+    )
+
+
+def test_click_ratio_with_valid_frame_skips_screenshot(monkeypatch: pytest.MonkeyPatch) -> None:
+    """带上有效帧标识时按该帧尺寸换算像素、用 by_coord 点击，全流程只截一张图。"""
+    _conn, _info, control = _install(monkeypatch)
+    token = _put_frame()
+
+    payload = _run("click_ratio", nx=0.5, ny=0.5, token=token)
+    summary = _summary(payload)
+
+    assert (summary["x"], summary["y"]) == (540, 1170)
+    assert ("click_coord", 540, 1170) in control.calls
+    assert not [call for call in control.calls if call[0] == "click_img"]
+    # 只有点击后的那一张图，没有为定位再截一张
+    assert control.calls.count(("screenshot_bytes",)) == 1
+
+
+def test_click_ratio_with_expired_token_refuses_without_gesture(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """token 失效时报错，且设备上不能发生点击。"""
+    _conn, _info, control = _install(monkeypatch)
+
+    payload = _run("click_ratio", nx=0.5, ny=0.5, token="deadbeef")
+
+    assert "error" in payload
+    assert "mark_dot" in payload["error"]
+    assert control.calls == []
+
+
+def test_click_ratio_rejects_frame_of_another_device(monkeypatch: pytest.MonkeyPatch) -> None:
+    """别的设备的帧不能拿来点这台设备。"""
+    _conn, _info, control = _install(monkeypatch)
+    token = _put_frame(serial="serial-2")
+
+    payload = _run("click_ratio", nx=0.5, ny=0.5, token=token)
+
+    assert "error" in payload
+    assert control.calls == []
+
+
+def test_click_ratio_can_skip_after_shot(monkeypatch: pytest.MonkeyPatch) -> None:
+    """shot_after=False 时不回图，仍是纯文本 JSON。"""
+    _conn, _info, control = _install(monkeypatch)
+
+    payload = _run("click_ratio", nx=0.5, ny=0.5, shot_after=False)
+
+    assert set(payload) == {"x", "y", "action_time"}
+    assert control.calls.count(("screenshot_bytes",)) == 0
+
+
+def test_tap_screen_with_valid_frame_validates_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    """像素点击带有效帧标识时照常点击，且只截点击后那一张。"""
+    _conn, _info, control = _install(monkeypatch)
+    token = _put_frame()
+
+    summary = _summary(_run("tap_screen", mode="click", x=12, y=34, token=token))
+
+    assert (summary["x"], summary["y"]) == (12, 34)
+    assert ("click_coord", 12, 34) in control.calls
+    assert control.calls.count(("screenshot_bytes",)) == 1
 
 
 # ══════════════════════════════════════════════════════════════════

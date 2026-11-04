@@ -9,13 +9,14 @@ Python 调试：➡️ python -m engines.agents.tools.tool_img_b64 🏁
 修改时间: ➡️ 2026-10-30 🏁
 类型: ➡️ 工具模块 🏁
 简介说明：➡️
-1. mark_dot: 平台工具，截取设备当前屏幕并在坐标处画红点，返回标记后的图片。
+1. mark_dot: 平台工具，截取设备当前屏幕并在坐标处画红点，返回标记后的图片、帧标识与像素坐标。
 2. mark_dot_b64: 纯函数，在 base64 图片上画圆点，base64 进、base64 出。
 3. build_img_b64_tools / img_b64_tool_specs: 工具函数表与 `ToolSpec` 产出。
 🏁
 关联模块：➡️
-1. engines.device.action: 导入 Screenshot, System, open_device
-2. utils.logs: 导入 agent_event_log
+1. engines/agents/tools/tool_frame_cache.py: mark_dot 核对通过后把这一帧放进缓存并签发 token
+2. engines.device.action: 导入 Screenshot, System, open_device
+3. utils.logs: 导入 agent_event_log
 🏁
 测试：➡️
 1. tests/engines/agents/test_tool_img_b64.py: 单文件调试指令：python -m pytest tests/engines/agents/test_tool_img_b64.py -vv --tb=shor
@@ -28,6 +29,7 @@ import base64
 import io
 
 from contextlib import contextmanager
+from dataclasses import dataclass
 from typing import Any, Callable
 
 from PIL import Image, ImageDraw
@@ -35,6 +37,7 @@ from PIL import Image, ImageDraw
 from engines.device.action import Screenshot, System, open_device
 from utils.logs import agent_event_log
 
+from . import tool_frame_cache as _frame_cache
 from .tool_base import ToolSpec
 
 __all__ = [
@@ -134,6 +137,28 @@ def _point(x: float, y: float, width: int, height: int, normalized: bool) -> tup
     return cx, cy
 
 
+@dataclass(frozen=True)
+class _Marked:
+    """
+    标记结果：标记后的图片与它落点的几何信息。
+
+    Attributes:
+        base64: 标记后的图片 base64。
+        media_type: 标记后图片的 media_type。
+        width: 图片宽（像素）。
+        height: 图片高（像素）。
+        x: 红点落点的像素横坐标。
+        y: 红点落点的像素纵坐标。
+    """
+
+    base64: str
+    media_type: str
+    width: int
+    height: int
+    x: int
+    y: int
+
+
 def _annotate(
     image_b64: str,
     x: float,
@@ -142,8 +167,8 @@ def _annotate(
     normalized: bool,
     color: str,
     ring: str,
-) -> tuple[str, str]:
-    """解码、画圆点、再编码；返回 (标记后的 base64, media_type)。
+) -> _Marked:
+    """解码、画圆点、再编码；返回标记结果（含图片尺寸与落点像素）。
 
     Args:
         image_b64: 原始图片 base64。
@@ -154,7 +179,7 @@ def _annotate(
         ring: 外圈描边颜色。
 
     Returns:
-        (标记后的 base64, 图片 media_type)，编码格式沿用输入图片。
+        标记结果：标记后的 base64、media_type、图片尺寸与红点落点像素。
 
     Raises:
         ValueError: base64 非法、图片无法解码，或像素坐标越界。
@@ -192,7 +217,14 @@ def _annotate(
         img.save(buf, "JPEG", quality=_JPEG_QUALITY)
     else:
         img.save(buf, save_fmt)
-    return base64.b64encode(buf.getvalue()).decode("ascii"), _media_type(fmt)
+    return _Marked(
+        base64=base64.b64encode(buf.getvalue()).decode("ascii"),
+        media_type=_media_type(fmt),
+        width=width,
+        height=height,
+        x=cx,
+        y=cy,
+    )
 
 
 def mark_dot_b64(
@@ -220,12 +252,13 @@ def mark_dot_b64(
     Raises:
         ValueError: image_b64 非法、图片无法解码，或像素坐标越界。
     """
-    marked, _media = _annotate(image_b64, x, y, normalized=normalized, color=color, ring=ring)
-    return marked
+    marked = _annotate(image_b64, x, y, normalized=normalized, color=color, ring=ring)
+    return marked.base64
 
 
 def mark_dot(serial: str, x: float, y: float, normalized: bool = True) -> dict:
-    """截图并在坐标处画红点，返回标记后的图片；点击前用它确认坐标是否落在目标元素上。
+    """截图并在坐标处画红点，返回标记后的图片、帧标识与像素坐标；点击前用它确认坐标。
+
     Args:
         serial: 设备序列号
         x: 横坐标，normalized=True 时为 0~1
@@ -233,17 +266,28 @@ def mark_dot(serial: str, x: float, y: float, normalized: bool = True) -> dict:
         normalized: 坐标是否为归一化坐标，默认 True
 
     Returns:
-        成功为 {"image": {"base64", "media_type"}}；失败为 {"error": 说明}。
+        成功为 {"image": {"base64", "media_type"}, "summary": {"token", "x", "y"}}，
+        `token` 可在 90 秒内交给点击类工具复用这一帧；失败为 {"error": 说明}。
     """
     try:
         shot_b64 = _screenshot_b64(serial)
-        marked, media_type = _annotate(
-            shot_b64, x, y, normalized=bool(normalized), color="red", ring="white"
-        )
+        marked = _annotate(shot_b64, x, y, normalized=bool(normalized), color="red", ring="white")
     except Exception as exc:  # noqa: BLE001 - 设备/图片侧失败一律转可读结论
         agent_event_log.warning(f"坐标标记失败：{exc}")
         return {"error": f"标记失败：{exc}"}
-    return {"image": {"base64": marked, "media_type": media_type}}
+    token = _frame_cache.put(
+        serial,
+        width=marked.width,
+        height=marked.height,
+        point_x=marked.x,
+        point_y=marked.y,
+        image_b64=shot_b64,
+        media_type=marked.media_type,
+    )
+    return {
+        "image": {"base64": marked.base64, "media_type": marked.media_type},
+        "summary": {"token": token, "x": marked.x, "y": marked.y},
+    }
 
 
 def build_img_b64_tools() -> dict[str, Callable[..., Any]]:

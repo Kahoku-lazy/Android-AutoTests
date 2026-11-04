@@ -27,6 +27,12 @@ pytestmark = pytest.mark.unit
 _SIZE = (200, 100)
 
 
+@pytest.fixture(autouse=True)
+def _empty_frames() -> None:
+    """每个用例从空帧缓存开始，避免 token 互相影响。"""
+    tool_img_b64._frame_cache.clear()
+
+
 def _image_b64(fmt: str = "PNG", size: tuple[int, int] = _SIZE) -> str:
     """纯色测试图 → base64。"""
     buf = io.BytesIO()
@@ -70,7 +76,7 @@ def test_mark_dot_normalized_draws_at_center(monkeypatch: pytest.MonkeyPatch):
 
     result = tool_img_b64.mark_dot("serial-1", 0.5, 0.5)
 
-    assert set(result) == {"image"}
+    assert set(result) == {"image", "summary"}
     assert result["image"]["media_type"] == "image/png"
     marked = _open(result["image"]["base64"])
     assert marked.size == _SIZE
@@ -80,6 +86,21 @@ def test_mark_dot_normalized_draws_at_center(monkeypatch: pytest.MonkeyPatch):
     assert marked.getpixel((199, 99))[:3] == (10, 120, 200)
     # 原始截图未被改动
     assert _open(source).getpixel((100, 50))[:3] == (10, 120, 200)
+
+
+def test_mark_dot_issues_reusable_frame_token(monkeypatch: pytest.MonkeyPatch):
+    """核对成功后签发帧 token，并回传换算好的像素坐标，供点击类工具复用。"""
+    _patch_shot(monkeypatch, _image_b64("PNG", (1080, 2400)))
+
+    result = tool_img_b64.mark_dot("serial-1", 0.5, 0.5)
+    summary = result["summary"]
+
+    assert set(summary) == {"token", "x", "y"}
+    assert (summary["x"], summary["y"]) == (540, 1200)
+    frame = tool_img_b64._frame_cache.get("serial-1", summary["token"])
+    assert frame is not None
+    assert (frame.width, frame.height) == (1080, 2400)
+    assert (frame.point_x, frame.point_y) == (540, 1200)
 
 
 def test_mark_dot_pixel_coordinates_match_normalized(monkeypatch: pytest.MonkeyPatch):

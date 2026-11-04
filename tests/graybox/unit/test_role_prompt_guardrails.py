@@ -23,7 +23,7 @@ def test_executor_prompt_declares_submission_checks():
         "在未达成时声称达成",
         "先逐步执行上一条驳回说明",
         "必须原样使用该坐标",
-        "手势完成后必须重新截图核对",
+        "必须用工具回传的点击后页面图核对结果",
         "action_time",
     ]
     for clause in clauses:
@@ -51,6 +51,22 @@ def test_executor_prompt_requires_coordinate_marking_before_click():
     assert "normalized=False" in EXECUTOR_PROMPT
     assert "不需要再标记" not in EXECUTOR_PROMPT
     assert "截图、坐标核对和返回键不用打开" in EXECUTOR_PROMPT
+
+
+def test_executor_prompt_reuses_verified_frame_for_click():
+    """核对通过后用返回的 token 直接点击，核对与点击之间不再截图。"""
+    assert "`token` 原样交给 click_ratio / tap_screen" in EXECUTOR_PROMPT
+    assert "核对与点击之间禁止再截图" in EXECUTOR_PROMPT
+    assert "禁止改用截图重新估算坐标" in EXECUTOR_PROMPT
+    assert "重新核对一次再点" in EXECUTOR_PROMPT
+
+
+def test_executor_prompt_does_not_screenshot_twice_per_action():
+    """点击类工具已回图时不得再截第二张；只有手势不回图才用截图复核。"""
+    assert "直接看那张图" in EXECUTOR_PROMPT
+    assert "点击后页面图核对结果" in EXECUTOR_PROMPT
+    assert "禁止**为同一个动作再调截图工具截第二张" in EXECUTOR_PROMPT
+    assert "工具没回图时" in EXECUTOR_PROMPT
 
 
 def test_executor_prompt_declares_log_check_belongs_to_verifier():

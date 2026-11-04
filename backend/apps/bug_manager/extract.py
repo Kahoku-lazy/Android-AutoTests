@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from backend.models.constants import BugCategory, TaskKind, TaskStatus
+from utils.logs import backend_log
 
 _TITLE_LIMIT = 500
 _UI_FAILURE = "UI 自动化失败"
@@ -64,9 +65,29 @@ def _ui_drafts(task: Any, status: str, payload: dict) -> list[BugDraft]:
     """UI automation: one ticket per failed case, else one task-level ticket."""
     if status not in {TaskStatus.FAILED, TaskStatus.INTERRUPTED}:
         return []
+    drafts: list[BugDraft] = []
+    reason, step = _interrupt_reason(task)
+    if reason:
+        drafts.append(
+            _draft(
+                task,
+                BugCategory.UI_AUTOMATION,
+                "task:log-interrupt",
+                f"设备日志中断：{_task_title(task)}",
+                "\n".join(
+                    [
+                        *_common_lines(task),
+                        f"中断步骤：第 {step} 步" if step else "中断步骤：—",
+                        f"中断原因：{reason}",
+                        "说明：事件流因设备日志被判为空/时间不满足而中断，这一步没有完成，"
+                        "不是模型判错；请检查串口采集与灯具连接后重跑。",
+                    ]
+                ),
+            )
+        )
     failed_cases = _failed_case_titles(payload)
     if status == TaskStatus.FAILED and failed_cases:
-        return [
+        drafts.extend(
             _draft(
                 task,
                 BugCategory.UI_AUTOMATION,
@@ -75,9 +96,10 @@ def _ui_drafts(task: Any, status: str, payload: dict) -> list[BugDraft]:
                 _ui_case_detail(task, payload, case, failed_cases),
             )
             for case in failed_cases
-        ]
+        )
+        return drafts
     prefix = _UI_TASK_INTERRUPTED if status == TaskStatus.INTERRUPTED else _UI_TASK_FAILURE
-    return [
+    drafts.append(
         _draft(
             task,
             BugCategory.UI_AUTOMATION,
@@ -85,7 +107,8 @@ def _ui_drafts(task: Any, status: str, payload: dict) -> list[BugDraft]:
             f"{prefix}：{_task_title(task)}",
             _ui_task_detail(task, payload, failed_cases),
         )
-    ]
+    )
+    return drafts
 
 
 def _case_drafts(task: Any, status: str, payload: dict) -> list[BugDraft]:
@@ -175,6 +198,39 @@ def _case_import_detail(task: Any, payload: dict, imported: dict) -> str:
     _append(lines, "验收结论：" + _text(payload.get("summary")))
     _append(lines, "未通过原因：" + _text(payload.get("reason")))
     return "\n".join(lines)
+
+
+def _interrupt_reason(task: Any) -> tuple[str, int]:
+    """读这条任务最后一次「事件流被打断」的原因与步骤号。
+
+    打断事件由引擎在异常结束时写入（设备日志为空、日志没盖满 5 秒都会走到这里），
+    台账据此单独开一张「设备日志中断」单，避免把判据问题当成模型判错。
+
+    Args:
+        task: 任务对象，只需要 ``id``。
+
+    Returns:
+        (原因, 步骤号)；没有打断事件时为 ("", 0)。
+    """
+    task_id = int(getattr(task, "id", 0) or 0)
+    if not task_id:
+        return "", 0
+    try:
+        from backend.apps.task_list.models import TaskEvent
+
+        row = (
+            TaskEvent.objects.filter(task_id=task_id, event_type="StepInterruptedEvent")
+            .order_by("-seq")
+            .only("payload", "step_seq")
+            .first()
+        )
+    except Exception as exc:  # noqa: BLE001 - 台账只做补充说明，读不到就当没有
+        backend_log.warning(f"读取中断事件失败：{exc}")
+        return "", 0
+    if row is None:
+        return "", 0
+    payload = row.payload if isinstance(row.payload, dict) else {}
+    return str(payload.get("reason") or "").strip(), int(row.step_seq or 0)
 
 
 def _common_lines(task: Any) -> list[str]:

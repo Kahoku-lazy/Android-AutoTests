@@ -378,6 +378,14 @@ def build_gates() -> list[Gate]:
             blocking=True,
         ),
         cmd_gate("eslint", "前端代码检查（eslint）", [NPM, "run", "lint"], True, FRONTEND),
+        # 线型白名单：虚线只属于 KpiCard / AgentRouteCard（规则见 .agents/skills/doodle-craft/SKILL.md）
+        cmd_gate(
+            "dashed-whitelist",
+            "前端线型（虚线白名单）",
+            [NPM, "run", "lint:lines"],
+            blocking=True,
+            cwd=FRONTEND,
+        ),
         cmd_gate(
             "vue-tsc",
             "前端类型检查（vue-tsc）",

@@ -22,7 +22,7 @@ def test_executor_prompt_declares_submission_checks():
         "逐条核对",
         "在未达成时声称达成",
         "先逐步执行上一条驳回说明",
-        "必须用工具回传的点击后页面图核对结果",
+        "用回传的页面图核对结果",
         "action_time",
     ]
     for clause in clauses:
@@ -67,12 +67,19 @@ def test_executor_prompt_forbids_action_without_anchor_confirmation():
     assert "核对与点击之间禁止再截图" in EXECUTOR_PROMPT
 
 
+def test_executor_prompt_confirms_drag_trajectory_first():
+    """拖动前必须先用核对图画出起点→终点轨迹，并禁止原样重复同一次拖动。"""
+    assert "mark_dot(serial, nx1, ny1, x2=…, y2=…)" in EXECUTOR_PROMPT
+    assert "起点、终点与箭头" in EXECUTOR_PROMPT
+    assert "再带该 `token` 调 `drag_ratio`" in EXECUTOR_PROMPT
+    assert "禁止**原样重复同一次拖动" in EXECUTOR_PROMPT
+
+
 def test_executor_prompt_does_not_screenshot_twice_per_action():
     """点击类工具已回图时不得再截第二张；只有手势不回图才用截图复核。"""
     assert "直接看那张图" in EXECUTOR_PROMPT
-    assert "点击后页面图核对结果" in EXECUTOR_PROMPT
+    assert "用回传的页面图核对结果" in EXECUTOR_PROMPT
     assert "禁止**为同一个动作再调截图工具截第二张" in EXECUTOR_PROMPT
-    assert "工具没回图时" in EXECUTOR_PROMPT
 
 
 def test_executor_prompt_declares_log_check_belongs_to_verifier():

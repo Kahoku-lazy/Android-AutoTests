@@ -47,7 +47,7 @@ _ACTION_CALLS: dict[str, dict] = {
     "app_control": {"action": "start_app", "package": "com.target"},
 }
 # 只回时间的工具：返回体必须**恰好**只有 action_time
-_TIME_ONLY = ("swipe_screen", "drag_ratio", "input_text", "press_key")
+_TIME_ONLY = ("swipe_screen", "input_text", "press_key")
 
 
 class _Conn:
@@ -222,7 +222,7 @@ def test_every_tool_has_handler() -> None:
 def test_every_action_returns_action_time(monkeypatch: pytest.MonkeyPatch, name: str) -> None:
     """7 个动作工具都要回传 action_time（滑动/输入/按键只回它）。"""
     _install(monkeypatch)
-    token = _put_frame()
+    token = _frame_for(name)
     payload = _run(name, **_calls_with_token(name, token))
     assert "error" not in payload, payload
     _assert_stamp(_summary(payload))
@@ -232,7 +232,7 @@ def test_every_action_returns_action_time(monkeypatch: pytest.MonkeyPatch, name:
 def test_every_action_closes_the_connection(monkeypatch: pytest.MonkeyPatch, name: str) -> None:
     """动作结束后必须断开设备。"""
     conn, _info, _control = _install(monkeypatch)
-    token = _put_frame()
+    token = _frame_for(name)
     _run(name, **_calls_with_token(name, token))
     assert conn.closed is True
 
@@ -351,11 +351,18 @@ def _put_frame(
 
 
 def _calls_with_token(name: str, token: str) -> dict:
-    """给点击类动作的调用参数补上帧标识；其它动作原样返回。"""
+    """给点击 / 拖动类动作的调用参数补上帧标识；其它动作原样返回。"""
     calls = dict(_ACTION_CALLS[name])
-    if name in {"click_ratio", "tap_screen"}:
+    if name in {"click_ratio", "tap_screen", "drag_ratio"}:
         calls["token"] = token
     return calls
+
+
+def _frame_for(name: str) -> str:
+    """按动作类型放一帧：拖动需要起点与终点两个点，其余单点即可。"""
+    if name == "drag_ratio":
+        return _put_frame(points=((540, 1170), (540, 900)))
+    return _put_frame()
 
 
 def test_click_ratio_with_valid_frame_skips_screenshot(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -734,6 +741,51 @@ def test_tap_screen_rejects_out_of_range_index(monkeypatch: pytest.MonkeyPatch) 
     assert "error" in payload
     assert "1~2" in payload["error"]
     assert control.calls == []
+
+
+# ══════════════════════════════════════════════════════════════════
+# 拖动：必须先用核对图画出轨迹
+# ══════════════════════════════════════════════════════════════════
+
+
+def test_drag_without_token_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    """没有核对过轨迹的拖动直接拒绝，设备上不能发生手势。"""
+    _conn, _info, control = _install(monkeypatch)
+
+    payload = _run("drag_ratio", nx1=0.3, ny1=0.6, nx2=0.3, ny2=0.5)
+
+    assert "error" in payload
+    assert "token" in payload["error"]
+    assert control.calls == []
+
+
+def test_drag_requires_two_point_frame(monkeypatch: pytest.MonkeyPatch) -> None:
+    """只有一个标记点的帧不能用来拖动。"""
+    _conn, _info, control = _install(monkeypatch)
+    token = _put_frame(points=((540, 1170),))
+
+    payload = _run("drag_ratio", nx1=0.3, ny1=0.6, nx2=0.3, ny2=0.5, token=token)
+
+    assert "error" in payload
+    assert "拖动轨迹" in payload["error"]
+    assert control.calls == []
+
+
+def test_drag_uses_frame_trajectory(monkeypatch: pytest.MonkeyPatch) -> None:
+    """按帧里的起点→终点拖动，并回传拖动后的页面图。"""
+    _conn, _info, control = _install(monkeypatch)
+    token = _put_frame(points=((216, 1170), (216, 900)))
+
+    payload = _run("drag_ratio", nx1=0, ny1=0, nx2=0, ny2=0, token=token)
+    summary = _summary(payload)
+
+    assert (summary["x"], summary["y"]) == (216, 1170)
+    assert (summary["x2"], summary["y2"]) == (216, 900)
+    assert payload["image"]["base64"]
+    drags = [call for call in control.calls if call[0] == "drag"]
+    assert drags and drags[0][1] == pytest.approx(0.2)
+    assert drags[0][2] == pytest.approx(0.5)
+    assert drags[0][4] == pytest.approx(900 / 2340)
 
 
 # ══════════════════════════════════════════════════════════════════

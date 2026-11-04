@@ -201,6 +201,7 @@ def _render(
     *,
     color: str = "red",
     ring: str = "white",
+    path: bool = False,
 ) -> _Marked:
     """解码、在每个点画圆点（多点时带序号）、再编码。
 
@@ -209,6 +210,7 @@ def _render(
         points: 要标记的像素坐标点，序号 = 下标 + 1。
         color: 圆点填充色。
         ring: 圆点外圈与序号描边色。
+        path: 是否把前两个点连成带箭头的轨迹（拖动核对用）。
 
     Returns:
         标记结果：标记后的 base64、media_type 与图片尺寸。
@@ -234,6 +236,11 @@ def _render(
     draw = ImageDraw.Draw(img)
     font = _label_font(min(width, height))
     numbered = len(points) > 1
+    if path and len(points) >= 2:
+        start, end = points[0], points[1]
+        draw.line((start, end), fill=ring, width=max(4, radius))
+        draw.line((start, end), fill=color, width=max(2, radius // 2))
+        _draw_arrow_head(draw, start, end, radius, color, ring)
     for index, (cx, cy) in enumerate(points, start=1):
         draw.ellipse(
             (
@@ -267,6 +274,55 @@ def _render(
         height=height,
         points=points,
     )
+
+
+def _draw_arrow_head(
+    draw, start: tuple[int, int], end: tuple[int, int], radius: int, color: str, ring: str
+) -> None:
+    """在轨迹终点画一个箭头，标出拖动方向。
+
+    Args:
+        draw: `ImageDraw` 对象。
+        start: 起点像素坐标。
+        end: 终点像素坐标。
+        radius: 圆点半径，箭头尺寸按它放大。
+        color: 箭头填充色。
+        ring: 箭头描边色。
+    """
+    dx, dy = end[0] - start[0], end[1] - start[1]
+    length = max((dx * dx + dy * dy) ** 0.5, 1.0)
+    ux, uy = dx / length, dy / length
+    size = max(radius * 2.2, 10.0)
+    tip = (end[0], end[1])
+    left = (end[0] - ux * size - uy * size * 0.5, end[1] - uy * size + ux * size * 0.5)
+    right = (end[0] - ux * size + uy * size * 0.5, end[1] - uy * size - ux * size * 0.5)
+    draw.polygon((tip, left, right), fill=color, outline=ring)
+
+
+def annotate_path(
+    image_b64: str,
+    points: tuple[tuple[int, int], ...],
+    *,
+    color: str = "red",
+    ring: str = "white",
+) -> _Marked:
+    """在一张图上画出拖动轨迹：起点 1、终点 2、两点连线与箭头。
+
+    Args:
+        image_b64: 原始图片 base64。
+        points: 起点与终点的像素坐标，顺序即拖动方向。
+        color: 轨迹与圆点填充色。
+        ring: 描边色。
+
+    Returns:
+        标记结果：标记后的 base64、media_type、图片尺寸与这些点。
+
+    Raises:
+        ValueError: base64 非法、图片无法解码，或点少于 2 个。
+    """
+    if len(points) < 2:
+        raise ValueError("拖动轨迹至少需要起点与终点")
+    return _render(image_b64, tuple(points), color=color, ring=ring, path=True)
 
 
 def annotate_points(
@@ -354,22 +410,43 @@ def mark_dot_b64(
     return marked.base64
 
 
-def mark_dot(serial: str, x: float, y: float, normalized: bool = True) -> dict:
-    """截图并在坐标处画红点，返回标记后的图片、帧标识与像素坐标；点击前用它确认坐标。
+def mark_dot(
+    serial: str,
+    x: float,
+    y: float,
+    normalized: bool = True,
+    x2: float | None = None,
+    y2: float | None = None,
+) -> dict:
+    """截图并在坐标处画红点；给了终点时改画起点→终点的拖动轨迹。
+
+    点击前用它确认点击位置；拖动前用它确认起点落在目标列/滑块上、终点方向与距离合适。
 
     Args:
         serial: 设备序列号
         x: 横坐标，normalized=True 时为 0~1
         y: 纵坐标，normalized=True 时为 0~1
         normalized: 坐标是否为归一化坐标，默认 True
+        x2: 拖动终点的横坐标，口径同 x；与 y2 同时给出时按轨迹绘制
+        y2: 拖动终点的纵坐标，口径同 y
 
     Returns:
-        成功为 {"image": {"base64", "media_type"}, "summary": {"token", "x", "y"}}，
-        `token` 可在 90 秒内交给点击类工具复用这一帧；失败为 {"error": 说明}。
+        成功为 {"image": {"base64", "media_type"}, "summary": {"token", "x", "y"}}；
+        画轨迹时额外带 "x2" / "y2"。`token` 可在 90 秒内交给点击或拖动工具复用这一帧；
+        失败为 {"error": 说明}。
     """
+    drawing_path = x2 is not None and y2 is not None
     try:
         shot_b64 = _screenshot_b64(serial)
-        marked = _annotate(shot_b64, x, y, normalized=bool(normalized), color="red", ring="white")
+        if drawing_path:
+            width, height = _image_size(shot_b64)
+            start = _point(x, y, width, height, bool(normalized))
+            end = _point(float(x2), float(y2), width, height, bool(normalized))
+            marked = annotate_path(shot_b64, (start, end))
+        else:
+            marked = _annotate(
+                shot_b64, x, y, normalized=bool(normalized), color="red", ring="white"
+            )
     except Exception as exc:  # noqa: BLE001 - 设备/图片侧失败一律转可读结论
         agent_event_log.warning(f"坐标标记失败：{exc}")
         return {"error": f"标记失败：{exc}"}
@@ -382,9 +459,12 @@ def mark_dot(serial: str, x: float, y: float, normalized: bool = True) -> dict:
         media_type=marked.media_type,
     )
     x_px, y_px = marked.points[0]
+    summary: dict[str, int | str] = {"token": token, "x": x_px, "y": y_px}
+    if drawing_path and len(marked.points) > 1:
+        summary["x2"], summary["y2"] = marked.points[1]
     return {
         "image": {"base64": marked.base64, "media_type": marked.media_type},
-        "summary": {"token": token, "x": x_px, "y": y_px},
+        "summary": summary,
     }
 
 

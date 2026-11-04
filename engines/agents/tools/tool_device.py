@@ -534,22 +534,53 @@ def swipe_screen(serial: str, direction: str = "up", distance: int = 500) -> str
     )
 
 
-def drag_ratio(serial: str, nx1: float, ny1: float, nx2: float, ny2: float) -> str:
-    """按归一化坐标拖动（视觉模型看图后输出起终点相对位置，工具换算成屏幕像素坐标）；只返回动作时间。
+def drag_ratio(
+    serial: str,
+    nx1: float,
+    ny1: float,
+    nx2: float,
+    ny2: float,
+    token: str = "",
+    shot_after: bool = True,
+) -> str | dict:
+    """按已核对轨迹拖动（起点与终点必须先在核对图里画出来）。
+
     Args:
         serial: 设备序列号
-        nx1: 起点横向相对位置 0~1（0=最左，1=最右）
-        ny1: 起点纵向相对位置 0~1（0=最上，1=最下）
-        nx2: 终点横向相对位置 0~1
-        ny2: 终点纵向相对位置 0~1
+        nx1: 兼容保留：带 token 时不再参与定位
+        ny1: 兼容保留：带 token 时不再参与定位
+        nx2: 兼容保留：带 token 时不再参与定位
+        ny2: 兼容保留：带 token 时不再参与定位
+        token: 拖动轨迹的核对帧标识；缺失时直接报错，不产生手势
+        shot_after: 是否回传拖动后的页面图，默认回传
+
+    Returns:
+        带图时为 {"image": {...}, "summary": {"x", "y", "x2", "y2", "action_time"}}；
+        不出图或失败时是 JSON 字符串。
     """
-    return _execute(
-        serial,
-        lambda info, control: Drag(control).by_ratio(
-            float(nx1), float(ny1), float(nx2), float(ny2)
-        ),
-        side_effect=True,
-    )
+    frame, error = _frame_or_error(serial, token)
+    if frame is None:
+        return error
+    if len(frame.points) < 2:
+        return _error("该帧没有拖动轨迹：先调用 mark_dot(x, y, x2=…, y2=…) 核对起点与终点")
+    start, end = frame.points[0], frame.points[1]
+
+    def body(control: Any) -> dict:
+        # 帧像素按帧尺寸还原成归一化比例，拖动实现只收比例
+        payload = dict(
+            Drag(control).by_ratio(
+                start[0] / frame.width,
+                start[1] / frame.height,
+                end[0] / frame.width,
+                end[1] / frame.height,
+            )
+            or {}
+        )
+        payload["x"], payload["y"] = start
+        payload["x2"], payload["y2"] = end
+        return payload
+
+    return _gesture(serial, body, shot_after=shot_after)
 
 
 def input_text(serial: str, text: str, clear_first: bool = True) -> str:

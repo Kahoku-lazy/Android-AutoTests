@@ -103,6 +103,26 @@ def test_mark_dot_issues_reusable_frame_token(monkeypatch: pytest.MonkeyPatch):
     assert frame.points == ((540, 1200),)
 
 
+def test_mark_dot_with_end_point_draws_trajectory(monkeypatch: pytest.MonkeyPatch):
+    """给出终点时画出起点→终点的轨迹，帧里存两个点，汇总里给出终点坐标。"""
+    _patch_shot(monkeypatch, _image_b64("PNG", (200, 100)))
+
+    result = tool_img_b64.mark_dot("serial-1", 0.2, 0.5, x2=0.8, y2=0.5)
+    summary = result["summary"]
+
+    assert (summary["x"], summary["y"]) == (40, 50)
+    assert (summary["x2"], summary["y2"]) == (160, 50)
+    frame = tool_img_b64._frame_cache.get("serial-1", summary["token"])
+    assert frame is not None
+    assert frame.points == ((40, 50), (160, 50))
+
+    marked = _open(result["image"]["base64"])
+    # 起点、终点都是红点，连线中点也被轨迹覆盖
+    assert marked.getpixel((40, 50))[:3] == (255, 0, 0)
+    assert marked.getpixel((160, 50))[:3] == (255, 0, 0)
+    assert marked.getpixel((100, 50))[:3] != (10, 120, 200)
+
+
 def test_mark_dot_pixel_coordinates_match_normalized(monkeypatch: pytest.MonkeyPatch):
     """像素坐标与归一化坐标画在同一点；边界 1.0 夹到右下角。"""
     source = _image_b64()

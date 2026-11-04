@@ -48,8 +48,6 @@ LOG_EMPTY = "日志为空，请检查断后是否正确连接，此轮执行终�
 LOG_SPAN_SHORT = "从起始点开始日志内容时间不满足5s"
 LOG_KEYWORD_MISS = "时间段内未抓到关键字"
 _CHECK_WINDOW = timedelta(seconds=5)
-# 起点之前再多看一段：交卷写的 action_time 常比真机日志晚几秒，只看窗口之后会漏
-_LOOKBACK = timedelta(seconds=10)
 
 LOG_AT_FORMATS = (
     "%Y-%m-%d %H:%M:%S,%f",
@@ -305,21 +303,21 @@ def check_device_log(
     port: int | str = 0,
     user_id: str = "",
 ) -> str:
-    """在指定端口的当前抓取文件里检查关键词是否出现在起点附近（前 10 秒到后 5 秒）。
+    """在指定端口的当前抓取文件里检查关键词是否出现在起点之后的 5 秒内。
     文件是 logs/serial_logs/{SKU}_{端口}.log。只匹配抓到的原文（忽略大小写），
     不读其它端口、轮转备份或内存缓冲。
-    找到则返回 logging 时间、该行原文、相对起点的偏移秒数，result 为 PASS。
+    找到则返回 logging 时间、该行原文、相对起点的偏移秒数（必然 >= 0），result 为 PASS。
     最晚一行已盖满 5 秒但没有关键词时，result 为 FAIL，msg 为「时间段内未抓到关键字」。
-    起点之后没有可解析行时中断本轮并说明日志为空。
-    起点之后有行、但最晚一行仍早于起点加 5 秒时，中断本轮并说明时间不满足 5 秒。
+    窗口内没有可解析行时中断本轮并说明日志为空。
+    窗口内有行、但最晚一行仍早于起点加 5 秒时，中断本轮并说明时间不满足 5 秒。
     缺少关键词、起点、型号或端口时返回 FAIL。
-    容差说明：真机日志常比交卷写的 action_time 早几秒，因此起点**之前**的 10 秒也参与匹配；
-    命中时 `offset_seconds` 为负，表示日志早于起点。
+    起点**之前**的行一律不参与匹配：日志只在动作触发之后才出现，更早的行属于上一个动作。
+    因此调用方必须把 `at` 给成「触发该日志的那次动作」的时刻，给晚了会整段漏掉。
 
     Args:
         keyword: 日志关键词原文，例如 switch_off
         at: 起点时间，与 logging 相同：`YYYY-MM-DD HH:MM:SS,mmm`。
-            匹配区间是「起点前 10 秒 ~ 起点后 5 秒」，含两端。也可只到秒（按该秒的 `,000`）
+            匹配区间是「起点 ~ 起点后 5 秒」，含两端。也可只到秒（按该秒的 `,000`）
         sku: 设备型号，例如 H6810 或 H7011
         port: 日志端口，例如 7005。必须指定，不从平台配置猜测
 
@@ -336,13 +334,11 @@ def check_device_log(
 
     start = _parse_log_at(at)
     start_ms = _millis(start.timestamp())
-    begin_ms = _millis((start - _LOOKBACK).timestamp())
     end_ms = _millis((start + _CHECK_WINDOW).timestamp())
     rows = _capture_rows(sku, port_number)
-    window = [row for row in rows if begin_ms <= _millis(row[0]) <= end_ms]
+    window = [row for row in rows if start_ms <= _millis(row[0]) <= end_ms]
 
-    # 先查再看窗口是否盖满：日志常比交卷写的 action_time 早几百毫秒到几秒，
-    # 命中就通过，不因为「起点之前」而判失败。
+    # 日志只在动作触发之后才出现：起点之前的行属于上一个动作，不参与本次判定
     needle = wanted.lower()
     for epoch, stamp, msg in window:
         if needle in msg.lower():
@@ -354,7 +350,7 @@ def check_device_log(
                 offset_seconds=offset,
             )
 
-    if not [row for row in rows if _millis(row[0]) >= start_ms]:
+    if not window:
         raise ValueError(LOG_EMPTY)
     if _millis(rows[-1][0]) < end_ms:
         raise ValueError(LOG_SPAN_SHORT)

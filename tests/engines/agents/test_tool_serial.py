@@ -78,28 +78,12 @@ def test_check_reports_fail_when_window_has_no_keyword(logfile) -> None:
     assert '"result": "FAIL"' in payload
 
 
-def test_check_matches_keyword_logged_before_start(logfile) -> None:
-    """真机日志比交卷写的起点早几秒时仍判命中，并回传负的偏移秒数。"""
+def test_check_ignores_keyword_before_start(logfile) -> None:
+    """起点之前的行属于上一个动作，不参与本次判定。"""
     _write(
         logfile,
         [
             _line("2026-11-04 12:25:11,000", "timer_configs_set_success"),
-            _line("2026-11-04 12:25:20,000", "heartbeat"),
-        ],
-    )
-
-    payload = tool_serial.check_device_log("timer_configs_set_success", at=_AT, sku=_SKU, port=_PORT)
-
-    assert '"result": "PASS"' in payload
-    assert '"offset_seconds": -4.0' in payload
-
-
-def test_check_ignores_keyword_older_than_lookback(logfile) -> None:
-    """早于起点的 10 秒容差之外的关键词不算命中。"""
-    _write(
-        logfile,
-        [
-            _line("2026-11-04 12:25:04,000", "timer_configs_set_success"),
             _line("2026-11-04 12:25:16,000", "heartbeat"),
             _line("2026-11-04 12:25:20,000", "heartbeat2"),
         ],
@@ -112,17 +96,17 @@ def test_check_ignores_keyword_older_than_lookback(logfile) -> None:
 
 
 def test_check_passes_when_capture_stalled_right_after_keyword(logfile) -> None:
-    """抓取在日志落地后中断、起点之后没有新行时，仍按起点前的容差判命中。"""
-    _write(logfile, [_line("2026-11-04 12:25:14,000", "timer_configs_set_success")])
+    """抓取在命中行之后中断、窗口没盖满时，只要窗口内已命中就判通过。"""
+    _write(logfile, [_line("2026-11-04 12:25:16,000", "timer_configs_set_success")])
 
     payload = tool_serial.check_device_log("timer_configs_set_success", at=_AT, sku=_SKU, port=_PORT)
 
     assert '"result": "PASS"' in payload
-    assert '"offset_seconds": -1.0' in payload
+    assert '"offset_seconds": 1.0' in payload
 
 
 def test_check_reports_positive_offset_inside_window(logfile) -> None:
-    """窗口内命中时偏移为正，口径与向后看 5 秒一致。"""
+    """窗口内命中时偏移为正，口径是「起点之后多少秒」。"""
     _write(
         logfile,
         [

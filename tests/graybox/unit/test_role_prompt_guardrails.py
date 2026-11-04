@@ -143,6 +143,14 @@ def test_verifier_prompt_splits_evidence_by_assertion_type():
     assert "不必截图" in VERIFIER_PROMPT
     assert "以截图为主要判据" in VERIFIER_PROMPT
     assert "不要调用 check_device_log" in VERIFIER_PROMPT
+
+
+def test_verifier_prompt_picks_the_triggering_action_time():
+    """at 只能取触发该日志的那次动作时间：给晚了整段漏，给早了算上一个动作。"""
+    assert "at 只能取「触发这条日志的那一次动作」的时间" in VERIFIER_PROMPT
+    assert "MUST NOT 取之后无关动作的时间" in VERIFIER_PROMPT
+    assert "起点给晚了会整段漏掉" in VERIFIER_PROMPT
+    assert "给的早了会把上一个动作的日志算成本次" in VERIFIER_PROMPT
     assert "混合型" in VERIFIER_PROMPT
 
 

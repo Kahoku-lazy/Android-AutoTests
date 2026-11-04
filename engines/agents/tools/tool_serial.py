@@ -11,12 +11,13 @@ Python 调试：➡️ python -m engines.agents.tools.tool_serial 🏁
 简介说明：➡️
 1. check_device_log: 在指定端口的当前抓取文件里检查关键词是否出现在起点之后的 5 秒内
 2. serial_tool_specs: 按固定顺序产出日志工具的 `ToolSpec` 列表
+3. _capture_rows: 按（长度, 修改时间, 文件身份）缓存已解析行，第二次起只解析新增部分
 🏁
 关联模块：➡️
 1. utils.logs: 导入 capture_file_path
 🏁
 测试：➡️
-1. 暂无专门单测
+1. tests/engines/agents/test_tool_serial.py: 单文件调试指令：python -m pytest tests/engines/agents/test_tool_serial.py -vv --tb=short
 🏁
 """
 
@@ -24,8 +25,12 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any
 
 from utils.logs import capture_file_path
 
@@ -57,6 +62,30 @@ _LOGGING_LINE = re.compile(
     r"^(?P<stamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})"
     r" - \S+ - (?:DEBUG|INFO|WARNING|ERROR|CRITICAL) - (?P<msg>.*)$"
 )
+
+
+@dataclass(frozen=True)
+class _ParsedLog:
+    """
+    一份日志的已解析快照，用于下一轮只解析新增部分。
+
+    Attributes:
+        size: 上次解析时的文件字节数。
+        mtime_ns: 上次解析时的修改时间（纳秒），用于发现被改写。
+        inode: 文件身份，用于发现轮转；平台取不到时为 0。
+        parsed_bytes: 已解析到的字节偏移，总是落在换行之后。
+        rows: 已解析出的 (epoch, logging 时间原文, 抓到原文)。
+    """
+
+    size: int
+    mtime_ns: int
+    inode: int
+    parsed_bytes: int
+    rows: tuple[tuple[float, str, str], ...]
+
+
+_cache: dict[str, _ParsedLog] = {}
+_lock = threading.Lock()
 
 
 def _local_tz():
@@ -114,13 +143,21 @@ def _positive_port(value: object) -> int | None:
     return number if number > 0 else None
 
 
-def _logging_epoch(stamp: str) -> float | None:
-    """logging 时间（逗号毫秒）转为本地时间的 epoch。"""
+def _logging_epoch(stamp: str, tz) -> float | None:
+    """logging 时间（逗号毫秒）转为 epoch，时区由调用方一次取好传进来。
+
+    Args:
+        stamp: 日志行的时间戳原文，形如 `2026-11-04 12:25:15,842`。
+        tz: 本地时区对象，每次解析只取一次，避免逐行取时区。
+
+    Returns:
+        对应 epoch 秒；时间戳格式不认识时为 None。
+    """
     try:
         moment = datetime.strptime(stamp.replace(",", ".", 1), "%Y-%m-%d %H:%M:%S.%f")
     except ValueError:
         return None
-    return moment.replace(tzinfo=_local_tz()).timestamp()
+    return moment.replace(tzinfo=tz).timestamp()
 
 
 def _millis(epoch: float) -> int:
@@ -128,23 +165,111 @@ def _millis(epoch: float) -> int:
     return round(epoch * 1000)
 
 
-def _capture_rows(sku: str, port: int) -> list[tuple[float, str, str]]:
-    """当前抓取文件的全部可解析行：(epoch, logging 时间原文, 抓到的原文)。"""
-    path = capture_file_path(sku, port)
-    if not path.is_file():
-        return []
+def _parse_tail(path: Path, offset: int) -> tuple[list[tuple[float, str, str]], int]:
+    """从字节偏移起解析到最后一个完整行为止。
+
+    Args:
+        path: 抓取文件路径。
+        offset: 已解析到的字节偏移，必须是换行之后的位置。
+
+    Returns:
+        (新增的可解析行, 新的已解析字节位)；结尾没有换行的半行留到下次。
+    """
+    with path.open("rb") as handle:
+        handle.seek(offset)
+        chunk = handle.read()
+    end = chunk.rfind(b"\n")
+    if end < 0:
+        return [], offset
+    tz = _local_tz()
     rows: list[tuple[float, str, str]] = []
-    for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
+    for raw in chunk[: end + 1].decode("utf-8", errors="replace").splitlines():
         matched = _LOGGING_LINE.match(raw.strip())
         if matched is None:
             continue
-        stamp = matched.group("stamp")
-        epoch = _logging_epoch(stamp)
+        epoch = _logging_epoch(matched.group("stamp"), tz)
         if epoch is None:
             continue
-        rows.append((epoch, stamp, matched.group("msg")))
-    rows.sort(key=lambda item: item[0])
-    return rows
+        rows.append((epoch, matched.group("stamp"), matched.group("msg")))
+    return rows, offset + end + 1
+
+
+def _capture_rows(sku: str, port: int) -> list[tuple[float, str, str]]:
+    """当前抓取文件的全部可解析行：(epoch, logging 时间原文, 抓到的原文)。
+
+    同一份文件第二次及之后只解析新增的完整行；文件变短、被改写或换了文件身份时
+    丢弃缓存按全量重解析，保证结果与「整份解析一次」一致。
+
+    Args:
+        sku: 设备型号，决定文件名前缀。
+        port: 日志端口。
+
+    Returns:
+        按时间升序的可解析行；文件不存在时为空列表。
+    """
+    path = capture_file_path(sku, port)
+    if not path.is_file():
+        return []
+    stat = path.stat()
+    key = str(path)
+    inode = _inode(stat)
+    with _lock:
+        cached = _cache.get(key)
+    if (
+        cached is not None
+        and inode == cached.inode
+        and stat.st_size >= cached.size
+        and stat.st_mtime_ns >= cached.mtime_ns
+    ):
+        if stat.st_size == cached.size:
+            return list(cached.rows)
+        fresh, parsed = _parse_tail(path, cached.parsed_bytes)
+        rows = cached.rows + tuple(fresh)
+        return _remember(key, stat, inode, parsed, rows)
+    fresh, parsed = _parse_tail(path, 0)
+    return _remember(key, stat, inode, parsed, tuple(fresh))
+
+
+def _inode(stat: Any) -> int:
+    """文件身份；平台取不到时统一为 0，退化成只比长度与修改时间。"""
+    return int(getattr(stat, "st_ino", 0) or 0)
+
+
+def _remember(
+    key: str,
+    stat: Any,
+    inode: int,
+    parsed: int,
+    rows: tuple[tuple[float, str, str], ...],
+) -> list[tuple[float, str, str]]:
+    """把这次的解析结果记进缓存，并返回按时间排好序的行。
+
+    Args:
+        key: 文件绝对路径。
+        stat: 本次 `Path.stat()` 的结果。
+        inode: 文件身份。
+        parsed: 已解析到的字节偏移。
+        rows: 已解析出的全部行。
+
+    Returns:
+        按时间升序的行列表。
+    """
+    ordered = sorted(rows, key=lambda item: item[0])
+    with _lock:
+        _cache[key] = _ParsedLog(
+            size=int(stat.st_size),
+            mtime_ns=int(stat.st_mtime_ns),
+            inode=inode,
+            parsed_bytes=parsed,
+            rows=tuple(ordered),
+        )
+    return list(ordered)
+
+
+def _clear_cache() -> None:
+    """清空解析缓存；只在测试里用。"""
+    with _lock:
+        _cache.clear()
 
 
 def _check_result(*, timestamp: str = "", msg: str = "", result: str) -> str:

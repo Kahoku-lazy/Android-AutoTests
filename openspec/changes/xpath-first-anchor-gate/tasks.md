@@ -1,0 +1,34 @@
+## 1. 帧缓存支持多点
+
+- [x] 1.1 `tool_frame_cache.Frame` 的 `point_x` / `point_y` 改为按序号排列的点列表，`put` 接收点列表；`mark_dot` 传 1 个点。验证：`tests/engines/agents/test_frame_cache.py` 断言多点的顺序与取回一致
+- [x] 1.2 单测覆盖「单点帧」与「多点帧」两种形态，以及过期/跨设备规则不变。验证：`python -m pytest tests/engines/agents/test_frame_cache.py -q` 全绿
+
+## 2. 一张图上标多个命中点
+
+- [x] 2.1 `tool_img_b64` 增加多点标注：每点画红点并在右上角写序号（白底描边、字号取短边 3%），返回标记图与尺寸。验证：单测断言每个点的中心像素为红色、图上不同点位置像素不同、单点调用与既有 `mark_dot` 输出一致
+- [x] 2.2 序号顺序固定为「先纵坐标、再横坐标」升序。验证：单测给两个乱序点，断言输出顺序按规则排好
+
+## 3. xpath 命中标记与归一化匹配
+
+- [x] 3.1 `xpath_action` 增加 `confirm`（默认开）：命中时在同一设备会话里截图、标全部命中点、签发 token，返回 `items`（序号、文本、x/y）与标记图。验证：单测断言单命中带序号 1、多命中带序号 1/2 且 `items` 顺序与图一致
+- [x] 3.2 命中 0 个时不出图、不截图。验证：单测断言返回体无 `image` 且设备未调用截图
+- [x] 3.3 文本归一化匹配（去空白 + NFKC + casefold）。验证：单测用节点文本 `睡 眠`、候选 `睡眠` 命中
+- [x] 3.4 最多 3 个候选、一次 UI 树读取试完。验证：单测计数 `find_xpath` 只被调用一次，结果按候选分别给出命中数
+
+## 4. 点击必须带锚点确认
+
+- [x] 4.1 `click_ratio` / `tap_screen` 缺 `token` 时返回可读 error 且不产生手势。验证：单测断言设备调用为空、error 文案含下一步动作
+- [x] 4.2 支持 `index`：按帧内序号取点；越界返回 error 不点击。验证：单测覆盖 `index=2` 正确点击与 `index=5` 被拒
+- [x] 4.3 既有 token 复用与回图行为不变。验证：`test_tool_device.py` 原有 token/回图用例仍通过
+
+## 5. 执行提示词改写
+
+- [x] 5.1 `UI_EXECUTOR_PROMPT.md` 改为：先 xpath（含归一化匹配、最多 3 个候选）→ 多命中看编号图挑序号 → 带 token 与 index 点击；xpath 未命中或无文案控件才用视觉估算 + `mark_dot`。验证：`tests/graybox/unit/test_role_prompt_guardrails.py` 新增四条断言（定位顺序、编号挑选、无核对不操作、报错先补核对）全绿
+- [x] 5.2 删除与新规则冲突的旧表述（如「无论来自自己看图估算还是 xpath 返回都先打红点」）。验证：通读提示词，`test_role_prompt_guardrails.py` 全绿
+
+## 6. 验收
+
+- [x] 6.1 本地门禁：`python run.py check`。验证：阻塞项全通过、退出码 0
+- [x] 6.2 真机重跑同一份结构化定时用例，记录 xpath 命中率、核对/动作比、首标不准率、墙钟。验证：墙钟不高于 466s（基线 354s + 30% 容忍），核对/动作 ≤1.15
+- [x] 6.3 分析文件补「xpath 优先」实测对比。验证：`dev_docs/DEV_TEST/分析-结构化任务184耗时构成-20261104.md` 含该表
+- [ ] 6.4 提交并推送，确认 CI 6 个 job 全绿。验证：`ci-phase1.yml` 6/6 success

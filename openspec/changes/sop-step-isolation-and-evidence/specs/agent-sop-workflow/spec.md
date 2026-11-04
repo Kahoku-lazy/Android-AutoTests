@@ -33,7 +33,7 @@
 
 ### Requirement: Each step carries its own anchors and log evidence
 
-步骤输入 SHALL 在「动作」与「要核对的结果」之外，允许携带两项可选的结构化补充：`anchor`（本步要去的页面、入口与目标元素）与 `log`（本步日志证据的型号、端口与关键词）。装载时 MUST 校验：`anchor` 只允许字符串键值且键名限于 `page` / `entry` / `target`；`log` 出现时 MUST 同时给出非空 `sku`、正整数 `port` 与非空 `keyword`，缺项 MUST 拒绝装载并给出可读原因。注入时 MUST 只注入当前步：`anchor` MUST 只进入执行角色的步骤提示，`log` MUST 只进入验收角色的步骤提示；执行角色的提示 MUST NOT 出现 `log` 内容或该步要核对的结果，验收角色的提示 MUST NOT 出现 `action` 或 `anchor` 内容。缺少这两项时，该步的提示与既有行为完全一致。
+步骤输入 SHALL 在「动作」与「要核对的结果」之外，允许携带两项可选的结构化补充：`anchor`（本步要去的页面、入口与目标元素）与 `log`（本步日志证据的型号、端口与关键词）。装载时 MUST 校验：`anchor` 只允许字符串键值且键名限于 `page` / `entry` / `target`；`log` 出现时 MUST 同时给出非空 `sku`、正整数 `port` 与至少一个非空关键词，关键词可以用 `keyword` 单个给出或 `keywords` 列表给出（最多 6 个，重复项表示该关键词要命中多次），两者 MUST NOT 同时出现；违反 MUST 拒绝装载并给出可读原因。注入时 MUST 只注入当前步：`anchor` MUST 只进入执行角色的步骤提示，`log` MUST 只进入验收角色的步骤提示；执行角色的提示 MUST NOT 出现 `log` 内容或该步要核对的结果，验收角色的提示 MUST NOT 出现 `action` 或 `anchor` 内容。缺少这两项时，该步的提示与既有行为完全一致。
 
 #### Scenario: Anchors reach the executor only
 
@@ -44,6 +44,11 @@
 
 - **WHEN** 某步给出 `log`（`sku=H6810`、`port=7005`、`keyword=timer_configs_set_success`）
 - **THEN** 验收角色收到的提示里含这三个字段，执行角色的提示里不含它们
+
+#### Scenario: Multiple keywords are checked one by one
+
+- **WHEN** 某步的 `log.keywords` 是 `[switch_on, lumi_set_success, lumi_set_success]`
+- **THEN** 验收角色收到的提示按该顺序列出三个关键词，并写明「逐个查、同一关键词出现两次要命中两次、全部命中才算通过」
 
 #### Scenario: A malformed log block is refused
 

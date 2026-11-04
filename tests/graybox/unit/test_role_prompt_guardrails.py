@@ -117,6 +117,13 @@ def test_verifier_prompt_splits_evidence_by_assertion_type():
     assert "混合型" in VERIFIER_PROMPT
 
 
+def test_verifier_prompt_checks_every_keyword():
+    """给出多个关键词时逐个查，全部命中才算通过。"""
+    assert "逐个调用 check_device_log" in VERIFIER_PROMPT
+    assert "同一个关键词出现两次表示要命中两次" in VERIFIER_PROMPT
+    assert "全部命中才算通过" in VERIFIER_PROMPT
+
+
 def test_executor_prompt_separates_connection_spinner_from_page_loading():
     """长按后的设备连接加载圈不按页面加载超时判失败。"""
     assert "属于设备连接/同步过程" in EXECUTOR_PROMPT

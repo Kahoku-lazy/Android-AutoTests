@@ -112,7 +112,7 @@ async def test_step_briefs_are_built_per_step(monkeypatch: pytest.MonkeyPatch) -
             action="设置 5:00 定时",
             expected="定时列表出现 5:00",
             anchor={"page": "定时页"},
-            log=LogEvidence(sku="H6810", port=7005, keyword="timer_configs_set_success"),
+            log=LogEvidence(sku="H6810", port=7005, keywords=("timer_configs_set_success",)),
         ),
         CaseStep(action="回到桌面", expected="桌面可见"),
     ]

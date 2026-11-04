@@ -49,7 +49,53 @@ def test_anchor_and_log_are_parsed():
     assert reason == ""
     step = cases[0].steps[0]
     assert step.anchor == {"page": "定时页", "entry": "详情页左上「定时」"}
-    assert step.log == LogEvidence(sku="H6810", port=7005, keyword="timer_configs_set_success")
+    assert step.log == LogEvidence(
+        sku="H6810", port=7005, keywords=("timer_configs_set_success",)
+    )
+
+
+def test_keywords_list_is_parsed():
+    """keywords 列表按顺序收好，重复项保留（表示该关键词要命中多次）。"""
+    text = _case(
+        "    - action: 开关各触发一次\n"
+        "      assert: 开灯与关灯日志\n"
+        "      log:\n"
+        "        sku: H6810\n"
+        "        port: 7005\n"
+        "        keywords: [switch_on, switch_off, switch_off]"
+    )
+
+    cases, reason = validate_platform_yaml(text)
+
+    assert reason == ""
+    assert cases[0].steps[0].log.keywords == ("switch_on", "switch_off", "switch_off")
+
+
+def test_keyword_and_keywords_are_exclusive():
+    """单个 keyword 与列表 keywords 不能同时给。"""
+    text = _case(
+        "    - action: 点一下\n      assert: 有反应\n"
+        "      log:\n        sku: H6810\n        port: 7005\n"
+        "        keyword: switch_on\n        keywords: [switch_off]"
+    )
+
+    cases, reason = validate_platform_yaml(text)
+
+    assert cases == []
+    assert "只能给一个" in reason
+
+
+def test_bad_keyword_token_is_rejected():
+    """关键词里出现空格等字符时拒绝，避免拼坏提示与工具入参。"""
+    text = _case(
+        "    - action: 点一下\n      assert: 有反应\n"
+        "      log:\n        sku: H6810\n        port: 7005\n        keywords: ['switch on']"
+    )
+
+    cases, reason = validate_platform_yaml(text)
+
+    assert cases == []
+    assert "只能含字母" in reason
 
 
 def test_unknown_anchor_key_is_rejected():

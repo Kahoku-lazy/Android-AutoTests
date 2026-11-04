@@ -10,7 +10,7 @@ Python 调试：➡️ python -m engines.agents.workflow.step_brief 🏁
 类型: ➡️ Agent 能力模块 🏁
 简介说明：➡️
 1. executor_brief: 动作 + 【本步页面锚点】，只给执行者
-2. verifier_brief: 要核对的结果 + 【本步日志证据】 + 【本步关键词表】，只给验收者
+2. verifier_brief: 要核对的结果 + 【本步日志证据】（一个或多个关键词） + 【本步关键词表】，只给验收者
 3. with_context: 把开场上下文（如设备 serial）重放到每一步，因为每步都是新角色实例
 4. 两份简报互不串味：执行者简报不含要核对的结果，验收简报不含动作与锚点
 🏁
@@ -38,6 +38,11 @@ ANCHOR_HEADER: Final[str] = "【本步页面锚点】"
 EVIDENCE_HEADER: Final[str] = "【本步日志证据】"
 KEYWORDS_HEADER: Final[str] = "【本步关键词表】"
 MISSING_KEYWORDS: Final[str] = "该型号关键词目录缺失，请退回截图核对页面；不要连续盲试关键词。"
+MULTI_KEYWORD_HINT: Final[str] = (
+    "逐个核对上面列出的关键词：每个关键词调用一次 check_device_log；"
+    "同一个关键词出现两次表示要命中两次（用两个不同的 action_time 各查一次）；"
+    "全部命中才算通过，任一未命中就判不通过并写明是哪个关键词、哪一次。"
+)
 
 __all__ = ["executor_brief", "verifier_brief", "with_context"]
 
@@ -100,9 +105,17 @@ def verifier_brief(step: CaseStep, keywords: str = "") -> str:
     parts = [step.expected]
     text = str(keywords or "").strip()
     if step.log is not None:
-        parts.append(
-            f"{EVIDENCE_HEADER}sku={step.log.sku} port={step.log.port} keyword={step.log.keyword}"
-        )
+        listed = list(step.log.keywords)
+        if len(listed) == 1:
+            parts.append(
+                f"{EVIDENCE_HEADER}sku={step.log.sku} port={step.log.port} keyword={listed[0]}"
+            )
+        else:
+            parts.append(
+                f"{EVIDENCE_HEADER}sku={step.log.sku} port={step.log.port} "
+                f"keywords={', '.join(listed)}"
+            )
+            parts.append(MULTI_KEYWORD_HINT)
         if text:
             parts.append(f"{KEYWORDS_HEADER}\n{text}")
         else:

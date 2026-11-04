@@ -15,6 +15,7 @@
 - [x] 2.7 用例级型号兜底：`platform_run._case_sku` 从用例标题识别型号（`H6810 定时功能测试` → `H6810`），经 `run_workflow(..., default_sku=...)` 传给装配；旧用例没有 `log` 时仍能拿到关键词表；验证：`test_sop_step_isolation.py::test_case_sku_fills_keyword_catalog_for_steps_without_log` 通过。
 - [x] 2.8 执行提示词第 16 条：交卷前必须停在本步结果页并先截图留证，禁止先返回/退出再交卷；验证：`test_executor_prompt_stays_on_result_page_before_submitting` 通过。
 - [x] 2.9 验收提示词按断言类型分流主证据：日志型以日志为唯一判据（不必截图、不因页面已离开判负），页面型以截图为主（不查日志），混合型两类都要；验收方法的 1~4 条重写并保留原有硬约束；验证：`test_verifier_prompt_splits_evidence_by_assertion_type` 与全部 15 条提示词纪律测试通过。
+- [x] 2.10 `log` 支持多关键词：`keyword`（单个）与 `keywords`（列表 ≤6，重复项=命中多次）二选一，二者同时出现或关键词含空格等非法字符时拒绝装载；`step_brief` 按序列出并附「逐个查、重复即多次、全中才过」提示；验收提示词同步该规则；验证：新增 4 条用例（列表解析、互斥、非法字符、多关键词渲染）通过，结构化资产 `D:\Govee\data\H6810\H6810_structured_cases.yaml` 校验通过（11 条用例 / 56 步 / 9 个日志证据，其中 4 步带多关键词）。
 
 ## 3. 每步新建角色实例
 

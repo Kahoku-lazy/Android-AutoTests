@@ -10,6 +10,7 @@ from engines.agents.workflow.step_brief import (
     EVIDENCE_HEADER,
     KEYWORDS_HEADER,
     MISSING_KEYWORDS,
+    MULTI_KEYWORD_HINT,
     executor_brief,
     verifier_brief,
     with_context,
@@ -17,7 +18,7 @@ from engines.agents.workflow.step_brief import (
 
 pytestmark = [pytest.mark.unit]
 
-_LOG = LogEvidence(sku="H6810", port=7005, keyword="timer_configs_set_success")
+_LOG = LogEvidence(sku="H6810", port=7005, keywords=("timer_configs_set_success",))
 
 
 def test_plain_step_keeps_original_text():
@@ -71,6 +72,20 @@ def test_missing_catalog_tells_verifier_to_fall_back():
 
     assert KEYWORDS_HEADER in brief
     assert MISSING_KEYWORDS in brief
+
+
+def test_multi_keywords_are_listed_with_hint():
+    """多个关键词按顺序列出，并附「逐个查、重复即多次」的提示。"""
+    step = CaseStep(
+        action="开关各触发一次",
+        expected="开灯与关灯日志",
+        log=LogEvidence(sku="H6810", port=7005, keywords=("switch_on", "switch_off")),
+    )
+
+    brief = verifier_brief(step)
+
+    assert "keywords=switch_on, switch_off" in brief
+    assert MULTI_KEYWORD_HINT in brief
 
 
 def test_catalog_is_attached_even_without_log_block():

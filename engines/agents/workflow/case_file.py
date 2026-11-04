@@ -25,6 +25,8 @@ Python 调试：➡️ python -m engines.agents.workflow.case_file 🏁
 
 from __future__ import annotations
 
+import re
+
 from collections.abc import Mapping
 from dataclasses import dataclass
 
@@ -40,21 +42,37 @@ ANCHOR_KEYS: tuple[str, ...] = ("page", "entry", "target")
 ANCHOR_VALUE_MAX = 120
 """`anchor` 每个值的最大字符数。"""
 
+KEYWORDS_MAX = 6
+"""一步最多带几个日志关键词。"""
+
+_KEYWORD_PATTERN = re.compile(r"^[A-Za-z0-9_.\-]+$")
+
 
 @dataclass(frozen=True)
 class LogEvidence:
     """
     一步的日志证据：型号、端口与关键词。
 
+    同一关键词出现多次表示「这一步要命中它 N 次」（例如开灯 + 关灯两个事件）。
+
     Attributes:
         sku: 型号，如 H6810。
         port: 日志端口，如 7005。
-        keyword: 日志关键词原文，如 timer_configs_set_success。
+        keywords: 日志关键词原文，按检查顺序排列；重复项表示需要命中多次。
     """
 
     sku: str
     port: int
-    keyword: str
+    keywords: tuple[str, ...]
+
+    @property
+    def keyword(self) -> str:
+        """第一个关键词，兼容只带一个关键词的旧调用。
+
+        Returns:
+            关键词列表的第一项。
+        """
+        return self.keywords[0]
 
 
 @dataclass(frozen=True)
@@ -141,18 +159,60 @@ def _parse_log(raw: object, *, where: str) -> tuple[LogEvidence | None, str]:
     if not isinstance(raw, dict):
         return None, f"{where} 的 log 必须是映射"
     sku = str(raw.get("sku") or "").strip()
-    keyword = str(raw.get("keyword") or "").strip()
     if not sku:
         return None, f"{where} 的 log.sku 缺失"
-    if not keyword:
-        return None, f"{where} 的 log.keyword 缺失"
     try:
         port = int(raw.get("port"))
     except (TypeError, ValueError):
         return None, f"{where} 的 log.port 必须是正整数"
     if port <= 0:
         return None, f"{where} 的 log.port 必须是正整数"
-    return LogEvidence(sku=sku, port=port, keyword=keyword), ""
+    keywords, reason = _parse_keywords(raw, where=where)
+    if reason:
+        return None, reason
+    return LogEvidence(sku=sku, port=port, keywords=keywords), ""
+
+
+def _parse_keywords(raw: dict, *, where: str) -> tuple[tuple[str, ...], str]:
+    """校验并收敛一步的日志关键词：单个 `keyword` 或 `keywords` 列表。
+
+    `keywords` 里同一个关键词出现两次，表示这一步要命中它两次（两次独立事件）。
+
+    Args:
+        raw: YAML 里的 `log` 节点。
+        where: 报错定位用的路径。
+
+    Returns:
+        (关键词元组, 失败原因)；成功时原因为空串。
+
+    Raises:
+        无：校验失败一律通过返回值报出，不打断调用方。
+    """
+    single = raw.get("keyword")
+    listed = raw.get("keywords")
+    if single is not None and listed is not None:
+        return (), f"{where} 的 log.keyword 与 log.keywords 只能给一个"
+    if single is not None:
+        values: list = [single]
+    elif listed is not None:
+        if not isinstance(listed, list):
+            return (), f"{where} 的 log.keywords 必须是列表"
+        values = listed
+    else:
+        return (), f"{where} 的 log.keyword 缺失"
+    keywords: list[str] = []
+    for value in values:
+        text = str(value or "").strip()
+        if not text:
+            return (), f"{where} 的 log.keyword 不能为空"
+        if not _KEYWORD_PATTERN.match(text):
+            return (), f"{where} 的日志关键词 {text!r} 只能含字母、数字、下划线、点和短横"
+        keywords.append(text)
+    if not keywords:
+        return (), f"{where} 的 log.keyword 不能为空"
+    if len(keywords) > KEYWORDS_MAX:
+        return (), f"{where} 的日志关键词最多 {KEYWORDS_MAX} 个，当前 {len(keywords)} 个"
+    return tuple(keywords), ""
 
 
 def parse_cases(

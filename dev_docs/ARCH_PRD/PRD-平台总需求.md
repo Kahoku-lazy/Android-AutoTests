@@ -39,7 +39,7 @@
 5. AI 执行内核：AgentScope SOP 双角色（`executor` + `verifier`），模型支持 DeepSeek 与阿里百炼。
 6. 验收证据：设备截图 + 串口日志关键词命中（动作后 5 秒窗口，动作前 30 秒基线）。
 7. 观测：四组运行日志、任务事件时间线、测试报告、仪表盘趋势与模型费用。
-8. 知识库助手：与 AI 助手并列的语音问答入口，对话实时显示并写入本地日志；**本期产品面**以语音与平台说明为主，**不对用户开放**完整 RAG 文档库运营（上传/解析/引用范围配置）；引擎侧 engines/agents/rag 可按目标态演进，与产品开关分离。
+8. 知识库助手：与 AI 助手并列的问答入口，**支持语音（Omni 实时）与文字（DeepSeek Flash）两种方式**，对话实时显示并写入本地日志；**本期产品面**以问答与平台说明为主，**不对用户开放**完整 RAG 文档库运营（上传/解析/引用范围配置）；引擎侧 engines/agents/rag 可按目标态演进，与产品开关分离。
 
 **❌ 非本期**
 
@@ -146,7 +146,7 @@ flowchart LR
 | 类别 | 约束 |
 |------|------|
 | 并发 | 单机；同一设备同一时刻至多一条执行任务，不同设备可并行 |
-| 实时性 | 无 WebSocket / SSE；任务进度与列表靠 HTTP 轮询。唯一例外：知识库助手实时语音走 `/ws/knowledge-assistant/`，该通道只承载音频、转写、打断与播放进度 |
+| 实时性 | 无 WebSocket / SSE；任务进度与列表靠 HTTP 轮询。唯一例外：知识库助手走 `/ws/knowledge-assistant/?mode=voice|text`，该通道只承载语音音频、转写、打断、播放进度与文字提问，不承载平台写操作 |
 | 安全 | 全部 `/api/` 走 JWT；公开面仅登录/注册/刷新、Admin、静态资源、API 文档；AI 智能体写操作仅超管 |
 | 契约 | 响应信封 `{status, data}`；错误 `{status, message}` + HTTP 状态码；JSON snake_case；`/api/` 尾斜杠 |
 | 数据 | 表前缀 `ai_ cm_ dp_ rg_ sl_ task_ wf_`；SQLite（开发）/ MySQL（生产）；Redis 承载 JWT 吊销与 Channels layer |
@@ -165,4 +165,4 @@ flowchart LR
 | 用例 / 步骤 | 文档式测试资产，步骤只含「操作 / 预期」两段文本 |
 | 证据窗口 | 动作后 5 秒内截取串口日志命中；动作前 30 秒作基线 |
 | 任务事件 | 模型调用、工具调用、内容块、判决等结构化记录，落 `task_events` |
-| 知识库助手 | 与 AI 助手并列的语音问答入口；对话落 `logs/knowledge_assistant/YYYY-MM-DD.jsonl`；本期不对用户开放 RAG 运营能力 |
+| 知识库助手 | 与 AI 助手并列的语音/文字问答入口；对话落 `logs/knowledge_assistant/YYYY-MM-DD.jsonl`；本期不对用户开放 RAG 运营能力 |

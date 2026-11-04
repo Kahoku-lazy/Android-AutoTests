@@ -26,6 +26,7 @@
 | `middleware/` | 智能体生命周期关键点拦截与扩展 |
 | `rag/` | 检索增强；细则见 [`rag/AGENTS.md`](rag/AGENTS.md) |
 | `realtime_vocie/` | 知识库语音会话（Omni + RAG）；细则见 [`realtime_vocie/AGENTS.md`](realtime_vocie/AGENTS.md) |
+| `knowledge_chat/` | 知识库文字会话（DeepSeek Flash + RAG 工具）；细则见 [`knowledge_chat/AGENTS.md`](knowledge_chat/AGENTS.md) |
 
 支持的模型系列（配置层）：DeepSeek、Dashscope。
 
@@ -58,6 +59,7 @@
 4. **创建运行实例**  
    - **LLM**：`AgentRoleFactory(model, role, tools, context, react).create()` → `agentscope.agent.Agent`（`model` 由 `engines.agents.models` 门面提供，Agent 内部只持有实例）；对外暴露 `build_*() -> Agent`（每次新实例）。实现落点：`agent_builders.py`。  
    - **Voice（Omni）**：`realtime_vocie_agent.build_realtime_vocie_agent()`；会话路径走 `realtime_vocie/`（含 RAG 工具注入）。
+   - **Text（知识库文字问答）**：`agent_builders.build_knowledge_chat()`；会话路径走 `knowledge_chat/`（DeepSeek Flash + 同一 RAG 工具，不装 TTS）。
 
 5. **工具与技能**  
    - 工具实现：`tools/tool_*.py`；分配：`tools_config.build_*_toolkit()`。  
@@ -77,6 +79,7 @@ Harness「记忆与上下文」**当前没有独立 `memory/` 包**，落点如�
 | Token 与费用 | `messaging/billing.py`；语音侧 session 的 `model_usage` |
 | 多轮对话历史（用例/SOP） | 各 `Agent` 运行实例内；**每次 `build_*` 新实例，不跨任务共享** |
 | 语音多轮 | `realtime_vocie/` Omni 会话 |
+| 文字多轮 | `knowledge_chat/` 的 Agent 实例；只在一次连接内，不跨会话 |
 | RAG 知识 | `rag/`：只注入**当轮**上下文（见 `rag/AGENTS.md`） |
 
 ## 红线（禁止）

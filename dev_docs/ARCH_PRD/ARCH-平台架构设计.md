@@ -128,7 +128,7 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 
 ### 3.3 Channels
 
-仅生产路由 `/ws/knowledge-assistant/`（知识库助手实时语音）。握手 `?token=` 调 `verify_token`，失败 4401。通道只承载音频/转写/打断/播放进度；**任务进度仍走 HTTP 轮询**。其它模块不得复用该通道做任务/设备/写操作。
+仅生产路由 `/ws/knowledge-assistant/`（知识库助手，`?mode=voice|text`）。握手 `?token=` 调 `verify_token`，失败 4401；非法 `mode` 4400。通道只承载语音音频/转写/打断/播放进度与文字提问；**任务进度仍走 HTTP 轮询**。其它模块不得复用该通道做任务/设备/写操作。
 
 ---
 

@@ -12,6 +12,8 @@
 
 **已移除**：`livetranslate`、`pipeline`（ASR→DeepSeek→TTS）、相关模式切换与配置分支。
 
+**文字问答**不在本包：见 [`knowledge_chat/AGENTS.md`](../knowledge_chat/AGENTS.md)（DeepSeek Flash + 同一 RAG 工具，不共享上下文、不下发音频）。
+
 ## 模块一览
 
 | 文件 | 职责 |

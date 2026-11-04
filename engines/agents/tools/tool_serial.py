@@ -48,6 +48,8 @@ LOG_EMPTY = "日志为空，请检查断后是否正确连接，此轮执行终�
 LOG_SPAN_SHORT = "从起始点开始日志内容时间不满足5s"
 LOG_KEYWORD_MISS = "时间段内未抓到关键字"
 _CHECK_WINDOW = timedelta(seconds=5)
+# 起点之前再多看一段：交卷写的 action_time 常比真机日志晚几秒，只看窗口之后会漏
+_LOOKBACK = timedelta(seconds=10)
 
 LOG_AT_FORMATS = (
     "%Y-%m-%d %H:%M:%S,%f",
@@ -272,12 +274,28 @@ def _clear_cache() -> None:
         _cache.clear()
 
 
-def _check_result(*, timestamp: str = "", msg: str = "", result: str) -> str:
-    """验收结论：timestamp / msg / result。"""
-    return json.dumps(
-        {"timestamp": timestamp, "msg": msg, "result": result},
-        ensure_ascii=False,
-    )
+def _check_result(
+    *,
+    timestamp: str = "",
+    msg: str = "",
+    result: str,
+    offset_seconds: float | None = None,
+) -> str:
+    """验收结论：timestamp / msg / result（命中时附相对起点的偏移秒数）。
+
+    Args:
+        timestamp: 命中行的 logging 时间原文。
+        msg: 命中行原文或未命中说明。
+        result: PASS / FAIL。
+        offset_seconds: 命中行相对起点的秒数；负数表示比起点更早。
+
+    Returns:
+        JSON 字符串。
+    """
+    payload: dict[str, object] = {"timestamp": timestamp, "msg": msg, "result": result}
+    if offset_seconds is not None:
+        payload["offset_seconds"] = offset_seconds
+    return json.dumps(payload, ensure_ascii=False)
 
 
 def check_device_log(
@@ -287,19 +305,21 @@ def check_device_log(
     port: int | str = 0,
     user_id: str = "",
 ) -> str:
-    """在指定端口的当前抓取文件里检查关键词是否出现在起点之后的 5 秒内。
+    """在指定端口的当前抓取文件里检查关键词是否出现在起点附近（前 10 秒到后 5 秒）。
     文件是 logs/serial_logs/{SKU}_{端口}.log。只匹配抓到的原文（忽略大小写），
     不读其它端口、轮转备份或内存缓冲。
-    找到则返回 logging 时间、该行原文且 result 为 PASS。
-    最晚一行已盖满这 5 秒但没有关键词时，result 为 FAIL，msg 为「时间段内未抓到关键字」。
+    找到则返回 logging 时间、该行原文、相对起点的偏移秒数，result 为 PASS。
+    最晚一行已盖满 5 秒但没有关键词时，result 为 FAIL，msg 为「时间段内未抓到关键字」。
     起点之后没有可解析行时中断本轮并说明日志为空。
     起点之后有行、但最晚一行仍早于起点加 5 秒时，中断本轮并说明时间不满足 5 秒。
     缺少关键词、起点、型号或端口时返回 FAIL。
+    容差说明：真机日志常比交卷写的 action_time 早几秒，因此起点**之前**的 10 秒也参与匹配；
+    命中时 `offset_seconds` 为负，表示日志早于起点。
 
     Args:
         keyword: 日志关键词原文，例如 switch_off
         at: 起点时间，与 logging 相同：`YYYY-MM-DD HH:MM:SS,mmm`。
-            从这一刻起向后 5 秒，含起点。也可只到秒（按该秒的 `,000`）
+            匹配区间是「起点前 10 秒 ~ 起点后 5 秒」，含两端。也可只到秒（按该秒的 `,000`）
         sku: 设备型号，例如 H6810 或 H7011
         port: 日志端口，例如 7005。必须指定，不从平台配置猜测
 
@@ -316,16 +336,27 @@ def check_device_log(
 
     start = _parse_log_at(at)
     start_ms = _millis(start.timestamp())
+    begin_ms = _millis((start - _LOOKBACK).timestamp())
     end_ms = _millis((start + _CHECK_WINDOW).timestamp())
-    after = [row for row in _capture_rows(sku, port_number) if _millis(row[0]) >= start_ms]
-    if not after:
-        raise ValueError(LOG_EMPTY)
+    rows = _capture_rows(sku, port_number)
+    window = [row for row in rows if begin_ms <= _millis(row[0]) <= end_ms]
 
+    # 先查再看窗口是否盖满：日志常比交卷写的 action_time 早几百毫秒到几秒，
+    # 命中就通过，不因为「起点之前」而判失败。
     needle = wanted.lower()
-    for epoch, stamp, msg in after:
-        if _millis(epoch) <= end_ms and needle in msg.lower():
-            return _check_result(timestamp=stamp, msg=msg, result="PASS")
-    if _millis(after[-1][0]) < end_ms:
+    for epoch, stamp, msg in window:
+        if needle in msg.lower():
+            offset = round((_millis(epoch) - start_ms) / 1000, 3)
+            return _check_result(
+                timestamp=stamp,
+                msg=msg,
+                result="PASS",
+                offset_seconds=offset,
+            )
+
+    if not [row for row in rows if _millis(row[0]) >= start_ms]:
+        raise ValueError(LOG_EMPTY)
+    if _millis(rows[-1][0]) < end_ms:
         raise ValueError(LOG_SPAN_SHORT)
     return _check_result(msg=LOG_KEYWORD_MISS, result="FAIL")
 

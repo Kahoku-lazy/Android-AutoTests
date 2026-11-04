@@ -21,12 +21,20 @@ const props = defineProps({
 
 const emit = defineEmits(["toggle"])
 
-/** 结果徽标配色：未完成 / 未执行与待执行同色 */
+/** 结果徽标配色：未完成黄、未执行灰 */
 const BADGE_CLASS = {
   PASS: "is-pass",
   FAIL: "is-fail",
   未完成: "is-pending",
-  未执行: "is-pending",
+  未执行: "is-idle",
+}
+
+/** 状态方块图标：与右侧文字标签一一对应 */
+const STATUS_ICON = {
+  PASS: "✓",
+  FAIL: "✗",
+  未完成: "△",
+  未执行: "○",
 }
 
 /** 尝试块默认展开：只记录被用户收起的那些，步骤一收起组件卸载即复原 */
@@ -47,7 +55,17 @@ function bodyId(step) {
 }
 
 function badgeClass(outcome) {
-  return BADGE_CLASS[outcome] || "is-pending"
+  return BADGE_CLASS[outcome] || "is-idle"
+}
+
+/** 方块图标：未知结果按未执行处理 */
+function statusIcon(step) {
+  return STATUS_ICON[step.outcome] || "○"
+}
+
+/** 方块配色与右侧标签同源 */
+function statusClass(step) {
+  return badgeClass(step.outcome)
 }
 
 /** 步骤行的耗时文案：未结束显示「进行中」，缺失或 0 毫秒不渲染 */
@@ -115,7 +133,9 @@ function toggle(step) {
         :aria-controls="bodyId(step)"
         @click="toggle(step)"
       >
-        <span class="flow-step__mark" aria-hidden="true">{{ isOpen(step) ? "▾" : "▸" }}</span>
+        <span class="flow-step__status" :class="statusClass(step)" aria-hidden="true">{{
+          statusIcon(step)
+        }}</span>
         <span class="flow-step__text"
           ><strong>{{ step.seq }}.</strong> {{ step.action }}</span
         >
@@ -124,6 +144,7 @@ function toggle(step) {
           >{{ cost.label }} {{ cost.text }}</span
         >
         <span class="flow-step__badge" :class="badgeClass(step.outcome)">{{ step.outcome }}</span>
+        <span class="flow-step__mark" aria-hidden="true">{{ isOpen(step) ? "▾" : "▸" }}</span>
       </button>
 
       <div v-if="isOpen(step)" :id="bodyId(step)" class="flow-step__body">

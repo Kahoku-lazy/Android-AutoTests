@@ -51,10 +51,7 @@ function verifier(overrides: Record<string, unknown> = {}) {
   })
 }
 
-function reportData(
-  rounds: Array<Record<string, unknown>>,
-  steps: Array<Record<string, unknown>>,
-) {
+function reportData(rounds: Array<Record<string, unknown>>, steps: Array<Record<string, unknown>>) {
   return {
     status: true,
     data: {
@@ -198,14 +195,16 @@ describe("任务详情步骤行", () => {
         phase: "执行阶段",
         title: "执行阶段",
         items: [
-          { seq: 1, label: "工具调用 · tap_device_screen", detail: '{"x":720}', time: "2026-11-03T14:32:44+08:00" },
+          {
+            seq: 1,
+            label: "工具调用 · tap_device_screen",
+            detail: '{"x":720}',
+            time: "2026-11-03T14:32:44+08:00",
+          },
         ],
       },
     ]
-    const wrapper = await mountWith(
-      [round({ blocks }), verifier({ round_id: 1, blocks })],
-      oneStep,
-    )
+    const wrapper = await mountWith([round({ blocks }), verifier({ round_id: 1, blocks })], oneStep)
     await wrapper.get(".flow-step__title").trigger("click")
 
     const heads = wrapper.findAll(".flow-proc__head")
@@ -235,7 +234,9 @@ describe("任务详情步骤行", () => {
 
     const bodies = wrapper.findAll(".flow-attempt__body")
     expect(bodies).toHaveLength(1)
-    expect(bodies[0].attributes("id")).toBe(wrapper.findAll(".flow-attempt__head")[1].attributes("aria-controls"))
+    expect(bodies[0].attributes("id")).toBe(
+      wrapper.findAll(".flow-attempt__head")[1].attributes("aria-controls"),
+    )
     expect(wrapper.findAll(".flow-proc")).toHaveLength(2)
   })
 
@@ -250,5 +251,42 @@ describe("任务详情步骤行", () => {
     expect(verifierProc.get(".flow-proc__verdict").text()).toBe("✅")
     expect(verifierProc.get(".flow-proc__summary").text()).toBe("已在前台，与预期一致")
     expect(verifierProc.find(".flow-proc__body").exists()).toBe(false)
+  })
+
+  it("状态方块与结果标签一一对应", async () => {
+    const wrapper = await mountWith([round()], oneStep)
+
+    const status = wrapper.get(".flow-step__status")
+    expect(status.text()).toBe("✓")
+    expect(status.classes()).toContain("is-pass")
+    expect(wrapper.get(".flow-step__badge").text()).toBe("PASS")
+  })
+
+  it("失败用 ✗、未执行用 ○，配色各不同", async () => {
+    const wrapper = await mountWith(
+      [verifier({ verdict: { passed: false, message: "未进入列表" } })],
+      [
+        { seq: 1, action: "打开列表", outcome: "FAIL" },
+        { seq: 2, action: "清理缓存", outcome: "未执行" },
+      ],
+    )
+
+    const statuses = wrapper.findAll(".flow-step__status")
+    expect(statuses[0].text()).toBe("✗")
+    expect(statuses[0].classes()).toContain("is-fail")
+    expect(statuses[1].text()).toBe("○")
+    expect(statuses[1].classes()).toContain("is-idle")
+    expect(wrapper.findAll(".flow-step__badge")[1].text()).toBe("未执行")
+  })
+
+  it("有耗时才渲染时间片，数值按紧凑文案", async () => {
+    const wrapper = await mountWith(
+      [round()],
+      [{ seq: 1, action: "启动应用", outcome: "PASS", duration_ms: 183000 }],
+    )
+    expect(wrapper.get(".flow-step__duration").text()).toBe("3m03s")
+
+    const plain = await mountWith([round()], oneStep)
+    expect(plain.find(".flow-step__duration").exists()).toBe(false)
   })
 })

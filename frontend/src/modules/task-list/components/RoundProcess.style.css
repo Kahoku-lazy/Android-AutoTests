@@ -1,18 +1,15 @@
-/* 任务详情：一轮模型过程的样式（执行紫 / 验收蓝，与步骤左边线同源） */
+/* 任务详情：一轮模型过程卡（执行紫 / 验收蓝，左侧 3px 角色色条） */
 .flow-proc {
   margin-top: var(--app-space-sm);
   padding: var(--app-space-sm) var(--app-space-md);
-  border: 2px solid var(--ink);
-  border-radius: 3px;
-  background: var(--paper);
-}
-
-.flow-proc.is-executor {
-  border-color: var(--c-ai);
+  border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
+  border-left: 3px solid var(--c-ai);
+  border-radius: 6px;
+  background: var(--app-bg-card);
 }
 
 .flow-proc.is-verifier {
-  border-color: var(--c-workflow);
+  border-left-color: var(--c-workflow);
 }
 
 .flow-proc__head {
@@ -33,13 +30,49 @@
   cursor: pointer;
 }
 
-.flow-proc__head:hover {
-  background: color-mix(in srgb, var(--ink) 5%, transparent);
-}
-
 .flow-proc__mark {
   flex: 0 0 auto;
+  color: var(--app-text-secondary);
   font-size: var(--app-size-xs);
+}
+
+.flow-proc__role {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--c-ai) 22%, var(--app-bg-card));
+  color: color-mix(in srgb, var(--ink) 82%, var(--c-ai));
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.flow-proc__role.is-verifier {
+  background: color-mix(in srgb, var(--c-workflow) 26%, var(--app-bg-card));
+  color: color-mix(in srgb, var(--ink) 78%, var(--c-workflow));
+}
+
+.flow-proc__meta {
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+  font-weight: 400;
+}
+
+/* 模型耗时：与步骤耗时同一天蓝 chip */
+.flow-proc__duration {
+  padding: 0 7px;
+  border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  border-radius: 5px;
+  background: var(--color-cyan-74);
+  color: var(--ink);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.flow-proc__verdict {
+  font-size: var(--app-size-sm);
 }
 
 /* 收起时的结论摘要：单行省略，完整结论在展开体里 */
@@ -58,62 +91,25 @@
   margin-top: var(--app-space-xs);
 }
 
-.flow-proc__role {
-  display: inline-block;
-  padding: 0 var(--app-space-xs);
-  border: 2px solid var(--ink);
-  border-radius: var(--app-radius-sm);
-  font-size: var(--app-size-xs);
-  font-weight: 600;
-  line-height: 1.5;
-}
-
-.flow-proc__role.is-executor {
-  background: var(--c-ai);
-}
-
-.flow-proc__role.is-verifier {
-  background: var(--c-workflow);
-}
-
-.flow-proc__meta {
-  color: var(--app-text-secondary);
-  font-size: var(--app-size-xs);
-  font-weight: 400;
-}
-
-/* 块头时长：模型调用耗时（或「进行中」），用青色时间片与灰底模型名区分 */
-.flow-proc__duration {
-  padding: 0 var(--app-space-xs);
-  border: 2px solid var(--ink);
-  border-radius: var(--app-radius-sm);
-  background: var(--color-cyan-74);
-  font-size: var(--app-size-xs);
-  font-weight: 700;
-}
-
-.flow-proc__verdict {
-  font-size: var(--app-size-sm);
-}
-
 .flow-proc__note {
   margin-top: var(--app-space-sm);
   padding: var(--app-space-xs) var(--app-space-sm);
-  border: 1.5px solid var(--ink);
-  border-radius: var(--app-radius-sm);
-  background: var(--paper);
+  border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--ink) 3%, var(--app-bg-card));
 }
 
 .flow-proc__note.is-handover {
-  border-color: var(--c-ai);
+  border-color: color-mix(in srgb, var(--c-ai) 40%, transparent);
 }
 
 .flow-proc__note.is-verdict {
-  border-color: var(--c-element);
+  border-color: color-mix(in srgb, var(--c-workflow) 45%, transparent);
 }
 
 .flow-proc__note-title {
   margin: 0 0 var(--app-space-xs);
+  color: var(--app-text-secondary);
   font-size: var(--app-size-xs);
   font-weight: 700;
 }
@@ -134,11 +130,12 @@
 
 .flow-phase {
   margin: 0;
-  padding: 0;
+  padding: 6px 0;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 6%, transparent);
 }
 
-.flow-phase + .flow-phase {
-  margin-top: var(--app-space-sm);
+.flow-phase:first-child {
+  border-top: 0;
 }
 
 .flow-phase__title {
@@ -168,10 +165,6 @@
   padding: var(--app-space-xs) 0;
 }
 
-.flow-item + .flow-item {
-  border-top: 1px dashed var(--ink);
-}
-
 .flow-item__head {
   display: flex;
   flex-wrap: wrap;
@@ -183,6 +176,7 @@
 .flow-item__head time {
   color: var(--app-text-secondary);
   font-size: var(--app-size-xs);
+  font-variant-numeric: tabular-nums;
 }
 
 .flow-item__count {

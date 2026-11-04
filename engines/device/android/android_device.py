@@ -1,16 +1,30 @@
 """
-调试运行入口：python -m engines.device.android.android_device
-
-模块说明：
-Android 设备控制模块，实现 Android 设备连接、信息查询、控制功能。
-
-类功能简介：
-1. AndroidConnection: 设备连接类 —— 无线 / USB 双栈连接、存活探测与重连。
-2. AdbChannel: adb 命令通道 —— 只执行命令、取回结果，不做解析。
-3. AdbInfo: 设备信息查询（纯 adb）—— 分辨率 / 前台应用 / 包名 / 已连接设备 / 层级 XML。
-4. AdbControl: 设备控制（纯 adb）—— 点击 / 长按 / 滑动 / 拖动 / 输入 / 按键 / 截图 / 应用启停。
-5. AndroidControl: 在 AdbControl 之上补 u2 的两项能力 —— xpath 元素查找、非 ASCII 输入；u2 会话按需连接。
-
+文件名: ➡ android_device.py 🏁
+路径: ➡ engines/device/android/android_device.py 🏁
+模块功能：➡ Android 设备连接、信息查询与控制实现 🏁
+Python 调试：➡ python -m engines.device.android.android_device 🏁
+时间：➡ 2026-10-20 🏁
+作者：➡ kahoku 🏁
+版本：➡ 1.0.0 🏁
+修改时间: ➡ 2026-11-02 🏁
+类型: ➡ 工具模块 🏁
+简介说明：➡
+1. AndroidConnectionConfig / AndroidConnection: 无线/USB 双栈连接、探活与重连
+2. AdbChannel: adb 命令通道（只执行、取回，不做解析）
+3. AdbInfo: 分辨率 / 前台应用 / 包名 / 已连接设备 / 层级 XML
+4. AdbControl: 点击 / 长按 / 滑动 / 拖动 / 输入 / 按键 / 截图 / 应用启停
+5. AndroidControl: 在 AdbControl 之上补 u2（xpath 等）
+6. capture_png: 截图辅助
+🏁
+关联模块：➡
+1. engines.device.action: DeviceConnection / DeviceControl 等抽象
+2. utils.logs: device_log
+🏁
+测试：➡
+1. tests/engines/devices/test_android_device.py: Android 设备控制
+2. tests/engines/agents/test_tool_device_e2e.py: 设备工具 e2e
+3. tests/engines/agents/test_xpath_action_coords.py: xpath 动作坐标
+🏁
 """
 
 from __future__ import annotations
@@ -35,6 +49,8 @@ _CONNECTED_KEYWORDS = ("connected", "already", "已连接", "已经连接", "成
 @dataclass(frozen=True)
 class AndroidConnectionConfig:
     # USB 连接 设备UUID
+    """Android 连接配置（序列号、无线地址、adb 可执行文件等）。"""
+
     uuid: str | None = None
 
     # 无线连接 设备地址与端口号
@@ -651,23 +667,115 @@ class AdbControl(DeviceControl):
             raise RuntimeError("screencap 返回的不是 PNG")
         return png
 
-    def app_start(self, package: str) -> None:
-        """启动应用（monkey 拉起 LAUNCHER，无需知道 Activity 名）。
+    def launcher_component(self, package: str) -> str:
+        """解析包的 LAUNCHER 组件。
 
         Args:
             package: 包名。
+
+        Returns:
+            形如 `com.govee.home/.HomeActivity` 的组件名；解析不到时返回空串。
         """
-        self.adb.shell(
-            ["monkey", "-p", str(package), "-c", "android.intent.category.LAUNCHER", "1"]
-        )
+        try:
+            output = self.adb.shell(
+                [
+                    "cmd",
+                    "package",
+                    "resolve-activity",
+                    "--brief",
+                    "-c",
+                    "android.intent.category.LAUNCHER",
+                    str(package),
+                ]
+            )
+        except RuntimeError:
+            return ""
+        for line in reversed(str(output or "").splitlines()):
+            text = line.strip()
+            if "/" in text and not text.startswith(("priority=", "No activity")):
+                return text
+        return ""
+
+    def is_installed(self, package: str) -> bool:
+        """包是否已安装。
+
+        Args:
+            package: 包名。
+
+        Returns:
+            已安装返回 True。
+        """
+        try:
+            output = self.adb.shell(["pm", "list", "packages", str(package)])
+        except RuntimeError:
+            return False
+        expected = f"package:{package}"
+        return any(line.strip() == expected for line in str(output or "").splitlines())
+
+    def _install_hint(self, package: str) -> str:
+        """列出设备上名字相近的已安装包，便于发现包名写错。
+
+        Args:
+            package: 调用方给的包名。
+
+        Returns:
+            形如「；设备上包含 'govee' 的包：com.govee.home, …」的提示；没有相近包时为空串。
+        """
+        segments = [part for part in str(package or "").split(".") if part]
+        keyword = max(segments, key=len) if segments else ""
+        if not keyword:
+            return ""
+        try:
+            output = self.adb.shell(["pm", "list", "packages"])
+        except RuntimeError:
+            return ""
+        near = [
+            line.strip().removeprefix("package:")
+            for line in str(output or "").splitlines()
+            if keyword in line
+        ]
+        return f"；设备上包含 {keyword!r} 的包：{', '.join(near[:5])}" if near else ""
+
+    def app_start(self, package: str) -> None:
+        """启动应用：优先按 LAUNCHER 组件用 am start，解析不到再退回 monkey。
+
+        Args:
+            package: 包名。
+
+        Raises:
+            RuntimeError: 包名未安装，或没有可用的启动入口。
+        """
+        pkg = str(package or "").strip()
+        component = self.launcher_component(pkg)
+        if component:
+            try:
+                self.adb.shell(["am", "start", "-W", "-n", component])
+                return
+            except RuntimeError:
+                pass  # am start 不认组件时退回 monkey 兜底
+        try:
+            self.adb.shell(["monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"])
+            return
+        except RuntimeError as exc:
+            raise RuntimeError(
+                f"启动应用失败：包名 {pkg!r} 未安装或没有 LAUNCHER 入口"
+                f"{self._install_hint(pkg)}；monkey 输出：{exc}"
+            ) from exc
 
     def app_stop(self, package: str) -> None:
         """停止应用。
 
         Args:
             package: 包名。
+
+        Raises:
+            RuntimeError: 包名未安装。am force-stop 对不存在的包也会返回成功，
+                不先校验会让调用方误以为应用已关闭。
         """
-        self.adb.shell(["am", "force-stop", str(package)])
+        pkg = str(package or "").strip()
+        if not self.is_installed(pkg):
+            raise RuntimeError(f"停止应用失败：包名 {pkg!r} 未安装{self._install_hint(pkg)}")
+        self.adb.shell(["am", "force-stop", pkg])
 
     def screen_size(self) -> tuple[int, int]:
         """屏幕分辨率，转发给 AdbInfo。

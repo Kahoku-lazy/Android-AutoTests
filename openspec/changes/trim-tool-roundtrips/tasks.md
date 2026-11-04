@@ -34,4 +34,4 @@
 - [x] 6.1 本地门禁：`python run.py check`。验证：阻塞项 22/22 通过，退出码 0
 - [x] 6.2 真机重跑同一份结构化定时用例（H6810），记录墙钟、`mark_dot` 次数、`screenshot_page` 次数、单次日志检查耗时。验证：墙钟低于 645s，截图次数下降，日志检查单次 < 1s；数据贴进分析文件
 - [x] 6.3 更新 `dev_docs/DEV_TEST/分析-结构化任务184耗时构成-20261104.md`：补「实施后」实测对比表。验证：文件含变更前后两列数据
-- [ ] 6.4 提交与推送：逐文件 `git add`、Conventional Commits、推 `Kahoku`。验证：`ci-phase1.yml` 6 个 job 全绿
+- [x] 6.4 提交与推送：逐文件 `git add`、Conventional Commits、推 `Kahoku`。验证：`ci-phase1.yml` 6 个 job 全绿

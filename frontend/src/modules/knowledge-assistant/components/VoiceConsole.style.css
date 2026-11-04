@@ -215,6 +215,56 @@
   gap: var(--space-sm);
 }
 
+.kb-modes {
+  display: flex;
+  gap: var(--space-xs);
+  padding: 4px;
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-subtle);
+}
+
+.kb-mode-btn {
+  flex: 1 1 0;
+  padding: var(--space-xs) var(--space-sm);
+  border: 2px solid transparent;
+  border-radius: var(--app-radius-sm);
+  background: transparent;
+  color: var(--app-text-secondary);
+  font-family: inherit;
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.kb-mode-btn.is-active {
+  border-color: var(--ink);
+  background: var(--color-yellow-94);
+  color: var(--ink);
+  box-shadow: 2px 2px 0 0 var(--ink);
+}
+
+.kb-mode-btn:focus-visible {
+  outline: 2px solid var(--c-dashboard);
+  outline-offset: 2px;
+}
+
+.kb-text-stage {
+  display: grid;
+  place-items: center;
+  width: 168px;
+  height: 168px;
+  border: 2px dashed var(--color-orange-76);
+  border-radius: var(--app-radius-lg);
+  background: var(--app-bg-subtle);
+}
+
+.kb-text-stage :deep(svg) {
+  width: 56px;
+  height: 56px;
+  stroke: var(--c-element);
+}
+
 .kb-meta {
   display: flex;
   flex-direction: column;

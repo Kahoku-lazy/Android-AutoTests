@@ -138,8 +138,20 @@ def record_voice_event(
     payload: dict,
     session_id: str,
     user_id: str = "",
+    *,
+    source: str = "voice",
 ) -> ModelUsage | None:
-    """把语音 JSONL 的 model_usage / asr_usage / tts_usage 写成账本。"""
+    """把知识库助手的 JSONL 用量事件写成账本。
+
+    Args:
+        payload: 日志里的用量事件（含 provider / model / tokens）。
+        session_id: 会话 id，写入 execution_id。
+        user_id: 当前登录用户 id。
+        source: 来源标识；语音会话为 voice，文字会话为 chat。
+
+    Returns:
+        写入的 ModelUsage；表不存在或数据非法时返回 None。
+    """
     kind = str(payload.get("event") or "")
     provider = normalize_provider(
         str(payload.get("provider") or ""),
@@ -163,7 +175,7 @@ def record_voice_event(
         usage_id = uuid.uuid4()
         payload["usage_id"] = usage_id.hex
     reply_id = str(payload.get("reply_id") or "unknown")
-    event_id = f"voice:{session_id}:{reply_id}:{kind}:{usage_id.hex}"
+    event_id = f"{source}:{session_id}:{reply_id}:{kind}:{usage_id.hex}"
     occurred_at = timezone.now()
     return record_usage(
         event_id=event_id,
@@ -180,7 +192,7 @@ def record_voice_event(
         cache_creation_tokens=int(payload.get("cache_creation_input_tokens") or 0),
         characters=int(payload.get("characters") or 0),
         category=category,
-        source="voice",
+        source=source,
         execution_id=session_id,
         usage_id=usage_id,
         metadata={

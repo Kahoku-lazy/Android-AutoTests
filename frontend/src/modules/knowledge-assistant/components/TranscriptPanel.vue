@@ -17,6 +17,7 @@ import {
   KB_MSG_RECOGNIZING,
   KB_ROLE_ASSISTANT,
   KB_ROLE_USER,
+  KB_TEXT_MAX_LEN,
 } from "../constants"
 import type { MessageRole, TranscriptMessage } from "../types"
 
@@ -24,6 +25,7 @@ defineProps<{
   messages: TranscriptMessage[]
   showComposer: boolean
   canSend: boolean
+  placeholder: string
 }>()
 
 const emit = defineEmits<{
@@ -98,7 +100,8 @@ function statusLabel(message: TranscriptMessage): string {
         class="kb-composer__input"
         data-testid="kb-text-input"
         type="text"
-        placeholder="输入文字提问，例如：长按开关按键3秒会怎样？"
+        :placeholder="placeholder"
+        :maxlength="KB_TEXT_MAX_LEN"
         :disabled="!canSend"
       />
       <DoodleBtn

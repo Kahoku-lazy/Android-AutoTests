@@ -1,8 +1,8 @@
-/**
- * 语音会话编排：麦克风、WebSocket、播放器与消息列表。
+﻿/**
+ * 知识库助手会话编排：语音（麦克风 + 播放器）与文字（DeepSeek Flash）两种方式。
  *
- * 组件只调用 start / stop / interrupt；本 composable 负责浏览器资源
- * 的建立与释放，并把服务端事件转成页面状态。仅 Omni + 知识库问答。
+ * 组件只调用 start / stop / interrupt / submitText；本 composable 负责浏览器资源的
+ * 建立与释放，并把服务端事件转成页面状态。语音与文字不共享上下文。
  */
 import { computed, ref } from "vue"
 import { getToken } from "@/shared/auth/token-storage"
@@ -11,26 +11,37 @@ import { MicCapture, listMicrophoneDevices, type MicrophoneDevice } from "../aud
 import {
   KB_INPUT_SAMPLE_RATE,
   KB_MIC_ERROR,
+  KB_MODE_TEXT,
+  KB_MODE_VOICE,
   KB_OUTPUT_SAMPLE_RATE,
   KB_SOCKET_ERROR,
   KB_UNAUTHORIZED_ERROR,
   KB_WS_PATH,
 } from "../constants"
+import { canSendText } from "../helpers/mode"
 import { applyServerEvent } from "../helpers/transcript"
-import type { ServerEvent, SessionInfo, TranscriptMessage, VoiceState } from "../types"
+import type {
+  AssistantMode,
+  ServerEvent,
+  SessionInfo,
+  TranscriptMessage,
+  VoiceState,
+} from "../types"
 
 const ACTIVE_STATES: VoiceState[] = ["connecting", "listening", "thinking", "speaking"]
 
 /**
- * 知识库助手语音会话。
+ * 知识库助手会话（语音 / 文字）。
  *
  * Returns:
- *   messages / state / errorMessage / session / isActive / canInterrupt，
- *   以及 start / stop / interrupt / dispose 四个动作。
+ *   messages / state / mode / canType / session / canInterrupt，
+ *   以及 start / stop / interrupt / submitText / dispose 五个动作。
  */
-export function useVoiceSession() {
+export function useAssistantSession() {
   const messages = ref<TranscriptMessage[]>([])
   const state = ref<VoiceState>("idle")
+  const mode = ref<AssistantMode>(KB_MODE_VOICE)
+  const socketOpen = ref(false)
   const errorMessage = ref("")
   const noticeMessage = ref("")
   const session = ref<SessionInfo | null>(null)
@@ -47,13 +58,15 @@ export function useVoiceSession() {
 
   const isActive = computed(() => ACTIVE_STATES.includes(state.value))
   const canInterrupt = computed(() => state.value === "speaking" || state.value === "thinking")
+  const canType = computed(() => canSendText(mode.value, socketOpen.value, state.value))
 
   async function loadDevices(): Promise<void> {
     devices.value = await listMicrophoneDevices()
   }
 
-  async function start(): Promise<void> {
+  async function start(nextMode: AssistantMode = KB_MODE_VOICE): Promise<void> {
     if (isActive.value) return
+    mode.value = nextMode
     errorMessage.value = ""
     noticeMessage.value = ""
     session.value = null
@@ -61,11 +74,18 @@ export function useVoiceSession() {
     state.value = "connecting"
     micLevel.value = 0
     sentFrames.value = 0
+    socketOpen.value = false
     closing = false
 
     const token = getToken()
     if (!token) {
       fail(KB_UNAUTHORIZED_ERROR)
+      return
+    }
+
+    // 文字方式不碰麦克风与播放器：没有浏览器音频权限要求。
+    if (nextMode === KB_MODE_TEXT) {
+      openSocket(token, nextMode)
       return
     }
 
@@ -88,7 +108,7 @@ export function useVoiceSession() {
         },
       })
       void loadDevices()
-      openSocket(token)
+      openSocket(token, nextMode)
     } catch (error) {
       const message =
         error instanceof DOMException && error.name === "NotAllowedError"
@@ -116,14 +136,27 @@ export function useVoiceSession() {
     state.value = "listening"
   }
 
+  /**
+   * 发送一条文字提问。
+   *
+   * Args:
+   *   text: 用户输入；空白内容不发送。
+   */
+  function submitText(text: string): void {
+    const value = text.trim()
+    if (!canType.value || !value) return
+    noticeMessage.value = ""
+    sendControl({ type: "text", text: value })
+  }
+
   function dispose(): void {
     cleanup()
     state.value = "idle"
   }
 
-  function openSocket(token: string): void {
+  function openSocket(token: string, nextMode: AssistantMode): void {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-    const params = new URLSearchParams({ token })
+    const params = new URLSearchParams({ token, mode: nextMode })
     const url = `${protocol}//${window.location.host}${KB_WS_PATH}?${params}`
     socket = new WebSocket(url)
     socket.binaryType = "arraybuffer"
@@ -160,6 +193,7 @@ export function useVoiceSession() {
           mode: event.mode,
           logPath: event.log_path,
         }
+        socketOpen.value = true
         state.value = "listening"
         break
       case "audio_item":
@@ -223,6 +257,7 @@ export function useVoiceSession() {
 
   function cleanup(): void {
     closing = true
+    socketOpen.value = false
     if (socket) {
       socket.onmessage = null
       socket.onerror = null
@@ -242,6 +277,9 @@ export function useVoiceSession() {
   return {
     messages,
     state,
+    mode,
+    socketOpen,
+    canType,
     errorMessage,
     noticeMessage,
     session,
@@ -255,6 +293,7 @@ export function useVoiceSession() {
     start,
     stop,
     interrupt,
+    submitText,
     dispose,
   }
 }

@@ -15,7 +15,8 @@ Python 调试：➡️ python -m engines.agents.role_sys_prompts 🏁
 4. UiControlPrompts: UI 控制（设备操作）提示词：执行 / 验收
 5. CaseAuthoringPrompts: 用例编写提示词：规划 / 编写 / 验收（含 Goal 变体）
 6. VoiceKnowledgePrompts: 知识库 Omni 语音助手系统提示词
-7. build_system_prompt: 兼容 realtime_vocie.knowledge：返回语音助手系统提示词
+7. KnowledgeChatPrompts: 知识库文字问答角色系统提示词
+8. build_system_prompt: 兼容 realtime_vocie.knowledge：返回语音助手系统提示词
 🏁
 关联模块：➡️
 1. 暂无本地 engines/utils 依赖
@@ -196,6 +197,17 @@ class VoiceKnowledgePrompts:
         return cls.SYSTEM_PROMPT
 
 
+class KnowledgeChatPrompts:
+    """知识库文字问答角色系统提示词。"""
+
+    TOKEN = "KNOWLEDGE_CHAT_PROMPT"
+
+    @classmethod
+    def system(cls) -> str:
+        """返回文字问答角色的系统提示词正文。"""
+        return load_prompt_md(cls.TOKEN)
+
+
 def build_system_prompt() -> str:
     """兼容 realtime_vocie.knowledge：返回语音助手系统提示词。"""
     return VoiceKnowledgePrompts.system()
@@ -226,6 +238,7 @@ __all__ = [
     "CHINESE_DEMAND",
     "CaseAuthoringPrompts",
     "EXECUTOR_PROMPT",
+    "KnowledgeChatPrompts",
     "SYSTEM_PROMPT",
     "UiControlPrompts",
     "VERIFIER_PROMPT",

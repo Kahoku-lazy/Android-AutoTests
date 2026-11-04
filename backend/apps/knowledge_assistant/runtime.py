@@ -17,6 +17,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Final
 
+from engines.agents.knowledge_chat import build_status as build_chat_status
 from engines.agents.realtime_vocie.config import build_runtime_status
 
 from .transcript_log import describe_path, today_file
@@ -70,6 +71,7 @@ def build_status_payload(environ: Mapping[str, str] | None = None) -> dict:
     log_dir = session_log_dir(environ)
     return {
         **status,
+        **build_chat_status(environ),
         "log_dir": describe_path(log_dir),
         "log_file": describe_path(today_file(log_dir)),
     }

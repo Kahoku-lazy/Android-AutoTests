@@ -1,24 +1,26 @@
 <script setup lang="ts">
 /**
- * 语音控制台：圆形语音按键、状态、错误与日志落点。
+ * 语音/文字控制台：方式选择、圆形语音按键或打字提示、状态与日志落点。
  *
- * 组件只负责渲染与事件绑定；会话状态由 useVoiceSession 提供。
+ * 组件只负责渲染与事件绑定；会话状态由 useAssistantSession 提供。
  */
 import { computed, nextTick, onMounted, watch } from "vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
 import {
-  KB_HINT_TEXT,
   KB_INTERRUPT_LABEL,
   KB_MIC_ACTIVE,
   KB_MIC_IDLE,
   KB_MIC_WAITING,
+  KB_MODE_OPTIONS,
+  KB_MODE_VOICE,
   KB_START_LABEL,
   KB_STOP_LABEL,
 } from "../constants"
 import type { MicrophoneDevice } from "../audio/micCapture"
-import type { VoiceState } from "../types"
+import type { AssistantMode, VoiceState } from "../types"
 
 const props = defineProps<{
+  mode: AssistantMode
   state: VoiceState
   statusText: string
   canStart: boolean
@@ -32,6 +34,7 @@ const props = defineProps<{
   modeLabel: string
   modelLabel: string
   logPath: string
+  hint: string
 }>()
 
 const emit = defineEmits<{
@@ -39,8 +42,10 @@ const emit = defineEmits<{
   stop: []
   interrupt: []
   deviceChange: [deviceId: string]
+  modeChange: [mode: AssistantMode]
 }>()
 
+const isVoice = computed(() => props.mode === KB_MODE_VOICE)
 const isActive = computed(() => props.state !== "idle" && props.state !== "error")
 const buttonTitle = computed(() => (isActive.value ? KB_STOP_LABEL : KB_START_LABEL))
 const levelPercent = computed(() => Math.min(100, Math.round(props.micLevel * 400)))
@@ -69,7 +74,7 @@ onMounted(async () => {
 })
 
 watch(
-  () => props.state,
+  () => [props.state, props.mode],
   async () => {
     await nextTick()
     refreshIcons()
@@ -79,8 +84,23 @@ watch(
 
 <template>
   <section class="kb-console" data-testid="kb-console">
+    <div class="kb-modes" role="group" aria-label="会话方式">
+      <button
+        v-for="option in KB_MODE_OPTIONS"
+        :key="option.value"
+        type="button"
+        class="kb-mode-btn"
+        :class="{ 'is-active': option.value === mode }"
+        :aria-pressed="option.value === mode"
+        :data-testid="`kb-mode-${option.value}`"
+        @click="emit('modeChange', option.value)"
+      >
+        {{ option.label }}
+      </button>
+    </div>
+
     <div class="kb-stage">
-      <label class="kb-device">
+      <label v-if="isVoice" class="kb-device">
         <span class="kb-device__label">麦克风</span>
         <select
           class="kb-device__select"
@@ -96,7 +116,11 @@ watch(
         </select>
       </label>
 
-      <div class="kb-orb" :class="{ 'is-active': isActive, 'is-speaking': state === 'speaking' }">
+      <div
+        v-if="isVoice"
+        class="kb-orb"
+        :class="{ 'is-active': isActive, 'is-speaking': state === 'speaking' }"
+      >
         <button
           type="button"
           class="kb-voice-btn"
@@ -109,6 +133,9 @@ watch(
           <i :data-lucide="isActive ? 'square' : 'mic'"></i>
         </button>
       </div>
+      <div v-else class="kb-text-stage" data-testid="kb-text-stage">
+        <i data-lucide="message-square-text"></i>
+      </div>
 
       <p class="kb-status" :class="`kb-status--${state}`" data-testid="kb-status">
         {{ statusText }}
@@ -117,8 +144,8 @@ watch(
         {{ noticeMessage }}
       </p>
       <p v-if="errorMessage" class="kb-error" data-testid="kb-error">{{ errorMessage }}</p>
-      <p class="kb-hint">{{ KB_HINT_TEXT }}</p>
-      <div v-if="isActive" class="kb-mic" data-testid="kb-mic">
+      <p class="kb-hint">{{ hint }}</p>
+      <div v-if="isActive && isVoice" class="kb-mic" data-testid="kb-mic">
         <span class="kb-mic__label">{{ micStatusText }}</span>
         <span class="kb-mic__meter">
           <span class="kb-mic__fill" :style="{ width: levelPercent + '%' }"></span>
@@ -140,7 +167,7 @@ watch(
         {{ KB_STOP_LABEL }}
       </DoodleBtn>
       <DoodleBtn
-        v-if="canInterrupt"
+        v-if="canInterrupt && isVoice"
         tone="yellow"
         data-testid="kb-interrupt"
         @click="emit('interrupt')"
@@ -152,7 +179,7 @@ watch(
     <dl class="kb-meta">
       <div class="kb-meta__row">
         <dt>模式</dt>
-        <dd>{{ modeLabel }}</dd>
+        <dd data-testid="kb-mode-label">{{ modeLabel }}</dd>
       </div>
       <div class="kb-meta__row">
         <dt>模型</dt>

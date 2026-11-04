@@ -12,6 +12,7 @@ Python 调试：➡️ python -m engines.agents.agent_builders 🏁
 1. RoleConfig / ToolsConfig / ContextConfig / ReActConfig: 过渡期再导出四分段类型
 2. AgentRoleFactory: 用已建好的模型 + 四分段配置装配 agentscope.Agent
 3. build_ui_executor / build_ui_verifier / build_case_*: 角色键 → 模型 + 四分段 + 工具包
+4. build_knowledge_chat: 知识库文字问答角色（纯文字，不装语音合成）
 4. executor_agent / verifier_agent / build_executor / build_verifier: 兼容旧名的快捷入口
 5. _agent_from_role_bundle: 全部角色共用的装配路径，模型只经 engines.agents.models 门面取
 🏁
@@ -69,6 +70,7 @@ __all__ = [
     "build_case_planner",
     "build_case_writer_goal",
     "build_case_verifier_goal",
+    "build_knowledge_chat",
     "build_executor",
     "build_verifier",
     "executor_agent",
@@ -95,18 +97,19 @@ def _as_context_config(context: ContextConfig) -> AsContextConfig:
     )
 
 
-def _default_middlewares(fallback_model: ChatModelBase | None) -> list:
+def _default_middlewares(fallback_model: ChatModelBase | None, *, with_tts: bool = True) -> list:
     """默认中间件装配：调用统一装配入口，只把备用模型实例传进去。
 
     Args:
         fallback_model: 已建好的备用模型；None 表示不启用回退。
+        with_tts: 是否允许装配语音合成中间件；纯文字角色传 False。
 
     Returns:
         交给 `Agent(middlewares=...)` 的列表。
     """
     from engines.agents.middleware import build_agent_middlewares
 
-    return build_agent_middlewares(fallback_model=fallback_model)
+    return build_agent_middlewares(fallback_model=fallback_model, with_tts=with_tts)
 
 
 class AgentRoleFactory:
@@ -123,6 +126,7 @@ class AgentRoleFactory:
         toolkit: Toolkit | None = None,
         middlewares: list | None = None,
         fallback_model: ChatModelBase | None = None,
+        with_tts: bool = True,
     ) -> None:
         """
         Args:
@@ -134,6 +138,7 @@ class AgentRoleFactory:
             toolkit: 显式工具包，优先于 tools.toolkit。
             middlewares: 显式中间件；None 时自动装配。
             fallback_model: 备用模型；仅自动装配中间件时使用。
+            with_tts: 是否允许自动装配语音合成中间件；纯文字角色传 False。
 
         Raises:
             TypeError: `role` 不是 RoleConfig。
@@ -153,6 +158,7 @@ class AgentRoleFactory:
         self.react = react if react is not None else ReActConfig()
         self._middlewares = middlewares
         self.fallback_model = fallback_model
+        self.with_tts = with_tts
 
     def create(self) -> Agent:
         """组装 agentscope.Agent。
@@ -165,7 +171,7 @@ class AgentRoleFactory:
         middlewares = (
             self._middlewares
             if self._middlewares is not None
-            else _default_middlewares(self.fallback_model)
+            else _default_middlewares(self.fallback_model, with_tts=self.with_tts)
         )
         return Agent(
             name=self.role.name,
@@ -184,6 +190,7 @@ def _agent_from_role_bundle(
     toolkit: Toolkit | None = None,
     react: ReActConfig | None = None,
     middlewares: list | None = None,
+    with_tts: bool = True,
 ) -> Agent:
     """把 RoleBundle 变成 Agent：模型经门面取，四分段来自 bundle。
 
@@ -192,6 +199,7 @@ def _agent_from_role_bundle(
         toolkit: 角色工具包。
         react: 覆盖 YAML 的 ReAct 配置；None 用 bundle 里的。
         middlewares: 显式中间件；None 时按默认装配并附带备用模型。
+        with_tts: 是否允许默认装配语音合成中间件；纯文字角色传 False。
 
     Returns:
         装配好的 Agent。
@@ -207,6 +215,7 @@ def _agent_from_role_bundle(
         toolkit=toolkit,
         middlewares=middlewares,
         fallback_model=fallback_model,
+        with_tts=with_tts,
     ).create()
 
 
@@ -300,4 +309,22 @@ def build_case_verifier_goal() -> Agent:
         load_role_spec("CASE_VERIFIER_GOAL_ROLE_CONFIG"),
         toolkit=build_case_authoring_toolkit(),
         middlewares=[],
+    )
+
+
+def build_knowledge_chat(toolkit: Toolkit | None = None) -> Agent:
+    """知识库文字问答角色：KNOWLEDGE_CHAT_ROLE_CONFIG + 知识检索工具包。
+
+    纯文字角色不装语音合成中间件，避免把回答再合成一遍音频。
+
+    Args:
+        toolkit: 调用方注入的工具包（如 RAG 的 search_knowledge）；None 用空包。
+
+    Returns:
+        装配好的 Agent（每次调用都是独立实例，多轮历史留在实例内）。
+    """
+    return _agent_from_role_bundle(
+        load_role_spec("KNOWLEDGE_CHAT_ROLE_CONFIG"),
+        toolkit=toolkit,
+        with_tts=False,
     )

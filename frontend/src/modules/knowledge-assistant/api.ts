@@ -1,7 +1,7 @@
 /**
  * 知识库助手 HTTP 唯一出口：只读就绪状态。
  *
- * WS 不走 axios；浏览器音频通道在 composables/useVoiceSession.ts。
+ * WS 不走 axios；浏览器音频与文字通道在 composables/useAssistantSession.ts。
  */
 import client from "@/shared/api-client"
 import type { DjangoResponse } from "@/shared/api-client"

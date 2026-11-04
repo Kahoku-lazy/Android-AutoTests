@@ -6,6 +6,9 @@
 
 export type VoiceState = "idle" | "connecting" | "listening" | "thinking" | "speaking" | "error"
 
+/** 会话方式：语音走 Omni，文字走 DeepSeek Flash。 */
+export type AssistantMode = "voice" | "text"
+
 export type MessageRole = "user" | "assistant"
 
 export type MessageStatus = "streaming" | "done" | "interrupted" | "error"
@@ -28,6 +31,9 @@ export interface KnowledgeAssistantStatus {
   agent_name: string
   log_dir: string
   log_file: string
+  text_model?: string
+  text_ready?: boolean
+  text_reason?: string
 }
 
 export interface ReadyEvent {

@@ -11,6 +11,8 @@ UI_EXECUTOR_ROLE_CONFIG:
   RoleConfig:
     name: ui_executor_role
     system_prompt: UI_EXECUTOR_PROMPT
+    # 可换 token（对应 config/data/app_info/{token}.md）；删掉本行即不加短卡
+    app_info: govee_home
 
   ToolsConfig:
 
@@ -39,6 +41,8 @@ UI_VERIFIER_ROLE_CONFIG:
   RoleConfig:
     name: ui_verifier_role
     system_prompt: UI_VERIFIER_PROMPT
+    # 可换 token（对应 config/data/app_info/{token}.md）；删掉本行即不加短卡
+    app_info: govee_home
 
   ToolsConfig:
 
@@ -133,7 +137,8 @@ CASE_WRITER_GOAL_ROLE_CONFIG:
     stream: true
 
   RoleConfig:
-    name: case_writer_role
+    # 与 CASE_WRITER_ROLE_CONFIG 的 case_writer_role 区分：事件流与判决里用这个名字
+    name: case_writer_goal_role
     system_prompt: CASE_WRITER_GOAL_PROMPT
 
   ToolsConfig:
@@ -156,7 +161,8 @@ CASE_VERIFIER_GOAL_ROLE_CONFIG:
     stream: true
 
   RoleConfig:
-    name: case_verifier_role
+    # 与 CASE_VERIFIER_ROLE_CONFIG 的 case_verifier_role 区分：事件流与判决里用这个名字
+    name: case_verifier_goal_role
     system_prompt: CASE_VERIFIER_GOAL_PROMPT
 
   ToolsConfig:
@@ -181,3 +187,27 @@ OMNI_ROLE_CONFIG:
     name: realtime_vocie_agent
     system_prompt: |
       你是实时语音助手。用简洁自然的中文回答用户问题；不确定时如实说明。
+
+
+# 知识库文字问答角色（DeepSeek Flash + 本地知识检索工具）
+KNOWLEDGE_CHAT_ROLE_CONFIG:
+  ModelConfig:
+    api_key: DEEPSEEK_API_KEY
+    base_url: https://api.deepseek.com/v1
+    provider: deepseek
+    model_name: deepseek-flash
+    vision: false
+    stream: true
+
+  RoleConfig:
+    name: knowledge_chat_role
+    system_prompt: KNOWLEDGE_CHAT_PROMPT
+
+  ToolsConfig:
+
+  ContextConfig:
+
+  ReActConfig:
+    max_iters: 4
+    structured_output_grace_iters: 2
+    stop_on_reject: true

@@ -71,16 +71,27 @@ class TranscriptBridge:
         log: 本次会话的对话日志写入方。
     """
 
-    def __init__(self, log: VoiceLogSink, model: str = "") -> None:
+    def __init__(
+        self,
+        log: VoiceLogSink,
+        model: str = "",
+        *,
+        provider: str = "dashscope",
+        category: str = "Realtime",
+    ) -> None:
         """
         初始化桥接器。
 
         Args:
             log: 本次会话的对话日志写入方。
-            model: 当前实时模型名，写入用量事件。
+            model: 当前模型名，写入用量事件。
+            provider: 用量事件的厂商；语音为 dashscope，文字为 deepseek。
+            category: 用量事件的分类；语音为 Realtime，文字为 LLM。
         """
         self.log = log
         self.model = model
+        self.provider = provider
+        self.category = category
         self._messages: dict[str, _PendingMessage] = {}
         self._state = ""
         self.usage_input = 0
@@ -147,8 +158,8 @@ class TranscriptBridge:
         self.usage_cache_creation += event.cache_creation_input_tokens
         self.log.event(
             "model_usage",
-            provider="dashscope",
-            category="Realtime",
+            provider=self.provider,
+            category=self.category,
             model=self.model,
             reply_id=event.reply_id,
             input_tokens=event.input_tokens,

@@ -118,6 +118,20 @@
   white-space: nowrap;
 }
 
+/* 日志中断标记：设备日志为空/没盖满 5 秒导致本步被打断，鼠标悬停看原因 */
+.flow-step__interrupt {
+  flex: 0 0 auto;
+  padding: 0 7px;
+  border: 1px solid color-mix(in srgb, var(--app-status-danger-text) 45%, transparent);
+  border-radius: 5px;
+  background: var(--app-status-danger-bg);
+  color: var(--app-status-danger-text);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: help;
+}
+
 /* 结果标签：软底胶囊，无描边 */
 .flow-step__badge {
   flex: 0 0 auto;

@@ -75,6 +75,7 @@ function makeReport(options: { running?: boolean } = {}) {
               model_ms: 41900,
               tool_ms: 98000,
               idle_ms: 52100,
+              interrupt: "",
             },
             {
               seq: 2,
@@ -82,6 +83,7 @@ function makeReport(options: { running?: boolean } = {}) {
               expected: "出现设备列表",
               outcome: "PASS",
               duration_ms: 42000,
+              interrupt: "",
             },
           ],
           round_ids: [0, 1],
@@ -211,5 +213,22 @@ describe("[P0] 任务详情四层耗时展示", () => {
     const rows = wrapper.findAll(".flow-step")
     expect(rows[1].findAll(".flow-step__cost")).toHaveLength(0)
     expect(rows[0].findAll(".flow-step__cost")).toHaveLength(3)
+  })
+
+  it("日志中断的步骤标出「日志中断」并把原因挂在 title 上", async () => {
+    const report = makeReport({ running: true })
+    report.data.cases[0].steps[0].interrupt = "日志为空，请检查断后是否正确连接，此轮执行终止"
+    mocks.getTaskReport.mockResolvedValue(report)
+    wrapper = mount(TaskDetailPage)
+    await flushPromises()
+
+    const badge = wrapper.find('[data-test="step-interrupt"]')
+    expect(badge.exists()).toBe(true)
+    expect(badge.text()).toBe("日志中断")
+    expect(badge.attributes("title")).toContain("日志为空")
+
+    // 没有打断的步骤不渲染该标记
+    const rows = wrapper.findAll(".flow-step")
+    expect(rows[1].findAll('[data-test="step-interrupt"]')).toHaveLength(0)
   })
 })

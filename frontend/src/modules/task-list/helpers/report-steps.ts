@@ -50,6 +50,8 @@ export interface StepView {
   toolMs: number
   /** 该步空档：墙钟减去模型与工具，不为负（毫秒） */
   idleMs: number
+  /** 该步被引擎打断的原因；没有打断时为空串 */
+  interrupt: string
   /** 该步仍有未结束的轮次 */
   running: boolean
   attempts: AttemptView[]
@@ -88,6 +90,7 @@ function normalizeSteps(steps?: TaskReportStep[]): TaskReportStep[] {
       model_ms: Math.max(Number(step.model_ms) || 0, 0),
       tool_ms: Math.max(Number(step.tool_ms) || 0, 0),
       idle_ms: Math.max(Number(step.idle_ms) || 0, 0),
+      interrupt: String(step.interrupt || "").trim(),
       running: Boolean(step.running),
     }))
 }
@@ -145,6 +148,7 @@ function buildStep(
     model_ms?: number
     tool_ms?: number
     idle_ms?: number
+    interrupt?: string
     running?: boolean
   } | null,
   group: TaskReportRound[],
@@ -159,6 +163,7 @@ function buildStep(
     modelMs: Math.max(Number(step?.model_ms) || 0, 0),
     toolMs: Math.max(Number(step?.tool_ms) || 0, 0),
     idleMs: Math.max(Number(step?.idle_ms) || 0, 0),
+    interrupt: String(step?.interrupt || "").trim(),
     running: Boolean(step?.running),
     attempts: buildAttempts(group),
   }

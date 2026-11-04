@@ -366,6 +366,8 @@ export interface TaskReportStep {
   tool_ms?: number
   /** 该步空档：墙钟减去模型与工具，不为负（毫秒） */
   idle_ms?: number
+  /** 该步被引擎打断的原因（例如设备日志为空）；没有打断时为空串 */
+  interrupt?: string
   /** 该步仍有未结束的轮次 */
   running?: boolean
 }

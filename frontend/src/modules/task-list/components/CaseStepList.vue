@@ -143,6 +143,13 @@ function toggle(step) {
         <span v-for="cost in costTexts(step)" :key="cost.label" class="flow-step__cost"
           >{{ cost.label }} {{ cost.text }}</span
         >
+        <span
+          v-if="step.interrupt"
+          class="flow-step__interrupt"
+          :title="step.interrupt"
+          data-test="step-interrupt"
+          >日志中断</span
+        >
         <span class="flow-step__badge" :class="badgeClass(step.outcome)">{{ step.outcome }}</span>
         <span class="flow-step__mark" aria-hidden="true">{{ isOpen(step) ? "▾" : "▸" }}</span>
       </button>

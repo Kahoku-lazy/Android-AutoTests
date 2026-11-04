@@ -771,6 +771,36 @@ def _verdict_maps(events: list[_EventRow]) -> list[dict]:
     return maps
 
 
+def _interrupt_maps(events: list[_EventRow]) -> list[dict]:
+    """每条用例一张表：步骤序号 → 该步被打断的原因（没有则不记）。
+
+    打断事件由引擎在事件流异常结束时写入（例如设备日志为空、日志没盖满 5 秒），
+    报告据此在步骤上标注「日志中断」，供人一眼看出失败不是模型判错。
+    """
+    maps: list[dict] = []
+    current: dict = {}
+    last = 0
+    saw = False
+    for event in events:
+        step = int(event.step_seq or 0)
+        if step and last and step < last:
+            maps.append(current)
+            current = {}
+            last = 0
+        if step:
+            last = step
+            saw = True
+        if event.event_type != "StepInterruptedEvent":
+            continue
+        payload = event.payload if isinstance(event.payload, dict) else {}
+        reason = str(payload.get("reason") or "").strip()
+        if step and reason:
+            current[step] = reason
+    if saw or current:
+        maps.append(current)
+    return maps
+
+
 def _step_outcome(passed, seq: int, group: list[dict]) -> str:
     if passed is True:
         return "PASS"
@@ -895,6 +925,7 @@ def _flow_cases(
     specs = _task_cases(task)
     groups = _split_round_groups(rounds)
     verdicts = _verdict_maps(events)
+    interrupts = _interrupt_maps(events)
     total = max(len(specs), len(groups), 0)
     if not specs and not groups:
         return []
@@ -903,6 +934,7 @@ def _flow_cases(
         spec = specs[index] if index < len(specs) else None
         group = groups[index] if index < len(groups) else []
         verdict = verdicts[index] if index < len(verdicts) else {}
+        interrupt = interrupts[index] if index < len(interrupts) else {}
         step_defs = list(spec.steps) if spec else []
         case_start, case_end, case_running = _group_span(group, spans)
         steps = []
@@ -914,6 +946,7 @@ def _flow_cases(
                         "action": step.action,
                         "expected": step.expected,
                         "outcome": _step_outcome(verdict.get(seq), seq, group),
+                        "interrupt": interrupt.get(seq, ""),
                         **_step_span(group, seq, spans),
                     }
                 )
@@ -926,6 +959,7 @@ def _flow_cases(
                         "action": "",
                         "expected": "",
                         "outcome": _step_outcome(verdict.get(seq), seq, group),
+                        "interrupt": interrupt.get(seq, ""),
                         **_step_span(group, seq, spans),
                     }
                 )

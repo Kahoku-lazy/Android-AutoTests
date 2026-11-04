@@ -23,7 +23,7 @@
 
 ```
 doodle-craft/
-├── SKILL.md                     # 入口：默认口径 / 场景 / 一段话风格 / 令牌指针 / 组件目录 / 硬规则 / 自检
+├── SKILL.md                     # 入口：默认口径 / 线型白名单 / 场景 / 一段话风格 / 令牌指针 / 组件目录 / 硬规则 / 自检
 ├── README.md                    # 本文件
 └── references/
     ├── vue-project.md           # 场景一：平台内 Vue 页面与组件（真实代码）
@@ -44,7 +44,7 @@ doodle-craft/
 
 ## 怎么用
 
-1. 先读 `SKILL.md` 的「默认设计口径」与「先选场景」，确定是平台内 Vue 开发还是单文件 HTML。
+1. 先读 `SKILL.md` 的「默认设计口径」「线型规则」与「先选场景」，确定是平台内 Vue 开发还是单文件 HTML；**画边框前先看虚线白名单**——不是 `KpiCard` / `AgentRouteCard` 这两个组件的皮肤，就写实线。
 2. 按场景进 `references/vue-project.md` 或 `references/standalone-html.md`。
 3. 具体到某个组件/视觉属性时，才去读对应的 `references/components/*.md` 或 `references/tokens.md`——**改什么读什么**，不必整包读完。
 4. 收尾走 `SKILL.md` 的「提交前自检」，机械项交给门禁：`cd frontend && npm run lint:styles`。

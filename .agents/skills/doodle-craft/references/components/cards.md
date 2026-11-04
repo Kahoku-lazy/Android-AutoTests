@@ -4,6 +4,8 @@
 
 > **作用域警示**：`.ac-card` 的涂鸦皮肤**只在 `.wb-shell`（或 `.workflow-workbench`）内生效**。页面根忘带主题作用域 → 卡片变实线大圆角 + 灰阴影（EP 出厂皮肤）。
 
+> **线型规则（2026-11-04 起，强制）**：虚线是**组件皮肤**，不是页面装饰。只有 `KpiCard`（核心指标 / 统计汇总）与 `AgentRouteCard`（`.route-card` 助手角色卡）可以声明 `dashed`；这两个组件复用到任何页面都照样虚线，但把它们的虚线样式抄到别的组件里**不算白名单**，一律实线。判定口径见 [../../SKILL.md](../../SKILL.md) §线型规则。下表列的是**当前代码**，其中 AppCard / SketchCard / DoodleNote 基类 / TaskBoard 任务卡的 `dashed` 属待迁移存量，改到即改实线，不要照抄。
+
 ## 1. AppCard 钉板卡（可复用数据块）
 
 用 `el-card` 外壳，皮肤在 `workbench-theme.css`（**只在 `.wb-shell` 内生效**）：

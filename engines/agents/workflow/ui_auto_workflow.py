@@ -33,6 +33,7 @@ Python 调试：➡️ python -m engines.agents.workflow.ui_auto_workflow 🏁
 import asyncio
 
 from collections.abc import Callable, Sequence
+from datetime import datetime
 
 import yaml
 
@@ -43,11 +44,42 @@ from agentscope.sop import SOP, SOPEngine, SOPStep
 from engines.agents.agent_builders import build_executor, build_verifier
 from engines.agents.config.log_keywords import load_log_keywords
 from engines.agents.event_log import write_line
-from engines.agents.event_sink import set_step_context
+from engines.agents.event_sink import current_run, current_sink, set_step_context
 from engines.agents.messaging.messages import AgentEventsShow
+from engines.agents.messaging.record import EventRecord
 from engines.agents.workflow.case_file import CaseStep
 from engines.agents.workflow.step_brief import executor_brief, verifier_brief, with_context
 from utils.logs import agent_event_log
+
+
+def _emit_interrupt(reason: str, exc_type: str) -> None:
+    """把「事件流被打断」写成一条事件，供任务详情与 BUG 台账识别。
+
+    Args:
+        reason: 打断原因的文本（设备日志为空 / 时间不满足 5 秒等）。
+        exc_type: 异常类型名，便于排查。
+    """
+    run = current_run()
+    now = datetime.now()
+    record = EventRecord(
+        event_type="StepInterruptedEvent",
+        phase="结束",
+        block_type="interrupt",
+        payload={
+            "reason": reason,
+            "exc_type": exc_type,
+            "step_seq": run.step_seq,
+            "attempt": run.attempt,
+            "task_id": run.task_id,
+        },
+        started_at=now,
+        ended_at=now,
+        duration_ms=0,
+    )
+    try:
+        current_sink().emit(record)
+    except Exception as exc:  # noqa: BLE001 - 台账失败不影响任务终态
+        agent_event_log.warning(f"记录中断事件失败：{exc}")
 
 
 def _step_keywords(step: CaseStep, default_sku: str) -> str:
@@ -196,6 +228,7 @@ class AgentSOPWorkflow:
             # 此时该步停在 running: 既不记驳回也不重试
             # 注意 Exception 接不住 BaseExceptionGroup（带取消时 asyncio 抛的是它）
             self._log(f"事件流被异常打断：{type(exc).__name__}: {exc}")
+            _emit_interrupt(str(exc), type(exc).__name__)
 
         # 结论不在事件流里: 跑完必须回 engine.state 读
         # 阶段是 running / pending 说明事件流被打断了, 不是"还在跑"

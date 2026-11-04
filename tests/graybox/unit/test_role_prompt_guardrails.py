@@ -108,6 +108,15 @@ def test_verifier_prompt_takes_keyword_from_step_evidence():
     assert "系统提示词末尾" not in VERIFIER_PROMPT
 
 
+def test_verifier_prompt_splits_evidence_by_assertion_type():
+    """日志型以日志为准且不必截图；页面型以截图为主且不查日志。"""
+    assert "以日志为唯一判据" in VERIFIER_PROMPT
+    assert "不必截图" in VERIFIER_PROMPT
+    assert "以截图为主要判据" in VERIFIER_PROMPT
+    assert "不要调用 check_device_log" in VERIFIER_PROMPT
+    assert "混合型" in VERIFIER_PROMPT
+
+
 def test_executor_prompt_separates_connection_spinner_from_page_loading():
     """长按后的设备连接加载圈不按页面加载超时判失败。"""
     assert "属于设备连接/同步过程" in EXECUTOR_PROMPT

@@ -14,6 +14,7 @@
 - [x] 2.6 改 `engines/agents/config/data/prompts/UI_EXECUTOR_PROMPT.md`：第 15 条要求优先按【本步页面锚点】导航、找不到入口最多试 2 个 xpath 候选；验证：`test_executor_prompt_uses_page_anchors` 通过。
 - [x] 2.7 用例级型号兜底：`platform_run._case_sku` 从用例标题识别型号（`H6810 定时功能测试` → `H6810`），经 `run_workflow(..., default_sku=...)` 传给装配；旧用例没有 `log` 时仍能拿到关键词表；验证：`test_sop_step_isolation.py::test_case_sku_fills_keyword_catalog_for_steps_without_log` 通过。
 - [x] 2.8 执行提示词第 16 条：交卷前必须停在本步结果页并先截图留证，禁止先返回/退出再交卷；验证：`test_executor_prompt_stays_on_result_page_before_submitting` 通过。
+- [x] 2.9 验收提示词按断言类型分流主证据：日志型以日志为唯一判据（不必截图、不因页面已离开判负），页面型以截图为主（不查日志），混合型两类都要；验收方法的 1~4 条重写并保留原有硬约束；验证：`test_verifier_prompt_splits_evidence_by_assertion_type` 与全部 15 条提示词纪律测试通过。
 
 ## 3. 每步新建角色实例
 

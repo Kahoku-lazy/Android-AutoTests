@@ -17,6 +17,15 @@ export interface StepRun {
   round: TaskReportRound
 }
 
+/** 报告时间统一按北京时间展示：CI 跑在 UTC，用本地时区取小时会整体偏 8 小时 */
+const BEIJING_CLOCK = new Intl.DateTimeFormat("zh-CN", {
+  timeZone: "Asia/Shanghai",
+  hourCycle: "h23",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+})
+
 /** 一次尝试：块头是次数标签，块内执行在前、验收在后 */
 export interface AttemptView {
   attempt: number
@@ -231,8 +240,7 @@ export function formatClock(iso?: string): string {
   if (!iso) return ""
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return ""
-  const pad = (value: number) => String(value).padStart(2, "0")
-  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  return BEIJING_CLOCK.format(date)
 }
 
 /**

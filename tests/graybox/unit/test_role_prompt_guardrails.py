@@ -22,7 +22,6 @@ def test_executor_prompt_declares_submission_checks():
         "逐条核对",
         "在未达成时声称达成",
         "先逐步执行上一条驳回说明",
-        "必须原样使用该坐标",
         "必须用工具回传的点击后页面图核对结果",
         "action_time",
     ]
@@ -42,23 +41,30 @@ def test_executor_prompt_stays_on_result_page_before_submitting():
     assert "禁止**先返回上一页" in EXECUTOR_PROMPT
 
 
-def test_executor_prompt_requires_coordinate_marking_before_click():
-    """估算坐标与 xpath 返回坐标都必须先用 mark_dot 打红点核对，确认后才允许点击。"""
-    assert "mark_dot(serial, x, y)" in EXECUTOR_PROMPT
-    assert "无论来自自己看图估算还是 xpath_action 返回" in EXECUTOR_PROMPT
-    assert "红点没有落在目标元素上" in EXECUTOR_PROMPT
-    assert "禁止**在确认红点位置前执行点击" in EXECUTOR_PROMPT
-    assert "normalized=False" in EXECUTOR_PROMPT
-    assert "不需要再标记" not in EXECUTOR_PROMPT
-    assert "截图、坐标核对和返回键不用打开" in EXECUTOR_PROMPT
+def test_executor_prompt_locates_by_xpath_before_vision():
+    """先按页面文案走 xpath（含归一化、最多 3 个候选），未命中才用视觉估算。"""
+    assert 'xpath_action(texts="文案1,文案2")' in EXECUTOR_PROMPT
+    assert "最多 3 个候选" in EXECUTOR_PROMPT
+    assert "自动忽略空格与全角差异" in EXECUTOR_PROMPT
+    assert "才用截图估算归一化坐标" in EXECUTOR_PROMPT
+    assert "或目标本身没有文案" in EXECUTOR_PROMPT
 
 
-def test_executor_prompt_reuses_verified_frame_for_click():
-    """核对通过后用返回的 token 直接点击，核对与点击之间不再截图。"""
-    assert "`token` 原样交给 click_ratio / tap_screen" in EXECUTOR_PROMPT
+def test_executor_prompt_picks_index_from_marked_image():
+    """多命中时先看带序号的标记图挑序号，再带 token 与 index 点击。"""
+    assert "每个点带序号" in EXECUTOR_PROMPT
+    assert "选定真正要点的那个序号" in EXECUTOR_PROMPT
+    assert "带 `token` 和 `index` 点击" in EXECUTOR_PROMPT
+    assert "禁止**凭坐标大小猜" in EXECUTOR_PROMPT
+
+
+def test_executor_prompt_forbids_action_without_anchor_confirmation():
+    """没核对过的目标禁止操作；工具报缺 token 时先补核对。"""
+    assert "没有经过坐标核对确认的目标禁止操作" in EXECUTOR_PROMPT
+    assert "缺 `token` 会直接报错且不会点" in EXECUTOR_PROMPT
+    assert "先补一次核对" in EXECUTOR_PROMPT
+    assert "禁止**绕过" in EXECUTOR_PROMPT
     assert "核对与点击之间禁止再截图" in EXECUTOR_PROMPT
-    assert "禁止改用截图重新估算坐标" in EXECUTOR_PROMPT
-    assert "重新核对一次再点" in EXECUTOR_PROMPT
 
 
 def test_executor_prompt_does_not_screenshot_twice_per_action():

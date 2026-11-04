@@ -53,11 +53,6 @@ pytestmark = [
 ]
 
 
-def _run(name: str, *args, **kwargs) -> dict:
-    """调用工具并解析返回的 JSON。"""
-    return json.loads(getattr(tool_device, name)(_SERIAL, *args, **kwargs))
-
-
 def _assert_stamp(payload: dict) -> None:
     """返回体里的 action_time 必须是本地时间戳格式。"""
     assert "action_time" in payload, payload
@@ -103,12 +98,25 @@ def test_screenshot_page_returns_png_without_path() -> None:
 # ══════════════════════════════════════════════════════════════════
 
 
+def _summary(payload: dict) -> dict:
+    """带图结果的可读字段在 summary 里；不带图的就是它本身。"""
+    return payload["summary"] if "image" in payload else payload
+
+
+def _run(name: str, *args, **kwargs) -> dict:
+    """调用工具并统一成 dict：带图结果原样返回，文本结果按 JSON 解析。"""
+    result = getattr(tool_device, name)(_SERIAL, *args, **kwargs)
+    return result if isinstance(result, dict) else json.loads(result)
+
+
 def test_click_ratio_returns_pixel_and_time() -> None:
-    """归一化点击回传实际像素坐标（屏幕中央）与时间。"""
-    payload = _run("click_ratio", nx=0.5, ny=0.5)
+    """先核对一次拿到帧标识，再点击；回传实际像素坐标与时间。"""
+    marked = _run("mark_dot", x=0.5, y=0.5)
+    token = _summary(marked)["token"]
+    payload = _summary(_run("click_ratio", nx=0.5, ny=0.5, token=token))
     _show(
-        "click_ratio(nx=0.5, ny=0.5)",
-        "{x: 实际像素, y: 实际像素, action_time: YYYY-MM-DD HH:MM:SS,mmm}，恰好这三个键",
+        "mark_dot(0.5, 0.5) → click_ratio(token)",
+        "{x: 实际像素, y: 实际像素, action_time: YYYY-MM-DD HH:MM:SS,mmm}",
         payload,
     )
 
@@ -119,10 +127,12 @@ def test_click_ratio_returns_pixel_and_time() -> None:
 
 
 def test_tap_screen_returns_pixel_and_time() -> None:
-    """像素点击回传的坐标与入参一致。"""
-    payload = _run("tap_screen", mode="click", x=100, y=200)
+    """按核对帧里的标记点点击：回传的坐标就是帧内那一点。"""
+    marked = _run("mark_dot", x=100, y=200, normalized=False)
+    token = _summary(marked)["token"]
+    payload = _summary(_run("tap_screen", mode="click", token=token))
     _show(
-        "tap_screen(mode=click, x=100, y=200)",
+        "mark_dot(100, 200) → tap_screen(token)",
         "{x: 100, y: 200, action_time: YYYY-MM-DD HH:MM:SS,mmm}",
         payload,
     )

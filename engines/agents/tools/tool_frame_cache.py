@@ -56,8 +56,7 @@ class Frame:
         token: 该帧的标识，点击类工具凭它复用这一帧。
         width: 图片宽（像素），归一化坐标按它换算。
         height: 图片高（像素）。
-        point_x: 红点落点的像素横坐标。
-        point_y: 红点落点的像素纵坐标。
+        points: 已核对并标记的点，序号 = 下标 + 1；单点核对时长度为 1。
         image_b64: 原始截图 base64（不含红点）。
         media_type: 原始截图的 media_type。
         issued_at: 签发时刻（`time.monotonic()`），只用于算过期。
@@ -67,8 +66,7 @@ class Frame:
     token: str
     width: int
     height: int
-    point_x: int
-    point_y: int
+    points: tuple[tuple[int, int], ...]
     image_b64: str
     media_type: str
     issued_at: float
@@ -83,8 +81,7 @@ def put(
     *,
     width: int,
     height: int,
-    point_x: int,
-    point_y: int,
+    points: tuple[tuple[int, int], ...],
     image_b64: str,
     media_type: str,
 ) -> str:
@@ -95,8 +92,7 @@ def put(
         serial: 设备序列号。
         width: 图片宽（像素）。
         height: 图片高（像素）。
-        point_x: 红点落点的像素横坐标。
-        point_y: 红点落点的像素纵坐标。
+        points: 已标记的点，序号 = 下标 + 1。
         image_b64: 原始截图 base64。
         media_type: 原始截图的 media_type。
 
@@ -109,8 +105,7 @@ def put(
         token=token,
         width=int(width),
         height=int(height),
-        point_x=int(point_x),
-        point_y=int(point_y),
+        points=tuple((int(x), int(y)) for x, y in points),
         image_b64=image_b64,
         media_type=media_type,
         issued_at=time.monotonic(),

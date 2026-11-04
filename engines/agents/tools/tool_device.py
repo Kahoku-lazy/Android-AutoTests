@@ -9,9 +9,9 @@ Python 调试：➡️ python -m engines.agents.tools.tool_device 🏁
 修改时间: ➡️ 2026-10-30 🏁
 类型: ➡️ 工具模块 🏁
 简介说明：➡️
-1. click_ratio: 按归一化坐标点击（视觉模型看图后输出相对位置，工具换算成屏幕像素坐标）；可凭核对帧标识复用同一帧、不重新截屏，并回传点击后的页面图
-2. tap_screen: 按像素坐标点击或长按设备屏幕；同样支持核对帧标识与点击后回图
-3. xpath_action: 获取页面 xpath 元素的文本与中心坐标（只查询，不点击）；未命中时 count 为 0、items 为空
+1. click_ratio: 按已核对帧里的标记点点击；必须带 token，缺 token 直接报错不产生手势
+2. tap_screen: 按已核对帧里的标记点点击或长按；同样必须带 token，可用 index 选第几个点
+3. xpath_action: 按 xpath 或页面文案查元素；命中时把全部命中点画在一张图上（多点带序号）并签发 token
 4. swipe_screen: 按方向滑动设备屏幕；只返回动作时间
 5. drag_ratio: 按归一化坐标拖动（视觉模型看图后输出起终点相对位置，工具换算成屏幕像素坐标）；只返回动作时间
 6. input_text: 向设备当前输入框输入文本（支持中文等非 ASCII 字符）；只返回动作时间
@@ -22,8 +22,9 @@ Python 调试：➡️ python -m engines.agents.tools.tool_device 🏁
 🏁
 关联模块：➡️
 1. engines.device.action: 导入 AppControl, Click, Drag, InputText, LongClick, PressKey 等
-2. engines/agents/tools/tool_frame_cache.py: 点击类工具凭 token 复用核对过的那一帧
-3. utils.logs: 导入 agent_event_log, logging_now_stamp
+2. engines/agents/tools/tool_frame_cache.py: 核对帧里存多个标记点，点击按序号复用
+3. engines/agents/tools/tool_img_b64.py: 命中多点时把全部点标在一张图上
+4. utils.logs: 导入 agent_event_log, logging_now_stamp
 🏁
 测试：➡️
 1. tests/engines/agents/test_tool_device.py: 单文件调试指令：python -m pytest tests/engines/agents/test_tool_device.py -vv -s --tb=sh
@@ -35,7 +36,9 @@ Python 调试：➡️ python -m engines.agents.tools.tool_device 🏁
 from __future__ import annotations
 
 import json
+import re
 import time
+import unicodedata
 
 from contextlib import contextmanager
 from typing import Any, Callable
@@ -56,6 +59,7 @@ from utils.logs import agent_event_log, logging_now_stamp
 
 from . import tool_frame_cache as _frame_cache
 from .tool_base import ToolSpec
+from .tool_img_b64 import annotate_points
 
 __all__ = [
     "app_control",
@@ -74,6 +78,10 @@ _READ_ONLY = frozenset({"screenshot_page", "xpath_action"})
 # 取值白名单：非法值一律返回可读错误，不静默退回默认动作（点错、滑错方向的代价更大）
 _TAP_MODES = ("click", "long_click")
 _SWIPE_DIRECTIONS = ("up", "down", "left", "right")
+# 一次最多试几个文案候选：一次 UI 树读取就能全部试完，成本封顶
+_MAX_CANDIDATES = 3
+# 取页面上所有带文案的节点，供归一化匹配使用
+_TEXT_XPATH = "//*[@text]"
 # 启停 App 后等前台切过来：monkey/force-stop 返回时窗口还没切（实测冷启动约 4s 才出现
 # mCurrentFocus），最多等这么久；停止通常是第一次读到就已离开，不会真等。
 _APP_SETTLE_TIMEOUT = 6.0
@@ -202,24 +210,6 @@ def _run_device(
         return {}, _error(f"连接设备失败：{exc}")
 
 
-def _frame_pixels(frame: _frame_cache.Frame, nx: float, ny: float) -> tuple[int, int]:
-    """按核对帧的图片尺寸把归一化坐标换成像素坐标；换算口径与坐标核对一致。
-
-    Args:
-        frame: 已核对的帧。
-        nx: 横向相对位置 0~1。
-        ny: 纵向相对位置 0~1。
-
-    Returns:
-        落在该帧图片内的像素坐标 (x, y)。
-    """
-    left = min(max(float(nx), 0.0), 1.0)
-    top = min(max(float(ny), 0.0), 1.0)
-    return min(int(left * frame.width), frame.width - 1), min(
-        int(top * frame.height), frame.height - 1
-    )
-
-
 def _gesture(
     serial: str,
     body: Callable[[Any], dict],
@@ -258,22 +248,45 @@ def _gesture(
 
 
 def _frame_or_error(serial: str, token: str) -> tuple[_frame_cache.Frame | None, str]:
-    """取核对帧；没给 token 时返回 (None, 空串)，token 失效时返回空帧与错误串。
+    """取核对帧；没给 token 或 token 失效时返回错误串（点击类工具的硬门槛）。
 
     Args:
         serial: 设备序列号。
-        token: 坐标核对工具签发的帧标识，可为空。
+        token: 坐标核对（`mark_dot` 或 `xpath_action` 标记）签发的帧标识。
 
     Returns:
-        (帧或 None, 错误 JSON 串或空串)。
+        (帧, 错误串)；成功时错误串为空，失败时帧为 None。
     """
     key = str(token or "").strip()
     if not key:
-        return None, ""
+        return None, _error(
+            "没有经过坐标核对确认的目标不能点击：先调用 xpath_action(texts=...) 或 "
+            "mark_dot(...) 拿到 token，再带 token 点击"
+        )
     frame = _frame_cache.get(serial, key)
     if frame is None:
-        return None, _error("标记帧已过期或不属于该设备，请重新调用 mark_dot 核对坐标后再点击")
+        return None, _error("标记帧已过期或不属于该设备，请重新核对坐标后再点击")
     return frame, ""
+
+
+def _frame_point(serial: str, token: str, index: int) -> tuple[tuple[int, int] | None, str]:
+    """按帧标识与序号取要点击的像素点。
+
+    Args:
+        serial: 设备序列号。
+        token: 核对帧标识。
+        index: 帧内序号，从 1 起；单点帧可省略。
+
+    Returns:
+        (像素点, 错误串)；失败时点为 None。
+    """
+    frame, error = _frame_or_error(serial, token)
+    if frame is None:
+        return None, error
+    number = int(index or 1)
+    if number < 1 or number > len(frame.points):
+        return None, _error(f"该帧没有第 {number} 个标记点；可选 1~{len(frame.points)}")
+    return frame.points[number - 1], ""
 
 
 def click_ratio(
@@ -281,29 +294,29 @@ def click_ratio(
     nx: float,
     ny: float,
     token: str = "",
+    index: int = 1,
     shot_after: bool = True,
 ) -> str | dict:
-    """按归一化坐标点击（视觉模型看图后输出相对位置，工具换算成屏幕像素坐标）。
+    """按帧内标记点点击（已核对过的坐标才允许点）。
 
     Args:
         serial: 设备序列号
-        nx: 横向相对位置 0~1（0=最左，1=最右）
-        ny: 纵向相对位置 0~1（0=最上，1=最下）
-        token: 坐标核对工具返回的帧标识；给出时用该帧的尺寸换算、不重新截屏
+        nx: 兼容保留：带 token 时不再参与定位
+        ny: 兼容保留：带 token 时不再参与定位
+        token: 核对帧标识；缺失时直接报错，不产生手势
+        index: 帧内序号，从 1 起；多命中时用它挑要点的那个
         shot_after: 是否回传点击后的页面图，默认回传
 
     Returns:
         带图时为 {"image": {...}, "summary": {"x", "y", "action_time"}}；
         不出图或失败时是 JSON 字符串。
     """
-    frame, error = _frame_or_error(serial, token)
-    if error:
+    point, error = _frame_point(serial, token, index)
+    if point is None:
         return error
 
     def body(control: Any) -> dict:
-        if frame is None:
-            return Click(control).by_img(float(nx), float(ny))
-        return Click(control).by_coord(*_frame_pixels(frame, nx, ny))
+        return Click(control).by_coord(*point)
 
     return _gesture(serial, body, shot_after=shot_after)
 
@@ -314,16 +327,18 @@ def tap_screen(
     x: int = 0,
     y: int = 0,
     token: str = "",
+    index: int = 1,
     shot_after: bool = True,
 ) -> str | dict:
-    """按像素坐标点击或长按设备屏幕。
+    """按帧内标记点点击或长按（已核对过的坐标才允许操作）。
 
     Args:
         serial: 设备序列号（由上游任务给出）
         mode: click 点击 / long_click 长按；其它值报错
-        x: 坐标 x（像素）
-        y: 坐标 y（像素）
-        token: 坐标核对工具返回的帧标识；给出时只校验该帧仍然有效，不重新截屏
+        x: 兼容保留：带 token 时不再参与定位
+        y: 兼容保留：带 token 时不再参与定位
+        token: 核对帧标识；缺失时直接报错，不产生手势
+        index: 帧内序号，从 1 起；多命中时用它挑要按的那个
         shot_after: 是否回传动作后的页面图，默认回传
 
     Returns:
@@ -333,10 +348,10 @@ def tap_screen(
     chosen = str(mode or "").strip()
     if chosen not in _TAP_MODES:
         return _error(f"不支持的点击模式: {chosen or '(空)'}；可用：click / long_click")
-    _frame, error = _frame_or_error(serial, token)
-    if error:
+    point, error = _frame_point(serial, token, index)
+    if point is None:
         return error
-    px, py = int(x or 0), int(y or 0)
+    px, py = point
     actions = {
         "long_click": lambda control: LongClick(control).by_coord(px, py),
         "click": lambda control: Click(control).by_coord(px, py),
@@ -344,36 +359,161 @@ def tap_screen(
     return _gesture(serial, actions[chosen], shot_after=shot_after)
 
 
-def _xpath_payload(found: list[dict] | None) -> dict:
-    """把查找结果裁成文本与中心坐标。一条扁平返回，多条按下标列出。"""
-    hits = [
-        {
+def _loose(text: str) -> str:
+    """归一化文案：NFKC、去掉全部空白、忽略大小写，用于容忍 App 的空格写法。
+
+    Args:
+        text: 原始文案。
+
+    Returns:
+        归一化后的比较用字符串。
+    """
+    return "".join(unicodedata.normalize("NFKC", str(text or "")).split()).casefold()
+
+
+def _split_candidates(texts: str) -> list[str]:
+    """把逗号/顿号分隔的文案候选拆开，最多保留 3 个。
+
+    Args:
+        texts: 逗号或顿号分隔的文案。
+
+    Returns:
+        去空后的候选列表。
+    """
+    items = [item.strip() for item in re.split(r"[,，、;；]", str(texts or "")) if item.strip()]
+    return items[:_MAX_CANDIDATES]
+
+
+def _quoted_text(xpath: str) -> str:
+    """从 `@text='xxx'` / `@text="xxx"` 里取出文案，供归一化兜底匹配。
+
+    Args:
+        xpath: xpath 表达式。
+
+    Returns:
+        取到的文案；没有则返回空串。
+    """
+    matched = re.search(r"@text\s*=\s*'([^']*)'", xpath) or re.search(
+        r'@text\s*=\s*"([^"]*)"', xpath
+    )
+    return matched.group(1) if matched else ""
+
+
+def _unique_hits(found: list[dict] | None) -> list[dict]:
+    """去重并按「先纵坐标、再横坐标」升序排列命中点。
+
+    Args:
+        found: 设备返回的元素列表。
+
+    Returns:
+        [{"text", "x", "y"}]，顺序即图上序号顺序。
+    """
+    seen: set[tuple[str, int, int]] = set()
+    hits: list[dict] = []
+    for item in found or []:
+        hit = {
             "text": str(item.get("text") or ""),
             "x": int(item.get("x") or 0),
             "y": int(item.get("y") or 0),
         }
-        for item in (found or [])
-    ]
-    if len(hits) == 1:
-        return {"count": 1, **hits[0]}
-    marked = [{"index": index, **hit} for index, hit in enumerate(hits)]
-    return {"count": len(hits), "items": marked}
+        key = (hit["text"], hit["x"], hit["y"])
+        if key in seen:
+            continue
+        seen.add(key)
+        hits.append(hit)
+    return sorted(hits, key=lambda hit: (hit["y"], hit["x"]))
 
 
-def xpath_action(serial: str, xpath: str) -> str:
-    """获取页面 xpath 元素的文本与中心坐标（只查询，不点击）；未命中时 count 为 0、items 为空。
-    命中一条时返回 text、x、y，不写下标；多条时 items 按下标 0 起列出。
-    拿到坐标后用 tap_screen 的像素 x、y 点击或长按。
+def _numbered(hits: list[dict]) -> list[dict]:
+    """给命中点补上从 1 起的序号。
+
+    Args:
+        hits: 已排序的命中点。
+
+    Returns:
+        [{"index", "text", "x", "y"}]。
+    """
+    return [{"index": index, **hit} for index, hit in enumerate(hits, start=1)]
+
+
+def xpath_action(serial: str, xpath: str = "", texts: str = "", confirm: bool = True) -> str | dict:
+    """按 xpath 或页面文案查元素；命中时把命中点标在同一张图上并签发帧标识。
+
     Args:
         serial: 设备序列号（由上游任务给出）
-        xpath: 元素 xpath 表达式（如 //android.widget.TextView[@text='H6110']）
+        xpath: xpath 表达式（如 //android.widget.TextView[@text='H6110']）；给了 texts 时可省略
+        texts: 页面上要匹配的文案，逗号或顿号分隔，最多 3 个；先精确匹配，再按去空白/全角归一化匹配
+        confirm: 是否截图标出全部命中点并签发 token，默认开启；关掉时只回坐标
+
+    Returns:
+        命中且 confirm 时为 {"image": …, "summary": {"count", "items", "candidates", "token"}}；
+        未命中、未开启 confirm 或出错时是 JSON 字符串。
     """
-    target = str(xpath)
-    return _execute(
+    candidates = _split_candidates(texts)
+    pattern = str(xpath or "").strip()
+    if not candidates and not pattern:
+        return _error("请给出 xpath 或 texts 之一")
+
+    def body(_info: Any, control: Any) -> dict:
+        if candidates:
+            nodes = control.find_xpath(_TEXT_XPATH) or []
+            counts: dict[str, int] = {}
+            hits: list[dict] = []
+            for candidate in candidates:
+                exact = [node for node in nodes if str(node.get("text") or "") == candidate]
+                matched = exact or [
+                    node for node in nodes if _loose(node.get("text")) == _loose(candidate)
+                ]
+                counts[candidate] = len(matched)
+                hits.extend(matched)
+            payload = {"candidates": counts, "hits": hits}
+        else:
+            found = control.find_xpath(pattern) or []
+            quoted = _quoted_text(pattern)
+            if not found and quoted:
+                nodes = control.find_xpath(_TEXT_XPATH) or []
+                found = [node for node in nodes if _loose(node.get("text")) == _loose(quoted)]
+            payload = {"candidates": {pattern: len(found)}, "hits": found}
+        if confirm and payload["hits"]:
+            shot = Screenshot(control).capture()
+            payload["shot"] = {
+                "base64": shot["image_base64"],
+                "media_type": shot["media_type"],
+            }
+        return payload
+
+    payload, error = _run_device(serial, body)
+    if error:
+        return error
+
+    hits = _unique_hits(payload["hits"])
+    counts = payload.get("candidates") or {}
+    if not hits:
+        return json.dumps({"count": 0, "candidates": counts, "items": []}, ensure_ascii=False)
+    shot = payload.get("shot")
+    if not shot:
+        return json.dumps(
+            {"count": len(hits), "candidates": counts, "items": _numbered(hits)},
+            ensure_ascii=False,
+        )
+    marked = annotate_points(shot["base64"], tuple((hit["x"], hit["y"]) for hit in hits))
+    token = _frame_cache.put(
         serial,
-        lambda info, control: _xpath_payload(control.find_xpath(target)),
-        side_effect=False,
+        width=marked.width,
+        height=marked.height,
+        points=marked.points,
+        image_b64=shot["base64"],
+        media_type=marked.media_type,
     )
+    return {
+        "image": {"base64": marked.base64, "media_type": marked.media_type},
+        "summary": {
+            "count": len(hits),
+            "candidates": counts,
+            "items": _numbered(hits),
+            "token": token,
+        },
+    }
 
 
 def swipe_screen(serial: str, direction: str = "up", distance: int = 500) -> str:

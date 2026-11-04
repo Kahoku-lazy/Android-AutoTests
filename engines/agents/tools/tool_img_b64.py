@@ -32,7 +32,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 from engines.device.action import Screenshot, System, open_device
 from utils.logs import agent_event_log
@@ -41,6 +41,7 @@ from . import tool_frame_cache as _frame_cache
 from .tool_base import ToolSpec
 
 __all__ = [
+    "annotate_points",
     "build_img_b64_tools",
     "img_b64_tool_specs",
     "mark_dot",
@@ -88,6 +89,27 @@ def _decode(image_b64: str) -> bytes:
 def _media_type(fmt: str) -> str:
     """PIL 格式名 → media_type；未知格式按 image/<小写> 兜底。"""
     return _FORMAT_MEDIA.get(fmt, f"image/{fmt.lower()}")
+
+
+def _image_size(image_b64: str) -> tuple[int, int]:
+    """图片像素尺寸。
+
+    Args:
+        image_b64: 原始图片 base64，可带 data URI 前缀。
+
+    Returns:
+        (宽, 高)。
+
+    Raises:
+        ValueError: base64 非法，或图片无法解码。
+    """
+    raw = _decode(image_b64)
+    try:
+        with Image.open(io.BytesIO(raw)) as src:
+            width, height = src.size
+    except (OSError, ValueError) as exc:
+        raise ValueError(f"image_b64 不是可识别的图片：{exc}") from exc
+    return width, height
 
 
 @contextmanager
@@ -147,16 +169,130 @@ class _Marked:
         media_type: 标记后图片的 media_type。
         width: 图片宽（像素）。
         height: 图片高（像素）。
-        x: 红点落点的像素横坐标。
-        y: 红点落点的像素纵坐标。
+        points: 已标记的点，序号 = 下标 + 1；单点标记时长度为 1。
     """
 
     base64: str
     media_type: str
     width: int
     height: int
-    x: int
-    y: int
+    points: tuple[tuple[int, int], ...]
+
+
+def _label_font(short_side: int):
+    """按图片短边算序号字号；Pillow 版本不支持带尺寸默认字体时退回默认字号。
+
+    Args:
+        short_side: 图片短边像素。
+
+    Returns:
+        可用于 `ImageDraw.text` 的字体对象。
+    """
+    size = max(18, int(short_side * 0.035))
+    try:
+        return ImageFont.load_default(size=size)
+    except TypeError:
+        return ImageFont.load_default()
+
+
+def _render(
+    image_b64: str,
+    points: tuple[tuple[int, int], ...],
+    *,
+    color: str = "red",
+    ring: str = "white",
+) -> _Marked:
+    """解码、在每个点画圆点（多点时带序号）、再编码。
+
+    Args:
+        image_b64: 原始图片 base64，可带 data URI 前缀。
+        points: 要标记的像素坐标点，序号 = 下标 + 1。
+        color: 圆点填充色。
+        ring: 圆点外圈与序号描边色。
+
+    Returns:
+        标记结果：标记后的 base64、media_type 与图片尺寸。
+
+    Raises:
+        ValueError: base64 非法，或图片无法解码。
+    """
+    raw = _decode(image_b64)
+    try:
+        with Image.open(io.BytesIO(raw)) as src:
+            fmt = (src.format or "PNG").upper()
+            img = src.copy()
+    except (OSError, ValueError) as exc:
+        raise ValueError(f"image_b64 不是可识别的图片：{exc}") from exc
+
+    save_fmt = "JPEG" if fmt in ("JPEG", "MPO") else fmt
+    if save_fmt == "JPEG" or img.mode not in ("RGB", "RGBA"):
+        img = img.convert("RGB")
+
+    width, height = img.size
+    radius = max(4, int(min(width, height) * _DOT_RATIO))
+    ring_width = max(2, radius // 3)
+    draw = ImageDraw.Draw(img)
+    font = _label_font(min(width, height))
+    numbered = len(points) > 1
+    for index, (cx, cy) in enumerate(points, start=1):
+        draw.ellipse(
+            (
+                cx - radius - ring_width,
+                cy - radius - ring_width,
+                cx + radius + ring_width,
+                cy + radius + ring_width,
+            ),
+            fill=ring,
+        )
+        draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius), fill=color)
+        if numbered:
+            draw.text(
+                (cx + radius, max(cy - radius - radius, 0)),
+                str(index),
+                fill=color,
+                font=font,
+                stroke_width=max(2, radius // 3),
+                stroke_fill=ring,
+            )
+
+    buf = io.BytesIO()
+    if save_fmt == "JPEG":
+        img.save(buf, "JPEG", quality=_JPEG_QUALITY)
+    else:
+        img.save(buf, save_fmt)
+    return _Marked(
+        base64=base64.b64encode(buf.getvalue()).decode("ascii"),
+        media_type=_media_type(fmt),
+        width=width,
+        height=height,
+        points=points,
+    )
+
+
+def annotate_points(
+    image_b64: str,
+    points: tuple[tuple[int, int], ...],
+    *,
+    color: str = "red",
+    ring: str = "white",
+) -> _Marked:
+    """在一张图上标记多个点；多点时每个点带序号（从 1 起）。
+
+    Args:
+        image_b64: 原始图片 base64。
+        points: 像素坐标点，序号 = 下标 + 1。
+        color: 圆点填充色。
+        ring: 圆点外圈与序号描边色。
+
+    Returns:
+        标记结果：标记后的 base64、media_type、图片尺寸与这些点。
+
+    Raises:
+        ValueError: base64 非法，或图片无法解码。
+    """
+    if not points:
+        raise ValueError("points 不能为空")
+    return _render(image_b64, tuple(points), color=color, ring=ring)
 
 
 def _annotate(
@@ -175,56 +311,18 @@ def _annotate(
         x: 横坐标。
         y: 纵坐标。
         normalized: 坐标是否为归一化坐标。
-        color: 圆点颜色。
-        ring: 外圈描边颜色。
+        color: 圆点颜色（保留参数，实际按红点绘制）。
+        ring: 外圈描边颜色（保留参数，实际按白圈绘制）。
 
     Returns:
-        标记结果：标记后的 base64、media_type、图片尺寸与红点落点像素。
+        标记结果：标记后的 base64、media_type、图片尺寸与落点像素。
 
     Raises:
         ValueError: base64 非法、图片无法解码，或像素坐标越界。
     """
-    raw = _decode(image_b64)
-    try:
-        with Image.open(io.BytesIO(raw)) as src:
-            fmt = (src.format or "PNG").upper()
-            img = src.copy()
-    except (OSError, ValueError) as exc:
-        raise ValueError(f"image_b64 不是可识别的图片：{exc}") from exc
-
-    save_fmt = "JPEG" if fmt in ("JPEG", "MPO") else fmt
-    if save_fmt == "JPEG" or img.mode not in ("RGB", "RGBA"):
-        img = img.convert("RGB")
-
-    width, height = img.size
+    width, height = _image_size(image_b64)
     cx, cy = _point(x, y, width, height, normalized)
-    radius = max(4, int(min(width, height) * _DOT_RATIO))
-    ring_width = max(2, radius // 3)
-    draw = ImageDraw.Draw(img)
-    draw.ellipse(
-        (
-            cx - radius - ring_width,
-            cy - radius - ring_width,
-            cx + radius + ring_width,
-            cy + radius + ring_width,
-        ),
-        fill=ring,
-    )
-    draw.ellipse((cx - radius, cy - radius, cx + radius, cy + radius), fill=color)
-
-    buf = io.BytesIO()
-    if save_fmt == "JPEG":
-        img.save(buf, "JPEG", quality=_JPEG_QUALITY)
-    else:
-        img.save(buf, save_fmt)
-    return _Marked(
-        base64=base64.b64encode(buf.getvalue()).decode("ascii"),
-        media_type=_media_type(fmt),
-        width=width,
-        height=height,
-        x=cx,
-        y=cy,
-    )
+    return _render(image_b64, ((cx, cy),), color=color, ring=ring)
 
 
 def mark_dot_b64(
@@ -279,14 +377,14 @@ def mark_dot(serial: str, x: float, y: float, normalized: bool = True) -> dict:
         serial,
         width=marked.width,
         height=marked.height,
-        point_x=marked.x,
-        point_y=marked.y,
+        points=marked.points,
         image_b64=shot_b64,
         media_type=marked.media_type,
     )
+    x_px, y_px = marked.points[0]
     return {
         "image": {"base64": marked.base64, "media_type": marked.media_type},
-        "summary": {"token": token, "x": marked.x, "y": marked.y},
+        "summary": {"token": token, "x": x_px, "y": y_px},
     }
 
 

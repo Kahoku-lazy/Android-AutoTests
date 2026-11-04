@@ -100,7 +100,7 @@ def test_mark_dot_issues_reusable_frame_token(monkeypatch: pytest.MonkeyPatch):
     frame = tool_img_b64._frame_cache.get("serial-1", summary["token"])
     assert frame is not None
     assert (frame.width, frame.height) == (1080, 2400)
-    assert (frame.point_x, frame.point_y) == (540, 1200)
+    assert frame.points == ((540, 1200),)
 
 
 def test_mark_dot_pixel_coordinates_match_normalized(monkeypatch: pytest.MonkeyPatch):

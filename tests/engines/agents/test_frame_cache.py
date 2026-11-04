@@ -28,13 +28,12 @@ def _empty_frames() -> None:
 
 
 def _put(serial: str = "serial-1", point_x: int = 540, point_y: int = 1200) -> str:
-    """放一帧默认几何的截图，返回 token。"""
+    """放一帧默认几何的截图（单个标记点），返回 token。"""
     return _frame_cache.put(
         serial,
         width=1080,
         height=2400,
-        point_x=point_x,
-        point_y=point_y,
+        points=((point_x, point_y),),
         image_b64="frame-bytes",
         media_type="image/jpeg",
     )
@@ -50,7 +49,7 @@ def test_put_returns_token_and_frame_round_trips() -> None:
     assert frame.token == token
     assert frame.serial == "serial-1"
     assert (frame.width, frame.height) == (1080, 2400)
-    assert (frame.point_x, frame.point_y) == (540, 1200)
+    assert frame.points == ((540, 1200),)
     assert frame.image_b64 == "frame-bytes"
     assert frame.media_type == "image/jpeg"
 

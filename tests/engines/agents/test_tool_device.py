@@ -84,6 +84,7 @@ class _Control:
         self.height = height
         self.calls: list[tuple] = []
         self.found: list[dict] = []
+        self.nodes: list[dict] = []
         self.fail_on: str = ""
 
     def _pixel(self, nx: float, ny: float) -> tuple[int, int]:
@@ -142,6 +143,8 @@ class _Control:
 
     def find_xpath(self, xpath: str) -> list[dict]:
         self._record("find_xpath", xpath)
+        if xpath == tool_device._TEXT_XPATH:
+            return list(self.nodes)
         return self.found
 
 
@@ -219,7 +222,8 @@ def test_every_tool_has_handler() -> None:
 def test_every_action_returns_action_time(monkeypatch: pytest.MonkeyPatch, name: str) -> None:
     """7 个动作工具都要回传 action_time（滑动/输入/按键只回它）。"""
     _install(monkeypatch)
-    payload = _run(name, **_ACTION_CALLS[name])
+    token = _put_frame()
+    payload = _run(name, **_calls_with_token(name, token))
     assert "error" not in payload, payload
     _assert_stamp(_summary(payload))
 
@@ -228,7 +232,8 @@ def test_every_action_returns_action_time(monkeypatch: pytest.MonkeyPatch, name:
 def test_every_action_closes_the_connection(monkeypatch: pytest.MonkeyPatch, name: str) -> None:
     """动作结束后必须断开设备。"""
     conn, _info, _control = _install(monkeypatch)
-    _run(name, **_ACTION_CALLS[name])
+    token = _put_frame()
+    _run(name, **_calls_with_token(name, token))
     assert conn.closed is True
 
 
@@ -238,10 +243,11 @@ def test_every_action_closes_the_connection(monkeypatch: pytest.MonkeyPatch, nam
 
 
 def test_click_ratio_returns_clicked_pixel(monkeypatch: pytest.MonkeyPatch) -> None:
-    """归一化 0.5/0.5 在 1080×2340 上即 (540, 1170)，并回传点击后的页面图。"""
+    """带核对帧的点击落在帧内标记点上，并回传点击后的页面图。"""
     _conn, _info, control = _install(monkeypatch)
+    token = _put_frame()
 
-    payload = _run("click_ratio", nx=0.5, ny=0.5)
+    payload = _run("click_ratio", nx=0.5, ny=0.5, token=token)
     summary = _summary(payload)
     _show(
         "click_ratio(nx=0.5, ny=0.5)｜1080×2340",
@@ -253,24 +259,29 @@ def test_click_ratio_returns_clicked_pixel(monkeypatch: pytest.MonkeyPatch) -> N
     assert set(summary) == {"x", "y", "action_time"}
     assert payload["image"]["media_type"] == "image/png"
     assert payload["image"]["base64"]
-    assert ("click_img", 540, 1170) in control.calls
+    assert ("click_coord", 540, 1170) in control.calls
     assert control.calls.count(("screenshot_bytes",)) == 1
 
 
-def test_click_ratio_clamps_to_screen(monkeypatch: pytest.MonkeyPatch) -> None:
-    """越界归一化坐标按屏幕边界夹取，回传的必须是真正点到的位置。"""
-    _install(monkeypatch)
+def test_click_ratio_uses_frame_point_regardless_of_ratio(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """带帧标识时点的是帧内标记点，nx/ny 只作兼容保留。"""
+    _conn, _info, control = _install(monkeypatch)
+    token = _put_frame(points=((700, 900),))
 
-    summary = _summary(_run("click_ratio", nx=1.5, ny=-0.2))
+    summary = _summary(_run("click_ratio", nx=1.5, ny=-0.2, token=token))
 
-    assert (summary["x"], summary["y"]) == (1079, 0)
+    assert (summary["x"], summary["y"]) == (700, 900)
+    assert ("click_coord", 700, 900) in control.calls
 
 
 def test_click_ratio_does_not_read_foreground(monkeypatch: pytest.MonkeyPatch) -> None:
     """点击不再回传前台应用，因此不应去读 dumpsys（少一次 adb）。"""
     _conn, info, _control = _install(monkeypatch)
+    token = _put_frame()
 
-    _run("click_ratio", nx=0.5, ny=0.5)
+    _run("click_ratio", nx=0.5, ny=0.5, token=token)
 
     assert info.reads == 0
 
@@ -279,7 +290,8 @@ def test_tap_screen_click_returns_pixel(monkeypatch: pytest.MonkeyPatch) -> None
     """像素点击回传的坐标与入参一致，并回图片。"""
     _conn, _info, control = _install(monkeypatch)
 
-    payload = _run("tap_screen", mode="click", x=12, y=34)
+    token = _put_frame(points=((12, 34),))
+    payload = _run("tap_screen", mode="click", x=12, y=34, token=token)
     summary = _summary(payload)
     _show(
         "tap_screen(mode=click, x=12, y=34)",
@@ -297,7 +309,8 @@ def test_tap_screen_long_click_returns_pixel(monkeypatch: pytest.MonkeyPatch) ->
     """长按同样回传坐标，且走的是长按实现而不是点击。"""
     _conn, _info, control = _install(monkeypatch)
 
-    summary = _summary(_run("tap_screen", mode="long_click", x=12, y=34))
+    token = _put_frame(points=((12, 34),))
+    summary = _summary(_run("tap_screen", mode="long_click", x=12, y=34, token=token))
 
     assert (summary["x"], summary["y"]) == (12, 34)
     assert ("long_click_coord", 12, 34) in control.calls
@@ -308,7 +321,9 @@ def test_tap_screen_default_mode_is_click(monkeypatch: pytest.MonkeyPatch) -> No
     """不传 mode 时按点击执行。"""
     _conn, _info, control = _install(monkeypatch)
 
-    _run("tap_screen", x=1, y=2)
+    token = _put_frame(points=((1, 2),))
+
+    _run("tap_screen", x=1, y=2, token=token)
 
     assert control.calls[0] == ("click_coord", 1, 2)
 
@@ -318,17 +333,29 @@ def test_tap_screen_default_mode_is_click(monkeypatch: pytest.MonkeyPatch) -> No
 # ══════════════════════════════════════════════════════════════════
 
 
-def _put_frame(serial: str = "serial-1", width: int = 1080, height: int = 2340) -> str:
-    """放一帧已核对截图，返回它的 token。"""
+def _put_frame(
+    serial: str = "serial-1",
+    width: int = 1080,
+    height: int = 2340,
+    points: tuple[tuple[int, int], ...] = ((540, 1170),),
+) -> str:
+    """放一帧已核对截图（可含多个标记点），返回它的 token。"""
     return tool_device._frame_cache.put(
         serial,
         width=width,
         height=height,
-        point_x=540,
-        point_y=1170,
+        points=points,
         image_b64="frame",
         media_type="image/png",
     )
+
+
+def _calls_with_token(name: str, token: str) -> dict:
+    """给点击类动作的调用参数补上帧标识；其它动作原样返回。"""
+    calls = dict(_ACTION_CALLS[name])
+    if name in {"click_ratio", "tap_screen"}:
+        calls["token"] = token
+    return calls
 
 
 def test_click_ratio_with_valid_frame_skips_screenshot(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -355,7 +382,7 @@ def test_click_ratio_with_expired_token_refuses_without_gesture(
     payload = _run("click_ratio", nx=0.5, ny=0.5, token="deadbeef")
 
     assert "error" in payload
-    assert "mark_dot" in payload["error"]
+    assert "重新核对" in payload["error"]
     assert control.calls == []
 
 
@@ -373,17 +400,18 @@ def test_click_ratio_rejects_frame_of_another_device(monkeypatch: pytest.MonkeyP
 def test_click_ratio_can_skip_after_shot(monkeypatch: pytest.MonkeyPatch) -> None:
     """shot_after=False 时不回图，仍是纯文本 JSON。"""
     _conn, _info, control = _install(monkeypatch)
+    token = _put_frame()
 
-    payload = _run("click_ratio", nx=0.5, ny=0.5, shot_after=False)
+    payload = _run("click_ratio", nx=0.5, ny=0.5, token=token, shot_after=False)
 
     assert set(payload) == {"x", "y", "action_time"}
     assert control.calls.count(("screenshot_bytes",)) == 0
 
 
 def test_tap_screen_with_valid_frame_validates_token(monkeypatch: pytest.MonkeyPatch) -> None:
-    """像素点击带有效帧标识时照常点击，且只截点击后那一张。"""
+    """像素点击带有效帧标识时点帧内标记点，且只截点击后那一张。"""
     _conn, _info, control = _install(monkeypatch)
-    token = _put_frame()
+    token = _put_frame(points=((12, 34),))
 
     summary = _summary(_run("tap_screen", mode="click", x=12, y=34, token=token))
 
@@ -603,31 +631,109 @@ def test_screenshot_page_media_type_falls_back_to_jpeg(monkeypatch: pytest.Monke
     assert payload["image"]["media_type"] == tool_device.Screenshot.MODEL_MEDIA_TYPE
 
 
-def test_xpath_action_returns_coordinates_without_action_time(
+def test_xpath_action_marks_single_hit_and_issues_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """xpath 只查询：回传文本与中心坐标，没有动作时间。"""
+    """xpath 命中 1 条：回带序号 1 的标记图、坐标与帧标识，且没有动作时间。"""
     _conn, _info, control = _install(monkeypatch)
     control.found = [{"text": "H6110", "x": 120, "y": 340}]
 
     payload = _run("xpath_action", xpath="//node")
+    summary = _summary(payload)
     _show(
         "xpath_action(//node)｜命中 1 条",
-        "{count: 1, text: H6110, x: 120, y: 340}，无 action_time",
-        payload,
+        "{image, summary: {count: 1, items: [{index: 1, text: H6110, x: 120, y: 340}], token}}",
+        summary,
     )
 
-    assert payload == {"count": 1, "text": "H6110", "x": 120, "y": 340}
-    assert "action_time" not in payload
+    assert summary["count"] == 1
+    assert summary["items"] == [{"index": 1, "text": "H6110", "x": 120, "y": 340}]
+    assert summary["token"]
+    assert payload["image"]["base64"]
+    assert "action_time" not in summary
+
+
+def test_xpath_action_marks_every_hit_with_index(monkeypatch: pytest.MonkeyPatch) -> None:
+    """命中多条时把全部点标在同一张图上，序号按纵坐标升序。"""
+    _conn, _info, control = _install(monkeypatch)
+    control.found = [
+        {"text": "定时", "x": 230, "y": 1684},
+        {"text": "定时", "x": 142, "y": 774},
+    ]
+
+    summary = _summary(_run("xpath_action", xpath="//*[@text='定时']"))
+
+    assert [item["index"] for item in summary["items"]] == [1, 2]
+    assert [(item["x"], item["y"]) for item in summary["items"]] == [(142, 774), (230, 1684)]
+    assert summary["token"]
 
 
 def test_xpath_action_reports_zero_hits(monkeypatch: pytest.MonkeyPatch) -> None:
-    """未命中时给 count=0，而不是报错。"""
-    _install(monkeypatch)
+    """未命中时给 count=0，且不出图、不截屏。"""
+    _conn, _info, control = _install(monkeypatch)
 
     payload = _run("xpath_action", xpath="//missing")
 
-    assert payload == {"count": 0, "items": []}
+    assert payload["count"] == 0
+    assert payload["items"] == []
+    assert "image" not in payload
+    assert control.calls.count(("screenshot_bytes",)) == 0
+
+
+def test_xpath_action_matches_when_app_inserts_spaces(monkeypatch: pytest.MonkeyPatch) -> None:
+    """App 把文案写成「睡 眠」时，按「睡眠」也能归一化命中。"""
+    _conn, _info, control = _install(monkeypatch)
+    control.nodes = [{"text": "睡 眠", "x": 104, "y": 1721}]
+
+    summary = _summary(_run("xpath_action", texts="睡眠"))
+
+    assert summary["count"] == 1
+    assert summary["items"][0]["text"] == "睡 眠"
+
+
+def test_xpath_action_tries_candidates_in_one_ui_read(monkeypatch: pytest.MonkeyPatch) -> None:
+    """多候选只读一次 UI 树，并分别给出命中数。"""
+    _conn, _info, control = _install(monkeypatch)
+    control.nodes = [{"text": "定时", "x": 142, "y": 774}]
+
+    summary = _summary(_run("xpath_action", texts="唤醒,定时,睡眠"))
+
+    assert summary["candidates"] == {"唤醒": 0, "定时": 1, "睡眠": 0}
+    assert control.calls.count(("find_xpath", tool_device._TEXT_XPATH)) == 1
+
+
+def test_click_without_token_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    """没有经过坐标核对确认的目标不能点：报错且不产生手势。"""
+    _conn, _info, control = _install(monkeypatch)
+
+    payload = _run("click_ratio", nx=0.5, ny=0.5)
+
+    assert "error" in payload
+    assert "token" in payload["error"]
+    assert control.calls == []
+
+
+def test_tap_screen_can_pick_hit_by_index(monkeypatch: pytest.MonkeyPatch) -> None:
+    """多命中帧里用 index 点第 2 个点。"""
+    _conn, _info, control = _install(monkeypatch)
+    token = _put_frame(points=((142, 774), (230, 1684)))
+
+    summary = _summary(_run("tap_screen", token=token, index=2))
+
+    assert (summary["x"], summary["y"]) == (230, 1684)
+    assert ("click_coord", 230, 1684) in control.calls
+
+
+def test_tap_screen_rejects_out_of_range_index(monkeypatch: pytest.MonkeyPatch) -> None:
+    """序号越界时报错，设备上不能发生手势。"""
+    _conn, _info, control = _install(monkeypatch)
+    token = _put_frame(points=((142, 774), (230, 1684)))
+
+    payload = _run("tap_screen", token=token, index=5)
+
+    assert "error" in payload
+    assert "1~2" in payload["error"]
+    assert control.calls == []
 
 
 # ══════════════════════════════════════════════════════════════════

@@ -5,28 +5,6 @@
 
 ## Requirements
 
-### Requirement: 页面提供单一语音按键启动会话
-
-知识库助手页面 MUST 提供一个可见的语音按键作为会话的唯一启动入口。页面首次打开 MUST NOT 主动申请麦克风权限、MUST NOT 自动建立实时语音连接；只有用户点击该按键后，页面才 SHALL 申请麦克风权限并打开会话。会话进行中再次点击 MUST 结束会话并释放麦克风与播放资源。
-
-#### Scenario: 首次打开不申请麦克风
-
-- **WHEN** 已登录用户打开 `/knowledge-assistant`
-- **THEN** 页面显示语音按键与空态提示
-- **AND** 浏览器未弹出麦克风授权提示，且未建立 `/ws/knowledge-assistant/` 连接
-
-#### Scenario: 点击按键开始会话
-
-- **WHEN** 用户点击语音按键并允许麦克风权限
-- **THEN** 页面状态从「未开始」进入「连接中」，成功后进入「聆听中」
-- **AND** 浏览器开始向实时语音通道发送音频
-
-#### Scenario: 再次点击结束会话
-
-- **WHEN** 会话进行中用户再次点击语音按键
-- **THEN** 页面停止采集与播放，并关闭实时语音连接
-- **AND** 页面状态回到「未开始」
-
 ### Requirement: 浏览器与实时模型之间的音频桥接
 
 系统 SHALL 通过后端 WebSocket 通道在浏览器与实时语音模型之间双向转发音频：上行 MUST 为单声道 PCM16、采样率与模型输入采样率一致；下行 MUST 为单声道 PCM16、采样率与模型输出采样率一致。浏览器 MUST NOT 获得模型服务商的 API Key。通道 MUST 要求有效登录凭证；凭证缺失或无效时 MUST 拒绝会话并给出可读提示。
@@ -103,7 +81,7 @@
 
 ### Requirement: 就绪状态可查询
 
-系统 SHALL 提供 `GET /api/knowledge-assistant/status/`，返回是否启用、是否就绪、不可用原因、模型名、音色、智能体名称与日志目录。响应 MUST NOT 含任何密钥。未就绪时页面 SHALL 在用户点击语音按键前给出可读原因，MUST NOT 让用户以为会话已经可用。
+系统 SHALL 提供 `GET /api/knowledge-assistant/status/`，返回是否启用、是否就绪、不可用原因、模型名、音色、智能体名称与日志目录；SHALL 另返回文字入口的 `text_model` / `text_ready` / `text_reason`。响应 MUST NOT 含任何密钥。两个入口的就绪状态 MUST 互不影响：任一入口未就绪时，页面 SHALL 在用户点击启动前给出该入口的可读原因，MUST NOT 让用户以为该入口已经可用。
 
 #### Scenario: 配置完整时就绪
 
@@ -116,6 +94,12 @@
 - **WHEN** 服务端缺少实时语音所需的 API Key
 - **THEN** 状态接口返回 `ready=false` 与中文原因
 - **AND** 页面显示该原因，并在点击语音按键前阻止建立会话
+
+#### Scenario: 一个入口未就绪不拖累另一个
+
+- **WHEN** 只缺少文字入口所需的 DeepSeek 密钥
+- **THEN** 语音入口仍为就绪
+- **AND** 页面只禁用文字方式并显示 `text_reason`
 
 ### Requirement: 会话结束释放全部资源
 
@@ -132,21 +116,6 @@
 - **WHEN** 用户在会话进行中离开 `/knowledge-assistant` 页面
 - **THEN** 会话按「用户主动结束」同样释放资源
 - **AND** 再次进入页面时不会自动恢复旧会话
-
-### Requirement: WebSocket 只用于实时语音通道
-
-平台的任务进度与列表 MUST NOT 因本能力改用 WebSocket；本能力新增的 WebSocket 通道 MUST 只承载知识库助手的实时语音与转写事件。该通道 MUST NOT 承载任务执行、设备控制、文件上传或平台写操作。
-
-#### Scenario: 任务进度仍走轮询
-
-- **WHEN** 用户查看任务清单或任务详情
-- **THEN** 页面仍通过既有 HTTP 接口轮询，不建立知识库助手通道
-
-#### Scenario: 通道不承载平台写操作
-
-- **WHEN** 客户端通过知识库助手通道发送非语音控制消息
-- **THEN** 服务端只接受「打断」与「播放进度」两类白名单消息，其余消息被忽略或拒绝
-- **AND** 不产生任何平台写操作
 
 ### Requirement: 麦克风输入可观测且无输入可提示
 
@@ -174,54 +143,6 @@
 - **WHEN** 服务端下发无输入提示
 - **THEN** 页面显示提示但仍保持「聆听中」，用户可切换设备后继续
 
-### Requirement: 实时翻译协议适配
-
-`livetranslate` 模式 SHALL 通过 DashScope Realtime WebSocket 建立会话，并发送 `session.output_modalities`、`session.translation.language`、`session.audio.input.turn_detection=speaker_detection`。源语种转写 SHALL 映射为用户消息；译文 SHALL 从 `response.audio_transcript.delta` 或 `response.text.delta` 映射为助手消息；音频 SHALL 从 `response.audio.delta` 按 24kHz PCM16 播放。会话结束前 SHALL 发送 `session.finish`。
-
-#### Scenario: 中文语音翻译成中文
-
-- **WHEN** 用户说“设备管理里怎么连接设备”，目标语种为 `zh`
-- **THEN** 页面出现用户源语转写
-- **AND** 助手消息出现中文译文
-
-#### Scenario: 目标语种可配
-
-- **WHEN** 配置 `KNOWLEDGE_ASSISTANT_TRANSLATION_LANGUAGE=en`
-- **THEN** `session.translation.language` 为 `en`
-- **AND** 助手译文为英文
-
-#### Scenario: 就绪事件暴露调用方式
-
-- **WHEN** WS 会话建立完成
-- **THEN** `ready` 事件包含 `mode` 与 `translation_language`
-- **AND** 页面「模式」行显示实时翻译或语音问答
-
-### Requirement: 调用方式可选且默认 Omni 直接对话
-
-系统 SHALL 支持两种实时语音调用方式：`omni`（实时对话）与 `livetranslate`（实时翻译）。默认调用方式 MUST 为 `omni`，默认模型 MUST 为 `qwen3.5-omni-plus-realtime`。用户 SHALL 能通过环境变量 `KNOWLEDGE_ASSISTANT_REALTIME_MODE` 显式选择调用方式，或仅设置 `KNOWLEDGE_ASSISTANT_MODEL` 由模型名推断：包含 `livetranslate` 走翻译，否则走 `omni`。调用方式与模型名不匹配时，系统 MUST 拒绝启动并在状态接口返回可读原因。
-
-#### Scenario: 默认使用 omni 问答
-
-- **WHEN** 只配置 `DASHSCOPE_API_KEY`
-- **THEN** 状态接口返回 `mode=omni`
-- **AND** 模型为 `qwen3.5-omni-plus-realtime`
-
-#### Scenario: 显式启用实时翻译
-
-- **WHEN** 配置 `KNOWLEDGE_ASSISTANT_REALTIME_MODE=livetranslate` 与 `KNOWLEDGE_ASSISTANT_MODEL=qwen3.8-livetranslate-flash-realtime`
-- **THEN** 会话使用实时翻译适配器
-
-#### Scenario: 只配模型名自动推断
-
-- **WHEN** 只配置 `KNOWLEDGE_ASSISTANT_MODEL=qwen3.8-livetranslate-flash-realtime`
-- **THEN** 调用方式自动推断为 `livetranslate`
-
-#### Scenario: 模式与模型不匹配
-
-- **WHEN** 配置 `KNOWLEDGE_ASSISTANT_REALTIME_MODE=omni` 且模型为 LiveTranslate
-- **THEN** 状态接口返回 `ready=false` 与可读原因
-- **AND** 不创建模型会话
-
 ### Requirement: 直接对话不注入预设答案
 
 系统 SHALL 使用简洁的直接对话系统提示词，MUST NOT 注入平台模块速览、固定答案话术或预先写好的回复。助手回复 MUST 由所选实时模型根据用户语音与通用中文语音助手提示自然生成，而不是从预设答案表中匹配。
@@ -238,91 +159,89 @@
 - **THEN** 只包含中文语音助手角色、简短口语化、回答长度等通用约束
 - **AND** 不包含「设备管理：扫描、连接……」这类平台知识速览或逐条回答模板
 
-### Requirement: 前端可选双路线
+### Requirement: WebSocket 只承载知识库问答通道
 
-系统 SHALL 在前端提供两条按会话可选的语音路线：
+平台的任务进度与列表 MUST NOT 因本能力改用 WebSocket；知识库助手通道 MUST 只承载语音问答与文字问答两类交互，MUST NOT 承载任务执行、设备控制、文件上传或任何平台写操作。
 
-1. `omni`：`qwen3.5-omni-plus-realtime` 直连，音色 `Tina`。
-2. `pipeline`：`livetranslate` ASR + `deepseek-flash` 回答 + `sambert-zhichu-v1`（知厨）播报。
+客户端上行白名单 SHALL 为 `interrupt`、`played`、`text` 三类；`text` MUST 只在文字模式的连接上被处理，语音模式收到时 MUST 忽略。任务进度 MUST 继续走 HTTP 轮询。
 
-默认路线 MUST 为 `omni`。用户切换路线后，WS 连接 MUST 携带 `mode=omni` 或 `mode=pipeline`；后端 MUST 按该连接选择对应会话实现，不得影响其他连接。页面「模式」行 MUST 显示当前路线。未开始会话时，页面「模型」行 MUST 按当前所选路线显示：`omni` 显示后端默认模型，`pipeline` 显示 pipeline 的 LLM/TTS 模型与音色；会话开始后 MUST 以 `ready` 事件返回的实际 `model`/`voice` 为准。
+#### Scenario: 任务进度仍走轮询
 
-#### Scenario: 默认 Omni 直连
+- **WHEN** 用户查看任务清单或任务详情
+- **THEN** 页面仍通过既有 HTTP 接口轮询
+- **AND** 不建立知识库助手通道
 
-- **WHEN** 用户只配置 `DASHSCOPE_API_KEY` 并打开页面
-- **THEN** 路线默认为 `omni`
-- **AND** 模型为 `qwen3.5-omni-plus-realtime`、音色 `Tina`
+#### Scenario: 通道不承载平台写操作
 
-#### Scenario: 选择 Pipeline
+- **WHEN** 客户端通过知识库助手通道发送白名单以外的消息
+- **THEN** 服务端忽略或拒绝该消息
+- **AND** 不产生任何平台写操作
 
-- **WHEN** 用户选择「ASR + DeepSeek Flash + TTS」并开始对话
-- **THEN** WS 连接携带 `mode=pipeline`
-- **AND** 页面模式显示 ASR + DeepSeek + TTS
-- **AND** 模型行显示 `deepseek-flash + sambert-zhichu-v1` 与「知厨」
-- **AND** 另一个 Omni 连接不受影响
+### Requirement: 页面提供会话方式选择与启动按键
 
-#### Scenario: 非法 mode
+知识库助手页面 MUST 提供可见的「语音 / 文字」方式选择与启动按键。语音方式下，只有用户点击启动后才申请麦克风并建立实时语音连接；文字方式的行为见 `knowledge-assistant-text-chat` 能力。页面首次打开 MUST NOT 主动申请麦克风权限、MUST NOT 自动建立任何连接。会话进行中再次点击 MUST 结束会话并释放麦克风与播放资源。
 
-- **WHEN** WS 携带不支持的 mode
-- **THEN** 连接返回可读错误并关闭
-- **AND** 不创建任何模型会话
+#### Scenario: 首次打开不申请麦克风
 
-### Requirement: Pipeline 问答链路
+- **WHEN** 已登录用户打开 `/knowledge-assistant`
+- **THEN** 页面显示方式选择、启动按键与空态提示
+- **AND** 浏览器未弹出麦克风授权提示，且未建立 `/ws/knowledge-assistant/` 连接
 
-`pipeline` 模式 SHALL 按以下顺序处理一轮语音：
+#### Scenario: 点击按键开始语音会话
 
-1. 把浏览器上行 PCM 送入 `qwen3.8-livetranslate-flash-realtime`，只消费源语转写结果。
-2. 把源语文本送入 `deepseek-flash`，流式得到中文回答。
-3. 把回答文本送入 `sambert-zhichu-v1`，生成 24kHz PCM16 音频并下发浏览器。
-4. 在页面上先显示用户源语转写，再显示助手回答文本，并播放 TTS 音频。
+- **WHEN** 用户在语音方式下点击启动按键并允许麦克风权限
+- **THEN** 页面状态从「未开始」进入「连接中」，成功后进入「聆听中」
+- **AND** 浏览器开始向实时语音通道发送音频
 
-ASR 的翻译输出 MUST NOT 被当作助手回答。TTS 失败时 MUST 保留已生成的文字回答，并给出可读提示。TTS 厂商 SHALL 可通过 `KNOWLEDGE_ASSISTANT_PIPELINE_TTS_PROVIDER` 选择 `sambert` 或 `qwen`；默认 MUST 为 `sambert`。
+#### Scenario: 再次点击结束会话
 
-#### Scenario: 用户问，模型答
+- **WHEN** 会话进行中用户再次点击启动按键
+- **THEN** 页面停止采集与播放，并关闭实时语音连接
+- **AND** 页面状态回到「未开始」
 
-- **WHEN** 用户说“设备管理里怎么连接设备”
-- **THEN** 页面显示用户源语转写
-- **AND** 页面显示 DeepSeek 生成的回答
-- **AND** 浏览器播放 Sambert「知厨」生成的语音
+### Requirement: 知识库助手 Token 用量记录
 
-#### Scenario: 多轮上下文
+系统 SHALL 在对话日志中记录模型调用的 token 用量：
 
-- **WHEN** 用户在同一会话里连续问两个相关问题
-- **THEN** 第二个回答能引用第一轮的用户/助手文本
+- 语音会话（Omni）MUST 消费 AgentScope `ModelCallEndEvent`，记录 `input_tokens`、`output_tokens`、`cache_input_tokens`、`cache_creation_input_tokens`。
+- 文字会话 MUST 记录 `deepseek-flash` 每次调用的 `input_tokens` 与 `output_tokens`，provider 为 deepseek，账本来源 MUST 与语音会话可区分。
+- 语音 `session_end` MUST 带上本次会话的 token 汇总。
 
-#### Scenario: 打断
+记录 MUST 写入 `logs/knowledge_assistant/YYYY-MM-DD.jsonl` 的 `model_usage` 事件，响应与日志 MUST NOT 暴露密钥。
 
-- **WHEN** 助手正在生成或播报时用户点击「打断」
-- **THEN** 当前 DeepSeek/TTS 任务被取消
-- **AND** 浏览器播放队列被清空
-- **AND** 页面回到聆听状态
+#### Scenario: Omni 记录每次模型调用
 
-#### Scenario: TTS 不可用
+- **WHEN** Omni 完成一次模型回复
+- **THEN** JSONL 出现 `model_usage` 事件
+- **AND** 包含 input/output tokens
+- **AND** 该会话 `session_end` 包含汇总
 
-- **WHEN** `sambert-zhichu-v1` 调用失败
-- **THEN** 助手文字回答仍显示并落日志
-- **AND** 页面提示语音播报失败
-- **AND** 会话不中断
+#### Scenario: 文字会话记录 DeepSeek 用量
 
-### Requirement: 语音 LLM 的 RAG 增强
+- **WHEN** 文字会话完成一次回答
+- **THEN** JSONL 出现 `model_usage` 事件，provider 为 deepseek、模型为 `deepseek-flash`
+- **AND** 包含 input/output tokens
 
-系统 SHALL 为语音助手提供本地 RAG：读取配置的数据目录（默认 `D:\Govee\data\rag_data`），解析 `.md/.txt`，切块、嵌入并写入本地索引。
+#### Scenario: 没有 usage 字段
 
-- `pipeline`：每轮提问后先检索，命中片段作为上下文注入 `deepseek-flash`。
-- `omni`：通过 `search_knowledge` 只读工具检索，把工具结果交回实时模型组织回答。
+- **WHEN** 模型返回没有 usage
+- **THEN** 不写伪造的 0 值事件
+- **AND** 会话正常结束
 
-未命中时 MUST 保持原有直接回答；RAG 不可用或检索失败 MUST NOT 中断语音会话。
+### Requirement: 本地知识检索由语音与文字共用
 
-#### Scenario: Pipeline 按资料回答
+系统 SHALL 为知识库助手提供本地 RAG：读取配置的数据目录（默认 `D:\Govee\data\rag_data`），解析 `.md/.txt`，切块、嵌入并写入本地索引。语音会话与文字会话 MUST 使用同一份索引：Omni 通过 `search_knowledge` 只读工具检索，文字会话通过同一工具检索；命中片段 MUST 作为回答依据，未命中时 MUST 保持原有回答能力。RAG 不可用或检索失败 MUST NOT 中断会话。
 
-- **WHEN** 用户问“长按开关按键 3 秒会怎样？”
+#### Scenario: 文字会话按资料回答
+
+- **WHEN** 用户用文字问「长按开关按键 3 秒会怎样？」
 - **AND** `rag_data` 的按键需求文档包含该说明
 - **THEN** 检索结果包含对应资料片段
-- **AND** DeepSeek 的回答引用“进入网络待机模式”等资料内容
+- **AND** 文字回答引用「进入网络待机模式」等资料内容
 
-#### Scenario: Omni 通过工具检索
+#### Scenario: 语音会话通过工具检索
 
-- **WHEN** 用户选择 `omni` 路线并问 H717D 按键问题
+- **WHEN** 用户用语音问 H717D 按键问题
 - **THEN** 实时模型可调用 `search_knowledge` 工具
 - **AND** 工具返回本地资料片段
 - **AND** 助手语音回答基于工具结果，而不是仅凭模型记忆
@@ -330,13 +249,13 @@ ASR 的翻译输出 MUST NOT 被当作助手回答。TTS 失败时 MUST 保留�
 #### Scenario: 资料未覆盖
 
 - **WHEN** 用户问题在 `rag_data` 中没有相关片段
-- **THEN** 系统不注入空上下文或工具返回“没有相关资料”
+- **THEN** 系统不注入空上下文，或工具返回「没有相关资料」
 - **AND** 助手仍正常回答或明确说不知道
 
 #### Scenario: RAG 不可用降级
 
 - **WHEN** 数据目录缺失、嵌入失败或索引损坏
-- **THEN** 语音会话仍可建立
+- **THEN** 会话仍可建立
 - **AND** 回答退化为无 RAG 的直接对话
 - **AND** 失败原因写入运行期日志，不向前端泄露密钥
 
@@ -345,99 +264,3 @@ ASR 的翻译输出 MUST NOT 被当作助手回答。TTS 失败时 MUST 保留�
 - **WHEN** `rag_data` 中某个文件内容变化
 - **THEN** 下一次检索前只重建该文件的文档
 - **AND** 未变化文件不重复嵌入
-
-### Requirement: Pipeline 文本输入
-
-`pipeline` 路线 SHALL 提供文本输入框；用户输入文字后，系统 MUST 跳过 ASR，把文字直接交给 DeepSeek（含 RAG）并合成 TTS 音频。未开始会话时发送文字 MUST 自动建立纯文本会话：不申请麦克风、不发送空音频，但仍建立播放器与 `/ws/knowledge-assistant/?mode=pipeline` 连接。
-
-WS 客户端消息白名单 SHALL 在 `interrupt` / `played` 之外增加 `text`，且 `text` 只允许 Pipeline 会话处理。
-
-#### Scenario: 纯文本提问
-
-- **WHEN** 用户在 Pipeline 路线输入“长按开关按键3秒会怎样？”并发送
-- **THEN** 页面出现用户文本消息
-- **AND** DeepSeek 按 RAG 资料生成回答
-- **AND** 浏览器播放 Sambert TTS 音频
-
-#### Scenario: 会话中追加文字
-
-- **WHEN** 语音会话已开始，用户输入文字并发送
-- **THEN** 当前回答被取消（如有）
-- **AND** 新文字作为新一轮用户问题处理
-
-#### Scenario: 纯文本不打麦克风提示
-
-- **WHEN** 用户未授权麦克风、仅使用文字提问
-- **THEN** 会话正常建立
-- **AND** 不显示“没有检测到麦克风音频”的提示
-
-#### Scenario: Omni 路线不显示文本输入
-
-- **WHEN** 路线为 `omni`
-- **THEN** 不显示 Pipeline 文本输入框
-
-### Requirement: 语音模型 Token 用量记录
-
-系统 SHALL 在对话日志中记录每次语音模型调用的 token 用量：
-
-- `omni`：消费 AgentScope `ModelCallEndEvent`，记录 `input_tokens`、`output_tokens`、`cache_input_tokens`、`cache_creation_input_tokens`。
-- `pipeline`：记录 DeepSeek `ChatResponse.usage`；ASR 的 `ResponseDoneEvent` 有 token 时也记录。
-- `session_end` MUST 带上本次会话的 token 汇总。
-
-记录 MUST 写入 `logs/knowledge_assistant/YYYY-MM-DD.jsonl` 的 `model_usage` 事件，不向前端暴露密钥。
-
-#### Scenario: Omni 记录每次模型调用
-
-- **WHEN** Omni 完成一次模型回复
-- **THEN** JSONL 出现 `model_usage` 事件
-- **AND** 包含 input/output tokens
-- **AND** `session_end` 包含汇总
-
-#### Scenario: Pipeline 记录 DeepSeek 用量
-
-- **WHEN** Pipeline 完成一次 DeepSeek 回答
-- **THEN** JSONL 出现 `model_usage` 事件，`provider="deepseek"`
-- **AND** 包含 input/output tokens
-- **AND** `session_end` 包含汇总
-
-#### Scenario: 没有 usage 字段
-
-- **WHEN** 模型返回没有 usage
-- **THEN** 不写伪造的 0 值事件
-- **AND** 会话正常结束
-
-### Requirement: Pipeline 回答链路由 Agent 承担
-`pipeline` 路线的回答与语音合成分工 MUST 由 Agent 承担：文本来自 Agent 的文本增量事件，语音来自语音合成中间件产出的音频块。ASR 与传输层 MUST NOT 改变。语音合成适配器 MUST 复用现有 Sambert / Qwen 引擎与音色，MUST NOT 改动默认音色。
-
-#### Scenario: 一轮回答同时产出文本与音频
-- **WHEN** 用户在 pipeline 路线说一句话，模型正常返回
-- **THEN** 前端按顺序收到 `reply_start`、若干 `transcript_delta`、`transcript_final`、`reply_end`，并在 `reply_end` 之前收到一整段 `audio`
-
-#### Scenario: 音色不变
-- **WHEN** 默认配置（sambert / 知厨）下跑一轮回答
-- **THEN** 播报仍使用原音色与采样率，不因改为 Agent 而换声音
-
-### Requirement: 音频整段发送
-语音合成中间件逐块产出的音频 MUST 由回答器累积成一段 PCM，在 `reply_end` 之前一次性发送；前端音频帧格式 MUST 保持不变。
-
-#### Scenario: 多块音频合并
-- **WHEN** 中间件分三次产出三段音频
-- **THEN** 前端只收到一次 `audio` 帧，内容是三段按序拼接
-
-### Requirement: 用量口径不变
-`model_usage` MUST 取本轮 `ModelCallEndEvent` 的输入、输出与两项缓存 token；`tts_usage` MUST 仍按本轮总字符数记一条，MUST NOT 因改为逐块合成而改变计费口径。
-
-#### Scenario: 一轮回答的用量
-- **WHEN** 一轮回答结束
-- **THEN** 日志里 `model_usage` 一条（四个 token 字段），`tts_usage` 一条（字符数为整轮文本长度）
-
-### Requirement: 回答链路可回退
-回答链路 MUST 由 `KNOWLEDGE_ASSISTANT_PIPELINE_ENGINE` 选择：`agent`（默认）走 Agent，`legacy` 走原直连实现。取值非法时 MUST 拒绝启动并给出可读原因。
-
-#### Scenario: 回退到旧实现
-- **WHEN** 配置 `KNOWLEDGE_ASSISTANT_PIPELINE_ENGINE=legacy`
-- **THEN** 会话按原直连模型 + 单独合成的方式工作
-
-#### Scenario: 非法取值
-- **WHEN** 配置成其它值
-- **THEN** 启动失败，报错信息点名该环境变量与可选值

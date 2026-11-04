@@ -393,19 +393,27 @@ def _parse_wm_size(text: str) -> tuple[int, int]:
     raise RuntimeError(f"wm size 输出无法解析：{(text or '').strip()}")
 
 
+_FOCUS_PATTERN = re.compile(r"mCurrentFocus=.*?\s([\w.]+)/([\w.$]+)")
+_RESUMED_PATTERN = re.compile(r"mResumedActivity.*?\s([\w.]+)/([\w.$]+)")
+
+
 def _parse_current_app(text: str) -> dict:
-    """从 `dumpsys window` 输出取当前前台应用。
+    """从窗口/Activity 转储里取当前前台应用。
+
+    同时认两种写法：`mCurrentFocus=Window{… pkg/Act}`（window 段）与
+    `mResumedActivity: ActivityRecord{… pkg/Act}`（activity 段）。
 
     Args:
-        text: `dumpsys window` 的原始输出。
+        text: `dumpsys window displays` 或 `dumpsys activity activities` 的原始输出。
 
     Returns:
         {"package": 包名, "activity": Activity}；取不到时两者为空串。
     """
-    match = re.search(r"mCurrentFocus=.*?\s([\w.]+)/([\w.$]+)", text or "")
-    if not match:
-        return {"package": "", "activity": ""}
-    return {"package": match.group(1), "activity": match.group(2)}
+    for pattern in (_FOCUS_PATTERN, _RESUMED_PATTERN):
+        match = pattern.search(text or "")
+        if match:
+            return {"package": match.group(1), "activity": match.group(2)}
+    return {"package": "", "activity": ""}
 
 
 def _parse_packages(text: str, query: str = "") -> list[str]:
@@ -465,10 +473,17 @@ class AdbInfo(DeviceInfo):
     def current_app(self) -> dict:
         """当前前台应用。
 
+        只读 `dumpsys window displays`（约 0.2s）；整份 `dumpsys window` 在本机要 5.5s，
+        而启停 App 时前台要轮询读取，用整份转储会把这个工具拖到十几秒。
+        displays 段取不到焦点窗口时，退回 `dumpsys activity activities`（同样约 0.2s）。
+
         Returns:
-            {"package": 包名, "activity": Activity}。
+            {"package": 包名, "activity": Activity}；都取不到时两者为空串。
         """
-        return _parse_current_app(self.adb.shell(["dumpsys", "window"]))
+        app = _parse_current_app(self.adb.shell(["dumpsys", "window", "displays"]))
+        if app["package"]:
+            return app
+        return _parse_current_app(self.adb.shell(["dumpsys", "activity", "activities"]))
 
     def packages(self, query: str = "") -> list[str]:
         """已安装包名列表。

@@ -360,6 +360,12 @@ export interface TaskReportStep {
   outcome?: string
   /** 该步墙钟耗时（毫秒），含重试与验收；无时间戳为 0 */
   duration_ms?: number
+  /** 该步模型调用合计（毫秒） */
+  model_ms?: number
+  /** 该步工具返回合计（毫秒） */
+  tool_ms?: number
+  /** 该步空档：墙钟减去模型与工具，不为负（毫秒） */
+  idle_ms?: number
   /** 该步仍有未结束的轮次 */
   running?: boolean
 }

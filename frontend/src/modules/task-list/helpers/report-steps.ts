@@ -44,6 +44,12 @@ export interface StepView {
   outcome: string
   /** 该步墙钟耗时（毫秒）；无时间戳为 0，渲染时按缺失处理 */
   durationMs: number
+  /** 该步模型调用合计（毫秒） */
+  modelMs: number
+  /** 该步工具返回合计（毫秒） */
+  toolMs: number
+  /** 该步空档：墙钟减去模型与工具，不为负（毫秒） */
+  idleMs: number
   /** 该步仍有未结束的轮次 */
   running: boolean
   attempts: AttemptView[]
@@ -79,6 +85,9 @@ function normalizeSteps(steps?: TaskReportStep[]): TaskReportStep[] {
       expected: String(step.expected || "").trim(),
       outcome: String(step.outcome || "").trim(),
       duration_ms: Math.max(Number(step.duration_ms) || 0, 0),
+      model_ms: Math.max(Number(step.model_ms) || 0, 0),
+      tool_ms: Math.max(Number(step.tool_ms) || 0, 0),
+      idle_ms: Math.max(Number(step.idle_ms) || 0, 0),
       running: Boolean(step.running),
     }))
 }
@@ -133,6 +142,9 @@ function buildStep(
     expected?: string
     outcome?: string
     duration_ms?: number
+    model_ms?: number
+    tool_ms?: number
+    idle_ms?: number
     running?: boolean
   } | null,
   group: TaskReportRound[],
@@ -144,6 +156,9 @@ function buildStep(
     expected: String(step?.expected || "").trim(),
     outcome: String(step?.outcome || "").trim() || derivedOutcome(group),
     durationMs: Math.max(Number(step?.duration_ms) || 0, 0),
+    modelMs: Math.max(Number(step?.model_ms) || 0, 0),
+    toolMs: Math.max(Number(step?.tool_ms) || 0, 0),
+    idleMs: Math.max(Number(step?.idle_ms) || 0, 0),
     running: Boolean(step?.running),
     attempts: buildAttempts(group),
   }

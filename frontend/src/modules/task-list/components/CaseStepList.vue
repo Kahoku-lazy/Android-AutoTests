@@ -56,6 +56,16 @@ function durationText(step) {
   return formatDurationMs(step.durationMs)
 }
 
+/** 步骤行的耗时构成：模型 / 工具 / 空档，某一项为 0 或不足 1 秒时不渲染 */
+function costTexts(step) {
+  const items = [
+    { label: "模型", text: formatDurationMs(step.modelMs) },
+    { label: "工具", text: formatDurationMs(step.toolMs) },
+    { label: "空档", text: formatDurationMs(step.idleMs) },
+  ]
+  return items.filter((item) => item.text)
+}
+
 /** 次数标签配色：该次验收驳回标红，重试标绿，首次为默认色 */
 function tagClass(attempt) {
   if (attemptVerdict(attempt) === false) return "is-fail"
@@ -110,6 +120,9 @@ function toggle(step) {
           ><strong>{{ step.seq }}.</strong> {{ step.action }}</span
         >
         <span v-if="durationText(step)" class="flow-step__duration">{{ durationText(step) }}</span>
+        <span v-for="cost in costTexts(step)" :key="cost.label" class="flow-step__cost"
+          >{{ cost.label }} {{ cost.text }}</span
+        >
         <span class="flow-step__badge" :class="badgeClass(step.outcome)">{{ step.outcome }}</span>
       </button>
 

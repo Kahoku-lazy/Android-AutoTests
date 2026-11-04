@@ -68,6 +68,19 @@
   font-weight: 700;
 }
 
+/* 耗时构成 chip：模型 / 工具 / 空档，底色比总耗时淡一档 */
+.flow-step__cost {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border: 1px dashed color-mix(in srgb, var(--ink) 16%, transparent);
+  border-radius: 5px;
+  color: color-mix(in srgb, var(--ink) 72%, transparent);
+  font-size: var(--app-size-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* 步骤耗时：结果徽标之前的青色时间片，与状态徽标区分开 */
 .flow-step__duration {
   flex: 0 0 auto;

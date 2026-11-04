@@ -9,14 +9,19 @@ Python 调试：➡️ python -m engines.agents.workflow.ui_auto_workflow 🏁
 修改时间: ➡️ 2026-10-30 🏁
 类型: ➡️ Agent 能力模块 🏁
 简介说明：➡️
-1. AgentSOPWorkflow: 把一份 SOP 跑一次 UI 自动化, 事件与运行汇总都写入同一份事件日志。
+1. AgentSOPWorkflow: 把一份 SOP 跑一次 UI 自动化, 事件与运行汇总都写入同一份事件日志
+2. 每个步骤新建一对执行者与验收者实例，跨步不继承上下文；重试复用该步实例
+3. 步骤提示由 step_brief 拼装：执行者拿动作与页面锚点，验收者拿结果与日志证据
 🏁
 关联模块：➡️
 1. engines.agents.agent_builders: 导入 build_executor, build_verifier
-2. engines.agents.event_log: 导入 write_line
-3. engines.agents.event_sink: 导入 set_step_context
-4. engines.agents.messaging.messages: 导入 AgentEventsShow
-5. utils.logs: 导入 agent_event_log
+2. engines.agents.config.log_keywords: 导入 load_log_keywords，按型号取关键词目录
+3. engines.agents.event_log: 导入 write_line
+4. engines.agents.event_sink: 导入 set_step_context
+5. engines.agents.messaging.messages: 导入 AgentEventsShow
+6. engines.agents.workflow.case_file: 导入 CaseStep，步骤的结构化输入
+7. engines.agents.workflow.step_brief: 导入 executor_brief / verifier_brief
+8. utils.logs: 导入 agent_event_log
 🏁
 测试：➡️
 1. tests/api/test_task_event_store.py: 任务事件落库：事件、缩略图、小时用量和任务费用
@@ -27,6 +32,8 @@ Python 调试：➡️ python -m engines.agents.workflow.ui_auto_workflow 🏁
 
 import asyncio
 
+from collections.abc import Callable, Sequence
+
 import yaml
 
 from agentscope.agent import Agent
@@ -34,23 +41,58 @@ from agentscope.message import UserMsg
 from agentscope.sop import SOP, SOPEngine, SOPStep
 
 from engines.agents.agent_builders import build_executor, build_verifier
+from engines.agents.config.log_keywords import load_log_keywords
 from engines.agents.event_log import write_line
 from engines.agents.event_sink import set_step_context
 from engines.agents.messaging.messages import AgentEventsShow
+from engines.agents.workflow.case_file import CaseStep
+from engines.agents.workflow.step_brief import executor_brief, verifier_brief, with_context
 from utils.logs import agent_event_log
 
 
+def _step_keywords(step: CaseStep, default_sku: str) -> str:
+    """取这一步的关键词表：优先用步上的 log.sku，其次用例级型号。
+
+    Args:
+        step: 一步的结构化输入。
+        default_sku: 用例级型号；步上没有 log 时用它。
+
+    Returns:
+        该型号的关键词目录正文；两者都没有或目录缺失时为空串。
+    """
+    sku = step.log.sku if step.log is not None else default_sku
+    return load_log_keywords(sku)
+
+
 class AgentSOPWorkflow:
-    def __init__(self, executor: Agent, verifier: Agent):
-        # executor: 执行角色的 Agent, 负责看页面、点设备
-        # verifier: 验收角色的 Agent, 负责截图与查设备日志, 判这一步过不过
+    """UI 自动 SOP 工作流：执行角色操作设备，验收角色判定步骤。"""
+
+    def __init__(
+        self,
+        executor_factory: Callable[[], Agent],
+        verifier_factory: Callable[[], Agent],
+    ):
+        """
+        Args:
+            executor_factory: 每个步骤调用一次，返回新的执行者（看页面、点设备）。
+            verifier_factory: 每个步骤调用一次，返回新的验收者（截图、查日志、判这一步）。
+        """
         self.log = agent_event_log
-        self.executor = executor
-        self.verifier = verifier
-        self.model_name = str(getattr(getattr(executor, "model", None), "model", "") or "-")
+        self._executor_factory = executor_factory
+        self._verifier_factory = verifier_factory
+        # 运行汇总用第一个执行者的模型名，取不到时用占位符；编号在 run_workflow 里刷新
+        self.model_name = "-"
 
         # 每一步被驳回几次后判失败, 由引擎执行, 不是步骤自己管
         self.MAX_ATTEMPTS = 2
+
+    def _build_agents(self) -> tuple[Agent, Agent]:
+        """为一步新建一对执行者与验收者。
+
+        Returns:
+            (执行者, 验收者)，两者都是全新实例，不带任何历史上下文。
+        """
+        return self._executor_factory(), self._verifier_factory()
 
     def dump(self, engine, sop) -> None:
         """流结束后回读运行状态：判决与交付都不在事件流里, 只能从这里看。
@@ -84,29 +126,54 @@ class AgentSOPWorkflow:
                     f" by={verdict.verifier}｜{verdict.message}"
                 )
 
-    async def run_workflow(self, name: str, steps: list[tuple[str, str]], run_input: str) -> None:
+    async def run_workflow(
+        self,
+        name: str,
+        steps: Sequence[CaseStep],
+        run_input: str,
+        *,
+        default_sku: str = "",
+    ) -> str:
         """装配一份 SOP 并跑完一次：事件实时打屏, 结束后回读状态。
 
         Args:
             name: 流程名, 只用于日志与汇总, 模型看不到。
-            steps: [(步骤描述, 需要达成的结果), ...], 一个二元组就是一步。
-            run_input: 开场输入, 只交给第一步。
+            steps: 一步一条的结构化输入；每个步骤单独新建一对角色实例。
+            run_input: 开场输入（含设备 serial 等）；每步都会重放到提示里，因为每步都是新实例。
+            default_sku: 用例级型号；某步没写 `log.sku` 时用它取关键词表，旧用例因此不必盲试。
 
         Returns:
             运行阶段字符串。完成时为 completed。
+
+        Raises:
+            ValueError: 步骤列表为空，无法装配流程。
         """
+        if not steps:
+            raise ValueError("步骤列表为空，无法装配 SOP")
+
+        # 每个步骤各建一对角色: 跨步不继承上下文; 同一步的重试仍复用该步的实例
+        pairs = [self._build_agents() for _ in steps]
+        first_executor, first_verifier = pairs[0]
+        self.model_name = str(getattr(getattr(first_executor, "model", None), "model", "") or "-")
+        # 开场上下文（设备 serial 等）每步重放：新实例的历史里没有它，不给就只能靠猜
+        context = str(run_input or "").strip()
+        sku_fallback = str(default_sku or "").strip()
+
         # 一份 SOP = 一串 SOPStep; SOP 本身不含运行状态, 可以反复跑
         sop = SOP(
             name=name,
             steps=[
                 SOPStep(
-                    subject=subject,  # 步骤描述: 写进执行者的步骤提醒
-                    description=description,  # 需要达成的结果: 只给验收者当判卷标准
-                    executor=self.executor,  # 执行者: 干活的一侧
-                    verifier=self.verifier,  # 验收者: 判卷的一侧
+                    subject=with_context(executor_brief(step), context),  # 执行者: 动作 + 页面锚点
+                    description=with_context(  # 验收者: 结果 + 日志证据 + 关键词表
+                        verifier_brief(step, _step_keywords(step, sku_fallback)),
+                        context,
+                    ),
+                    executor=executor,  # 执行者: 本步新建
+                    verifier=verifier,  # 验收者: 本步新建
                     max_attempts=self.MAX_ATTEMPTS,  # 最大重试次数: 驳回几次后整轮失败
                 )
-                for subject, description in steps
+                for step, (executor, verifier) in zip(steps, pairs, strict=True)
             ],
         )
 
@@ -116,10 +183,10 @@ class AgentSOPWorkflow:
             buf: dict = {}  # 增量累积器: 块碎片、工具入参、工具返回都攒在这里
             # 发言开始早于模型调用, 「开始」行用角色上的模型名
             models = {
-                self.executor.name: self.executor.model.model,
-                self.verifier.name: self.verifier.model.model,
+                first_executor.name: first_executor.model.model,
+                first_verifier.name: first_verifier.model.model,
             }
-            # 开场输入只交给第一步; 之后的步骤拿上一步的交付（handover）
+            # 开场输入交给第一步供引擎推进；上下文已在每步的步骤提示里重放
             async for event in engine.reply_stream(UserMsg(name="user", content=run_input)):
                 _stamp_step(engine)
                 await show_event(event, buf, models)
@@ -242,5 +309,6 @@ def run_workflow(yml_path: str, run_input: str, case_title: str | None = None) -
         if case_title and title != case_title:
             continue
 
-        workflow = AgentSOPWorkflow(build_executor(), build_verifier())
-        asyncio.run(workflow.run_workflow(title, steps, run_input))
+        workflow = AgentSOPWorkflow(build_executor, build_verifier)
+        case_steps = [CaseStep(action=action, expected=expected) for action, expected in steps]
+        asyncio.run(workflow.run_workflow(title, case_steps, run_input))

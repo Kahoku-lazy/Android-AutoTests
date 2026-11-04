@@ -30,6 +30,18 @@ def test_executor_prompt_declares_submission_checks():
         assert clause in EXECUTOR_PROMPT, clause
 
 
+def test_executor_prompt_uses_page_anchors():
+    """执行提示词要求优先按步骤给出的页面锚点导航，并禁止连续盲试 xpath。"""
+    assert "【本步页面锚点】" in EXECUTOR_PROMPT
+    assert "禁止**连续盲试" in EXECUTOR_PROMPT
+
+
+def test_executor_prompt_stays_on_result_page_before_submitting():
+    """交卷前必须停在本步结果所在的页面，验收重新截图才看得到证据。"""
+    assert "交卷前必须停在本步结果所在的页面" in EXECUTOR_PROMPT
+    assert "禁止**先返回上一页" in EXECUTOR_PROMPT
+
+
 def test_executor_prompt_requires_coordinate_marking_before_click():
     """估算坐标与 xpath 返回坐标都必须先用 mark_dot 打红点核对，确认后才允许点击。"""
     assert "mark_dot(serial, x, y)" in EXECUTOR_PROMPT
@@ -86,6 +98,14 @@ def test_verifier_prompt_rejection_is_executable():
     """驳回意见必须落在执行者工具集内。"""
     assert "驳回意见必须能在执行者工具集内执行" in VERIFIER_PROMPT
     assert "不要让它调用日志工具" in VERIFIER_PROMPT
+
+
+def test_verifier_prompt_takes_keyword_from_step_evidence():
+    """关键词优先取步骤给出的证据，其次查关键词表，禁止连续盲试。"""
+    assert "【本步日志证据】" in VERIFIER_PROMPT
+    assert "【本步关键词表】" in VERIFIER_PROMPT
+    assert "MUST NOT 连续盲试多个关键词" in VERIFIER_PROMPT
+    assert "系统提示词末尾" not in VERIFIER_PROMPT
 
 
 def test_executor_prompt_separates_connection_spinner_from_page_loading():

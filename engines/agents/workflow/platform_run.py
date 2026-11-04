@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import re
 import threading
 
 from collections.abc import Callable
@@ -54,6 +55,21 @@ _inflight: dict[int, tuple[asyncio.AbstractEventLoop, asyncio.Task]] = {}
 
 CaseRunner = Callable[[str, list[tuple[str, str]], str], str]
 AppCloser = Callable[[str], None]
+
+_SKU_IN_TITLE = re.compile(r"\b([A-Z]\d{3,5})\b")
+
+
+def _case_sku(title: str) -> str:
+    """从用例标题里取型号（如 H6810）。
+
+    Args:
+        title: 用例标题，例如「H6810 定时功能测试」。
+
+    Returns:
+        形如 H6810 的型号；标题里没有型号时返回空串。
+    """
+    match = _SKU_IN_TITLE.search(str(title or ""))
+    return match.group(1) if match else ""
 
 
 def bind_cancel(task_id: int) -> threading.Event:
@@ -190,13 +206,19 @@ async def _drive_real(
             # 用例名与步骤号逐条刷新：一个任务可以按序跑多条用例
             set_case_title(case.title)
             set_step_context(None, None)
-            # 每条用例新建角色，避免上一条用例的对话与工具返回污染下一条
-            executor = build_executor()
-            verifier = build_verifier()
-            workflow = AgentSOPWorkflow(IncompleteHandoverGuard(executor), verifier)
-            steps = [(step.action, step.expected) for step in case.steps]
+            # 角色工厂交出去，由工作流按步新建实例：跨步不继承上下文，跨用例也不共享
+            workflow = AgentSOPWorkflow(
+                lambda: IncompleteHandoverGuard(build_executor()),
+                build_verifier,
+            )
+            steps = list(case.steps)
             try:
-                phase = await workflow.run_workflow(case.title, steps, opening)
+                phase = await workflow.run_workflow(
+                    case.title,
+                    steps,
+                    opening,
+                    default_sku=_case_sku(case.title),
+                )
             finally:
                 _close_after_case(device_serial, closer)
             if phase == "completed":

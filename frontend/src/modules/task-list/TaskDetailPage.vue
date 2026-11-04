@@ -10,7 +10,7 @@ import { getTaskReport } from "./api/tasks"
 import CaseImportCard from "./components/CaseImportCard.vue"
 import CaseStepList from "./components/CaseStepList.vue"
 import { useReportPoll } from "./composables/useReportPoll"
-import { caseStepViews, formatClock } from "./helpers/report-steps"
+import { caseStepViews, formatClock, formatDurationMs } from "./helpers/report-steps"
 import {
   DEFAULT_OPEN_CASE_INDEX,
   TASK_REPORT_HEADER_GRADIENT,
@@ -176,6 +176,12 @@ function taskStatusText(status) {
 
 function caseOpen(index) {
   return openCases.value.has(index)
+}
+
+/** 用例行的耗时文案：未结束显示「进行中」，缺失或 0 毫秒不渲染 */
+function caseDuration(caseItem) {
+  if (caseItem?.running) return "进行中"
+  return formatDurationMs(caseItem?.duration_ms)
 }
 
 function toggleCase(index) {
@@ -349,6 +355,9 @@ function outcomeClass(outcome) {
               <span class="flow-case__name"
                 >{{ caseIndex + 1 }}. 测试用例：{{ caseItem.title || "未命名用例" }}</span
               >
+              <span v-if="caseDuration(caseItem)" class="flow-case__duration">{{
+                caseDuration(caseItem)
+              }}</span>
               <span class="badge" :class="outcomeClass(caseItem.outcome)">{{
                 caseItem.outcome
               }}</span>

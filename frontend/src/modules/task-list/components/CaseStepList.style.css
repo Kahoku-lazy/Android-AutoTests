@@ -68,6 +68,17 @@
   font-weight: 700;
 }
 
+/* 步骤耗时：结果徽标之前的青色时间片，与状态徽标区分开 */
+.flow-step__duration {
+  flex: 0 0 auto;
+  padding: 0 var(--app-space-xs);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--color-cyan-74);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+}
+
 .flow-step__badge.is-pass {
   background: var(--app-status-success-bg);
 }

@@ -345,6 +345,10 @@ export interface TaskReportRound {
   handover?: string
   verdict?: TaskReportRoundVerdict | null
   blocks?: TaskReportBlock[]
+  /** 该轮模型调用时长（毫秒）：只统计 ModelCallEndEvent，未结束为已发生的部分 */
+  model_ms?: number
+  /** 该轮尚未结束（缺少结束事件） */
+  running?: boolean
 }
 
 /** 用例步骤：动作、预期与结果（结果由后端算好） */
@@ -354,6 +358,10 @@ export interface TaskReportStep {
   expected?: string
   /** PASS / FAIL / 未完成 / 未执行 */
   outcome?: string
+  /** 该步墙钟耗时（毫秒），含重试与验收；无时间戳为 0 */
+  duration_ms?: number
+  /** 该步仍有未结束的轮次 */
+  running?: boolean
 }
 
 /** 一条用例：步骤轴 + 轮次引用 */
@@ -362,6 +370,10 @@ export interface TaskReportCase {
   outcome?: string
   steps?: TaskReportStep[]
   round_ids?: number[]
+  /** 该用例墙钟耗时（毫秒）；无时间戳为 0 */
+  duration_ms?: number
+  /** 该用例仍有未结束的轮次 */
+  running?: boolean
 }
 
 /** 报告里的任务摘要（字段比 TaskDetail 窄） */

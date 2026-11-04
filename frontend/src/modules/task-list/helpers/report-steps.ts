@@ -33,6 +33,10 @@ export interface StepView {
   expected: string
   /** PASS / FAIL / 未完成 / 未执行 */
   outcome: string
+  /** 该步墙钟耗时（毫秒）；无时间戳为 0，渲染时按缺失处理 */
+  durationMs: number
+  /** 该步仍有未结束的轮次 */
+  running: boolean
   attempts: AttemptView[]
 }
 
@@ -65,6 +69,8 @@ function normalizeSteps(steps?: TaskReportStep[]): TaskReportStep[] {
       action: String(step.action || "").trim(),
       expected: String(step.expected || "").trim(),
       outcome: String(step.outcome || "").trim(),
+      duration_ms: Math.max(Number(step.duration_ms) || 0, 0),
+      running: Boolean(step.running),
     }))
 }
 
@@ -113,7 +119,13 @@ function buildAttempts(group: TaskReportRound[]): AttemptView[] {
 function buildStep(
   key: string,
   seq: number,
-  step: { action?: string; expected?: string; outcome?: string } | null,
+  step: {
+    action?: string
+    expected?: string
+    outcome?: string
+    duration_ms?: number
+    running?: boolean
+  } | null,
   group: TaskReportRound[],
 ): StepView {
   return {
@@ -122,6 +134,8 @@ function buildStep(
     action: String(step?.action || "").trim(),
     expected: String(step?.expected || "").trim(),
     outcome: String(step?.outcome || "").trim() || derivedOutcome(group),
+    durationMs: Math.max(Number(step?.duration_ms) || 0, 0),
+    running: Boolean(step?.running),
     attempts: buildAttempts(group),
   }
 }
@@ -219,4 +233,29 @@ export function formatClock(iso?: string): string {
   if (Number.isNaN(date.getTime())) return ""
   const pad = (value: number) => String(value).padStart(2, "0")
   return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
+
+/**
+ * 毫秒转紧凑耗时文案。
+ *
+ * 口径：不足 1 分钟用 `42s`，不足 1 小时用 `3m12s`，超过 1 小时用 `1h02m`。
+ *
+ * Args:
+ *   ms: 毫秒数，可空。
+ *
+ * Returns:
+ *   紧凑文案；0、负数、非数字或不足 1 秒时返回空串（由调用方隐藏）。
+ */
+export function formatDurationMs(ms?: number | null): string {
+  const total = Number(ms)
+  if (!Number.isFinite(total) || total <= 0) return ""
+  const seconds = Math.round(total / 1000)
+  if (seconds < 1) return ""
+  if (seconds < 60) return `${seconds}s`
+  const pad = (value: number) => String(value).padStart(2, "0")
+  const minutes = Math.floor(seconds / 60)
+  const restSeconds = seconds % 60
+  if (minutes < 60) return `${minutes}m${pad(restSeconds)}s`
+  const hours = Math.floor(minutes / 60)
+  return `${hours}h${pad(minutes % 60)}m`
 }

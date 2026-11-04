@@ -83,6 +83,9 @@ def _event(
     role="executor_role",
     step_seq=1,
     attempt=1,
+    started_at=None,
+    ended_at=None,
+    duration_ms=0,
 ):
     return TaskEvent.objects.create(
         task=task,
@@ -95,6 +98,9 @@ def _event(
         step_seq=step_seq,
         attempt=attempt,
         payload=payload or {},
+        started_at=started_at,
+        ended_at=ended_at,
+        duration_ms=duration_ms,
     )
 
 
@@ -453,3 +459,152 @@ def test_flow_reports_media_id_instead_of_inline_image():
     assert "AAA" not in dumped
     plain_item = next(item for item in items if item["event_type"] == "ReplyStartEvent")
     assert plain_item["media_id"] is None
+
+
+def test_flow_reports_step_and_case_durations():
+    """步骤与用例给墙钟耗时：步覆盖执行 + 验收，用例覆盖全部步骤。"""
+    from datetime import datetime
+
+    owner = get_user_model().objects.create_user(username="flow-owner-duration", password="pass")
+    task = _task(owner)
+    # 第 1 步：执行轮 09:00:00–09:00:30，验收轮 09:00:31–09:00:34
+    _event(
+        task,
+        1,
+        "ReplyStartEvent",
+        "开始",
+        started_at=datetime(2026, 11, 3, 9, 0, 0),
+        ended_at=datetime(2026, 11, 3, 9, 0, 0),
+    )
+    _event(
+        task,
+        2,
+        "ReplyEndEvent",
+        "结束",
+        started_at=datetime(2026, 11, 3, 9, 0, 29),
+        ended_at=datetime(2026, 11, 3, 9, 0, 30),
+    )
+    _event(
+        task,
+        3,
+        "ReplyStartEvent",
+        "开始",
+        role="verifier_role",
+        started_at=datetime(2026, 11, 3, 9, 0, 31),
+        ended_at=datetime(2026, 11, 3, 9, 0, 31),
+    )
+    _event(
+        task,
+        4,
+        "ReplyEndEvent",
+        "结束",
+        role="verifier_role",
+        started_at=datetime(2026, 11, 3, 9, 0, 33),
+        ended_at=datetime(2026, 11, 3, 9, 0, 34),
+    )
+    # 第 2 步：09:01:00–09:02:00
+    _event(
+        task,
+        5,
+        "ReplyStartEvent",
+        "开始",
+        step_seq=2,
+        started_at=datetime(2026, 11, 3, 9, 1, 0),
+        ended_at=datetime(2026, 11, 3, 9, 1, 0),
+    )
+    _event(
+        task,
+        6,
+        "ReplyEndEvent",
+        "结束",
+        step_seq=2,
+        started_at=datetime(2026, 11, 3, 9, 1, 59),
+        ended_at=datetime(2026, 11, 3, 9, 2, 0),
+    )
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    case = flow["cases"][0]
+    by_seq = {step["seq"]: step for step in case["steps"]}
+
+    assert by_seq[1]["duration_ms"] == 34000
+    assert by_seq[2]["duration_ms"] == 60000
+    assert case["duration_ms"] == 120000
+    assert by_seq[1]["duration_ms"] + by_seq[2]["duration_ms"] <= case["duration_ms"]
+
+
+def test_flow_round_model_ms_counts_model_calls_only():
+    """轮级 model_ms 只统计模型调用，不拿轮次墙钟冒充。"""
+    from datetime import datetime
+
+    owner = get_user_model().objects.create_user(username="flow-owner-model", password="pass")
+    task = _task(owner)
+    _event(
+        task,
+        1,
+        "ReplyStartEvent",
+        "开始",
+        started_at=datetime(2026, 11, 3, 9, 0, 0),
+        ended_at=datetime(2026, 11, 3, 9, 0, 0),
+    )
+    _event(
+        task,
+        2,
+        "ModelCallEndEvent",
+        "推理",
+        started_at=datetime(2026, 11, 3, 9, 0, 5),
+        ended_at=datetime(2026, 11, 3, 9, 0, 17),
+        duration_ms=12000,
+    )
+    _event(
+        task,
+        3,
+        "ReplyEndEvent",
+        "结束",
+        started_at=datetime(2026, 11, 3, 9, 0, 29),
+        ended_at=datetime(2026, 11, 3, 9, 0, 30),
+    )
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    round_row = flow["rounds"][0]
+
+    assert round_row["model_ms"] == 12000
+    assert round_row["running"] is False
+
+
+def test_flow_marks_running_round_without_digits():
+    """只有开始没有结束的轮次标 running，步骤与用例同步标记。"""
+    from datetime import datetime
+
+    owner = get_user_model().objects.create_user(username="flow-owner-running", password="pass")
+    task = _task(owner)
+    task.status = "running"
+    task.save(update_fields=["status"])
+    _event(
+        task,
+        1,
+        "ReplyStartEvent",
+        "开始",
+        started_at=datetime(2026, 11, 3, 9, 0, 0),
+    )
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+
+    assert flow["rounds"][0]["running"] is True
+    assert flow["cases"][0]["running"] is True
+
+
+def test_flow_without_timestamps_does_not_fake_durations():
+    """存量事件没有时间戳时，四层耗时给 0 且不判运行中。"""
+    owner = get_user_model().objects.create_user(username="flow-owner-legacy", password="pass")
+    task = _task(owner)
+    _event(task, 1, "ReplyStartEvent", "开始")
+    _event(task, 2, "ModelCallEndEvent", "推理")
+    _event(task, 3, "ReplyEndEvent", "结束")
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    case = flow["cases"][0]
+
+    assert flow["rounds"][0]["model_ms"] == 0
+    assert flow["rounds"][0]["running"] is False
+    assert case["duration_ms"] == 0
+    assert case["steps"][0]["duration_ms"] == 0

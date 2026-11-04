@@ -6,7 +6,7 @@
  * 过程块默认收起，收起时头部保留角色、判决与结论摘要；步骤行与尝试分块由 CaseStepList 提供。
  */
 import { computed, ref } from "vue"
-import { formatClock } from "../helpers/report-steps"
+import { formatClock, formatDurationMs } from "../helpers/report-steps"
 import TaskMediaThumb from "./TaskMediaThumb.vue"
 
 const props = defineProps({
@@ -43,6 +43,13 @@ const summary = computed(() => String(props.round?.verdict?.message || "").trim(
 
 const procTitle = computed(() => (isVerifier.value ? "验收过程" : "执行过程"))
 
+/** 块头时长：未结束显示「进行中」；有模型耗时时带「模型」前缀；缺失不渲染 */
+const durationText = computed(() => {
+  if (props.round?.running) return "进行中"
+  const text = formatDurationMs(props.round?.model_ms)
+  return text ? `模型 ${text}` : ""
+})
+
 const bodyId = computed(() => `flow-proc-${props.round?.round_id}`)
 
 function phaseClass(phase) {
@@ -68,6 +75,7 @@ function phaseClass(phase) {
       >
       <span class="flow-proc__title">{{ procTitle }}</span>
       <span v-if="round.model" class="flow-proc__meta">{{ round.model }}</span>
+      <span v-if="durationText" class="flow-proc__duration">{{ durationText }}</span>
       <span v-if="verdictMark" class="flow-proc__verdict">{{ verdictMark }}</span>
       <span v-if="!open && summary" class="flow-proc__summary">{{ summary }}</span>
     </button>

@@ -104,6 +104,17 @@
   min-width: 0;
 }
 
+/* 用例耗时：结果徽标之前的青色时间片，一眼能看到这条用例花了多久 */
+.flow-case__duration {
+  flex: 0 0 auto;
+  padding: 0 var(--app-space-xs);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--color-cyan-74);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+}
+
 .flow-case__body {
   padding: 0 var(--app-space-md) var(--app-space-md);
   border-top: 2.5px dashed var(--ink);

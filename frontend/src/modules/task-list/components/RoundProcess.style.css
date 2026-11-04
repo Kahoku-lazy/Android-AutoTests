@@ -82,6 +82,16 @@
   font-weight: 400;
 }
 
+/* 块头时长：模型调用耗时（或「进行中」），用青色时间片与灰底模型名区分 */
+.flow-proc__duration {
+  padding: 0 var(--app-space-xs);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--color-cyan-74);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+}
+
 .flow-proc__verdict {
   font-size: var(--app-size-sm);
 }

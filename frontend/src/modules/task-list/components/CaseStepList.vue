@@ -6,7 +6,7 @@
  * 块头是次数标签（可折叠，默认展开），块内依次渲染执行过程与验收过程。
  */
 import { computed, ref } from "vue"
-import { attemptVerdict } from "../helpers/report-steps"
+import { attemptVerdict, formatDurationMs } from "../helpers/report-steps"
 import RoundProcess from "./RoundProcess.vue"
 
 const props = defineProps({
@@ -48,6 +48,12 @@ function bodyId(step) {
 
 function badgeClass(outcome) {
   return BADGE_CLASS[outcome] || "is-pending"
+}
+
+/** 步骤行的耗时文案：未结束显示「进行中」，缺失或 0 毫秒不渲染 */
+function durationText(step) {
+  if (step.running) return "进行中"
+  return formatDurationMs(step.durationMs)
 }
 
 /** 次数标签配色：该次验收驳回标红，重试标绿，首次为默认色 */
@@ -103,6 +109,7 @@ function toggle(step) {
         <span class="flow-step__text"
           ><strong>{{ step.seq }}.</strong> {{ step.action }}</span
         >
+        <span v-if="durationText(step)" class="flow-step__duration">{{ durationText(step) }}</span>
         <span class="flow-step__badge" :class="badgeClass(step.outcome)">{{ step.outcome }}</span>
       </button>
 

@@ -18,11 +18,13 @@ from backend.apps.task_list.models import Task, TaskAttachment, TaskEvent
 from backend.models.constants import TaskKind
 from engines.agents.workflow.case_file import validate_platform_yaml
 
-# 分组只需要这 6 列；阶段、展示与明细字段只补给每组的第一行。
+# 分组只需要这 6 列；阶段、展示、明细与起止时间只补给每组的第一行。
 _SLIM_COLUMNS = ("seq", "event_type", "is_delta", "step_seq", "attempt", "delta_count")
 _DISPLAY_COLUMNS = ("role_name", "role_kind", "model", "media_id", "phase")
 _DETAIL_COLUMNS = (
     "duration_ms",
+    "started_at",
+    "ended_at",
     "input_tokens",
     "cache_input_tokens",
     "output_tokens",
@@ -32,7 +34,7 @@ _DETAIL_COLUMNS = (
 
 @dataclass(slots=True)
 class _EventRow:
-    """聚合用的事件行：先只有分组字段，代表行再补展示与明细字段。"""
+    """聚合用的事件行：先只有分组字段，代表行再补展示、明细与起止时间字段。"""
 
     seq: int
     event_type: str
@@ -48,6 +50,8 @@ class _EventRow:
     moment: object = None
     payload: dict | None = None
     duration_ms: int = 0
+    started_at: object = None
+    ended_at: object = None
     input_tokens: int = 0
     cache_input_tokens: int = 0
     output_tokens: int = 0
@@ -112,6 +116,8 @@ def _load_events(task_id: int) -> list[_EventRow]:
         event.moment = detail["moment"]
         event.payload = detail["report_payload"]
         event.duration_ms = detail["duration_ms"]
+        event.started_at = detail["started_at"]
+        event.ended_at = detail["ended_at"]
         event.input_tokens = detail["input_tokens"]
         event.cache_input_tokens = detail["cache_input_tokens"]
         event.output_tokens = detail["output_tokens"]
@@ -608,9 +614,73 @@ def _duty(kind: str, step_seq, attempt, steps) -> str:
     return " · ".join(part for part in (head, action) if part)
 
 
-def _rounds(grouped: list[tuple[dict, str]]) -> list[dict]:
-    """按时间把事件放进图片上的阶段；阶段切换才新开一块。"""
+def _event_end(started, ended, duration_ms: int):
+    """
+    代表事件的结束时刻。
+
+    折叠增量的代表行只带首条增量的 ended_at，用 ``started_at + duration_ms``
+    兜住流式尾巴（duration_ms 由 event_store 在折叠时算出）。
+
+    Args:
+        started: 开始时刻，可能为空。
+        ended: 结束时刻，可能为空。
+        duration_ms: 该事件（或该段增量）的持续毫秒数。
+
+    Returns:
+        结束时刻；无法确定时返回 None。
+    """
+    if ended is not None:
+        return ended
+    if started is not None and duration_ms:
+        return started + timedelta(milliseconds=int(duration_ms))
+    return None
+
+
+def _span_ms(start, end) -> int:
+    """两个时刻之间的毫秒数；任一为空或为负时返回 0。"""
+    if start is None or end is None:
+        return 0
+    return max(int((end - start).total_seconds() * 1000), 0)
+
+
+def _fold_round_time(span: dict, item: dict, times: dict[int, "_EventRow"]) -> None:
+    """
+    把一条代表事件的时间累加进它所在轮次的跨度。
+
+    Args:
+        span: 该轮的跨度字典（`start` / `end` / `model_ms` / `has_end`）。
+        item: `_grouped()` 产出的条目，取 `seq` 与 `event_type`。
+        times: 代表行序号到事件行的映射，用于取起止时间与时长。
+    """
+    event = times.get(item.get("seq"))
+    if event is None:
+        return
+    if event.started_at is not None:
+        if span["start"] is None or event.started_at < span["start"]:
+            span["start"] = event.started_at
+    if event.ended_at is not None:
+        span["has_end"] = True
+    end = _event_end(event.started_at, event.ended_at, event.duration_ms)
+    if end is not None and (span["end"] is None or end > span["end"]):
+        span["end"] = end
+    if item.get("event_type") == "ModelCallEndEvent":
+        span["model_ms"] += int(event.duration_ms or 0)
+
+
+def _rounds(
+    grouped: list[tuple[dict, str]], times: dict[int, "_EventRow"]
+) -> tuple[list[dict], dict[int, dict]]:
+    """按时间把事件放进图片上的阶段；阶段切换才新开一块。
+
+    Args:
+        grouped: `_grouped()` 的产出（条目与阶段）。
+        times: 代表行序号到事件行的映射，供跨度累加使用。
+
+    Returns:
+        (轮次列表, 轮次编号 → 起止与模型耗时)。
+    """
     rounds: list[dict] = []
+    spans: dict[int, dict] = {}
     current: dict | None = None
     for item, phase in grouped:
         if current is None or item["event_type"] in ("ReplyStartEvent", "SOP_STEP_STARTED"):
@@ -626,6 +696,13 @@ def _rounds(grouped: list[tuple[dict, str]]) -> list[dict]:
                 "blocks": [],
             }
             rounds.append(current)
+            spans[current["round_id"]] = {
+                "start": None,
+                "end": None,
+                "model_ms": 0,
+                "has_end": False,
+            }
+        _fold_round_time(spans[current["round_id"]], item, times)
         kind = _role_kind(item)
         if kind and not current["_kind"]:
             current["_kind"] = kind
@@ -643,7 +720,7 @@ def _rounds(grouped: list[tuple[dict, str]]) -> list[dict]:
         if not blocks or blocks[-1]["phase"] != phase:
             blocks.append({"phase": phase, "title": title, "items": []})
         blocks[-1]["items"].append(item)
-    return rounds
+    return rounds, spans
 
 
 def _split_round_groups(rounds: list[dict]) -> list[list[dict]]:
@@ -733,21 +810,74 @@ def _lift_note(entry: dict, key: str):
     return found
 
 
-def _annotate(group: list[dict], steps) -> list[dict]:
+def _group_span(group: list[dict], spans: dict[int, dict]) -> tuple[object, object, bool]:
+    """
+    一组轮次的墙钟跨度与运行标记。
+
+    Args:
+        group: 同一用例（或同一步骤）下的轮次字典。
+        spans: 轮次编号 → 起止与模型耗时。
+
+    Returns:
+        (最早开始, 最晚结束, 是否有轮次尚未结束)；没有时间戳时为 (None, None, False)。
+    """
+    start = None
+    end = None
+    running = False
+    for row in group:
+        span = spans.get(row.get("round_id"))
+        if span is None:
+            continue
+        if span["start"] is not None and (start is None or span["start"] < start):
+            start = span["start"]
+        if span["end"] is not None and (end is None or span["end"] > end):
+            end = span["end"]
+        if span["start"] is not None and not span["has_end"]:
+            running = True
+    return start, end, running
+
+
+def _step_span(group: list[dict], seq: int, spans: dict[int, dict]) -> dict:
+    """
+    某一步骤在该用例内的耗时与运行标记。
+
+    Args:
+        group: 该用例的全部轮次。
+        seq: 步骤序号。
+        spans: 轮次编号 → 起止与模型耗时。
+
+    Returns:
+        含 `duration_ms` 与 `running` 的字段字典；该步没有轮次时为 0 / False。
+    """
+    rows = [row for row in group if int(row.get("step_seq") or 0) == int(seq)]
+    start, end, running = _group_span(rows, spans)
+    return {"duration_ms": _span_ms(start, end), "running": running}
+
+
+def _annotate(group: list[dict], steps, spans: dict[int, dict]) -> list[dict]:
     for entry in group:
         kind = entry.pop("_kind", "")
         attempt = entry.pop("_attempt", None)
+        span = spans.get(entry.get("round_id")) or {}
         entry["role_kind"] = kind
         entry["attempt"] = attempt
         entry["subject"] = _subject(kind, entry.get("step_seq"), steps)
         entry["verdict"] = _lift_note(entry, "verdict")
         entry["handover"] = _lift_note(entry, "handover") or ""
         entry["duty"] = _duty(kind, entry.get("step_seq"), attempt, steps)
+        # 轮级给纯模型时长；该轮没有模型调用事件时回退为轮次墙钟
+        entry["model_ms"] = int(span.get("model_ms") or 0) or _span_ms(
+            span.get("start"), span.get("end")
+        )
+        # 存量事件没有任何时间戳时不判运行中，避免老任务一直显示「进行中」
+        entry["running"] = (not span.get("has_end")) and span.get("start") is not None
     return group
 
 
-def _flow_cases(task: Task, events: list[_EventRow], rounds: list[dict]) -> list[dict]:
-    """把轮次按用例切开，并给出每条用例、每一步的结果。"""
+def _flow_cases(
+    task: Task, events: list[_EventRow], rounds: list[dict], spans: dict[int, dict]
+) -> list[dict]:
+    """把轮次按用例切开，并给出每条用例、每一步的结果与耗时。"""
     specs = _task_cases(task)
     groups = _split_round_groups(rounds)
     verdicts = _verdict_maps(events)
@@ -760,6 +890,7 @@ def _flow_cases(task: Task, events: list[_EventRow], rounds: list[dict]) -> list
         group = groups[index] if index < len(groups) else []
         verdict = verdicts[index] if index < len(verdicts) else {}
         step_defs = list(spec.steps) if spec else []
+        case_start, case_end, case_running = _group_span(group, spans)
         steps = []
         if step_defs:
             for seq, step in enumerate(step_defs, start=1):
@@ -769,6 +900,7 @@ def _flow_cases(task: Task, events: list[_EventRow], rounds: list[dict]) -> list
                         "action": step.action,
                         "expected": step.expected,
                         "outcome": _step_outcome(verdict.get(seq), seq, group),
+                        **_step_span(group, seq, spans),
                     }
                 )
         else:
@@ -780,16 +912,19 @@ def _flow_cases(task: Task, events: list[_EventRow], rounds: list[dict]) -> list
                         "action": "",
                         "expected": "",
                         "outcome": _step_outcome(verdict.get(seq), seq, group),
+                        **_step_span(group, seq, spans),
                     }
                 )
         title = spec.title if spec else (task.case_title or f"用例 {index + 1}")
-        annotated = _annotate(group, step_defs)
+        annotated = _annotate(group, step_defs, spans)
         packed.append(
             {
                 "title": title,
                 "outcome": _case_outcome(steps, bool(group)),
                 "steps": steps,
                 "round_ids": [entry["round_id"] for entry in annotated],
+                "duration_ms": _span_ms(case_start, case_end),
+                "running": case_running,
             }
         )
     return packed
@@ -874,7 +1009,8 @@ def build_task_flow(user_id: str | None, task_id: str) -> dict | None:
     if task.task_kind == TaskKind.CASE_AUTHORING:
         return _case_authoring_flow(task)
     events = _load_events(task.id)
-    rounds = _rounds(_grouped(events))
+    rounds, spans = _rounds(_grouped(events), {event.seq: event for event in events})
+    cases = _flow_cases(task, events, rounds, spans)
     return {
         "task": {
             "id": task.id,
@@ -891,5 +1027,5 @@ def build_task_flow(user_id: str | None, task_id: str) -> dict | None:
         },
         "conclusion": _conclusion(task, events),
         "rounds": rounds,
-        "cases": _flow_cases(task, events, rounds),
+        "cases": cases,
     }

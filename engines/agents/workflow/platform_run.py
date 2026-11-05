@@ -43,6 +43,7 @@ from engines.agents.event_sink import (
     MAX_MODEL_CALLS,
     MAX_RUN_SECONDS,
     budget_exceeded,
+    set_case_quota,
     set_case_title,
     set_step_context,
 )
@@ -199,6 +200,8 @@ async def _drive_real(
         _inflight[task_id] = (asyncio.get_running_loop(), current)
     completed: list[str] = []
     failed: list[str] = []
+    # 配额按本条任务的用例数放大：全功能回归一次带多条用例，不该比单条任务更早被打断
+    set_case_quota(len(cases))
     try:
         for case in cases:
             if cancel_event is not None and cancel_event.is_set():

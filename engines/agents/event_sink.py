@@ -87,8 +87,11 @@ def _env_int(name: str, default: int) -> int:
 
 
 # 运行预算：超过任一项即停止整轮任务。0 表示不限制。
+# 次数默认按「每条用例的结果」给配额，整任务上限 = 单用例配额 × 本任务用例数；
+# SOP_MAX_MODEL_CALLS 只在单用例配额被置 0 时兜底成绝对上限。
 MAX_MODEL_CALLS = _env_int("SOP_MAX_MODEL_CALLS", 600)
-MAX_RUN_SECONDS = _env_int("SOP_MAX_RUN_SECONDS", 7200)
+MAX_MODEL_CALLS_PER_CASE = _env_int("SOP_MAX_MODEL_CALLS_PER_CASE", 300)
+MAX_RUN_SECONDS = _env_int("SOP_MAX_RUN_SECONDS", 14400)
 
 
 def bind_sink(sink: EventSink) -> Token[EventSink]:
@@ -189,6 +192,9 @@ class RunContext:
     budget_exceeded: bool = False
     """已超预算。调用方据此终止整轮任务。"""
 
+    model_call_limit: int = 0
+    """本任务允许的模型调用次数；0 表示回落到 MAX_MODEL_CALLS。"""
+
 
 _run: ContextVar[RunContext | None] = ContextVar("agent_run_context", default=None)
 
@@ -260,6 +266,20 @@ def set_step_context(step_seq: int | None, attempt: int | None) -> None:
     ctx.attempt = attempt
 
 
+def set_case_quota(case_count: int) -> None:
+    """按本任务的用例条数设定模型调用配额。
+
+    一次任务可以带多条用例（全功能回归），按条数放大配额，避免「用例越多越早被打断」。
+
+    Args:
+        case_count: 本任务要跑的用例条数；<= 0 时不改配额。
+    """
+    ctx = _run.get()
+    if ctx is None or case_count <= 0 or MAX_MODEL_CALLS_PER_CASE <= 0:
+        return
+    ctx.model_call_limit = MAX_MODEL_CALLS_PER_CASE * int(case_count)
+
+
 def count_model_call() -> None:
     """给本次任务记一次模型调用。超过次数或时长上限时置位预算标志。
 
@@ -270,7 +290,8 @@ def count_model_call() -> None:
         return
     ctx.model_calls += 1
     elapsed = time.monotonic() - ctx.started if ctx.started > 0 else 0.0
-    over_calls = MAX_MODEL_CALLS > 0 and ctx.model_calls > MAX_MODEL_CALLS
+    limit = ctx.model_call_limit or MAX_MODEL_CALLS
+    over_calls = limit > 0 and ctx.model_calls > limit
     over_time = MAX_RUN_SECONDS > 0 and elapsed > MAX_RUN_SECONDS
     if over_calls or over_time:
         ctx.budget_exceeded = True

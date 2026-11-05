@@ -105,16 +105,16 @@ def run_task_async(task_id: int, agent_id: int) -> None:
 
 
 def _run_case_authoring(task: Task, cancel_event=None) -> dict:
-    """跑一次模块化家电测试用例编写，返回可写入 Task.result 的结果字典。
+    """跑一次状态机三段式用例编写，返回可写入 Task.result 的结果字典。
 
     Args:
         task: 用例编写任务。
         cancel_event: 任务的取消信号；已置位时不再开跑。
 
     Returns:
-        status / summary / phase / passed / document / verdicts / modules / reason。
+        status / summary / phase / passed / artifact / facts / verdicts / document / reason。
     """
-    from engines.agents.workflow.case_authoring_workflow import run_case_authoring_modules
+    from engines.agents.workflow.case_goal_workflow import run_case_authoring_artifact
 
     if cancel_event is not None and cancel_event.is_set():
         return _case_failed("用户关闭", status="cancelled")
@@ -125,7 +125,7 @@ def _run_case_authoring(task: Task, cancel_event=None) -> dict:
     try:
         result = asyncio.run(
             _await_case_run(
-                run_case_authoring_modules(
+                run_case_authoring_artifact(
                     requirement,
                     project_code=api.case_project_code(task),
                     version="V1",
@@ -141,47 +141,31 @@ def _run_case_authoring(task: Task, cancel_event=None) -> dict:
         {"passed": passed, "message": message, "verifier": verifier}
         for passed, message, verifier in result.verdicts
     ]
-    modules = [
-        {
-            "key": module.key,
-            "name": module.name,
-            "start_line": module.start_line,
-            "end_line": module.end_line,
-            "passed": module.passed,
-            "truncated": module.truncated,
-            "document_length": module.document_length,
-            "message": module.message,
-        }
-        for module in result.modules
-    ]
     passed = bool(result.passed)
-    reason = ""
-    if not passed and verdicts:
-        reason = str(verdicts[-1].get("message") or "")
-    if result.truncated and not reason:
-        reason = "输出超过单次上限且无法继续拆分（OUTPUT_TRUNCATED）"
+    reason = "" if passed else (result.reason or "未通过验收")
     case_import = (
-        _import_case_document(task, result.document)
-        if passed and result.document
-        else _skipped_import("验收未通过或文档为空，未写入用例库")
+        _import_case_artifact(task, result)
+        if passed
+        else _skipped_import("验收未通过或产物为空，未写入用例库")
     )
-    module_count = len(modules) or 1
+    counts = result.artifact.counts
     return {
         "status": "success" if passed else "fail",
         "summary": (
-            f"测试用例已生成并通过验收（{module_count} 个模块）"
+            f"用例已生成并通过验收（状态 {counts['states']} 个 / 迁移 {counts['transitions']} 条"
+            f" / 场景 {counts['scenarios']} 条 / 用例 {counts['cases']} 条）"
             if passed
-            else f"测试用例验收未通过（{module_count} 个模块）"
+            else f"用例验收未通过（用例 {counts['cases']} 条）"
         ),
         "phase": result.phase,
         "passed": passed,
-        "truncated": result.truncated,
-        "max_output_tokens": result.max_output_tokens,
+        "artifact": result.artifact.payload(),
+        "facts": result.facts.payload(),
         "document": result.document,
         "verdicts": verdicts,
-        "modules": modules,
         "case_import": case_import,
         "reason": reason,
+        "max_output_tokens": result.max_output_tokens,
     }
 
 
@@ -199,30 +183,45 @@ def _skipped_import(message: str) -> dict:
     }
 
 
-def _import_case_document(task: Task, document: str) -> dict:
-    """把验收通过的 Markdown 文档解析并写入用例库；失败只降级为结果字段。"""
+def _import_case_artifact(task: Task, result) -> dict:
+    """把验收通过的三段式产物写入用例库；失败只降级为结果字段。
+
+    Args:
+        task: 用例编写任务。
+        result: 目标流水线结果，含 `artifact`。
+
+    Returns:
+        导入结论；失败时 status 为 failed 并带原因。
+    """
     from backend.apps.case_manager.api import import_case_rows
-    from engines.agents.workflow.case_document_check import case_step_pairs, parse_case_document
 
     owner = str(task.created_by or getattr(task.agent, "owner_id", "") or "")
     if not owner:
         return _skipped_import("任务缺少发起人，未写入用例库")
+    artifact = result.artifact
+    state_names = {state.id: state.name for state in artifact.states}
+    scenario_titles = {scenario.id: scenario.title for scenario in artifact.scenarios}
+    fallback_module = artifact.states[0].name if artifact.states else ""
+    rows = [
+        {
+            "source_case_id": case.id,
+            "title": case.title,
+            "priority": case.priority,
+            "module": scenario_titles.get(case.scenario_id) or fallback_module,
+            "precondition": state_names.get(case.pre_state, case.pre_state),
+            "steps": [
+                {
+                    "action": step.action,
+                    "assertion": state_names.get(step.expect_state, step.expect_state),
+                }
+                for step in case.steps
+            ],
+        }
+        for case in artifact.cases
+    ]
+    if not rows:
+        return _skipped_import("产物里没有用例，未写入用例库")
     try:
-        parsed = parse_case_document(document)
-        rows = [
-            {
-                "source_case_id": case.case_id,
-                "title": case.fields.get("测试标题", ""),
-                "priority": case.priority,
-                "module": case.module,
-                "precondition": case.fields.get("前置条件", ""),
-                "steps": [
-                    {"action": action, "assertion": assertion}
-                    for action, assertion in case_step_pairs(case)
-                ],
-            }
-            for case in parsed.cases
-        ]
         return import_case_rows(
             user_id=owner,
             task_id=task.id,
@@ -230,7 +229,7 @@ def _import_case_document(task: Task, document: str) -> dict:
             rows=rows,
         )
     except Exception as exc:  # noqa: BLE001 - 导入失败不能改变任务验收结论
-        backend_log.exception("import case authoring result failed task=%s", task.id)
+        backend_log.exception("import case authoring artifact failed task=%s", task.id)
         return {
             **_skipped_import(f"写入用例库失败：{exc}"),
             "status": "failed",
@@ -244,13 +243,21 @@ def _case_failed(reason: str, *, status: str = "fail") -> dict:
         "summary": reason,
         "phase": status,
         "passed": False,
-        "truncated": False,
-        "max_output_tokens": 0,
+        "artifact": {
+            "states": [],
+            "transitions": [],
+            "scenarios": [],
+            "cases": [],
+            "diagram": "",
+            "report": "",
+            "counts": {},
+        },
+        "facts": {"blocking": [], "warnings": []},
         "document": "",
         "verdicts": [],
-        "modules": [],
         "case_import": _skipped_import(reason),
         "reason": reason,
+        "max_output_tokens": 0,
     }
 
 

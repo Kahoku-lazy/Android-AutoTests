@@ -1020,6 +1020,14 @@ def _case_authoring_flow(task: Task) -> dict:
     if not isinstance(case_import, dict):
         case_import = None
     verdicts = payload.get("verdicts") if isinstance(payload.get("verdicts"), list) else []
+    artifact = payload.get("artifact") if isinstance(payload.get("artifact"), dict) else {}
+    counts = artifact.get("counts")
+    if not isinstance(counts, dict):
+        counts = {
+            key: len(artifact.get(key) or [])
+            for key in ("states", "transitions", "scenarios", "cases")
+        }
+    facts = payload.get("facts") if isinstance(payload.get("facts"), dict) else {}
     documents = [
         {"filename": row.filename}
         for row in list_task_attachments(task)
@@ -1044,6 +1052,14 @@ def _case_authoring_flow(task: Task) -> dict:
         "rounds": [],
         "cases": [],
         "case_import": case_import,
+        "artifact": {
+            "counts": counts,
+            "diagram": str(artifact.get("diagram") or ""),
+        },
+        "facts": {
+            "blocking": len(facts.get("blocking") or []),
+            "warnings": len(facts.get("warnings") or []),
+        },
         "documents": documents,
         "events": _case_events(events),
     }

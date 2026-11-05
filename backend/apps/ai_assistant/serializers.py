@@ -17,7 +17,8 @@ class AgentInputSerializer(serializers.Serializer):
     """Agent 基本信息入参 — 模型/线路改由后台维护，不再经配置页提交。"""
 
     name = serializers.CharField(required=False, allow_blank=True, max_length=200)
-    avatar = serializers.CharField(required=False, allow_blank=True)
+    # 头像是固定内置图标；限制长度，避免再把 MB 级 base64 写进库
+    avatar = serializers.CharField(required=False, allow_blank=True, max_length=4096)
     tags = serializers.CharField(required=False, allow_blank=True)
     description = serializers.CharField(required=False, allow_blank=True)
 
@@ -36,7 +37,6 @@ class AgentInputSerializer(serializers.Serializer):
 class AgentListSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
-    avatar = serializers.CharField()
     tags = serializers.CharField()
     description = serializers.CharField()
     model_provider = serializers.CharField()
@@ -47,15 +47,12 @@ class AgentListSerializer(serializers.Serializer):
     created_at = serializers.CharField()
 
     def get_route_configs(self, obj):
-        """看板展示用：线路 name/avatar + 各角色 model_name/provider，不含 api_key。"""
+        """看板展示用：线路 name + 各角色 model_name/provider，不含头像与 api_key。"""
         result = {}
         for route, route_data in (obj.route_configs or {}).items():
             if not isinstance(route_data, dict):
                 continue
-            entry = {
-                "name": route_data.get("name") or "",
-                "avatar": route_data.get("avatar") or "",
-            }
+            entry = {"name": route_data.get("name") or ""}
             for role in ("planner", "executor", "verifier"):
                 cfg = route_data.get(role)
                 if isinstance(cfg, dict):
@@ -70,7 +67,6 @@ class AgentListSerializer(serializers.Serializer):
 class AgentDetailSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
-    avatar = serializers.CharField()
     tags = serializers.CharField()
     description = serializers.CharField()
     model_provider = serializers.CharField()

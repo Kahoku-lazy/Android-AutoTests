@@ -2508,8 +2508,6 @@ components:
           type: integer
         name:
           type: string
-        avatar:
-          type: string
         tags:
           type: string
         description:
@@ -2544,7 +2542,6 @@ components:
           type: string
       required:
       - api_key
-      - avatar
       - base_url
       - created_at
       - description

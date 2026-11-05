@@ -153,4 +153,38 @@ describe('[P0] useTaskList', () => {
 
     wrapper.unmount()
   })
+
+  it('轮询：上一轮未返回时跳过本轮，间隔 10 秒', async () => {
+    vi.useFakeTimers()
+    type ListResult = Awaited<ReturnType<typeof taskApi.listTasks>>
+    let release: ((value: ListResult) => void) | null = null
+    const running = { ...makeTask(1), status: 'running' }
+    const pending = new Promise<ListResult>((resolve) => {
+      release = resolve
+    })
+    vi.mocked(taskApi.listTasks)
+      .mockResolvedValueOnce({ status: true, data: { tasks: [running] } })
+      .mockImplementationOnce(() => pending)
+
+    const { result, wrapper } = await mountComposable(() => useTaskList())
+    await flushPromises()
+    expect(result.tasks.value[0].status).toBe('running')
+
+    vi.advanceTimersByTime(10000)
+    await flushPromises()
+    expect(taskApi.listTasks).toHaveBeenCalledTimes(2)
+
+    vi.advanceTimersByTime(30000)
+    await flushPromises()
+    expect(taskApi.listTasks).toHaveBeenCalledTimes(2)
+
+    release?.({ status: true, data: { tasks: [running] } } as ListResult)
+    await flushPromises()
+    vi.advanceTimersByTime(10000)
+    await flushPromises()
+    expect(taskApi.listTasks).toHaveBeenCalledTimes(3)
+
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
 })

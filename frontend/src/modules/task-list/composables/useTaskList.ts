@@ -12,8 +12,8 @@ import {
 } from "../constants"
 import type { TaskRecord } from "@/shared/types/ai"
 
-/** 运行态轮询间隔：任务执行中每 5s 刷新，全部终态后自动停止 */
-const POLL_INTERVAL_MS = 5000
+/** 运行态轮询间隔：任务执行中每 10s 刷新，全部终态后自动停止 */
+const POLL_INTERVAL_MS = 10000
 
 const TERMINAL_STATUSES = new Set(["completed", "success", "failed", "cancelled", "paused"])
 
@@ -24,6 +24,8 @@ export function useTaskList() {
   const rerunningId = ref<number | null>(null)
   const cancellingId = ref<number | null>(null)
   let pollTimer: ReturnType<typeof setInterval> | null = null
+  // 在途请求计数：轮询在上一轮未返回时直接跳过，避免慢请求叠加
+  let inFlight = 0
 
   const { activeFilter, filterTabs, filteredItems } = useFilterTabs(
     tasks,
@@ -65,6 +67,8 @@ export function useTaskList() {
   }
 
   async function load(silent = false) {
+    if (silent && inFlight > 0) return
+    inFlight += 1
     if (!silent) loading.value = true
     error.value = ""
     try {
@@ -77,8 +81,10 @@ export function useTaskList() {
       }
     } catch {
       error.value = "加载任务列表失败，请检查网络连接"
+    } finally {
+      inFlight -= 1
+      loading.value = false
     }
-    loading.value = false
   }
 
   async function remove(task: TaskRecord) {

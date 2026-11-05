@@ -5,6 +5,7 @@ import json
 import re
 
 from django.db import transaction
+from django.db.models.fields.json import KeyTextTransform
 from django.utils import timezone
 
 from backend.apps.ai_assistant.api import filter_agents_for_user, resolve_assistant_name
@@ -459,9 +460,61 @@ def _attachment_names(task: Task) -> list[str]:
     return [legacy] if legacy else []
 
 
-def serialize_agent_task_row(task: Task) -> dict:
-    """任务发布列表行。正文不下发。"""
+# 任务列表只取这些列；不要 select_related("agent")——agent 行可能带 MB 级头像与线路配置。
+TASK_LIST_FIELDS = (
+    "id",
+    "agent_id",
+    "title",
+    "task_kind",
+    "goal",
+    "status",
+    "result",
+    "device_serial",
+    "device_label",
+    "case_title",
+    "attachment_filename",
+    "created_at",
+    "started_at",
+    "finished_at",
+    "cost_total",
+)
+
+
+def assistant_names_by_agent(agent_ids) -> dict[int, str]:
+    """按 agent id 批量取线路显示名：只在 SQL 侧抽 route name，不读整个 route_configs。
+
+    Args:
+        agent_ids: 需要取名的智能体 id 集合（可含 0/None，自动忽略）。
+
+    Returns:
+        {agent_id: 线路名或智能体名}。
+    """
+    ids = {int(agent_id) for agent_id in agent_ids if agent_id}
+    if not ids:
+        return {}
+    rows = (
+        AIAgent.objects.filter(id__in=ids)
+        .annotate(
+            route_name=KeyTextTransform(
+                "name",
+                KeyTextTransform("device_control", "route_configs"),
+            ),
+        )
+        .values_list("id", "name", "route_name")
+    )
+    return {int(agent_id): str(route_name or name or "") for agent_id, name, route_name in rows}
+
+
+def serialize_agent_task_row(task: Task, *, assistant_name: str | None = None) -> dict:
+    """任务发布列表行。正文不下发。
+
+    Args:
+        task: 任务对象；附件需已 prefetch。
+        assistant_name: 批量取好的线路名；None 时回退到单条解析。
+    """
     names = _attachment_names(task)
+    if assistant_name is None:
+        assistant_name = resolve_assistant_name(getattr(task, "agent", None))
     return {
         "id": task.id,
         "title": task.title,
@@ -474,7 +527,7 @@ def serialize_agent_task_row(task: Task) -> dict:
         "case_title": task.case_title or "",
         "attachment_filename": names[0] if names else "",
         "attachment_names": names,
-        "assistant_name": resolve_assistant_name(getattr(task, "agent", None)),
+        "assistant_name": assistant_name,
         "created_at": str(task.created_at) if task.created_at else "",
         "started_at": str(task.started_at) if task.started_at else "",
         "finished_at": str(task.finished_at) if task.finished_at else "",

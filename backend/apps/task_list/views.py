@@ -142,8 +142,24 @@ class AgentTaskListAPIView(APIView):
     def get(self, request):
         user_id = getattr(request, "user_id", None)
         agents = agent_api.filter_agents_for_user(AIAgent.objects.all(), user_id)
-        tasks = Task.objects.filter(agent__in=agents).select_related("agent").order_by("-id")[:100]
-        return Response({"tasks": [api.serialize_agent_task_row(t) for t in tasks]})
+        tasks = list(
+            Task.objects.filter(agent__in=agents)
+            .only(*api.TASK_LIST_FIELDS)
+            .prefetch_related("file_attachments")
+            .order_by("-id")[:100]
+        )
+        assistant_names = api.assistant_names_by_agent(task.agent_id for task in tasks)
+        return Response(
+            {
+                "tasks": [
+                    api.serialize_agent_task_row(
+                        task,
+                        assistant_name=assistant_names.get(task.agent_id),
+                    )
+                    for task in tasks
+                ],
+            },
+        )
 
 
 class AgentTaskDeleteAPIView(APIView):

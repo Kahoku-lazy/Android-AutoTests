@@ -41,12 +41,6 @@ from agentscope.skill import LocalSkillLoader, Skill, SkillLoaderBase
 from agentscope.tool import ToolGroup, Toolkit
 
 from .tools import build_toolkit
-from .tools.tool_case_module_store import (
-    ModuleStore,
-    build_verifier_store_tools,
-    build_writer_store_tools,
-)
-from .tools.tool_case_plan import build_case_plan_tools
 from .tools.tool_device import device_tool_specs
 from .tools.tool_img_b64 import img_b64_tool_specs
 from .tools.tool_serial import serial_tool_specs
@@ -233,7 +227,9 @@ def build_verifier_toolkit() -> Toolkit:
 
 
 def build_case_authoring_toolkit() -> Toolkit:
-    """组装规划/验收角色共用的空工具包：不操作设备，也不读写文件。
+    """组装用例编写/验收角色共用的空工具包：不操作设备，也不读写文件。
+
+    产物工具由流水线在运行时按任务注入（见 `build_case_artifact_tools`）。
 
     Returns:
         只含 basic 组、不含任何工具的新 Toolkit。
@@ -241,34 +237,25 @@ def build_case_authoring_toolkit() -> Toolkit:
     return build_toolkit([])
 
 
-def build_case_writer_toolkit() -> Toolkit:
-    """组装写用例角色的工具包：只带计划模式四件套，不操作设备。
-
-    Returns:
-        basic 组内含 ``TaskCreate`` / ``TaskGet`` / ``TaskList`` / ``TaskUpdate``。
-    """
-    return Toolkit(tools=build_case_plan_tools())
-
-
-def build_case_module_store_tools(
-    store: ModuleStore,
-    module_key: str,
-    *,
-    read_only: bool = False,
-):
-    """组装 GoalPipeline 模块存储工具：编写角色可写，验收角色只读。
+def build_case_artifact_tools(store, *, read_only: bool = False, requirement_text: str = ""):
+    """组装三段式产物的增量工具：编写角色可写，验收角色只读。
 
     Args:
-        store: 本次任务共享的模块存储。
-        module_key: 当前模块 KEY，工具闭包固定该值。
+        store: 本次任务共享的产物存储。
         read_only: 为真时只返回读取工具。
+        requirement_text: 需求正文；验收角色用它开启事实预检。
 
     Returns:
         可直接挂到角色 Toolkit 的 FunctionTool 列表。
     """
-    if read_only:
-        return build_verifier_store_tools(store, module_key)
-    return build_writer_store_tools(store, module_key)
+    # 延迟导入：产物工具依赖 workflow 包，模块级导入会与 workflow.__init__ 形成环
+    from .tools.tool_case_artifact import build_artifact_store_tools
+
+    return build_artifact_store_tools(
+        store,
+        read_only=read_only,
+        requirement_text=requirement_text,
+    )
 
 
 # ── 技能注册（工具包 + 技能来源） ──

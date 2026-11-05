@@ -243,12 +243,12 @@ def build_ui_verifier() -> Agent:
 
 
 def build_case_writer() -> Agent:
-    """用例编写执行角色：CASE_WRITER_ROLE_CONFIG + 计划模式工具。"""
-    from engines.agents.tools_config import build_case_writer_toolkit
+    """用例编写执行角色：CASE_WRITER_ROLE_CONFIG + 空工具包（产物工具运行时注入）。"""
+    from engines.agents.tools_config import build_case_authoring_toolkit
 
     return _agent_from_role_bundle(
         load_role_spec("CASE_WRITER_ROLE_CONFIG"),
-        toolkit=build_case_writer_toolkit(),
+        toolkit=build_case_authoring_toolkit(),
         middlewares=[],
     )
 
@@ -277,39 +277,6 @@ def executor_agent() -> Agent:
 def verifier_agent() -> Agent:
     """兼容旧名：等同 build_ui_verifier。"""
     return build_ui_verifier()
-
-
-def build_case_planner() -> Agent:
-    """用例模块规划角色：CASE_PLANNER_ROLE_CONFIG。"""
-    from engines.agents.tools_config import build_case_authoring_toolkit
-
-    return _agent_from_role_bundle(
-        load_role_spec("CASE_PLANNER_ROLE_CONFIG"),
-        toolkit=build_case_authoring_toolkit(),
-        middlewares=[],
-    )
-
-
-def build_case_writer_goal() -> Agent:
-    """用例编写 Goal 变体：CASE_WRITER_GOAL_ROLE_CONFIG。"""
-    from engines.agents.tools_config import build_case_writer_toolkit
-
-    return _agent_from_role_bundle(
-        load_role_spec("CASE_WRITER_GOAL_ROLE_CONFIG"),
-        toolkit=build_case_writer_toolkit(),
-        middlewares=[],
-    )
-
-
-def build_case_verifier_goal() -> Agent:
-    """用例验收 Goal 变体：CASE_VERIFIER_GOAL_ROLE_CONFIG。"""
-    from engines.agents.tools_config import build_case_authoring_toolkit
-
-    return _agent_from_role_bundle(
-        load_role_spec("CASE_VERIFIER_GOAL_ROLE_CONFIG"),
-        toolkit=build_case_authoring_toolkit(),
-        middlewares=[],
-    )
 
 
 def build_knowledge_chat(toolkit: Toolkit | None = None) -> Agent:

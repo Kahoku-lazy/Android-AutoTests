@@ -90,6 +90,14 @@ const isRunning = computed(
 const caseImport = computed(() => flow.value?.case_import || null)
 const caseVerdicts = computed(() => conclusion.value?.verdicts || [])
 const caseEvents = computed(() => flow.value?.events || [])
+const caseArtifact = computed(() => {
+  const counts = flow.value?.artifact?.counts
+  if (!counts) return null
+  const total =
+    (counts.states || 0) + (counts.transitions || 0) + (counts.scenarios || 0) + (counts.cases || 0)
+  return total > 0 ? counts : null
+})
+const caseFacts = computed(() => flow.value?.facts || null)
 const expandedEvents = ref(new Set())
 
 function eventExpanded(index) {
@@ -266,6 +274,17 @@ function outcomeClass(outcome) {
         </section>
 
         <template v-if="isCaseAuthoring">
+          <section v-if="caseArtifact" class="flow-case-notes" data-test="case-artifact">
+            <h2 class="flow-section-title">三段式产物</h2>
+            <p class="flow-verdict-summary">
+              状态 {{ caseArtifact.states || 0 }} 个 · 迁移 {{ caseArtifact.transitions || 0 }} 条 ·
+              场景 {{ caseArtifact.scenarios || 0 }} 条 · 用例 {{ caseArtifact.cases || 0 }} 条
+            </p>
+            <p v-if="caseFacts" class="flow-verdict-summary">
+              事实预检：确定性问题 {{ caseFacts.blocking || 0 }} 条 · 告警
+              {{ caseFacts.warnings || 0 }} 条
+            </p>
+          </section>
           <CaseImportCard :case-import="caseImport" :is-running="isRunning" />
           <section v-if="caseEvents.length || isRunning" class="flow-case-notes">
             <h2 class="flow-section-title">

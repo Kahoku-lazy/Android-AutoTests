@@ -426,6 +426,23 @@ export interface TaskReportEvent {
   count?: number
 }
 
+/** 用例编写任务的三段式产物计数 */
+export interface TaskArtifactSummary {
+  counts?: {
+    states?: number
+    transitions?: number
+    scenarios?: number
+    cases?: number
+  }
+  diagram?: string
+}
+
+/** 用例编写任务的事实预检摘要 */
+export interface TaskFactsSummary {
+  blocking?: number
+  warnings?: number
+}
+
 /** 报告负载：data 字段 */
 export interface TaskReportPayload {
   task?: TaskReportTask
@@ -436,6 +453,10 @@ export interface TaskReportPayload {
   events?: TaskReportEvent[]
   /** 用例编写任务的入库结果 */
   case_import?: Record<string, unknown> | null
+  /** 用例编写任务的三段式产物计数 */
+  artifact?: TaskArtifactSummary | null
+  /** 用例编写任务的事实预检摘要 */
+  facts?: TaskFactsSummary | null
 }
 
 export interface TaskReportResponse {

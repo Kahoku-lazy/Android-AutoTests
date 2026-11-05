@@ -1,14 +1,12 @@
 """Dashboard stats views — aggregated platform statistics for the frontend dashboard."""
 
 from django.db import OperationalError, ProgrammingError
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiTypes, extend_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from backend.apps.ai_assistant.api import filter_agents_for_user
-from backend.apps.ai_assistant.models import AIAgent
 from backend.apps.case_manager.api import list_projects
 from backend.apps.case_manager.models import CaseProject, TestDefinition
 from backend.apps.dashboard.ai_usage import (
@@ -18,10 +16,11 @@ from backend.apps.dashboard.ai_usage import (
     ai_task_execution_summary,
     ai_today_usage_slots,
     ai_usage_stats,
+    load_visible_agents,
     platform_activities,
 )
 from backend.apps.device_pool.models import Device
-from backend.apps.usage_ledger.api import usage_summary
+from backend.apps.usage_ledger.api import usage_dashboard
 from backend.apps.workflow.models import WorkflowDocument
 from utils.logs import backend_log
 
@@ -62,11 +61,15 @@ _HIDDEN_DEVICE_STATUSES = ("OFFLINE", "DISCONNECTED")
 
 
 def _device_dashboard_stats():
-    """Return (online, total) consistent with /devices list filtering."""
-    visible = Device.objects.exclude(status__in=_HIDDEN_DEVICE_STATUSES)
-    total = visible.count()
-    online = visible.filter(status__in=_VISIBLE_DEVICE_STATUSES).count()
-    return online, total
+    """Return (online, total) consistent with /devices list filtering.
+
+    一次聚合同时算总数与在线数：仪表盘每次请求都调它，能省一条查询。
+    """
+    row = Device.objects.exclude(status__in=_HIDDEN_DEVICE_STATUSES).aggregate(
+        total=Count("id"),
+        online=Count("id", filter=Q(status__in=_VISIBLE_DEVICE_STATUSES)),
+    )
+    return int(row["online"] or 0), int(row["total"] or 0)
 
 
 def _cases_breakdown(user_id=None):
@@ -103,10 +106,10 @@ class DashboardStatsAPIView(APIView):
         case_enabled = case_total  # 文档用例无独立 enabled，与 total 同值
         run_total = 0
         run_active = 0
-        agent_total = filter_agents_for_user(AIAgent.objects.all(), user_id).count()
-        agent_active = (
-            filter_agents_for_user(AIAgent.objects.all(), user_id).filter(status="active").count()
-        )
+        # 一次装载：后续统计与活动流复用，避免每处都把含 6.5MB avatar 的整行再读一遍
+        agents = load_visible_agents(user_id)
+        agent_total = len(agents)
+        agent_active = sum(1 for agent in agents if agent.status == "active")
 
         # ── AI 用量 + 每日 token/缓存/费用序列 ──
         daily_ai = ai_daily_series(user_id)
@@ -122,16 +125,10 @@ class DashboardStatsAPIView(APIView):
                 "workflow": _workflow_stats(),
                 "runs": {"total": run_total, "active": run_active},
                 "agents": {"total": agent_total, "active": agent_active},
-                "ai_usage": ai_usage_stats(user_id),
-                "usage_ledger": {
-                    "today": usage_summary("today", recent_limit=0),
-                    "total": usage_summary("all", recent_limit=0),
-                    "voice_today": usage_summary("today", recent_limit=0, source="voice"),
-                    "voice_total": usage_summary("all", recent_limit=0, source="voice"),
-                    "recent": usage_summary("today", recent_limit=20)["recent"],
-                },
+                "ai_usage": ai_usage_stats(user_id, agents),
+                "usage_ledger": usage_dashboard(),
                 "charts": {
-                    "execution": ai_task_daily_execution(user_id),
+                    "execution": ai_task_daily_execution(user_id, agents=agents),
                     "ai_tokens": {
                         "labels": daily_ai["labels"],
                         "total_tokens": daily_ai["total_tokens"],
@@ -143,8 +140,8 @@ class DashboardStatsAPIView(APIView):
                     },
                     "today_usage": ai_today_usage_slots(user_id),
                 },
-                "execution_summary": ai_task_execution_summary(user_id),
-                "recent_tasks": ai_recent_tasks(user_id),
+                "execution_summary": ai_task_execution_summary(user_id, agents),
+                "recent_tasks": ai_recent_tasks(user_id, agents=agents),
                 "last_updated": timezone.now().strftime("%Y-%m-%d %H:%M"),
                 "system_status": "normal"
                 if device_online > 0 or device_total == 0

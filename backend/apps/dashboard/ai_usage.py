@@ -17,14 +17,29 @@ from backend.apps.ai_assistant.api import filter_agents_for_user, resolve_assist
 from backend.apps.ai_assistant.models import AIAgent
 from backend.apps.task_list.models import Task, TaskUsageHourly
 
+# 仪表盘只需要的智能体列：avatar 是 base64 大字段（线上有一条 6.5MB），
+# tags / description 同样不该进内存；漏列会在单测的 SQL 预算里暴露。
+_AGENT_FIELDS = (
+    "id",
+    "name",
+    "owner_id",
+    "status",
+    "route_configs",
+    "updated_at",
+    "model_provider",
+    "model_name",
+)
 
-def _agents(user_id):
-    return list(filter_agents_for_user(AIAgent.objects.all(), user_id))
+
+def load_visible_agents(user_id):
+    """装载当前用户可见的智能体，只取仪表盘需要的列（不读 avatar）。"""
+    return list(filter_agents_for_user(AIAgent.objects.only(*_AGENT_FIELDS), user_id))
 
 
-def _task_qs(user_id):
+def _task_qs(user_id, agents=None):
     """当前用户可见智能体产生的任务。任务数仍按任务表计。"""
-    return Task.objects.filter(agent__in=_agents(user_id))
+    visible = agents if agents is not None else load_visible_agents(user_id)
+    return Task.objects.filter(agent__in=visible)
 
 
 def _hourly_qs():
@@ -117,15 +132,19 @@ def _agent_usage(agents):
     return usage
 
 
-def ai_usage_stats(user_id):
+def ai_usage_stats(user_id, agents=None):
     """AI 用量聚合（今日/累计），含 DeepSeek 费用。
 
     用量与费用取平台全部小时用量，任务数取当前用户可见任务。
     返回：任务数量、输入/输出 token、缓存命中 token/命中率、平均每任务 token、
     DeepSeek 费用，各指标分 today / total 两组口径。
+
+    Args:
+        user_id: 当前用户 id。
+        agents: 已装载的可见智能体；None 时自行装载（避免重复读取大字段）。
     """
     today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    agents = _agents(user_id)
+    agents = agents if agents is not None else load_visible_agents(user_id)
     task_qs = Task.objects.filter(agent__in=agents)
     hourly = _hourly_qs()
     today_hourly = hourly.filter(stat_date=today_start.date())
@@ -309,14 +328,20 @@ def _day_labels(days: int):
     return first_day, labels
 
 
-def ai_task_daily_execution(user_id, days=7):
-    """近 N 日按 created_at 分桶的助手任务卡成功 / 失败柱。"""
+def ai_task_daily_execution(user_id, days=7, agents=None):
+    """近 N 日按 created_at 分桶的助手任务卡成功 / 失败柱。
+
+    Args:
+        user_id: 当前用户 id。
+        days: 天数窗口。
+        agents: 已装载的可见智能体；None 时自行装载。
+    """
     first_day, labels = _day_labels(days)
     success = [0] * days
     failed = [0] * days
     try:
         tasks = list(
-            _task_qs(user_id).filter(created_at__gte=first_day).only("created_at", "status")
+            _task_qs(user_id, agents).filter(created_at__gte=first_day).only("created_at", "status")
         )
     except (OperationalError, ProgrammingError):
         return {"labels": labels, "success": success, "failed": failed}
@@ -334,9 +359,14 @@ def ai_task_daily_execution(user_id, days=7):
     return {"labels": labels, "success": success, "failed": failed}
 
 
-def ai_task_execution_summary(user_id):
-    """可见助手任务卡的成功 / 失败总数。"""
-    qs = _task_qs(user_id)
+def ai_task_execution_summary(user_id, agents=None):
+    """可见助手任务卡的成功 / 失败总数。
+
+    Args:
+        user_id: 当前用户 id。
+        agents: 已装载的可见智能体；None 时自行装载。
+    """
+    qs = _task_qs(user_id, agents)
 
     def safe_count(filtered):
         try:
@@ -350,11 +380,17 @@ def ai_task_execution_summary(user_id):
     }
 
 
-def ai_recent_tasks(user_id, limit=8):
-    """最近助手任务卡（结果面板行）。"""
+def ai_recent_tasks(user_id, limit=8, agents=None):
+    """最近助手任务卡（结果面板行）。
+
+    Args:
+        user_id: 当前用户 id。
+        limit: 条数。
+        agents: 已装载的可见智能体；None 时自行装载。
+    """
     try:
         rows = list(
-            _task_qs(user_id)
+            _task_qs(user_id, agents)
             .order_by("-created_at")
             .only("id", "title", "goal", "status", "created_at")[:limit]
         )
@@ -379,17 +415,23 @@ def ai_recent_tasks(user_id, limit=8):
 _ACTIVITY_WINDOW = 100
 
 
-def platform_activities(user_id, *, limit=10, offset=0):
+def platform_activities(user_id, *, limit=10, offset=0, agents=None):
     """平台活动时间线：助手任务卡（run）+ 智能体更新（agent），按 time 倒序。
 
     各源最多取 _ACTIVITY_WINDOW 条，合并后截断为 _ACTIVITY_WINDOW，再按
     offset/limit 切片。不查询已删除的 TestRunRecord。
+
+    Args:
+        user_id: 当前用户 id。
+        limit: 返回条数。
+        offset: 分页偏移。
+        agents: 已装载的可见智能体；None 时自行装载。
     """
     items = []
 
     try:
         tasks = list(
-            _task_qs(user_id)
+            _task_qs(user_id, agents)
             .order_by("-created_at")
             .only("title", "goal", "status", "created_at")[:_ACTIVITY_WINDOW]
         )
@@ -408,11 +450,12 @@ def platform_activities(user_id, *, limit=10, offset=0):
         )
 
     try:
-        agents = list(
-            filter_agents_for_user(AIAgent.objects.all(), user_id).order_by("-updated_at")[
-                :_ACTIVITY_WINDOW
-            ]
-        )
+        visible = agents if agents is not None else load_visible_agents(user_id)
+        agents = sorted(
+            [agent for agent in visible if agent.updated_at],
+            key=lambda agent: agent.updated_at,
+            reverse=True,
+        )[:_ACTIVITY_WINDOW]
     except (OperationalError, ProgrammingError):
         agents = []
     for agent in agents:

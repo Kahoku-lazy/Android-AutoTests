@@ -193,6 +193,9 @@ export function useDashboardStats(): UseDashboardStatsReturn {
   const systemStatus = ref("normal")
   const activities = ref<ActivityItem[]>([])
 
+  // 静默刷新在途标记：轮询与可见性回调撞车时只保留一个请求
+  let silentInFlight = false
+
   async function _fetchAndMap(
     setLoadingFlag: (v: boolean) => void,
     options: { silent?: boolean } = {},
@@ -256,7 +259,14 @@ export function useDashboardStats(): UseDashboardStatsReturn {
   }
 
   async function refreshSilently() {
-    await _fetchAndMap(() => {}, { silent: true })
+    // 可见性补刷与定时器可能同一瞬间触发：已有静默请求在跑就跳过，避免慢请求叠加
+    if (silentInFlight) return
+    silentInFlight = true
+    try {
+      await _fetchAndMap(() => {}, { silent: true })
+    } finally {
+      silentInFlight = false
+    }
   }
 
   return {

@@ -215,18 +215,106 @@ def _period_start(period: str) -> datetime | None:
     return None
 
 
-def _sum(qs) -> dict:
-    """聚合 token/费用/调用数。"""
-    row = qs.aggregate(
-        tokens=Sum("total_tokens"),
-        cost=Sum("cost_total"),
-        calls=Count("usage_id"),
+def _scoped_usage(start: datetime | None, source: str = ""):
+    """按周期与来源取用量查询集；分类/厂商维度由调用方一次分组。"""
+    qs = ModelUsage.objects.all()
+    if start is not None:
+        qs = qs.filter(occurred_at__gte=start)
+    if source:
+        qs = qs.filter(source=source)
+    return qs
+
+
+def _provider_label(provider: object) -> str:
+    """厂商展示名：dashscope → DASHSCOPE，其余 → DeepSeek。"""
+    return "DASHSCOPE" if str(provider or "").lower() == "dashscope" else "DeepSeek"
+
+
+def _grouped_rows(start: datetime | None, source: str = "") -> list[dict]:
+    """一次按 category + provider 分组，避免「每个分类再查一次厂商」的 N+1。"""
+    return list(
+        _scoped_usage(start, source)
+        .values("category", "provider")
+        .annotate(
+            tokens=Sum("total_tokens"),
+            cost=Sum("cost_total"),
+            calls=Count("usage_id"),
+        ),
     )
+
+
+def _shape_summary(rows: list[dict], period: str) -> dict:
+    """把分组行拼成 {total, categories(含 providers)}，分类与厂商按 token 降序。"""
+    total_tokens = 0
+    total_cost = Decimal(0)
+    total_calls = 0
+    buckets: dict[str, dict] = {}
+    for row in rows:
+        tokens = int(row["tokens"] or 0)
+        cost = Decimal(row["cost"] or 0)
+        calls = int(row["calls"] or 0)
+        total_tokens += tokens
+        total_cost += cost
+        total_calls += calls
+
+        category = row["category"] or "Other"
+        bucket = buckets.setdefault(
+            category,
+            {"tokens": 0, "cost": Decimal(0), "calls": 0, "providers": {}},
+        )
+        bucket["tokens"] += tokens
+        bucket["cost"] += cost
+        bucket["calls"] += calls
+        provider = _provider_label(row["provider"])
+        provider_bucket = bucket["providers"].setdefault(
+            provider,
+            {"tokens": 0, "cost": Decimal(0), "calls": 0},
+        )
+        provider_bucket["tokens"] += tokens
+        provider_bucket["cost"] += cost
+        provider_bucket["calls"] += calls
+
+    categories = []
+    for name, bucket in sorted(buckets.items(), key=lambda item: item[1]["tokens"], reverse=True):
+        providers = [
+            {
+                "provider": provider,
+                "tokens": values["tokens"],
+                "cost": float(values["cost"]),
+                "calls": values["calls"],
+            }
+            for provider, values in sorted(
+                bucket["providers"].items(),
+                key=lambda item: item[1]["tokens"],
+                reverse=True,
+            )
+        ]
+        categories.append(
+            {
+                "category": name,
+                "tokens": bucket["tokens"],
+                "cost": float(bucket["cost"]),
+                "calls": bucket["calls"],
+                "providers": providers,
+            },
+        )
     return {
-        "tokens": int(row["tokens"] or 0),
-        "cost": float(Decimal(row["cost"] or 0)),
-        "calls": int(row["calls"] or 0),
+        "period": period,
+        "total": {
+            "tokens": total_tokens,
+            "cost": float(total_cost),
+            "calls": total_calls,
+        },
+        "categories": categories,
     }
+
+
+def _recent_records(start: datetime | None, source: str, limit: int) -> list[dict]:
+    """最近明细；limit <= 0 时不查。"""
+    if limit <= 0:
+        return []
+    rows = _scoped_usage(start, source).order_by("-occurred_at")[:limit]
+    return [_record_payload(record) for record in rows]
 
 
 def usage_summary(
@@ -245,41 +333,10 @@ def usage_summary(
     Returns:
         可直接 JSON 序列化的汇总。
     """
-    start = _period_start(period)
-    qs = ModelUsage.objects.all()
-    if start is not None:
-        qs = qs.filter(occurred_at__gte=start)
-    if source:
-        qs = qs.filter(source=source)
     try:
-        total = _sum(qs)
-        categories = []
-        for row in (
-            qs.values("category")
-            .annotate(
-                tokens=Sum("total_tokens"),
-                cost=Sum("cost_total"),
-                calls=Count("usage_id"),
-            )
-            .order_by("-tokens")
-        ):
-            category = row["category"] or "Other"
-            categories.append(
-                {
-                    "category": category,
-                    "tokens": int(row["tokens"] or 0),
-                    "cost": float(Decimal(row["cost"] or 0)),
-                    "calls": int(row["calls"] or 0),
-                    "providers": _providers(qs.filter(category=category)),
-                },
-            )
-        recent = [_record_payload(record) for record in qs.order_by("-occurred_at")[:recent_limit]]
-        return {
-            "period": period,
-            "total": total,
-            "categories": categories,
-            "recent": recent,
-        }
+        summary = _shape_summary(_grouped_rows(_period_start(period), source), period)
+        summary["recent"] = _recent_records(_period_start(period), source, recent_limit)
+        return summary
     except (OperationalError, ProgrammingError):
         return {
             "period": period,
@@ -289,28 +346,41 @@ def usage_summary(
         }
 
 
-def _providers(qs) -> list[dict]:
-    """按厂商拆分一个分类。"""
-    rows = (
-        qs.values("provider")
-        .annotate(
-            tokens=Sum("total_tokens"),
-            cost=Sum("cost_total"),
-            calls=Count("usage_id"),
-        )
-        .order_by("-tokens")
-    )
-    return [
-        {
-            "provider": str(row["provider"] or "").upper()
-            if str(row["provider"]).lower() == "dashscope"
-            else "DeepSeek",
-            "tokens": int(row["tokens"] or 0),
-            "cost": float(Decimal(row["cost"] or 0)),
-            "calls": int(row["calls"] or 0),
+def usage_dashboard() -> dict:
+    """
+    仪表盘一次取齐五个用量口径，避免重复聚合。
+
+    Returns:
+        含 today / total / voice_today / voice_total / recent 的字典；
+        结构分别与 `usage_summary` 同口径。
+    """
+    start = _period_start("today")
+    try:
+        today = _shape_summary(_grouped_rows(start), "today")
+        total = _shape_summary(_grouped_rows(None), "all")
+        voice_today = _shape_summary(_grouped_rows(start, "voice"), "today")
+        voice_total = _shape_summary(_grouped_rows(None, "voice"), "all")
+        recent = _recent_records(start, "", 20)
+    except (OperationalError, ProgrammingError):
+        empty = {
+            "period": "today",
+            "total": {"tokens": 0, "cost": 0.0, "calls": 0},
+            "categories": [],
         }
-        for row in rows
-    ]
+        return {
+            "today": {**empty, "recent": []},
+            "total": {**empty, "period": "all", "recent": []},
+            "voice_today": {**empty, "recent": []},
+            "voice_total": {**empty, "period": "all", "recent": []},
+            "recent": [],
+        }
+    return {
+        "today": {**today, "recent": []},
+        "total": {**total, "recent": []},
+        "voice_today": {**voice_today, "recent": []},
+        "voice_total": {**voice_total, "recent": []},
+        "recent": recent,
+    }
 
 
 def _record_payload(record: ModelUsage) -> dict:

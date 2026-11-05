@@ -8,7 +8,12 @@ import pytest
 
 from django.utils import timezone
 
-from backend.apps.usage_ledger.api import record_usage, record_voice_event, usage_summary
+from backend.apps.usage_ledger.api import (
+    record_usage,
+    record_voice_event,
+    usage_dashboard,
+    usage_summary,
+)
 from backend.apps.usage_ledger.models import ModelUsage
 from backend.apps.usage_ledger.pricing import category_of, price_usage
 
@@ -115,3 +120,62 @@ def test_voice_event_writes_uuid_and_summary():
     record = ModelUsage.objects.get(source="voice")
     assert len(str(record.usage_id)) == 36
     assert record.usage_id.hex in record.event_id
+
+
+def test_usage_dashboard_matches_single_summary():
+    """批量口径与单次汇总一致：分类、厂商、金额都不因合并聚合而变。"""
+    now = timezone.now()
+    record_usage(
+        event_id="dash:llm",
+        provider="deepseek",
+        model="deepseek-flash",
+        occurred_at=now,
+        input_tokens=100,
+        output_tokens=10,
+        category="LLM",
+        source="task",
+    )
+    record_usage(
+        event_id="dash:realtime",
+        provider="dashscope",
+        model="qwen3.5-omni-plus-realtime",
+        occurred_at=now,
+        input_tokens=50,
+        output_tokens=5,
+        category="Realtime",
+        source="voice",
+    )
+
+    dashboard = usage_dashboard()
+    plain_today = usage_summary("today")
+    plain_voice = usage_summary("today", source="voice")
+
+    assert dashboard["today"]["total"] == plain_today["total"]
+    assert dashboard["today"]["categories"] == plain_today["categories"]
+    assert dashboard["total"]["total"] == usage_summary("all")["total"]
+    assert dashboard["voice_today"]["total"] == plain_voice["total"]
+    assert dashboard["recent"] == plain_today["recent"]
+
+
+def test_usage_dashboard_uses_five_queries():
+    """四个口径 + 最近明细 = 5 条查询，分类数不影响查询数。"""
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    during = timezone.now()
+    for index, category in enumerate(("LLM", "TTS", "Realtime", "Embedding")):
+        record_usage(
+            event_id=f"dash:budget:{index}",
+            provider="deepseek",
+            model="deepseek-flash",
+            occurred_at=during,
+            input_tokens=10 + index,
+            output_tokens=1,
+            category=category,
+            source="task",
+        )
+
+    with CaptureQueriesContext(connection) as ctx:
+        usage_dashboard()
+
+    assert len(ctx.captured_queries) == 5

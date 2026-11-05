@@ -91,6 +91,8 @@ export function useLogPorts() {
   async function refreshLines(): Promise<void> {
     const row = activePort.value
     if (!row) return
+    // 自动刷新在上一轮未返回时直接跳过，避免 5 秒轮询叠加
+    if (linesLoading.value) return
     linesLoading.value = true
     try {
       const data = await fetchLogPortLines(row.port, tail.value)

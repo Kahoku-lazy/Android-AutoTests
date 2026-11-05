@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from django.db import IntegrityError, transaction
+from django.db.models import Count
 
 from utils.logs import backend_log
 
@@ -32,6 +33,9 @@ class ConflictError(Exception):
 
 
 def serialize_project(obj: CaseProject) -> dict[str, Any]:
+    case_count = getattr(obj, "case_count", None)
+    if case_count is None:
+        case_count = TestDefinition.objects.filter(project_id=obj.id).count()
     return {
         "id": obj.id,
         "name": obj.name,
@@ -39,12 +43,17 @@ def serialize_project(obj: CaseProject) -> dict[str, Any]:
         "created_by": obj.created_by,
         "created_at": obj.created_at.isoformat() if obj.created_at else "",
         "updated_at": obj.updated_at.isoformat() if obj.updated_at else "",
-        "case_count": TestDefinition.objects.filter(project_id=obj.id).count(),
+        "case_count": int(case_count),
     }
 
 
 def list_projects(*, user_id: str) -> list[dict[str, Any]]:
-    qs = CaseProject.objects.filter(created_by=user_id).order_by("-created_at")
+    # 一次 annotate 出每个项目的用例数，避免 1+P 次 COUNT
+    qs = (
+        CaseProject.objects.filter(created_by=user_id)
+        .annotate(case_count=Count("cases"))
+        .order_by("-created_at")
+    )
     return [serialize_project(p) for p in qs]
 
 

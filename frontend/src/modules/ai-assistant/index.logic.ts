@@ -79,6 +79,10 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
 
   // ── Data loading ──
 
+  // 首次进入由 onMounted 拉取；onActivated 只在「从其它页返回」时刷新，
+  // 避免 keep-alive 首挂载时 onMounted 与 onActivated 各打一次请求。
+  let loadedOnce = false
+
   async function loadAgents() {
     loading.value = true
     agentsError.value = ""
@@ -86,6 +90,7 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
       const data = await listAgents()
       if (data.status && data.data) {
         agents.value = data.data.agents
+        loadedOnce = true
       } else {
         agentsError.value = data.message || "加载失败"
       }
@@ -108,7 +113,7 @@ export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoar
     await loadAgents()
   })
   onActivated(() => {
-    loadAgents()
+    if (loadedOnce) loadAgents()
   })
 
   return {

@@ -252,11 +252,11 @@ export function useTaskPublish() {
     submitting.value = false
   }
 
+  // 智能体列表在挂载时加载（响应已瘦身到 KB 级）；设备列表要同步 ADB，
+  // 只在打开「新建任务」弹窗时按需加载（watch dialogVisible）。
   onMounted(() => {
-    void loadDevices()
     void loadAgents()
   })
-
   return {
     form,
     submitting,

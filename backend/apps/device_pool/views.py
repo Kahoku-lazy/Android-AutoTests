@@ -5,6 +5,7 @@
 """
 
 import re
+import time
 
 from django.conf import settings
 from drf_spectacular.utils import OpenApiTypes, extend_schema
@@ -84,7 +85,11 @@ def list_devices(request):
 @extend_schema(responses=OpenApiTypes.OBJECT)
 @api_view(["GET"])
 def device_current(request):
-    """GET /api/devices/current — 当前活动设备信息。"""
+    """GET /api/devices/current — 当前活动设备信息。
+
+    读分辨率与前台应用需要连一次 ADB；同一设备 10 秒内复用上次结果，
+    避免轮询式调用把请求线程拖在 shell 上。
+    """
     current_serial = device_pool.current_serial
     info: dict = {}
     app: dict = {}
@@ -96,17 +101,7 @@ def device_current(request):
         except Device.DoesNotExist:
             dev = None
         if dev is not None:
-            connection, device_info, _control = open_device(
-                System.ANDROID, current_serial, dev.connection_addr or current_serial
-            )
-            try:
-                width, height = device_info.screen_size()
-                info = {"displayWidth": width, "displayHeight": height}
-                app = device_info.current_app() or {}
-            except Exception:
-                backend_log.warning("读取设备前台失败 serial=%s", current_serial)
-            finally:
-                connection.disconnect()
+            info, app = _probe_current_device(current_serial, dev)
 
     if dev is not None:
         return Response(
@@ -129,6 +124,35 @@ def device_current(request):
             "package": app.get("package", ""),
         }
     )
+
+
+_CURRENT_PROBE_TTL_SECONDS = 10.0
+_current_probe_cache: dict[str, tuple[float, dict, dict]] = {}
+
+
+def _probe_current_device(serial: str, dev: Device) -> tuple[dict, dict]:
+    """读取当前设备分辨率与前台应用；10 秒内复用缓存。"""
+    now = time.monotonic()
+    cached = _current_probe_cache.get(serial)
+    if cached is not None and now - cached[0] < _CURRENT_PROBE_TTL_SECONDS:
+        return cached[1], cached[2]
+
+    info: dict = {}
+    app: dict = {}
+    connection, device_info, _control = open_device(
+        System.ANDROID, serial, dev.connection_addr or serial
+    )
+    try:
+        width, height = device_info.screen_size()
+        info = {"displayWidth": width, "displayHeight": height}
+        app = device_info.current_app() or {}
+    except Exception:
+        backend_log.warning("读取设备前台失败 serial=%s", serial)
+    finally:
+        connection.disconnect()
+
+    _current_probe_cache[serial] = (now, info, app)
+    return info, app
 
 
 @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)

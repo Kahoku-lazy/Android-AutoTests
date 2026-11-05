@@ -9,6 +9,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.db.models import Case, F, JSONField, Max, Q, Value, When
+from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Coalesce
 
 from backend.apps.ai_assistant.api import filter_agents_for_user, resolve_assistant_name
@@ -30,6 +31,27 @@ _DETAIL_COLUMNS = (
     "output_tokens",
     "cost_total",
 )
+
+# 报告列表：最多扫 1000 条、返回 500 条；线路名走 SQL 侧 JSON 提取，不联表取大字段。
+_REPORT_SCAN_LIMIT = 1000
+_REPORT_LIST_LIMIT = 500
+
+
+def _assistant_names_map(agent_ids: list[int]) -> dict[int, str]:
+    """按 agent id 批量取线路显示名（不读 avatar / route_configs 大字段）。"""
+    if not agent_ids:
+        return {}
+    rows = (
+        AIAgent.objects.filter(id__in=agent_ids)
+        .annotate(
+            route_name=KeyTextTransform(
+                "name",
+                KeyTextTransform("device_control", "route_configs"),
+            ),
+        )
+        .values_list("id", "name", "route_name")
+    )
+    return {int(agent_id): str(route_name or name or "") for agent_id, name, route_name in rows}
 
 
 @dataclass(slots=True)
@@ -229,7 +251,24 @@ def build_report_list(
         return empty
 
     agents = filter_agents_for_user(AIAgent.objects.all(), user_id)
-    qs = Task.objects.filter(agent__in=agents).select_related("agent").order_by("-created_at")
+    agent_ids = list(agents.values_list("id", flat=True))
+    assistant_names = _assistant_names_map(agent_ids)
+    qs = (
+        Task.objects.filter(agent_id__in=agent_ids)
+        .only(
+            "id",
+            "agent_id",
+            "title",
+            "task_kind",
+            "status",
+            "device_serial",
+            "device_label",
+            "created_at",
+            "started_at",
+            "finished_at",
+        )
+        .order_by("-created_at")[:_REPORT_SCAN_LIMIT]
+    )
     if start_date:
         qs = qs.filter(created_at__date__gte=start_date)
     if end_date:
@@ -252,7 +291,7 @@ def build_report_list(
     n_pass = 0
     n_fail = 0
     for task in qs:
-        assistant = resolve_assistant_name(getattr(task, "agent", None))
+        assistant = assistant_names.get(task.agent_id, "")
         if creator_q and creator_q not in assistant.lower():
             continue
         status_key = (task.status or "").lower()
@@ -268,18 +307,19 @@ def build_report_list(
             elif status_key in FAIL_STATUSES:
                 trend["fail"][idx] += 1
         started = task.started_at or task.created_at
-        runs.append(
-            {
-                "run_id": str(task.id),
-                "task_kind": task.task_kind,
-                "device_serial": _device_display(task),
-                "task_name": task.title or "",
-                "creator": assistant,
-                "status": task.status or "",
-                "duration": format_duration(task.started_at, task.finished_at),
-                "started_at": _iso(started),
-            }
-        )
+        if len(runs) < _REPORT_LIST_LIMIT:
+            runs.append(
+                {
+                    "run_id": str(task.id),
+                    "task_kind": task.task_kind,
+                    "device_serial": _device_display(task),
+                    "task_name": task.title or "",
+                    "creator": assistant,
+                    "status": task.status or "",
+                    "duration": format_duration(task.started_at, task.finished_at),
+                    "started_at": _iso(started),
+                }
+            )
 
     for i, (p_count, f_count) in enumerate(zip(trend["pass"], trend["fail"])):
         trend["rate"][i] = _pass_rate(p_count, f_count)

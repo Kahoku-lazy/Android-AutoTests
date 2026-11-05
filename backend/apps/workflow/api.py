@@ -38,6 +38,7 @@ from datetime import datetime
 from typing import Any
 
 from django.db import IntegrityError, transaction
+from django.db.models import Count, Q
 
 from .api_digest import get_document_digest, list_document_summaries
 from .models import WorkflowDirectory, WorkflowDocument, WorkflowPrototype
@@ -71,23 +72,31 @@ def _parse_config(raw: str | dict | list | None) -> Any:
 
 
 def serialize_prototype(p: WorkflowPrototype) -> dict:
+    doc_count = getattr(p, "doc_count", None)
+    if doc_count is None:
+        doc_count = WorkflowDocument.objects.filter(
+            prototype_id=p.id,
+            doc_type__in=WorkflowDocument.SUPPORTED_TYPES,
+        ).count()
     return {
         "id": p.id,
         "name": p.name,
         "description": p.description or "",
         "created_at": p.created_at.isoformat() if p.created_at else "",
         "updated_at": p.updated_at.isoformat() if p.updated_at else "",
-        "doc_count": WorkflowDocument.objects.filter(
-            prototype_id=p.id,
-            doc_type__in=WorkflowDocument.SUPPORTED_TYPES,
-        ).count(),
+        "doc_count": int(doc_count),
     }
 
 
 def list_prototypes() -> list[dict]:
-    return [
-        serialize_prototype(p) for p in WorkflowPrototype.objects.order_by("-updated_at", "-id")
-    ]
+    # 一次 annotate 出每个原型的文档数，避免 1+P 次 COUNT
+    qs = WorkflowPrototype.objects.annotate(
+        doc_count=Count(
+            "documents",
+            filter=Q(documents__doc_type__in=WorkflowDocument.SUPPORTED_TYPES),
+        ),
+    ).order_by("-updated_at", "-id")
+    return [serialize_prototype(p) for p in qs]
 
 
 def get_prototype(prototype_id: int) -> dict | None:

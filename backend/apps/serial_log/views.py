@@ -10,6 +10,9 @@ GET  /api/serial-log/keywords/                登录可读：关键词 → 功�
 
 from __future__ import annotations
 
+import threading
+import time
+
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -26,15 +29,34 @@ def _user_id(request) -> str:
     return str(getattr(request, "user_id", "") or "")
 
 
+_RECONCILE_TTL_SECONDS = 10.0
+_reconcile_lock = threading.Lock()
+_reconcile_at = 0.0
+
+
+def _reconcile_throttled() -> None:
+    """按开关状态校正监听：10 秒内只做一次，GET 不再每条请求都启停线程。"""
+    global _reconcile_at
+    now = time.monotonic()
+    if now - _reconcile_at < _RECONCILE_TTL_SECONDS:
+        return
+    with _reconcile_lock:
+        now = time.monotonic()
+        if now - _reconcile_at < _RECONCILE_TTL_SECONDS:
+            return
+        try:
+            port_service.reconcile()
+        except Exception as exc:  # 采集故障不能拖垮读接口：记日志后照常返回
+            backend_log.warning("device log port reconcile failed: %s", exc)
+        _reconcile_at = now
+
+
 class LogPortListAPIView(APIView):
-    """GET /api/serial-log/ports/ — 端口列表（顺带按开关状态校正监听，幂等）。"""
+    """GET /api/serial-log/ports/ — 端口列表（顺带按开关状态校正监听，10 秒节流）。"""
 
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
-        try:
-            port_service.reconcile()
-        except Exception as exc:  # 列表不能被采集故障拖垮：照常给出配置与开关状态
-            backend_log.warning("device log port reconcile failed on list: %s", exc)
+        _reconcile_throttled()
         return Response({"ports": port_service.list_ports()})
 
 
@@ -71,10 +93,7 @@ class LogPortLinesAPIView(APIView):
 
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request, port: int):
-        try:
-            port_service.reconcile()
-        except Exception as exc:  # 读日志不依赖采集线程：失败也照常返回文件内容
-            backend_log.warning("device log port reconcile failed on read: %s", exc)
+        _reconcile_throttled()
         payload = port_service.read_lines(int(port), request.query_params.get("tail"))
         return Response(payload)
 

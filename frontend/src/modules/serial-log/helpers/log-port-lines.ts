@@ -6,10 +6,10 @@
 
 import type { LogPortLine } from "../api"
 
-/** 日志窗口可选读取行数（默认 2000，与平台配置一致） */
+/** 日志窗口可选读取行数（默认 500：自动刷新时无需每次搬 2000 行） */
 export const LOG_TAIL_OPTIONS = [500, 1000, 2000, 5000]
 
-export const LOG_TAIL_DEFAULT = 2000
+export const LOG_TAIL_DEFAULT = 500
 
 /** 自动刷新间隔（毫秒） */
 export const LOG_AUTO_REFRESH_MS = 5000

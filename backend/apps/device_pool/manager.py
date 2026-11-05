@@ -11,9 +11,11 @@
 """
 
 import subprocess
+import threading
 import time
 
 from datetime import datetime
+from typing import Final
 
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -36,6 +38,21 @@ from .pool import device as device_pool
 
 # observe 观察占用锁的兜底超时（秒）：关页/崩溃无释放时，30 分钟后由心跳回收
 OBSERVE_LOCK_TTL = 1800
+
+# 设备状态同步的最小间隔（秒）：列表/心跳共用一次 ADB 扫描结果，
+# 避免每个 GET 都在请求线程里跑 adb 子进程与 u2 连接。
+STATUS_SYNC_TTL_SECONDS: Final[float] = 10.0
+_status_sync_lock = threading.Lock()
+_status_sync_at = 0.0
+_status_sync_result: tuple[int, int] = (0, 0)
+
+
+def reset_status_sync_cache() -> None:
+    """清空状态同步缓存（测试与显式刷新用）。"""
+    global _status_sync_at, _status_sync_result
+    with _status_sync_lock:
+        _status_sync_at = 0.0
+        _status_sync_result = (0, 0)
 
 
 class DeviceError(APIException):
@@ -368,11 +385,27 @@ class DeviceStateMachine:
         return DeviceStatus.ONLINE
 
     def update_device_status(self) -> tuple[int, int]:
-        """同步 DB 设备状态与真实 ADB 状态（list/heartbeat 触发）。
+        """同步 DB 设备状态与真实 ADB 状态（list/heartbeat 触发，10 秒内复用）。
 
         含「注册 adb 新设备」——设备发现是状态同步的一部分（见 PRD §4.4）。
         设备不在 adb 列表时：BUSY 保护进行中任务；非 BUSY 直接删除（不保留离线记录）。
+        真正扫描的实现在 `_sync_device_status()`；本方法只做节流与并发保护。
         """
+        global _status_sync_at, _status_sync_result
+        now = time.monotonic()
+        if now - _status_sync_at < STATUS_SYNC_TTL_SECONDS:
+            return _status_sync_result
+        with _status_sync_lock:
+            now = time.monotonic()
+            if now - _status_sync_at < STATUS_SYNC_TTL_SECONDS:
+                return _status_sync_result
+            result = self._sync_device_status()
+            _status_sync_at = now
+            _status_sync_result = result
+            return result
+
+    def _sync_device_status(self) -> tuple[int, int]:
+        """真正执行一次 ADB 扫描与库内状态对齐。"""
         self._registry.purge_disconnected_devices()
         now = datetime.now()
         adb_serials = self._detector.connectable_serials()

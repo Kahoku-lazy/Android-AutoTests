@@ -1168,7 +1168,11 @@ paths:
   /api/devices/current/:
     get:
       operationId: devices_current_retrieve
-      description: GET /api/devices/current — 当前活动设备信息。
+      description: |-
+        GET /api/devices/current — 当前活动设备信息。
+
+        读分辨率与前台应用需要连一次 ADB；同一设备 10 秒内复用上次结果，
+        避免轮询式调用把请求线程拖在 shell 上。
       tags:
       - devices
       security:
@@ -1537,7 +1541,7 @@ paths:
   /api/serial-log/ports/:
     get:
       operationId: serial_log_ports_retrieve
-      description: GET /api/serial-log/ports/ — 端口列表（顺带按开关状态校正监听，幂等）。
+      description: GET /api/serial-log/ports/ — 端口列表（顺带按开关状态校正监听，10 秒节流）。
       tags:
       - serial-log
       security:

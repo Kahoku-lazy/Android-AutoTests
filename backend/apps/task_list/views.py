@@ -251,14 +251,14 @@ class TaskReportAPIView(APIView):
         status, max_seq = meta
         terminal = status in _REPORT_TERMINAL_STATUSES
         cache_key = f"task-flow:{task_id}:{max_seq}"
-        cached = cache.get(cache_key) if terminal else None
+        cached = cache.get(cache_key)
         if cached is None:
             payload = build_task_flow(user_id, task_id)
             if payload is None:
                 raise NotFound("任务不存在")
             cached = _report_body(payload)
-            if terminal:
-                cache.set(cache_key, cached, _REPORT_CACHE_TTL)
+            # 运行中任务：短缓存 2 秒，多个查看者共用一次构建，事件序号变化后自然换键
+            cache.set(cache_key, cached, _REPORT_CACHE_TTL if terminal else 2)
 
         raw, zipped, etag = cached
         quoted = f'"{etag}"'

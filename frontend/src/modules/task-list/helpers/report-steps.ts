@@ -52,6 +52,10 @@ export interface StepView {
   idleMs: number
   /** 该步被引擎打断的原因；没有打断时为空串 */
   interrupt: string
+  /** 中断类别：log 证据不可用 / exception 执行层异常；没有中断时为空串 */
+  interruptKind: string
+  /** 导致中断的工具名；不是工具导致时为空串 */
+  interruptTool: string
   /** 该步仍有未结束的轮次 */
   running: boolean
   attempts: AttemptView[]
@@ -91,6 +95,8 @@ function normalizeSteps(steps?: TaskReportStep[]): TaskReportStep[] {
       tool_ms: Math.max(Number(step.tool_ms) || 0, 0),
       idle_ms: Math.max(Number(step.idle_ms) || 0, 0),
       interrupt: String(step.interrupt || "").trim(),
+      interrupt_kind: String(step.interrupt_kind || "").trim(),
+      interrupt_tool: String(step.interrupt_tool || "").trim(),
       running: Boolean(step.running),
     }))
 }
@@ -149,6 +155,8 @@ function buildStep(
     tool_ms?: number
     idle_ms?: number
     interrupt?: string
+    interrupt_kind?: string
+    interrupt_tool?: string
     running?: boolean
   } | null,
   group: TaskReportRound[],
@@ -164,6 +172,8 @@ function buildStep(
     toolMs: Math.max(Number(step?.tool_ms) || 0, 0),
     idleMs: Math.max(Number(step?.idle_ms) || 0, 0),
     interrupt: String(step?.interrupt || "").trim(),
+    interruptKind: String(step?.interrupt_kind || "").trim(),
+    interruptTool: String(step?.interrupt_tool || "").trim(),
     running: Boolean(step?.running),
     attempts: buildAttempts(group),
   }

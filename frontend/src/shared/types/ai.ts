@@ -368,6 +368,10 @@ export interface TaskReportStep {
   idle_ms?: number
   /** 该步被引擎打断的原因（例如设备日志为空）；没有打断时为空串 */
   interrupt?: string
+  /** 中断类别：log 证据不可用 / exception 执行层异常；没有中断时为空串 */
+  interrupt_kind?: string
+  /** 导致中断的工具名；不是工具导致时为空串 */
+  interrupt_tool?: string
   /** 该步仍有未结束的轮次 */
   running?: boolean
 }

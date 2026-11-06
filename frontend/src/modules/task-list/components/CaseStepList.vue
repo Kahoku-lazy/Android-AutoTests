@@ -93,6 +93,11 @@ function tagClass(attempt) {
   return ""
 }
 
+/** 中断标注文案：证据不可用与执行层异常分开显示，原因在 title 里；存量数据按日志中断渲染 */
+function interruptLabel(step) {
+  return step.interruptKind === "exception" ? "异常中断" : "日志中断"
+}
+
 function attemptKey(step, attempt) {
   return `${step.key}#${attempt.attempt}`
 }
@@ -150,7 +155,7 @@ function toggle(step) {
           class="flow-step__interrupt"
           :title="step.interrupt"
           data-test="step-interrupt"
-          >日志中断</span
+          >{{ interruptLabel(step) }}</span
         >
         <span class="flow-step__badge" :class="badgeClass(step.outcome)">{{ step.outcome }}</span>
         <span class="flow-step__mark" aria-hidden="true">{{ isOpen(step) ? "▾" : "▸" }}</span>

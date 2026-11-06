@@ -84,6 +84,7 @@ def _as_react_config(react: ReActConfig) -> AsReActConfig:
         max_iters=react.max_iters,
         structured_output_grace_iters=react.structured_output_grace_iters,
         stop_on_reject=react.stop_on_reject,
+        interruption_raise_cancelled_error=react.interruption_raise_cancelled_error,
     )
 
 

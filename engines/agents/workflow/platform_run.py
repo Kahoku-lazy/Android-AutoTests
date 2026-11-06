@@ -200,6 +200,8 @@ async def _drive_real(
         _inflight[task_id] = (asyncio.get_running_loop(), current)
     completed: list[str] = []
     failed: list[str] = []
+    # 取消信号下沉到工作流：每个事件边界检查一次，命中即结束当前步
+    should_stop = cancel_event.is_set if cancel_event is not None else None
     # 配额按本条任务的用例数放大：全功能回归一次带多条用例，不该比单条任务更早被打断
     set_case_quota(len(cases))
     try:
@@ -221,6 +223,7 @@ async def _drive_real(
                     steps,
                     opening,
                     default_sku=_case_sku(case.title),
+                    should_stop=should_stop,
                 )
             finally:
                 _close_after_case(device_serial, closer)

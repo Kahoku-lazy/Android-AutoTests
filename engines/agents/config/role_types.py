@@ -100,6 +100,8 @@ class ReActConfig:
         max_iters: ReAct 循环最大轮次。
         structured_output_grace_iters: 结构化输出的宽限轮次。
         stop_on_reject: 被驳回时是否停止。
+        interruption_raise_cancelled_error: 被取消后是否继续抛出取消异常；
+            默认 True，避免「关闭任务」被角色层当成一次可重试的失败尝试。
 
     Raises:
         FrozenInstanceError: ReAct 配置不可变。
@@ -108,3 +110,4 @@ class ReActConfig:
     max_iters: int = 30
     structured_output_grace_iters: int = 5
     stop_on_reject: bool = True
+    interruption_raise_cancelled_error: bool = True

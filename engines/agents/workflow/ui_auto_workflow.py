@@ -165,6 +165,7 @@ class AgentSOPWorkflow:
         run_input: str,
         *,
         default_sku: str = "",
+        should_stop: Callable[[], bool] | None = None,
     ) -> str:
         """装配一份 SOP 并跑完一次：事件实时打屏, 结束后回读状态。
 
@@ -173,12 +174,15 @@ class AgentSOPWorkflow:
             steps: 一步一条的结构化输入；每个步骤单独新建一对角色实例。
             run_input: 开场输入（含设备 serial 等）；每步都会重放到提示里，因为每步都是新实例。
             default_sku: 用例级型号；某步没写 `log.sku` 时用它取关键词表，旧用例因此不必盲试。
+            should_stop: 停止信号探测函数；返回 True 时在当前事件边界结束本次运行。
+                None 表示不监听，行为与不传时一致。
 
         Returns:
             运行阶段字符串。完成时为 completed。
 
         Raises:
             ValueError: 步骤列表为空，无法装配流程。
+            asyncio.CancelledError: 停止信号置位时抛出，供调用方按取消收口。
         """
         if not steps:
             raise ValueError("步骤列表为空，无法装配 SOP")
@@ -220,6 +224,10 @@ class AgentSOPWorkflow:
             }
             # 开场输入交给第一步供引擎推进；上下文已在每步的步骤提示里重放
             async for event in engine.reply_stream(UserMsg(name="user", content=run_input)):
+                # 停止信号每个事件边界检查一次：库默认吞掉取消，只靠 task.cancel()
+                # 会把「关闭」误当成一次失败尝试并触发重试，所以这里主动中断
+                if should_stop is not None and should_stop():
+                    raise asyncio.CancelledError()
                 _stamp_step(engine)
                 await show_event(event, buf, models)
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import uuid
 
@@ -17,6 +18,24 @@ _SHANGHAI = ZoneInfo("Asia/Shanghai")
 _BATCH = 50
 # 单批字节上限，远低于 MySQL max_allowed_packet（本机实测 64MB），留足余量。
 _MAX_BATCH_BYTES = 8 * 1024 * 1024
+# 写失败后留在缓冲里等待重试的行数上限；超过就丢最旧的并告警，避免长故障吃光内存。
+_RETRY_MAX_ROWS = 500
+
+
+def in_async_context() -> bool:
+    """当前是否处在事件循环线程里。
+
+    Django 禁止在这种上下文里直接访问 ORM（会抛 SynchronousOnlyOperation），
+    所以在事件循环里必须把写入推迟到同步上下文，而不是让它失败。
+
+    Returns:
+        True 表示当前线程正跑着事件循环。
+    """
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return False
+    return True
 
 
 class TaskEventSink:
@@ -30,6 +49,7 @@ class TaskEventSink:
         self._task_id = 0
         self._agent_id = 0
         self._ready = False
+        self._retry = False
 
     def emit(self, record, image_b64: str = "") -> None:
         """收一条记录；连续增量先攒着，类型或步骤变化时落行。"""
@@ -48,25 +68,94 @@ class TaskEventSink:
         self._append_row(_row(record, image_b64, ctx, self._seq))
 
     def flush(self) -> None:
-        """把已结束的行写入数据库；整批失败时降级逐行，坏行不拖累其余。
+        """把已结束的行写入数据库。
 
-        原先整批失败后行仍留在缓冲里重试，一旦某行永远写不进去（例如 payload
-        撑爆 MySQL 包上限），会一路失败到 close()，把剩余事件全部丢掉。
+        成功率优先于「清空缓冲」：写失败的行 MUST 留在缓冲里等下次重试，
+        MUST NOT 直接丢弃。处在事件循环线程时推迟到同步上下文再写，
+        避免 Django 的 SynchronousOnlyOperation 把整批事件打掉。
         """
         if not self._rows or not self._task_id:
             self._rows.clear()
             self._bytes = 0
             return
-        rows, self._rows, self._bytes = self._rows, [], 0
-        try:
-            api.insert_task_events(self._task_id, rows)
-        except Exception:
-            backend_log.exception(
-                "事件批量写入失败，降级逐行写 task_id=%s rows=%s", self._task_id, len(rows)
+        if in_async_context():
+            # 事件循环里不能直接访问 ORM：保留缓冲，交给同步上下文的 flush/close
+            backend_log.warning(
+                "事件写入在事件循环线程里被推迟 task_id=%s rows=%s",
+                self._task_id,
+                len(self._rows),
             )
-            rows = self._insert_one_by_one(rows)
-        for row in rows:
+            return
+        pending = self._rows
+        if self._retry:
+            # 上次可能写成功但回包失败：重试前剔除已入库的行，避免重复
+            existing = self._existing_seqs([row["seq"] for row in pending])
+            pending = [row for row in pending if row["seq"] not in existing]
+        if pending:
+            try:
+                api.insert_task_events(self._task_id, pending)
+                written = pending
+            except Exception:
+                backend_log.exception(
+                    "事件批量写入失败，降级逐行写 task_id=%s rows=%s",
+                    self._task_id,
+                    len(pending),
+                )
+                written = self._insert_one_by_one(pending)
+        else:
+            written = []
+        handled = {row["seq"] for row in written}
+        if pending and len(written) < len(pending):
+            self._retry = True
+        self._rows = [row for row in self._rows if row["seq"] not in handled]
+        self._recount()
+        self._trim_overflow()
+        for row in written:
             _add_usage(row, self._agent_id, self._task_id)
+
+    def _existing_seqs(self, seqs: list[int]) -> set[int]:
+        """查出这些序号里已经入库的那些。
+
+        Args:
+            seqs: 待写入的行序号。
+
+        Returns:
+            已存在的序号集合；查询失败时返回空集合（宁可重复也不丢）。
+        """
+        from backend.apps.task_list.models import TaskEvent
+
+        try:
+            return set(
+                TaskEvent.objects.filter(task_id=self._task_id, seq__in=seqs).values_list(
+                    "seq", flat=True
+                )
+            )
+        except Exception:
+            backend_log.exception("查询已入库事件序号失败 task_id=%s", self._task_id)
+            return set()
+
+    def _recount(self) -> None:
+        """按剩余缓冲重算字节数。"""
+        self._bytes = sum(
+            len(json.dumps(row, ensure_ascii=False, default=str)) for row in self._rows
+        )
+
+    def _trim_overflow(self) -> None:
+        """缓冲积压超过上限时丢最旧的行并告警，防止长故障吃光内存。"""
+        overflow = len(self._rows) - _RETRY_MAX_ROWS
+        if overflow <= 0:
+            return
+        dropped = self._rows[:overflow]
+        self._rows = self._rows[overflow:]
+        self._recount()
+        backend_log.warning(
+            "事件重试缓冲超过 %s 行，丢弃最旧的 %s 行 task_id=%s seq=%s..%s",
+            _RETRY_MAX_ROWS,
+            overflow,
+            self._task_id,
+            dropped[0]["seq"],
+            dropped[-1]["seq"],
+        )
 
     def _insert_one_by_one(self, rows: list[dict]) -> list[dict]:
         """逐行写入，返回写成功的行；失败行只记日志。
@@ -83,7 +172,7 @@ class TaskEventSink:
                 api.insert_task_events(self._task_id, [row])
             except Exception:
                 backend_log.warning(
-                    "事件行写入失败已丢弃 task_id=%s seq=%s type=%s",
+                    "事件行写入失败，留待下次重试 task_id=%s seq=%s type=%s",
                     self._task_id,
                     row.get("seq"),
                     row.get("event_type"),

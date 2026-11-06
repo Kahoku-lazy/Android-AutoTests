@@ -40,7 +40,7 @@ export interface StepView {
   seq: number
   action: string
   expected: string
-  /** PASS / FAIL / 未完成 / 未执行 */
+  /** PASS / FAIL / 主动关闭 / 未完成 / 未执行 */
   outcome: string
   /** 该步墙钟耗时（毫秒）；无时间戳为 0，渲染时按缺失处理 */
   durationMs: number

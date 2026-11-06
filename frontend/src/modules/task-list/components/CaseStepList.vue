@@ -21,11 +21,12 @@ const props = defineProps({
 
 const emit = defineEmits(["toggle"])
 
-/** 结果徽标配色：未完成黄、未执行灰 */
+/** 结果徽标配色：未完成黄、未执行灰、主动关闭灰（用户关闭的中断不是失败） */
 const BADGE_CLASS = {
   PASS: "is-pass",
   FAIL: "is-fail",
   未完成: "is-pending",
+  主动关闭: "is-idle",
   未执行: "is-idle",
 }
 
@@ -34,6 +35,7 @@ const STATUS_ICON = {
   PASS: "✓",
   FAIL: "✗",
   未完成: "△",
+  主动关闭: "⊘",
   未执行: "○",
 }
 

@@ -24,6 +24,130 @@ RESULT_STATUS_MAP = {
     "cancelled": TaskStatus.CANCELLED,
 }
 
+# 取消兜底：工作线程超时仍未退出时强制放行设备，避免线程挂死把设备永久占住。
+CANCEL_RELEASE_SECONDS = 60
+
+# 正在跑任务的工作线程与取消兜底计时器，都按任务 id 登记。
+_workers: dict[int, threading.Thread] = {}
+_release_timers: dict[int, threading.Timer] = {}
+
+
+def schedule_cancel_release(
+    task_id: int,
+    serial: str,
+    agent_id: int,
+    *,
+    timeout: float = CANCEL_RELEASE_SECONDS,
+) -> None:
+    """关闭任务后登记兜底放行：工作线程超时未退出时强制放行并留痕。
+
+    Args:
+        task_id: 被关闭的任务 id。
+        serial: 该任务的设备 serial；空串表示不占设备，直接跳过。
+        agent_id: 任务所属智能体 id，写告警事件时使用。
+        timeout: 兜底等待秒数。
+
+    Returns:
+        None。计时器为 daemon 线程，不阻塞调用方。
+    """
+    if not (serial or "").strip():
+        return
+    timer = threading.Timer(timeout, _force_release_device, args=(task_id, serial, agent_id))
+    timer.daemon = True
+    _release_timers[task_id] = timer
+    timer.start()
+
+
+def release_device_now(task_id: int, serial: str) -> None:
+    """工作线程退出时放行设备槽：撤掉兜底计时器并拉起同设备下一条任务。
+
+    Args:
+        task_id: 刚结束的任务 id。
+        serial: 该任务的设备 serial；空串表示不占设备。
+
+    Returns:
+        None。
+    """
+    timer = _release_timers.pop(task_id, None)
+    if timer is not None:
+        timer.cancel()
+    _workers.pop(task_id, None)
+    serial = (serial or "").strip()
+    if serial:
+        api.dispatch_device(serial)
+
+
+def _force_release_device(task_id: int, serial: str, agent_id: int) -> None:
+    """兜底计时器回调：工作线程仍存活时写告警事件，然后强制放行设备。
+
+    Args:
+        task_id: 被关闭的任务 id。
+        serial: 该任务的设备 serial。
+        agent_id: 任务所属智能体 id。
+
+    Returns:
+        None。任何异常只记日志，不影响设备放行。
+    """
+    try:
+        close_old_connections()
+        thread = _workers.get(task_id)
+        if thread is not None and thread.is_alive():
+            _record_cancel_timeout(task_id, agent_id)
+        api.dispatch_device(serial)
+        _release_timers.pop(task_id, None)
+    except Exception:  # noqa: BLE001 - 兜底放行失败只记日志，不能让计时器线程崩掉
+        backend_log.exception("取消兜底放行失败 task_id=%s", task_id)
+    finally:
+        close_old_connections()
+
+
+def _record_cancel_timeout(task_id: int, agent_id: int) -> None:
+    """把「关闭后工作线程超时未退出」写成一条任务事件，供详情页与排障查看。
+
+    Args:
+        task_id: 被关闭的任务 id。
+        agent_id: 任务所属智能体 id。
+
+    Returns:
+        None。落库失败只记日志。
+    """
+    from datetime import datetime
+
+    from engines.agents.event_sink import (
+        bind_run_context,
+        bind_sink,
+        reset_run_context,
+        reset_sink,
+    )
+    from engines.agents.messaging.record import EventRecord
+
+    from .event_store import TaskEventSink
+
+    now = datetime.now()
+    record = EventRecord(
+        event_type="TaskCancelTimeoutEvent",
+        phase="结束",
+        block_type="interrupt",
+        payload={
+            "reason": f"关闭后 {CANCEL_RELEASE_SECONDS} 秒工作线程仍未退出，已强制放行设备",
+            "task_id": task_id,
+        },
+        started_at=now,
+        ended_at=now,
+        duration_ms=0,
+    )
+    sink = TaskEventSink()
+    sink_token = bind_sink(sink)
+    run_token = bind_run_context(task_id, agent_id, "")
+    try:
+        sink.emit(record)
+    except Exception:  # noqa: BLE001 - 告警事件写不进去也不影响放行
+        backend_log.exception("记录取消超时事件失败 task_id=%s", task_id)
+    finally:
+        sink.close()
+        reset_sink(sink_token)
+        reset_run_context(run_token)
+
 
 def run_task_async(task_id: int, agent_id: int) -> None:
     """后台线程入口：启动平台 SOP，并把加载结论与终态写回任务。"""
@@ -37,8 +161,10 @@ def run_task_async(task_id: int, agent_id: int) -> None:
     sink = None
     sink_token = None
     run_token = None
+    serial = ""
     try:
         task = Task.objects.get(id=task_id)
+        serial = task.device_serial or ""
         cancel_event = bind_cancel(task_id)
         sink = TaskEventSink()
         sink_token = bind_sink(sink)
@@ -53,6 +179,7 @@ def run_task_async(task_id: int, agent_id: int) -> None:
                     task,
                     status=status,
                     result=api.dump_task_run_payload(result),
+                    release_device=False,
                 )
             return
 
@@ -65,6 +192,10 @@ def run_task_async(task_id: int, agent_id: int) -> None:
             device_serial=task.device_serial or "",
         )
         api.set_config_load_message(task, result.get("load_message") or "")
+        # 取消优先：用户在跑的过程中关闭了任务，收尾不能把 cancelled 改写成别的终态
+        task.refresh_from_db()
+        if task.status == TaskStatus.CANCELLED:
+            return
         status = RESULT_STATUS_MAP.get(result.get("status") or "", TaskStatus.FAILED)
         payload = {
             "status": result.get("status") or "fail",
@@ -77,12 +208,16 @@ def run_task_async(task_id: int, agent_id: int) -> None:
             task,
             status=status,
             result=api.dump_task_run_payload(payload),
+            release_device=False,
         )
     except Exception as exc:
         backend_log.exception("async task failed id=%s", task_id)
         try:
             api.finalize_task(
-                Task.objects.get(id=task_id), status=TaskStatus.FAILED, result=f"执行异常: {exc}"
+                Task.objects.get(id=task_id),
+                status=TaskStatus.FAILED,
+                result=f"执行异常: {exc}",
+                release_device=False,
             )
         except Exception:
             backend_log.exception("finalize async task failed id=%s", task_id)
@@ -101,6 +236,8 @@ def run_task_async(task_id: int, agent_id: int) -> None:
         from engines.agents.workflow.platform_run import clear_cancel
 
         clear_cancel(task_id)
+        # 设备槽只在这里放行：取消路径不提前放行，避免两条任务抢同一台手机
+        release_device_now(task_id, serial)
         close_old_connections()
 
 
@@ -290,10 +427,12 @@ async def _await_case_run(run, cancel_event):
 
 
 def spawn_task_thread(task_id: int, agent_id: int) -> None:
-    """启动 daemon 线程执行任务。"""
-    threading.Thread(
+    """启动 daemon 线程执行任务，并登记线程供取消兜底判断是否已退出。"""
+    thread = threading.Thread(
         target=run_task_async,
         args=(task_id, agent_id),
         daemon=True,
         name=f"ai-task-{task_id}",
-    ).start()
+    )
+    _workers[task_id] = thread
+    thread.start()

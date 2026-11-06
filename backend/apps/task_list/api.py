@@ -348,10 +348,20 @@ def finalize_task(
     status: str,
     result: str = "",
     usage: dict | None = None,
+    release_device: bool = True,
 ) -> Task:
     """完成任务：状态/结果/完成时间 + 累计 token 用量（任务发布完成时调用）。
 
-    usage 为工作流返回的任务级 token 累加器（含按模型拆分），空则只落状态/结果。
+    Args:
+        task: 要收口的任务。
+        status: 终态。
+        result: 写入 `Task.result` 的结果载荷。
+        usage: 工作流返回的任务级 token 累加器（含按模型拆分），空则只落状态/结果。
+        release_device: 是否在收口后放行该设备槽。取消路径传 False，
+            放行交给工作线程退出时统一执行，避免旧线程还在操作设备就拉起下一条任务。
+
+    Returns:
+        已保存终态的任务。
     """
     task.status = status
     task.result = result
@@ -367,7 +377,7 @@ def finalize_task(
     task.save(update_fields=fields)
     _record_bug_safely(task)
     serial = (task.device_serial or "").strip()
-    if serial:
+    if release_device and serial:
         dispatch_device(serial)
     return task
 
@@ -392,7 +402,12 @@ def _record_bug_safely(task: Task) -> None:
 
 
 def cancel_running_task(task: Task) -> Task:
-    """关闭运行中的 SOP。排队中的任务拒绝关闭。不调用角色基类的中断方法。"""
+    """关闭运行中的 SOP。排队中的任务拒绝关闭。不调用角色基类的中断方法。
+
+    设备槽 MUST NOT 在关闭动作里放行：任务终态立刻置为 `cancelled`，但同一设备
+    上排队的任务要等工作线程真正退出后才拉起（见 `task_runner.release_device_now`），
+    否则旧线程还在操作设备，就会出现两条任务抢同一台手机。
+    """
     if task.status == TaskStatus.PENDING:
         raise ValueError("排队中的任务不能关闭")
     if task.status != TaskStatus.RUNNING:
@@ -400,7 +415,13 @@ def cancel_running_task(task: Task) -> Task:
     from engines.agents.workflow.platform_run import request_cancel
 
     request_cancel(task.id)
-    return finalize_task(task, status=TaskStatus.CANCELLED, result="用户关闭")
+    finalized = finalize_task(
+        task, status=TaskStatus.CANCELLED, result="用户关闭", release_device=False
+    )
+    from backend.apps.task_list.task_runner import schedule_cancel_release
+
+    schedule_cancel_release(finalized.id, finalized.device_serial or "", finalized.agent_id)
+    return finalized
 
 
 def delete_task(task: Task) -> None:

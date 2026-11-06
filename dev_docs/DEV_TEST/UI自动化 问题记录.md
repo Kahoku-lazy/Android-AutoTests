@@ -245,6 +245,23 @@
 
 - **已修**：见 1.3（步骤行「日志中断」红标 + BUG 单）。
 
+### 7.4 关闭任务后仍在跑并继续计费（已修）
+
+- **现象**：任务 `197`（结构化步骤-串口-全功能测试-02）09:47:20 点关闭，数据库当场写成 `cancelled`，但执行线程又跑了 **230 秒**：77 次设备操作（点击 18 / 标点 18 / 截图 15 / xpath 14 / 拖拽 4 / 应用控制 1 / 查日志 3 / 重置工具 3）、82 次模型调用、**¥0.9394**（关闭前 33 秒只花了 ¥0.0249）。真正停下靠的是 09:51:08 一条工具异常（`ExceptionGroup: One or more tool calls raised an exception`）打断事件流。
+- **根因**（三层叠加）：
+  1. AgentScope 默认吞取消：`ReActConfig.interruption_raise_cancelled_error` 默认 `False`，`Agent.reply_stream` 在 `except CancelledError` 里只发一条 `ReplyEnd(INTERRUPTED)` 就正常返回；并发工具路径还会 `uncancel()`。于是 `task.cancel()` 只等于「打断这一次回复」，SOP 引擎把它当成「本步失败」自动重试 —— 09:47:20.036 的 ReplyEnd 之后 3 毫秒就开始了同一步的第二次尝试。
+  2. 取消信号只在**每条用例开头**检查一次，单用例任务永远命中不到。
+  3. 关闭动作里立刻 `finalize_task` → 内部 `dispatch_device(serial)`，同设备排队任务会被放行；旧线程还在点屏幕，就出现两条任务抢一台手机。
+- **已修**（变更 `task-cancel-immediate-stop`）：
+  - 工作流在**每个事件边界**检查停止信号，命中即抛取消结束当前步骤；当前步作废，不生成判决、不触发重试。
+  - 角色侧 `ReActConfig.interruption_raise_cancelled_error` 默认改为 `True` 并透传到 agentscope，取消能穿透角色层。
+  - `cancel_running_task` 不再放行设备槽；放行统一在工作线程退出时执行，另设 60 秒兜底：线程仍未退出则写一条 `TaskCancelTimeoutEvent` 并强制放行。
+  - 工作线程收尾先 `refresh_from_db`，任务已是 `cancelled` 时不覆盖终态。
+- **自测**：`test_platform_cancel.py`（5 条）+ `test_task_cancel_dispatch.py`（6 条）+ `test_case_run_continuity.py`（7 条）全绿；未新增 `raises-doc` 告警。
+- **真机复测**（任务 `198`「关闭功能测试-01」，10:41:08 关闭）：关闭后 **0 条事件、0 次模型调用、¥0**，工作线程已退出（进程内无 `ai-task-198` 线程）；总花费 ¥0.0113。关闭前最后一条事件早于点击 2.5 秒，因此本次无法从事件侧读出「停止延迟」的精确秒数。
+- **界面口径**：关闭任务在详情页里，当前步与用例徽标显示「主动关闭」（中性灰），未执行的步骤仍显示「未执行」，已判 `FAIL` 的步骤不被改写。
+- **非目标**：不引入「停止中」中间态；日志类工具异常打断整条用例的问题另立变更。
+
 ---
 
 ## 八、工程与门禁

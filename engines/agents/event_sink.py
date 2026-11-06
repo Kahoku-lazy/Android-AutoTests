@@ -15,6 +15,7 @@ Python 调试：➡️ python -m engines.agents.event_sink 🏁
 4. RunContext / bind_run_context: 一次运行盖在每条事件上的上下文，引擎不写库。
 5. set_case_title / set_step_context: 运行途中刷新当前用例名与当前步骤。
 6. count_model_call / budget_exceeded: 运行预算（模型调用次数与时长）的计数与判定。
+7. StepInterrupt / bind_interrupts / note_interrupt: 收集本次运行里被中断的步骤与原因。
 🏁
 关联模块：➡️
 1. 暂无本地 engines/utils 依赖
@@ -264,6 +265,87 @@ def set_step_context(step_seq: int | None, attempt: int | None) -> None:
         return
     ctx.step_seq = step_seq
     ctx.attempt = attempt
+
+
+@dataclass
+class StepInterrupt:
+    """一步中断的记录：序号、标题、类别、原因与涉及的工具。
+
+    Attributes:
+        step_seq: 被中断的步骤序号，从 1 起；未知时为 0。
+        title: 该步标题（步骤 subject），用于报告与失败原因。
+        kind: 中断类别：`log` 证据不可用 / `exception` 执行层异常。
+        reason: 原因原文。
+        tool: 涉及的工具名；不是工具导致时为空串。
+    """
+
+    step_seq: int = 0
+    title: str = ""
+    kind: str = "exception"
+    reason: str = ""
+    tool: str = ""
+
+
+_interrupts: ContextVar[list[StepInterrupt] | None] = ContextVar("step_interrupts", default=None)
+
+
+def bind_interrupts() -> Token:
+    """开始收集本次运行的中断记录。
+
+    Returns:
+        还原用的令牌，交给 reset_interrupts。
+    """
+    return _interrupts.set([])
+
+
+def reset_interrupts(token: Token) -> None:
+    """还原 bind_interrupts 之前的上下文。
+
+    Args:
+        token: bind_interrupts 返回的令牌。
+    """
+    _interrupts.reset(token)
+
+
+def current_interrupts() -> list[StepInterrupt]:
+    """本次运行已记录的中断；未绑定收集器时为空列表。
+
+    Returns:
+        中断记录列表的副本。
+    """
+    return list(_interrupts.get() or [])
+
+
+def note_interrupt(
+    kind: str,
+    reason: str,
+    *,
+    title: str = "",
+    tool: str = "",
+    step_seq: int | None = None,
+) -> None:
+    """记一条步骤中断。没有绑定收集器时静默忽略（例如单工具调试）。
+
+    Args:
+        kind: 中断类别：`log` 证据不可用 / `exception` 执行层异常。
+        reason: 原因原文。
+        title: 该步标题；调用方知道就填。
+        tool: 涉及的工具名；不是工具导致时留空。
+        step_seq: 步骤序号；None 表示取当前运行上下文里的步骤。
+    """
+    log = _interrupts.get()
+    if log is None:
+        return
+    seq = int(step_seq) if step_seq else int(current_run().step_seq or 0)
+    log.append(
+        StepInterrupt(
+            step_seq=seq,
+            title=str(title or ""),
+            kind=str(kind or "exception"),
+            reason=str(reason or ""),
+            tool=str(tool or ""),
+        )
+    )
 
 
 def set_case_quota(case_count: int) -> None:

@@ -200,6 +200,7 @@ async def _drive_real(
         _inflight[task_id] = (asyncio.get_running_loop(), current)
     completed: list[str] = []
     failed: list[str] = []
+    reasons: dict[str, str] = {}
     # 取消信号下沉到工作流：每个事件边界检查一次，命中即结束当前步
     should_stop = cancel_event.is_set if cancel_event is not None else None
     # 配额按本条任务的用例数放大：全功能回归一次带多条用例，不该比单条任务更早被打断
@@ -233,13 +234,42 @@ async def _drive_real(
                 return _cancelled(completed, failed)
             else:
                 failed.append(case.title)
+                detail = _interrupt_reason(getattr(workflow, "interrupts", None))
+                if detail:
+                    reasons[case.title] = detail
             if budget_exceeded():
                 return _budget_stop(completed, failed)
-        return _finished(completed, failed)
+        return _finished(completed, failed, reasons)
     except asyncio.CancelledError:
         return _cancelled(completed, failed)
     finally:
         _inflight.pop(task_id, None)
+
+
+_KIND_LABEL = {"log": "证据不可用", "exception": "执行异常"}
+
+
+def _interrupt_reason(interrupts) -> str:
+    """把一步或多步中断拼成一句可读原因：第几步、哪一类、原文。
+
+    Args:
+        interrupts: `StepInterrupt` 列表；为空表示不是中断导致的失败。
+
+    Returns:
+        形如「第 2 步中断证据不可用（工具 check_device_log）：日志为空…」；
+        没有中断时返回空串。
+    """
+    if not interrupts:
+        return ""
+    parts: list[str] = []
+    for item in list(interrupts)[:3]:
+        label = _KIND_LABEL.get(item.kind, item.kind)
+        where = f"第 {item.step_seq} 步" if item.step_seq else "某步骤"
+        tool = f"（工具 {item.tool}）" if item.tool else ""
+        parts.append(f"{where}中断{label}{tool}：{item.reason}")
+    if len(interrupts) > 3:
+        parts.append(f"等 {len(interrupts)} 处中断")
+    return "；".join(parts)
 
 
 def _close_after_case(device_serial: str, closer: AppCloser | None) -> None:
@@ -259,13 +289,29 @@ def _close_after_case(device_serial: str, closer: AppCloser | None) -> None:
         write_line("-", f"收尾关闭应用失败：{exc}")
 
 
-def _finished(completed: list[str], failed: list[str]) -> dict:
-    """整轮结束的结果：有失败用例时状态为 fail，并汇总全部失败标题。"""
+def _finished(
+    completed: list[str], failed: list[str], reasons: dict[str, str] | None = None
+) -> dict:
+    """整轮结束的结果：有失败用例时状态为 fail，并汇总全部失败标题。
+
+    Args:
+        completed: 已完成的用例标题。
+        failed: 未完成的用例标题。
+        reasons: 标题 → 失败细节（例如第几步中断、中断类别与原因）；无细节时省略。
+
+    Returns:
+        运行结果字典。
+    """
     if not failed:
         return _succeeded(completed)
+    detail = reasons or {}
+    parts = []
+    for title in failed:
+        extra = detail.get(title, "")
+        parts.append(f"用例「{title}」未完成（{extra}）" if extra else f"用例「{title}」未完成")
     return {
         "load_message": LOAD_OK,
-        "reason": "；".join(f"用例「{title}」未完成" for title in failed),
+        "reason": "；".join(parts),
         "status": "fail",
         "completed": list(completed),
         "failed": list(failed),

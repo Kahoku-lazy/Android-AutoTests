@@ -38,13 +38,20 @@ from datetime import datetime
 import yaml
 
 from agentscope.agent import Agent
-from agentscope.message import UserMsg
-from agentscope.sop import SOP, SOPEngine, SOPStep
+from agentscope.message import TextBlock, UserMsg
+from agentscope.sop import SOP, SOPEngine, SOPPhase, SOPStep
 
 from engines.agents.agent_builders import build_executor, build_verifier
 from engines.agents.config.log_keywords import load_log_keywords
 from engines.agents.event_log import write_line
-from engines.agents.event_sink import current_run, current_sink, set_step_context
+from engines.agents.event_sink import (
+    bind_interrupts,
+    current_interrupts,
+    current_run,
+    note_interrupt,
+    reset_interrupts,
+    set_step_context,
+)
 from engines.agents.messaging.messages import AgentEventsShow
 from engines.agents.messaging.record import EventRecord
 from engines.agents.workflow.case_file import CaseStep
@@ -52,12 +59,23 @@ from engines.agents.workflow.step_brief import executor_brief, verifier_brief, w
 from utils.logs import agent_event_log
 
 
-def _emit_interrupt(reason: str, exc_type: str) -> None:
+async def _emit_interrupt(
+    reason: str,
+    exc_type: str,
+    *,
+    kind: str = "exception",
+    step_seq: int | None = None,
+) -> None:
     """把「事件流被打断」写成一条事件，供任务详情与 BUG 台账识别。
+
+    走 `show_event`（内部 `database_sync_to_async`），因此是在工作线程里写库：
+    直接在事件循环里同步写库会被 Django 判为 SynchronousOnlyOperation 并整批丢事件。
 
     Args:
         reason: 打断原因的文本（设备日志为空 / 时间不满足 5 秒等）。
         exc_type: 异常类型名，便于排查。
+        kind: 中断类别：`log` 证据不可用 / `exception` 执行层异常。
+        step_seq: 被中断的步骤序号；None 表示取当前运行上下文里的步骤。
     """
     run = current_run()
     now = datetime.now()
@@ -68,7 +86,8 @@ def _emit_interrupt(reason: str, exc_type: str) -> None:
         payload={
             "reason": reason,
             "exc_type": exc_type,
-            "step_seq": run.step_seq,
+            "kind": kind,
+            "step_seq": step_seq if step_seq is not None else run.step_seq,
             "attempt": run.attempt,
             "task_id": run.task_id,
         },
@@ -77,9 +96,98 @@ def _emit_interrupt(reason: str, exc_type: str) -> None:
         duration_ms=0,
     )
     try:
-        current_sink().emit(record)
+        await show_event(record, {}, {}, flush=True)
     except Exception as exc:  # noqa: BLE001 - 台账失败不影响任务终态
         agent_event_log.warning(f"记录中断事件失败：{exc}")
+
+
+async def _emit_step_interrupt(interrupt) -> None:
+    """把一步的中断写成事件：带上类别、原因与涉及的工具。
+
+    Args:
+        interrupt: `StepInterrupt` 记录（序号、标题、类别、原因、工具）。
+    """
+    set_step_context(interrupt.step_seq or None, 1)
+    await _emit_interrupt(
+        interrupt.reason,
+        interrupt.kind,
+        kind=interrupt.kind,
+        step_seq=interrupt.step_seq,
+    )
+    if interrupt.tool:
+        agent_event_log.warning(
+            f"步骤中断：第 {interrupt.step_seq} 步 {interrupt.title}｜{interrupt.kind}｜"
+            f"工具 {interrupt.tool}｜{interrupt.reason}"
+        )
+
+
+class _ResilientSOPStep(SOPStep):
+    """单步中断只影响这一步：异常收敛到本步并把该步收口，引擎继续推进。
+
+    收集器里的中断记录由 `run_workflow` 统一转成事件，本类只负责把步骤状态
+    从「还在跑」改成「已收口」，避免引擎把异常当成整轮失败。
+    """
+
+    def __init__(self, *args, step_seq: int = 0, **kwargs) -> None:
+        """
+        Args:
+            *args: 透传给 SOPStep 的位置参数（subject / description / executor / verifier）。
+            step_seq: 步骤序号，从 1 起；写入中断记录用。
+            **kwargs: 透传给 SOPStep 的关键字参数。
+        """
+        super().__init__(*args, **kwargs)
+        self.step_seq = step_seq
+
+    def _close_interrupted(
+        self, state, kind: str, reason: str, tool: str = "", *, noted: bool = False
+    ) -> None:
+        """记一条中断并把该步标记为已收口，让引擎继续下一步。
+
+        Args:
+            state: 本步的运行记录。
+            kind: 中断类别。
+            reason: 原因原文。
+            tool: 涉及的工具名。
+            noted: True 表示原因已由工具记进收集器，这里不再重复记。
+        """
+        if not noted:
+            note_interrupt(kind, reason, title=self.subject, tool=tool, step_seq=self.step_seq)
+        self.record(state, False, reason, "workflow")
+        state.submission = [TextBlock(text=f"（本步中断：{reason}）")]
+        state.phase = SOPPhase.COMPLETED
+
+    async def reply_stream(self, inputs, state):
+        """跑一次尝试；异常或证据不可用时只中断本步。
+
+        Args:
+            inputs: 引擎交给这次尝试的输入。
+            state: 本步的运行记录。
+
+        Yields:
+            本步产生的事件；中断后立即结束，不再继续本步。
+        """
+        seen = len(current_interrupts())
+        try:
+            async for event in super().reply_stream(inputs, state):
+                yield event
+                latest = current_interrupts()
+                if len(latest) > seen:
+                    seen = len(latest)
+                    self._close_interrupted(
+                        state, latest[-1].kind, latest[-1].reason, latest[-1].tool, noted=True
+                    )
+                    return
+            # 流正常结束也要看一次：证据不可用可能发生在最后一个事件之后
+            latest = current_interrupts()
+            if len(latest) > seen:
+                self._close_interrupted(
+                    state, latest[-1].kind, latest[-1].reason, latest[-1].tool, noted=True
+                )
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001 - 单步异常不许打死整条用例
+            self._close_interrupted(state, "exception", f"{type(exc).__name__}: {exc}")
+            return
 
 
 def _step_keywords(step: CaseStep, default_sku: str) -> str:
@@ -99,6 +207,9 @@ def _step_keywords(step: CaseStep, default_sku: str) -> str:
 class AgentSOPWorkflow:
     """UI 自动 SOP 工作流：执行角色操作设备，验收角色判定步骤。"""
 
+    INTERRUPTED_PHASE = "interrupted"
+    """本次运行里有步骤被中断时的收口阶段，调用方据此把用例记为失败。"""
+
     def __init__(
         self,
         executor_factory: Callable[[], Agent],
@@ -114,6 +225,8 @@ class AgentSOPWorkflow:
         self._verifier_factory = verifier_factory
         # 运行汇总用第一个执行者的模型名，取不到时用占位符；编号在 run_workflow 里刷新
         self.model_name = "-"
+        # 本次运行里被中断的步骤（StepInterrupt 列表），调用方据此写失败原因
+        self.interrupts: list = []
 
         # 每一步被驳回几次后判失败, 由引擎执行, 不是步骤自己管
         self.MAX_ATTEMPTS = 2
@@ -196,10 +309,11 @@ class AgentSOPWorkflow:
         sku_fallback = str(default_sku or "").strip()
 
         # 一份 SOP = 一串 SOPStep; SOP 本身不含运行状态, 可以反复跑
+        # 用 _ResilientSOPStep：单步异常只中断这一步，引擎继续推进后续步骤
         sop = SOP(
             name=name,
             steps=[
-                SOPStep(
+                _ResilientSOPStep(
                     subject=with_context(executor_brief(step), context),  # 执行者: 动作 + 页面锚点
                     description=with_context(  # 验收者: 结果 + 日志证据 + 关键词表
                         verifier_brief(step, _step_keywords(step, sku_fallback)),
@@ -208,12 +322,16 @@ class AgentSOPWorkflow:
                     executor=executor,  # 执行者: 本步新建
                     verifier=verifier,  # 验收者: 本步新建
                     max_attempts=self.MAX_ATTEMPTS,  # 最大重试次数: 驳回几次后整轮失败
+                    step_seq=index,
                 )
-                for step, (executor, verifier) in zip(steps, pairs, strict=True)
+                for index, (step, (executor, verifier)) in enumerate(
+                    zip(steps, pairs, strict=True), start=1
+                )
             ],
         )
 
         engine = SOPEngine(sop)  # 引擎持有本次运行的状态, 即 engine.state
+        interrupt_token = bind_interrupts()
 
         try:
             buf: dict = {}  # 增量累积器: 块碎片、工具入参、工具返回都攒在这里
@@ -232,18 +350,26 @@ class AgentSOPWorkflow:
                 await show_event(event, buf, models)
 
         except Exception as exc:
-            # 裸 SOPStep 不接工具异常：设备日志为空时会打到这里, 事件流当场结束
-            # 此时该步停在 running: 既不记驳回也不重试
+            # 兜底：步骤级已接住工具异常，走到这里说明事件流本身坏了
             # 注意 Exception 接不住 BaseExceptionGroup（带取消时 asyncio 抛的是它）
             self._log(f"事件流被异常打断：{type(exc).__name__}: {exc}")
-            _emit_interrupt(str(exc), type(exc).__name__)
+            await _emit_interrupt(f"{type(exc).__name__}: {exc}", type(exc).__name__)
 
-        # 结论不在事件流里: 跑完必须回 engine.state 读
-        # 阶段是 running / pending 说明事件流被打断了, 不是"还在跑"
-        self._log(f"运行阶段：{engine.phase}")
-        self.dump(engine, sop)
-        phase = getattr(engine.phase, "value", engine.phase)
-        return str(phase or "")
+        try:
+            # 一步中断只收口这一步：把收集到中断写成事件，用例结论由调用方按 FAIL 收
+            self.interrupts = current_interrupts()
+            for interrupt in self.interrupts:
+                await _emit_step_interrupt(interrupt)
+            # 结论不在事件流里: 跑完必须回 engine.state 读
+            # 中断过就按 interrupted 收口，其余情况用引擎给的阶段
+            self._log(f"运行阶段：{engine.phase}")
+            self.dump(engine, sop)
+            if self.interrupts:
+                return self.INTERRUPTED_PHASE
+            phase = getattr(engine.phase, "value", engine.phase)
+            return str(phase or "")
+        finally:
+            reset_interrupts(interrupt_token)
 
     def _log(self, action: str) -> None:
         """运行汇总写入与事件时间线同一份日志。模型名用执行者的模型。"""

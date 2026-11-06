@@ -187,4 +187,32 @@ describe('[P0] useTaskList', () => {
     wrapper.unmount()
     vi.useRealTimers()
   })
+
+  it('离开清单（keep-alive 失活）后不再轮询，回到清单静默补拉一次', async () => {
+    vi.useFakeTimers()
+    const running = { ...makeTask(1), status: 'running' }
+    vi.mocked(taskApi.listTasks).mockResolvedValue({
+      status: true,
+      data: { tasks: [running] },
+    })
+
+    const { deactivate, activate, wrapper } = await mountComposable(() => useTaskList(), {
+      keepAlive: true,
+    })
+    await flushPromises()
+    expect(taskApi.listTasks).toHaveBeenCalledTimes(1)
+
+    // keep-alive 缓存：只失活，不卸载
+    await deactivate?.()
+    await vi.advanceTimersByTimeAsync(30000)
+    await flushPromises()
+    expect(taskApi.listTasks).toHaveBeenCalledTimes(1)
+
+    await activate?.()
+    await flushPromises()
+    expect(taskApi.listTasks).toHaveBeenCalledTimes(2)
+
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
 })

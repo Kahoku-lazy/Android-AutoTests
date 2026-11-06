@@ -19,7 +19,16 @@ import {
 
 const route = useRoute()
 const router = useRouter()
-const taskId = computed(() => String(route.params.id))
+
+/**
+ * 本次打开的任务编号：setup 时读一次即可，MUST NOT 做成响应式。
+ *
+ * `App.vue` 的 `<component :key="route.path">` 保证「一条任务路径一个实例」，
+ * 而 `useRoute()` 拿到的是**全局**当前路由——如果继续订阅它（computed + watch），
+ * 离开页面时 `route.params.id` 会变成 undefined，`Number()` 得 NaN，
+ * 打出 `/tasks/NaN/report/` 的 404。这里只是普通读取，不建立响应式依赖。
+ */
+const taskId = Number(route.params.id)
 
 const flow = ref(null)
 const loading = ref(false)
@@ -34,20 +43,21 @@ const {
 } = useReportPoll(refreshReport, () => isRunning.value)
 
 onMounted(() => loadReport())
-watch(taskId, () => loadReport())
 
 /**
  * 首屏加载：清空旧报告，失败时给出错误态。
  *
- * 成功且任务仍在运行时接上自动刷新。
+ * 成功且任务仍在运行时接上自动刷新。任务编号非法（路由参数缺失或非数字）时
+ * 直接返回，既不请求也不进入错误态——缓存页不该因为「别人导航」而被写脏。
  */
 async function loadReport() {
+  if (!Number.isFinite(taskId)) return
   loading.value = true
   error.value = ""
   flow.value = null
   stopPoll()
   try {
-    const payload = await getTaskReport(Number(taskId.value))
+    const payload = await getTaskReport(taskId)
     if (payload.status && payload.data) {
       flow.value = payload.data
       error.value = ""
@@ -65,16 +75,22 @@ async function loadReport() {
  * 静默刷新：只替换报告数据，不动骨架与错误态。
  *
  * Returns:
- *   true 表示本轮成功；失败交给轮询按退避重试。
+ *   true 表示本轮成功；网络错误与 5xx 返回 false 交给轮询退避。
+ *
+ * Raises:
+ *   4xx 错误原样抛出：任务已删除 / 不属于当前用户时重试没有意义，
+ *   由 `useReportPoll` 立即停止自动刷新。
  */
 async function refreshReport() {
-  if (!isRunning.value) return false
+  if (!Number.isFinite(taskId) || !isRunning.value) return false
   try {
-    const payload = await getTaskReport(Number(taskId.value))
+    const payload = await getTaskReport(taskId)
     if (!payload.status || !payload.data) return false
     flow.value = payload.data
     return true
-  } catch {
+  } catch (e) {
+    const status = e?.response?.status
+    if (typeof status === "number" && status >= 400 && status < 500) throw e
     return false
   }
 }
@@ -386,7 +402,7 @@ function outcomeClass(outcome) {
                 :steps="caseSteps[caseIndex] || []"
                 :open-keys="openSteps"
                 :key-prefix="`${caseIndex}:`"
-                :task-id="Number(taskId)"
+                :task-id="taskId"
                 @toggle="toggleStep"
               />
             </div>

@@ -2,12 +2,15 @@
  * 任务详情：运行中任务的报告自动刷新调度。
  *
  * 本模块只负责「什么时候再拉一次」，不关心报告内容：
- * 1. useReportPoll: 定时调度 + 失败退避 + 页面可见性暂停 + 卸载清理。
+ * 1. useReportPoll: 定时调度 + 失败退避 + 页面可见性暂停 + 失活（keep-alive 缓存）停止 + 卸载清理。
  *
  * 采用 `setTimeout` 自调度而非 `setInterval`：上一轮请求回来后才会排下一轮，
  * 慢响应不会堆积请求。页面隐藏期间不发请求，重新可见时立即补一次。
+ *
+ * 生命周期口径：`App.vue` 用全局 keep-alive 缓存页面，切走只触发 `onDeactivated`、
+ * 不触发 `onUnmounted`，所以停止条件 MUST 挂在失活上，否则离开页面后仍会每 3 秒打一次报告。
  */
-import { onMounted, onUnmounted, ref, type Ref } from "vue"
+import { onActivated, onDeactivated, onMounted, onUnmounted, ref, type Ref } from "vue"
 import { REPORT_POLL_BACKOFF_MS, REPORT_POLL_MAX_FAILURES, TASK_REPORT_POLL_MS } from "../constants"
 
 /** 自动刷新可调参数：默认取 constants 里的唯一真相源，测试按需覆盖 */
@@ -37,10 +40,26 @@ export interface ReportPollHandle {
 }
 
 /**
+ * 从 axios 错误里取 HTTP 状态码。
+ *
+ * Args:
+ *   error: `refresh()` 抛出的任意值。
+ *
+ * Returns:
+ *   状态码；取不到时返回 undefined（按网络错误处理）。
+ */
+function httpStatusOf(error: unknown): number | undefined {
+  const status = (error as { response?: { status?: number } } | null | undefined)?.response?.status
+  return typeof status === "number" ? status : undefined
+}
+
+/**
  * 给详情页挂上报告轮询。
  *
  * Args:
  *   refresh: 拉取一次报告的函数；返回 true 表示本轮成功、false 表示失败。
+ *     4xx（任务已删除 / 不属于当前用户）MUST 以抛出错误的形式表达，
+ *     本函数据此判定「重试没有意义」并立即停止。
  *   isActive: 是否仍需要轮询（任务未进终态）；返回 false 时停止调度。
  *   options: 间隔 / 退避序列 / 失败上限，默认取模块常量。
  *
@@ -64,6 +83,10 @@ export function useReportPoll(
   let inFlight = false
   let stopped = true
   let failures = 0
+  /** 失活标记：keep-alive 缓存期间不排定时器，回到页面才恢复 */
+  let deactivated = false
+  /** `onActivated` 首次触发紧跟 `onMounted`，用它区分「首次挂载」与「从缓存回来」 */
+  let activatedOnce = false
 
   function hidden(): boolean {
     return typeof document !== "undefined" && document.hidden
@@ -88,6 +111,11 @@ export function useReportPoll(
       polling.value = false
       return
     }
+    // 页面已被缓存起来：先记下「仍需要刷新」（stopped 保持 false），回到页面再排
+    if (deactivated) {
+      polling.value = false
+      return
+    }
     polling.value = true
     timer = setTimeout(() => {
       timer = null
@@ -109,10 +137,12 @@ export function useReportPoll(
 
     inFlight = true
     let ok = false
+    let failureStatus: number | undefined
     try {
       ok = (await refresh()) === true
-    } catch {
-      // 请求抛错按本轮失败处理，交给退避重试
+    } catch (error) {
+      // 请求抛错按本轮失败处理：4xx 交给下面判定，其余走退避
+      failureStatus = httpStatusOf(error)
     }
     inFlight = false
     if (stopped) return
@@ -122,6 +152,13 @@ export function useReportPoll(
       failed.value = false
       lastUpdatedAt.value = new Date()
       schedule(intervalMs)
+      return
+    }
+
+    // 4xx：任务是按编号定位的资源，重试不会让它回来，立即停并交给调用方提示
+    if (failureStatus !== undefined && failureStatus >= 400 && failureStatus < 500) {
+      failed.value = true
+      stop()
       return
     }
 
@@ -151,7 +188,7 @@ export function useReportPoll(
 
   /** 回到可见时补一次：正在跑就不重复排队，避免两个请求并发 */
   function onVisibilityChange(): void {
-    if (hidden()) return
+    if (hidden() || deactivated) return
     if (stopped || inFlight) return
     clearTimer()
     void run()
@@ -159,6 +196,23 @@ export function useReportPoll(
 
   onMounted(() => {
     document.addEventListener("visibilitychange", onVisibilityChange)
+  })
+
+  onDeactivated(() => {
+    deactivated = true
+    clearTimer()
+    polling.value = false
+  })
+
+  onActivated(() => {
+    // 首次激活紧跟 onMounted，此时调用方还没拿到首屏数据，不重复启动
+    if (!activatedOnce) {
+      activatedOnce = true
+      return
+    }
+    deactivated = false
+    // 调用方主动停过（任务终态 / 4xx 暂停）就不自作主张恢复；否则立即补一次
+    if (!stopped) schedule(0)
   })
 
   onUnmounted(() => {

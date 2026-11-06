@@ -3,8 +3,8 @@
  * 目录：tests/dashboard/p1/
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { mount } from "@vue/test-utils"
-import { defineComponent, h, nextTick } from "vue"
+import { flushPromises, mount } from "@vue/test-utils"
+import { defineComponent, h, KeepAlive, nextTick, ref } from "vue"
 import {
   DASHBOARD_REFRESH_MS,
   useDashboardAutoRefresh,
@@ -27,6 +27,40 @@ function mountAuto(refresh: () => Promise<void>) {
     },
   })
   return mount(Comp)
+}
+
+/** 按 App.vue 的真实结构挂载：KeepAlive 缓存，切走只失活不卸载 */
+function mountAutoKeepAlive(refresh: () => Promise<void>) {
+  const visible = ref(true)
+  const Comp = defineComponent({
+    name: "DashboardProbe",
+    setup() {
+      useDashboardAutoRefresh(refresh)
+      return () => h("div")
+    },
+  })
+  const Placeholder = defineComponent({
+    name: "DashboardPlaceholder",
+    setup: () => () => h("span"),
+  })
+  const Host = defineComponent({
+    setup: () => () =>
+      h(KeepAlive, null, {
+        default: () => (visible.value ? h(Comp, { key: "dashboard" }) : h(Placeholder, { key: "other" })),
+      }),
+  })
+  const wrapper = mount(Host)
+  return {
+    wrapper,
+    deactivate: async () => {
+      visible.value = false
+      await nextTick()
+    },
+    activate: async () => {
+      visible.value = true
+      await nextTick()
+    },
+  }
 }
 
 describe("[P1] useDashboardAutoRefresh", () => {
@@ -121,5 +155,28 @@ describe("[P1] useDashboardAutoRefresh", () => {
     await nextTick()
 
     expect(refresh).not.toHaveBeenCalled()
+  })
+
+  it("离开页面（keep-alive 失活）后停止轮询，回来立即刷新一次并恢复定时器", async () => {
+    const refresh = vi.fn().mockResolvedValue(undefined)
+    const { wrapper, deactivate, activate } = mountAutoKeepAlive(refresh)
+
+    // 切走后 3 个周期内不请求（页面被缓存，组件未卸载）
+    await deactivate()
+    vi.advanceTimersByTime(DASHBOARD_REFRESH_MS * 3)
+    await nextTick()
+    expect(refresh).not.toHaveBeenCalled()
+
+    // 回到页面：立即补一次，不等 30 秒
+    await activate()
+    await flushPromises()
+    expect(refresh).toHaveBeenCalledTimes(1)
+
+    // 定时器已恢复
+    vi.advanceTimersByTime(DASHBOARD_REFRESH_MS)
+    await flushPromises()
+    expect(refresh).toHaveBeenCalledTimes(2)
+
+    wrapper.unmount()
   })
 })

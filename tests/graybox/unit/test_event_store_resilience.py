@@ -26,16 +26,17 @@ class _SilentLog:
 
 
 @pytest.mark.unit
-def test_flush_falls_back_to_row_by_row(monkeypatch):
-    """整批失败时逐行重试：坏行丢弃，好行照样落库。"""
+def test_flush_keeps_failed_row_for_retry(monkeypatch):
+    """整批失败时逐行重试：好行落库，坏行留在缓冲里等下次重试（不丢）。"""
     from backend.apps.task_list import api, event_store
 
     written: list[int] = []
+    bad_seqs: set[int] = {2}
 
     def fake_insert(task_id, rows):
         if len(rows) > 1:
             raise RuntimeError("packet too large")
-        if rows[0]["seq"] == 2:
+        if rows[0]["seq"] in bad_seqs:
             raise RuntimeError("bad row")
         written.append(rows[0]["seq"])
 
@@ -52,8 +53,46 @@ def test_flush_falls_back_to_row_by_row(monkeypatch):
     sink.flush()
 
     assert written == [1, 3]
+    assert [row["seq"] for row in sink._rows] == [2]
+    assert sink._retry is True
+
+    # 故障恢复后，下一次 flush 把这行补上，缓冲清空
+    bad_seqs.clear()
+    sink.flush()
+
+    assert written == [1, 3, 2]
     assert sink._rows == []
     assert sink._bytes == 0
+
+
+@pytest.mark.unit
+def test_flush_defers_in_async_context(monkeypatch):
+    """事件循环线程里不直接写库：保留缓冲，等同步上下文再写。"""
+    import asyncio
+
+    from backend.apps.task_list import api, event_store
+
+    written: list[int] = []
+    monkeypatch.setattr(
+        api, "insert_task_events", lambda task_id, rows: written.extend(r["seq"] for r in rows)
+    )
+    monkeypatch.setattr(event_store, "backend_log", _SilentLog())
+
+    sink = event_store.TaskEventSink()
+    sink._task_id = 7
+    sink._rows = [{"seq": 1, "event_type": "A"}]
+
+    async def _in_loop() -> None:
+        sink.flush()
+        assert written == []
+        assert [row["seq"] for row in sink._rows] == [1]
+
+    asyncio.run(_in_loop())
+
+    # 回到同步上下文后正常写入
+    sink.flush()
+    assert written == [1]
+    assert sink._rows == []
 
 
 @pytest.mark.unit

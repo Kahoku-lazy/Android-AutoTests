@@ -48,7 +48,7 @@ def _event(task, seq, event_type, *, step_seq=1, payload=None, started_at=None):
 
 
 def test_interrupted_step_carries_reason():
-    """打断事件落在第 2 步时，报告的该步带 interrupt 原因。"""
+    """打断事件落在第 2 步时，报告的该步带 interrupt 原因与中断类别。"""
     owner = get_user_model().objects.create_user(username="int-owner", password="pass")
     task = _task(owner)
     start = datetime(2026, 11, 4, 17, 57, 0)
@@ -59,7 +59,12 @@ def test_interrupted_step_carries_reason():
         3,
         "StepInterruptedEvent",
         step_seq=2,
-        payload={"reason": LOG_EMPTY, "exc_type": "DeveloperOrientedException"},
+        payload={
+            "reason": LOG_EMPTY,
+            "exc_type": "exception",
+            "kind": "log",
+            "tool": "check_device_log",
+        },
         started_at=start + timedelta(seconds=30),
     )
 
@@ -67,7 +72,40 @@ def test_interrupted_step_carries_reason():
 
     steps = flow["cases"][0]["steps"]
     assert steps[0]["interrupt"] == ""
+    assert steps[0]["interrupt_kind"] == ""
     assert steps[1]["interrupt"] == LOG_EMPTY
+    assert steps[1]["interrupt_kind"] == "log"
+    assert steps[1]["interrupt_tool"] == "check_device_log"
+    # 中断即未通过：计入失败统计
+    assert steps[1]["outcome"] == "FAIL"
+    assert flow["cases"][0]["outcome"] == "FAIL"
+
+
+def test_exception_interrupt_is_labelled_separately():
+    """执行层异常与证据不可用分开标注，原因里带异常类型。"""
+    owner = get_user_model().objects.create_user(username="int-owner-3", password="pass")
+    task = _task(owner)
+    start = datetime(2026, 11, 6, 11, 17, 0)
+    _event(task, 1, "ReplyStartEvent", step_seq=1, started_at=start)
+    _event(
+        task,
+        2,
+        "StepInterruptedEvent",
+        step_seq=1,
+        payload={
+            "reason": "ExceptionGroup: One or more tool calls raised an exception (2 sub-exceptions)",
+            "kind": "exception",
+        },
+        started_at=start + timedelta(seconds=30),
+    )
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+
+    step = flow["cases"][0]["steps"][0]
+    assert step["interrupt_kind"] == "exception"
+    assert step["interrupt_tool"] == ""
+    assert "ExceptionGroup" in step["interrupt"]
+    assert step["outcome"] == "FAIL"
 
 
 def test_task_without_interrupt_has_empty_field():

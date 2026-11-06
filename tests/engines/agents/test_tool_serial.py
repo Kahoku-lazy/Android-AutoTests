@@ -121,24 +121,30 @@ def test_check_reports_positive_offset_inside_window(logfile) -> None:
     assert '"offset_seconds": 2.5' in payload
 
 
-def test_check_raises_when_no_log_after_start(logfile) -> None:
-    """起点之后没有任何行时中断本轮。"""
+def test_check_returns_fail_when_no_log_after_start(logfile) -> None:
+    """起点之后没有任何行：返回 FAIL + 证据不可用标记，不抛异常。"""
     _write(logfile, [_line("2026-11-04 12:25:10,000", "too_early")])
 
-    with pytest.raises(ValueError) as excinfo:
-        tool_serial.check_device_log("timer_configs_set_success", at=_AT, sku=_SKU, port=_PORT)
+    payload = tool_serial.check_device_log(
+        "timer_configs_set_success", at=_AT, sku=_SKU, port=_PORT
+    )
 
-    assert str(excinfo.value) == tool_serial.LOG_EMPTY
+    assert '"result": "FAIL"' in payload
+    assert tool_serial.LOG_EMPTY in payload
+    assert '"evidence_missing": true' in payload
 
 
-def test_check_raises_when_window_not_covered(logfile) -> None:
-    """起点之后的行还没盖满 5 秒时中断本轮。"""
+def test_check_returns_fail_when_window_not_covered(logfile) -> None:
+    """起点之后的行还没盖满 5 秒：返回 FAIL + 证据不可用标记，不抛异常。"""
     _write(logfile, [_line("2026-11-04 12:25:16,000", "only_one_line")])
 
-    with pytest.raises(ValueError) as excinfo:
-        tool_serial.check_device_log("timer_configs_set_success", at=_AT, sku=_SKU, port=_PORT)
+    payload = tool_serial.check_device_log(
+        "timer_configs_set_success", at=_AT, sku=_SKU, port=_PORT
+    )
 
-    assert str(excinfo.value) == tool_serial.LOG_SPAN_SHORT
+    assert '"result": "FAIL"' in payload
+    assert tool_serial.LOG_SPAN_SHORT in payload
+    assert '"evidence_missing": true' in payload
 
 
 def test_incremental_second_call_starts_at_previous_offset(

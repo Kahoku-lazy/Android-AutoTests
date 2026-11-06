@@ -26,7 +26,6 @@ import asyncio
 import inspect
 import json
 
-from agentscope.exception import DeveloperOrientedException
 from agentscope.message import Base64Source, DataBlock, TextBlock
 from agentscope.permission import PermissionBehavior, PermissionDecision
 from agentscope.skill import LocalSkillLoader
@@ -35,7 +34,6 @@ from agentscope.tool import FunctionTool, ToolChunk, ToolGroup, Toolkit
 from utils.logs import agent_event_log
 
 from .tool_base import ToolSpec
-from .tool_serial import LOG_EMPTY, LOG_SPAN_SHORT
 
 __all__ = ["PlatformFunctionTool", "build_toolkit"]
 
@@ -76,6 +74,7 @@ class PlatformFunctionTool(FunctionTool):
 
     def __init__(self, spec: ToolSpec, user_id: str = ""):
         # 写工具（read_only=False）串行执行，避免并发破坏设备动作顺序。
+        """按 ToolSpec 包装平台函数工具；写工具串行执行以保证设备动作顺序。"""
         super().__init__(
             spec.handler,
             is_read_only=spec.read_only,
@@ -106,8 +105,7 @@ class PlatformFunctionTool(FunctionTool):
             工具返回值转换出的 ToolChunk。
 
         Raises:
-            DeveloperOrientedException: 工具抛出日志为空或时间不足 5 秒时，
-                转成开发者可见异常而不是普通参数错误。
+            Exception: 工具自身抛出的异常原样上抛（日志证据不可用已改为正常结果返回）。
         """
         if self._accepts_user_id:
             kwargs.setdefault("user_id", self._user_id)
@@ -118,15 +116,10 @@ class PlatformFunctionTool(FunctionTool):
                 json.dumps(kwargs, ensure_ascii=False, default=str),
             )
         )
-        try:
-            if inspect.iscoroutinefunction(self._func):
-                result = await super().call(**kwargs)
-            else:
-                result = await asyncio.to_thread(self._func, **kwargs)
-        except ValueError as exc:
-            if str(exc) in {LOG_EMPTY, LOG_SPAN_SHORT}:
-                raise DeveloperOrientedException(str(exc)) from exc
-            raise
+        if inspect.iscoroutinefunction(self._func):
+            result = await super().call(**kwargs)
+        else:
+            result = await asyncio.to_thread(self._func, **kwargs)
         self.log.info("【工具返回】%s 返回=%s" % (self._func.__name__, _safe_log(result)))
         chunk = _image_result_to_chunk(result)
         if chunk is not None:
@@ -134,6 +127,7 @@ class PlatformFunctionTool(FunctionTool):
         return self._convert_func_result_to_chunk(result)
 
     async def check_permissions(self, tool_input, context):
+        """权限检查：只读/自动放行写工具，否则走平台权限决策。"""
         if self.is_read_only:
             return PermissionDecision(PermissionBehavior.ALLOW, "只读工具直接放行")
         if self._auto_allow:

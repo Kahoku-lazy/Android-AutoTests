@@ -34,6 +34,7 @@ from typing import Any
 
 from utils.logs import capture_file_path
 
+from ..event_sink import note_interrupt
 from .tool_base import ToolSpec
 
 __all__ = [
@@ -278,6 +279,8 @@ def _check_result(
     msg: str = "",
     result: str,
     offset_seconds: float | None = None,
+    reason: str = "",
+    evidence_missing: bool = False,
 ) -> str:
     """验收结论：timestamp / msg / result（命中时附相对起点的偏移秒数）。
 
@@ -286,6 +289,9 @@ def _check_result(
         msg: 命中行原文或未命中说明。
         result: PASS / FAIL。
         offset_seconds: 命中行相对起点的秒数；负数表示比起点更早。
+        reason: 失败原因原文；命中时不填。
+        evidence_missing: 是否为「证据拿不到」（日志为空 / 时间不满足）；调用方据此区分
+            设备没响应与环境问题。
 
     Returns:
         JSON 字符串。
@@ -293,6 +299,10 @@ def _check_result(
     payload: dict[str, object] = {"timestamp": timestamp, "msg": msg, "result": result}
     if offset_seconds is not None:
         payload["offset_seconds"] = offset_seconds
+    if reason:
+        payload["reason"] = reason
+    if evidence_missing:
+        payload["evidence_missing"] = True
     return json.dumps(payload, ensure_ascii=False)
 
 
@@ -323,8 +333,6 @@ def check_device_log(
 
     Raises:
         ValueError: at 时间点无法解析。
-        ValueError: 起点之后没有可解析行（日志为空），中断本轮。
-        ValueError: 起点之后的日志还没盖满 5 秒，中断本轮。
     """
     del user_id
     wanted = str(keyword or "").strip()
@@ -351,9 +359,22 @@ def check_device_log(
             )
 
     if not window:
-        raise ValueError(LOG_EMPTY)
+        # 证据拿不到（日志空洞/未抓取）：按失败返回并标注，不抛异常打断整条用例
+        note_interrupt("log", LOG_EMPTY, tool="check_device_log")
+        return _check_result(
+            msg=LOG_EMPTY,
+            result="FAIL",
+            reason=LOG_EMPTY,
+            evidence_missing=True,
+        )
     if _millis(rows[-1][0]) < end_ms:
-        raise ValueError(LOG_SPAN_SHORT)
+        note_interrupt("log", LOG_SPAN_SHORT, tool="check_device_log")
+        return _check_result(
+            msg=LOG_SPAN_SHORT,
+            result="FAIL",
+            reason=LOG_SPAN_SHORT,
+            evidence_missing=True,
+        )
     return _check_result(msg=LOG_KEYWORD_MISS, result="FAIL")
 
 

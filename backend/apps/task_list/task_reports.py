@@ -841,26 +841,49 @@ def _interrupt_maps(events: list[_EventRow]) -> list[dict]:
     return maps
 
 
-def _step_outcome(passed, seq: int, group: list[dict]) -> str:
+def _step_outcome(passed, seq: int, group: list[dict], cancelled: bool = False) -> str:
+    """一步的结果：有判决按判决，没判决再分「没开始」与「开始了但没结论」。
+
+    Args:
+        passed: 该步最后一次验收判决；None 表示还没判决。
+        seq: 步骤序号。
+        group: 该用例的轮次列表，用来判断这一步是否真的开始过。
+        cancelled: 任务是否被用户关闭；关闭导致的中断标「主动关闭」而不是「未完成」。
+
+    Returns:
+        PASS / FAIL / 主动关闭 / 未完成 / 未执行。
+    """
     if passed is True:
         return "PASS"
     if passed is False:
         return "FAIL"
     reached = any(int(entry.get("step_seq") or 0) == seq for entry in group)
-    return "未完成" if reached else "未执行"
+    if not reached:
+        return "未执行"
+    return "主动关闭" if cancelled else "未完成"
 
 
-def _case_outcome(steps: list[dict], started: bool) -> str:
+def _case_outcome(steps: list[dict], started: bool, cancelled: bool = False) -> str:
+    """一条用例的结果：判决优先，没跑完时区分「用户关闭」与「未完成」。
+
+    Args:
+        steps: 该用例的步骤结果列表。
+        started: 这条用例是否已经开始执行。
+        cancelled: 任务是否被用户关闭。
+
+    Returns:
+        PASS / FAIL / 主动关闭 / 未完成 / 未执行。
+    """
     if not started:
         return "未执行"
     if not steps:
-        return "未完成"
+        return "主动关闭" if cancelled else "未完成"
     marks = [step["outcome"] for step in steps]
     if all(mark == "PASS" for mark in marks):
         return "PASS"
     if any(mark == "FAIL" for mark in marks):
         return "FAIL"
-    return "未完成"
+    return "主动关闭" if cancelled else "未完成"
 
 
 def _subject(kind: str, step_seq, steps) -> str:
@@ -966,6 +989,8 @@ def _flow_cases(
     groups = _split_round_groups(rounds)
     verdicts = _verdict_maps(events)
     interrupts = _interrupt_maps(events)
+    # 用户关闭导致的中断在报告里标「主动关闭」，不要和引擎驳回的「未完成」混为一谈
+    cancelled = str(task.status or "") == "cancelled"
     total = max(len(specs), len(groups), 0)
     if not specs and not groups:
         return []
@@ -985,7 +1010,7 @@ def _flow_cases(
                         "seq": seq,
                         "action": step.action,
                         "expected": step.expected,
-                        "outcome": _step_outcome(verdict.get(seq), seq, group),
+                        "outcome": _step_outcome(verdict.get(seq), seq, group, cancelled),
                         "interrupt": interrupt.get(seq, ""),
                         **_step_span(group, seq, spans),
                     }
@@ -998,7 +1023,7 @@ def _flow_cases(
                         "seq": seq,
                         "action": "",
                         "expected": "",
-                        "outcome": _step_outcome(verdict.get(seq), seq, group),
+                        "outcome": _step_outcome(verdict.get(seq), seq, group, cancelled),
                         "interrupt": interrupt.get(seq, ""),
                         **_step_span(group, seq, spans),
                     }
@@ -1008,7 +1033,7 @@ def _flow_cases(
         packed.append(
             {
                 "title": title,
-                "outcome": _case_outcome(steps, bool(group)),
+                "outcome": _case_outcome(steps, bool(group), cancelled),
                 "steps": steps,
                 "round_ids": [entry["round_id"] for entry in annotated],
                 "duration_ms": _span_ms(case_start, case_end),

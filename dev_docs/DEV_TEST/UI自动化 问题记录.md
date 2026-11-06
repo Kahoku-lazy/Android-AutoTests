@@ -262,6 +262,22 @@
 - **界面口径**：关闭任务在详情页里，当前步与用例徽标显示「主动关闭」（中性灰），未执行的步骤仍显示「未执行」，已判 `FAIL` 的步骤不被改写。
 - **非目标**：不引入「停止中」中间态；日志类工具异常打断整条用例的问题另立变更。
 
+### 7.5 日志空洞把一条做成的用例判死，原因还丢了（已修）
+
+- **现象**：任务 `201`（结构化用例测试-纯UI版本-01）里，`H6810 详情页开关与亮度功能测试` 判「未完成」，但执行者其实做成了：11:16:25 点电源键关灯（截图显示「设备已关闭」）、11:16:42 再点开灯（蓝灯 85%），11:16:59 提交 handover。42 秒后这条用例就结束了，第 3、4 步没跑，整轮任务从 `completed` 变成 `failed`。
+- **根因**（三层）：
+  1. **设备日志 36 秒空洞**（11:16:13–11:16:49）正好盖住两次点击；验收者在 11:17:06 并发查 `check_device_log(switch_off)` 与 `check_device_log(switch_on)`，两个窗口内都没有任何可解析行。
+  2. 日志工具按当时的规格「中断本轮」`raise ValueError(LOG_EMPTY)`，`tool_wrapper` 把它转成 `DeveloperOrientedException`，AgentScope 把两个异常聚合成 `ExceptionGroup(2 sub-exceptions)` 穿透工作流，整条用例被结束。
+  3. 中断事件由 `_emit_interrupt` 在**事件循环线程里同步**写库，恰好凑满 50 条一批 → Django `SynchronousOnlyOperation` → 整批 50 条（seq 651–700，含写着原因的 `StepInterruptedEvent`）逐行重试后全丢。`task_media` 里还留着 event_seq 652/658/664/676/699 的截图，事件行却没了 —— 报告只剩「未完成」，没有原因。
+- **已修**（变更 `interrupt-reason-and-log-evidence`）：
+  - 日志工具窗口为空 / 未盖满 5 秒时返回 `FAIL` + `reason` + `evidence_missing`，不再抛异常；验收提示词同步写明「证据不可用 ≠ 执行失败」。
+  - 工作流用 `_ResilientSOPStep` 把中断收敛到单步：记原因、不重试、**继续跑后续步骤**；被中断的步骤记 `FAIL` 并计入失败统计，失败原因写清「第几步 + 中断类别 + 原文」。
+  - `_emit_interrupt` 改走 `show_event`（线程转交），事件写入失败的行留在缓冲里重试（上限 500 行），不再整批丢。
+  - 报告步骤行新增 `interrupt_kind`：区分「日志中断」（证据不可用）与「异常中断」（执行层异常），悬停看原因全文。
+- **自测**：`test_step_interrupt_continue.py`（7 条）+ `test_tool_serial.py`（14 条）+ `test_event_store_resilience.py`（4 条）+ `test_task_report_interrupt.py`（3 条）全绿；前端 `tests/task-list` 141 条全绿。
+- **注意**：任务 201 的历史事件里那条中断事件已经丢了，所以旧任务页面上看不到原因；本修复只对新产生的运行生效。
+
+
 ---
 
 ## 八、工程与门禁

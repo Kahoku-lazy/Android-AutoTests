@@ -815,7 +815,7 @@ def _interrupt_maps(events: list[_EventRow]) -> list[dict]:
     """每条用例一张表：步骤序号 → 该步被打断的原因（没有则不记）。
 
     打断事件由引擎在事件流异常结束时写入（例如设备日志为空、日志没盖满 5 秒），
-    报告据此在步骤上标注「日志中断」，供人一眼看出失败不是模型判错。
+    报告据此在步骤上标注「日志中断 / 异常中断」，供人一眼看出失败不是模型判错。
     """
     maps: list[dict] = []
     current: dict = {}
@@ -835,7 +835,12 @@ def _interrupt_maps(events: list[_EventRow]) -> list[dict]:
         payload = event.payload if isinstance(event.payload, dict) else {}
         reason = str(payload.get("reason") or "").strip()
         if step and reason:
-            current[step] = reason
+            current[step] = {
+                "reason": reason,
+                # 存量事件没有 kind：它们都来自日志证据检查，按 log 处理
+                "kind": str(payload.get("kind") or "").strip() or "log",
+                "tool": str(payload.get("tool") or "").strip(),
+            }
     if saw or current:
         maps.append(current)
     return maps
@@ -861,6 +866,34 @@ def _step_outcome(passed, seq: int, group: list[dict], cancelled: bool = False) 
     if not reached:
         return "未执行"
     return "主动关闭" if cancelled else "未完成"
+
+
+def _step_marks(passed, seq, group, cancelled, interrupt) -> dict:
+    """一步的结果字段：中断优先记为 FAIL，并带出中断类别与原因。
+
+    Args:
+        passed: 该步最后一次验收判决；None 表示没判决。
+        seq: 步骤序号。
+        group: 该用例的轮次列表。
+        cancelled: 任务是否被用户关闭。
+        interrupt: 该步的中断信息（reason / kind / tool）；没有中断时为 None。
+
+    Returns:
+        含 outcome / interrupt / interrupt_kind / interrupt_tool 的字段字典。
+    """
+    if interrupt:
+        return {
+            "outcome": "FAIL",
+            "interrupt": interrupt["reason"],
+            "interrupt_kind": interrupt["kind"],
+            "interrupt_tool": interrupt["tool"],
+        }
+    return {
+        "outcome": _step_outcome(passed, seq, group, cancelled),
+        "interrupt": "",
+        "interrupt_kind": "",
+        "interrupt_tool": "",
+    }
 
 
 def _case_outcome(steps: list[dict], started: bool, cancelled: bool = False) -> str:
@@ -1010,8 +1043,7 @@ def _flow_cases(
                         "seq": seq,
                         "action": step.action,
                         "expected": step.expected,
-                        "outcome": _step_outcome(verdict.get(seq), seq, group, cancelled),
-                        "interrupt": interrupt.get(seq, ""),
+                        **_step_marks(verdict.get(seq), seq, group, cancelled, interrupt.get(seq)),
                         **_step_span(group, seq, spans),
                     }
                 )
@@ -1023,8 +1055,7 @@ def _flow_cases(
                         "seq": seq,
                         "action": "",
                         "expected": "",
-                        "outcome": _step_outcome(verdict.get(seq), seq, group, cancelled),
-                        "interrupt": interrupt.get(seq, ""),
+                        **_step_marks(verdict.get(seq), seq, group, cancelled, interrupt.get(seq)),
                         **_step_span(group, seq, spans),
                     }
                 )

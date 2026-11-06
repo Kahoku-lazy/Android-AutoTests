@@ -96,6 +96,27 @@ def test_cancel_keeps_earlier_failures(tmp_path):
     assert result["completed"] == []
 
 
+def test_single_case_cancel_leaves_no_failed_entry(tmp_path):
+    """只有一条用例时取消：整体 cancelled，不把它记成失败或完成。"""
+    path = tmp_path / "single.yaml"
+    path.write_text(
+        "- title: 甲\n  steps:\n    - action: 点一下\n      assert: 页面已打开\n",
+        encoding="utf-8",
+    )
+    seen: list[str] = []
+
+    def runner(title: str, steps: list[tuple[str, str]], opening: str) -> str:
+        seen.append(title)
+        return "cancelled"
+
+    result = run_platform_sop(str(path), "开场", run_case=runner)
+
+    assert seen == ["甲"]
+    assert result["status"] == "cancelled"
+    assert result["failed"] == []
+    assert result["completed"] == []
+
+
 def test_executor_budget_is_double_the_default():
     assert load_role_spec("UI_EXECUTOR_ROLE_CONFIG").react.max_iters == 60
     assert load_role_spec("UI_VERIFIER_ROLE_CONFIG").react.max_iters == 30

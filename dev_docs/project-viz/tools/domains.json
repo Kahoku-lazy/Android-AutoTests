@@ -1,0 +1,95 @@
+{
+  "_说明": "业务域对照表（人工维护）。fe / be 填模块或 App 名；engine 填 engines 下的相对路径（agents/<子目录> 或一级子包）。coverage 是人工判定：direct=直连引擎，via=经工作流间接，none=无引擎支撑。",
+  "domains": [
+    {
+      "key": "device",
+      "label": "设备管理",
+      "fe": ["device-pool"],
+      "be": ["device_pool"],
+      "engine": ["device"],
+      "coverage": "direct",
+      "note": "引擎 device/ 直接提供连接与控制"
+    },
+    {
+      "key": "serial",
+      "label": "串口日志",
+      "fe": ["serial-log"],
+      "be": ["serial_log"],
+      "engine": ["uart_log"],
+      "coverage": "direct",
+      "note": "引擎 uart_log/ 负责采集与落盘"
+    },
+    {
+      "key": "knowledge",
+      "label": "知识库助手",
+      "fe": ["knowledge-assistant"],
+      "be": ["knowledge_assistant"],
+      "engine": ["agents/rag", "agents/realtime_vocie", "agents/knowledge_chat"],
+      "coverage": "direct",
+      "note": "RAG 检索 + 语音/文字两种会话"
+    },
+    {
+      "key": "ai",
+      "label": "AI 助手",
+      "fe": ["ai-assistant"],
+      "be": ["ai_assistant"],
+      "engine": ["agents/tools", "agents/messaging", "agents/models"],
+      "coverage": "direct",
+      "note": "角色工具调用 + 事件计费 + 模型门面"
+    },
+    {
+      "key": "task",
+      "label": "任务清单",
+      "fe": ["task-list"],
+      "be": ["task_list"],
+      "engine": ["agents/workflow"],
+      "coverage": "via",
+      "note": "经 SOP 工作流间接使用引擎"
+    },
+    {
+      "key": "case",
+      "label": "用例管理",
+      "fe": ["case-manager"],
+      "be": ["case_manager"],
+      "engine": ["agents/workflow"],
+      "coverage": "via",
+      "note": "经用例编写工作流间接使用引擎"
+    },
+    {
+      "key": "dashboard",
+      "label": "仪表盘",
+      "fe": ["dashboard"],
+      "be": ["dashboard"],
+      "engine": [],
+      "coverage": "none",
+      "note": "聚合展示，不需要引擎"
+    },
+    {
+      "key": "report",
+      "label": "测试报告",
+      "fe": ["report-generator"],
+      "be": ["report_generator"],
+      "engine": [],
+      "coverage": "none",
+      "note": "报告生成，当前无引擎能力"
+    },
+    {
+      "key": "bug",
+      "label": "BUG 管理",
+      "fe": ["bug-manager"],
+      "be": ["bug_manager"],
+      "engine": [],
+      "coverage": "none",
+      "note": "无自动化能力"
+    },
+    {
+      "key": "workflow",
+      "label": "页面流",
+      "fe": ["workflow"],
+      "be": ["workflow"],
+      "engine": [],
+      "coverage": "none",
+      "note": "页面流语义管理，与引擎 workflow/ 的 SOP 编排不是同一件事"
+    }
+  ]
+}

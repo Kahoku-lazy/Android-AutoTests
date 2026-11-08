@@ -19,7 +19,7 @@ import { IconLayers } from "@/shared/icons/index"
 export const PAGE_HEADER = {
   title: "仪表盘",
 
-  subtitle: "自动化测试平台 · 实时监控设备状态、用例执行、AI Agent 与测试报告",
+  subtitle: "智能化测试平台 · 实时监控设备状态、用例执行、AI Agent 与测试报告",
 
   icon: "layout-dashboard" as const,
 

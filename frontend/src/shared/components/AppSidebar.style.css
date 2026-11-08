@@ -4,7 +4,7 @@
    ═══════════════════════════════════════════ */
 
 .sidebar {
-  /* 线型由侧栏边界自持：全站不再用共享 --comp-* 令牌代持 dashed/solid 决定 */
+  /* 线型由侧栏边界自持：全站不再用共享 --comp-* 令牌代持 实线/虚线 决定 */
   --sidebar-line: solid;
   --sidebar-border: var(--size-stroke-sketch) var(--sidebar-line) var(--ink);
   --sidebar-yellow: var(--comp-sidebar-yellow);
@@ -24,7 +24,7 @@
   z-index: var(--z-raised);
   border-right: var(--sidebar-border);
   box-shadow: none;
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-family: var(--app-font);
   transition:
     width var(--app-duration-slow) var(--app-ease),
@@ -56,10 +56,10 @@
   border-radius: 2px;
   background: #fff;
   box-shadow: 2px 2px 0 0 var(--sidebar-teal);
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-family: var(--app-font);
   font-size: var(--app-size-md);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   cursor: pointer;
   line-height: 1;
   display: grid;
@@ -150,52 +150,62 @@
 .sidebar__header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
   height: var(--app-topbar-h, 96px);
   box-sizing: border-box;
   min-width: 0;
   margin: 0;
-  padding: 0 16px;
+  padding: 0 14px;
   border-bottom: var(--sidebar-border);
   letter-spacing: -0.02em;
-  color: var(--ink);
+  color: var(--app-text-primary);
   text-decoration: none;
   cursor: pointer;
 }
 .sidebar__header:hover {
-  color: var(--ink);
-}
-.brand-mark {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  border: 2.5px solid var(--ink);
-  background: var(--sidebar-yellow);
-  box-shadow: 2px 2px 0 0 var(--sidebar-teal);
-  display: grid;
-  place-items: center;
-  font-size: var(--app-size-xs);
-  font-weight: 800;
-  line-height: 1;
-  color: var(--ink);
-  border-radius: 2px;
+  color: var(--app-text-primary);
 }
 .sidebar__brand {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  line-height: 1.2;
+  line-height: var(--app-line-height-tight);
+}
+/* 品牌图标：手绘 AI 徽标，纯白底用 multiply 融进纸面 */
+.brand-mark {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: 8px;
+  mix-blend-mode: multiply;
 }
 .brand-title {
   display: block;
-  font-family: var(--app-font);
-  font-size: var(--app-size-md);
-  font-weight: 800;
+  /* 平台标识用登录页同款手写体（--font-brand，仅 400 字重；加粗会变合成粗体） */
+  font-family: var(--app-font-brand);
+  font-size: var(--app-size-xl);
+  font-weight: var(--app-font-weight-regular);
+  letter-spacing: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--ink);
+  color: var(--app-text-primary);
+}
+/* 「智能化」三字取山景配色：深蓝 → 青 → 绿（三档均为现有原子） */
+.brand-accent {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-blue-27) 0%,
+    var(--color-teal-38) 52%,
+    var(--color-green-49) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  /* 手写体笔画细，加 0.35px 墨色描边保证浅色段仍可读 */
+  -webkit-text-stroke: 0.35px color-mix(in srgb, var(--ink) 40%, transparent);
 }
 
 /* ── 导航 ── */
@@ -215,13 +225,13 @@
 }
 .sidebar__group-label {
   padding: 0 10px 8px;
-  font-size: var(--app-size-xs);
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-semibold);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--ink);
-  opacity: 0.45;
-  line-height: 1.2;
+  /* 原为墨色 + opacity .45（≈2.81:1）；改用 secondary 实色后 5.21:1 */
+  color: var(--app-text-secondary);
+  line-height: var(--app-line-height-tight);
   user-select: none;
 }
 
@@ -232,13 +242,13 @@
   gap: 10px;
   width: 100%;
   box-sizing: border-box;
-  min-height: 42px;
+  min-height: 46px;
   padding: 10px 12px;
   margin-bottom: 6px;
   font-family: var(--app-font);
-  font-size: var(--app-size-sm);
-  font-weight: 700;
-  color: var(--ink);
+  font-size: var(--app-size-md);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
   text-align: left;
   text-decoration: none;
   background: transparent;
@@ -271,7 +281,7 @@
 .nav-lucide-icon {
   width: 14px;
   height: 14px;
-  color: var(--ink);
+  color: var(--app-text-primary);
   stroke-width: 2;
 }
 .nav-lucide-icon--sub {
@@ -281,16 +291,16 @@
 
 .sidebar-menu__item:hover {
   background: color-mix(in srgb, var(--sidebar-yellow) 28%, transparent);
-  color: var(--ink);
+  color: var(--app-text-primary);
   transform: rotate(-0.4deg);
 }
 .sidebar-menu__item:hover .nav-lucide-icon {
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 
 .sidebar-menu__item.active {
-  color: var(--ink);
-  font-weight: 800;
+  color: var(--app-text-primary);
+  font-weight: var(--app-font-weight-heavy);
   background: var(--sidebar-yellow);
   border: var(--sidebar-border);
   border-radius: 2px;
@@ -303,8 +313,8 @@
 }
 .sidebar-menu__item.active .nav-lucide-icon,
 .sidebar-menu__item.active .sidebar-menu__label {
-  color: var(--ink);
-  font-weight: 800;
+  color: var(--app-text-primary);
+  font-weight: var(--app-font-weight-heavy);
 }
 .sidebar-menu__item.active::before,
 .sidebar-menu__item.active::after {
@@ -315,29 +325,37 @@
 .sidebar-menu__label {
   flex: 1;
   min-width: 0;
-  line-height: 1.2;
+  line-height: var(--app-line-height-tight);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 
 .sidebar-menu__badge {
   flex-shrink: 0;
   padding: 2px 7px;
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   letter-spacing: 0.03em;
-  color: var(--ink);
+  color: var(--app-text-primary);
   background: #fff;
   border-radius: 2px;
   line-height: 16px;
   margin-left: auto;
   border: 1.5px solid var(--ink);
 }
+/* 开发中：红底红字的窄标签，用语义色而不是 ink 描边 */
 .sidebar-menu__badge--dev {
-  background: color-mix(in srgb, var(--c-element) 22%, #fff);
+  background: var(--app-status-danger-bg);
+  border-color: var(--app-status-danger-text);
+  color: var(--app-status-danger-text);
+  font-size: var(--app-size-xs);
+  font-weight: var(--app-font-weight-semibold);
+  letter-spacing: 0;
+  line-height: 15px;
+  padding: 1px 6px;
 }
 .sidebar-menu__badge--pending {
   background: var(--sidebar-yellow);
@@ -345,6 +363,12 @@
 .sidebar-menu__item.active .sidebar-menu__badge {
   background: #fff;
   border-color: var(--ink);
+}
+/* 选中态保持红色语义，不被上面的白底覆盖 */
+.sidebar-menu__item.active .sidebar-menu__badge--dev {
+  background: var(--app-status-danger-bg);
+  border-color: var(--app-status-danger-text);
+  color: var(--app-status-danger-text);
 }
 
 .sidebar-menu__item--group {
@@ -356,7 +380,7 @@
   flex-shrink: 0;
   margin-left: auto;
   font-size: var(--app-size-sm);
-  color: var(--ink);
+  color: var(--app-text-primary);
   opacity: 0.55;
   line-height: 1;
   transition: transform var(--app-duration) var(--app-ease);
@@ -419,15 +443,15 @@
   background: transparent;
   font-family: var(--app-font);
   font-size: var(--app-size-md);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
   text-align: left;
   margin: 3px 0;
 }
 .sidebar__user-status {
   font-size: var(--app-size-md);
   color: var(--app-status-success-text);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
 }
 .sidebar__user-row {
   display: flex;
@@ -437,9 +461,9 @@
 }
 .sidebar__user-name {
   display: inline-block;
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-size: var(--app-size-md);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 
 .logout-btn {
@@ -447,7 +471,7 @@
   border: 2px solid var(--ink) !important;
   border-radius: 2px !important;
   color: var(--app-bg-card) !important;
-  font-weight: 700 !important;
+  font-weight: var(--app-font-weight-bold) !important;
   font-size: var(--app-size-md) !important;
   padding: 4px 12px !important;
   box-shadow: 2px 2px 0 0 var(--ink) !important;

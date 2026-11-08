@@ -1,4 +1,22 @@
-export const NAV_CATEGORIES = [
+export interface NavItem {
+  path: string
+  icon: string
+  label: string
+  /** 开发中的条目：右侧显示红色「开发中」标签 */
+  isDev?: boolean
+  /** 自定义标签文案（缺省「开发中」） */
+  badge?: string
+  badgeClass?: string
+  children?: NavItem[]
+}
+
+export interface NavCategory {
+  key: string
+  label: string
+  items: NavItem[]
+}
+
+export const NAV_CATEGORIES: NavCategory[] = [
   {
     key: "main",
     label: "",
@@ -9,7 +27,7 @@ export const NAV_CATEGORIES = [
     label: "AI 功能",
     items: [
       { path: "/ai-assistant", icon: "bot", label: "AI 助手" },
-      { path: "/knowledge-assistant", icon: "book-open", label: "知识库助手" },
+      { path: "/knowledge-assistant", icon: "book-open", label: "知识库助手", isDev: true },
     ],
   },
   {
@@ -17,7 +35,7 @@ export const NAV_CATEGORIES = [
     label: "数据",
     items: [
       { path: "/devices", icon: "smartphone", label: "设备管理" },
-      { path: "/workflow", icon: "git-branch", label: "页面流" },
+      { path: "/workflow", icon: "git-branch", label: "页面流", isDev: true },
       { path: "/serial-log", icon: "terminal", label: "串口日志" },
     ],
   },

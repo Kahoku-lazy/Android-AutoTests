@@ -19,15 +19,15 @@ describe("[P0] 会话方式文案", () => {
 })
 
 describe("[P0] 文字发送门控", () => {
-  it("只有文字方式且已连接才可发送", () => {
-    expect(canSendText("voice", true, "listening")).toBe(false)
-    expect(canSendText("text", false, "listening")).toBe(false)
-    expect(canSendText("text", true, "listening")).toBe(true)
+  it("文字方式随时可发，语音方式不可发", () => {
+    expect(canSendText("voice", "listening")).toBe(false)
+    expect(canSendText("text", "idle")).toBe(true)
+    expect(canSendText("text", "listening")).toBe(true)
   })
 
   it("回答进行中不可再发", () => {
-    expect(canSendText("text", true, "thinking")).toBe(false)
-    expect(canSendText("text", true, "speaking")).toBe(false)
+    expect(canSendText("text", "thinking")).toBe(false)
+    expect(canSendText("text", "speaking")).toBe(false)
   })
 })
 

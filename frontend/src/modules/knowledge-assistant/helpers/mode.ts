@@ -41,17 +41,18 @@ export function statusTextFor(mode: AssistantMode, state: VoiceState): string {
 }
 
 /**
- * 文字输入框是否可发送：只在文字方式、已连接、且没有回答进行中时为真。
+ * 文字输入框是否可发送：只在文字方式、且没有回答进行中时为真。
+ *
+ * 「是否已连接」不再是前提——未连接时发送会自动建连并把这条文本补发出去。
  *
  * Args:
  *   mode: 语音或文字。
- *   connected: 通道是否已就绪。
  *   state: 会话状态。
  *
  * Returns:
  *   可发送则 true。
  */
-export function canSendText(mode: AssistantMode, connected: boolean, state: VoiceState): boolean {
-  if (mode !== KB_MODE_TEXT || !connected) return false
+export function canSendText(mode: AssistantMode, state: VoiceState): boolean {
+  if (mode !== KB_MODE_TEXT) return false
   return state !== "thinking" && state !== "speaking"
 }

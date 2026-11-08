@@ -30,7 +30,7 @@
 .kb-device__label {
   color: var(--app-text-secondary);
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 
 .kb-device__select {
@@ -39,10 +39,10 @@
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-sm);
   background: var(--paper);
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-family: inherit;
   font-size: var(--app-size-sm);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
 }
 
 .kb-device__select:disabled {
@@ -62,7 +62,7 @@
   content: "";
   position: absolute;
   inset: 8px;
-  border: 2px dashed var(--color-orange-76);
+  border: 1px solid var(--color-orange-76);
   border-radius: 50%;
   opacity: 0.9;
 }
@@ -87,7 +87,7 @@
   border: 2.5px solid var(--ink);
   border-radius: 50%;
   background: var(--c-element);
-  color: var(--ink);
+  color: var(--app-text-primary);
   cursor: pointer;
   box-shadow: 4px 4px 0 0 var(--ink);
   transition:
@@ -135,8 +135,8 @@
 .kb-status {
   margin: var(--space-sm) 0 0;
   font-size: var(--app-size-lg);
-  font-weight: 800;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
 }
 
 .kb-status--error {
@@ -156,7 +156,7 @@
   background: var(--app-error-bg);
   color: var(--app-status-danger-text);
   font-size: var(--app-size-sm);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
 }
 
 .kb-notice {
@@ -168,8 +168,8 @@
   background: var(--color-yellow-94);
   color: var(--color-orange-37);
   font-size: var(--app-size-xs);
-  font-weight: 700;
-  line-height: 1.5;
+  font-weight: var(--app-font-weight-bold);
+  line-height: var(--app-line-height-normal);
 }
 
 .kb-hint {
@@ -177,7 +177,7 @@
   margin: 0;
   color: var(--app-text-secondary);
   font-size: var(--app-size-xs);
-  line-height: 1.6;
+  line-height: var(--app-line-height-relaxed);
 }
 
 .kb-mic {
@@ -191,7 +191,7 @@
 .kb-mic__label {
   color: var(--app-text-secondary);
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 
 .kb-mic__meter {
@@ -233,14 +233,14 @@
   color: var(--app-text-secondary);
   font-family: inherit;
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   cursor: pointer;
 }
 
 .kb-mode-btn.is-active {
   border-color: var(--ink);
   background: var(--color-yellow-94);
-  color: var(--ink);
+  color: var(--app-text-primary);
   box-shadow: 2px 2px 0 0 var(--ink);
 }
 
@@ -254,7 +254,7 @@
   place-items: center;
   width: 168px;
   height: 168px;
-  border: 2px dashed var(--color-orange-76);
+  border: 1px solid var(--color-orange-76);
   border-radius: var(--app-radius-lg);
   background: var(--app-bg-subtle);
 }
@@ -284,14 +284,14 @@
 .kb-meta__row dt {
   flex: 0 0 auto;
   color: var(--app-text-secondary);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 
 .kb-meta__row dd {
   flex: 1 1 auto;
   min-width: 0;
   margin: 0;
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-family: var(--app-font-mono);
   overflow-wrap: anywhere;
 }

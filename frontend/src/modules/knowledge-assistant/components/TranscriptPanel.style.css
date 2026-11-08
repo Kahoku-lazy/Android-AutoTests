@@ -24,14 +24,14 @@
 .kb-panel-title {
   margin: 0;
   font-size: var(--app-size-lg);
-  font-weight: 800;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
 }
 
 .kb-panel-count {
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 
 .kb-transcript {
@@ -58,7 +58,7 @@
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-sm);
   background: var(--paper);
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-family: inherit;
   font-size: var(--app-size-sm);
 }
@@ -87,7 +87,7 @@
 }
 
 .kb-msg--interrupted {
-  border-style: dashed;
+  border-style: solid;
 }
 
 .kb-msg--error {
@@ -105,14 +105,14 @@
 
 .kb-msg__role {
   font-size: var(--app-size-xs);
-  font-weight: 800;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
 }
 
 .kb-msg__status {
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 
 .kb-msg__status--interrupted {
@@ -125,9 +125,9 @@
 
 .kb-msg__text {
   margin: 0;
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-size: var(--app-size-sm);
-  line-height: 1.7;
+  line-height: var(--app-line-height-relaxed);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

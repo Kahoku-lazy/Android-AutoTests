@@ -155,7 +155,7 @@ watch(
 
     <div class="kb-actions">
       <DoodleBtn
-        v-if="!isActive"
+        v-if="!isActive && isVoice"
         tone="teal"
         :disabled="!canStart"
         data-testid="kb-start"
@@ -163,7 +163,7 @@ watch(
       >
         {{ KB_START_LABEL }}
       </DoodleBtn>
-      <DoodleBtn v-else tone="danger" data-testid="kb-stop" @click="emit('stop')">
+      <DoodleBtn v-else-if="isActive" tone="danger" data-testid="kb-stop" @click="emit('stop')">
         {{ KB_STOP_LABEL }}
       </DoodleBtn>
       <DoodleBtn

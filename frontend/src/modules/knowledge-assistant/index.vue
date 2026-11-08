@@ -36,7 +36,6 @@ import {
   KB_TEXT_HINT,
   KB_TEXT_PLACEHOLDER,
   KB_TEXT_READY_FALLBACK,
-  KB_TEXT_START_HINT,
 } from "./constants"
 import { modeLabel, statusTextFor } from "./helpers/mode"
 import type { AssistantMode, KnowledgeAssistantStatus } from "./types"
@@ -51,7 +50,6 @@ const {
   messages,
   state,
   mode,
-  socketOpen,
   canType,
   errorMessage,
   noticeMessage,
@@ -98,9 +96,9 @@ const unavailableHint = computed(() =>
     : "按上面的原因处理后点击「重试」，就绪后语音按键才可用。",
 )
 const hint = computed(() => (mode.value === KB_MODE_TEXT ? KB_TEXT_HINT : KB_HINT_TEXT))
-const composerPlaceholder = computed(() =>
-  socketOpen.value ? KB_TEXT_PLACEHOLDER : KB_TEXT_START_HINT,
-)
+const composerPlaceholder = KB_TEXT_PLACEHOLDER
+/** 文字方式直接发送即可建连，但仍要先满足就绪状态（服务未就绪时输入框保持禁用） */
+const canSendNow = computed(() => canType.value && canStart.value)
 const mergedNotice = computed(() => modeNotice.value || noticeMessage.value)
 
 async function loadStatus(): Promise<void> {
@@ -210,7 +208,7 @@ watch(
             <TranscriptPanel
               :messages="messages"
               :show-composer="mode === KB_MODE_TEXT"
-              :can-send="canType"
+              :can-send="canSendNow"
               :placeholder="composerPlaceholder"
               @text-submit="onTextSubmit"
             />

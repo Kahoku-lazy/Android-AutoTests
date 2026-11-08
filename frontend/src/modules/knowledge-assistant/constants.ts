@@ -38,7 +38,7 @@ export const KB_STATUS_TEXT: Record<VoiceState, string> = {
 }
 
 export const KB_STATUS_TEXT_TEXT: Record<VoiceState, string> = {
-  idle: "未开始",
+  idle: "输入问题即可开始",
   connecting: "正在连接文字服务…",
   listening: "等待提问",
   thinking: "正在思考…",
@@ -49,10 +49,10 @@ export const KB_STATUS_TEXT_TEXT: Record<VoiceState, string> = {
 export const KB_HINT_TEXT =
   "点击语音按键开始对话；助手回答时开口即可打断。建议戴耳机，避免外放回声。"
 
-export const KB_TEXT_HINT = "在右侧输入框打字提问，回答实时出现；切回语音需先结束会话。"
+export const KB_TEXT_HINT = "在右侧输入框打字回车即可提问，回答实时出现；切回语音需先结束会话。"
 
 export const KB_EMPTY_TITLE = "还没有对话"
-export const KB_EMPTY_HINT = "选择语音或文字方式，开始对话"
+export const KB_EMPTY_HINT = "语音点按键开始，文字直接输入提问"
 
 export const KB_ROLE_USER = "你"
 export const KB_ROLE_ASSISTANT = "知识库助手"
@@ -67,14 +67,13 @@ export const KB_STOP_LABEL = "结束对话"
 export const KB_INTERRUPT_LABEL = "打断回答"
 
 export const KB_TEXT_PLACEHOLDER = "输入文字提问，例如：长按开关按键3秒会怎样？"
-export const KB_TEXT_START_HINT = "先点「开始对话」，再输入文字提问"
 export const KB_TEXT_MAX_LEN = 2000
 
 export const KB_READY_FALLBACK = "语音服务未就绪"
 export const KB_TEXT_READY_FALLBACK = "文字服务未就绪"
 export const KB_STATUS_LOAD_ERROR = "无法读取知识库助手状态"
 export const KB_MIC_ERROR = "无法使用麦克风，请检查浏览器权限"
-export const KB_UNAUTHORIZED_ERROR = "登录已过期，请重新登录"
+export const KB_UNAUTHORIZED_ERROR = "登录状态已过期，请刷新页面后重试"
 export const KB_SOCKET_ERROR = "连接已断开，请重新开始"
 
 export const KB_MIC_IDLE = "麦克风：未采集到音频"

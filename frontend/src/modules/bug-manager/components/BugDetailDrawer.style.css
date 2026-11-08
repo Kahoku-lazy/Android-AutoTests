@@ -15,16 +15,16 @@
 .bug-detail__no {
   font-family: var(--app-font-mono);
   font-size: var(--app-size-sm);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
 }
 
 .bug-detail__title {
   margin: 0;
   font-family: var(--app-font-display);
   font-size: var(--app-size-xl);
-  line-height: 1.35;
-  color: var(--ink);
+  line-height: var(--app-line-height-snug);
+  color: var(--app-text-primary);
 }
 
 .bug-badge,
@@ -35,7 +35,7 @@
   border: 1.5px solid var(--ink);
   border-radius: var(--app-radius-sm);
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 
 .bug-badge.is-ui {
@@ -75,7 +75,7 @@
 
 .bug-meta dt {
   color: var(--app-text-secondary);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 
 .bug-meta dd {
@@ -85,8 +85,8 @@
 }
 
 .bug-task-link {
-  color: var(--ink);
-  font-weight: 700;
+  color: var(--app-text-primary);
+  font-weight: var(--app-font-weight-bold);
   text-decoration: underline;
   text-decoration-style: wavy;
   text-decoration-color: var(--c-runner);
@@ -108,8 +108,8 @@
 .bug-detail__subtitle {
   margin: 0;
   font-size: var(--app-size-sm);
-  font-weight: 800;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
 }
 
 .bug-detail__body {
@@ -124,6 +124,6 @@
   overflow-wrap: anywhere;
   font-family: var(--app-font-mono);
   font-size: var(--app-size-xs);
-  line-height: 1.65;
-  color: var(--ink);
+  line-height: var(--app-line-height-relaxed);
+  color: var(--app-text-primary);
 }

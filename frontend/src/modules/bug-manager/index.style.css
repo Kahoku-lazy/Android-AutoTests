@@ -56,7 +56,7 @@
 .filter-hint {
   margin-left: auto;
   font-size: var(--app-size-xs);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   color: var(--app-text-secondary);
   white-space: nowrap;
 }
@@ -71,7 +71,7 @@
 
 .toolbar-label {
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-text-secondary);
 }
 
@@ -84,7 +84,7 @@
   padding: var(--app-space-xs) var(--app-space-sm);
   font-family: inherit;
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-text-secondary);
   background: var(--app-bg-card);
   border: 2px solid var(--app-border-light);
@@ -98,7 +98,7 @@
 
 .page-size-btn:hover,
 .page-size-btn.active {
-  color: var(--ink);
+  color: var(--app-text-primary);
   border-color: var(--ink);
   background: var(--app-bg-subtle);
 }
@@ -106,7 +106,7 @@
 .page-info {
   margin-left: auto;
   font-size: var(--app-size-xs);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   color: var(--app-text-secondary);
   white-space: nowrap;
 }
@@ -120,8 +120,8 @@
   padding: var(--app-space-xs) var(--app-space-sm);
   font-family: inherit;
   font-size: var(--app-size-xs);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
   background: var(--app-bg-card);
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-sm);
@@ -148,14 +148,14 @@
 
 .bug-table :deep(.el-table__header th) {
   background: var(--app-bg-subtle) !important;
-  color: var(--ink) !important;
+  color: var(--app-text-primary) !important;
   font-size: var(--app-size-xs) !important;
-  font-weight: 700 !important;
+  font-weight: var(--app-font-weight-bold) !important;
   border-bottom: 2.5px solid var(--ink) !important;
 }
 
 .bug-table :deep(.el-table__body td) {
-  color: var(--ink);
+  color: var(--app-text-primary);
   border-bottom: 1px solid var(--app-border-light) !important;
 }
 
@@ -166,7 +166,7 @@
 .bug-no {
   font-family: var(--app-font-mono);
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 
 .bug-title {
@@ -190,7 +190,7 @@
   border: 1.5px solid var(--ink);
   border-radius: var(--app-radius-sm);
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 
 .bug-badge.is-ui {
@@ -217,10 +217,10 @@
 }
 
 .bug-task-link {
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-family: var(--app-font-mono);
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   text-decoration: underline;
   text-decoration-style: wavy;
   text-decoration-color: var(--c-runner);

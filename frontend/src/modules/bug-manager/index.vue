@@ -9,6 +9,7 @@ import DoodleBtn from "@/shared/components/DoodleBtn.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import BugDetailDrawer from "./components/BugDetailDrawer.vue"
+import BugDistributionChart from "./components/BugDistributionChart.vue"
 import { getBug, updateBugStatus } from "./api"
 import { useBugList } from "./composables/useBugList"
 import {
@@ -140,6 +141,14 @@ function errorMessage(error: unknown, fallback: string): string {
             :clickable="false"
           />
         </div>
+      </section>
+
+      <section class="doc-section bug-distribution">
+        <div class="doc-section__header">
+          <h3 class="doc-section__title">BUG 分布 <span class="doc-tag">Distribution</span></h3>
+          <span class="doc-section__label">处理状态与任务类型拆分，随筛选结果同步</span>
+        </div>
+        <BugDistributionChart :summary="summary" />
       </section>
 
       <section class="doc-section bug-table-section">

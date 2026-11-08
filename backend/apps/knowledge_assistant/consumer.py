@@ -125,7 +125,7 @@ class KnowledgeAssistantConsumer(AsyncWebsocketConsumer):
             backend_log.warning("知识库助手 WS 鉴权失败: %s", exc)
             await self.accept()
             await self._send_json(
-                {"type": "error", "message": "登录已过期或令牌无效，请重新登录"},
+                {"type": "error", "message": "登录状态已过期，请刷新页面后重试"},
             )
             await self.close(code=4401)
             return

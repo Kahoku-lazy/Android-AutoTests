@@ -8,8 +8,9 @@
  */
 import axios from "axios"
 import { formatApiError } from "@/shared/types/api-error"
-import type { ApiError } from "@/shared/types/api-error"
+import type { AuthResponse } from "@/shared/types/auth"
 import { getToken, setToken, clearToken, getRefreshToken } from "@/shared/auth/token-storage"
+import { configureTokenRefresh, refreshAccessToken } from "@/shared/auth/token-refresh"
 import { attachAuthInterceptors } from "@/shared/api-auth-interceptors"
 
 /** 后端统一响应信封 — 所有 Django API 返回此格式 */
@@ -26,12 +27,26 @@ const client = axios.create({
   timeout: 120000, // 2min for LLM API responses
 })
 
+// 续期是 HTTP 唯一出口的一部分：把真实请求注入 token-refresh，WS 与拦截器共用
+configureTokenRefresh(async (refreshToken) => {
+  const response = await axios.post<AuthResponse>("/api/auth/refresh/", {
+    refresh_token: refreshToken,
+  })
+  return response.data
+})
+
 attachAuthInterceptors(client, {
   getToken,
   setToken,
   clearToken,
   getRefreshToken,
-  refreshRequest: (body) => axios.post("/api/auth/refresh/", body),
+  // 与 WebSocket 建连共用同一把单飞锁：并发续期只发一次刷新请求
+  refreshRequest: async () => {
+    const access = await refreshAccessToken()
+    return {
+      data: { status: true, data: { access_token: access, token_type: "bearer" } } as AuthResponse,
+    }
+  },
   redirectToLogin: () => {
     window.location.href = "/login"
   },

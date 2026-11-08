@@ -185,14 +185,14 @@ function navigate() {
   display: block;
   font-family: var(--app-font-display, var(--app-font, inherit));
   font-size: var(--app-size-2xl, 28px);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   letter-spacing: -0.03em;
   line-height: 1;
 }
 
 .stats-card__stat small {
   font-size: var(--app-size-xs, 11px);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-status-success-text, var(--stats-card-trend-text));
 }
 </style>

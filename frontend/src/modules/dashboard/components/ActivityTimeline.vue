@@ -157,8 +157,6 @@ defineExpose({ openHistory, loadMoreHistory, historyItems, historyHasMore })
 
 <style scoped>
 .activity-timeline {
-  /* 单槽≈标题行 + 条目底距，十条固定可视高度 */
-  --timeline-slot: calc(var(--app-size-sm) * 1.5 + var(--app-space-xl));
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -175,20 +173,22 @@ defineExpose({ openHistory, loadMoreHistory, historyItems, historyHasMore })
 .timeline__title {
   font-family: var(--app-font-display);
   font-size: var(--app-size-md);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
   margin: 0;
 }
 
 .timeline__list {
   flex: 1;
-  min-height: calc(var(--timeline-slot) * 10);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   padding-right: var(--app-space-sm);
 }
 
 .timeline__empty {
-  min-height: calc(var(--timeline-slot) * 10);
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -275,8 +275,8 @@ defineExpose({ openHistory, loadMoreHistory, historyItems, historyHasMore })
 
 .timeline-item__action {
   font-size: var(--app-size-sm);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
 }
 
 .timeline-item__time {
@@ -289,7 +289,7 @@ defineExpose({ openHistory, loadMoreHistory, historyItems, historyHasMore })
   font-size: var(--app-size-sm);
   color: var(--app-text-secondary);
   margin: 0;
-  line-height: 1.5;
+  line-height: var(--app-line-height-normal);
 }
 
 .timeline-item__tags {
@@ -305,7 +305,7 @@ defineExpose({ openHistory, loadMoreHistory, historyItems, historyHasMore })
   background: var(--app-bg-subtle);
   border: 1px solid var(--app-border-light);
   color: var(--app-text-secondary);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
 }
 
 .timeline-history__list {
@@ -324,13 +324,13 @@ defineExpose({ openHistory, loadMoreHistory, historyItems, historyHasMore })
   grid-template-columns: 1fr auto;
   gap: var(--app-space-xs) var(--app-space-md);
   padding: var(--app-space-sm) 0;
-  border-bottom: 1px dashed var(--app-border-light);
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
 }
 
 .timeline-history__action {
   font-size: var(--app-size-sm);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
 }
 
 .timeline-history__time {

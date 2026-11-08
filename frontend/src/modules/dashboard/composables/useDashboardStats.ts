@@ -193,6 +193,12 @@ export function useDashboardStats(): UseDashboardStatsReturn {
   const systemStatus = ref("normal")
   const activities = ref<ActivityItem[]>([])
 
+  /**
+   * 上一次成功应用的数据指纹。
+   * 5 秒静默轮询只在指纹变化时写状态：数据没变就什么都不做，
+   * 「最近更新」时间也不会被无意义的轮询刷新。
+   */
+  let lastSignature = ""
   // 静默刷新在途标记：轮询与可见性回调撞车时只保留一个请求
   let silentInFlight = false
 
@@ -209,36 +215,56 @@ export function useDashboardStats(): UseDashboardStatsReturn {
         fetchRecentActivities(),
       ])
 
+      let mapped: ReturnType<typeof mapStatsResponse> | null = null
+      let nextActivities: ActivityItem[] | null = null
+      let activitiesFailed = false
+
       if (statsRes.status === "fulfilled") {
         const body = statsRes.value.data
-        if (body?.status && body.data) {
-          const mapped = mapStatsResponse(body.data)
-          stats.value = mapped.stats
-          executionChart.value = mapped.executionChart
-          executionSummary.value = mapped.executionSummary
-          aiTokenChart.value = mapped.aiTokenChart
-          deepseekCostChart.value = mapped.deepseekCostChart
-          todayUsageChart.value = mapped.todayUsageChart
-          recentTasks.value = mapped.recentTasks
-          lastUpdated.value = mapped.lastUpdated
-          systemStatus.value = mapped.systemStatus
-          error.value = null
-        } else if (!silent) {
-          error.value = body?.message || "统计数据加载失败，请检查网络连接"
-        }
+        if (body?.status && body.data) mapped = mapStatsResponse(body.data)
+        else if (!silent) error.value = body?.message || "统计数据加载失败，请检查网络连接"
       } else if (!silent) {
         error.value = "统计数据加载失败，请检查网络连接"
       }
 
       if (activitiesRes.status === "fulfilled") {
         const body = activitiesRes.value.data
-        if (body?.status) {
-          activities.value = body.data || []
-        }
+        if (body?.status) nextActivities = body.data || []
       } else if (!silent && !error.value) {
+        activitiesFailed = true
         error.value = "活动记录加载失败，请检查网络连接"
       }
-    } catch (e: unknown) {
+
+      // 指纹不含 lastUpdated：时间戳每轮都会变，但数据本身可能没变
+      const signature = JSON.stringify({
+        stats: mapped?.stats ?? null,
+        executionChart: mapped?.executionChart ?? null,
+        executionSummary: mapped?.executionSummary ?? null,
+        aiTokenChart: mapped?.aiTokenChart ?? null,
+        deepseekCostChart: mapped?.deepseekCostChart ?? null,
+        todayUsageChart: mapped?.todayUsageChart ?? null,
+        recentTasks: mapped?.recentTasks ?? null,
+        activities: nextActivities,
+      })
+      const unchanged = signature === lastSignature
+      lastSignature = signature
+      if (silent && unchanged) return
+
+      if (mapped) {
+        stats.value = mapped.stats
+        executionChart.value = mapped.executionChart
+        executionSummary.value = mapped.executionSummary
+        aiTokenChart.value = mapped.aiTokenChart
+        deepseekCostChart.value = mapped.deepseekCostChart
+        todayUsageChart.value = mapped.todayUsageChart
+        recentTasks.value = mapped.recentTasks
+        lastUpdated.value = mapped.lastUpdated
+        systemStatus.value = mapped.systemStatus
+        // 统计成功但活动失败时保留活动错误，不被这一行覆盖
+        if (!activitiesFailed) error.value = null
+      }
+      if (nextActivities) activities.value = nextActivities
+    } catch {
       // 静默轮询失败时保留上一次成功的数据，不把错误态盖到已展示的统计上
       if (!silent) error.value = "仪表盘数据加载失败，请稍后重试"
     } finally {

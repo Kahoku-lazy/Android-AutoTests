@@ -28,7 +28,6 @@ import {
 
 const {
   loading,
-  refreshing,
   error,
   PAGE_HEADER,
   stats,
@@ -96,18 +95,7 @@ function formatUsageToken(tokens: number): string {
       :subtitle="PAGE_HEADER.subtitle"
       :icon="PAGE_HEADER.icon"
       :icon-gradient="PAGE_HEADER.iconGradient"
-    >
-      <template #actions>
-        <el-button
-          class="wb-btn wb-btn--sunset"
-          size="small"
-          :loading="refreshing"
-          @click="refreshData"
-        >
-          刷新
-        </el-button>
-      </template>
-    </WorkbenchHeader>
+    />
 
     <ErrorState v-if="error" :message="error" @retry="loadData" />
 
@@ -118,9 +106,7 @@ function formatUsageToken(tokens: number): string {
           <div class="chapter-head__left">
             <div class="chapter-mark"><IconMonitor :size="16" /></div>
             <div>
-              <div class="chapter-eyebrow">Platform Ops</div>
               <h3 class="chapter-title"><span class="marker">平台运营</span></h3>
-              <p class="chapter-desc">核心入口指标 · 实时状态可点进模块</p>
             </div>
           </div>
         </header>
@@ -181,9 +167,7 @@ function formatUsageToken(tokens: number): string {
           <div class="chapter-head__left">
             <div class="chapter-mark"><IconBrain :size="16" /></div>
             <div>
-              <div class="chapter-eyebrow">AI Usage</div>
               <h3 class="chapter-title"><span class="marker">AI 用量</span></h3>
-              <p class="chapter-desc">Token · 缓存 · DeepSeek 费用</p>
             </div>
           </div>
         </header>
@@ -279,9 +263,7 @@ function formatUsageToken(tokens: number): string {
           <div class="chapter-head__left">
             <div class="chapter-mark"><IconLayers :size="16" /></div>
             <div>
-              <div class="chapter-eyebrow">Test Assets</div>
               <h3 class="chapter-title"><span class="marker">测试资产</span></h3>
-              <p class="chapter-desc">用例库 + 元素库 · 同一存量视角</p>
             </div>
           </div>
           <div class="chip-row">
@@ -322,9 +304,7 @@ function formatUsageToken(tokens: number): string {
           <div class="chapter-head__left">
             <div class="chapter-mark"><IconActivity :size="16" /></div>
             <div>
-              <div class="chapter-eyebrow">Trends &amp; Activity</div>
               <h3 class="chapter-title"><span class="marker">趋势与动态</span></h3>
-              <p class="chapter-desc">近 7 日任务卡 · Token · 费用 · 今日进度 · 活动流</p>
             </div>
           </div>
         </header>
@@ -380,18 +360,17 @@ function formatUsageToken(tokens: number): string {
         <div class="subhead">最近动态 <span class="subhead__tag">Activity</span></div>
         <ActivityTimeline :items="activities" />
       </section>
-
-      <footer class="dashboard__footer">
-        <div class="dashboard__footer-item">
-          <IconClock :size="14" />
-          <span>最近更新: {{ lastUpdated || "暂无数据" }}</span>
-        </div>
-        <div class="dashboard__footer-item">
-          <IconAlertCircle :size="14" />
-          <span>系统状态: {{ systemStatus === "normal" ? "正常运行" : "无设备连接" }}</span>
-        </div>
-      </footer>
     </div>
+    <footer class="dashboard__footer">
+      <div class="dashboard__footer-item">
+        <IconClock :size="14" />
+        <span>最近更新: {{ lastUpdated || "暂无数据" }}</span>
+      </div>
+      <div class="dashboard__footer-item">
+        <IconAlertCircle :size="14" />
+        <span>系统状态: {{ systemStatus === "normal" ? "正常运行" : "无设备连接" }}</span>
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -399,9 +378,17 @@ function formatUsageToken(tokens: number): string {
 <style scoped>
 .agent-usage-list {
   display: grid;
-  grid-template-columns: 1fr;
+  /* Agent-01 / Agent-02 横排；窄屏再回落成单列 */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--app-space-md);
   margin-top: 0;
+  align-items: stretch;
+}
+
+@media (max-width: 1400px) {
+  .agent-usage-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 1100px) {

@@ -133,10 +133,10 @@ function openTask(task: RecentTask) {
   padding: 6px 12px;
   border-radius: var(--app-radius-pill);
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   border: 1px solid var(--app-border-light);
   background: var(--app-bg-card);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 
 .summary-chip.is-success {
@@ -158,12 +158,12 @@ function openTask(task: RecentTask) {
   align-items: center;
   justify-content: center;
   font-size: var(--app-size-xs);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   background: var(--app-bg-card);
 }
 .summary-chip__value {
   font-size: var(--app-size-md);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
 }
 
 .task-result-panel__list {
@@ -204,7 +204,7 @@ function openTask(task: RecentTask) {
   align-items: center;
   justify-content: center;
   font-size: var(--app-size-sm);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   flex-shrink: 0;
 }
 .task-row__status.is-success {
@@ -235,8 +235,8 @@ function openTask(task: RecentTask) {
 }
 .task-row__title {
   font-size: var(--app-size-sm);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
   margin-bottom: 3px;
 }
 
@@ -254,7 +254,7 @@ function openTask(task: RecentTask) {
   align-items: center;
   justify-content: center;
   font-size: var(--app-size-xs);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
 }
 .case-icon.is-success {
   background: var(--app-status-success-bg);
@@ -276,7 +276,7 @@ function openTask(task: RecentTask) {
 .task-row__stats {
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
 }
 .task-row__time {
   font-size: var(--app-size-xs);

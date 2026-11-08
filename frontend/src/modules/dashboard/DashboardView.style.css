@@ -9,10 +9,24 @@
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  padding: 0 var(--app-space-lg) var(--app-space-lg);
+  /* 顶部留 8px：章节板有 -0.25° 旋转，上沿为零内距时旋转角会被滚动容器裁掉 */
+  padding: var(--app-space-sm) var(--app-space-lg) var(--app-space-sm);
   display: flex;
   flex-direction: column;
   gap: var(--app-space-xl);
+}
+
+/* 内容不满一屏时，让最后一块章节板与活动卡撑满剩余高度：
+   活动卡边框/阴影一直落到页脚，页尾不再露出裸白
+   （数据多到超过一屏时 flex:1 无剩余空间，不产生额外影响） */
+.dashboard-workbench .doc-body > section:last-child {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.dashboard-workbench .doc-body > section:last-child :deep(.activity-timeline) {
+  flex: 1;
+  min-height: 0;
 }
 
 /* ── 章节钉板 ── */
@@ -52,27 +66,28 @@
 }
 .chapter-head__left {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--app-space-sm);
   min-width: 0;
 }
 .chapter-mark {
-  width: 34px;
-  height: 34px;
-  border: 2.5px solid var(--ink);
+  /* 高度对齐 20px 标题的行盒（20 × 1.25 = 25px），不再比字高出一头 */
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--ink);
   background: var(--ch-accent);
   display: grid;
   place-items: center;
   flex-shrink: 0;
 }
 .chapter-mark :deep(svg) {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   stroke: var(--ink);
 }
 .chapter-eyebrow {
   font-size: var(--app-size-xs);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   opacity: 0.45;
@@ -80,11 +95,11 @@
 }
 .chapter-title {
   font-family: var(--app-font-display);
-  font-size: var(--app-size-md);
-  font-weight: 800;
+  font-size: var(--app-size-lg);
+  font-weight: var(--app-font-weight-heavy);
   letter-spacing: -0.02em;
-  line-height: 1.2;
-  color: var(--ink);
+  line-height: var(--app-line-height-tight);
+  color: var(--app-text-primary);
   margin: 0;
 }
 .chapter-title .marker {
@@ -97,7 +112,7 @@
 .chapter-desc {
   font-size: var(--app-size-xs);
   opacity: 0.62;
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   margin-top: 4px;
 }
 
@@ -116,12 +131,12 @@
   border: 1.5px solid var(--ink);
   background: var(--color-white);
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   border-radius: var(--el-border-radius-small);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 .chip b {
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
 }
 .chip--teal {
   background: color-mix(in srgb, var(--c-case) 22%, var(--color-white));
@@ -135,9 +150,9 @@
   align-items: center;
   gap: 8px;
   font-size: var(--app-size-sm);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   margin: var(--app-space-xs) 0 var(--app-space-sm);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 .subhead::after {
   content: "";
@@ -147,7 +162,7 @@
 }
 .subhead__tag {
   font-size: var(--app-size-xs);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   opacity: 0.45;
@@ -178,12 +193,12 @@
 }
 .cases-empty__text {
   margin: 0 0 var(--app-space-xs);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
 }
 .cases-empty__link {
-  color: var(--ink);
-  font-weight: 800;
+  color: var(--app-text-primary);
+  font-weight: var(--app-font-weight-heavy);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -199,7 +214,8 @@
 /* ── AI Usage Layout ── */
 .ch-ai__body {
   display: grid;
-  grid-template-columns: minmax(0, 536px) minmax(280px, 420px);
+  /* 右列改弹性宽度：Agent 卡横排需要整段剩余空间 */
+  grid-template-columns: minmax(0, 536px) minmax(0, 1fr);
   gap: var(--app-space-md);
   align-items: stretch;
 }
@@ -261,23 +277,25 @@
 }
 .trends-tasks-card__title {
   font-size: var(--app-size-sm);
-  font-weight: 800;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
   margin-bottom: 12px;
   letter-spacing: 0.01em;
 }
 
 /* ── Footer ── */
+/* 页脚移出滚动容器后固定在页面底部（不随 .doc-body 滚动） */
 .dashboard__footer {
+  flex: 0 0 auto;
+  margin: 0 var(--app-space-lg) var(--app-space-md);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--app-space-xl);
   padding: 12px var(--app-space-md);
   background: var(--app-bg-card);
-  border: 2.5px dashed var(--ink);
-  border-radius: 2px;
-  box-shadow: 3px 3px 0 0 var(--c-workflow);
+  border: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
+  border-radius: var(--app-radius-lg);
   color: var(--app-text-secondary);
   font-size: var(--app-size-sm);
 }
@@ -286,7 +304,7 @@
   align-items: center;
   gap: 6px;
   font-size: var(--app-size-sm);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
 }
 .dashboard__footer-item :deep(svg) {
   color: var(--app-text-secondary);
@@ -304,7 +322,7 @@
 }
 
 .voice-usage-summary b {
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-size: var(--app-size-md);
   font-variant-numeric: tabular-nums;
 }
@@ -312,7 +330,7 @@
 .usage-empty {
   margin: 0;
   padding: var(--space-md);
-  border: 2px dashed var(--ink);
+  border: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
   border-radius: var(--app-radius-sm);
   background: var(--app-bg-subtle);
   color: var(--app-text-secondary);

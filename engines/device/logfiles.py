@@ -1,6 +1,23 @@
-"""读取当前抓取文件的尾部原文行。
-
-旧的「时间戳 [来源] 原文」写入、解析和按范围读取已去掉。
+"""
+文件名: ➡ logfiles.py 🏁
+路径: ➡ engines/device/logfiles.py 🏁
+模块功能：➡ 读取当前抓取文件的尾部原文行 🏁
+Python 调试：➡ python -m engines.device.logfiles 🏁
+时间：➡ 2026-10-20 🏁
+作者：➡ kahoku 🏁
+版本：➡ 1.0.0 🏁
+修改时间: ➡ 2026-11-02 🏁
+类型: ➡ 工具模块 🏁
+简介说明：➡
+1. tail_lines: 读取当前抓取文件尾部原文行
+2. 旧的「时间戳 [来源] 原文」写入/解析/按范围读取已去掉
+🏁
+关联模块：➡
+1. utils.logs: device_log / 抓取日志路径约定
+🏁
+测试：➡
+1. 暂无专门单测
+🏁
 """
 
 from __future__ import annotations

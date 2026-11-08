@@ -1,7 +1,24 @@
-"""页面文本识别 — 引擎视觉包。
-
-只供 `engines.agents.tools.tool_ocr` 调用。cnocr 在本模块被导入时加载，
-调用方必须在函数内部导入本模块，避免引擎启动拉起重依赖。
+"""
+文件名: ➡ ocr.py 🏁
+路径: ➡ engines/vision/ocr.py 🏁
+模块功能：➡ 页面文本识别（cnocr，惰性由调用方导入） 🏁
+Python 调试：➡ python -m engines.vision.ocr 🏁
+时间：➡ 2026-10-20 🏁
+作者：➡ kahoku 🏁
+版本：➡ 1.0.0 🏁
+修改时间: ➡ 2026-11-02 🏁
+类型: ➡ 工具模块 🏁
+简介说明：➡
+1. recognize: 对页面图像做文本识别
+2. cnocr 在本模块被导入时加载；调用方必须在函数内部导入本模块，避免引擎启动拉起重依赖
+3. 只供 engines.agents.tools.tool_ocr 调用
+🏁
+关联模块：➡
+1. engines.agents.tools.tool_ocr: 唯一预期调用方
+🏁
+测试：➡
+1. tests/engines/agents/test_ocr_tool.py: OCR 工具
+🏁
 """
 
 import logging

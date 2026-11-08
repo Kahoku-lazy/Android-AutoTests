@@ -1,6 +1,25 @@
-"""设备日志里留下的两样东西：端口来源登记，以及关键词表索引。
-
-监听、写文件在 `engines.uart_log`。证据开窗、内存缓冲和北京时间戳已去掉。
+"""
+文件名: ➡ logbus.py 🏁
+路径: ➡ engines/device/logbus.py 🏁
+模块功能：➡ 设备日志端口来源登记与关键词表索引 🏁
+Python 调试：➡ python -m engines.device.logbus 🏁
+时间：➡ 2026-10-20 🏁
+作者：➡ kahoku 🏁
+版本：➡ 1.0.0 🏁
+修改时间: ➡ 2026-11-02 🏁
+类型: ➡ 工具模块 🏁
+简介说明：➡
+1. LogSourceSpec: 端口来源登记规格
+2. KeywordIndex: 关键词表索引与匹配
+3. 监听与写文件在 engines.uart_log
+🏁
+关联模块：➡
+1. utils.logs: device_log
+2. engines.uart_log: 端口监听与抓取写入
+🏁
+测试：➡
+1. 暂无专门单测
+🏁
 """
 
 from __future__ import annotations
@@ -78,6 +97,7 @@ class KeywordIndex:
 
     @property
     def mapping(self) -> dict[str, list[dict[str, Any]]]:
+        """返回当前关键词表映射（只读视图口径：内部 dict）。"""
         return self._map
 
     def match(self, text: str) -> list[tuple[str, list[dict[str, Any]]]]:

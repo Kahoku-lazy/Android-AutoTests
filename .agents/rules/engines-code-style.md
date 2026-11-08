@@ -5,7 +5,7 @@
 > 本文约束 `engines/` 下全部代码的**通用编写风格**。  
 > 子目录若另有 `AGENTS.md`（如 `engines/agents/`、`engines/agents/rag/`），补充该领域规则。  
 > **冲突时以更具体目录的 AGENTS 为准**；命名等已被子文档明确的条目，以子文档为准。  
-> 写/改代码前的阅读与检查流程见 [`engines/AGENTS.md`](../../engines/AGENTS.md)；自动化检查用技能 [`.agents/skills/engines-agents-style-check/`](../skills/engines-agents-style-check/)。
+> 写/改代码前的阅读与检查流程见 [`engines/AGENTS.md`](../../engines/AGENTS.md)；自动化检查用技能：注释/docstring → [`.agents/skills/engines-docstring-check/`](../skills/engines-docstring-check/)，命名 / 禁 import → [`.agents/skills/engines-agents-style-check/`](../skills/engines-agents-style-check/)。
 
 ## 1. 适用范围
 
@@ -17,6 +17,8 @@
 功能架构、目录职责、工具必须经 `tools_config` 分配等，见 [`engines/agents/AGENTS.md`](../../engines/agents/AGENTS.md)，本文不重复展开。
 
 ## 2. 注释与文档字符串（必须）
+
+> 本节里**能机械化**的部分（模块 11 字段模板、类 `Attributes:`、函数 `Args`/`Returns`/`Raises`、段序、列表编号）由技能 [`.agents/skills/engines-docstring-check/`](../skills/engines-docstring-check/) 校验；注释文案是否准确、`#` 行内注释质量仍需人判断。
 
 1. **模块与公开方法必须有 docstring**，格式见下文「注释格式模板」。
 2. 模块 docstring 放在文件头：写明 `Python 调试`（`python -m …`）、模块用途、简介说明、关联本地模块与相关测试（格式见模板）。
@@ -113,7 +115,7 @@ Python 调试：➡️python -m engines.agents.config.models_config 🏁
 2. **日志**：用项目既有 logging 方式；避免在库代码里用 `print` 打业务日志。
 3. **测试**：行为变更应有对应测试（优先既有 `tests/` 布局）；不要把测试文件塞进业务包当正式模块。
 4. **功能开发**：涉及新能力或跨模块行为变更时，仍遵循仓库根目录 AGENTS / OpenSpec 流程（若根文档有要求）；**局部风格与 docstring 修复**可不走 OpenSpec，但不得借机扩大范围。
-5. **本地风格检查**：按 [`engines/AGENTS.md`](../../engines/AGENTS.md)「AI 阅读与检查流程」使用技能 [`.agents/skills/engines-agents-style-check/`](../skills/engines-agents-style-check/)（`python -m scripts.check_engines_agents_style`）。检查器只覆盖机械化子集；过检 ≠ 整份规范合规。
+5. **本地风格检查**：按 [`engines/AGENTS.md`](../../engines/AGENTS.md)「AI 阅读与检查流程」使用技能 [`.agents/skills/engines-docstring-check/`](../skills/engines-docstring-check/)（`python -m scripts.docstrings check`，查注释/docstring 合规）与 [`.agents/skills/engines-agents-style-check/`](../skills/engines-agents-style-check/)（`python -m scripts.check_engines_agents_style`，查命名 / 禁 import）。两个检查器都只覆盖机械化子集；过检 ≠ 整份规范合规。
 
 ## 8. 修订说明（相对旧版）
 

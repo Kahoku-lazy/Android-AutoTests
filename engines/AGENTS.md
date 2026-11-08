@@ -28,17 +28,27 @@
 
 **写清楚，防止忽略 `.agents/rules/`：** AI 进入 engines 相关任务时**只有本 `engines/AGENTS.md` 是默认必读项**；规范全文在 rules 里，若不在本文件写明「何时读」，容易被跳过。
 
+**两个技能各管一段，别跑错：**
+
+| 场景 | 技能 | 命令（cd 到技能目录） |
+| --- | --- | --- |
+| **读代码前**先取注释看全貌 | [`engines-docstring-check`](../.agents/skills/engines-docstring-check/SKILL.md) | `python -m scripts.docstrings read --changed`（或 `--path engines/...`） |
+| **改完代码**自检注释/docstring 合规 | 同上 | `python -m scripts.docstrings check`（默认只查 git 改动行） |
+| 命名 / 禁 import / 门禁机械化项 | [`engines-agents-style-check`](../.agents/skills/engines-agents-style-check/SKILL.md) | `python -m scripts.check_engines_agents_style` |
+
+技能是**辅助**：注释是否可信、设计是否合理仍要人判断，过检 ≠ 整份规范合规。
+
 1. **任何时候进入 engines 任务**：先读本 `engines/AGENTS.md`（职责 + 红线 + 本流程）。
 2. **即将编写或修改 `engines/**` 代码时**（含补 docstring、改工具、改 role、改设备/串口/视觉等）：  
    **必须先阅读** [`.agents/rules/engines-code-style.md`](../.agents/rules/engines-code-style.md) 全文（或至少与本次改动相关的章节），**禁止**未读规范就写代码。
-3. **只做只读分析 / 解释 / 排障且不改 `engines/**` 代码时**：可以不读 `.agents/rules/engines-code-style.md`。
+3. **只做只读分析 / 解释 / 排障且不改 `engines/**` 代码时**：可以不读 `.agents/rules/engines-code-style.md`；但**读代码前建议先用 `engines-docstring-check read`** 拿模块字段 + 签名 + 段清单，比逐行读实现省一个量级（也顺带看出注释是否可信）。
 4. **需要检查代码是否符合可自动化的规范条目时**（用户要求检查、改完自检、准备宣称合规、门禁 `engines-agents-style` 告警）：  
-   **必须使用项目技能** [`.agents/skills/engines-agents-style-check/`](../.agents/skills/engines-agents-style-check/)（按其 `SKILL.md` 运行）：
+   **必须使用项目技能**：注释/docstring 用 [`engines-docstring-check`](../.agents/skills/engines-docstring-check/SKILL.md)（按其 `SKILL.md` 运行 `python -m scripts.docstrings check`）；命名 / 禁 import / `tool_*.py` 段序另用 [`engines-agents-style-check`](../.agents/skills/engines-agents-style-check/SKILL.md)：
    ```text
    cd .agents/skills/engines-agents-style-check
    python -m scripts.check_engines_agents_style
    ```
-   检查器只覆盖机械化子集（模块 docstring、`Raises:` 与 显式 `raise`、`tool_*.py` 命名与工具 docstring 段序等）；**过检 ≠ 整份规范合规**。
+   两个检查器都只覆盖机械化子集；**过检 ≠ 整份规范合规**。
 5. **改 agents 架构 / 目录职责时**：另读 [`engines/agents/AGENTS.md`](agents/AGENTS.md)。涉及 RAG / 语音 / device / uart_log / vision 时再读对应子目录 AGENTS（见速查）。
 
 ## 相关路径速查
@@ -47,6 +57,7 @@
 |------|------|
 | 平台总思路（Model + Harness） | [../AGENTS.md](../AGENTS.md)「平台架构定位」 |
 | 规范原文（风格正文） | [`.agents/rules/engines-code-style.md`](../.agents/rules/engines-code-style.md) |
+| 注释 / docstring 读写技能 | [`.agents/skills/engines-docstring-check/`](../.agents/skills/engines-docstring-check/) |
 | 风格检查技能 | [`.agents/skills/engines-agents-style-check/`](../.agents/skills/engines-agents-style-check/) |
 | agents 架构 | [`engines/agents/AGENTS.md`](agents/AGENTS.md) |
 | RAG 子约束 | [`engines/agents/rag/AGENTS.md`](agents/rag/AGENTS.md) |

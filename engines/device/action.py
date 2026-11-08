@@ -1,23 +1,28 @@
 """
-调试运行入口：python -m engines.device.action
-
-模块说明：
-设备动作封装模块，提供设备连接、信息查询、控制功能。
-
-类功能简介：
-1. System: 系统声明 + 各系统实现类解析。
-2. DeviceConnection: 设备连接：连接 / 断开 / 存活探测 / 重连。
-3. DeviceInfo: 设备信息查询（只读，不产生副作用）。
-4. DeviceControl: 设备控制：动作方法名统一，三端实现 MUST NOT 各创别名。
-5. Click: 点击动作：坐标 / 图像两种方式，各自独立函数。
-6. LongClick: 长按动作：坐标 / 图像两种方式，各自独立函数。
-7. Swipe: 滑动动作：按方向 / 按坐标两种方式，各自独立函数。
-8. Drag: 拖动动作：按归一化起终点拖动。
-
-9. DeviceConnection
-10. DeviceInfo
-11. DeviceControl
-
+文件名: ➡ action.py 🏁
+路径: ➡ engines/device/action.py 🏁
+模块功能：➡ 设备动作封装：连接、信息查询与控制统一入口 🏁
+Python 调试：➡ python -m engines.device.action 🏁
+时间：➡ 2026-10-20 🏁
+作者：➡ kahoku 🏁
+版本：➡ 1.0.0 🏁
+修改时间: ➡ 2026-11-02 🏁
+类型: ➡ 工具模块 🏁
+简介说明：➡
+1. System: 系统声明 + 各系统实现类解析
+2. DeviceConnection / DeviceInfo / DeviceControl: 连接、只读信息、控制抽象
+3. Click / LongClick / Swipe / Drag / InputText / PressKey / AppControl / Screenshot: 动作外观类
+4. open_device: 按系统打开设备并装配动作
+🏁
+关联模块：➡
+1. utils.logs: device_log
+2. engines.device.android.android_device: Android 实现（由 System 解析加载）
+🏁
+测试：➡
+1. tests/engines/devices/test_android_device.py: Android 设备控制
+2. tests/engines/agents/test_tool_device.py: 设备工具
+3. tests/engines/agents/test_xpath_action_coords.py: xpath 动作坐标
+🏁
 """
 
 from __future__ import annotations
@@ -233,10 +238,12 @@ class Click:
         self._control = control
 
     def by_coord(self, x: int, y: int) -> dict:
+        """按像素坐标点击。"""
         self._control.click_coord(int(x), int(y))
         return {"x": int(x), "y": int(y)}
 
     def by_img(self, nx: float, ny: float) -> dict:
+        """按归一化图像坐标点击，返回实际像素坐标。"""
         x, y = self._control.click_img(float(nx), float(ny))
         return {"x": int(x), "y": int(y)}
 
@@ -249,10 +256,12 @@ class LongClick:
         self._control = control
 
     def by_coord(self, x: int, y: int, duration: float = 0.8) -> dict:
+        """按像素坐标长按。"""
         self._control.long_click_coord(int(x), int(y), float(duration))
         return {"x": int(x), "y": int(y)}
 
     def by_img(self, nx: float, ny: float, duration: float = 0.8) -> dict:
+        """按归一化图像坐标长按，返回实际像素坐标。"""
         x, y = self._control.long_click_img(float(nx), float(ny), float(duration))
         return {"x": int(x), "y": int(y)}
 
@@ -265,10 +274,12 @@ class Swipe:
         self._control = control
 
     def by_direction(self, direction: str = "up", distance: int = 500) -> dict:
+        """按方向滑动（如 up/down/left/right）。"""
         self._control.swipe(str(direction or "up"), int(distance or 500))
         return {}
 
     def by_coord(self, x1: int, y1: int, x2: int, y2: int, duration: float = 0.5) -> dict:
+        """按起终点像素坐标滑动。"""
         self._control.swipe_coord(int(x1), int(y1), int(x2), int(y2), float(duration))
         return {}
 
@@ -281,6 +292,7 @@ class Drag:
         self._control = control
 
     def by_ratio(self, nx1: float, ny1: float, nx2: float, ny2: float) -> dict:
+        """按归一化起终点比例拖动。"""
         self._control.drag(float(nx1), float(ny1), float(nx2), float(ny2))
         return {}
 
@@ -293,6 +305,7 @@ class InputText:
         self._control = control
 
     def by_text(self, text: str, clear_first: bool = True) -> dict:
+        """输入文本；可选先清空。"""
         self._control.input_text(str(text or ""), bool(clear_first))
         return {}
 
@@ -305,10 +318,12 @@ class PressKey:
         self._control = control
 
     def by_key(self, key: str = "back") -> dict:
+        """按下指定按键（默认 back）。"""
         self._control.press_key(str(key or "back"))
         return {}
 
     def back(self) -> dict:
+        """按下返回键。"""
         return self.by_key("back")
 
 
@@ -320,10 +335,12 @@ class AppControl:
         self._control = control
 
     def start(self, package: str) -> dict:
+        """启动指定包名应用。"""
         self._control.app_start(str(package))
         return {"package": str(package), "action": "start_app"}
 
     def stop(self, package: str) -> dict:
+        """停止指定包名应用。"""
         self._control.app_stop(str(package))
         return {"package": str(package), "action": "stop_app"}
 

@@ -1,10 +1,26 @@
 """
-python -m 调试路径: engines.device.android.recent_apps
-
-本模块的业务功能如下：
-1. parse_recent_packages: 从最近任务原文取出包名。
-2. packages_to_stop: 去掉桌面和系统界面。
-3. close_recent_apps: 停掉这些应用并回到桌面。
+文件名: ➡ recent_apps.py 🏁
+路径: ➡ engines/device/android/recent_apps.py 🏁
+模块功能：➡ 解析并关闭 Android 最近任务中的应用 🏁
+Python 调试：➡ python -m engines.device.android.recent_apps 🏁
+时间：➡ 2026-10-20 🏁
+作者：➡ kahoku 🏁
+版本：➡ 1.0.0 🏁
+修改时间: ➡ 2026-11-02 🏁
+类型: ➡ 工具模块 🏁
+简介说明：➡
+1. parse_recent_packages: 从最近任务原文取出包名
+2. parse_home_package: 解析桌面包名
+3. packages_to_stop: 去掉桌面和系统界面后的待停包名
+4. close_recent_apps: 停掉这些应用并回到桌面
+🏁
+关联模块：➡
+1. engines.device.action: 设备控制入口
+2. engines.agents.event_log: 事件日志
+🏁
+测试：➡
+1. tests/engines/agents/test_close_recent_apps.py: 关闭最近应用
+🏁
 """
 
 from __future__ import annotations

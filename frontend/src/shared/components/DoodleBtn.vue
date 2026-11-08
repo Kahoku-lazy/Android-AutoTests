@@ -60,11 +60,11 @@ function onClick(e: MouseEvent) {
   border: 2.5px solid var(--ink);
   border-radius: 2px;
   background: var(--paper);
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-family: inherit;
   font-size: var(--app-size-sm, 13px);
-  font-weight: 800;
-  line-height: 1.2;
+  font-weight: var(--app-font-weight-heavy);
+  line-height: var(--app-line-height-tight);
   box-shadow: 3px 3px 0 0 var(--ink);
   cursor: pointer;
   transition:
@@ -79,17 +79,17 @@ function onClick(e: MouseEvent) {
 
 .doodle-btn--teal {
   background: var(--c-case);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 
 .doodle-btn--yellow {
   background: var(--c-dashboard);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 
 .doodle-btn--paper {
   background: var(--paper);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 
 .doodle-btn:hover:not(:disabled):not(.is-disabled) {

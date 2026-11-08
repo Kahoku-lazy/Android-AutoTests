@@ -66,5 +66,5 @@
   gap: 12px;
   color: var(--app-text-secondary);
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }

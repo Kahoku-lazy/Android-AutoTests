@@ -35,7 +35,7 @@
   font-size: var(--app-size-xs);
   font-family: inherit;
   margin: var(--app-space-md) 0 0;
-  font-weight: 500;
+  font-weight: var(--app-font-weight-medium);
   background: none;
   border: none;
   padding: 0;
@@ -47,14 +47,14 @@
 
 .form-link {
   color: var(--c-workflow);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
 }
 
 .field-error {
   margin: calc(-1 * var(--app-space-sm)) 0 0 28px;
   font-size: var(--app-size-xs);
   color: var(--app-error);
-  font-weight: 500;
+  font-weight: var(--app-font-weight-medium);
 }
 
 .form-submit {
@@ -68,7 +68,7 @@
   border-radius: 2px !important;
   background: var(--app-marker-red) !important;
   color: var(--app-text-inverse) !important;
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   box-shadow: 3px 3px 0 0 var(--ink);
 }
 
@@ -100,6 +100,6 @@
 .remember-label {
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
-  font-weight: 500;
+  font-weight: var(--app-font-weight-medium);
   user-select: none;
 }

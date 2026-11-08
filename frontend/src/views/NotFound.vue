@@ -52,8 +52,8 @@ function goBack() {
 
 .not-found__code {
   font-family: var(--app-font-display);
-  font-size: 96px;
-  font-weight: 800;
+  font-size: var(--app-size-4xl);
+  font-weight: var(--app-font-weight-heavy);
   color: var(--c-dashboard);
   line-height: 1;
   margin-bottom: var(--app-space-md);
@@ -61,7 +61,7 @@ function goBack() {
 
 .not-found__title {
   font-size: var(--app-size-xl);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-text);
   margin: 0 0 var(--app-space-sm);
 }

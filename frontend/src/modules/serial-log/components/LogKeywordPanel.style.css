@@ -18,8 +18,8 @@
 .sl-cat-title {
   margin: 0;
   font-size: var(--app-size-md);
-  font-weight: 800;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
 }
 .sl-cat-sub {
   margin: var(--app-space-xs) 0 0;
@@ -45,13 +45,13 @@
   padding: 6px 12px;
   border-radius: var(--app-radius-sm);
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   border: 2px solid var(--ink);
   cursor: pointer;
   font-family: inherit;
   box-shadow: 2px 2px 0 var(--ink);
   background: var(--app-bg-card);
-  color: var(--ink);
+  color: var(--app-text-primary);
   transition:
     transform var(--app-duration-fast),
     background var(--app-duration-fast);
@@ -80,12 +80,12 @@
   border: 1.5px solid var(--ink);
   border-radius: var(--app-radius-sm);
   background: var(--app-bg-card);
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-size: var(--app-size-sm);
 }
 .lk-count {
   font-size: var(--app-size-xs);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   color: var(--app-text-secondary);
 }
 
@@ -93,7 +93,7 @@
   margin: 0 0 var(--app-space-sm);
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
-  line-height: 1.5;
+  line-height: var(--app-line-height-normal);
 }
 .lk-origin-dim {
   color: var(--app-text-muted);
@@ -103,7 +103,7 @@
 .lk-keyword {
   font-family: var(--app-font-mono);
   font-size: var(--app-size-xs);
-  color: var(--ink);
+  color: var(--app-text-primary);
   word-break: break-all;
 }
 .lk-module {
@@ -114,13 +114,13 @@
   margin-right: var(--app-space-xs);
   font-family: var(--app-font-mono);
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-text-muted);
 }
 .lk-feature-name {
   font-size: var(--app-size-xs);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
 }
 
 @media (prefers-reduced-motion: reduce) {

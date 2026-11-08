@@ -25,31 +25,8 @@ const OWNERS = new Set([
   "modules/ai-assistant/components/AgentRouteCard.vue",
 ])
 
-/** 存量登记（只降不增）；改到某个文件时把对应行删掉，不要调大数字 */
-const BASELINE = new Map([
-  ["modules/case-manager/CaseFileSheet.style.css", 2],
-  ["modules/dashboard/components/ActivityTimeline.vue", 1],
-  ["modules/dashboard/DashboardView.style.css", 2],
-  ["modules/device-pool/components/DisconnectDialog.vue", 1],
-  ["modules/knowledge-assistant/components/TranscriptPanel.style.css", 1],
-  ["modules/knowledge-assistant/components/VoiceConsole.style.css", 2],
-  ["modules/serial-log/components/WifiPortPanel.style.css", 1],
-  ["modules/task-list/components/CaseImportCard.vue", 1],
-  ["modules/task-list/components/StepLogCheck.style.css", 1],
-  ["modules/task-list/components/StepLogEvidence.style.css", 1],
-  ["modules/task-list/components/TaskAttemptCard.vue", 1],
-  ["modules/task-list/components/TaskMediaThumb.style.css", 2],
-  ["modules/workflow/components/vueflow/PageFlowNode.vue", 2],
-  ["modules/workflow/components/WorkflowDirTree.vue", 2],
-  ["shared/components/AppCard.vue", 3],
-  ["shared/components/AppSidebar.style.css", 1],
-  ["shared/components/DoodleNote.vue", 2],
-  ["shared/components/SketchCard.vue", 2],
-  ["shared/styles/tokens.css", 2],
-  ["shared/styles/workbench-theme.css", 4],
-  ["views/LoginView.style.css", 1],
-  ["style.css", 2],
-])
+/** 存量已清零：任何非白名单文件出现 dashed 都直接阻断 */
+const BASELINE = new Map([])
 
 function walk(dir, exts) {
   const out = []

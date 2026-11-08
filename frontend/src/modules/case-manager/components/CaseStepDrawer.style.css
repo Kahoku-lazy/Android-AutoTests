@@ -10,7 +10,7 @@
   margin: 0;
   color: var(--app-text-secondary);
   font-size: var(--app-size-xs);
-  line-height: 1.6;
+  line-height: var(--app-line-height-relaxed);
 }
 
 .step-drawer__list {
@@ -41,8 +41,8 @@
 
 .step-drawer__index {
   font-size: var(--app-size-sm);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
 }
 
 .step-drawer__ops {
@@ -54,10 +54,10 @@
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-md);
   background: var(--app-bg-card);
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-family: inherit;
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   padding: var(--app-space-xs) var(--app-space-sm);
   cursor: pointer;
 }
@@ -76,7 +76,7 @@
   flex-direction: column;
   gap: var(--app-space-xs);
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-text-secondary);
 }
 
@@ -85,10 +85,10 @@
   border: 2px solid var(--case-border-subtle);
   border-radius: var(--app-radius-md);
   background: var(--paper);
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-family: inherit;
   font-size: var(--app-size-sm);
-  line-height: 1.5;
+  line-height: var(--app-line-height-normal);
   padding: var(--app-space-sm);
   resize: vertical;
 }

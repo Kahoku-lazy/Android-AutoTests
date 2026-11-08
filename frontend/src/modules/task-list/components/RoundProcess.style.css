@@ -22,10 +22,10 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--ink);
+  color: var(--app-text-primary);
   font: inherit;
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   text-align: left;
   cursor: pointer;
 }
@@ -43,8 +43,8 @@
   background: color-mix(in srgb, var(--c-ai) 22%, var(--app-bg-card));
   color: color-mix(in srgb, var(--ink) 82%, var(--c-ai));
   font-size: var(--app-size-xs);
-  font-weight: 700;
-  line-height: 1.7;
+  font-weight: var(--app-font-weight-bold);
+  line-height: var(--app-line-height-relaxed);
 }
 
 .flow-proc__role.is-verifier {
@@ -55,7 +55,7 @@
 .flow-proc__meta {
   color: var(--app-text-secondary);
   font-size: var(--app-size-xs);
-  font-weight: 400;
+  font-weight: var(--app-font-weight-regular);
 }
 
 /* 模型耗时：与步骤耗时同一天蓝 chip */
@@ -64,9 +64,9 @@
   border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
   border-radius: 5px;
   background: var(--color-cyan-74);
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -82,7 +82,7 @@
   overflow: hidden;
   color: var(--app-text-secondary);
   font-size: var(--app-size-xs);
-  font-weight: 400;
+  font-weight: var(--app-font-weight-regular);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -111,7 +111,7 @@
   margin: 0 0 var(--app-space-xs);
   color: var(--app-text-secondary);
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 
 .flow-note {
@@ -119,7 +119,7 @@
   white-space: pre-wrap;
   word-break: break-word;
   font-size: var(--app-size-sm);
-  line-height: 1.6;
+  line-height: var(--app-line-height-relaxed);
 }
 
 .flow-timeline {
@@ -142,7 +142,7 @@
   margin: 0 0 var(--app-space-xs);
   color: var(--phase-accent, var(--ink));
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 
 .flow-phase.is-start {
@@ -180,7 +180,7 @@
 }
 
 .flow-item__count {
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 
 .flow-item__detail {

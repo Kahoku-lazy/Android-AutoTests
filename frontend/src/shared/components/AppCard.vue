@@ -12,7 +12,6 @@ const props = withDefaults(
   defineProps<{
     /** 兼容旧调用：模块色名或 app-*；优先用 tone */
     color?: string
-    type?: "default" | "dashed"
     /** CSS 色或 var(--c-*)，驱动图钉与硬阴影 */
     tone?: string
     /** 微倾角度（deg） */
@@ -22,7 +21,6 @@ const props = withDefaults(
   }>(),
   {
     color: "",
-    type: "default",
     tone: "",
     tilt: 0.3,
     pin: true,
@@ -61,11 +59,7 @@ const rootStyle = computed(() => ({
   "--ac-tilt": `${props.tilt}deg`,
 }))
 
-const rootClass = computed(() => [
-  "ac-card",
-  props.type === "dashed" ? "ac-card--dashed" : "",
-  props.pin ? "ac-card--pin" : "",
-])
+const rootClass = computed(() => ["ac-card", props.pin ? "ac-card--pin" : ""])
 </script>
 
 <template>

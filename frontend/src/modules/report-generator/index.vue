@@ -516,18 +516,18 @@ function openTaskReport(row) {
 .filter-summary {
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   white-space: nowrap;
   margin-left: auto;
 }
 .btn-sm {
   padding: var(--app-space-xs) 10px;
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-sm);
   background: var(--app-bg-card);
-  color: var(--ink);
+  color: var(--app-text-primary);
   cursor: pointer;
   font-family: inherit;
   transition: all var(--app-duration-fast);
@@ -550,7 +550,7 @@ function openTaskReport(row) {
 }
 .toolbar-label {
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-text-secondary);
 }
 .page-size-btns {
@@ -560,7 +560,7 @@ function openTaskReport(row) {
 .page-size-btn {
   padding: var(--app-space-xs) 10px;
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-text-secondary);
   background: var(--app-bg-card);
   border: 2px solid var(--app-border-light);
@@ -571,12 +571,12 @@ function openTaskReport(row) {
 }
 .page-size-btn:hover {
   border-color: var(--ink);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 .page-size-btn.active {
   background: var(--app-bg-subtle);
   border-color: var(--ink);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 .chart-row {
   display: grid;
@@ -593,7 +593,7 @@ function openTaskReport(row) {
 }
 .chart-title {
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   margin-bottom: var(--app-space-sm);
 }
 
@@ -608,7 +608,7 @@ function openTaskReport(row) {
 .page-info {
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   white-space: nowrap;
   margin-left: auto;
 }
@@ -620,8 +620,8 @@ function openTaskReport(row) {
 .page-nav-btn {
   padding: var(--app-space-xs) 10px;
   font-size: var(--app-size-xs);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
   background: var(--app-bg-card);
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-sm);
@@ -654,8 +654,8 @@ function openTaskReport(row) {
 }
 .report-table :deep(.el-table__header th) {
   background: var(--app-bg-subtle) !important;
-  color: var(--ink) !important;
-  font-weight: 700 !important;
+  color: var(--app-text-primary) !important;
+  font-weight: var(--app-font-weight-bold) !important;
   font-size: var(--app-size-xs) !important;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -663,7 +663,7 @@ function openTaskReport(row) {
 }
 .report-table :deep(.el-table__body td) {
   border-bottom: 1px solid var(--el-border-color-light) !important;
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 .report-table :deep(.el-table__body tr:hover td) {
   background: var(--rg-hover-bg) !important;
@@ -672,11 +672,11 @@ function openTaskReport(row) {
 .cell-run-id {
   font-family: var(--app-font-mono);
   font-size: var(--app-size-xs);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
 }
 .badge {
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   padding: 2px 7px;
   border-radius: var(--el-border-radius-small);
   border: 1.5px solid var(--ink);

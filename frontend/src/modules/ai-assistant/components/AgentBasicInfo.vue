@@ -50,7 +50,7 @@ const workflow = computed(() => agentWorkflow(props.taskKind))
 <style scoped>
 .agent-form :deep(.el-form-item__label) {
   font-size: var(--app-size-md);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   color: var(--ai-ink-subtle);
 }
 .agent-form :deep(.el-input__wrapper),

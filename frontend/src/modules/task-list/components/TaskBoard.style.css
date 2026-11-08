@@ -31,7 +31,7 @@
   display: inline-block;
   min-width: 2.5em;
   margin-right: var(--app-space-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--ai-ink-muted);
 }
 /* 附件行：文件名过长时单行省略，不撑高便签卡片 */
@@ -62,8 +62,8 @@
   line-height: var(--el-collapse-header-height);
   padding: 0 var(--app-space-md);
   font-size: var(--app-size-sm);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
   border-bottom: 1px solid var(--ai-bg-subtle);
 }
 .task-status-collapse :deep(.el-collapse-item.is-pending .el-collapse-item__header) {
@@ -104,13 +104,13 @@
   align-items: center;
   gap: var(--app-space-sm);
   width: 100%;
-  line-height: 1.2;
+  line-height: var(--app-line-height-tight);
 }
 .task-status-head__count {
   flex-shrink: 0;
   font-size: var(--app-size-xs);
-  font-weight: 600;
-  line-height: 1.2;
+  font-weight: var(--app-font-weight-semibold);
+  line-height: var(--app-line-height-tight);
   color: inherit;
   border: 1px solid currentColor;
   padding: 0 var(--app-space-xs);
@@ -125,7 +125,7 @@
 .task-card__title {
   margin: 0;
   font-size: var(--app-size-md);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   color: var(--ai-ink-soft);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -135,12 +135,12 @@
 .task-status-head__label {
   flex-shrink: 0;
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   padding: 2px 7px;
   border-radius: var(--el-border-radius-small);
   border: 1.5px solid var(--ink);
   white-space: nowrap;
-  line-height: 1.2;
+  line-height: var(--app-line-height-tight);
 }
 .task-status-head__label.is-pending {
   background: var(--ai-bg-neutral);

@@ -136,7 +136,7 @@ const hasExecEvidence = computed(
 <style scoped>
 .tac {
   padding: var(--app-space-sm) var(--app-space-md);
-  border: 1.5px dashed var(--ai-warm-border);
+  border: 1px solid var(--ai-warm-border);
   border-radius: var(--app-radius-md);
   background: var(--app-bg-card);
   display: flex;
@@ -160,13 +160,13 @@ const hasExecEvidence = computed(
 .tac__title {
   margin: 0;
   font-size: var(--app-size-sm);
-  font-weight: 800;
-  color: var(--ink);
-  line-height: 1.4;
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
+  line-height: var(--app-line-height-snug);
 }
 .tac__badge {
   font-size: var(--app-size-xs);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
 }
 .tac-result {
   padding: var(--app-space-sm);
@@ -177,15 +177,15 @@ const hasExecEvidence = computed(
 .tac-result__title {
   margin: 0 0 var(--app-space-xs);
   font-size: var(--app-size-sm);
-  font-weight: 800;
-  color: var(--ink);
-  line-height: 1.4;
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
+  line-height: var(--app-line-height-snug);
 }
 .tac-result__row {
   margin: 0 0 var(--app-space-xs);
   font-size: var(--app-size-sm);
   color: var(--ai-ink-soft, var(--app-text-secondary));
-  line-height: 1.5;
+  line-height: var(--app-line-height-normal);
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -195,12 +195,12 @@ const hasExecEvidence = computed(
   margin-bottom: 0;
 }
 .tac-result__label {
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--ai-ink-muted, var(--app-text-muted));
   min-width: 2em;
 }
 .tac-result__value {
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
 }
 .tac-result__msg {
   color: var(--ai-ink-soft, var(--app-text-secondary));
@@ -215,7 +215,7 @@ const hasExecEvidence = computed(
 }
 .tac-result__shot-label {
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--ai-ink-muted, var(--app-text-muted));
 }
 .tac__img {
@@ -228,10 +228,10 @@ const hasExecEvidence = computed(
 }
 .is-ok {
   color: var(--app-status-success-text);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
 }
 .is-bad {
   color: var(--app-status-danger-text);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
 }
 </style>

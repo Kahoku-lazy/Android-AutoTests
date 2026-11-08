@@ -190,8 +190,8 @@ onMounted(load)
 }
 .case-preview__title {
   font-size: var(--app-size-lg);
-  font-weight: 800;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -199,7 +199,7 @@ onMounted(load)
 .case-preview__meta {
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 .case-preview__body {
   flex: 1 1 0;
@@ -223,19 +223,19 @@ onMounted(load)
   flex-wrap: wrap;
   flex-shrink: 0;
   font-size: var(--app-size-sm);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
 }
 .case-preview__pager {
   display: flex;
   align-items: center;
   gap: var(--app-space-sm);
   font-size: var(--app-size-sm);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
 }
 .case-preview__text {
-  color: var(--ink);
+  color: var(--app-text-primary);
   display: inline-block;
   max-width: 100%;
   overflow: hidden;
@@ -249,8 +249,8 @@ onMounted(load)
   border-radius: 2px;
   padding: 0 var(--app-space-xs);
   font-size: var(--app-size-xs);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
   background: var(--app-bg-input);
 }
 .case-preview__tags {
@@ -261,6 +261,6 @@ onMounted(load)
 }
 .case-preview__sep {
   color: var(--app-text-muted);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 </style>

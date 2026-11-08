@@ -264,7 +264,7 @@ function onKeydown(e: KeyboardEvent) {
 
 .kpi-card--kpi .kpi-card__label {
   font-size: var(--app-size-sm, 13px);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   letter-spacing: 0.04em;
   margin-bottom: 2px;
 }
@@ -272,8 +272,8 @@ function onKeydown(e: KeyboardEvent) {
 .kpi-card--kpi .kpi-card__value {
   font-family: var(--app-font, inherit);
   font-size: var(--app-size-2xl, 28px);
-  font-weight: 800;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
   line-height: 1.1;
 }
 
@@ -303,7 +303,7 @@ function onKeydown(e: KeyboardEvent) {
   border: 2px solid var(--ink);
   border-radius: var(--kpi-radius);
   background: var(--kpi-accent);
-  color: var(--ink);
+  color: var(--app-text-primary);
   box-shadow: 2px 2px 0 0 var(--kpi-icon-shadow);
 }
 
@@ -311,7 +311,7 @@ function onKeydown(e: KeyboardEvent) {
   width: 14px;
   height: 14px;
   stroke: var(--ink);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 
 .kpi-card__icon-fallback {
@@ -325,12 +325,12 @@ function onKeydown(e: KeyboardEvent) {
   flex: 1;
   min-width: 0;
   font-size: var(--app-size-sm, 13px);
-  font-weight: 800;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  line-height: 1.2;
+  line-height: var(--app-line-height-tight);
 }
 
 .kpi-card__live {
@@ -370,7 +370,7 @@ function onKeydown(e: KeyboardEvent) {
   display: block;
   font-family: var(--app-font-display, var(--app-font, inherit));
   font-size: var(--app-size-2xl, 28px);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   letter-spacing: -0.03em;
   line-height: 1;
   color: var(--kpi-accent);
@@ -378,15 +378,15 @@ function onKeydown(e: KeyboardEvent) {
 
 .kpi-card__stat :deep(small) {
   font-size: var(--app-size-xs, 11px);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-status-success-text);
 }
 
 .kpi-card__desc {
   font-size: var(--app-size-xs, 11px);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   color: var(--app-text-secondary);
-  line-height: 1.4;
+  line-height: var(--app-line-height-snug);
 }
 
 @media (prefers-reduced-motion: reduce) {

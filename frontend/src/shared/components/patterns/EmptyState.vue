@@ -32,13 +32,13 @@ defineProps({
   gap: var(--app-space-sm);
 }
 .empty-state__icon {
-  font-size: 40px;
-  line-height: 1.2;
+  font-size: var(--app-size-3xl);
+  line-height: var(--app-line-height-tight);
 }
 .empty-state__text {
   font-size: var(--app-size-md);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
   margin: 0;
 }
 .empty-state__hint {

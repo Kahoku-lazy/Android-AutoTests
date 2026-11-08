@@ -31,7 +31,7 @@ const emit = defineEmits<{ save: [] }>()
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-md);
   font-size: var(--app-size-md);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   font-family: inherit;
   cursor: pointer;
   transition: all var(--app-duration-slow) var(--app-ease);

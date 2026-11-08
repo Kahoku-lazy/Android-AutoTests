@@ -450,12 +450,12 @@ function onCreateRoot() {
 }
 .rail-chev {
   font-size: var(--app-size-lg);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
 }
 .rail-label {
   writing-mode: vertical-rl;
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   letter-spacing: 0.12em;
 }
 .dir-head {
@@ -475,7 +475,7 @@ function onCreateRoot() {
   border-radius: var(--app-radius-md);
   background: var(--app-bg-card);
   font-size: var(--app-size-sm);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   cursor: pointer;
   color: var(--app-text-secondary);
   line-height: 1;
@@ -483,19 +483,19 @@ function onCreateRoot() {
 }
 .dir-toggle:hover {
   border-color: var(--c-workflow);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 .dir-title {
   font-size: var(--app-size-md);
-  font-weight: 800;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
 }
 .dir-desc {
   margin: var(--app-space-xs) 0 12px;
   font-size: var(--app-size-sm);
   color: var(--app-text-secondary);
-  font-weight: 600;
-  line-height: 1.5;
+  font-weight: var(--app-font-weight-semibold);
+  line-height: var(--app-line-height-normal);
 }
 .dir-actions {
   display: flex;
@@ -508,10 +508,10 @@ function onCreateRoot() {
   border-radius: var(--app-radius-sm);
   background: var(--app-bg-card);
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   font-family: inherit;
   cursor: pointer;
-  color: var(--ink);
+  color: var(--app-text-primary);
   transition: background var(--app-duration-fast) var(--app-ease);
 }
 .mini:hover {
@@ -530,13 +530,13 @@ function onCreateRoot() {
   margin: 12px var(--app-space-sm);
   padding: var(--app-space-md) 12px;
   font-size: var(--app-size-sm);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   color: var(--app-text-secondary);
-  line-height: 1.6;
+  line-height: var(--app-line-height-relaxed);
   text-align: center;
   background: var(--app-bg-subtle);
   border-radius: var(--app-radius-sm);
-  border: 1px dashed var(--ac-border-soft);
+  border: 1px solid var(--ac-border-soft);
 }
 .dir-row {
   width: 100%;
@@ -551,8 +551,8 @@ function onCreateRoot() {
   cursor: pointer;
   font-family: inherit;
   font-size: var(--app-size-sm);
-  font-weight: 600;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-semibold);
+  color: var(--app-text-primary);
   text-align: left;
   box-sizing: border-box;
   transition: background var(--app-duration-fast) var(--app-ease);
@@ -565,7 +565,7 @@ function onCreateRoot() {
   box-shadow: inset 3px 0 0 var(--c-workflow);
 }
 .dir-row.drop-on {
-  outline: 2px dashed var(--c-workflow);
+  outline: 1px solid var(--c-workflow);
   outline-offset: -2px;
   background: var(--ac-accent-soft);
 }
@@ -574,7 +574,7 @@ function onCreateRoot() {
 }
 .dir-row.root {
   margin-bottom: var(--app-space-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 .dir-row.flow .name {
   color: var(--ac-accent-deep);
@@ -582,7 +582,7 @@ function onCreateRoot() {
 .type-tag {
   margin-left: 6px;
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-text-secondary);
   opacity: 0.85;
 }
@@ -613,7 +613,7 @@ function onCreateRoot() {
 }
 .badge {
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   padding: 1px 7px;
   border-radius: var(--app-radius-pill);
   background: var(--ac-accent-soft);
@@ -627,15 +627,15 @@ function onCreateRoot() {
   border: 2px solid var(--c-workflow);
   border-radius: var(--app-radius-md);
   font-size: var(--app-size-sm);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   font-family: inherit;
-  color: var(--ink);
+  color: var(--app-text-primary);
   outline: none;
 }
 .drag-hint {
   padding: var(--app-space-sm) 10px;
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--ac-accent-deep);
   background: var(--ac-accent-soft);
   border-top: 2px solid var(--ac-border-soft);
@@ -667,9 +667,9 @@ function onCreateRoot() {
   padding: 9px 12px;
   border-radius: var(--app-radius-md);
   font-size: var(--app-size-sm);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   font-family: inherit;
-  color: var(--ink);
+  color: var(--app-text-primary);
   cursor: pointer;
   transition: background var(--app-duration-fast) var(--app-ease);
 }

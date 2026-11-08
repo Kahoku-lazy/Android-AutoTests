@@ -541,8 +541,8 @@ function rowClass(data: UiTreeNode) {
 
 .explorer-toolbar--select .explorer-crumbs {
   font-size: var(--app-size-sm);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -554,12 +554,12 @@ function rowClass(data: UiTreeNode) {
   background: var(--paper);
   border-radius: var(--app-radius-sm);
   padding: 6px 12px;
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   font-size: var(--app-size-xs);
   cursor: pointer;
   font-family: inherit;
-  color: var(--ink);
-  line-height: 1.2;
+  color: var(--app-text-primary);
+  line-height: var(--app-line-height-tight);
   transition:
     transform var(--app-duration-fast) var(--app-ease),
     background var(--app-duration-fast) var(--app-ease);
@@ -637,9 +637,9 @@ function rowClass(data: UiTreeNode) {
 .explorer-row__name {
   flex: 0 1 auto;
   min-width: 0;
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   font-size: var(--app-size-sm);
-  color: var(--ink);
+  color: var(--app-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -648,7 +648,7 @@ function rowClass(data: UiTreeNode) {
 .explorer-row__enter {
   flex-shrink: 0;
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--c-case);
   opacity: 0.85;
 }

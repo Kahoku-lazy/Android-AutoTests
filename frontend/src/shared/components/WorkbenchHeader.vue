@@ -49,9 +49,7 @@ watch(
         </span>
         <div class="brand-text">
           <h1 class="brand-title">{{ title }}</h1>
-          <p v-if="subtitle || $slots.subtitle" class="brand-sub">
-            <slot name="subtitle">{{ subtitle }}</slot>
-          </p>
+          <!-- 副标题已停用（2026-11-05）：页头只保留标题；subtitle prop 暂留以兼容调用点 -->
         </div>
       </div>
       <div v-if="$slots.actions" class="header-actions">
@@ -116,7 +114,7 @@ watch(
 .brand-mark--lucide :deep(svg) {
   width: 18px;
   height: 18px;
-  color: var(--ink);
+  color: var(--app-text-primary);
   stroke: var(--ink);
 }
 .brand-text {
@@ -124,27 +122,19 @@ watch(
 }
 .brand-title {
   margin: 0;
-  font-family: var(--app-font-display);
-  font-size: var(--app-size-2xl);
-  font-weight: 700;
-  color: var(--ink);
-  line-height: 1.2;
+  /* 页标题与平台标识同族：登录页同款手写体，字号降一级（2xl → xl） */
+  font-family: var(--app-font-brand);
+  font-size: var(--app-size-xl);
+  font-weight: var(--app-font-weight-regular);
+  color: var(--app-text-primary);
+  line-height: var(--app-line-height-tight);
   transform: rotate(-0.5deg);
   /* 单行收敛：长标题不折行，超出省略号 */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.brand-sub {
-  margin: 1px 0 0;
-  font-size: var(--app-size-xs);
-  font-weight: 600;
-  color: var(--app-text-secondary);
-  line-height: 1.35;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+/* .brand-sub 已随副标题一起停用（2026-11-05） */
 .header-actions {
   margin-left: auto;
   display: flex;
@@ -157,7 +147,7 @@ watch(
    wb-btn--* 变体一并压成同一底色，丢失操作语义。
    border-width 必须保留：用于覆盖基础皮肤的 `border: 2px solid` 简写。 */
 .wb-header :deep(.el-button) {
-  font-weight: 800 !important;
+  font-weight: var(--app-font-weight-heavy) !important;
   border-width: 2.5px !important;
   border-radius: var(--app-radius-md) !important;
   padding: 5px 14px !important;

@@ -190,8 +190,8 @@ function handleCancel() {
 
 .net-label {
   font-size: var(--app-size-sm);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
 }
 
 .net-field.has-error :deep(input) {
@@ -202,14 +202,14 @@ function handleCancel() {
   font-size: var(--app-size-sm);
   color: var(--app-status-danger-text);
   margin: 0;
-  line-height: 1.4;
+  line-height: var(--app-line-height-snug);
 }
 
 .net-hint {
   font-size: var(--app-size-sm);
   color: var(--app-text-secondary);
   margin: 0;
-  line-height: 1.5;
+  line-height: var(--app-line-height-normal);
 }
 
 .net-hint code {

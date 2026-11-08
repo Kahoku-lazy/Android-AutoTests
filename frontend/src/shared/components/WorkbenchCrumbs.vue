@@ -90,9 +90,9 @@ function goCrumb(item: CrumbItem) {
   color: var(--comp-crumb-ink, var(--ink));
   font: inherit;
   font-size: var(--app-size-xs);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   cursor: pointer;
-  line-height: 1.3;
+  line-height: var(--app-line-height-tight);
 }
 
 .wb-crumbs__back:hover {
@@ -124,7 +124,7 @@ function goCrumb(item: CrumbItem) {
 
 .wb-crumbs__sep {
   color: var(--comp-crumb-muted, var(--app-text-secondary));
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   opacity: 0.45;
 }
 
@@ -134,7 +134,7 @@ function goCrumb(item: CrumbItem) {
   padding: 0;
   font: inherit;
   font-size: var(--app-size-xs);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   color: var(--comp-crumb-ink, var(--ink));
   cursor: pointer;
   text-decoration-line: underline;
@@ -149,7 +149,7 @@ function goCrumb(item: CrumbItem) {
 
 .wb-crumbs__here {
   font-size: var(--app-size-xs);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   color: var(--comp-crumb-ink, var(--ink));
   background: linear-gradient(
     transparent 55%,

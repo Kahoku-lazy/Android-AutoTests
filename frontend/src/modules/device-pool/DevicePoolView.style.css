@@ -47,7 +47,7 @@
 .filter-count {
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   white-space: nowrap;
   padding: var(--app-space-xs) 10px;
   background: var(--app-bg-subtle);
@@ -64,7 +64,7 @@
 }
 .dev-mock-toggle__label {
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-text-secondary);
   white-space: nowrap;
 }
@@ -111,8 +111,8 @@
 .device-workbench .page-size-btn {
   border: 2px solid var(--ink) !important;
   border-radius: 2px !important;
-  color: var(--ink) !important;
-  font-weight: 700 !important;
+  color: var(--app-text-primary) !important;
+  font-weight: var(--app-font-weight-bold) !important;
   box-shadow: 2px 2px 0 0 var(--ink) !important;
   transition:
     transform var(--app-duration-fast) var(--app-ease),
@@ -165,8 +165,8 @@
 .card-group-title {
   font-family: var(--app-font-display);
   font-size: var(--app-size-md);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
   display: flex;
   align-items: center;
   gap: var(--app-space-sm);
@@ -213,7 +213,7 @@
 }
 .toolbar-label {
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-text-secondary);
   white-space: nowrap;
 }
@@ -237,7 +237,7 @@
 .page-info {
   font-size: var(--app-size-sm);
   color: var(--app-text-secondary);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   white-space: nowrap;
 }
 .page-nav {
@@ -342,14 +342,14 @@
     var(--app-bg-subtle),
     color-mix(in srgb, var(--app-bg-subtle) 40%, transparent)
   ) !important;
-  color: var(--ink) !important;
+  color: var(--app-text-primary) !important;
   padding: 14px 12px !important;
 }
 
 /* 纸面风格不画网格线：行线、列线与表头分栏底线均不绘制
    （frontend-l4-data-surface「Tables draw no visible grid lines」） */
 .device-table-wrapper :deep(.el-table td.el-table__cell) {
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-size: var(--app-size-sm);
   padding: 14px 12px !important;
   position: relative;
@@ -378,23 +378,23 @@
 }
 .dev-model {
   margin: 0 0 5px;
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   font-size: var(--app-size-md);
-  line-height: 1.25;
-  color: var(--ink);
+  line-height: var(--app-line-height-tight);
+  color: var(--app-text-primary);
 }
 .dev-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 10px;
   font-size: var(--app-size-xs);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   color: var(--app-text-secondary);
 }
 .dev-meta code {
   font-family: var(--app-font-mono);
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-nav-text);
   background: var(--app-bg-subtle);
   border: 1px solid var(--app-border-light);
@@ -412,8 +412,8 @@
   border: 1.5px solid var(--ink);
   border-radius: var(--app-radius-sm);
   font-size: var(--app-size-xs);
-  font-weight: 800;
-  line-height: 1.2;
+  font-weight: var(--app-font-weight-heavy);
+  line-height: var(--app-line-height-tight);
   white-space: nowrap;
 }
 .conn-chip--wifi {
@@ -438,7 +438,7 @@
 .screen-cell {
   font-family: var(--app-font-mono);
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-nav-text);
 }
 .time-cell {
@@ -448,13 +448,13 @@
   gap: 2px;
 }
 .time-rel {
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   font-size: var(--app-size-sm);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 .time-abs {
   font-size: var(--app-size-xs);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   color: var(--app-text-secondary);
 }
 

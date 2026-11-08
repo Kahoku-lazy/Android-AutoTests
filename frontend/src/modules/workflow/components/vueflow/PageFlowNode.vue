@@ -177,7 +177,7 @@ watch(
   border-radius: var(--app-radius-md);
   padding: 11px 13px 13px;
   font-family: var(--app-font);
-  color: var(--ink);
+  color: var(--app-text-primary);
   box-shadow: var(--app-shadow-sm);
   /* ── 本模块私有色：tokens.css 未登记，登记在节点自身根类 ── */
   --wf-node-selected-ring: var(--color-cyan-74-a30) /* -> --color-cyan-74-a30 */; /* 选中态外发光（工作流蓝 28%） */
@@ -192,7 +192,7 @@ watch(
     var(--app-shadow-md);
 }
 .pf-node.popup {
-  border-style: dashed;
+  border-style: solid;
 }
 .pf-node.start {
   min-width: 240px;
@@ -226,9 +226,9 @@ watch(
   background: transparent;
   border: 2px solid transparent;
   border-radius: var(--app-radius-md);
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-size: var(--app-size-sm);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   padding: 2px 6px;
   outline: none;
   font-family: inherit;
@@ -252,7 +252,7 @@ watch(
   border-radius: var(--app-radius-sm);
   padding: 5px var(--app-space-sm);
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   font-family: inherit;
   background: transparent;
   color: var(--app-text-secondary);
@@ -263,7 +263,7 @@ watch(
 }
 .kind-btn.active {
   background: var(--app-bg-card);
-  color: var(--ink);
+  color: var(--app-text-primary);
   box-shadow: var(--app-shadow-sm);
 }
 .kind-btn:focus-visible {
@@ -279,7 +279,7 @@ watch(
 }
 .pf-pkg label {
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-text-secondary);
   flex-shrink: 0;
 }
@@ -290,7 +290,7 @@ watch(
   border: 1.5px solid var(--ink);
   border-radius: var(--app-radius-md);
   background: var(--app-bg-card);
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-size: var(--app-size-xs);
   font-family: var(--app-font-mono);
   outline: none;
@@ -304,8 +304,8 @@ watch(
   color: var(--app-text-secondary);
   margin-bottom: var(--app-space-sm);
   padding-left: var(--app-space-xs);
-  line-height: 1.5;
-  font-weight: 600;
+  line-height: var(--app-line-height-normal);
+  font-weight: var(--app-font-weight-semibold);
 }
 .pf-row {
   display: flex;
@@ -323,8 +323,8 @@ watch(
   justify-content: flex-end;
 }
 .pf-port-name {
-  color: var(--ink);
-  font-weight: 600;
+  color: var(--app-text-primary);
+  font-weight: var(--app-font-weight-semibold);
 }
 .pf-port-type {
   font-size: var(--app-size-xs);
@@ -338,7 +338,7 @@ watch(
 }
 .pf-in-count {
   font-size: var(--app-size-xs);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   color: var(--wf-node-in-count-fg);
   background: var(--wf-node-in-count-bg);
   border-radius: var(--app-radius-md);
@@ -362,7 +362,7 @@ watch(
 }
 .pf-actions button:hover {
   border-color: var(--c-workflow);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 
 .pf-handle {
@@ -394,19 +394,19 @@ watch(
   color: var(--app-text-secondary);
   text-align: center;
   padding: var(--app-space-sm) 0 var(--app-space-xs);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
 }
 
 .pf-add {
   width: 100%;
   margin-top: var(--app-space-sm);
   padding: 7px;
-  border: 2px dashed var(--ink);
+  border: 1px solid var(--ink);
   border-radius: var(--app-radius-md);
   background: var(--ac-accent-soft);
   color: var(--ac-accent-deep);
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   cursor: pointer;
   font-family: inherit;
   transition: border-color var(--app-duration-fast) var(--app-ease);

@@ -35,14 +35,13 @@
 
   /* ── white ── */
   --color-white: #ffffff;
-  --color-white-a30: rgba(255, 255, 255, 0.3);
   --color-white-a60: rgba(255, 255, 255, 0.6);
 
   /* ── ink ── */
   --color-ink-79: #c9cacc;
   --color-ink-57: #96918c;
+  --color-ink-42: #6b6b74;
   --color-ink-47: #7c6f83;
-  --color-ink-46: #6b7280;
   --color-ink-34: #5d5950;
   --color-ink-05-a05: rgba(0, 0, 0, 0.05);
   --color-ink-05-a10: rgba(0, 0, 0, 0.1);
@@ -56,25 +55,18 @@
   --color-red-73: #e8998a;
   --color-red-69: #f56b6a;
   --color-red-69-a05: rgba(245, 107, 106, 0.05);
-  --color-red-69-a10: rgba(245, 107, 106, 0.1);
   --color-red-69-a30: rgba(245, 107, 106, 0.3);
   --color-red-49: #b35a48;
   --color-red-46: #b23838;
   --color-red-29: #7a1c1c;
 
   /* ── orange ── */
-  --color-orange-77: #f3c798;
   --color-orange-76: #d8d2c4;
-  --color-orange-64: #d8a870;
   --color-orange-63: #f0a050;
-  --color-orange-55-a10: rgba(245, 166, 35, 0.1);
-  --color-orange-55-a18: rgba(245, 166, 35, 0.18);
-  --color-orange-55-a60: rgba(245, 166, 35, 0.6);
   --color-orange-53: #daa535;
   --color-orange-44: #827360;
   --color-orange-37: #b2710c;
   --color-orange-32: #794f29;
-  --color-orange-32-a05: rgba(121, 79, 41, 0.05);
   --color-orange-26: #534330;
 
   /* ── yellow ── */
@@ -92,12 +84,10 @@
   /* ── lime ── */
   --color-lime-94: #fffef5;
   --color-lime-45: #6fba2c;
-  --color-lime-45-a10: rgba(111, 186, 44, 0.1);
 
   /* ── green ── */
   --color-green-87: #c8f5d0;
   --color-green-61: #6bcb77;
-  --color-green-60-a60: rgba(122, 184, 141, 0.6);
   --color-green-49: #4caf50;
   --color-green-33: #2d7a31;
   --color-green-23: #1a5c2a;
@@ -105,7 +95,6 @@
   /* ── teal ── */
   --color-teal-67: #6ee7d8;
   --color-teal-49: #4ecdc4;
-  --color-teal-49-a30: rgba(78, 205, 196, 0.3);
   --color-teal-38: #16aea1;
   --color-teal-30: #14857c;
   --color-teal-29: #1a7a5c;
@@ -123,13 +112,11 @@
   --color-blue-82-a10: rgba(162, 209, 254, 0.1);
   --color-blue-82-a18: rgba(162, 209, 254, 0.18);
   --color-blue-82-a30: rgba(162, 209, 254, 0.3);
-  --color-blue-82-a60: rgba(162, 209, 254, 0.6);
   --color-blue-68: #60a5fa;
   --color-blue-68-s64: #7a8fe2;
   --color-blue-68-s64-a18: rgba(122, 143, 226, 0.18);
   --color-blue-64: #67a4e0;
   --color-blue-62: #7889c4;
-  --color-blue-60: #3b82f6;
   --color-blue-53: #4660c6;
   --color-blue-42: #4a5a8a;
   --color-blue-27: #1a426f;
@@ -137,7 +124,6 @@
   /* ── indigo ── */
   --color-indigo-84: #c7b6f8;
   --color-indigo-76: #a78bfa;
-  --color-indigo-76-a18: rgba(167, 139, 250, 0.18);
   --color-indigo-46: #5b45a4;
   --color-indigo-35-a10: rgba(74, 78, 105, 0.1);
   --color-indigo-35-a30: rgba(74, 78, 105, 0.3);
@@ -148,7 +134,6 @@
   /* ── violet ── */
   --color-violet-96: #f6eafe;
   --color-violet-89: #e7d0f6;
-  --color-violet-75: #c084fc;
 
   /* ── purple ── */
   --color-purple-87: #f5c0fb;
@@ -175,6 +160,20 @@
   --font-size-xl: 24px;
   --font-size-2xl: 32px;
   --font-size-3xl: 48px;
+  --font-size-4xl: 96px;
+
+  /* ── 字重（排版令牌；组件内不得再写数字）── */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-heavy: 800;
+
+  /* ── 行高（排版令牌；代码里的 1 / px 值仍可直接写）── */
+  --line-height-tight: 1.25;
+  --line-height-snug: 1.4;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.7;
 
   /* ═══════════════════════════════════════════
      T0 主 token · 三、基础量原子（间距 / 圆角 / 阴影 / 动效 / 尺寸）
@@ -280,7 +279,7 @@
   --comp-crumb-back-bg: var(--color-white);
   --comp-crumb-back-shadow: 2px 2px 0 0 var(--color-indigo-13);
   /* AppTable 表纸皮肤 */
-  --comp-sheet-border: 2.5px dashed var(--color-indigo-13);
+  --comp-sheet-border: 1px solid var(--color-ink-79);
   --comp-sheet-bg: var(--color-white);
   --comp-sheet-radius: 2px 6px 2px 4px;
   --comp-sheet-shadow-x: 4px;
@@ -296,7 +295,7 @@
   /* 表格斑马纹底色：暖色纸面族派生（EP 默认的 --el-fill-color-lighter 是冷灰 #fafafa） */
   --comp-table-row-striped-bg: color-mix(in srgb, var(--color-orange-76) 25%, var(--app-bg-card));
   /* L5 对话框纸面补缺 */
-  --comp-dialog-border: 2.5px dashed var(--color-indigo-13);
+  --comp-dialog-border: 1px solid var(--color-ink-79);
   --comp-dialog-shadow: 4px 4px 0 0 var(--color-indigo-13);
   --comp-dialog-radius: 6px 10px 6px 10px;
   --comp-dialog-bg: var(--color-white);
@@ -363,10 +362,15 @@
   --app-bg-card: var(--color-white) /* alias -> --color-white */;
   --app-bg-input: var(--color-white) /* alias -> --color-white */;
   --app-bg-subtle: var(--color-lime-94) /* alias -> --color-lime-94 */;
+  --app-bg-canvas: var(--paper);
+  --app-bg-muted: color-mix(in srgb, var(--ink) 4%, var(--color-white));
 
   /* ── 中性色 · 文字 ── */
   --app-text: var(--ink);
-  --app-text-secondary: var(--color-ink-57) /* alias -> --color-ink-57 */;
+  --app-text-primary: var(--ink);
+  --app-text-secondary: var(--color-ink-42) /* alias -> --color-ink-42（5.21:1，达 AA） */;
+  --app-text-tertiary: var(--color-ink-57) /* alias -> --color-ink-57（仅大字/图标，12px 禁用） */;
+  --app-text-disabled: var(--color-ink-79) /* alias -> --color-ink-79（仅非文本） */;
   --app-text-muted: var(--color-ink-79) /* alias -> --color-ink-79 */;
   --app-text-inverse: var(--color-white) /* alias -> --color-white */;
   --app-nav-text: var(--color-ink-34) /* alias -> --color-ink-34 */; /* 侧边栏导航未激活文字（暖灰，纸面语言） */
@@ -374,6 +378,8 @@
   /* ── 中性色 · 边框/高亮/激活 ── */
   --app-border-light: var(--color-white) /* alias -> --color-white */;
   --app-border-lighter: var(--color-lime-94) /* alias -> --color-lime-94 */;
+  --app-border-subtle: color-mix(in srgb, var(--ink) 10%, transparent);
+  --app-border-strong: color-mix(in srgb, var(--ink) 24%, transparent);
   --app-highlight: var(--color-yellow-70) /* alias -> --color-yellow-70 */;
 
   /* ── 阴影/遮罩（rgba 色值）── */
@@ -428,6 +434,16 @@
   --app-size-xl: var(--font-size-xl) /* alias -> --font-size-xl */; /* 页面标题 */
   --app-size-2xl: var(--font-size-2xl) /* alias -> --font-size-2xl */; /* KPI 数字、Hero 数字 */
   --app-size-3xl: var(--font-size-3xl) /* alias -> --font-size-3xl */; /* 品牌展示级：仅首屏品牌标题（当前唯一消费点：登录页 Hero 标题）*/
+  --app-size-4xl: var(--font-size-4xl) /* alias -> --font-size-4xl */; /* 404 巨字等展示级 */
+  --app-font-weight-regular: var(--font-weight-regular) /* alias -> --font-weight-regular */;
+  --app-font-weight-medium: var(--font-weight-medium) /* alias -> --font-weight-medium */;
+  --app-font-weight-semibold: var(--font-weight-semibold) /* alias -> --font-weight-semibold */;
+  --app-font-weight-bold: var(--font-weight-bold) /* alias -> --font-weight-bold */;
+  --app-font-weight-heavy: var(--font-weight-heavy) /* alias -> --font-weight-heavy */;
+  --app-line-height-tight: var(--line-height-tight) /* alias -> --line-height-tight */;
+  --app-line-height-snug: var(--line-height-snug) /* alias -> --line-height-snug */;
+  --app-line-height-normal: var(--line-height-normal) /* alias -> --line-height-normal */;
+  --app-line-height-relaxed: var(--line-height-relaxed) /* alias -> --line-height-relaxed */;
 
   /* ═══════════════════════════════════════════
      皮肤维度三 · 间距 Spacing

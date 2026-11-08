@@ -38,17 +38,16 @@ defineProps({
   gap: var(--app-space-sm);
   padding: var(--app-space-md) var(--app-space-lg);
   background: var(--paper);
-  border: 2.5px dashed var(--ink);
-  border-radius: 2px;
-  box-shadow: 4px 4px 0 0 var(--c-report);
+  border: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
+  border-radius: var(--app-radius-lg);
 }
 
 .flow-import__summary,
 .flow-import__message {
   margin: 0;
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-size: var(--app-size-sm);
-  line-height: 1.6;
+  line-height: var(--app-line-height-relaxed);
 }
 
 .flow-import__link {
@@ -56,7 +55,7 @@ defineProps({
   padding: 4px var(--app-space-md);
   color: var(--paper);
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   text-decoration: none;
   background: var(--ink);
   border: 2px solid var(--ink);
@@ -64,7 +63,7 @@ defineProps({
 }
 
 .flow-import__link:hover {
-  color: var(--ink);
+  color: var(--app-text-primary);
   background: var(--paper);
 }
 

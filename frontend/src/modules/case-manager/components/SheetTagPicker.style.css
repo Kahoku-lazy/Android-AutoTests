@@ -16,12 +16,12 @@
   border-radius: var(--app-radius-pill);
   padding: var(--app-space-xs) var(--app-space-sm);
   font-size: var(--app-size-xs);
-  font-weight: 700;
-  line-height: 1.2;
+  font-weight: var(--app-font-weight-bold);
+  line-height: var(--app-line-height-tight);
   cursor: pointer;
   font-family: inherit;
   background: var(--paper);
-  color: var(--ink);
+  color: var(--app-text-primary);
   white-space: nowrap;
 }
 

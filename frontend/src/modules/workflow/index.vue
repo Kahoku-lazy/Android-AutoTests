@@ -478,11 +478,11 @@ watch(
   border: 2.5px solid var(--ink);
   border-radius: var(--app-radius-sm);
   background: var(--app-bg-card);
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   font-family: inherit;
-  line-height: 1.4;
+  line-height: var(--app-line-height-snug);
   cursor: pointer;
   box-shadow: var(--app-shadow-sm);
   transition:
@@ -515,7 +515,7 @@ watch(
   gap: 6px;
   padding: 6px var(--app-space-sm);
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-text-secondary);
   cursor: pointer;
   white-space: nowrap;
@@ -532,7 +532,7 @@ watch(
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--ac-accent-deep);
   padding: var(--app-space-xs) 10px;
   background: var(--ac-accent-soft);
@@ -573,14 +573,14 @@ watch(
 .wf-modal-hint {
   margin: 6px 0 var(--app-space-md);
   font-size: var(--app-size-sm);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   color: var(--app-text-secondary);
 }
 .wf-modal-label {
   display: block;
   font-size: var(--app-size-sm);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
   margin-bottom: 6px;
 }
 </style>

@@ -100,8 +100,8 @@ async function doDelete() {
 }
 .menu-title {
   font-size: var(--app-size-sm);
-  font-weight: 800;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
   padding: 6px var(--app-space-sm) 2px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -116,9 +116,9 @@ async function doDelete() {
   border: none;
   border-radius: var(--app-radius-md);
   background: transparent;
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-size: var(--app-size-sm);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   cursor: pointer;
   text-align: left;
   font-family: inherit;

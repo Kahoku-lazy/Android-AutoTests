@@ -115,7 +115,7 @@ const rootStyle = computed(() => {
   flex-direction: column;
   gap: var(--app-space-sm, 8px);
   padding: var(--app-space-md, 12px);
-  border: 2.5px dashed var(--ink);
+  border: 1px solid var(--app-border-subtle);
   border-radius: var(--note-radius);
   background: var(--paper);
   box-shadow: 4px 4px 0 0 var(--note-accent);
@@ -165,7 +165,7 @@ const rootStyle = computed(() => {
   gap: var(--app-space-sm, 8px);
   margin-top: auto;
   padding-top: var(--app-space-sm, 8px);
-  border-top: 1.5px dashed color-mix(in srgb, var(--ink) 22%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
 }
 
 /* note：纸色 deco-card */

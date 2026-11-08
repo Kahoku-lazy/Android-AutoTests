@@ -56,8 +56,8 @@ const emit = defineEmits<{
 .error-message {
   margin: 0;
   font-size: var(--app-size-sm);
-  line-height: 1.6;
-  color: var(--ink);
+  line-height: var(--app-line-height-relaxed);
+  color: var(--app-text-primary);
   word-break: break-word;
   max-height: min(40vh, 240px);
   overflow-y: auto;

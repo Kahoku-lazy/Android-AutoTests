@@ -18,8 +18,8 @@
 .sl-cat-title {
   margin: 0;
   font-size: var(--app-size-md);
-  font-weight: 800;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
 }
 .sl-cat-sub {
   margin: var(--app-space-xs) 0 0;
@@ -45,13 +45,13 @@
   padding: 6px 12px;
   border-radius: var(--app-radius-sm);
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   border: 2px solid var(--ink);
   cursor: pointer;
   font-family: inherit;
   box-shadow: 2px 2px 0 var(--ink);
   background: var(--app-bg-card);
-  color: var(--ink);
+  color: var(--app-text-primary);
   transition:
     transform var(--app-duration-fast),
     background var(--app-duration-fast);
@@ -71,8 +71,8 @@
   align-items: center;
   gap: var(--app-space-sm);
   font-family: var(--app-font-mono);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
 }
 
 .lp-dot {
@@ -91,7 +91,7 @@
 
 .lp-mono {
   font-family: var(--app-font-mono);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 
 .lp-switch {
@@ -102,7 +102,7 @@
 
 .lp-switch-text {
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 .lp-switch-text.on {
   color: var(--app-status-success-text);
@@ -117,18 +117,18 @@
 .lp-note {
   margin: var(--app-space-sm) 0 0;
   font-size: var(--app-size-xs);
-  line-height: 1.5;
+  line-height: var(--app-line-height-normal);
 }
 .lp-hint {
   color: var(--app-text-secondary);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
 }
 .lp-hint-dim {
   color: var(--app-text-muted);
 }
 .lp-warn {
   color: var(--app-status-danger-text);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
 }
 .lp-note {
   color: var(--app-text-secondary);
@@ -150,7 +150,7 @@
   gap: var(--app-space-md);
   flex-wrap: wrap;
   padding-bottom: var(--app-space-sm);
-  border-bottom: 1.5px dashed var(--dot);
+  border-bottom: 1px solid var(--dot);
 }
 
 .lp-tail {
@@ -158,8 +158,8 @@
   align-items: center;
   gap: var(--app-space-xs);
   font-size: var(--app-size-xs);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
 }
 .lp-tail-select {
   width: 120px;
@@ -170,8 +170,8 @@
   align-items: center;
   gap: var(--app-space-xs);
   font-size: var(--app-size-xs);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
 }
 
 .lp-count {
@@ -207,13 +207,13 @@
 .lp-time {
   font-family: var(--app-font-mono);
   font-size: var(--app-size-xs);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
 }
 
 .lp-src {
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   text-align: center;
   border: 1.5px solid var(--ink);
   border-radius: var(--el-border-radius-small);
@@ -227,7 +227,7 @@
   word-break: break-all;
   font-family: var(--app-font-mono);
   font-size: var(--app-size-xs);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 
 /* 减少动效：关闭位移 / 旋转 / 缩放（颜色过渡不受影响） */

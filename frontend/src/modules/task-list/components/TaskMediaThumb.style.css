@@ -14,7 +14,7 @@
   display: block;
   width: 240px;
   height: 120px;
-  border: 2.5px dashed var(--ink);
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
   border-radius: var(--app-radius-sm);
   opacity: 0.35;
 }
@@ -27,13 +27,13 @@
   font: inherit;
   font-size: var(--app-size-xs);
   background: transparent;
-  border: 1px dashed var(--ink);
+  border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
   border-radius: var(--app-radius-sm);
   cursor: pointer;
 }
 
 .task-media-thumb__open:hover {
-  color: var(--ink);
+  color: var(--app-text-primary);
   border-style: solid;
 }
 

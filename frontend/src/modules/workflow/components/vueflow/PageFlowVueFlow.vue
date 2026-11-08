@@ -696,9 +696,9 @@ watch(
   border-radius: var(--app-radius-sm);
   background: var(--app-bg-card);
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   font-family: inherit;
-  color: var(--ink);
+  color: var(--app-text-primary);
   outline: none;
   transition: border-color var(--app-duration-fast) var(--app-ease);
 }
@@ -707,7 +707,7 @@ watch(
 }
 .kind-chip {
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   padding: 3px 9px;
   border-radius: var(--app-radius-pill);
   background: var(--ac-accent-soft);
@@ -716,7 +716,7 @@ watch(
 }
 .id-chip {
   font-size: var(--app-size-xs);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   color: var(--app-text-secondary);
   font-family: var(--app-font-mono);
   max-width: 220px;
@@ -735,10 +735,10 @@ watch(
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-sm);
   background: var(--app-bg-card);
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-family: inherit;
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   cursor: pointer;
   box-shadow: var(--app-shadow-sm);
   transition:
@@ -785,7 +785,7 @@ watch(
 .hint {
   font-size: var(--app-size-sm);
   color: var(--ac-accent-deep);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   margin-left: var(--app-space-xs);
   max-width: 40%;
   overflow: hidden;
@@ -796,7 +796,7 @@ watch(
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
   margin-left: auto;
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   white-space: nowrap;
 }
 .vf-canvas {
@@ -887,7 +887,7 @@ watch(
   box-shadow: 4px 4px 0 0 var(--wf-picker-shadow);
   overflow: hidden;
   font-family: var(--app-font, "Cascadia Mono", "Noto Sans SC", sans-serif);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 .el-picker-head {
   display: flex;
@@ -899,11 +899,11 @@ watch(
 }
 .el-picker-head strong {
   font-size: var(--app-size-sm);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
 }
 .el-picker-count {
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--wf-picker-accent);
   background: var(--wf-picker-count-bg);
   padding: 2px var(--app-space-sm);
@@ -922,7 +922,7 @@ watch(
 }
 .el-picker-close:hover {
   background: var(--wf-picker-tint-soft);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 .el-picker-search {
   margin: 10px 12px 6px;
@@ -930,9 +930,9 @@ watch(
   border: 1.5px solid var(--wf-picker-border);
   border-radius: var(--app-radius-md);
   background: var(--app-bg-card);
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-size: var(--app-size-sm);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   font-family: inherit;
   outline: none;
 }
@@ -960,7 +960,7 @@ watch(
   text-align: left;
   cursor: pointer;
   font-family: inherit;
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 .el-picker-item:hover:not(:disabled) {
   border-color: var(--wf-picker-focus);
@@ -973,7 +973,7 @@ watch(
 }
 .el-ico {
   font-size: var(--app-size-md);
-  line-height: 1.2;
+  line-height: var(--app-line-height-tight);
   flex-shrink: 0;
 }
 .el-body {
@@ -985,21 +985,21 @@ watch(
 }
 .el-label {
   font-size: var(--app-size-sm);
-  font-weight: 800;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
 }
 .el-xpath {
   font-size: var(--app-size-xs);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   color: var(--wf-picker-xpath);
   word-break: break-all;
-  line-height: 1.35;
+  line-height: var(--app-line-height-snug);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 .el-tag {
   flex-shrink: 0;
   font-size: var(--app-size-xs);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   padding: 3px var(--app-space-sm);
   border-radius: var(--app-radius-pill);
   background: var(--wf-picker-tint-soft);
@@ -1014,7 +1014,7 @@ watch(
   padding: var(--app-space-lg) 12px;
   text-align: center;
   font-size: var(--app-size-sm);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-text-secondary);
 }
 </style>

@@ -7,7 +7,7 @@
   /* 取共享/主 token：本规则在 20 个 .wb-shell 页根上生效，
      原先消费 --ac-font / --ac-ink（只在 .workflow-workbench 内声明）会在这些页根上静默失效 */
   font-family: var(--app-font);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 
 .wb-shell *,
@@ -23,11 +23,11 @@
 .wb-shell .wb-btn.el-button,
 .wb-shell .el-button.wb-btn {
   border-radius: var(--app-radius-sm);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   font-family: inherit;
   border: 2px solid var(--ink);
   background: var(--app-bg-card);
-  color: var(--ink);
+  color: var(--app-text-primary);
   box-shadow: var(--app-shadow-sm);
   transition: all var(--app-duration-fast);
 }
@@ -41,7 +41,7 @@
 .wb-shell .wb-btn.el-button--primary,
 .wb-shell .el-button.wb-btn.el-button--primary {
   background: var(--c-dashboard);
-  color: var(--ink);
+  color: var(--app-text-primary);
   border-color: var(--ink);
 }
 
@@ -56,7 +56,7 @@
 }
 .wb-shell .wb-btn.el-button--success {
   background: var(--c-device);
-  color: var(--ink);
+  color: var(--app-text-primary);
   border-color: var(--ink);
 }
 
@@ -66,10 +66,10 @@
   position: relative;
   overflow: visible !important;
   background: var(--app-bg-card) !important;
-  border: 2.5px dashed var(--ink) !important;
-  border-radius: 2px !important;
-  box-shadow: 4px 4px 0 0 var(--ac-accent) !important;
-  transform: rotate(var(--ac-tilt));
+  border: 1px solid var(--app-border-subtle) !important;
+  border-radius: var(--app-radius-lg) !important;
+  box-shadow: none !important;
+  transform: none;
   transition:
     transform var(--app-duration, 0.2s) var(--app-ease, ease),
     box-shadow var(--app-duration, 0.2s) var(--app-ease, ease);
@@ -78,12 +78,9 @@
 .workflow-workbench .ac-card:hover,
 .wb-shell .ac-card:focus-within,
 .workflow-workbench .ac-card:focus-within {
-  transform: rotate(0deg) translate(-1px, -1px);
-  box-shadow: 5px 5px 0 0 var(--ac-accent) !important;
-}
-.wb-shell .ac-card--dashed,
-.workflow-workbench .ac-card--dashed {
-  border-style: dashed !important;
+  border-color: var(--ink) !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 .wb-shell .ac-card .ac-card__pin,
 .workflow-workbench .ac-card .ac-card__pin {
@@ -135,19 +132,19 @@
 .wb-shell .ac-tabs .el-tabs__item {
   padding: 5px 14px;
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   border-radius: var(--app-radius-sm);
   border: 2px solid transparent;
   color: var(--app-text-secondary);
   height: auto;
-  line-height: 1.4;
+  line-height: var(--app-line-height-snug);
   transition: all var(--app-duration-fast);
 }
 .wb-shell .ac-tabs .el-tabs__item:hover {
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 .wb-shell .ac-tabs .el-tabs__item.is-active {
-  color: var(--ink);
+  color: var(--app-text-primary);
   background: var(--c-dashboard);
   border-color: var(--ink);
 }
@@ -155,8 +152,8 @@
 /* AppTable */
 .wb-shell .ac-table th.el-table__cell {
   background: var(--app-bg-subtle);
-  color: var(--ink);
-  font-weight: 700;
+  color: var(--app-text-primary);
+  font-weight: var(--app-font-weight-bold);
   font-size: var(--app-size-xs);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -164,7 +161,7 @@
   border-bottom: 1px solid transparent;
 }
 .wb-shell .ac-table td.el-table__cell {
-  color: var(--ink);
+  color: var(--app-text-primary);
   /* 纸面风格不画行网格线；保留 1px 占位以维持行高 */
   border-bottom: 1px solid transparent;
 }

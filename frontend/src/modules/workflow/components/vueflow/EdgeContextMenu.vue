@@ -141,8 +141,8 @@ async function doDelete() {
 }
 .edge-menu__title {
   font-size: var(--app-size-sm);
-  font-weight: 800;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
   padding: 6px var(--app-space-sm) 2px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -156,9 +156,9 @@ async function doDelete() {
   border: none;
   border-radius: var(--app-radius-md);
   background: transparent;
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-size: var(--app-size-sm);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   cursor: pointer;
   text-align: left;
   font-family: inherit;
@@ -179,18 +179,18 @@ async function doDelete() {
   gap: 6px;
   padding: var(--app-space-xs) 6px var(--app-space-sm);
   font-size: var(--app-size-sm);
-  font-weight: 800;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
 }
 .edge-menu__back {
   border: 2px solid var(--ink);
   background: var(--app-bg-card);
-  color: var(--ink);
+  color: var(--app-text-primary);
   border-radius: var(--app-radius-md);
   width: 28px;
   height: 28px;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   line-height: 1;
 }
 .edge-menu__back:hover {
@@ -202,7 +202,7 @@ async function doDelete() {
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-sm);
   background: var(--app-bg-card);
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-size: var(--app-size-sm);
   outline: none;
   font-family: inherit;
@@ -214,6 +214,6 @@ async function doDelete() {
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
   padding: 0 var(--app-space-sm) 6px;
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
 }
 </style>

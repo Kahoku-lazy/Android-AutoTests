@@ -95,6 +95,9 @@ const avatarBoxStyle = computed(() => {
 }
 .route-card.doodle-note {
   padding: var(--app-space-md);
+  /* 白名单：助手角色卡是唯一保留虚线的卡片样式 */
+  border: 2.5px dashed var(--ink);
+  border-radius: 2px;
 }
 .route-identity {
   display: flex;
@@ -132,18 +135,18 @@ const avatarBoxStyle = computed(() => {
   gap: var(--app-space-md);
 }
 .route-agent-name {
-  font-size: 18px;
-  line-height: 1.2;
-  font-weight: 800;
+  font-size: var(--app-size-lg);
+  line-height: var(--app-line-height-tight);
+  font-weight: var(--app-font-weight-heavy);
   color: var(--ai-ink-soft);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .route-duty {
-  font-size: 15px;
-  line-height: 1.2;
-  font-weight: 700;
+  font-size: var(--app-size-sm);
+  line-height: var(--app-line-height-tight);
+  font-weight: var(--app-font-weight-bold);
   color: var(--ai-ink-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -154,7 +157,7 @@ const avatarBoxStyle = computed(() => {
   min-height: 34px;
   padding: 0 var(--app-space-sm);
   border-width: 2.5px;
-  font-size: 15px;
+  font-size: var(--app-size-sm);
   box-shadow: 3px 3px 0 0 var(--ink);
 }
 
@@ -171,14 +174,14 @@ const avatarBoxStyle = computed(() => {
     flex-basis: 120px;
   }
   .route-agent-name {
-    font-size: 15px;
+    font-size: var(--app-size-sm);
   }
   .route-duty {
-    font-size: 13px;
+    font-size: var(--app-size-xs);
   }
   .route-card :deep(.route-config-btn) {
     min-height: 30px;
-    font-size: 13px;
+    font-size: var(--app-size-xs);
   }
 }
 </style>

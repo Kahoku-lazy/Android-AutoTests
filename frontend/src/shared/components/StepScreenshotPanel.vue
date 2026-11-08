@@ -157,7 +157,7 @@ function stepTypeColor(type) {
 }
 .sec-title {
   font-size: var(--app-size-md);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   margin: 0 0 var(--app-space-xs);
   display: flex;
   align-items: center;
@@ -168,7 +168,7 @@ function stepTypeColor(type) {
   background: var(--app-pending);
   padding: 2px 10px;
   border-radius: var(--app-radius-sm);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   color: var(--app-pending-text);
 }
 .sec-sub {
@@ -215,9 +215,9 @@ function stepTypeColor(type) {
   border-radius: var(--app-radius-sm);
 }
 .case-group__title {
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   font-size: var(--app-size-sm);
-  color: var(--ink);
+  color: var(--app-text-primary);
   flex: 1;
 }
 .case-group__stats {
@@ -228,7 +228,7 @@ function stepTypeColor(type) {
   font-size: var(--app-size-xs);
   padding: 2px var(--app-space-sm);
   border-radius: var(--app-radius-sm);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
 }
 .cg-stat--total {
   background: var(--app-bg-subtle);
@@ -282,9 +282,9 @@ function stepTypeColor(type) {
   border-bottom: 1px solid var(--app-border-lighter);
 }
 .ss-step-num {
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   font-size: var(--app-size-xs);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 .ss-type-badge {
   font-size: var(--app-size-xs);
@@ -297,7 +297,7 @@ function stepTypeColor(type) {
   font-size: var(--app-size-xs);
   padding: 1px 7px;
   border-radius: var(--app-radius-sm);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
 }
 .ss-result--pass {
   background: var(--app-pass);
@@ -341,7 +341,7 @@ function stepTypeColor(type) {
   transition: opacity var(--app-duration-fast) var(--app-ease);
   color: var(--app-text-inverse);
   font-size: var(--app-size-sm);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
 }
 .ss-img-wrap:hover .ss-img-overlay {
   opacity: 1;
@@ -352,8 +352,8 @@ function stepTypeColor(type) {
 }
 .ss-desc {
   font-size: var(--app-size-xs);
-  color: var(--ink);
-  line-height: 1.4;
+  color: var(--app-text-primary);
+  line-height: var(--app-line-height-snug);
   margin-bottom: 3px;
 }
 .ss-selector {
@@ -369,6 +369,6 @@ function stepTypeColor(type) {
   border-radius: 5px;
   color: var(--app-fail-text);
   font-size: var(--app-size-xs);
-  line-height: 1.4;
+  line-height: var(--app-line-height-snug);
 }
 </style>

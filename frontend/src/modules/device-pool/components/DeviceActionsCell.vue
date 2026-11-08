@@ -62,7 +62,7 @@ const runnerOccupied = computed(() => isRunnerOccupied(props.device.occupied_by)
   min-height: 26px;
   padding: var(--app-space-xs) 10px;
   font-size: var(--app-size-xs);
-  line-height: 1.2;
+  line-height: var(--app-line-height-tight);
   white-space: nowrap;
 }
 /* 底色保留操作语义；外形（边/圆角/阴影/文字色）由页面统一按键皮肤承担 */

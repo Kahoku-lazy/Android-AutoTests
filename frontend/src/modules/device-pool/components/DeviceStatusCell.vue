@@ -36,7 +36,7 @@ defineProps<{
 }
 .status-cell :deep(.el-tag) {
   border-radius: var(--app-radius-pill) !important;
-  font-weight: 700 !important;
+  font-weight: var(--app-font-weight-bold) !important;
   font-size: var(--app-size-xs) !important;
   border: 1px solid transparent !important;
   padding: 0 10px !important;
@@ -65,7 +65,7 @@ defineProps<{
   font-size: var(--app-size-xs);
   padding: 1px var(--app-space-sm);
   border-radius: var(--app-radius-pill);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   max-width: 130px;
   overflow: hidden;
   text-overflow: ellipsis;

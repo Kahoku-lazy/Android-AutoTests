@@ -4,7 +4,7 @@
   --login-rule: var(--color-blue-82-a30);
   /* 登录页保留手绘虚线：线型是本页自己的登记，不借用侧栏自持的 --sidebar-line，
      以免全站线型切换时被静默带走（见 openspec frontend-login-hand-drawn-hero） */
-  --login-line: dashed;
+  --login-line: solid;
   --login-border: var(--size-stroke-sketch) var(--login-line) var(--ink);
 
   position: relative;
@@ -97,8 +97,8 @@
   margin: 0;
   font-size: var(--app-size-3xl);
   font-family: var(--app-font-brand);
-  font-weight: 400;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-regular);
+  color: var(--app-text-primary);
   line-height: 1.15;
   letter-spacing: -0.02em;
   transform: rotate(-1.2deg);
@@ -108,12 +108,12 @@
   flex-shrink: 0;
   display: inline-block;
   font-size: var(--app-size-xs);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
   padding: var(--app-space-xs) var(--app-space-md);
   border-radius: var(--app-radius-pill);
   background: var(--app-bg-card);
   border: var(--app-border-width) solid var(--ink);
-  color: var(--ink);
+  color: var(--app-text-primary);
   margin-top: var(--app-space-xs);
 }
 
@@ -121,7 +121,7 @@
   font-size: var(--app-size-2xl);
   font-family: var(--app-font-brand);
   color: var(--app-text-secondary);
-  line-height: 1.7;
+  line-height: var(--app-line-height-relaxed);
   margin: 0;
 }
 
@@ -148,8 +148,8 @@
   border-radius: 2px;
   font-family: var(--app-font);
   font-size: var(--app-size-sm);
-  font-weight: 700;
-  line-height: 1.2;
+  font-weight: var(--app-font-weight-bold);
+  line-height: var(--app-line-height-tight);
   cursor: pointer;
   transition:
     transform var(--app-duration) var(--app-ease),
@@ -164,7 +164,7 @@
 
 .hero-cta--ghost {
   background: transparent;
-  color: var(--ink);
+  color: var(--app-text-primary);
   border-style: var(--login-line);
   box-shadow: none;
 }
@@ -246,8 +246,8 @@
 .meeting-doodle__title {
   margin: var(--app-space-sm) 0 0;
   font-size: var(--app-size-lg);
-  font-weight: 800;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
   letter-spacing: -0.02em;
 }
 

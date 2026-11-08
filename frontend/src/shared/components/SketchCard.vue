@@ -114,7 +114,7 @@ function onDelete(e: MouseEvent) {
   text-align: left;
   cursor: pointer;
   background: #fff;
-  border: 2.5px dashed var(--ink);
+  border: 1px solid var(--ink);
   border-radius: 2px;
   box-shadow: 4px 4px 0 0 var(--sketch-accent);
   transform: rotate(var(--sketch-tilt));
@@ -143,7 +143,7 @@ function onDelete(e: MouseEvent) {
   place-items: center;
   border: 2.5px solid var(--ink);
   background: var(--sketch-accent);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 
 .sketch-card__icon :deep(svg) {
@@ -151,23 +151,23 @@ function onDelete(e: MouseEvent) {
   height: 16px;
   stroke-width: 2.4;
   stroke: var(--ink);
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 
 .sketch-card__title {
   margin: 0 0 6px;
   font-size: var(--app-size-md);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   letter-spacing: -0.02em;
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 
 .sketch-card__desc {
   margin: 0;
   font-size: var(--app-size-sm, 13px);
-  line-height: 1.45;
+  line-height: var(--app-line-height-snug);
   opacity: 0.88;
-  color: var(--ink);
+  color: var(--app-text-primary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -184,9 +184,9 @@ function onDelete(e: MouseEvent) {
   right: 12px;
   bottom: 10px;
   font-size: var(--app-size-xs, 12px);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   opacity: 0.45;
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 
 .sketch-card__kill {
@@ -197,11 +197,11 @@ function onDelete(e: MouseEvent) {
   height: 22px;
   display: grid;
   place-items: center;
-  border: 1.5px dashed var(--ink);
+  border: 1px solid var(--ink);
   background: transparent;
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-size: var(--app-size-xs, 12px);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   opacity: 0.45;
   cursor: pointer;
 }

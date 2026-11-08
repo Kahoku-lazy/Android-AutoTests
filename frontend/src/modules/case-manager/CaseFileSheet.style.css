@@ -39,7 +39,7 @@
 .case-sheet__table th {
   background: var(--case-sheet-head-bg);
   color: var(--case-sheet-head-fg);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   position: sticky;
   top: 0;
   z-index: var(--z-base);
@@ -90,7 +90,7 @@
 .sheet-cell {
   min-height: 44px;
   padding: var(--app-space-sm);
-  line-height: 1.4;
+  line-height: var(--app-line-height-snug);
   word-break: break-word;
 }
 
@@ -112,7 +112,7 @@
 }
 
 .sheet-cell--editable:hover {
-  outline: 2px dashed color-mix(in srgb, var(--c-case) 55%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--c-case) 55%, transparent);
   outline-offset: -2px;
 }
 
@@ -133,7 +133,7 @@
   outline: none;
   background: transparent;
   font: inherit;
-  color: var(--ink);
+  color: var(--app-text-primary);
   padding: var(--app-space-xs);
   min-height: 32px;
 }
@@ -141,7 +141,7 @@
 .sheet-editor--area {
   resize: vertical;
   min-height: 64px;
-  line-height: 1.45;
+  line-height: var(--app-line-height-snug);
 }
 
 /* 步骤数摘要：点击打开步骤面板 */
@@ -153,17 +153,17 @@
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-md);
   background: var(--app-bg-card);
-  color: var(--ink);
+  color: var(--app-text-primary);
   font-family: inherit;
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   cursor: pointer;
   box-shadow: 2px 2px 0 var(--ink);
 }
 
 .steps-trigger.is-empty {
   color: var(--app-text-muted);
-  border-style: dashed;
+  border-style: solid;
   box-shadow: none;
 }
 
@@ -185,7 +185,7 @@
   border: 2px solid var(--ink);
   background: var(--app-bg-card);
   color: var(--app-status-danger-text);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   font-size: var(--app-size-xs);
   cursor: pointer;
   font-family: inherit;

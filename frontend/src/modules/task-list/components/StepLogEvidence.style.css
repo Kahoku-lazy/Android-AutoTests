@@ -3,7 +3,7 @@
 .sle {
   margin-top: var(--app-space-sm);
   padding: var(--app-space-sm);
-  border: 1.5px dashed var(--ai-warm-border);
+  border: 1px solid var(--ai-warm-border);
   border-radius: var(--app-radius-sm);
   background: var(--app-bg-card);
   display: flex;
@@ -20,9 +20,9 @@
 .sle-title {
   margin: 0;
   font-size: var(--app-size-sm);
-  font-weight: 800;
-  color: var(--ink);
-  line-height: 1.4;
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
+  line-height: var(--app-line-height-snug);
 }
 .sle-hint {
   font-size: var(--app-size-xs);
@@ -34,7 +34,7 @@
   margin: 0;
   font-size: var(--app-size-xs);
   color: var(--ai-ink-soft, var(--app-text-secondary));
-  line-height: 1.5;
+  line-height: var(--app-line-height-normal);
 }
 
 .sle-summary {
@@ -54,15 +54,15 @@
   background: var(--app-bg-subtle);
 }
 .sle-chip__grade {
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
 }
 .sle-chip__count {
   color: var(--ai-ink-soft, var(--app-text-secondary));
 }
 .sle-chip__keyword {
   font-family: var(--app-font-mono);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
 }
 .sle-chip__feature {
   color: var(--ai-ink-soft, var(--app-text-secondary));
@@ -95,10 +95,10 @@
 }
 .sle-detail :deep(.el-collapse-item__header) {
   font-size: var(--app-size-xs);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
   height: auto;
-  line-height: 1.4;
+  line-height: var(--app-line-height-snug);
   padding: var(--app-space-xs) 0;
   border: none;
   background: transparent;
@@ -133,12 +133,12 @@
   padding: 0 var(--app-space-xs);
   border: 1.5px solid var(--ink);
   border-radius: var(--el-border-radius-small);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
 }
 .sle-hit__keyword {
   font-family: var(--app-font-mono);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
 }
 .sle-hit__feature {
   color: var(--ai-ink-soft, var(--app-text-secondary));
@@ -163,12 +163,12 @@
   align-items: baseline;
   gap: var(--app-space-xs);
   font-size: var(--app-size-xs);
-  line-height: 1.5;
+  line-height: var(--app-line-height-normal);
 }
 .sle-row__time {
   font-family: var(--app-font-mono);
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
 }
 .sle-row__src {
   padding: 0 var(--app-space-xs);
@@ -186,5 +186,5 @@
   min-width: 0;
 }
 .sle-row.is-merged .sle-row__text {
-  color: var(--ink);
+  color: var(--app-text-primary);
 }

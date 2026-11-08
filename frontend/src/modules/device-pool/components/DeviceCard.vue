@@ -180,9 +180,9 @@ function go() {
 .card-model {
   margin: 0;
   font-size: var(--app-size-sm);
-  font-weight: 800;
-  line-height: 1.2;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-heavy);
+  line-height: var(--app-line-height-tight);
+  color: var(--app-text-primary);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -192,7 +192,7 @@ function go() {
   margin: var(--app-space-xs) 0 0;
   font-family: var(--app-font-mono);
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-nav-text);
   background: var(--app-bg-subtle);
   border: 1px solid var(--ink);
@@ -213,7 +213,7 @@ function go() {
   border: 1px solid var(--ink);
   border-radius: var(--app-radius-sm);
   font-size: var(--app-size-xs);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -262,18 +262,18 @@ function go() {
 .meta-k {
   display: block;
   font-size: var(--app-size-xs);
-  font-weight: 500;
+  font-weight: var(--app-font-weight-medium);
   color: var(--app-text-secondary);
   margin-bottom: 1px;
 }
 .meta-v {
   font-size: var(--app-size-xs);
-  font-weight: 500;
-  color: var(--ink);
+  font-weight: var(--app-font-weight-medium);
+  color: var(--app-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 1.3;
+  line-height: var(--app-line-height-tight);
 }
 .meta-v--mono {
   font-family: var(--app-font-mono);
@@ -291,7 +291,7 @@ function go() {
 }
 .tag {
   font-size: var(--app-size-xs);
-  font-weight: 800;
+  font-weight: var(--app-font-weight-heavy);
   padding: 1px 5px;
   border: 1px solid var(--ink);
   border-radius: var(--app-radius-sm);
@@ -299,11 +299,11 @@ function go() {
 }
 .tag--wifi {
   background: color-mix(in srgb, var(--c-workflow) 40%, var(--app-bg-card));
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 .tag--usb {
   background: color-mix(in srgb, var(--c-device) 35%, var(--app-bg-card));
-  color: var(--ink);
+  color: var(--app-text-primary);
 }
 .tag--lock {
   background: var(--app-status-purple-bg);

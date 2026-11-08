@@ -128,7 +128,7 @@ async function save() {
   background: linear-gradient(135deg, var(--ai-teal), var(--ai-teal-hover));
   color: var(--app-bg-card);
   font-size: var(--app-size-md);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   box-shadow: var(--app-shadow-sm);
 }
 </style>

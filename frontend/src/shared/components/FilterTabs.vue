@@ -39,7 +39,7 @@ const emit = defineEmits(["update:modelValue"])
   gap: 6px;
   padding: 5px 14px;
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-text-secondary);
   background: var(--app-bg-card);
   border: 1px solid var(--app-border-light);
@@ -49,11 +49,11 @@ const emit = defineEmits(["update:modelValue"])
   transition: all var(--app-duration);
 }
 .filter-tab:hover {
-  color: var(--ink);
+  color: var(--app-text-primary);
   border-color: var(--app-border-lighter);
 }
 .filter-tab.active {
-  color: var(--ink);
+  color: var(--app-text-primary);
   background: var(--app-bg-subtle);
   border-color: var(--ink);
 }
@@ -68,7 +68,7 @@ const emit = defineEmits(["update:modelValue"])
   border: 1px solid var(--app-border-light);
   display: inline-grid;
   place-items: center;
-  color: var(--ink);
+  color: var(--app-text-primary);
   line-height: 1;
 }
 .filter-tab.active .filter-tab-count {

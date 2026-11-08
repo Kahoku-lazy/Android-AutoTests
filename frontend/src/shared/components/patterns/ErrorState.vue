@@ -33,16 +33,16 @@ defineEmits(["retry"])
   border-radius: var(--app-radius-md);
   font-size: var(--app-size-sm);
   color: var(--app-status-danger-text);
-  font-weight: 600;
+  font-weight: var(--app-font-weight-semibold);
 }
 .error-state__btn {
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   padding: var(--app-space-xs) var(--app-space-md);
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-sm);
   background: var(--app-bg-card);
-  color: var(--ink);
+  color: var(--app-text-primary);
   cursor: pointer;
   transition: all var(--app-duration-fast) var(--app-ease);
   font-family: var(--app-font);

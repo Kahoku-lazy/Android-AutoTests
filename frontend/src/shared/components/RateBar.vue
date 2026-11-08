@@ -66,7 +66,7 @@ const rateClass = computed(() => {
 
 .rate-bar__label {
   font-size: var(--app-size-xs);
-  font-weight: 700;
+  font-weight: var(--app-font-weight-bold);
   min-width: 36px;
   text-align: right;
 }

@@ -62,6 +62,6 @@ function handleCancel() {
   padding: 10px;
   border-radius: var(--app-radius-sm);
   margin-top: var(--app-space-sm);
-  border: 1.5px dashed var(--ink);
+  border: 1px solid var(--app-border-subtle);
 }
 </style>

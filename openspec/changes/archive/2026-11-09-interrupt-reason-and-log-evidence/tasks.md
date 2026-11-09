@@ -20,14 +20,14 @@
 
 - [x] 4.1 `backend/apps/task_list/task_reports.py`：`_interrupt_maps` 读出 `interrupt_kind`（`log` 证据不可用 / `exception` 执行层异常）与 `interrupt_tool`，步骤对象新增这两个可选字段；被中断的步骤 `outcome` MUST 为 `FAIL`（不是「未完成」）；验证：新增 `tests/api/test_task_report_interrupt.py` 用例断言两类中断都落 `FAIL`、类型与工具名正确，原有 `interrupt` 原文保持。
 - [x] 4.2 `frontend/src/modules/task-list/components/CaseStepList.vue` + `helpers/report-steps.ts`：中断步骤显示 `FAIL` 徽标 + 按 `interrupt_kind` 渲染「日志中断」/「异常中断」，`title` 为原因全文；验证：`cd frontend && npm run typecheck` 与 `npx vitest run tests/task-list` 通过。
-- [ ] 4.3 界面上真实任务可见（任务 201 的中断事件已随整批丢失，只能对新运行验证）：新跑一条 ≥2 步任务并在中途制造日志空洞，详情页被中断步骤显示 `FAIL` +「日志中断 / 异常中断」，悬停能读到原因原文；验证：目视确认后记录到 `dev_docs/DEV_TEST/UI自动化 问题记录.md` §7.5。
+- [ ] 4.3 界面上真实任务可见（任务 201 的中断事件已随整批丢失，只能对新运行验证）：新跑一条 ≥2 步任务并在中途制造日志空洞，详情页被中断步骤显示 `FAIL` +「日志中断 / 异常中断」，悬停能读到原因原文；验证：目视确认后记录到 `dev_docs/DEV_TEST/UI自动化 问题记录.md` §7.5。**（延后：本轮按代码 + 单测收口，真机验收留到下一次运行）**
 
 ## 5. 门禁与回归
 
 - [x] 5.1 engines 自检：`python -m scripts.docstrings check` 与 `python -m scripts.check_engines_agents_style`（在各自技能目录下）；验证：本次新增/修改行 0 告警，存量 23 条不变。
 - [x] 5.2 全量相关回归：`python -m pytest -c tests/pytest.ini tests/graybox/unit tests/api/test_task_*.py -q`；验证：无新增失败（既有失败逐条说明来源）。
 - [x] 5.3 本地门禁：`python run.py check`；验证：阻塞项通过（`vitest` 若因未提交的前端改动失败，需说明不是本次引入）。
-- [ ] 5.4 真机验证：跑一条 ≥2 步且带日志断言的用例，人为制造日志空洞（或选中日志断流时段），确认该步显示「异常中断/日志中断」、后续步骤继续执行、任务结果原因含该步标题；验证：任务详情页与 `task_tasks.result` 一致，且该任务事件序号连续无缺口。
+- [ ] 5.4 真机验证：跑一条 ≥2 步且带日志断言的用例，人为制造日志空洞（或选中日志断流时段），确认该步显示「异常中断/日志中断」、后续步骤继续执行、任务结果原因含该步标题；验证：任务详情页与 `task_tasks.result` 一致，且该任务事件序号连续无缺口。**（延后：同上，留到下一次真机运行）**
 
 ## 6. 任务 204 复盘出的两处回归
 

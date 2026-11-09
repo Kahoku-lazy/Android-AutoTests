@@ -1,7 +1,14 @@
 /** 任务列表 — 加载 / 刷新 / 按线路筛选 / 运行态轮询（离开页面即停） */
 import { ref, computed, onActivated, onDeactivated, onMounted, onUnmounted } from "vue"
 import { ElMessage } from "element-plus"
-import { listTasks, deleteTask, clearTasks, rerunTask, cancelTask } from "../api/tasks"
+import {
+  listTasks,
+  deleteTask,
+  clearTasks,
+  rerunTask,
+  cancelTask,
+  getTaskStats,
+} from "../api/tasks"
 import { useFilterTabs } from "@/shared/composables/useFilterTabs"
 import {
   TASK_FILTER_TABS,
@@ -10,7 +17,7 @@ import {
   taskStatusTone,
   type TaskStatusTone,
 } from "../constants"
-import type { TaskRecord } from "@/shared/types/ai"
+import type { TaskRecord, TaskStats } from "@/shared/types/ai"
 
 /** 运行态轮询间隔：任务执行中每 10s 刷新，全部终态后自动停止 */
 const POLL_INTERVAL_MS = 10000
@@ -19,6 +26,7 @@ const TERMINAL_STATUSES = new Set(["completed", "success", "failed", "cancelled"
 
 export function useTaskList() {
   const tasks = ref<TaskRecord[]>([])
+  const stats = ref<TaskStats | null>(null)
   const loading = ref(false)
   const error = ref("")
   const rerunningId = ref<number | null>(null)
@@ -72,6 +80,16 @@ export function useTaskList() {
     }
   }
 
+  async function loadStats() {
+    // 统计与列表同源刷新：失败只保留上一次数值，不把页面拖进错误态
+    try {
+      const data = await getTaskStats()
+      if (data.status && data.data) stats.value = data.data
+    } catch {
+      // 统计失败不提示：列表本身仍是可用的
+    }
+  }
+
   async function load(silent = false) {
     if (silent && inFlight > 0) return
     inFlight += 1
@@ -82,6 +100,7 @@ export function useTaskList() {
       if (data.status && data.data) {
         tasks.value = data.data.tasks
         schedulePoll()
+        await loadStats()
       } else {
         error.value = data.message || "加载失败"
       }
@@ -99,6 +118,7 @@ export function useTaskList() {
       if (data.status) {
         tasks.value = tasks.value.filter((t) => t.id !== task.id)
         schedulePoll()
+        await loadStats()
         ElMessage.success("已删除")
       } else {
         ElMessage.error(data.message || "删除失败")
@@ -114,6 +134,7 @@ export function useTaskList() {
       if (data.status) {
         tasks.value = []
         stopPoll()
+        await loadStats()
         ElMessage.success("已清空任务卡片")
       } else {
         ElMessage.error(data.message || "清空失败")
@@ -184,6 +205,7 @@ export function useTaskList() {
 
   return {
     tasks,
+    stats,
     loading,
     error,
     load,

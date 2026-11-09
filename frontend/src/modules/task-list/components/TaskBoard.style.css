@@ -7,6 +7,30 @@
 .task-board__body {
   min-height: var(--app-space-2xl);
 }
+/* 任务结果占比：左环图 + 右柱状图组（窄屏自动堆叠）；四张卡按行等高 */
+.task-share {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-space-lg);
+  align-items: stretch;
+}
+.task-share__donut {
+  flex: 1 1 380px;
+  min-width: 320px;
+  display: flex;
+}
+.task-share__charts {
+  flex: 2 1 460px;
+  min-width: 320px;
+  display: flex;
+}
+/* 窄屏（<1360px）把环图与柱状图组各占一整行：避免柱状图挤成两行、环图下方留大片空白 */
+@media (max-width: 1360px) {
+  .task-share__donut,
+  .task-share__charts {
+    flex: 1 1 100%;
+  }
+}
 .task-attach-name {
   margin: var(--app-space-xs) 0 0;
   font-size: var(--app-size-xs);

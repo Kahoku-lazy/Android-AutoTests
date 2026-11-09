@@ -6,6 +6,7 @@ import type {
   TaskDetailResponse,
   TaskListResponse,
   TaskReportResponse,
+  TaskStatsResponse,
   TaskSubmitResponse,
 } from "@/shared/types/ai"
 
@@ -20,6 +21,12 @@ export async function submitTask(payload: FormData): Promise<TaskSubmitResponse>
 /** 任务列表 */
 export async function listTasks(): Promise<TaskListResponse> {
   const { data } = await djangoClient.get<TaskListResponse>("/tasks/")
+  return data
+}
+
+/** 任务状态统计（总数 / 成功率 / 执行中 / 四类结果） */
+export async function getTaskStats(): Promise<TaskStatsResponse> {
+  const { data } = await djangoClient.get<TaskStatsResponse>("/tasks/stats/")
   return data
 }
 

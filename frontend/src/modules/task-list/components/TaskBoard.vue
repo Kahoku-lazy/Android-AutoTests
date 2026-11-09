@@ -26,6 +26,9 @@ import {
 import { useTaskPublish } from "../composables/useTaskPublish"
 import { useTaskList } from "../composables/useTaskList"
 import PlatformCasePicker from "./PlatformCasePicker.vue"
+import TaskStatsStrip from "./TaskStatsStrip.vue"
+import TaskOutcomeDonut from "./TaskOutcomeDonut.vue"
+import TaskShareCharts from "./TaskShareCharts.vue"
 import type { TaskRecord } from "@/shared/types/ai"
 
 /** 任务态 → sticky 底色：成功 Do / 失败 Dont / 执行中 / 等待 */
@@ -93,6 +96,7 @@ const taskRules = computed(() => ({
 }))
 const {
   tasks,
+  stats,
   loading,
   error,
   load,
@@ -162,6 +166,27 @@ async function onSubmit() {
 </script>
 
 <template>
+  <section class="doc-section step-panel">
+    <div class="doc-section__header">
+      <h3 class="doc-section__title">任务概览<span class="doc-tag">Stats</span></h3>
+    </div>
+    <TaskStatsStrip :stats="stats" :loading="loading" />
+  </section>
+
+  <section class="doc-section step-panel">
+    <div class="doc-section__header">
+      <h3 class="doc-section__title">任务结果占比<span class="doc-tag">Share</span></h3>
+    </div>
+    <div class="task-share">
+      <div class="task-share__donut">
+        <TaskOutcomeDonut :stats="stats" />
+      </div>
+      <div class="task-share__charts">
+        <TaskShareCharts :stats="stats" />
+      </div>
+    </div>
+  </section>
+
   <section class="doc-section step-panel">
     <div class="doc-section__header">
       <h3 class="doc-section__title">任务卡片<span class="doc-tag">Task</span></h3>

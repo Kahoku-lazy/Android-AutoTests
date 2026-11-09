@@ -16,6 +16,7 @@ vi.mock('@/modules/task-list/api/tasks', () => ({
   deleteTask: vi.fn(),
   clearTasks: vi.fn(),
   rerunTask: vi.fn(),
+  getTaskStats: vi.fn(),
 }))
 
 function makeTask(id: number): TaskRecord {
@@ -30,6 +31,20 @@ function makeTask(id: number): TaskRecord {
 describe('[P0] useTaskList', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(taskApi.getTaskStats).mockResolvedValue({
+      status: true,
+      data: {
+        total: 0,
+        running: 0,
+        pending: 0,
+        success: 0,
+        failed: 0,
+        interrupted: 0,
+        cancelled: 0,
+        finished: 0,
+        success_rate: 0,
+      },
+    })
   })
 
   it('load 成功后默认「全部任务」', async () => {

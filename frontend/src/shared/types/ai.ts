@@ -85,6 +85,33 @@ export interface TaskListResponse {
   message?: string
 }
 
+/** 任务状态统计（GET /api/tasks/stats/）；成功率口径 = 成功 ÷ 已结束 */
+export interface TaskStats {
+  total: number
+  running: number
+  pending: number
+  success: number
+  failed: number
+  interrupted: number
+  cancelled: number
+  finished: number
+  success_rate: number
+  /** 分智能体统计：每个可见智能体一项，没有任务的智能体给全 0 */
+  agents?: TaskAgentStats[]
+}
+
+/** 单个智能体的任务统计（字段与总体统计同口径） */
+export interface TaskAgentStats extends Omit<TaskStats, "agents"> {
+  id: number
+  name: string
+}
+
+export interface TaskStatsResponse {
+  status?: boolean
+  data?: TaskStats
+  message?: string
+}
+
 export interface TaskFailedItem {
   item?: string
   reason?: string

@@ -1877,6 +1877,22 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/tasks/stats/:
+    get:
+      operationId: tasks_stats_retrieve
+      description: GET /api/tasks/stats — 当前用户可见任务的状态统计（总体 + 分智能体）。
+      tags:
+      - tasks
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/tasks/submit/:
     post:
       operationId: tasks_submit_create

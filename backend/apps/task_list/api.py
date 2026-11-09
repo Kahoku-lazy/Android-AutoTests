@@ -5,6 +5,7 @@ import json
 import re
 
 from django.db import transaction
+from django.db.models import Count
 from django.db.models.fields.json import KeyTextTransform
 from django.utils import timezone
 
@@ -27,6 +28,8 @@ __all__ = [
     "cancel_running_task",
     "delete_task",
     "clear_agent_tasks",
+    "task_stats",
+    "task_stats_by_agent",
     "recover_orphaned_tasks",
     "begin_drain",
     "is_draining",
@@ -65,6 +68,89 @@ def is_draining() -> bool:
 def count_running_tasks() -> int:
     """当前进程可见的 running 任务数，供停机排空轮询。"""
     return Task.objects.filter(status=TaskStatus.RUNNING).count()
+
+
+def _status_buckets(counts: dict[str, int]) -> dict:
+    """把「状态 → 条数」收成统计字段：成功含 completed/success 两种历史写法。
+
+    Args:
+        counts: `{状态: 条数}`，允许含未知状态（自然计入总数与分母）。
+
+    Returns:
+        `{total, running, pending, success, failed, interrupted, cancelled,
+        finished, success_rate}`。
+    """
+    success = counts.get(TaskStatus.COMPLETED, 0) + counts.get("success", 0)
+    running = counts.get(TaskStatus.RUNNING, 0)
+    pending = counts.get(TaskStatus.PENDING, 0)
+    total = sum(counts.values())
+    finished = max(total - running - pending, 0)
+    rate = round(success / finished * 100, 1) if finished else 0.0
+    return {
+        "total": total,
+        "running": running,
+        "pending": pending,
+        "success": success,
+        "failed": counts.get(TaskStatus.FAILED, 0),
+        "interrupted": counts.get(TaskStatus.INTERRUPTED, 0),
+        "cancelled": counts.get(TaskStatus.CANCELLED, 0),
+        "finished": finished,
+        "success_rate": rate,
+    }
+
+
+def task_stats(tasks) -> dict:
+    """
+    按状态聚合任务数并派生成功率。
+
+    统计只做一次 `GROUP BY status`，不读取任务明细行；成功率口径为
+    「成功 ÷ 已结束」，已结束 = 总数 − 执行中 − 待执行。
+
+    Args:
+        tasks: 已按可见范围过滤的 `Task` 查询集。
+
+    Returns:
+        `{total, running, pending, success, failed, interrupted, cancelled,
+        finished, success_rate}`；成功含 `completed` 与 `success` 两种历史写法。
+    """
+    counts = {
+        str(row["status"] or ""): int(row["count"])
+        for row in tasks.values("status").annotate(count=Count("id"))
+    }
+    return _status_buckets(counts)
+
+
+def task_stats_by_agent(tasks, agents) -> list[dict]:
+    """
+    按智能体分别统计任务（供任务清单的分智能体柱状图）。
+
+    每个可见智能体都会出现在结果里，没有任务的智能体返回全 0 —— 新增智能体后
+    图表自动多一张，不需要改前端。统计仍只做一次 `GROUP BY agent_id, status`。
+
+    Args:
+        tasks: 已按可见范围过滤的 `Task` 查询集。
+        agents: 当前用户可见的智能体列表（`AIAgent`）。
+
+    Returns:
+        按智能体编号升序的列表，每项为 `{id, name, ...统计字段}`。
+    """
+    grouped: dict[int, dict[str, int]] = {}
+    for row in tasks.values("agent_id", "status").annotate(count=Count("id")):
+        agent_id = int(row["agent_id"])
+        status = str(row["status"] or "")
+        bucket = grouped.setdefault(agent_id, {})
+        bucket[status] = bucket.get(status, 0) + int(row["count"])
+    names = assistant_names_by_agent([agent.id for agent in agents])
+    result: list[dict] = []
+    for agent in agents:
+        result.append(
+            {
+                "id": agent.id,
+                "name": names.get(agent.id) or agent.name,
+                **_status_buckets(grouped.get(int(agent.id), {})),
+            }
+        )
+    return result
 
 
 def recover_orphaned_tasks() -> int:

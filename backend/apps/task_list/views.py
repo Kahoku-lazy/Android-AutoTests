@@ -210,6 +210,19 @@ class AgentTaskListAPIView(APIView):
         )
 
 
+class AgentTaskStatsAPIView(APIView):
+    """GET /api/tasks/stats — 当前用户可见任务的状态统计（总体 + 分智能体）。"""
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        user_id = getattr(request, "user_id", None)
+        agents = list(agent_api.filter_agents_for_user(AIAgent.objects.all(), user_id))
+        tasks = Task.objects.filter(agent__in=agents)
+        data = api.task_stats(tasks)
+        data["agents"] = api.task_stats_by_agent(tasks, agents)
+        return Response(data)
+
+
 class AgentTaskDeleteAPIView(APIView):
     """POST /api/tasks/{task_id}/delete — 删除任务发布记录。"""
 

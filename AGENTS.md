@@ -19,10 +19,10 @@
 - **Model**：推理与生成（如 DeepSeek、Dashscope / Omni 等），由角色配置选用。
 - **Harness**：角色跑起来所需的外围能力，集中在 `engines/agents/`：
   - **工具** `tools/` + `tools_config.py`
-  - **技能** `skills/`
-  - **知识库** `rag/`（及 MCP 等扩展配置 `mcp_config/`）
+  - **技能** `config/data/skills/`（资产已就位，装配入口尚未接上，见 `engines/agents/AGENTS.md`）
+  - **知识库** `rag/`（MCP 等扩展配置尚未落地，当前无 `mcp_config/`）
   - **记忆与上下文**：会话/历史与当轮上下文装配（含 messaging、语音 session/pipeline 等；RAG 结果只注入当轮，不写进长期历史）
-  - **提示词** `prompts/` + `prompt_config.py`
+  - **提示词** `config/data/prompts/` + `role_sys_prompts.py`
 - **角色** `agent_builders.py`（`AgentRoleFactory` + `build_*`）：把选定的 Model 与上述 Harness 装配成可下发、可计量的 Agent；四分段类型在 `config/role_types.py`，语音角色在 `realtime_vocie_agent.py`。
 - **工作流** `workflow/`：SOP 步骤与单次运行；不在此创建角色或旁路绑定工具/提示词。
 

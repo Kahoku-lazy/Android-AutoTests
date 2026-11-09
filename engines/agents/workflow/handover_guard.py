@@ -1,7 +1,7 @@
 """
 文件名: ➡️ handover_guard.py 🏁
 路径: ➡️ engines/agents/workflow/handover_guard.py 🏁
-模块功能：➡️ 2. IncompleteHandoverGuard: 包装执行者，自述未完成时在原尝试内回灌“继续执行” 🏁
+模块功能：➡️ 执行者包装器：交卷自述未完成时在原尝试内回灌继续指令 🏁
 Python 调试：➡️ python -m engines.agents.workflow.handover_guard 🏁
 时间：➡️ 2026-10-21 🏁
 作者：➡️ kahoku 🏁

@@ -1,7 +1,7 @@
 """
 文件名: ➡️ model_retry.py 🏁
 路径: ➡️ engines/agents/middleware/model_retry.py 🏁
-模块功能：➡️ 2. RetrySettings / load_retry_settings: 从环境变量读出重试与回退参数 🏁
+模块功能：➡️ 模型调用重试与备用模型回退中间件：错误分类、退避与流式不重放 🏁
 Python 调试：➡️ python -m engines.agents.middleware.model_retry 🏁
 时间：➡️ 2026-10-28 🏁
 作者：➡️ kahoku 🏁

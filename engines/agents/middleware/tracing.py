@@ -1,7 +1,7 @@
 """
 文件名: ➡️ tracing.py 🏁
 路径: ➡️ engines/agents/middleware/tracing.py 🏁
-模块功能：➡️ 2. build_tracing_middleware: 配了端点才装配框架的 TracingMiddleware 🏁
+模块功能：➡️ 链路追踪：注册 TracerProvider 并按端点装配追踪中间件 🏁
 Python 调试：➡️ python -m engines.agents.middleware.tracing 🏁
 时间：➡️ 2026-10-28 🏁
 作者：➡️ kahoku 🏁

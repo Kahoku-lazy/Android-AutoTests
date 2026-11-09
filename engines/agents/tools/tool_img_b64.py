@@ -1,7 +1,7 @@
 """
 文件名: ➡️ tool_img_b64.py 🏁
 路径: ➡️ engines/agents/tools/tool_img_b64.py 🏁
-模块功能：➡️ 2. mark_dot_b64: 纯函数，在 base64 图片上画圆点，base64 进、base64 出 🏁
+模块功能：➡️ 截图标注工具：在 base64 图上画点/框，并按核对帧 token 复用同一帧 🏁
 Python 调试：➡️ python -m engines.agents.tools.tool_img_b64 🏁
 时间：➡️ 2026-10-22 🏁
 作者：➡️ kahoku 🏁

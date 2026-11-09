@@ -1,7 +1,7 @@
 """
 文件名: ➡️ service.py 🏁
 路径: ➡️ engines/agents/rag/service.py 🏁
-模块功能：➡️ 2. format_context(): 控制注入上下文的来源、相关度与长度 🏁
+模块功能：➡️ 检索服务：懒建索引、检索并把命中片段格式化成注入上下文 🏁
 Python 调试：➡️ python -m engines.agents.rag.service 🏁
 时间：➡️ 2026-10-28 🏁
 作者：➡️ kahoku 🏁

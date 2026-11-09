@@ -1,7 +1,7 @@
 """
 文件名: ➡️ config.py 🏁
 路径: ➡️ engines/agents/rag/config.py 🏁
-模块功能：➡️ 2. load_rag_config(): 从环境变量读取并做基本归一化 🏁
+模块功能：➡️ RAG 配置：从环境变量读数据/索引目录、切块与检索参数 🏁
 Python 调试：➡️ python -m engines.agents.rag.config 🏁
 时间：➡️ 2026-10-29 🏁
 作者：➡️ kahoku 🏁

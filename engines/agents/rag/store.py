@@ -1,7 +1,7 @@
 """
 文件名: ➡️ store.py 🏁
 路径: ➡️ engines/agents/rag/store.py 🏁
-模块功能：➡️ 2. 支持 create/delete/has_collection、insert/delete、search/list 🏁
+模块功能：➡️ 本地 SQLite 向量库：集合与文档的建删查，实现 VectorStoreBase 🏁
 Python 调试：➡️ python -m engines.agents.rag.store 🏁
 时间：➡️ 2026-10-28 🏁
 作者：➡️ kahoku 🏁

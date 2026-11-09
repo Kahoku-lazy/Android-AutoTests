@@ -1,7 +1,7 @@
 """
 文件名: ➡️ event_sink.py 🏁
 路径: ➡️ engines/agents/event_sink.py 🏁
-模块功能：➡️ 2. bind_sink / current_sink: 绑定与取出当前接收方。默认实现丢弃记录，不写库 🏁
+模块功能：➡️ 事件出口：接收方绑定、运行上下文与预算、步骤中断收集 🏁
 Python 调试：➡️ python -m engines.agents.event_sink 🏁
 时间：➡️ 2026-10-28 🏁
 作者：➡️ kahoku 🏁

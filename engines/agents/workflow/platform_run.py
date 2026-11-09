@@ -1,7 +1,7 @@
 """
 文件名: ➡️ platform_run.py 🏁
 路径: ➡️ engines/agents/workflow/platform_run.py 🏁
-模块功能：➡️ 2. request_cancel: 取消正在跑的 SOP 事件流 🏁
+模块功能：➡️ 平台任务入口：校验用例 YAML、按序跑完每条用例并登记取消信号 🏁
 Python 调试：➡️ python -m engines.agents.workflow.platform_run 🏁
 时间：➡️ 2026-10-30 🏁
 作者：➡️ kahoku 🏁

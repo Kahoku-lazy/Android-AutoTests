@@ -1,7 +1,7 @@
 """
 文件名: ➡️ events.py 🏁
 路径: ➡️ engines/agents/realtime_vocie/events.py 🏁
-模块功能：➡️ 2. TranscriptBridge: 把 AgentScope 的 AgentEvent 翻译成前端线格式，并落最终 🏁
+模块功能：➡️ 语音事件桥：把 AgentScope 事件翻成前端线格式并落最终转写 🏁
 Python 调试：➡️ python -m engines.agents.realtime_vocie.events 🏁
 时间：➡️ 2026-10-28 🏁
 作者：➡️ kahoku 🏁

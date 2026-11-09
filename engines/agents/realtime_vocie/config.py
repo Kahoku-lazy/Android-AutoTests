@@ -1,7 +1,7 @@
 """
 文件名: ➡️ config.py 🏁
 路径: ➡️ engines/agents/realtime_vocie/config.py 🏁
-模块功能：➡️ 2. load_config(): 从根 `.env` / 环境变量读取并校验配置 🏁
+模块功能：➡️ 实时语音配置：从根 .env / 环境变量读密钥、模型与音色并校验 🏁
 Python 调试：➡️ python -m engines.agents.realtime_vocie.config 🏁
 时间：➡️ 2026-10-30 🏁
 作者：➡️ kahoku 🏁

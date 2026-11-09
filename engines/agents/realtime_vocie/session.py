@@ -1,7 +1,7 @@
 """
 文件名: ➡️ session.py 🏁
 路径: ➡️ engines/agents/realtime_vocie/session.py 🏁
-模块功能：➡️ 2. 在 Omni 会话上注入知识库 RAG 工具（启用时） 🏁
+模块功能：➡️ Omni 实时语音会话：事件循环、RAG 工具注入与音频透传 🏁
 Python 调试：➡️ python -m engines.agents.realtime_vocie.session 🏁
 时间：➡️ 2026-10-30 🏁
 作者：➡️ kahoku 🏁

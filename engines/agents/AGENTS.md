@@ -21,7 +21,7 @@
 | `tools_config.py` | **唯一**角色工具分配入口 |
 | `tools/` | 角色工具实现；按模块分组，文件名 `tool_*.py` |
 | `messaging/` | 事件上屏、折叠日志、结构化记录、Token 费用；接收方协议见 `event_sink` |
-| `mcp_config/` | 角色 MCP 工具配置 |
+| `case_roles.py` | 用例编写/验收角色的**成对装配**（建角色 + 挂产物工具）；workflow 只编排 |
 | `workflow/` | SOP 步骤输入与单次运行；**不在此**创建角色、配置提示词或绑定工具 |
 | `middleware/` | 智能体生命周期关键点拦截与扩展 |
 | `rag/` | 检索增强；细则见 [`rag/AGENTS.md`](rag/AGENTS.md) |

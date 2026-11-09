@@ -1,7 +1,7 @@
 """
 文件名: ➡️ messages.py 🏁
 路径: ➡️ engines/agents/messaging/messages.py 🏁
-模块功能：➡️ 2. AgentEventsShow: 把事件流写成文本日志，并把结构化记录交给接收方 🏁
+模块功能：➡️ 事件上屏：把事件流折成文本日志，并把结构化记录交给接收方 🏁
 Python 调试：➡️ python -m engines.agents.messaging.messages 🏁
 时间：➡️ 2026-10-27 🏁
 作者：➡️ kahoku 🏁

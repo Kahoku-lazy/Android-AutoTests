@@ -1,7 +1,7 @@
 """
 文件名: ➡️ case_file.py 🏁
 路径: ➡️ engines/agents/workflow/case_file.py 🏁
-模块功能：➡️ 2. load_manual_cases: 手工入口读取用例，缺少 agent 时按 sop 🏁
+模块功能：➡️ 用例 YAML 的读取与校验：平台用例与手工入口共用同一套步骤字段 🏁
 Python 调试：➡️ python -m engines.agents.workflow.case_file 🏁
 时间：➡️ 2026-10-28 🏁
 作者：➡️ kahoku 🏁

@@ -1,7 +1,7 @@
 """
 文件名: ➡️ indexer.py 🏁
 路径: ➡️ engines/agents/rag/indexer.py 🏁
-模块功能：➡️ 2. 按文件 mtime/size/切块策略版本做增量重建；未变化文件不重复嵌入 🏁
+模块功能：➡️ 索引构建：扫描资料、切块写入知识库，并按 mtime/大小/切块版本增量重建 🏁
 Python 调试：➡️ python -m engines.agents.rag.indexer 🏁
 时间：➡️ 2026-10-29 🏁
 作者：➡️ kahoku 🏁

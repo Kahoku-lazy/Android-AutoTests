@@ -1,7 +1,7 @@
 """
 文件名: ➡️ chunker.py 🏁
 路径: ➡️ engines/agents/rag/chunker.py 🏁
-模块功能：➡️ 2. 单段超过 chunk_size 时回退到近似 token 切分，并给子块带上标题前缀 🏁
+模块功能：➡️ 资料切块：按 Markdown 标题边界切分，超长段落回退近似 token 切分 🏁
 Python 调试：➡️ python -m engines.agents.rag.chunker 🏁
 时间：➡️ 2026-10-29 🏁
 作者：➡️ kahoku 🏁

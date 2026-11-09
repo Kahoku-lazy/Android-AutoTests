@@ -1,7 +1,7 @@
 """
 文件名: ➡️ rag_context.py 🏁
 路径: ➡️ engines/agents/middleware/rag_context.py 🏁
-模块功能：➡️ 2. build_rag_middleware: 按环境变量装配上述中间件，复用现有 rag 索引 🏁
+模块功能：➡️ RAG 上下文中间件：按用户消息检索并把片段追加到系统提示词 🏁
 Python 调试：➡️ python -m engines.agents.middleware.rag_context 🏁
 时间：➡️ 2026-10-28 🏁
 作者：➡️ kahoku 🏁

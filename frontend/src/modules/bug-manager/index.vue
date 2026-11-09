@@ -153,8 +153,7 @@ function errorMessage(error: unknown, fallback: string): string {
 
       <section class="doc-section bug-table-section">
         <div class="doc-section__header bug-table-section__header">
-          <h3 class="doc-section__title">BUG 单 <span class="doc-tag">Tickets</span></h3>
-          <FilterTabs :tabs="categoryTabs" v-model="category" />
+          <FilterTabs class="bug-category-tabs" :tabs="categoryTabs" v-model="category" />
         </div>
 
         <div class="filter-bar">

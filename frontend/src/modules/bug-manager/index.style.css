@@ -42,7 +42,8 @@
   align-items: center;
   gap: var(--app-space-sm);
   flex-wrap: wrap;
-  padding: var(--app-space-sm) var(--app-space-md) 0;
+  /* 上下等距 4px：工具条整体上移 */
+  padding: var(--app-space-xs) var(--app-space-md);
 }
 
 .bug-filter-input {
@@ -146,21 +147,56 @@
   cursor: pointer;
 }
 
-.bug-table :deep(.el-table__header th) {
-  background: var(--app-bg-subtle) !important;
+/* 表格底：与测试报告同一套柠檬淡底；作用域锚在页面根，避免 report 页踩过的 scope 不匹配 */
+.bug-workbench :deep(.el-table),
+.bug-workbench :deep(.el-table tr),
+.bug-workbench :deep(.el-table__body td.el-table__cell) {
+  background: color-mix(in srgb, var(--c-dashboard) 12%, var(--app-bg-card)) !important;
+}
+
+.bug-workbench :deep(.el-table__header th.el-table__cell) {
+  background: color-mix(in srgb, var(--c-dashboard) 22%, var(--app-bg-card)) !important;
   color: var(--app-text-primary) !important;
-  font-size: var(--app-size-xs) !important;
+  font-size: var(--app-size-sm) !important;
   font-weight: var(--app-font-weight-bold) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   border-bottom: 2.5px solid var(--ink) !important;
 }
 
-.bug-table :deep(.el-table__body td) {
+.bug-workbench :deep(.el-table__body td) {
   color: var(--app-text-primary);
-  border-bottom: 1px solid var(--app-border-light) !important;
+  border-bottom: 1px solid var(--el-border-color-light) !important;
 }
 
-.bug-table :deep(.el-table__body tr:hover td) {
-  background: var(--bug-hover-bg) !important;
+.bug-workbench :deep(.el-table__body tr:hover > td.el-table__cell) {
+  background: color-mix(in srgb, var(--c-dashboard) 20%, var(--app-bg-card)) !important;
+}
+
+/* 分类筛选：淡色底 + 墨框选中 */
+.bug-category-tabs :deep(.filter-tab) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 var(--app-space-sm);
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--c-runner) 12%, var(--app-bg-card));
+  color: var(--app-text-secondary);
+  font-weight: var(--app-font-weight-semibold);
+}
+.bug-category-tabs :deep(.filter-tab[data-key="ui_automation"]) {
+  background: color-mix(in srgb, var(--c-ai) 10%, var(--app-bg-card));
+}
+.bug-category-tabs :deep(.filter-tab[data-key="case_authoring"]) {
+  background: color-mix(in srgb, var(--c-case) 10%, var(--app-bg-card));
+}
+.bug-category-tabs :deep(.filter-tab.active) {
+  color: var(--app-text-primary);
+  border-color: var(--ink);
+  background: color-mix(in srgb, var(--c-runner) 20%, var(--app-bg-card));
+  box-shadow: 2px 2px 0 0 color-mix(in srgb, var(--c-runner) 40%, var(--paper));
 }
 
 .bug-no {

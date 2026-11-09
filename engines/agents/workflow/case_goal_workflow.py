@@ -13,14 +13,14 @@ Python 调试：➡️ python -m engines.agents.workflow.case_goal_workflow 🏁
 2. run_case_authoring_artifact: 两角色一条目标流水线跑到底，执行者只构建一次。
 3. 有确定性问题时即使验收判通过也不放行，并把问题写成一条独立判决。
 4. 产物由 ArtifactStore 增量累积，文档与状态图由渲染器派生。
+5. 角色与工具由 case_roles 装配好后传入，本模块只编排。
 🏁
 关联模块：➡️
-1. engines/agents/agent_builders: 导入 build_case_verifier, build_case_writer
-2. engines/agents/tools_config: 导入 build_case_artifact_tools
-3. engines/agents/workflow/case_artifact: 导入 Artifact, ArtifactStore
-4. engines/agents/workflow/case_artifact_facts: 导入 FactReport, check_artifact_facts
-5. engines/agents/workflow/case_artifact_render: 导入 render
-6. engines/agents/workflow/ui_auto_workflow: 导入 show_event
+1. engines/agents/case_roles: 导入 build_case_authoring_roles，成对装配编写/验收角色
+2. engines/agents/workflow/case_artifact: 导入 Artifact, ArtifactStore
+3. engines/agents/workflow/case_artifact_facts: 导入 FactReport, check_artifact_facts
+4. engines/agents/workflow/case_artifact_render: 导入 render
+5. engines/agents/workflow/ui_auto_workflow: 导入 show_event
 🏁
 测试：➡️
 1. tests/graybox/unit/test_case_goal_workflow.py: 单文件调试指令：python -m pytest tests/graybox/unit/test_case_goal_workflow.py -vv --tb=short
@@ -34,8 +34,7 @@ from dataclasses import dataclass, replace
 from agentscope.message import Msg, UserMsg
 from agentscope.pipeline import GoalPipeline
 
-from engines.agents.agent_builders import build_case_verifier, build_case_writer
-from engines.agents.tools_config import build_case_artifact_tools
+from engines.agents.case_roles import build_case_authoring_roles
 from engines.agents.workflow.case_artifact import Artifact, ArtifactStore
 from engines.agents.workflow.case_artifact_facts import FactReport, check_artifact_facts
 from engines.agents.workflow.case_artifact_render import render
@@ -163,12 +162,7 @@ async def run_case_authoring_artifact(
     """
     run_input = build_case_run_input(requirement_text, project_code, version)
     store = ArtifactStore()
-    writer = build_case_writer()
-    verifier = build_case_verifier()
-    await writer.toolkit.add_tool(build_case_artifact_tools(store))
-    await verifier.toolkit.add_tool(
-        build_case_artifact_tools(store, read_only=True, requirement_text=requirement_text)
-    )
+    writer, verifier = await build_case_authoring_roles(store, requirement_text=requirement_text)
 
     reports: list[dict] = []
     verdicts_raw: list[dict] = []

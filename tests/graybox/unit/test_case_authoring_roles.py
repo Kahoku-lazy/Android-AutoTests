@@ -71,6 +71,24 @@ def test_workflow_package_exports_single_entry():
     assert not hasattr(package, "CaseAuthoringWorkflow")
 
 
+async def test_paired_assembly_attaches_artifact_tools():
+    """成对装配：编写角色可写产物，验收角色只读，两侧工具不共享。"""
+    from engines.agents.case_roles import build_case_authoring_roles
+    from engines.agents.workflow.case_artifact import ArtifactStore
+
+    store = ArtifactStore()
+    writer, verifier = await build_case_authoring_roles(store, requirement_text="需求正文")
+
+    writer_tools = {tool.name for group in writer.toolkit.tool_groups for tool in group.tools}
+    verifier_tools = {
+        tool.name for group in verifier.toolkit.tool_groups for tool in group.tools
+    }
+
+    assert {"save_state_machine", "append_scenarios", "append_cases"} <= writer_tools
+    assert {"read_artifact", "check_artifact_facts"} <= verifier_tools
+    assert not ({"save_state_machine", "append_scenarios", "append_cases"} & verifier_tools)
+
+
 def test_build_run_input_contains_requirement_and_project_meta():
     """开场输入三段齐全，空白项落到默认值。"""
     from engines.agents.workflow.case_goal_workflow import build_case_run_input

@@ -23,7 +23,7 @@
   - **知识库** `rag/`（及 MCP 等扩展配置 `mcp_config/`）
   - **记忆与上下文**：会话/历史与当轮上下文装配（含 messaging、语音 session/pipeline 等；RAG 结果只注入当轮，不写进长期历史）
   - **提示词** `prompts/` + `prompt_config.py`
-- **角色** `role/`（继承 `BaseRole`）：把选定的 Model 与上述 Harness 装配成可下发、可计量的 Agent。
+- **角色** `agent_builders.py`（`AgentRoleFactory` + `build_*`）：把选定的 Model 与上述 Harness 装配成可下发、可计量的 Agent；四分段类型在 `config/role_types.py`，语音角色在 `realtime_vocie_agent.py`。
 - **工作流** `workflow/`：SOP 步骤与单次运行；不在此创建角色或旁路绑定工具/提示词。
 
 ### Harness 的控制与数据底座
@@ -71,7 +71,7 @@ git push origin Kahoku             # 推送后确认 6 个 CI job 全绿
 
 2. 相同业务功能封装在一个模块(`.py`)中, 例如 设备控制工具全部放在`engines/agents/tools/tool_device.py`中；串口日志相关的放在了`engines/agents/tools/tool_serial.py`中
 
-3. 参考模块`engines/agents/role/config.py`中的编写方法，采用单一职责划分出模型配置，Agent角色配置与创建模型功能；一个模块（类、函数、组件）只做一件事，内部元素紧密相关，职责清晰；
+3. 参考模块`engines/agents/config/role_types.py`（角色配置四分段数据类）与`engines/agents/models/chat_model.py`（按 provider 建模型）中的编写方法，采用单一职责划分出模型配置、Agent 角色配置与创建模型功能；一个模块（类、函数、组件）只做一件事，内部元素紧密相关，职责清晰；
 
 4. **要保证**模块之间依赖尽量少、尽量简单。改一个地方，不容易牵连一大片
 

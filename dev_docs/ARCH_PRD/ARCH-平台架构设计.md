@@ -54,7 +54,7 @@ Android 自动化测试与智能体平台：**前端只展示，后端只做通�
   - 知识库：`rag/`（MCP 等见 `mcp_config/`）  
   - 记忆与上下文：会话/历史与当轮上下文（messaging、语音 session/pipeline 等；RAG 只注入当轮，不进长期历史）  
   - 提示词：`prompts/` + **唯一配置入口** `prompt_config.py`  
-- **角色**：`role/`，继承 `base.BaseRole`，把选定 Model 与 Harness 装配成可下发、可计量的 Agent。  
+- **角色**：`agent_builders.py` 的 `AgentRoleFactory` + `build_*`，把选定 Model 与 Harness 装配成可下发、可计量的 Agent（四分段类型在 `config/role_types.py`；语音角色在 `realtime_vocie_agent.py`）。  
 - **工作流**：`workflow/` 管 SOP 步骤与单次运行；**禁止**在此创建角色或旁路绑定工具/提示词。
 
 ### 2.3 Harness 的控制与数据底座

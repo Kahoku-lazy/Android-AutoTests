@@ -5,16 +5,16 @@
 Python 调试：➡️ python -m engines.agents.agent_builders 🏁
 时间：➡️ 2026-10-30 🏁
 作者：➡️ kahoku 🏁
-版本：➡️ 1.1.0 🏁
-修改时间: ➡️ 2026-11-03 🏁
+版本：➡️ 1.1.1 🏁
+修改时间: ➡️ 2026-11-09 🏁
 类型: ➡️ Agent 能力模块 🏁
 简介说明：➡️
 1. RoleConfig / ToolsConfig / ContextConfig / ReActConfig: 过渡期再导出四分段类型
 2. AgentRoleFactory: 用已建好的模型 + 四分段配置装配 agentscope.Agent
 3. build_ui_executor / build_ui_verifier / build_case_*: 角色键 → 模型 + 四分段 + 工具包
 4. build_knowledge_chat: 知识库文字问答角色（纯文字，不装语音合成）
-4. executor_agent / verifier_agent / build_executor / build_verifier: 兼容旧名的快捷入口
-5. _agent_from_role_bundle: 全部角色共用的装配路径，模型只经 engines.agents.models 门面取
+5. executor_agent / verifier_agent / build_executor / build_verifier: 兼容旧名的快捷入口
+6. _agent_from_role_bundle: 全部角色共用的装配路径，模型只经 engines.agents.models 门面取
 🏁
 关联模块：➡️
 1. engines.agents.config.role_loader: 导入 load_role_spec / RoleBundle，装角色四分段
@@ -67,9 +67,6 @@ __all__ = [
     "build_ui_verifier",
     "build_case_writer",
     "build_case_verifier",
-    "build_case_planner",
-    "build_case_writer_goal",
-    "build_case_verifier_goal",
     "build_knowledge_chat",
     "build_executor",
     "build_verifier",

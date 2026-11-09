@@ -49,12 +49,18 @@ def check_agent_owner(user_id: str, agent_id: int) -> bool:
 
 
 def check_agent_visible(user_id: str, agent_id: int) -> bool:
-    """检查用户是否可见该 Agent（owner 或超级管理员拥有的共享智能体）。"""
+    """检查用户是否可见该 Agent（无主 / owner / 超级管理员拥有的共享智能体）。
+
+    无主（`owner_id IS NULL`）= 迁移种下的平台共享智能体：种子执行时可能还没有
+    超级管理员，因此可见性不能依赖 owner 一定非空。
+    """
     if not user_id:
         return False
     agent = AIAgent.objects.filter(id=agent_id).only("id", "owner_id").first()
     if not agent:
         return False
+    if agent.owner_id is None:
+        return True
     if _same_user(agent.owner_id, user_id):
         return True
     return _owner_is_superuser(agent.owner_id)

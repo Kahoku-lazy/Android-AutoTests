@@ -33,7 +33,12 @@ __all__ = [
 
 
 def filter_agents_for_user(queryset, user_id: str | None):
-    """Scope agent list：超级管理员全量；普通用户 = 超级管理员拥有的共享智能体 ∪ 自己拥有的（遗留）。"""
+    """Scope agent list：超级管理员全量；普通用户 = 无主智能体 ∪ 超级管理员拥有的共享智能体 ∪ 自己拥有的（遗留）。
+
+    无主（`owner_id IS NULL`）来自迁移种子：种子执行时可能还没有超级管理员
+    （标准启动顺序是先 migrate 再 createsuperuser），这类行按平台共享处理，
+    使可见性不依赖启动顺序。
+    """
     if not user_id:
         return queryset.none()
     try:
@@ -45,7 +50,9 @@ def filter_agents_for_user(queryset, user_id: str | None):
     superuser_ids = list(
         get_user_model().objects.filter(is_superuser=True).values_list("id", flat=True)
     )
-    return queryset.filter(Q(owner_id=user_id) | Q(owner_id__in=superuser_ids))
+    return queryset.filter(
+        Q(owner_id__isnull=True) | Q(owner_id=user_id) | Q(owner_id__in=superuser_ids)
+    )
 
 
 _AGENT_CREATE_DEFAULTS = {

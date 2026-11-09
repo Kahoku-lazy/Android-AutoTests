@@ -148,6 +148,8 @@ User.objects.filter(username='admin').exists() or User.objects.create_superuser(
 
 `admin` / `admin123` 只用于本机引导。共享或生产环境请改掉，不要把口令写进仓库。
 
+`migrate` 会自动种下两条默认智能体——设备执行（`Agent-01号`）与用例编写（`Agent-02`），不需要手工创建；两条都随代码走，任何全新环境拉下来就有。
+
 
 数据库默认 MySQL（`DB_ENGINE=mysql`）。改成 `DB_ENGINE=sqlite` 时，库文件是仓库根目录的 `db.sqlite3`，不是 `data/` 下面那个历史路径。
 

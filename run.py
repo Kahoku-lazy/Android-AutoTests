@@ -2,9 +2,9 @@
 Android-AutoTests platform manager — start / stop / restart / status / logs / check.
 
 Usage:
-    python run.py start [backend|frontend ...]
+    python run.py start [backend|frontend ...] [--no-db]
     python run.py stop  [backend|frontend ...]
-    python run.py restart [...]
+    python run.py restart [...] [--no-db]
     python run.py status
     python run.py logs [backend|frontend ...]
     python run.py check          # 本地质量门禁（实现见 utils/check_gates.py）
@@ -55,6 +55,120 @@ BASE_ENV = {
     "DJANGO_SETTINGS_MODULE": "backend.config.settings",
     "SERVER_PORT": str(SERVICES["backend"]),
 }
+
+
+# ── 数据库前置检查 ───────────────────────────────────────────
+
+_DB_LOOPBACK = {"127.0.0.1", "localhost", "::1"}
+
+
+def _db_config() -> dict:
+    """读取 .env 里的数据库配置（仅用于启动检查，不参与后端运行时配置）。"""
+    return {
+        "engine": os.environ.get("DB_ENGINE", "mysql").strip().lower(),
+        "host": os.environ.get("DB_HOST", "127.0.0.1").strip(),
+        "port": int(os.environ.get("DB_PORT", "3306")),
+        "user": os.environ.get("DB_USER", "root"),
+        "password": os.environ.get("DB_PASSWORD", ""),
+        "name": os.environ.get("DB_NAME", "android_autotests"),
+        "service": os.environ.get("DB_SERVICE_NAME", "MySQL" if IS_WIN else "mysql").strip(),
+    }
+
+
+def _db_reachable(cfg: dict) -> tuple[bool, str]:
+    """用真实连接验证数据库（网络 + 账号 + 库名一次过）；sqlite 直接视为可用。
+
+    Returns:
+        tuple[bool, str]: (是否连通, 失败原因摘要)。
+    """
+    if cfg["engine"] == "sqlite":
+        return True, ""
+    try:
+        import MySQLdb
+
+        conn = MySQLdb.connect(
+            host=cfg["host"],
+            port=cfg["port"],
+            user=cfg["user"],
+            passwd=cfg["password"],
+            db=cfg["name"],
+            connect_timeout=3,
+        )
+        conn.close()
+        return True, ""
+    except Exception as exc:  # noqa: BLE001 - 任何连接失败都转成可读摘要
+        return False, " ".join(str(exc).split())[:220]
+
+
+def _is_loopback(host: str) -> bool:
+    """数据库地址是否为本机。"""
+    return host.strip().lower() in _DB_LOOPBACK
+
+
+def _db_status_line() -> str:
+    """status 命令里的数据库描述；永不抛异常。"""
+    cfg = _db_config()
+    if cfg["engine"] == "sqlite":
+        return "SQLite  (DB_ENGINE=sqlite)"
+    ok, _ = _db_reachable(cfg)
+    return f"{cfg['host']}:{cfg['port']}  {'ONLINE' if ok else 'OFFLINE'}"
+
+
+def _start_local_db_service(cfg: dict) -> tuple[bool, str]:
+    """按平台启动本机数据库服务；返回 (是否成功, 原始输出)。"""
+    service = cfg["service"]
+    if IS_WIN:
+        cmd = ["sc.exe", "start", service]
+    elif sys.platform == "darwin":
+        cmd = ["brew", "services", "start", service]
+    else:
+        cmd = ["systemctl", "start", service]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    except Exception as exc:  # noqa: BLE001 - 命令不存在/超时都按启动失败处理
+        return False, str(exc)
+    output = " ".join(((proc.stdout or "") + (proc.stderr or "")).split())
+    if proc.returncode == 0 or "already" in output.lower():
+        return True, output
+    return False, output
+
+
+def _db_elevation_hint(cfg: dict) -> str:
+    """给出当前平台启动数据库服务的提权命令。"""
+    service = cfg["service"]
+    if IS_WIN:
+        return f"net start {service}   （以管理员身份运行）"
+    if sys.platform == "darwin":
+        return f"brew services start {service}"
+    return f"sudo systemctl start {service}"
+
+
+def _ensure_db(cfg: dict, allow_autostart: bool) -> bool:
+    """启动后端前的数据库检查：可达即通过；本机可尝试拉起服务；否则报错中止。"""
+    ok, detail = _db_reachable(cfg)
+    if ok:
+        print(f"  Database         : {cfg['host']}:{cfg['port']}  ONLINE")
+        return True
+
+    print(f"  Database         : {cfg['host']}:{cfg['port']}  OFFLINE（{detail or '连接失败'}）")
+    if not _is_loopback(cfg["host"]):
+        print("  Database         : 远程数据库不可达，请检查网络与服务；不会尝试启动远程库。")
+        return False
+
+    hint = _db_elevation_hint(cfg)
+    if not allow_autostart:
+        print(f"  Database         : 已禁用自动启动（DB_AUTOSTART=0）。请先启动：{hint}")
+        return False
+
+    print(f"  Database         : 尝试启动本机服务 {cfg['service']} ...")
+    started, output = _start_local_db_service(cfg)
+    if started and _db_reachable(cfg)[0]:
+        print(f"  Database         : {cfg['host']}:{cfg['port']}  ONLINE（已启动）")
+        return True
+    if output:
+        print(f"  Database         : 启动失败：{output[:200]}")
+    print(f"  Database         : 请手动启动后重试：{hint}")
+    return False
 
 
 # ── 进程 / 端口工具 ───────────────────────────────────────────
@@ -176,6 +290,8 @@ def resolve_services(names: list[str]) -> list[str]:
 
 def cleanup_mysql_connections() -> None:
     """Windows 强制杀 Daphne 后清理孤儿 Sleep 连接，避免 max_connections。"""
+    if os.environ.get("DB_ENGINE", "mysql").strip().lower() == "sqlite":
+        return
     try:
         import MySQLdb
 
@@ -184,7 +300,12 @@ def cleanup_mysql_connections() -> None:
         db_host = BASE_ENV.get("DB_HOST", "127.0.0.1")
         db_port = int(BASE_ENV.get("DB_PORT", "3306"))
         conn = MySQLdb.connect(
-            host=db_host, port=db_port, user=db_user, db=db_name, connect_timeout=3
+            host=db_host,
+            port=db_port,
+            user=db_user,
+            passwd=os.environ.get("DB_PASSWORD", ""),
+            db=db_name,
+            connect_timeout=3,
         )
         cur = conn.cursor()
         cur.execute(
@@ -358,8 +479,14 @@ def cmd_setup(check_only: bool = False, force: bool = False, from_file: str | No
     print(f"  ADB: {adb_tools.adb_binary()}")
 
 
-def cmd_start(services: list[str]) -> None:
+def cmd_start(services: list[str], skip_db: bool = False) -> None:
     names = resolve_services(services)
+    db_disabled = os.environ.get("DB_CHECK", "1").strip().lower() in ("0", "false", "no")
+    if "backend" in names and not skip_db and not db_disabled:
+        autostart = os.environ.get("DB_AUTOSTART", "1").strip().lower() not in ("0", "false", "no")
+        if not _ensure_db(_db_config(), allow_autostart=autostart):
+            print("\n  Aborted: 数据库不可用，未启动任何服务（可用 --no-db 跳过检查）。")
+            return
     if "backend" in names:
         _ensure_adb()
     for s in names:
@@ -391,12 +518,12 @@ def cmd_stop(services: list[str]) -> None:
     print("Done.")
 
 
-def cmd_restart(services: list[str]) -> None:
+def cmd_restart(services: list[str], skip_db: bool = False) -> None:
     names = resolve_services(services)
     for s in names:
         _STOP[s]()
     time.sleep(2)
-    cmd_start(names)
+    cmd_start(names, skip_db=skip_db)
 
 
 def cmd_status() -> None:
@@ -411,6 +538,7 @@ def cmd_status() -> None:
     fe_port = SERVICES["frontend"]
     print(f"  Django backend   (:{be_port})  {http_ok(f'http://127.0.0.1:{be_port}/')}")
     print(f"  Vue frontend     (:{fe_port})  {http_ok(f'http://127.0.0.1:{fe_port}/')}")
+    print(f"  Database         : {_db_status_line()}")
     print(f"  ADB              : {_adb_status_line()}")
 
 
@@ -439,12 +567,13 @@ if __name__ == "__main__":
     p.add_argument("--check", action="store_true", help="setup: 只检测，不下载")
     p.add_argument("--force", action="store_true", help="setup: 强制重装 platform-tools")
     p.add_argument("--from-file", default=None, help="setup: 用本地 platform-tools zip 离线安装")
+    p.add_argument("--no-db", action="store_true", help="start/restart: 跳过数据库检查")
     args = p.parse_args()
 
     {
-        "start": lambda: cmd_start(args.services),
+        "start": lambda: cmd_start(args.services, skip_db=args.no_db),
         "stop": lambda: cmd_stop(args.services),
-        "restart": lambda: cmd_restart(args.services),
+        "restart": lambda: cmd_restart(args.services, skip_db=args.no_db),
         "status": cmd_status,
         "logs": lambda: cmd_logs(args.services),
         "check": cmd_check,

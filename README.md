@@ -118,7 +118,7 @@ Django 版本锁在 6.0.x：6.1 的模型字段检查会在没有数据库时连
 |------|---------|---------|
 | Python | 3.13（`ruff.toml` 的 `target-version = "py313"`） | `python --version` |
 | Node.js | 20 | `node --version` |
-| MySQL | 默认引擎；也可 `DB_ENGINE=sqlite` | 客户端能连上 `DB_HOST` |
+| MySQL | 默认引擎；也可 `DB_ENGINE=sqlite` | `python run.py status` 的 Database 行；`start` 会自动检测并尝试启动本机服务，远程库只检测 |
 | ADB | 平台自带：`python run.py setup` 安装到 `tools/platform-tools/`；也可用 `ADB_PATH` 指向已有 adb（不回退系统 PATH） | `python run.py setup --check` |
 
 > adb 起不来并报 `cannot open ...\adb.log: Permission denied` 时，是 adb 37 在部分 Windows 上写 daemon 日志被拒；
@@ -162,13 +162,15 @@ User.objects.filter(username='admin').exists() or User.objects.create_superuser(
 
 ```bash
 python run.py setup      # 首次/换机：安装项目内 platform-tools（唯一会联网的命令）
-python run.py start      # Daphne(:8766) + Vite(:5173)
+python run.py start      # 先检测数据库 → Daphne(:8766) + Vite(:5173)
 python run.py stop       # 停后端前先排空运行中任务
 python run.py restart
-python run.py status     # 两个服务是否 ONLINE
+python run.py status     # 服务、数据库、adb 状态
 python run.py logs       # 各服务日志尾部
 python run.py check      # 本地质量门禁（与 CI 同一批检查，不跑全量回归）
 ```
+
+`start` 会先用 `.env` 的 `DB_*` 真实连一次数据库：本机不可达时尝试启动服务（`DB_SERVICE_NAME`，失败会打印提权命令并中止）；远程库只检测不启动。库由外部管理或 CI 环境可用 `python run.py start --no-db` 跳过检查（`DB_AUTOSTART=0` 则只关自动启动、仍检测）。
 
 也可以只操作其中一个：`python run.py start backend`。后端端口由 `SERVER_PORT` 控制，默认 8766；前端固定 5173。`run.py stop` 等待运行中任务结束，上限 `STOP_DRAIN_TIMEOUT`（默认 180 秒），超时后强制停。
 

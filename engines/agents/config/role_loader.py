@@ -77,6 +77,8 @@ def _is_empty_section(value: object) -> bool:
 def _merge_dataclass(cls, raw: object, *, where: str):
     """用 YAML 部分字段覆盖 dataclass 默认值；空节则全默认。
 
+    未知键直接报错：配置写了不生效比配置报错更难查（例如 `max_iter` 少了 `s`）。
+
     Args:
         cls: 目标 dataclass 类型。
         raw: YAML 节点。
@@ -86,12 +88,16 @@ def _merge_dataclass(cls, raw: object, *, where: str):
         dataclass 实例。
 
     Raises:
-        ValueError: 节点不是映射表，或字段缺失且无默认值。
+        ValueError: 节点不是映射表，出现 dataclass 不认识的键，或字段缺失且无默认值。
     """
     if _is_empty_section(raw):
         return cls()
     if not isinstance(raw, dict):
         raise ValueError(f"{where} 必须是映射表或空")
+    known = [f.name for f in fields(cls)]
+    unknown = sorted(set(raw) - set(known))
+    if unknown:
+        raise ValueError(f"{where} 含未知键 {', '.join(unknown)}；可选：{', '.join(sorted(known))}")
     kwargs: dict = {}
     for f in fields(cls):
         if f.name in raw and raw[f.name] is not None:

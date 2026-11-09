@@ -272,10 +272,21 @@
 - **已修**（变更 `interrupt-reason-and-log-evidence`）：
   - 日志工具窗口为空 / 未盖满 5 秒时返回 `FAIL` + `reason` + `evidence_missing`，不再抛异常；验收提示词同步写明「证据不可用 ≠ 执行失败」。
   - 工作流用 `_ResilientSOPStep` 把中断收敛到单步：记原因、不重试、**继续跑后续步骤**；被中断的步骤记 `FAIL` 并计入失败统计，失败原因写清「第几步 + 中断类别 + 原文」。
-  - `_emit_interrupt` 改走 `show_event`（线程转交），事件写入失败的行留在缓冲里重试（上限 500 行），不再整批丢。
+  - `_emit_interrupt` 改走 `event_sink.emit_record`（记录直写接收方 + 线程转交），事件写入失败的行留在缓冲里重试（上限 500 行），不再整批丢。**原版误走 `show_event`**：那条路要按 AgentScope 事件类型名折叠，`EventRecord` 认不出会被静默丢成空结果，所以任务 201/204 里 `StepInterruptedEvent` 一条都没落库（见下方补修）。
   - 报告步骤行新增 `interrupt_kind`：区分「日志中断」（证据不可用）与「异常中断」（执行层异常），悬停看原因全文。
 - **自测**：`test_step_interrupt_continue.py`（7 条）+ `test_tool_serial.py`（14 条）+ `test_event_store_resilience.py`（4 条）+ `test_task_report_interrupt.py`（3 条）全绿；前端 `tests/task-list` 141 条全绿。
 - **注意**：任务 201 的历史事件里那条中断事件已经丢了，所以旧任务页面上看不到原因；本修复只对新产生的运行生效。
+
+#### 7.5.1 任务 204 复盘补修（2026-11-09）
+
+用任务 `204`（`非结构化用例-单一功能测试-卡片页测试`，11 步、23 分 45 秒、¥4.03）复核 §7.5 的修复，发现两处回归：
+
+| 回归 | 现象 | 修法 | 验证 |
+| --- | --- | --- | --- |
+| 中断事件仍然不落库 | 任务 204 有 1723 条事件，`StepInterruptedEvent` **0 条**；第 7 步在报告里「未完成」且 `interrupt_kind` 为空 | `_emit_interrupt` 改走 `event_sink.emit_record`，不经折叠 | 单测断言替身 sink 收到记录；`tests/api` 断言真的写进 `task_events` |
+| 失败原因漏掉真正判死的步骤 | 原因只有「第 7 步中断证据不可用」，第 8 步「验收驳回 2 次」完全没出现 | 工作流收集 `failed_steps`，`_failure_detail` 同时汇总两类 | 单测断言原因里两类都在 |
+
+另外两条**未修**、留作后续（见 §九）：第 7 步其实是做成的（两次调亮度都有 `lumi_set_success`），只因第二次查询窗口恰好落在 21 秒日志空洞里被判「证据不可用」；第 8 步（添加效果）两次驳回是真实的页面锚点问题。
 
 
 ---

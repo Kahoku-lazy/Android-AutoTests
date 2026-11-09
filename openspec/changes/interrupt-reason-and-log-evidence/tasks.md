@@ -28,3 +28,10 @@
 - [x] 5.2 全量相关回归：`python -m pytest -c tests/pytest.ini tests/graybox/unit tests/api/test_task_*.py -q`；验证：无新增失败（既有失败逐条说明来源）。
 - [x] 5.3 本地门禁：`python run.py check`；验证：阻塞项通过（`vitest` 若因未提交的前端改动失败，需说明不是本次引入）。
 - [ ] 5.4 真机验证：跑一条 ≥2 步且带日志断言的用例，人为制造日志空洞（或选中日志断流时段），确认该步显示「异常中断/日志中断」、后续步骤继续执行、任务结果原因含该步标题；验证：任务详情页与 `task_tasks.result` 一致，且该任务事件序号连续无缺口。
+
+## 6. 任务 204 复盘出的两处回归
+
+- [x] 6.1 **中断事件没落库**：`_emit_interrupt` 原来走 `show_event` → `fold.step` 按 AgentScope 事件类型名分派，`EventRecord` 一个都不匹配，被静默丢成空结果（任务 201/204 因此一条 `StepInterruptedEvent` 都没有）。改为新增 `AgentEventsShow.emit(record, flush=)` 直写接收方，并经 `database_sync_to_async(..., thread_sensitive=False)` 转线程（`asgiref` 会复制 ContextVar，接收方仍可见）。验证：单测绑一个替身 sink，断言 `run_workflow` 结束后 sink 收到 `StepInterruptedEvent`；不再用「替身 `show_event` 收到事件」这种测不到落库的断言。**验证结果**：通过 —— 实现落在既有的 `event_sink.emit_record`（`model_retry.py` 已是同一用法）；`tests/graybox/unit/test_step_interrupt_continue.py::test_interrupt_event_reaches_sink` 断言替身 sink 收到一条 `StepInterruptedEvent`；`tests/api/test_task_event_store.py::test_interrupt_event_from_running_loop_writes` 断言该记录真的写进 `task_events`（`step_seq`/`attempt`/`case_title`/`payload.kind` 全对）。
+- [x] 6.2 **失败原因漏报被驳回的步骤**：`run_workflow` 只要收集器非空就按 `interrupted` 收口，`reason` 只拼中断原因；任务 204 第 8 步「验收驳回 2 次」因此完全没出现在原因里。`AgentSOPWorkflow` 新增 `failed_steps`（验收驳回到上限、且不是中断的步骤：序号 / 标题 / 驳回次数 / 最后一条驳回说明），`platform_run._failure_detail` 同时汇总两类。验证：单测断言原因里同时出现第 7 步中断与第 8 步驳回。**验证结果**：通过 —— `test_rejected_step_is_collected_as_failure`（第 2 步驳回 2 次、原因含驳回说明、标题取动作原文）、`test_failure_detail_covers_interrupt_and_rejection`（同时出现「第 7 步 … 证据不可用」与「第 8 步 … 验收驳回 2 次」）、`test_interrupted_step_is_not_reported_as_rejection`（同一处不重复报）、`test_failure_detail_counts_overflow`（超三条给总数）。
+
+

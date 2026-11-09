@@ -35,24 +35,22 @@
   position: relative;
   background: var(--paper);
   border-radius: 2px;
-  box-shadow: 4px 4px 0 0 var(--ch-accent);
-  padding: var(--app-space-md) var(--app-space-md) var(--app-space-sm);
+  /* 章节大卡的投影统一为银灰，不再跟随各章节模块色 */
+  box-shadow: 4px 4px 0 0 var(--color-ink-79);
+  /* 下内距加大：容纳卡片 12px 的右下阴影，避免阴影压到板块下边缘 */
+  padding: var(--app-space-md) var(--app-space-md) var(--app-space-lg);
 }
 .doc-section--board.ch-ops {
   --ch-accent: var(--c-device);
-  transform: rotate(-0.25deg);
 }
 .doc-section--board.ch-ai {
   --ch-accent: var(--c-ai);
-  transform: rotate(0.35deg);
 }
 .doc-section--board.ch-asset {
   --ch-accent: var(--c-case);
-  transform: rotate(-0.2deg);
 }
 .doc-section--board.ch-trend {
   --ch-accent: var(--c-report);
-  transform: rotate(0.15deg);
 }
 
 .chapter-head {
@@ -215,18 +213,12 @@
 .ch-ai__body {
   display: grid;
   /* 右列改弹性宽度：Agent 卡横排需要整段剩余空间 */
-  grid-template-columns: minmax(0, 536px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 460px) minmax(0, 860px);
   gap: var(--app-space-md);
   align-items: stretch;
 }
 .ch-ai__body--solo {
-  grid-template-columns: minmax(0, 536px);
-}
-.ai-usage-kpis {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--app-space-md);
-  align-items: start;
+  grid-template-columns: minmax(0, 460px);
 }
 @media (max-width: 1100px) {
   .ch-ai__body,
@@ -234,10 +226,167 @@
     grid-template-columns: 1fr;
   }
 }
-@media (max-width: 640px) {
-  .ai-usage-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+
+/* ── DeepSeek 账单卡：标题 + 缓存命中率主指标 + 两行双列明细 ── */
+/* ── 零件卡（DeepSeek 账单 / Agent 用量共用）：编号 + 顶边色条 + 右上角黄圆，无阴影无倾斜 ── */
+.part-card {
+  position: relative;
+  height: 100%;
+  overflow: visible;
+  /* 描边与阴影同色（阴影第一层） */
+  border: 2px solid color-mix(in srgb, var(--part-accent, var(--c-ai)) 42%, var(--paper)) !important;
+  border-radius: 2px !important;
+  background: color-mix(in srgb, var(--ink) 4%, var(--paper)) !important;
+  /* 只在右下留阴影：三层同色相、逐层变浅，形成浅色渐变带 */
+  box-shadow:
+    4px 4px 0 0 color-mix(in srgb, var(--part-accent, var(--c-ai)) 42%, var(--paper)),
+    8px 8px 0 0 color-mix(in srgb, var(--part-accent, var(--c-ai)) 20%, var(--paper)),
+    12px 12px 0 0 color-mix(in srgb, var(--part-accent, var(--c-ai)) 8%, var(--paper)) !important;
+  transform: none !important;
+}
+/* 顶边居中图钉：与 KPI 卡同款，颜色取本章节 accent */
+.part-card::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  background: var(--part-accent, var(--c-ai));
+  z-index: 1;
+}
+.part-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  /* 角标取顶边同色系的淡色：与 --part-accent 同色相，降低饱和度 */
+  background: color-mix(in srgb, var(--part-accent, var(--c-ai)) 28%, var(--paper));
+  /* 弧线描边与角标填充同色，不再用墨线勾边 */
+  border-left: 2px solid color-mix(in srgb, var(--part-accent, var(--c-ai)) 28%, var(--paper));
+  border-bottom: 2px solid color-mix(in srgb, var(--part-accent, var(--c-ai)) 28%, var(--paper));
+  border-bottom-left-radius: 100%;
+}
+.part-card:hover {
+  transform: translate(-1px, -1px) !important;
+  box-shadow:
+    5px 5px 0 0 color-mix(in srgb, var(--part-accent, var(--c-ai)) 42%, var(--paper)),
+    9px 9px 0 0 color-mix(in srgb, var(--part-accent, var(--c-ai)) 20%, var(--paper)),
+    13px 13px 0 0 color-mix(in srgb, var(--part-accent, var(--c-ai)) 8%, var(--paper)) !important;
+}
+.part-card :deep(.el-card__body) {
+  height: 100%;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.part-card__head {
+  display: flex;
+  /* 编号是 20px 的 SVG 徽标，与标题垂直居中对齐 */
+  align-items: center;
+  gap: var(--app-space-xs);
+  /* 标题栏保留 12px 上下内距，避免压扁标题 */
+  padding: calc(var(--app-space-sm) + var(--app-space-xs)) var(--app-space-md);
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+}
+.part-card__title {
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: var(--app-font-weight-heavy);
+  letter-spacing: -0.01em;
+}
+.part-card__stamp {
+  margin-left: auto;
+  /* 让开右上角 52px 的黄圆，避免副标识被圆压住 */
+  margin-right: 30px;
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+  font-weight: var(--app-font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.part-card__hero {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--app-space-sm);
+  padding: var(--app-space-sm) var(--app-space-md);
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+}
+.part-card__hero-label {
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-semibold);
+}
+.part-card__hero-value {
+  color: var(--part-accent, var(--c-ai));
+  /* 数值文字：同色相深→浅渐变（单位另行覆盖为黑色） */
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--part-accent, var(--c-ai)) 55%, var(--ink)) 0%,
+    var(--part-accent, var(--c-ai)) 55%,
+    color-mix(in srgb, var(--part-accent, var(--c-ai)) 20%, var(--paper)) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-family: var(--app-font-display);
+  font-size: var(--app-size-xl);
+  font-weight: var(--app-font-weight-heavy);
+  line-height: 1;
+}
+.part-card__row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  flex: 1;
+}
+.part-card__row + .part-card__row {
+  border-top: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.part-card__cell {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--app-space-xs);
+  padding: var(--app-space-sm) var(--app-space-md);
+}
+.part-card__cell + .part-card__cell {
+  border-left: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.part-card__cell span {
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+  font-weight: var(--app-font-weight-semibold);
+}
+.part-card__cell b {
+  /* 数值文字：同色相深→浅渐变（单位另行覆盖为黑色） */
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--part-accent, var(--c-ai)) 55%, var(--ink)) 0%,
+    var(--part-accent, var(--c-ai)) 55%,
+    color-mix(in srgb, var(--part-accent, var(--c-ai)) 20%, var(--paper)) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: var(--app-size-md);
+  font-weight: var(--app-font-weight-heavy);
+  line-height: 1.1;
+}
+.part-card :deep(em) {
+  margin-left: 2px;
+  /* 单位统一黑色，不吃数值的渐变 */
+  color: var(--app-text-primary);
+  -webkit-text-fill-color: var(--app-text-primary);
+  background-image: none;
+  font-size: var(--app-size-sm);
+  font-style: normal;
+  font-weight: var(--app-font-weight-semibold);
 }
 
 /* ── Trends ── */

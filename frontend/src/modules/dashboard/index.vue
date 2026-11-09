@@ -3,15 +3,18 @@ import { computed } from "vue"
 import { useDashboardView, toMillions } from "./DashboardView.logic"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
+import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
 import StatsAppCard from "./components/StatsCard.vue"
 import AppCard from "@/shared/components/AppCard.vue"
 import { sketchToneAt, sketchTiltAt } from "@/shared/helpers/sketchCard"
+import { formatSignificant } from "@/shared/animations"
 import TrendBarChart from "./components/TrendBarChart.vue"
 import SeriesBarChart from "./components/SeriesBarChart.vue"
 import TodayUsageChart from "./components/TodayUsageChart.vue"
 import { useMidnightRefresh } from "./composables/useMidnightRefresh"
 import TaskResultPanel from "./components/TaskResultPanel.vue"
 import ActivityTimeline from "./components/ActivityTimeline.vue"
+import PartNumber from "./components/PartNumber.vue"
 import {
   IconDevice,
   IconPlay,
@@ -20,10 +23,8 @@ import {
   IconAlertCircle,
   IconLayers,
   IconMonitor,
-  IconTarget,
   IconTrendingUp,
   IconActivity,
-  IconZap,
 } from "@/shared/icons/index"
 
 const {
@@ -80,6 +81,22 @@ const voiceUsageSeries = computed(() => {
     },
   ]
 })
+
+/** Agent 用量卡顶点色条：按序号轮转模块色，与「卡片即零件」的编号卡一致 */
+const AGENT_CARD_ACCENTS = ["var(--c-ai)", "var(--c-case)", "var(--c-runner)", "var(--c-workflow)"]
+
+function agentCardAccent(index: number): string {
+  return AGENT_CARD_ACCENTS[index % AGENT_CARD_ACCENTS.length]
+}
+
+/** Token 只允许 K / M 两个单位：数值与单位分开，便于单位用黑色、数值走渐变 */
+function tokenValue(tokens: number): string {
+  return tokens >= 1_000_000 ? (tokens / 1_000_000).toFixed(2) : (tokens / 1_000).toFixed(2)
+}
+
+function tokenUnit(tokens: number): string {
+  return tokens >= 1_000_000 ? "M" : "K"
+}
 
 function formatUsageToken(tokens: number): string {
   return tokens >= 1_000_000
@@ -172,86 +189,87 @@ function formatUsageToken(tokens: number): string {
           </div>
         </header>
         <div class="ch-ai__body" :class="{ 'ch-ai__body--solo': !stats.aiUsage.agents.length }">
-          <div class="ai-usage-kpis">
-            <StatsAppCard
-              label="累计用量"
-              :value="toMillions(stats.aiUsage.totalTokens.total)"
-              suffix="M"
-              :decimals="2"
-              color="sage"
-              :loading="loading"
-              desc="DeepSeek"
-            >
-              <template #icon><IconTrendingUp :size="15" /></template>
-            </StatsAppCard>
-            <StatsAppCard
-              label="当天用量"
-              :value="toMillions(stats.aiUsage.totalTokens.today)"
-              suffix="M"
-              :decimals="2"
-              color="cream"
-              :loading="loading"
-              desc="DeepSeek"
-            >
-              <template #icon><IconLayers :size="15" /></template>
-            </StatsAppCard>
-            <StatsAppCard
-              label="缓存命中率"
-              :value="stats.aiUsage.cacheHitRate.total"
-              suffix="%"
-              :decimals="1"
-              color="deep"
-              :loading="loading"
-              desc="DeepSeek"
-            >
-              <template #icon><IconTarget :size="15" /></template>
-            </StatsAppCard>
-            <StatsAppCard
-              label="总费用"
-              :value="stats.aiUsage.deepseekCost.total"
-              suffix=" 元"
-              :significant-digits="3"
-              color="dust"
-              :loading="loading"
-              desc="DeepSeek"
-            >
-              <template #icon><IconZap :size="15" /></template>
-            </StatsAppCard>
-            <StatsAppCard
-              label="当天费用"
-              :value="stats.aiUsage.deepseekCost.today"
-              suffix=" 元"
-              :significant-digits="3"
-              color="dust"
-              :loading="loading"
-              desc="DeepSeek"
-            >
-              <template #icon><IconClock :size="15" /></template>
-            </StatsAppCard>
-          </div>
+          <AppCard
+            class="part-card ai-bill"
+            :pin="false"
+            :style="{ '--part-accent': 'var(--c-case)' }"
+          >
+            <div class="part-card__head">
+              <PartNumber value="00" />
+              <h4 class="part-card__title">DeepSeek 账单</h4>
+              <span class="part-card__stamp">DeepSeek</span>
+            </div>
+            <SkeletonCard v-if="loading" />
+            <template v-else>
+              <div class="part-card__hero">
+                <span class="part-card__hero-label">缓存命中率</span>
+                <strong class="part-card__hero-value"
+                  >{{ stats.aiUsage.cacheHitRate.total.toFixed(1) }}<em>%</em></strong
+                >
+              </div>
+              <div class="part-card__row">
+                <div class="part-card__cell">
+                  <span>当天用量</span>
+                  <b>{{ toMillions(stats.aiUsage.totalTokens.today).toFixed(2) }}<em>M</em></b>
+                </div>
+                <div class="part-card__cell">
+                  <span>当天费用</span>
+                  <b>{{ formatSignificant(stats.aiUsage.deepseekCost.today, 3) }}<em>元</em></b>
+                </div>
+              </div>
+              <div class="part-card__row">
+                <div class="part-card__cell">
+                  <span>总用量</span>
+                  <b>{{ toMillions(stats.aiUsage.totalTokens.total).toFixed(2) }}<em>M</em></b>
+                </div>
+                <div class="part-card__cell">
+                  <span>总费用</span>
+                  <b>{{ formatSignificant(stats.aiUsage.deepseekCost.total, 3) }}<em>元</em></b>
+                </div>
+              </div>
+            </template>
+          </AppCard>
           <div v-if="stats.aiUsage.agents.length" class="agent-usage-list">
             <AppCard
               v-for="(agent, index) in stats.aiUsage.agents"
               :key="agent.id"
-              class="agent-usage-card"
-              :tone="sketchToneAt(index)"
-              :tilt="sketchTiltAt(index)"
+              class="part-card agent-usage-card"
+              :pin="false"
+              :style="{ '--part-accent': agentCardAccent(index) }"
             >
-              <h4 class="agent-usage-card__name">{{ agent.name || "智能体" }}</h4>
-              <ul class="agent-usage-card__stats">
-                <li>
-                  <span>缓存命中</span><b>{{ agent.cache_hit_tokens.toLocaleString() }}</b>
-                </li>
-                <li>
-                  <span>输入</span><b>{{ agent.input_tokens.toLocaleString() }}</b>
-                </li>
-                <li>
-                  <span>输出</span><b>{{ agent.output_tokens.toLocaleString() }}</b>
-                </li>
-                <li>
-                  <span>总费用</span><b>{{ agent.cost_total }} 元</b>
-                </li>
-              </ul>
+              <div class="part-card__head">
+                <PartNumber :value="String(index + 1).padStart(2, '0')" />
+                <h4 class="part-card__title">{{ agent.name || "智能体" }}</h4>
+              </div>
+              <div class="part-card__row">
+                <div class="part-card__cell">
+                  <span>缓存命中</span>
+                  <b
+                    >{{ tokenValue(agent.cache_hit_tokens)
+                    }}<em>{{ tokenUnit(agent.cache_hit_tokens) }}</em></b
+                  >
+                </div>
+                <div class="part-card__cell">
+                  <span>输入</span>
+                  <b
+                    >{{ tokenValue(agent.input_tokens)
+                    }}<em>{{ tokenUnit(agent.input_tokens) }}</em></b
+                  >
+                </div>
+              </div>
+              <div class="part-card__row">
+                <div class="part-card__cell">
+                  <span>输出</span>
+                  <b
+                    >{{ tokenValue(agent.output_tokens)
+                    }}<em>{{ tokenUnit(agent.output_tokens) }}</em></b
+                  >
+                </div>
+                <div class="part-card__cell">
+                  <span>总费用</span>
+                  <b>{{ formatSignificant(Number(agent.cost_total), 3) }}<em>元</em></b>
+                </div>
+              </div>
             </AppCard>
           </div>
         </div>
@@ -397,41 +415,8 @@ function formatUsageToken(tokens: number): string {
   }
 }
 
+/* Agent 用量卡只声明布局；外壳（编号 / 色条 / 黄圆 / 分隔线）由 .part-card 提供 */
 .agent-usage-card {
   height: 100%;
-}
-
-.agent-usage-card :deep(.el-card__body) {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.agent-usage-card__name {
-  margin: 0 0 var(--app-space-sm);
-  font-size: var(--app-size-md);
-}
-
-.agent-usage-card__stats {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-content: center;
-  gap: var(--app-space-sm);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.agent-usage-card__stats li {
-  display: flex;
-  flex-direction: column;
-  gap: var(--app-space-xs);
-  font-size: var(--app-size-sm);
-}
-
-.agent-usage-card__stats span {
-  color: var(--app-text-secondary);
-  font-size: var(--app-size-xs);
 }
 </style>

@@ -208,65 +208,138 @@ async function onSubmit() {
     </div>
 
     <!-- 新建任务弹窗 -->
-    <el-dialog v-model="dialogVisible" title="新建任务" width="640px" :close-on-click-modal="false">
+    <el-dialog
+      v-model="dialogVisible"
+      title="新建任务"
+      width="900px"
+      class="task-create-dialog"
+      :close-on-click-modal="false"
+    >
       <el-form
         ref="taskFormRef"
         :model="form"
         :rules="taskRules"
-        label-width="120px"
+        label-position="top"
+        class="task-create-form"
         @submit.prevent
       >
-        <el-form-item label="任务标题" prop="title">
-          <el-input
-            v-model="form.title"
-            placeholder="例如：校准 H705F 色温"
-            maxlength="200"
-            show-word-limit
-          />
-        </el-form-item>
-        <el-form-item label="智能体" prop="agent_id">
-          <el-select
-            v-model="form.agent_id"
-            style="width: 100%"
-            filterable
-            placeholder="请选择智能体"
-          >
-            <el-option
-              v-for="item in agentOptions"
-              :key="item.id"
-              :label="item.label"
-              :value="item.id"
-            />
-          </el-select>
-        </el-form-item>
-        <template v-if="isCaseAuthoring">
-          <el-form-item label="需求文档">
-            <el-upload
-              :accept="DOCUMENT_ACCEPT"
-              :limit="5"
-              multiple
-              :auto-upload="false"
-              :show-file-list="true"
-              :on-change="onDocumentChange"
-              :on-remove="onDocumentRemove"
-            >
-              <el-button size="small">选择 PRD / Word</el-button>
-            </el-upload>
-            <p class="task-attach-name">
-              支持 .docx / .pdf / .md；上传后由 Agent-02 解析需求并生成测试用例
+        <div class="task-create-grid">
+          <div class="task-create-col">
+            <p class="task-create-col__title">基本信息</p>
+            <el-form-item label="任务标题" prop="title">
+              <el-input
+                v-model="form.title"
+                placeholder="例如：校准 H705F 色温"
+                maxlength="200"
+                show-word-limit
+              />
+            </el-form-item>
+            <el-form-item label="智能体" prop="agent_id">
+              <el-select
+                v-model="form.agent_id"
+                style="width: 100%"
+                filterable
+                placeholder="请选择智能体"
+              >
+                <el-option
+                  v-for="item in agentOptions"
+                  :key="item.id"
+                  :label="item.label"
+                  :value="item.id"
+                />
+              </el-select>
+            </el-form-item>
+            <template v-if="isCaseAuthoring">
+              <el-form-item label="需求文档">
+                <el-upload
+                  :accept="DOCUMENT_ACCEPT"
+                  :limit="5"
+                  multiple
+                  :auto-upload="false"
+                  :show-file-list="true"
+                  :on-change="onDocumentChange"
+                  :on-remove="onDocumentRemove"
+                >
+                  <el-button size="small">选择 PRD / Word</el-button>
+                </el-upload>
+                <p class="task-attach-name">
+                  支持 .docx / .pdf / .md；上传后由 Agent-02 解析需求并生成测试用例
+                </p>
+              </el-form-item>
+            </template>
+            <template v-else>
+              <el-form-item label="用例来源">
+                <el-radio-group v-model="form.case_source">
+                  <el-radio v-for="opt in CASE_SOURCE_OPTIONS" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </el-radio>
+                </el-radio-group>
+              </el-form-item>
+              <template v-if="form.case_source !== CASE_SOURCE_PLATFORM">
+                <el-form-item label="配置">
+                  <el-upload
+                    :accept="CONFIG_ACCEPT"
+                    :limit="1"
+                    :auto-upload="false"
+                    :show-file-list="true"
+                    :on-change="onConfigPicked"
+                    :on-remove="clearConfig"
+                  >
+                    <el-button size="small">选择 YAML</el-button>
+                  </el-upload>
+                  <p class="task-attach-name">配置只收 YAML：.yaml / .yml，单份，上限 20MB</p>
+                  <p v-if="form.configFile" class="task-attach-name">
+                    已选：{{ form.configFile.name }}
+                  </p>
+                  <p v-if="caseError" class="task-case-error">{{ caseError }}</p>
+                </el-form-item>
+                <el-form-item label="测试指定用例">
+                  <el-select
+                    v-model="form.case_title"
+                    style="width: 100%"
+                    clearable
+                    placeholder="全部用例"
+                    @clear="form.case_title = ''"
+                  >
+                    <el-option label="全部用例" value="" />
+                    <el-option
+                      v-for="title in caseTitles"
+                      :key="title"
+                      :label="title"
+                      :value="title"
+                    />
+                  </el-select>
+                </el-form-item>
+              </template>
+            </template>
+            <el-form-item label="设备" prop="device_serial">
+              <el-select
+                v-model="form.device_serial"
+                style="width: 100%"
+                clearable
+                filterable
+                placeholder="请选择设备"
+              >
+                <el-option
+                  v-for="d in selectableDevices"
+                  :key="d.serial"
+                  :label="taskDeviceLabel(d)"
+                  :value="taskDeviceAddress(d)"
+                />
+              </el-select>
+            </el-form-item>
+          </div>
+
+          <div class="task-create-col task-create-col--side">
+            <p class="task-create-col__title">
+              {{
+                !isCaseAuthoring && form.case_source === CASE_SOURCE_PLATFORM
+                  ? "平台用例"
+                  : "执行方式"
+              }}
             </p>
-          </el-form-item>
-        </template>
-        <template v-else>
-          <el-form-item label="用例来源">
-            <el-radio-group v-model="form.case_source">
-              <el-radio v-for="opt in CASE_SOURCE_OPTIONS" :key="opt.value" :value="opt.value">
-                {{ opt.label }}
-              </el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item v-if="form.case_source === CASE_SOURCE_PLATFORM" label="平台用例">
             <PlatformCasePicker
+              v-if="!isCaseAuthoring && form.case_source === CASE_SOURCE_PLATFORM"
               :projects="platformProjects"
               :files="platformFiles"
               :cases="platformCases"
@@ -279,55 +352,18 @@ async function onSubmit() {
               @update:file-id="onPlatformFileChange"
               @update:case-ids="onPlatformCasesChange"
             />
-          </el-form-item>
-          <template v-else>
-            <el-form-item label="配置">
-              <el-upload
-                :accept="CONFIG_ACCEPT"
-                :limit="1"
-                :auto-upload="false"
-                :show-file-list="true"
-                :on-change="onConfigPicked"
-                :on-remove="clearConfig"
-              >
-                <el-button size="small">选择 YAML</el-button>
-              </el-upload>
-              <p class="task-attach-name">配置只收 YAML：.yaml / .yml，单份，上限 20MB</p>
-              <p v-if="form.configFile" class="task-attach-name">
-                已选：{{ form.configFile.name }}
-              </p>
-              <p v-if="caseError" class="task-case-error">{{ caseError }}</p>
-            </el-form-item>
-            <el-form-item label="测试指定用例">
-              <el-select
-                v-model="form.case_title"
-                style="width: 100%"
-                clearable
-                placeholder="全部用例"
-                @clear="form.case_title = ''"
-              >
-                <el-option label="全部用例" value="" />
-                <el-option v-for="title in caseTitles" :key="title" :label="title" :value="title" />
-              </el-select>
-            </el-form-item>
-          </template>
-          <el-form-item label="设备" prop="device_serial">
-            <el-select
-              v-model="form.device_serial"
-              style="width: 100%"
-              clearable
-              filterable
-              placeholder="请选择设备"
-            >
-              <el-option
-                v-for="d in selectableDevices"
-                :key="d.serial"
-                :label="taskDeviceLabel(d)"
-                :value="taskDeviceAddress(d)"
-              />
-            </el-select>
-          </el-form-item>
-        </template>
+            <div v-else class="task-create-hint">
+              <template v-if="isCaseAuthoring">
+                <strong>需求文档模式</strong>
+                <p>上传需求文档后由 Agent-02 解析并生成测试用例，无需再选平台用例。</p>
+              </template>
+              <template v-else>
+                <strong>本地 YAML 模式</strong>
+                <p>提交后按左侧选择的配置文件执行，可指定其中一条用例。</p>
+              </template>
+            </div>
+          </div>
+        </div>
       </el-form>
       <template #footer>
         <el-button @click="closeDialog">取消</el-button>

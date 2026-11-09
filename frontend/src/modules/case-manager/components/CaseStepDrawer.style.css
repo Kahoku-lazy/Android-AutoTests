@@ -1,4 +1,4 @@
-﻿/* CaseStepDrawer 私有样式：步骤卡片列表 + 编辑框 */
+/* CaseStepDrawer 私有样式：步骤卡片列表 + 编辑框 */
 
 .step-drawer {
   display: flex;
@@ -100,4 +100,40 @@
 
 .step-drawer__add {
   align-self: flex-start;
+}
+
+/* 执行提示：来自 YAML 的页面锚点 / 日志证据，只读展示 */
+.step-drawer__hints {
+  list-style: none;
+  margin: 0;
+  padding: var(--app-space-xs) var(--app-space-sm);
+  border-left: 3px solid var(--c-case);
+  background: var(--app-bg-subtle);
+  border-radius: var(--app-radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.step-drawer__hint-row {
+  display: flex;
+  gap: var(--app-space-xs);
+  font-size: var(--app-size-xs);
+  line-height: var(--app-line-height-normal);
+}
+
+.step-drawer__hint-label {
+  flex: 0 0 auto;
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-secondary);
+}
+
+.step-drawer__hint-text {
+  color: var(--app-text-primary);
+  word-break: break-word;
+}
+
+.step-drawer__hint-note {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
 }

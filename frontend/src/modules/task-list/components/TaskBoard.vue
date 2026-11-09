@@ -10,6 +10,8 @@ import ConfirmButton from "@/shared/components/patterns/ConfirmButton.vue"
 import DoodleNote from "@/shared/components/DoodleNote.vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
 import {
+  CASE_SOURCE_OPTIONS,
+  CASE_SOURCE_PLATFORM,
   TASK_STATUS_LABELS,
   taskDetailRoute,
   taskStatusTone,
@@ -23,6 +25,7 @@ import {
 } from "../helpers/task-device-address"
 import { useTaskPublish } from "../composables/useTaskPublish"
 import { useTaskList } from "../composables/useTaskList"
+import PlatformCasePicker from "./PlatformCasePicker.vue"
 import type { TaskRecord } from "@/shared/types/ai"
 
 /** 任务态 → sticky 底色：成功 Do / 失败 Dont / 执行中 / 等待 */
@@ -51,6 +54,7 @@ const {
   caseTitles,
   caseError,
   dialogVisible,
+  platform,
   CONFIG_ACCEPT,
   DOCUMENT_ACCEPT,
   openDialog,
@@ -59,9 +63,23 @@ const {
   canSubmit,
   onConfigChange,
   clearConfig,
+  onPlatformProjectChange,
+  onPlatformFileChange,
+  onPlatformCasesChange,
   onDocumentChange,
   onDocumentRemove,
 } = useTaskPublish()
+
+/** 平台用例选择器的数据源（解构出来以便模板直接取用） */
+const {
+  projects: platformProjects,
+  files: platformFiles,
+  cases: platformCases,
+  projectId: platformProjectId,
+  fileId: platformFileId,
+  loading: platformLoading,
+  error: platformError,
+} = platform
 
 const selectableDevices = computed(() => devices.value.filter(isSelectableTaskDevice))
 
@@ -215,21 +233,59 @@ async function onSubmit() {
           </el-form-item>
         </template>
         <template v-else>
-          <el-form-item label="配置">
-            <el-upload
-              :accept="CONFIG_ACCEPT"
-              :limit="1"
-              :auto-upload="false"
-              :show-file-list="true"
-              :on-change="onConfigPicked"
-              :on-remove="clearConfig"
-            >
-              <el-button size="small">选择 YAML</el-button>
-            </el-upload>
-            <p class="task-attach-name">配置只收 YAML：.yaml / .yml，单份，上限 20MB</p>
-            <p v-if="form.configFile" class="task-attach-name">已选：{{ form.configFile.name }}</p>
-            <p v-if="caseError" class="task-case-error">{{ caseError }}</p>
+          <el-form-item label="用例来源">
+            <el-radio-group v-model="form.case_source">
+              <el-radio v-for="opt in CASE_SOURCE_OPTIONS" :key="opt.value" :value="opt.value">
+                {{ opt.label }}
+              </el-radio>
+            </el-radio-group>
           </el-form-item>
+          <el-form-item v-if="form.case_source === CASE_SOURCE_PLATFORM" label="平台用例">
+            <PlatformCasePicker
+              :projects="platformProjects"
+              :files="platformFiles"
+              :cases="platformCases"
+              :project-id="platformProjectId"
+              :file-id="platformFileId"
+              :case-ids="form.caseIds"
+              :loading="platformLoading"
+              :error="platformError"
+              @update:project-id="onPlatformProjectChange"
+              @update:file-id="onPlatformFileChange"
+              @update:case-ids="onPlatformCasesChange"
+            />
+          </el-form-item>
+          <template v-else>
+            <el-form-item label="配置">
+              <el-upload
+                :accept="CONFIG_ACCEPT"
+                :limit="1"
+                :auto-upload="false"
+                :show-file-list="true"
+                :on-change="onConfigPicked"
+                :on-remove="clearConfig"
+              >
+                <el-button size="small">选择 YAML</el-button>
+              </el-upload>
+              <p class="task-attach-name">配置只收 YAML：.yaml / .yml，单份，上限 20MB</p>
+              <p v-if="form.configFile" class="task-attach-name">
+                已选：{{ form.configFile.name }}
+              </p>
+              <p v-if="caseError" class="task-case-error">{{ caseError }}</p>
+            </el-form-item>
+            <el-form-item label="测试指定用例">
+              <el-select
+                v-model="form.case_title"
+                style="width: 100%"
+                clearable
+                placeholder="全部用例"
+                @clear="form.case_title = ''"
+              >
+                <el-option label="全部用例" value="" />
+                <el-option v-for="title in caseTitles" :key="title" :label="title" :value="title" />
+              </el-select>
+            </el-form-item>
+          </template>
           <el-form-item label="设备" prop="device_serial">
             <el-select
               v-model="form.device_serial"
@@ -244,18 +300,6 @@ async function onSubmit() {
                 :label="taskDeviceLabel(d)"
                 :value="taskDeviceAddress(d)"
               />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="测试指定用例">
-            <el-select
-              v-model="form.case_title"
-              style="width: 100%"
-              clearable
-              placeholder="全部用例"
-              @clear="form.case_title = ''"
-            >
-              <el-option label="全部用例" value="" />
-              <el-option v-for="title in caseTitles" :key="title" :label="title" :value="title" />
             </el-select>
           </el-form-item>
         </template>

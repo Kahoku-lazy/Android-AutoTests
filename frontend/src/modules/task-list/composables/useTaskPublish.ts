@@ -8,7 +8,13 @@ import { TASK_KIND_CASE_AUTHORING } from "@/modules/ai-assistant/constants"
 import { listDevices, submitTask } from "../api/tasks"
 import { taskDeviceAddress } from "../helpers/task-device-address"
 import { parseCaseTitles } from "../helpers/yaml-case-titles"
-import { TASK_DEVICE_POLL_INTERVAL_MS } from "../constants"
+import { usePlatformCases } from "./usePlatformCases"
+import {
+  CASE_SOURCE_DEFAULT,
+  CASE_SOURCE_PLATFORM,
+  TASK_DEVICE_POLL_INTERVAL_MS,
+  type CaseSource,
+} from "../constants"
 import type { AgentRecord } from "@/shared/types/ai"
 import type { DeviceRecord } from "@/shared/types/device"
 
@@ -16,10 +22,14 @@ export interface TaskFormState {
   title: string
   /** 选中的智能体 id；null = 未选择（提交置灰） */
   agent_id: number | null
-  /** 设备执行：唯一配置 YAML */
+  /** 设备执行：用例来源（平台用例 / 本地 YAML） */
+  case_source: CaseSource
+  /** 设备执行：唯一配置 YAML（本地 YAML 来源） */
   configFile: File | null
+  /** 设备执行：平台用例编号（平台用例来源） */
+  caseIds: string[]
   device_serial: string
-  /** 指定用例标题；空串 = 全部用例 */
+  /** 指定用例标题；空串 = 全部用例（仅本地 YAML 来源） */
   case_title: string
   /** 用例编写：PRD / Word 文档 */
   documents: File[]
@@ -38,7 +48,9 @@ function emptyForm(): TaskFormState {
   return {
     title: "",
     agent_id: null,
+    case_source: CASE_SOURCE_DEFAULT,
     configFile: null,
+    caseIds: [],
     device_serial: "",
     case_title: "",
     documents: [],
@@ -57,6 +69,8 @@ export function useTaskPublish() {
   const caseTitles = ref<string[]>([])
   const caseError = ref("")
   const dialogVisible = ref(false)
+  /** 平台用例选择器：项目 → 用例表 → 用例 */
+  const platform = usePlatformCases()
 
   const agentOptions = computed<AgentOption[]>(() =>
     agents.value.map((agent) => ({
@@ -125,20 +139,20 @@ export function useTaskPublish() {
     if (open) {
       startDevicePoll()
       void loadAgents()
+      void platform.loadProjects()
     } else stopDevicePoll()
   })
 
   // 切换智能体时只清掉与目标任务类型不兼容的字段：
-  // 选 Agent-02 清设备/YAML/指定用例；选设备执行 Agent 清 PRD/Word 文档。
+  // 选 Agent-02 清设备/用例来源/指定用例；选设备执行 Agent 清 PRD/Word 文档。
   watch(
     () => form.value.agent_id,
     () => {
       const picked = agents.value.find((agent) => agent.id === form.value.agent_id)
       if (picked?.task_kind === TASK_KIND_CASE_AUTHORING) {
-        form.value.configFile = null
-        form.value.case_title = ""
-        caseTitles.value = []
-        caseError.value = ""
+        clearConfig()
+        form.value.caseIds = []
+        platform.reset()
         form.value.device_serial = ""
       } else {
         form.value.documents = []
@@ -147,12 +161,41 @@ export function useTaskPublish() {
     { flush: "sync" },
   )
 
+  // 切换用例来源时清掉另一侧的已选内容：平台用例与本地 YAML 不混用
+  watch(
+    () => form.value.case_source,
+    (source) => {
+      if (source === CASE_SOURCE_PLATFORM) {
+        clearConfig()
+        return
+      }
+      form.value.caseIds = []
+    },
+  )
+
   onUnmounted(stopDevicePoll)
 
   function canSubmit(): boolean {
     if (form.value.title.trim() === "" || form.value.agent_id === null) return false
     if (isCaseAuthoring.value) return form.value.documents.length > 0
-    return form.value.configFile !== null && form.value.device_serial.trim() !== ""
+    if (form.value.device_serial.trim() === "") return false
+    if (form.value.case_source === CASE_SOURCE_PLATFORM) return form.value.caseIds.length > 0
+    return form.value.configFile !== null
+  }
+
+  /** 平台用例：切项目 / 切表都清空已选用例，避免跨表编号混在一起 */
+  async function onPlatformProjectChange(projectId: number | null) {
+    form.value.caseIds = []
+    await platform.loadFiles(projectId)
+  }
+
+  async function onPlatformFileChange(fileId: number | null) {
+    form.value.caseIds = []
+    await platform.loadCases(fileId)
+  }
+
+  function onPlatformCasesChange(caseIds: string[]) {
+    form.value.caseIds = caseIds
   }
 
   /** 选 YAML：解析标题；换文件时清空已选用例。 */
@@ -211,11 +254,13 @@ export function useTaskPublish() {
 
   async function submit(onSuccess?: () => void) {
     if (!canSubmit()) {
-      ElMessage.warning(
-        isCaseAuthoring.value
-          ? "请填写任务标题、选择 Agent-02 并上传 PRD / Word 文档"
-          : "请填写任务标题、选择智能体、YAML 与设备",
-      )
+      if (isCaseAuthoring.value) {
+        ElMessage.warning("请填写任务标题、选择 Agent-02 并上传 PRD / Word 文档")
+      } else if (form.value.case_source === CASE_SOURCE_PLATFORM) {
+        ElMessage.warning("请填写任务标题、选择智能体、设备与至少一条平台用例")
+      } else {
+        ElMessage.warning("请填写任务标题、选择智能体、YAML 与设备")
+      }
       return
     }
     submitting.value = true
@@ -229,12 +274,17 @@ export function useTaskPublish() {
         }
       } else {
         fd.append("device_serial", form.value.device_serial.trim())
-        fd.append("case_title", form.value.case_title.trim())
+        fd.append("case_source", form.value.case_source)
         const hit = devices.value.find((d) => taskDeviceAddress(d) === form.value.device_serial)
         const label = hit ? deviceLabelOf(hit) : ""
         if (label) fd.append("device_label", label)
-        if (form.value.configFile) {
-          fd.append("config", form.value.configFile)
+        if (form.value.case_source === CASE_SOURCE_PLATFORM) {
+          fd.append("case_ids", JSON.stringify(form.value.caseIds))
+        } else {
+          fd.append("case_title", form.value.case_title.trim())
+          if (form.value.configFile) {
+            fd.append("config", form.value.configFile)
+          }
         }
       }
       const data = await submitTask(fd)
@@ -242,6 +292,7 @@ export function useTaskPublish() {
         ElMessage.success("任务已提交")
         form.value = emptyForm()
         clearConfig()
+        platform.reset()
         onSuccess?.()
       } else {
         ElMessage.error(data.message || "提交失败")
@@ -267,6 +318,7 @@ export function useTaskPublish() {
     caseTitles,
     caseError,
     dialogVisible,
+    platform,
     CONFIG_ACCEPT,
     DOCUMENT_ACCEPT,
     openDialog,
@@ -276,6 +328,9 @@ export function useTaskPublish() {
     loadDevices,
     onConfigChange,
     clearConfig,
+    onPlatformProjectChange,
+    onPlatformFileChange,
+    onPlatformCasesChange,
     onDocumentChange,
     onDocumentRemove,
     clearDocuments,

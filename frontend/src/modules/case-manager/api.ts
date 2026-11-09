@@ -138,6 +138,25 @@ export function batchDeleteDefinitions(ids: string[]): Envelope<{ deleted: numbe
   })
 }
 
+// ── YAML 导入 ──
+
+export interface YamlImportResult {
+  file_id: number
+  file_name: string
+  total: number
+  created: number
+  updated: number
+  removed: number
+  skipped: Array<{ title: string; reason: string }>
+}
+
+/** 上传一份 YAML，导入当前项目的用例表（同名表复用，按标题覆盖） */
+export function importYaml(form: FormData): Envelope<YamlImportResult> {
+  return client.post<DjangoResponse<YamlImportResult>>("/cases/import-yaml/", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  })
+}
+
 // ── Move ──
 
 export function moveItem(body: {

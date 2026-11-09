@@ -48,6 +48,42 @@ def _visible_task(request, task_id: int) -> Task | None:
     return Task.objects.select_related("agent").filter(id=task_id, agent__in=agents).first()
 
 
+def _platform_case_config(*, case_ids: list[str], user_id: str) -> tuple[str, list]:
+    """把选中的平台用例物化成任务配置附件。
+
+    Args:
+        case_ids: 平台用例编号列表，顺序即执行顺序。
+        user_id: 当前用户编号，只能物化自己项目下的用例。
+
+    Returns:
+        (case_title, 附件列表)。``case_title`` 固定为空串：整份 YAML 就是要跑的用例。
+
+    Raises:
+        ValidationError: 未选用例，或用例无法物化为平台 YAML。
+        NotFound: 有编号不存在或不属于当前用户。
+    """
+    if not case_ids:
+        raise ValidationError("请至少选择一条平台用例")
+    from backend.apps.case_manager import api as case_manager_api
+    from backend.apps.task_list.attachments import PreparedUpload
+
+    try:
+        yaml_text = case_manager_api.export_yaml_text(case_ids=list(case_ids), user_id=user_id)
+    except LookupError as exc:
+        raise NotFound(str(exc)) from exc
+    except ValueError as exc:
+        raise ValidationError(str(exc)) from exc
+    filename = f"平台用例-{len(case_ids)}条.yaml"
+    return "", [
+        PreparedUpload(
+            kind="config",
+            filename=filename,
+            body=yaml_text,
+            content=yaml_text.encode("utf-8"),
+        )
+    ]
+
+
 class TaskSubmitAPIView(APIView):
     """POST /api/tasks/submit — 提交任务；按设备调度（同设备排队 / 异设备并行）。"""
 
@@ -67,6 +103,8 @@ class TaskSubmitAPIView(APIView):
         device_serial = (data.get("device_serial") or "").strip()
         device_label = (data.get("device_label") or "").strip()
         case_title = (data.get("case_title") or "").strip()
+        case_source = str(data.get("case_source") or "yaml")
+        case_ids = data.get("case_ids") or []
         task_kind = str(getattr(agent, "task_kind", "") or TaskKind.DEVICE_CONTROL)
 
         from backend.apps.task_list.attachments import (
@@ -103,13 +141,19 @@ class TaskSubmitAPIView(APIView):
 
         if not device_serial:
             raise ValidationError("请选择设备")
-        try:
-            prepared = collect_task_files(
-                request.FILES.getlist("config"),
-                request.FILES.getlist("documents"),
+        if case_source == "platform":
+            case_title, prepared = _platform_case_config(
+                case_ids=case_ids,
+                user_id=str(user_id or ""),
             )
-        except AttachmentError as exc:
-            raise ValidationError(str(exc)) from exc
+        else:
+            try:
+                prepared = collect_task_files(
+                    request.FILES.getlist("config"),
+                    request.FILES.getlist("documents"),
+                )
+            except AttachmentError as exc:
+                raise ValidationError(str(exc)) from exc
 
         task = api.create_task(
             agent,
@@ -122,13 +166,17 @@ class TaskSubmitAPIView(APIView):
             created_by=str(user_id or ""),
         )
         for index, item in enumerate(prepared):
+            # 平台用例来源的配置由服务端生成，只存正文，不落磁盘原件
+            stored_path = (
+                "" if case_source == "platform" else store_flat_upload(item.filename, item.content)
+            )
             api.add_task_attachment(
                 task,
                 kind=item.kind,
                 filename=item.filename,
                 body=item.body,
                 sort_order=index,
-                stored_path=store_flat_upload(item.filename, item.content),
+                stored_path=stored_path,
             )
         api.dispatch_device(device_serial)
         task.refresh_from_db()

@@ -33,8 +33,16 @@ export function emptySheetRow(): SheetRowDraft {
   }
 }
 
-function toSteps(steps: CaseStep[] | undefined): CaseStep[] {
-  return (steps || []).map((step) => ({ action: step.action, assertion: step.assertion }))
+/** 把读回的步骤收成草稿：执行提示只读透传，不参与编辑 */
+export function toSteps(steps: CaseStep[] | undefined): CaseStep[] {
+  return (steps || []).map((step) => {
+    const next: CaseStep = { action: step.action, assertion: step.assertion }
+    // 执行提示只读透传：表格里改动作/断言不应把 YAML 带来的锚点与日志证据洗掉
+    if (step.anchor && Object.keys(step.anchor).length) next.anchor = { ...step.anchor }
+    if (step.log && step.log.sku)
+      next.log = { ...step.log, keywords: [...(step.log.keywords || [])] }
+    return next
+  })
 }
 
 function toDraft(row: CaseDefinition): SheetRowDraft {

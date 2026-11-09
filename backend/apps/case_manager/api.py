@@ -36,6 +36,7 @@ from .api_projects import (
     serialize_project,
     update_project,
 )
+from .api_yaml import export_yaml_text, import_yaml_text, parse_yaml_text
 from .models import CaseDirectory, CaseFile, CaseProject, TestDefinition
 
 __all__ = [
@@ -54,16 +55,19 @@ __all__ = [
     "delete_directory",
     "delete_file",
     "delete_project",
+    "export_yaml_text",
     "get_definition",
     "get_file",
     "get_file_sheet",
     "get_project",
     "get_project_tree",
     "import_case_rows",
+    "import_yaml_text",
     "list_file_cases",
     "list_projects",
     "move_item",
     "next_case_id",
+    "parse_yaml_text",
     "serialize_definition",
     "serialize_directory",
     "serialize_file",

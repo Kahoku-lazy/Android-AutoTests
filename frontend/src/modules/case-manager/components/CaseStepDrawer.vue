@@ -7,6 +7,7 @@
  */
 import { ref, watch } from "vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
+import { stepHintLines } from "../helpers/step-hints"
 import type { CaseStep } from "../types"
 
 const props = defineProps<{
@@ -22,14 +23,19 @@ const emit = defineEmits<{
 
 const draft = ref<CaseStep[]>([])
 
+/** 复制一步的草稿：执行提示只读保留，不参与编辑 */
+function toDraft(step: CaseStep): CaseStep {
+  const next: CaseStep = { action: step.action, assertion: step.assertion }
+  if (step.anchor && Object.keys(step.anchor).length) next.anchor = { ...step.anchor }
+  if (step.log && step.log.sku) next.log = { ...step.log, keywords: [...(step.log.keywords || [])] }
+  return next
+}
+
 watch(
   () => props.modelValue,
   (open) => {
     if (!open) return
-    draft.value = (props.steps || []).map((step) => ({
-      action: step.action,
-      assertion: step.assertion,
-    }))
+    draft.value = (props.steps || []).map(toDraft)
   },
 )
 
@@ -55,7 +61,14 @@ function moveStep(index: number, delta: number) {
 function apply() {
   emit(
     "apply",
-    draft.value.map((step) => ({ action: step.action, assertion: step.assertion })),
+    draft.value.map((step) => ({
+      action: step.action,
+      assertion: step.assertion,
+      ...(step.anchor && Object.keys(step.anchor).length ? { anchor: { ...step.anchor } } : {}),
+      ...(step.log && step.log.sku
+        ? { log: { ...step.log, keywords: [...(step.log.keywords || [])] } }
+        : {}),
+    })),
   )
   close()
 }
@@ -126,6 +139,15 @@ function apply() {
               placeholder="例如：设备日志出现开灯事件"
             />
           </label>
+          <ul v-if="stepHintLines(step).length" class="step-drawer__hints">
+            <li v-for="line in stepHintLines(step)" :key="line.label" class="step-drawer__hint-row">
+              <span class="step-drawer__hint-label">{{ line.label }}</span>
+              <span class="step-drawer__hint-text">{{ line.text }}</span>
+            </li>
+            <li class="step-drawer__hint-note">
+              执行提示来自 YAML，本面板只读；要改请重新导入 YAML。
+            </li>
+          </ul>
         </li>
       </ol>
 

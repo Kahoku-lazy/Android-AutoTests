@@ -98,13 +98,15 @@ Django 版本锁在 6.0.x：6.1 的模型字段检查会在没有数据库时连
 
 智能体记录只决定**归属和任务类型**（`device_control` 设备执行 / `case_authoring` 用例编写）。`backend/apps/task_list/engine_adapter.py` 不再读取 `route_configs`，也不再构造 `ModelConfig`。
 
-1. **建用例**：用例管理工作台里写「项目 → 目录 → 文件 → 用例 → 步骤（操作 / 预期）」。用例编写类任务改为上传需求文档，由编写 SOP 产出文档。
-2. **下发任务**：任务清单页（`/tasks`）选择已有智能体、目标设备、附件与用例标题后提交。同一设备串行，不同设备并行。
+1. **建用例**：用例管理工作台里写「项目 → 目录 → 文件 → 用例 → 步骤（操作 / 预期）」，或用「导入 YAML」把现成 YAML 灌进用例库。用例编写类任务改为上传需求文档，由编写 SOP 产出文档。
+2. **下发任务**：任务清单页（`/tasks`）选择已有智能体、目标设备与**用例来源**后提交：平台用例（选项目 → 用例表 → 用例，可多选）或本地 YAML（上传一份并可选指定单条）。同一设备串行，不同设备并行。
 3. **装配**：平台把用例物化成临时 YAML，起后台线程调用 `engines.agents.workflow.platform_run.run_platform_sop`。模型、工具、提示词在引擎内写死：`build_executor()` / `build_verifier()` 使用 `DeepSeekModelConfig.FLASH`（`deepseek-flash`）和 `DEEPSEEK_API_KEY`。
 4. **执行 + 验收**：执行角色按步骤操作设备（最多 60 轮）；验收角色截图、查设备日志关键词，判过 / 不过（最多 30 轮）。用例编写任务走规划 / 编写 / 验收，不操作设备，密钥同样来自 `DEEPSEEK_API_KEY`。
 5. **落库与回看**：过程事件写入任务事件表（含 token 与费用）。步骤截图压成长边 720px 的 WebP，落在 `DATA_DIR/task_media/<任务 id>/<sha256>.webp`。任务详情回放时间线，报告页按用例汇总，失败进入 BUG 单。
 
 换模型只改 `engines/agents/role/agents.py`（以及用例编写的 `engines/agents/role/case_roles.py`）和 `engines/agents/config/models.py`。不要在 Django 模型或前端把密钥再传一遍。备用模型由 `AGENT_FALLBACK_MODEL` 控制，默认关闭；没有特殊要求不要回退到 Pro。
+
+> **用例库与本地 YAML 互通**：`python manage.py import_case_yaml --dir <目录> --project <项目名>` 把目录下每份 YAML 同步成一张用例表（同名表按标题覆盖，重复执行幂等；`--prune` 才删除 YAML 中已消失的行）。取哪张表执行由任务弹窗的「平台用例」来源决定。YAML 里的 `anchor`（页面锚点）与 `log`（日志证据）会随步骤入库，平台用例执行时原样注入执行 / 验收角色，效果与直接上传同一份 YAML 等价。
 
 ---
 

@@ -3,6 +3,20 @@
 /** 新建任务设备下拉轮询间隔，与设备管理 HEARTBEAT_INTERVAL（30s）对齐 */
 export const TASK_DEVICE_POLL_INTERVAL_MS = 30000
 
+/** 用例来源：平台用例库直接执行，或上传本地 YAML */
+export const CASE_SOURCE_PLATFORM = "platform"
+export const CASE_SOURCE_YAML = "yaml"
+export type CaseSource = typeof CASE_SOURCE_PLATFORM | typeof CASE_SOURCE_YAML
+
+/** 用例来源选项（弹窗单选） */
+export const CASE_SOURCE_OPTIONS: { value: CaseSource; label: string; hint: string }[] = [
+  { value: CASE_SOURCE_PLATFORM, label: "平台用例", hint: "选项目与用例，直接跑平台用例库" },
+  { value: CASE_SOURCE_YAML, label: "本地 YAML", hint: "上传一份 YAML，可指定单条用例" },
+]
+
+/** 默认用例来源：平台用例 */
+export const CASE_SOURCE_DEFAULT: CaseSource = CASE_SOURCE_PLATFORM
+
 /** 任务详情页页头图标与渐变 */
 export const TASK_REPORT_HEADER_ICON = "file-bar-chart"
 export const TASK_REPORT_HEADER_GRADIENT = "linear-gradient(135deg,#999,#8b7f8f)"

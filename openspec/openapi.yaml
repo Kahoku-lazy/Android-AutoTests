@@ -710,6 +710,36 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/cases/import-yaml/:
+    post:
+      operationId: cases_import_yaml_create
+      description: 把上传的 YAML 用例导入当前用户的用例项目。
+      tags:
+      - cases
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/cases/move/:
     post:
       operationId: cases_move_create
@@ -2561,6 +2591,14 @@ components:
       - tags
       - task_kind
       - vision_model_name
+    CaseSourceEnum:
+      enum:
+      - yaml
+      - platform
+      type: string
+      description: |-
+        * `yaml` - yaml
+        * `platform` - platform
     DocTypeEnum:
       enum:
       - page_flow
@@ -2706,8 +2744,9 @@ components:
       description: |-
         任务提交入参 — title/agent_id 必填；设备由任务类型在视图层校验。
 
-        device_control 任务必须有 device_serial；case_authoring 任务必须上传
-        documents（PRD/Word），不需要设备与 YAML。
+        device_control 任务必须有 device_serial，用例来源二选一：``yaml`` 上传配置
+        文件，或 ``platform`` 给用例编号列表（JSON 数组字符串）。case_authoring 任务
+        必须上传 documents（PRD/Word），不需要设备与 YAML。
       properties:
         title:
           type: string
@@ -2718,6 +2757,13 @@ components:
           type: string
           default: ''
         case_title:
+          type: string
+          default: ''
+        case_source:
+          allOf:
+          - $ref: '#/components/schemas/CaseSourceEnum'
+          default: yaml
+        case_ids:
           type: string
           default: ''
         goal:

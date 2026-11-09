@@ -5,11 +5,28 @@ export type CaseType = "FUNC" | "AUTO"
 export type Priority = "P0" | "P1" | "P2"
 export type BusinessType = "appliance" | "lighting" | "app"
 
+/** 一步可选的页面锚点：只注入执行角色，减少「找入口」的盲试 */
+export interface CaseStepAnchor {
+  page?: string
+  entry?: string
+  target?: string
+}
+
+/** 一步可选的日志证据：只注入验收角色；同一关键词出现两次表示要命中两次 */
+export interface CaseStepLog {
+  sku: string
+  port: number
+  keywords: string[]
+}
+
 /** 一条步骤：动作 + 断言；id 只在读接口回来时存在，保存时按位置整段替换 */
 export interface CaseStep {
   id?: number
   action: string
   assertion: string
+  /** 执行提示：来自 YAML 导入，步骤面板只读展示，保存时原样回传 */
+  anchor?: CaseStepAnchor
+  log?: CaseStepLog
 }
 
 export interface CaseProject {

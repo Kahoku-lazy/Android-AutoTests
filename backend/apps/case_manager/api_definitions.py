@@ -7,6 +7,8 @@ from typing import Any
 from django.db import transaction
 from django.utils import timezone
 
+from engines.agents.workflow.case_file import parse_step_hints
+
 from .api_files import get_file
 from .api_ids import allocate_case_id_on_create
 from .api_projects import ConflictError, get_project
@@ -55,7 +57,13 @@ def format_display_time(value) -> str:
 def serialize_steps(obj: TestDefinition) -> list[dict[str, Any]]:
     """Return the ordered step list of one case（预取命中时不再查库）。"""
     return [
-        {"id": step.id, "action": step.action, "assertion": step.assertion}
+        {
+            "id": step.id,
+            "action": step.action,
+            "assertion": step.assertion,
+            "anchor": step.anchor or {},
+            "log": step.log or {},
+        }
         for step in obj.steps.all()
     ]
 
@@ -99,24 +107,36 @@ def _owned_case(*, case_id: str, user_id: str) -> TestDefinition:
     return obj
 
 
-def _normalize_steps(steps: Any) -> list[dict[str, str]]:
-    """把入参收敛为 ``[{"action", "assertion"}]``，保持提交顺序。
+def _normalize_steps(steps: Any) -> list[dict[str, Any]]:
+    """把入参收敛为 ``[{"action", "assertion", "anchor", "log"}]``，保持提交顺序。
+
+    执行提示（``anchor`` / ``log``）合法时收成纯字典，缺失时为空字典；不合法时
+    错误信息带步骤序号，由调用方直接透给前端。
 
     Raises:
-        ValueError: 入参不是数组，或某一项不是对象。
+        ValueError: 入参不是数组，某一项不是对象，或某步执行提示不合法。
     """
     if steps is None:
         return []
     if not isinstance(steps, (list, tuple)):
         raise ValueError("执行步骤必须是数组")
-    normalized: list[dict[str, str]] = []
+    normalized: list[dict[str, Any]] = []
     for index, item in enumerate(steps, start=1):
         if not isinstance(item, dict):
             raise ValueError(f"第 {index} 步格式无效")
+        anchor, log, reason = parse_step_hints(
+            item.get("anchor"),
+            item.get("log"),
+            where=f"第 {index} 步",
+        )
+        if reason:
+            raise ValueError(reason)
         normalized.append(
             {
                 "action": str(item.get("action") or ""),
                 "assertion": str(item.get("assertion") or ""),
+                "anchor": anchor,
+                "log": log,
             }
         )
     return normalized
@@ -162,7 +182,7 @@ def _validate_required(*, title: str, steps: list[dict[str, Any]]) -> None:
             raise ValueError(f"第 {index} 步：断言不能超过 {MAX_STEP_TEXT} 字符")
 
 
-def _replace_steps(obj: TestDefinition, steps: list[dict[str, str]]) -> None:
+def _replace_steps(obj: TestDefinition, steps: list[dict[str, Any]]) -> None:
     """整段替换步骤：先清空再按顺序重建，序号由服务端重编号。"""
     obj.steps.all().delete()
     CaseStep.objects.bulk_create(
@@ -172,6 +192,8 @@ def _replace_steps(obj: TestDefinition, steps: list[dict[str, str]]) -> None:
                 sort_order=index,
                 action=step["action"],
                 assertion=step["assertion"],
+                anchor=step.get("anchor") or {},
+                log=step.get("log") or {},
             )
             for index, step in enumerate(steps, start=1)
         ]

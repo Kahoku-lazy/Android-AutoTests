@@ -13,6 +13,7 @@ import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
 import ProjectTree from "./components/ProjectTree.vue"
 import CasePagePreview from "./components/CasePagePreview.vue"
+import ImportYamlDialog from "./components/ImportYamlDialog.vue"
 import SplitHandle from "@/shared/components/SplitHandle.vue"
 import { useProjectTree } from "./composables/useProjectTree"
 import type { TreeFileNode, TreeNode } from "./types"
@@ -21,6 +22,9 @@ const route = useRoute()
 const router = useRouter()
 
 const projectId = computed(() => Number(route.params.projectId))
+
+/** 导入 YAML 弹窗：导入成功后刷新目录树 */
+const importVisible = ref(false)
 
 const {
   project,
@@ -124,6 +128,11 @@ async function refreshTree() {
   await loadTree()
 }
 
+async function onYamlImported(payload: { file_id: number }) {
+  await loadTree()
+  await selectFile(payload.file_id)
+}
+
 async function onCreateDirectory(payload: { name: string; parentId: number | null }) {
   await addDirectory(payload.name, payload.parentId)
 }
@@ -190,7 +199,13 @@ onBeforeUnmount(() => {
       :subtitle="headerSubtitle"
       icon="layers"
       :icon-gradient="'linear-gradient(135deg,var(--c-case),var(--case-icon-accent))'"
-    />
+    >
+      <template #actions>
+        <el-button class="wb-btn" @click="importVisible = true">导入 YAML</el-button>
+      </template>
+    </WorkbenchHeader>
+
+    <ImportYamlDialog v-model="importVisible" :project-id="projectId" @imported="onYamlImported" />
 
     <div class="doc-body">
       <WorkbenchCrumbs back-to="/cases" back-label="返回项目列表" :items="crumbItems" />

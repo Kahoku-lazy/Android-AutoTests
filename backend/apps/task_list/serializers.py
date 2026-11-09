@@ -1,13 +1,19 @@
 """task-list serializers — task submission input."""
 
+import json
+
 from rest_framework import serializers
+
+CASE_SOURCE_YAML = "yaml"
+CASE_SOURCE_PLATFORM = "platform"
 
 
 class TaskSubmitInputSerializer(serializers.Serializer):
     """任务提交入参 — title/agent_id 必填；设备由任务类型在视图层校验。
 
-    device_control 任务必须有 device_serial；case_authoring 任务必须上传
-    documents（PRD/Word），不需要设备与 YAML。
+    device_control 任务必须有 device_serial，用例来源二选一：``yaml`` 上传配置
+    文件，或 ``platform`` 给用例编号列表（JSON 数组字符串）。case_authoring 任务
+    必须上传 documents（PRD/Word），不需要设备与 YAML。
     """
 
     title = serializers.CharField(required=True, allow_blank=False)
@@ -27,6 +33,12 @@ class TaskSubmitInputSerializer(serializers.Serializer):
         error_messages={"invalid": "请选择设备"},
     )
     case_title = serializers.CharField(required=False, allow_blank=True, default="")
+    case_source = serializers.ChoiceField(
+        required=False,
+        choices=[CASE_SOURCE_YAML, CASE_SOURCE_PLATFORM],
+        default=CASE_SOURCE_YAML,
+    )
+    case_ids = serializers.CharField(required=False, allow_blank=True, default="")
     goal = serializers.CharField(required=False, allow_blank=True, default="")
     assistant_route = serializers.CharField(required=False, allow_blank=True, default="")
     device_label = serializers.CharField(required=False, allow_blank=True, default="")
@@ -52,6 +64,30 @@ class TaskSubmitInputSerializer(serializers.Serializer):
 
     def validate_case_title(self, value):
         return (value or "").strip()
+
+    def validate_case_ids(self, value):
+        """把 JSON 数组字符串收成用例编号列表。
+
+        Raises:
+            serializers.ValidationError: 不是 JSON 数组，或元素不是非空字符串。
+        """
+        text = (value or "").strip()
+        if not text:
+            return []
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise serializers.ValidationError("用例编号必须是 JSON 数组") from exc
+        if not isinstance(parsed, list):
+            raise serializers.ValidationError("用例编号必须是 JSON 数组")
+        ids: list[str] = []
+        for item in parsed:
+            if not isinstance(item, (str, int)):
+                raise serializers.ValidationError("用例编号必须是字符串")
+            clean = str(item).strip()
+            if clean:
+                ids.append(clean)
+        return ids
 
     def validate_device_label(self, value):
         return (value or "").strip()

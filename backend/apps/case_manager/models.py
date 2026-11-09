@@ -190,6 +190,8 @@ class CaseStep(models.Model):
     """Ordered step of a document case → cm_case_steps.
 
     步骤顺序即执行顺序：``sort_order`` 由服务端按提交顺序重编号，客户端不指定。
+    ``anchor`` / ``log`` 是执行侧可选提示（页面锚点 / 日志证据），只由 YAML 导入与
+    步骤面板产生，空字典表示该步没有提示。
     """
 
     case = models.ForeignKey(
@@ -200,6 +202,8 @@ class CaseStep(models.Model):
     sort_order = models.PositiveIntegerField(default=1)
     action = models.TextField(default="", blank=True)
     assertion = models.TextField(default="", blank=True)
+    anchor = models.JSONField(default=dict, blank=True)
+    log = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

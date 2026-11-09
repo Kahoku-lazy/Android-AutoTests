@@ -1,11 +1,13 @@
 /**
- * [P0] 必测 — 任务发布表单：智能体必选、YAML 解析标题、提交五项
+ * [P0] 必测 — 任务发布表单：智能体必选、用例来源二选一、YAML 解析标题、提交载荷
  */
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest"
 import { flushPromises } from "@vue/test-utils"
 import * as taskApi from "@/modules/task-list/api/tasks"
 import * as agentApi from "@/modules/ai-assistant/api/agents"
+import * as caseApi from "@/modules/case-manager/api"
 import { useTaskPublish } from "@/modules/task-list/composables/useTaskPublish"
+import { flattenFiles } from "@/modules/task-list/composables/usePlatformCases"
 import { mountComposable } from "../../helpers/mountComposable"
 
 vi.mock("@/modules/task-list/api/tasks", () => ({
@@ -15,6 +17,12 @@ vi.mock("@/modules/task-list/api/tasks", () => ({
 
 vi.mock("@/modules/ai-assistant/api/agents", () => ({
   listAgents: vi.fn(),
+}))
+
+vi.mock("@/modules/case-manager/api", () => ({
+  listProjects: vi.fn(),
+  getProjectTree: vi.fn(),
+  getFileSheet: vi.fn(),
 }))
 
 const YAML_TEXT = `
@@ -68,6 +76,39 @@ describe("[P0] useTaskPublish", () => {
         ],
       },
     })
+    vi.mocked(caseApi.listProjects).mockResolvedValue({
+      data: { status: true, data: [{ id: 7, name: "H6810 用例库" }] },
+    } as never)
+    vi.mocked(caseApi.getProjectTree).mockResolvedValue({
+      data: {
+        status: true,
+        data: {
+          project: { id: 7, name: "H6810 用例库" },
+          tree: [
+            {
+              type: "directory",
+              id: 1,
+              name: "01",
+              sort_order: 0,
+              children: [{ type: "file", id: 21, name: "case", sort_order: 0, updated_at: "" }],
+            },
+            { type: "file", id: 20, name: "H6810_structured_cases", sort_order: 1, updated_at: "" },
+          ],
+        },
+      },
+    } as never)
+    vi.mocked(caseApi.getFileSheet).mockResolvedValue({
+      data: {
+        status: true,
+        data: {
+          file: { id: 20, project_id: 7, directory_id: null, name: "H6810_structured_cases" },
+          rows: [
+            { id: "TC-1", title: "H6810 定时功能测试", step_count: 5 },
+            { id: "TC-2", title: "H6810 颜色功能测试", step_count: 7 },
+          ],
+        },
+      },
+    } as never)
   })
 
   afterEach(() => {
@@ -80,6 +121,7 @@ describe("[P0] useTaskPublish", () => {
 
     result.form.value.title = "标题"
     result.form.value.device_serial = "S1"
+    result.form.value.case_source = "yaml"
     await result.onConfigChange(yamlFile())
     expect(result.canSubmit()).toBe(false)
 
@@ -117,7 +159,7 @@ describe("[P0] useTaskPublish", () => {
     wrapper.unmount()
   })
 
-  it("提交只带 title/agent_id/device_serial/case_title/config", async () => {
+  it("本地 YAML 来源提交 title/agent_id/device_serial/case_source/case_title/config", async () => {
     vi.mocked(taskApi.submitTask).mockResolvedValue({
       status: true,
       data: { id: 1, status: "pending" },
@@ -128,6 +170,7 @@ describe("[P0] useTaskPublish", () => {
     result.form.value.title = "校准"
     result.form.value.agent_id = 10
     result.form.value.device_serial = "S1"
+    result.form.value.case_source = "yaml"
     await result.onConfigChange(yamlFile())
     result.form.value.case_title = "乙"
     await result.submit()
@@ -138,12 +181,122 @@ describe("[P0] useTaskPublish", () => {
     expect(fd.get("title")).toBe("校准")
     expect(fd.get("agent_id")).toBe("10")
     expect(fd.get("device_serial")).toBe("S1")
+    expect(fd.get("case_source")).toBe("yaml")
     expect(fd.get("case_title")).toBe("乙")
     expect(fd.get("config")).toBeInstanceOf(File)
+    expect(fd.get("case_ids")).toBeNull()
     expect(fd.get("goal")).toBeNull()
     expect(fd.get("documents")).toBeNull()
 
     wrapper.unmount()
+  })
+
+  it("平台用例来源：至少选一条才能提交，提交带 case_ids 且不带 config", async () => {
+    vi.mocked(taskApi.submitTask).mockResolvedValue({
+      status: true,
+      data: { id: 3, status: "pending" },
+    })
+    const { result, wrapper } = await mountComposable(() => useTaskPublish())
+    await flushPromises()
+
+    result.form.value.title = "H6810 回归"
+    result.form.value.agent_id = 10
+    result.form.value.device_serial = "S1"
+    expect(result.form.value.case_source).toBe("platform")
+    expect(result.canSubmit()).toBe(false)
+
+    await result.onPlatformProjectChange(7)
+    await flushPromises()
+    expect(result.platform.files.value.map((f) => f.name)).toEqual([
+      "case",
+      "H6810_structured_cases",
+    ])
+
+    await result.onPlatformFileChange(20)
+    await flushPromises()
+    expect(result.platform.cases.value).toHaveLength(2)
+
+    result.onPlatformCasesChange(["TC-1", "TC-2"])
+    expect(result.canSubmit()).toBe(true)
+
+    await result.submit()
+    await flushPromises()
+
+    const fd = vi.mocked(taskApi.submitTask).mock.calls[0][0] as FormData
+    expect(fd.get("case_source")).toBe("platform")
+    expect(JSON.parse(String(fd.get("case_ids")))).toEqual(["TC-1", "TC-2"])
+    expect(fd.get("config")).toBeNull()
+    expect(fd.get("case_title")).toBeNull()
+    expect(fd.get("device_serial")).toBe("S1")
+
+    wrapper.unmount()
+  })
+
+  it("切换用例来源清空另一侧已选内容", async () => {
+    const { result, wrapper } = await mountComposable(() => useTaskPublish())
+    await flushPromises()
+
+    await result.onPlatformProjectChange(7)
+    await result.onPlatformFileChange(20)
+    await flushPromises()
+    result.onPlatformCasesChange(["TC-1"])
+    expect(result.form.value.caseIds).toEqual(["TC-1"])
+
+    result.form.value.case_source = "yaml"
+    await flushPromises()
+    expect(result.form.value.caseIds).toEqual([])
+
+    await result.onConfigChange(yamlFile())
+    result.form.value.case_title = "甲"
+    result.form.value.case_source = "platform"
+    await flushPromises()
+    expect(result.form.value.configFile).toBeNull()
+    expect(result.form.value.case_title).toBe("")
+
+    wrapper.unmount()
+  })
+
+  it("切项目或切表都会清空已选用例", async () => {
+    const { result, wrapper } = await mountComposable(() => useTaskPublish())
+    await flushPromises()
+
+    await result.onPlatformProjectChange(7)
+    await result.onPlatformFileChange(20)
+    await flushPromises()
+    result.onPlatformCasesChange(["TC-1", "TC-2"])
+
+    await result.onPlatformFileChange(21)
+    expect(result.form.value.caseIds).toEqual([])
+
+    result.onPlatformCasesChange(["TC-1"])
+    await result.onPlatformProjectChange(null)
+    expect(result.form.value.caseIds).toEqual([])
+    expect(result.platform.files.value).toEqual([])
+
+    wrapper.unmount()
+  })
+
+  it("目录树拍平成用例表列表", () => {
+    const files = flattenFiles([
+      { type: "file", id: 1, name: "a", sort_order: 0, updated_at: "" },
+      {
+        type: "directory",
+        id: 2,
+        name: "01",
+        sort_order: 1,
+        children: [
+          { type: "file", id: 3, name: "b", sort_order: 0, updated_at: "" },
+          {
+            type: "directory",
+            id: 4,
+            name: "02",
+            sort_order: 1,
+            children: [{ type: "file", id: 5, name: "c", sort_order: 0, updated_at: "" }],
+          },
+        ],
+      },
+    ])
+    expect(files.map((item) => item.name)).toEqual(["a", "b", "c"])
   })
 
   it("Agent-02：上传 PRD/Word 后可提交，只带文档不带设备与 YAML", async () => {

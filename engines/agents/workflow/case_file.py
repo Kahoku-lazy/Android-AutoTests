@@ -13,6 +13,7 @@ Python 调试：➡️ python -m engines.agents.workflow.case_file 🏁
 2. load_manual_cases: 手工入口读取用例，缺少 agent 时按 sop
 3. CaseStep / LogEvidence: 一步的结构化输入；anchor（页面锚点）与 log（日志证据）可选
 4. _parse_anchor / _parse_log: 可选字段的校验，失败时给出可读原因而不抛异常
+5. parse_step_hints: 把可选执行提示校验成可入库的纯字典，供平台用例库复用
 🏁
 关联模块：➡️
 1. 暂无本地 engines/utils 依赖
@@ -20,6 +21,7 @@ Python 调试：➡️ python -m engines.agents.workflow.case_file 🏁
 测试：➡️
 1. tests/graybox/unit/test_case_step_fields.py: 步骤结构字段的解析与拒绝
 2. tests/graybox/unit/test_platform_case_title.py: 平台 SOP 指定用例
+3. tests/graybox/unit/test_case_yaml_import.py: parse_step_hints 的合法/非法两路
 🏁
 """
 
@@ -267,6 +269,40 @@ def parse_cases(
     if enforce and agents[0] != SOP_AGENT:
         return [], f"未登记的智能体: {agents[0]}"
     return items, ""
+
+
+def parse_step_hints(
+    anchor: object, log: object, *, where: str = "步骤"
+) -> tuple[dict[str, str], dict[str, object], str]:
+    """
+    校验一步的可选执行提示，返回可入库的纯字典。
+
+    Args:
+        anchor: YAML 或接口里的 `anchor` 节点；None 表示该步没有页面锚点。
+        log: YAML 或接口里的 `log` 节点；None 表示该步没有日志证据。
+        where: 报错定位用的路径，例如「用例「甲」第 2 步」。
+
+    Returns:
+        (页面锚点字典, 日志证据字典, 失败原因)。成功时原因为空串，缺失项为空字典；
+        日志证据固定为 `{sku, port, keywords}`，单关键词也收敛成列表。
+
+    Raises:
+        无：校验失败一律通过返回值报出，不打断调用方。
+    """
+    anchor_map, reason = _parse_anchor(anchor, where=where)
+    if reason:
+        return {}, {}, reason
+    evidence, reason = _parse_log(log, where=where)
+    if reason:
+        return {}, {}, reason
+    payload: dict[str, object] = {}
+    if evidence is not None:
+        payload = {
+            "sku": evidence.sku,
+            "port": evidence.port,
+            "keywords": list(evidence.keywords),
+        }
+    return dict(anchor_map or {}), payload, ""
 
 
 def validate_platform_yaml(text: str) -> tuple[list[CaseItem], str]:

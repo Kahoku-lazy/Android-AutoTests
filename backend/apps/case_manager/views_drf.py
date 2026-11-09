@@ -1,5 +1,7 @@
 """case_manager DRF ViewSets — projects, directories, document definitions."""
 
+from pathlib import Path
+
 from drf_spectacular.utils import OpenApiTypes, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view
@@ -9,6 +11,12 @@ from rest_framework.response import Response
 from . import api as case_api
 from .api_projects import ConflictError
 from .models import CaseDirectory, CaseFile, CaseProject, TestDefinition
+
+#: YAML 导入的体积上限，与任务附件同口径。
+IMPORT_YAML_MAX_SIZE = 20 * 1024 * 1024
+
+#: 允许导入的 YAML 扩展名。
+IMPORT_YAML_EXTENSIONS = {".yaml", ".yml"}
 
 # 下列 @extend_schema / @extend_schema_view 仅声明 OpenAPI 文档中的 JSON 入参/响应形态，
 # queryset 仅用于让 drf-spectacular 从模型推导路径参数类型，运行时不会被查询。
@@ -289,6 +297,46 @@ class TestDefinitionViewSet(viewsets.ViewSet):
         except Exception as exc:
             return _raise_or_conflict(exc)
         return Response(data)
+
+
+@extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+@api_view(["POST"])
+def import_yaml(request):
+    """把上传的 YAML 用例导入当前用户的用例项目。"""
+    upload = request.FILES.get("file")
+    if upload is None:
+        raise ValidationError({"detail": "请上传 YAML 文件"})
+    filename = Path(str(upload.name or "")).name
+    if Path(filename).suffix.lower() not in IMPORT_YAML_EXTENSIONS:
+        raise ValidationError({"detail": "只支持 YAML（.yaml / .yml）"})
+    size = getattr(upload, "size", 0) or 0
+    if size > IMPORT_YAML_MAX_SIZE:
+        raise ValidationError({"detail": "文件过大（上限 20MB）"})
+    try:
+        text = upload.read().decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise ValidationError({"detail": "YAML 必须是 UTF-8"}) from exc
+
+    body = request.data or {}
+    project_id = body.get("project_id")
+    if project_id in (None, ""):
+        raise ValidationError({"detail": "必须指定所属项目"})
+    raw_file_id = body.get("file_id")
+    file_id = int(raw_file_id) if raw_file_id not in (None, "") else None
+    file_name = str(body.get("file_name") or "").strip() or Path(filename).stem
+    prune = str(body.get("prune") or "").strip().lower() in {"1", "true", "yes", "on"}
+    try:
+        data = case_api.import_yaml_text(
+            project_id=int(project_id),
+            user_id=_user_id(request),
+            text=text,
+            file_id=file_id,
+            file_name=file_name,
+            prune=prune,
+        )
+    except Exception as exc:
+        return _raise_or_conflict(exc)
+    return Response(data)
 
 
 @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)

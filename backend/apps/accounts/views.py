@@ -164,7 +164,7 @@ class LogoutView(APIView):
             blacklist_token(token)
         except BlacklistUnavailableError:
             return Response(
-                {"detail": "Redis 不可用，无法撤销令牌", "retry": True},
+                {"detail": "吊销服务不可用，请稍后重试", "retry": True},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         return Response({})

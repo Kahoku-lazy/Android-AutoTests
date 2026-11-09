@@ -8,13 +8,20 @@ from __future__ import annotations
 
 import pytest
 
+from django.contrib.auth.models import User
 from django.test import Client
 
 from backend.shared.auth.jwt_auth import create_access_token
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit, pytest.mark.auth]
 
-POST_PATH = "/api/reports/"  # 该视图非 DRF、未 @csrf_exempt，但会忽略请求方法直接返回 JSON
+POST_PATH = "/api/auth/logout/"  # DRF 受保护端点：JWT 请求必须绕过 CSRF 校验直达视图
+
+
+@pytest.fixture
+def user():
+    """令牌的 sub 必须指向真实用户：DRF 认证会按 sub 查 auth_user。"""
+    return User.objects.create_user(username="csrf_probe", password="pw123456")
 
 
 @pytest.fixture
@@ -29,13 +36,13 @@ def strict_client():
     return Client(enforce_csrf_checks=True)
 
 
-def _jwt_header(user_id: str = "u-csrf-test") -> dict:
+def _jwt_header(user_id: str) -> dict:
     return {"HTTP_AUTHORIZATION": f"Bearer {create_access_token(user_id)}"}
 
 
-def test_jwt_request_is_not_csrf_blocked(strict_client):
+def test_jwt_request_is_not_csrf_blocked(strict_client, user):
     """强制 CSRF 下，有效 JWT 的 POST 仍必须到达视图（200，非 403）。"""
-    resp = strict_client.post(POST_PATH, **_jwt_header())
+    resp = strict_client.post(POST_PATH, **_jwt_header(str(user.id)))
     assert resp.status_code == 200, resp.content[:200]
     assert resp.json()["status"] is True
 

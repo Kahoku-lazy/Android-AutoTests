@@ -1,19 +1,26 @@
-"""登出 = 退出本次登录 —— 会话级吊销契约（OpenSpec: revoke-session-on-logout）。
+"""登出 = 退出本次登录 —— 会话级吊销契约（OpenSpec: db-backed-token-revocation）。
 
-逐条对应 openspec/changes/revoke-session-on-logout/specs/auth-session/spec.md 的 Scenario。
-JWT 吊销记录存放在真实 Redis（测试库不含 Redis），键自带 TTL，用例之间用不同 sid 相互隔离。
+逐条对应该变更 specs/auth-session/spec.md 的 Scenario。
+吊销记录持久化在数据库（测试库为 SQLite 内存库），不再依赖 Redis；
+记录带失效时刻，用例之间用不同 sid 相互隔离。
 """
 
 from __future__ import annotations
 
 import json
 
+from datetime import timedelta
+
 import jwt as pyjwt
 import pytest
 
 from django.contrib.auth.models import User
+from django.db import OperationalError
 from django.test import Client
+from django.utils import timezone
 
+from backend.apps.accounts import api
+from backend.apps.accounts.models import TokenRevocation
 from backend.shared.auth import jwt_auth
 from backend.shared.auth.jwt_auth import (
     create_access_token,
@@ -109,16 +116,21 @@ def test_other_session_is_unaffected(user):
     assert _post(b, "/api/auth/refresh/", {"refresh_token": tb["refresh_token"]}).status_code == 200
 
 
-def test_logout_fails_closed_when_redis_unavailable(user, monkeypatch):
-    """Scenario: Redis 不可用时拒绝登出（503 + retry），不假装成功。"""
+def test_logout_fails_closed_when_store_unavailable(user, monkeypatch):
+    """Scenario: 吊销存储不可用时拒绝登出（503 + retry），不假装成功。"""
+
+    def _broken(*_args, **_kwargs):
+        raise OperationalError("revocation store unavailable")
+
     c = Client()
     tokens = _login(c)
 
-    monkeypatch.setattr(jwt_auth, "_get_redis", lambda: None)
+    monkeypatch.setattr(api, "revoke_session", _broken)
     r = _post(c, "/api/auth/logout/", None, **_auth(tokens["access_token"]))
 
     assert r.status_code == 503, r.content
     assert r.json()["retry"] is True
+    assert r.json()["message"] == "吊销服务不可用，请稍后重试"
 
     # 未成功吊销 —— 会话仍然可用（fail-closed 的语义是「拒绝」而不是「假装成功」）
     monkeypatch.undo()
@@ -149,13 +161,59 @@ def test_verify_token_rejects_revoked_session(user):
 
 
 def test_revocation_ttl_covers_refresh_lifetime(user, monkeypatch):
-    """不变量：会话吊销记录的 TTL 必须覆盖 refresh 的寿命，否则 refresh 会「复活」。"""
+    """不变量：会话吊销记录的有效期必须覆盖 refresh 的寿命，否则 refresh 会「复活」。"""
     captured = {}
     monkeypatch.setattr(
-        jwt_auth, "_revocation_add", lambda key, ttl: captured.update(key=key, ttl=ttl)
+        jwt_auth,
+        "_revocation_add",
+        lambda kind, ref, ttl: captured.update(kind=kind, ref=ref, ttl=ttl),
     )
 
     jwt_auth.revoke_session("sid-under-test")
 
-    assert captured["key"] == jwt_auth._SESSION_PREFIX + "sid-under-test"
+    assert captured["kind"] == "session"
+    assert captured["ref"] == "sid-under-test"
     assert captured["ttl"] == jwt_auth.get_config().refresh_ttl
+
+
+def test_revocation_row_is_persisted(user):
+    """Scenario: 吊销记录跨服务重启仍然有效 —— 记录落在库里，不在进程内存。"""
+    tokens = create_token_pair(str(user.id))
+    sid = session_id_of(tokens["access_token"])
+    jwt_auth.revoke_session(sid)
+
+    row = TokenRevocation.objects.get(kind=TokenRevocation.KIND_SESSION, ref=sid)
+    remaining = (row.expires_at - timezone.now()).total_seconds()
+    assert remaining > jwt_auth.get_config().refresh_ttl - 60
+
+
+def test_expired_revocation_no_longer_blocks(user):
+    """Scenario: 吊销记录过期后不再生效。"""
+    tokens = create_token_pair(str(user.id))
+    sid = session_id_of(tokens["access_token"])
+    jwt_auth.revoke_session(sid)
+
+    TokenRevocation.objects.filter(ref=sid).update(expires_at=timezone.now() - timedelta(seconds=1))
+
+    assert verify_token(tokens["access_token"], expected_type="access")["sub"] == str(user.id)
+
+
+def test_purge_expired_keeps_live_records(user):
+    """清理只删过期行，未过期记录的行为不变。"""
+    now = timezone.now()
+    TokenRevocation.objects.create(
+        kind=TokenRevocation.KIND_SESSION,
+        ref="expired-sid",
+        expires_at=now - timedelta(hours=1),
+    )
+    TokenRevocation.objects.create(
+        kind=TokenRevocation.KIND_SESSION,
+        ref="live-sid",
+        expires_at=now + timedelta(hours=1),
+    )
+
+    assert api.purge_expired() == 1
+    assert not TokenRevocation.objects.filter(ref="expired-sid").exists()
+    assert TokenRevocation.objects.filter(ref="live-sid").exists()
+    assert api.is_revoked(sid="live-sid") is True
+    assert api.is_revoked(sid="expired-sid") is False

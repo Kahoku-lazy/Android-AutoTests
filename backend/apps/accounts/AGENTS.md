@@ -2,8 +2,9 @@
 
 > **AGENTS 层级**：二级约束 —— 根 `AGENTS.md` 与上级 `backend/apps/AGENTS.md` 优先于本文件（本文件只写增量）。
 
-登录鉴权模块。**没有自有表**（无 `models.py`），直接使用 Django 内置 `auth_user`；
-写操作全部收敛在 `api.py`（`__all__ = ["create_user"]`）。
+登录鉴权模块。用户仍直接使用 Django 内置 `auth_user`；本模块自有表只有一张
+`acc_token_revocations`（`models.TokenRevocation`，登出吊销记录）。
+写操作全部收敛在 `api.py`（`create_user` / `revoke_session` / `revoke_token` / `purge_expired`）。
 规格真相源：`openspec/specs/auth-session/spec.md`。
 
 ## 契约：会话与登出
@@ -16,7 +17,10 @@
   否则续期后的令牌会脱离会话管辖（登出撤不掉它）。
 - **吊销记录 TTL = `JWT_REFRESH_TTL`**：登出请求只携带 access（1h），但同会话的 refresh 还有至多 7d 寿命；
   TTL 取短了会让 refresh 在记录过期后恢复可用。
-- **fail-closed**：吊销写入失败（Redis 不可用）时登出返回 `503` + `retry`，不得假装成功。
+- **吊销记录落库**：判定只看未过期行（`expires_at > now()`），写入时顺手清理一批过期行；
+  服务重启不清空吊销状态，也不再依赖 Redis。
+- **fail-closed**：吊销写入失败（吊销存储不可用，如数据库异常）时登出返回 `503` + `retry`，不得假装成功。
+  校验侧（读）遇存储故障记 error 日志并放行 token —— 不让吊销库抖动把全员踢下线。
 
 ## 契约：用户名唯一性
 
@@ -42,5 +46,5 @@
 | login | 200 / 400 / 401 | 成功 / 用户名或密码缺失 / 凭证错误 |
 | register | 200 / 400 / 409 | 成功 / 长度·一致性·邮箱校验 / 用户名已存在 |
 | refresh | 200 / 401 | 换新 access / refresh 无效、已吊销或类型错 |
-| logout | 200 / 503 | 已吊销 / Redis 不可用（拒绝登出） |
+| logout | 200 / 503 | 已吊销 / 吊销存储不可用（拒绝登出） |
 | me | 200 / 401 / 404 | 身份 / 无令牌或已吊销 / 用户已删除 |

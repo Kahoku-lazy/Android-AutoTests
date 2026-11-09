@@ -10,25 +10,21 @@ from typing import Optional
 import jwt
 
 from django.conf import settings
+from django.db import DatabaseError
 
 logger = logging.getLogger(__name__)
 
-_BLACKLIST_PREFIX = "jwt:blacklist:"
-# 会话级吊销：一次登录签发的 access 与 refresh 共享一个 sid，登出按 sid 整组作废
-_SESSION_PREFIX = "jwt:session_revoked:"
-
-# Redis client — cached after first successful connection.
-# Never caches failures, so it auto-recovers when Redis comes back.
-_redis_client = None
+_REVOCATION_KIND_SESSION = "session"
+_REVOCATION_KIND_TOKEN = "token"
 
 
 class BlacklistUnavailableError(RuntimeError):
-    """Raised when a blacklist operation fails because Redis is unavailable.
+    """Raised when a revocation record cannot be written (store unavailable).
 
-    This is a deliberate hard-fail: without Redis, we cannot reliably
-    persist token revocations.  Accepting a logout and storing the
-    revocation in memory would mean revoked tokens become valid again
-    after a service restart — a security regression.
+    This is a deliberate hard-fail: without a durable revocation store we
+    cannot promise that a logout sticks.  Accepting a logout and keeping the
+    revocation in memory would mean revoked tokens become valid again after a
+    service restart — a security regression.
     """
 
 
@@ -52,106 +48,72 @@ def get_config() -> JWTConfig:
     return JWTConfig()
 
 
-def _get_redis():
-    """Return a Redis client or None if unavailable.
+def _revocation_store():
+    """返回吊销存储的读写口（`apps.accounts.api`）。
 
-    Successful connections are cached for reuse.  Failures are never
-    cached, so the next call will retry — this allows the blacklist to
-    recover automatically once Redis is available again.
+    惰性导入：`apps.accounts.views` 会 import 本模块，模块级反向 import 会成环。
     """
-    global _redis_client
-    if _redis_client is not None:
-        try:
-            _redis_client.ping()
-            return _redis_client
-        except Exception:
-            logger.warning("JWT blacklist: cached Redis connection lost, reconnecting")
-            _redis_client = None
-    try:
-        import redis
+    from backend.apps.accounts import api as accounts_api
 
-        client = redis.from_url(
-            getattr(settings, "REDIS_URL", "redis://localhost:6379/0"),
-            decode_responses=True,
-            socket_connect_timeout=3,
-        )
-        client.ping()
-        _redis_client = client
-        return client
-    except Exception as exc:
-        logger.error(
-            "JWT blacklist: Redis 不可用，Token 黑名单操作将失败。"
-            "请启动 Redis: redis-server --port %s。错误: %s",
-            getattr(settings, "REDIS_PORT", 6379),
-            exc,
-        )
-        return None
+    return accounts_api
 
 
 def _is_revoked(jti: str = "", sid: str = "") -> bool:
     """Check whether this token's *jti*, or its session *sid*, has been revoked.
 
-    Both keys go into a single ``EXISTS`` round trip, so session-level revocation
+    Both identifiers are resolved in a single query, so session-level revocation
     costs nothing extra on the hot path (``verify_token`` runs on every
     authenticated request).
 
-    When Redis is unavailable we log an error and return ``False``
+    When the revocation store is unreachable we log an error and return ``False``
     (allow the token).  This is the safer default: rejecting every
-    token when the revocation store is unreachable would lock all users out.
+    token when the revocation store hiccups would lock all users out.
     """
-    keys = []
-    if jti:
-        keys.append(f"{_BLACKLIST_PREFIX}{jti}")
-    if sid:
-        keys.append(f"{_SESSION_PREFIX}{sid}")
-    if not keys:
+    if not jti and not sid:
         return False
-    client = _get_redis()
-    if client:
-        try:
-            return bool(client.exists(*keys))
-        except Exception as exc:
-            logger.error("JWT blacklist: exists() 失败: %s", exc)
-            return False
-    logger.error("JWT blacklist: 无法检查黑名单（Redis 不可用），放行 token")
-    return False
+    try:
+        return _revocation_store().is_revoked(sid=sid, jti=jti)
+    except DatabaseError as exc:
+        logger.error("JWT 吊销：查询吊销记录失败，放行 token: %s", exc)
+        return False
 
 
-def _revocation_add(key: str, ttl_seconds: int):
+def _revocation_add(kind: str, ref: str, ttl_seconds: int) -> None:
     """Record one revocation entry with the given TTL.
 
-    Raises :class:`BlacklistUnavailableError` when Redis is
+    Raises :class:`BlacklistUnavailableError` when the store is
     unavailable — we refuse to perform a logout that would be silently
     undone on the next service restart.
+
+    Args:
+        kind: ``session``（按会话）或 ``token``（按单令牌）。
+        ref: 会话标识或令牌标识。
+        ttl_seconds: 记录有效期（秒）。
     """
-    if not key:
+    if not ref:
         return
-    ttl_seconds = max(int(ttl_seconds), 1)
-    client = _get_redis()
-    if client:
-        try:
-            # set(..., ex=) 取代已废弃的 setex（redis-py 标记 deprecated 起）
-            client.set(key, "1", ex=ttl_seconds)
-        except Exception as exc:
-            raise BlacklistUnavailableError(f"Redis 写入黑名单失败: {exc}") from exc
-    else:
-        raise BlacklistUnavailableError(
-            "Redis 不可用，无法将 Token 加入黑名单。请检查 Redis 服务状态后重试登出。"
-        )
+    store = _revocation_store()
+    try:
+        if kind == _REVOCATION_KIND_SESSION:
+            store.revoke_session(ref, ttl_seconds)
+        else:
+            store.revoke_token(ref, ttl_seconds)
+    except DatabaseError as exc:
+        raise BlacklistUnavailableError(f"吊销记录写入失败: {exc}") from exc
 
 
 def _blacklist_add(jti: str, ttl_seconds: int):
     """按单个令牌（jti）吊销 —— 供没有 sid 的历史令牌兜底。"""
     if not jti:
         return
-    _revocation_add(f"{_BLACKLIST_PREFIX}{jti}", ttl_seconds)
+    _revocation_add(_REVOCATION_KIND_TOKEN, jti, ttl_seconds)
 
 
 def _session_add(sid: str, ttl_seconds: int):
     """按会话（sid）吊销 —— 同一次登录的 access 与 refresh 一起失效。"""
     if not sid:
         return
-    _revocation_add(f"{_SESSION_PREFIX}{sid}", ttl_seconds)
+    _revocation_add(_REVOCATION_KIND_SESSION, sid, ttl_seconds)
 
 
 def create_access_token(
@@ -250,7 +212,7 @@ def revoke_session(sid: str, ttl_seconds: Optional[int] = None):
     session's refresh token lives up to ``refresh_ttl`` (7d); a shorter TTL would
     let the refresh token become usable again once the entry expires.
 
-    Raises :class:`BlacklistUnavailableError` when Redis is unavailable.
+    Raises :class:`BlacklistUnavailableError` when the revocation store is unavailable.
     """
     if not sid:
         return
@@ -278,7 +240,7 @@ def session_id_of(token: str) -> str:
 def blacklist_token(token: str):
     """Add token to blacklist by jti claim (for logout).
 
-    Raises :class:`BlacklistUnavailableError` if Redis is unavailable.
+    Raises :class:`BlacklistUnavailableError` if the revocation store is unavailable.
     The caller (logout view) should catch this and return a 503 response
     so the user knows to retry.
     """

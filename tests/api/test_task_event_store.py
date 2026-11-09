@@ -28,7 +28,7 @@ from engines.agents.event_sink import (
     set_step_context,
 )
 from engines.agents.messaging.record import EventRecord
-from engines.agents.workflow.ui_auto_workflow import show_event
+from engines.agents.workflow.ui_auto_workflow import _emit_interrupt, show_event
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 
@@ -311,3 +311,32 @@ def test_show_event_from_running_loop_writes():
     assert row.step_seq == 2
     assert row.attempt == 1
     assert row.case_title == "卡片页"
+
+
+@pytest.mark.django_db(transaction=True)
+def test_interrupt_event_from_running_loop_writes():
+    """中断事件必须真的落库：它不走事件折叠，直接交给接收方。"""
+    task = _task()
+    sink = TaskEventSink()
+    sink_token = bind_sink(sink)
+    run_token = bind_run_context(task.id, task.agent_id, "卡片页")
+
+    async def _run():
+        set_step_context(2, 1)
+        await _emit_interrupt("日志为空", "check_device_log", kind="log", step_seq=2)
+
+    try:
+        asyncio.run(_run())
+        sink.close()
+    finally:
+        reset_sink(sink_token)
+        reset_run_context(run_token)
+
+    row = TaskEvent.objects.get(task=task, event_type="StepInterruptedEvent")
+    assert row.step_seq == 2
+    assert row.attempt == 1
+    assert row.case_title == "卡片页"
+    assert row.payload["kind"] == "log"
+    assert row.payload["step_seq"] == 2
+    assert row.payload["reason"] == "日志为空"
+    assert row.payload["exc_type"] == "check_device_log"

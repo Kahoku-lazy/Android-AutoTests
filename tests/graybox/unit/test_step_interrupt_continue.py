@@ -11,7 +11,7 @@ import pytest
 from agentscope.message import Msg, TextBlock
 from agentscope.types import ReplyFinishedReason
 
-from engines.agents.event_sink import note_interrupt
+from engines.agents.event_sink import bind_sink, note_interrupt, reset_sink
 from engines.agents.tools.tool_serial import LOG_EMPTY
 from engines.agents.workflow import ui_auto_workflow
 from engines.agents.workflow.case_file import CaseStep
@@ -57,7 +57,7 @@ class _FakeExecutor:
 
 
 class _FakeVerifier:
-    """替身验收者：pass 时给通过判决；evidence 时先记一条证据不可用。"""
+    """替身验收者：pass 给通过，reject 一律驳回，evidence 先记一条证据不可用。"""
 
     def __init__(self, name: str, behavior: str) -> None:
         self.name = name
@@ -73,13 +73,31 @@ class _FakeVerifier:
             yield "tool-result"
             return
         yield "looked at screenshot"
+        if self.behavior == "reject":
+            yield _reply(self.name, "驳回", {"passed": False, "message": "页面还停在上一页"})
+            return
         if self.behavior == "pass":
             yield _reply(self.name, "判决", {"passed": True, "message": ""})
 
 
+class _FakeSink:
+    """替身接收方：只记录收到的结构化事件。"""
+
+    def __init__(self) -> None:
+        self.records: list = []
+
+    def emit(self, record, image_b64: str = "") -> None:
+        """收下一条记录。"""
+        del image_b64
+        self.records.append(record)
+
+    def flush(self) -> None:
+        """落库替身：什么都不做。"""
+
+
 @pytest.fixture(autouse=True)
 def _silence_show_event(monkeypatch):
-    """把事件上屏替换成记录器，单测不写库，同时能断言中断事件写出来了。"""
+    """把事件上屏替换成记录器；单测不写文本日志，也不走接收方。"""
     events: list = []
 
     async def _record(event, buf, models, *, flush=False):
@@ -141,19 +159,54 @@ async def test_evidence_missing_interrupts_only_that_step(_silence_show_event):
     assert LOG_EMPTY in workflow.interrupts[0].reason
 
 
-async def test_interrupt_event_is_emitted_with_kind(_silence_show_event):
-    """中断要写成 StepInterruptedEvent，带 kind 与原因，报告才读得到。"""
-    seen = {"executors": 0, "verifiers": 0}
-    workflow = _workflow([("pass", "pass"), ("raise", "pass"), ("pass", "pass")], seen)
+async def test_interrupt_event_reaches_sink(_silence_show_event):
+    """中断要真正交给接收方（写进 task_events），不是只交给上屏函数。
 
-    await workflow.run_workflow("用例", _steps(3), "开场")
+    回归点：中断曾走 `show_event`，而折叠按 AgentScope 事件类型名分派，
+    `EventRecord` 认不出会被静默丢成空结果——任务 201/204 因此一条中断事件都没有。
+    """
+    sink = _FakeSink()
+    token = bind_sink(sink)
+    try:
+        seen = {"executors": 0, "verifiers": 0}
+        workflow = _workflow([("pass", "pass"), ("raise", "pass"), ("pass", "pass")], seen)
 
-    records = [e for e in _silence_show_event if getattr(e, "event_type", "") == "StepInterruptedEvent"]
+        await workflow.run_workflow("用例", _steps(3), "开场")
+    finally:
+        reset_sink(token)
+
+    records = [
+        record for record in sink.records if getattr(record, "event_type", "") == "StepInterruptedEvent"
+    ]
     assert len(records) == 1
     payload = records[0].payload
     assert payload["kind"] == "exception"
     assert payload["step_seq"] == 2
     assert "RuntimeError" in payload["reason"]
+
+
+async def test_rejected_step_is_collected_as_failure(_silence_show_event):
+    """验收驳回到上限的步骤要进 failed_steps，失败原因才点得到名。"""
+    seen = {"executors": 0, "verifiers": 0}
+    workflow = _workflow([("pass", "pass"), ("pass", "reject"), ("pass", "pass")], seen)
+
+    await workflow.run_workflow("用例", _steps(3), "开场")
+
+    assert [item.step_seq for item in workflow.failed_steps] == [2]
+    assert workflow.failed_steps[0].attempts == 2
+    assert "上一页" in workflow.failed_steps[0].reason
+    assert workflow.failed_steps[0].title == "动作 2"
+
+
+async def test_interrupted_step_is_not_reported_as_rejection(_silence_show_event):
+    """被中断的步骤不要在 failed_steps 里再报一次。"""
+    seen = {"executors": 0, "verifiers": 0}
+    workflow = _workflow([("pass", "pass"), ("pass", "evidence")], seen)
+
+    await workflow.run_workflow("用例", _steps(2), "开场")
+
+    assert len(workflow.interrupts) == 1
+    assert workflow.failed_steps == []
 
 
 async def test_all_steps_pass_has_no_interrupt(_silence_show_event):
@@ -169,9 +222,9 @@ async def test_all_steps_pass_has_no_interrupt(_silence_show_event):
 
 def test_interrupt_reason_is_readable():
     """失败原因要写清第几步、哪一类中断与原文。"""
-    from engines.agents.workflow.platform_run import _interrupt_reason
+    from engines.agents.workflow.platform_run import _failure_detail
 
-    detail = _interrupt_reason(
+    detail = _failure_detail(
         [SimpleNamespace(step_seq=2, kind="log", reason=LOG_EMPTY, tool="check_device_log")]
     )
 
@@ -179,7 +232,37 @@ def test_interrupt_reason_is_readable():
     assert "证据不可用" in detail
     assert "check_device_log" in detail
     assert LOG_EMPTY in detail
-    assert _interrupt_reason([]) == ""
+    assert _failure_detail([]) == ""
+
+
+def test_failure_detail_covers_interrupt_and_rejection():
+    """中断与验收驳回要同时出现在原因里（任务 204 只报了中断、漏了驳回）。"""
+    from engines.agents.workflow.platform_run import _failure_detail
+    from engines.agents.workflow.ui_auto_workflow import StepFailure
+
+    detail = _failure_detail(
+        [SimpleNamespace(step_seq=7, kind="log", reason=LOG_EMPTY, tool="check_device_log")],
+        [StepFailure(step_seq=8, title="添加效果", attempts=2, reason="页面还停在上一页")],
+    )
+
+    assert "第 7 步" in detail and "证据不可用" in detail
+    assert "第 8 步" in detail and "添加效果" in detail
+    assert "验收驳回 2 次" in detail
+    assert "页面还停在上一页" in detail
+
+
+def test_failure_detail_counts_overflow():
+    """超过三条要给出总数，避免原因看起来只有三处问题。"""
+    from engines.agents.workflow.platform_run import _failure_detail
+
+    interrupts = [
+        SimpleNamespace(step_seq=index, kind="log", reason=LOG_EMPTY, tool="check_device_log")
+        for index in range(1, 6)
+    ]
+
+    detail = _failure_detail(interrupts)
+
+    assert "等 2 处未通过" in detail
 
 
 def test_verifier_prompt_explains_evidence_missing():

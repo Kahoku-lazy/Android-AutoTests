@@ -13,6 +13,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from engines.device.action import System, open_device
+from utils.adb import AdbUnavailableError
 from utils.logs import backend_log
 
 from .contracts import ConnectionType, DeviceStatus, LockReleaseReason
@@ -77,6 +78,10 @@ def list_devices(request):
                 "current": current_serial,
             }
         )
+    except DeviceError:
+        raise
+    except AdbUnavailableError as exc:
+        return Response({"message": str(exc)}, status=503)
     except Exception:
         backend_log.exception("list_devices failed")
         return Response({"message": "设备列表加载失败"}, status=500)
@@ -253,6 +258,8 @@ def scan_device(request):
         )
     except DeviceError:
         raise  # 交给 DRF 异常处理器返回具体 message（如无法解析序列号）
+    except AdbUnavailableError as exc:
+        return Response({"message": str(exc)}, status=503)
     except Exception:
         backend_log.exception("scan_device failed")
         return Response({"message": "扫描失败"}, status=500)

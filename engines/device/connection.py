@@ -27,12 +27,21 @@ from __future__ import annotations
 import uiautomator2 as u2
 
 from engines.device.action import EngineConnectError
+from utils.adb import adb_binary
 
 __all__ = ["fetch_device_info", "probe_u2"]
 
 
 def probe_u2(addr: str) -> None:
-    """u2 连接 + info 验证（设备连接入口的轻量探活）。失败抛 EngineConnectError。"""
+    """u2 连接 + info 验证（设备连接入口的轻量探活）。失败抛 EngineConnectError。
+
+    Raises:
+        AdbUnavailableError: 平台没有可用 adb（由 `utils.adb` 解析器抛出）。
+        EngineConnectError: u2 连接或取 info 失败。
+    """
+    # 先解析一次 adb：把 ADBUTILS_ADB_PATH 钉到平台自带那份，避免 u2 回退系统 PATH。
+    # 该错误不包成 EngineConnectError —— 缺 adb 是环境问题，需要按 503 原样上报。
+    adb_binary()
     try:
         d = u2.connect(addr)
         _ = d.info
@@ -42,5 +51,6 @@ def probe_u2(addr: str) -> None:
 
 def fetch_device_info(addr: str) -> dict:
     """经 u2 采集设备元信息（productName/displayWidth/displayHeight/sdkInt…）。"""
+    adb_binary()
     d = u2.connect(addr)
     return dict(d.info)

@@ -210,3 +210,7 @@ tests/reports/
 
 # Cursor
 .git/cursor/
+
+# ── 本地安装的 platform-tools（python run.py setup 产物，不入库）──
+tools/platform-tools/
+tools/.cache/

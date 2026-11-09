@@ -119,7 +119,10 @@ Django 版本锁在 6.0.x：6.1 的模型字段检查会在没有数据库时连
 | Python | 3.13（`ruff.toml` 的 `target-version = "py313"`） | `python --version` |
 | Node.js | 20 | `node --version` |
 | MySQL | 默认引擎；也可 `DB_ENGINE=sqlite` | 客户端能连上 `DB_HOST` |
-| ADB | 在 `PATH` 中 | `adb version` |
+| ADB | 平台自带：`python run.py setup` 安装到 `tools/platform-tools/`；也可用 `ADB_PATH` 指向已有 adb（不回退系统 PATH） | `python run.py setup --check` |
+
+> adb 起不来并报 `cannot open ...\adb.log: Permission denied` 时，是 adb 37 在部分 Windows 上写 daemon 日志被拒；
+> 平台已自动把 `ANDROID_ADB_LOG_PATH` 指向 `NUL` 规避，无需手工处理。
 
 ### 安装
 
@@ -133,6 +136,9 @@ source .venv/bin/activate
 
 pip install -r requirements.txt
 cd frontend && npm install && cd ..
+
+# 安装项目内 adb（官方 platform-tools；首次/换机时执行，唯一会联网的命令）
+python run.py setup
 
 cp .env.example .env
 # 至少改这几项：DJANGO_SECRET_KEY、DB_*、DEEPSEEK_API_KEY
@@ -155,6 +161,7 @@ User.objects.filter(username='admin').exists() or User.objects.create_superuser(
 ### 启动
 
 ```bash
+python run.py setup      # 首次/换机：安装项目内 platform-tools（唯一会联网的命令）
 python run.py start      # Daphne(:8766) + Vite(:5173)
 python run.py stop       # 停后端前先排空运行中任务
 python run.py restart
@@ -194,6 +201,7 @@ python run.py check      # 本地质量门禁（与 CI 同一批检查，不跑�
 | `dev_docs/DEV_TEST/` | 设计方案、分析报告、接口说明 |
 | `data/` | **运行时数据根**，已 gitignore。截图、上传、任务媒体、头像、RAG 索引都在这里。可用环境变量 `DATA_DIR` 指到仓库外的磁盘 |
 | `temps/` | **临时沙箱**，已 gitignore。探针、调试截图、门禁产物放这里。可以整目录清空 |
+| `tools/platform-tools/` | **本地 adb**，已 gitignore。由 `python run.py setup` 安装；也可用 `ADB_PATH` 指向其它 adb |
 | `logs/` | 运行日志：`backend.log` · `frontend.log` · `agents/agent_events.log` · `device.log` · `serial.log` · `serial_logs/` |
 
 ### `temps/` 与 `data/` 的边界

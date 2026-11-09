@@ -227,6 +227,15 @@ class _FakeSubprocess:
         return self.calls[-1]["command"]
 
 
+@pytest.fixture(autouse=True)
+def _stub_adb_binary(monkeypatch):
+    """单测不依赖机器上的 adb：解析结果固定为 "adb"，断言仍按命令形式比对。
+
+    解析路径本身由 test_resolved_binary_used_when_executable_not_given 覆盖。
+    """
+    monkeypatch.setattr(android_device, "adb_binary", lambda: "adb")
+
+
 @pytest.fixture
 def fake_subprocess(monkeypatch):
     """把 android_device 里的 subprocess 换成替身；返回安装函数，参数是预设结果队列。"""
@@ -279,6 +288,16 @@ class TestAdbChannel:
         AdbChannel(_SERIAL, executable=r"C:\platform-tools\adb.exe").shell(["getprop"])
 
         assert fake.command[0] == r"C:\platform-tools\adb.exe"
+
+    def test_resolved_binary_used_when_executable_not_given(self, fake_subprocess, monkeypatch):
+        """未显式指定 executable 时，argv0 取平台解析出的 adb 路径。"""
+        monkeypatch.setattr(
+            android_device, "adb_binary", lambda: r"C:\tools\platform-tools\adb.exe"
+        )
+        fake = fake_subprocess()
+        AdbChannel(_SERIAL).shell(["getprop"])
+
+        assert fake.command[0] == r"C:\tools\platform-tools\adb.exe"
 
     def test_timeout_forwarded_to_subprocess(self, fake_subprocess):
         """timeout 原样传给 subprocess.run。"""

@@ -16,7 +16,6 @@
 """
 
 import argparse
-import shutil
 import subprocess
 import sys
 import time
@@ -46,18 +45,10 @@ def _fix_console_encoding() -> None:
 
 
 def adb_path() -> str:
-    found = shutil.which("adb")
-    if found:
-        return found
-    try:
-        import adbutils
+    """返回与平台一致的 adb 路径（ADB_PATH → 项目内 → adbutils 内置，不回退 PATH）。"""
+    from utils.adb import adb_binary
 
-        bundled = adbutils.adb_path()
-        if bundled and Path(bundled).exists():
-            return bundled
-    except Exception:  # noqa: BLE001 - 仅为兜底查找 adb，任何失败都不致命
-        pass
-    return "adb"
+    return adb_binary()
 
 
 def adb_devices(adb: str) -> list[tuple[str, str, str]]:

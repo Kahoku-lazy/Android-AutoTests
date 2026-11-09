@@ -8,6 +8,8 @@ Usage:
     python run.py status
     python run.py logs [backend|frontend ...]
     python run.py check          # 本地质量门禁（实现见 utils/check_gates.py）
+    python run.py setup          # 安装项目内 platform-tools（唯一会联网的命令）
+    python run.py setup --check  # 只检测 adb，缺失时退出码 1
 """
 
 from __future__ import annotations
@@ -301,8 +303,65 @@ _LOGS = {"backend": "backend.log", "frontend": "frontend.log"}
 # ── 命令 ─────────────────────────────────────────────────────
 
 
+def _adb_status_line() -> str:
+    """返回 status 命令里的 ADB 描述：来源 + 版本；缺失时给出修复命令。"""
+    from utils import adb as adb_tools
+
+    info = adb_tools.adb_status()
+    if not info["path"]:
+        return "MISSING  (run: python run.py setup)"
+    version = ""
+    try:
+        proc = subprocess.run([info["path"], "version"], capture_output=True, text=True, timeout=5)
+        lines = (proc.stdout or proc.stderr or "").strip().splitlines()
+        if lines:
+            version = lines[0].replace("Android Debug Bridge version", "").strip()
+    except Exception:  # noqa: BLE001 - 版本行只是附加信息，失败不影响状态输出
+        version = ""
+    label = {"env": "ADB_PATH", "platform": "platform", "bundled": "bundled"}
+    return f"{label.get(info['source'], info['source'])}  {version}".strip()
+
+
+def _ensure_adb() -> None:
+    """启动后端前检查 adb：缺失时提示；`AUTO_SETUP=1` 时自动安装。"""
+    from utils import adb as adb_tools
+
+    try:
+        adb_tools.adb_binary()
+        return
+    except adb_tools.AdbUnavailableError as exc:
+        print(f"  ADB: {exc}")
+    if os.environ.get("AUTO_SETUP", "").strip().lower() not in ("1", "true", "yes"):
+        return
+    from utils import platform_tools
+
+    print("  ADB: AUTO_SETUP=1，开始安装 platform-tools ...")
+    platform_tools.install()
+    adb_tools.reset_cache()
+
+
+def cmd_setup(check_only: bool = False, force: bool = False, from_file: str | None = None) -> None:
+    """检测/安装项目内 platform-tools；唯一会联网的命令。"""
+    from utils import adb as adb_tools
+    from utils import platform_tools
+
+    if check_only:
+        info = platform_tools.status()
+        if info["installed"]:
+            print(f"  ADB: platform 已安装（{info['version']}）{info['path']}")
+            sys.exit(0)
+        print(f"  ADB: 未安装（当前来源：{info['source']}）。运行 python run.py setup 安装。")
+        sys.exit(1)
+
+    platform_tools.install(force=force, archive=from_file)
+    adb_tools.reset_cache()
+    print(f"  ADB: {adb_tools.adb_binary()}")
+
+
 def cmd_start(services: list[str]) -> None:
     names = resolve_services(services)
+    if "backend" in names:
+        _ensure_adb()
     for s in names:
         _STOP[s]()
     time.sleep(1)
@@ -352,6 +411,7 @@ def cmd_status() -> None:
     fe_port = SERVICES["frontend"]
     print(f"  Django backend   (:{be_port})  {http_ok(f'http://127.0.0.1:{be_port}/')}")
     print(f"  Vue frontend     (:{fe_port})  {http_ok(f'http://127.0.0.1:{fe_port}/')}")
+    print(f"  ADB              : {_adb_status_line()}")
 
 
 def cmd_logs(services: list[str]) -> None:
@@ -374,8 +434,11 @@ def cmd_check() -> None:
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Android-AutoTests platform manager")
-    p.add_argument("cmd", choices=["start", "stop", "restart", "status", "logs", "check"])
+    p.add_argument("cmd", choices=["start", "stop", "restart", "status", "logs", "check", "setup"])
     p.add_argument("services", nargs="*", default=[], help="backend frontend (default: all)")
+    p.add_argument("--check", action="store_true", help="setup: 只检测，不下载")
+    p.add_argument("--force", action="store_true", help="setup: 强制重装 platform-tools")
+    p.add_argument("--from-file", default=None, help="setup: 用本地 platform-tools zip 离线安装")
     args = p.parse_args()
 
     {
@@ -385,4 +448,5 @@ if __name__ == "__main__":
         "status": cmd_status,
         "logs": lambda: cmd_logs(args.services),
         "check": cmd_check,
+        "setup": lambda: cmd_setup(args.check, args.force, args.from_file),
     }[args.cmd]()

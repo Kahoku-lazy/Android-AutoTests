@@ -8,6 +8,9 @@
 
 与 pool.DevicePool 分工：本模块管「数据面」（dp_devices 记录与状态机），DevicePool 管
 「连接/会话/操作面」。写库仍经本模块类方法（由 api.py 白名单转调）。
+
+adb 来源统一走 `utils.adb.adb_binary()`（平台自带优先，不回退系统 PATH）；全部来源缺失时
+各方法抛 `AdbUnavailableError`，由视图映射为 503 + 「运行 python run.py setup」提示。
 """
 
 import subprocess
@@ -23,6 +26,7 @@ from rest_framework.exceptions import APIException
 
 from engines.device.action import EngineConnectError
 from engines.device.connection import fetch_device_info, probe_u2
+from utils.adb import AdbUnavailableError, adb_binary
 from utils.logs import backend_log
 
 from .contracts import (
@@ -92,13 +96,17 @@ class DeviceDetector:
     def adb_device_serials(self) -> set:
         """返回当前 adb 可见设备的地址集合（USB 串号 / 无线 IP:port / mDNS）。"""
         try:
-            result = subprocess.run(["adb", "devices"], capture_output=True, text=True, timeout=5)
+            result = subprocess.run(
+                [adb_binary(), "devices"], capture_output=True, text=True, timeout=5
+            )
             serials = set()
             for line in result.stdout.strip().split("\n")[1:]:
                 parts = line.strip().split()
                 if len(parts) >= 2 and parts[1] == "device":
                     serials.add(parts[0])
             return serials
+        except AdbUnavailableError:
+            raise
         except Exception:
             return set()
 
@@ -149,7 +157,7 @@ class DeviceDetector:
         for attempt in range(3):
             try:
                 result = subprocess.run(
-                    ["adb", "-s", addr, "shell", "getprop", "ro.serialno"],
+                    [adb_binary(), "-s", addr, "shell", "getprop", "ro.serialno"],
                     capture_output=True,
                     text=True,
                     timeout=5,
@@ -168,7 +176,7 @@ class DeviceDetector:
         """读取设备 property（如 ro.product.model），失败返回空串。"""
         try:
             result = subprocess.run(
-                ["adb", "-s", addr, "shell", "getprop", prop],
+                [adb_binary(), "-s", addr, "shell", "getprop", prop],
                 capture_output=True,
                 text=True,
                 timeout=5,
@@ -213,7 +221,10 @@ class DeviceDetector:
         try:
             if ":" in addr and not self.is_adb_listed(addr):
                 result = subprocess.run(
-                    ["adb", "connect", addr], capture_output=True, text=True, timeout=10
+                    [adb_binary(), "connect", addr],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
                 )
                 output = (result.stdout or "") + (result.stderr or "")
                 lower = output.lower()
@@ -231,6 +242,8 @@ class DeviceDetector:
                         status_code=504,
                     )
             probe_u2(addr)
+        except AdbUnavailableError as e:
+            raise DeviceError(str(e), status_code=503) from e
         except subprocess.TimeoutExpired:
             raise DeviceError("连接超时，请检查设备 USB/WiFi 连接", status_code=504)
         except EngineConnectError as e:
@@ -252,11 +265,13 @@ class DeviceDetector:
         addr = f"{ip}:{port}"
         try:
             result = subprocess.run(
-                ["adb", "pair", addr, code],
+                [adb_binary(), "pair", addr, code],
                 capture_output=True,
                 text=True,
                 timeout=20,
             )
+        except AdbUnavailableError as e:
+            raise DeviceError(str(e), status_code=503) from e
         except subprocess.TimeoutExpired:
             raise DeviceError("配对超时，请确认手机配对页仍打开", status_code=504) from None
         output = ((result.stdout or "") + (result.stderr or "")).lower()

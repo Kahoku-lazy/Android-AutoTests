@@ -110,7 +110,7 @@ class AndroidConnection(DeviceConnection):
         self.log.info(f"执行命令: adb {shown}")
         try:
             result = subprocess.run(
-                ["adb", *args],
+                [adb_binary(), *args],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -224,14 +224,14 @@ def _bounds_center(bounds: str) -> tuple[int, int]:
 
 from pathlib import Path
 
-ADB = "adb"
+from utils.adb import adb_binary
 
 
 def _run(args: list[str], timeout: float = 30.0) -> tuple[int, bytes, bytes]:
     """跑一条 adb 命令, 返回 (退出码, stdout 字节, stderr 字节)。
     stdout 必须是字节: screencap 是二进制, 一旦按文本解码就会被换行转换破坏。
     """
-    proc = subprocess.run([ADB, *args], capture_output=True, timeout=timeout)
+    proc = subprocess.run([adb_binary(), *args], capture_output=True, timeout=timeout)
     return proc.returncode, proc.stdout, proc.stderr
 
 
@@ -254,7 +254,6 @@ def capture_png(serial: str, file_path: str) -> bytes:
     return out
 
 
-_ADB_EXE = "adb"
 _UIDUMP_PATH = "/data/local/tmp/window_dump.xml"
 _FAIL_DETAIL_LIMIT = 200
 
@@ -284,9 +283,9 @@ def _failure_detail(stdout: bytes, stderr: bytes) -> str:
 class AdbChannel:
     """adb 命令通道：只负责执行命令并取回结果，不做任何解析。"""
 
-    def __init__(self, serial: str, executable: str = _ADB_EXE) -> None:
+    def __init__(self, serial: str, executable: str | None = None) -> None:
         self.serial = serial
-        self.executable = executable
+        self.executable = executable or adb_binary()
 
     def shell(self, args: list[str], timeout: float = 30.0) -> str:
         """跑一条 adb shell 命令，返回解码后的文本。

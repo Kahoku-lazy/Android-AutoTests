@@ -5,13 +5,15 @@
 Python 调试：➡️ python -m engines.agents.workflow.ui_auto_workflow 🏁
 时间：➡️ 2026-10-30 🏁
 作者：➡️ kahoku 🏁
-版本：➡️ 1.0.0 🏁
-修改时间: ➡️ 2026-10-30 🏁
+版本：➡️ 1.1.0 🏁
+修改时间: ➡️ 2026-11-09 🏁
 类型: ➡️ Agent 能力模块 🏁
 简介说明：➡️
 1. AgentSOPWorkflow: 把一份 SOP 跑一次 UI 自动化, 事件与运行汇总都写入同一份事件日志
 2. 每个步骤新建一对执行者与验收者实例，跨步不继承上下文；重试复用该步实例
 3. 步骤提示由 step_brief 拼装：执行者拿动作与页面锚点，验收者拿结果与日志证据
+4. _emit_interrupt / _emit_step_interrupt: 中断记录经 event_sink 直写接收方，保证事件落库
+5. _failed_steps: 收集「验收驳回到上限」的步骤，与中断一起构成失败原因
 🏁
 关联模块：➡️
 1. engines.agents.agent_builders: 导入 build_executor, build_verifier
@@ -33,6 +35,7 @@ Python 调试：➡️ python -m engines.agents.workflow.ui_auto_workflow 🏁
 import asyncio
 
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from datetime import datetime
 
 import yaml
@@ -48,6 +51,7 @@ from engines.agents.event_sink import (
     bind_interrupts,
     current_interrupts,
     current_run,
+    emit_record,
     note_interrupt,
     reset_interrupts,
     set_step_context,
@@ -68,8 +72,9 @@ async def _emit_interrupt(
 ) -> None:
     """把「事件流被打断」写成一条事件，供任务详情与 BUG 台账识别。
 
-    走 `show_event`（内部 `database_sync_to_async`），因此是在工作线程里写库：
-    直接在事件循环里同步写库会被 Django 判为 SynchronousOnlyOperation 并整批丢事件。
+    走 `event_sink.emit_record`：它把记录直写接收方并在工作线程里执行，既不经过
+    事件折叠（`EventRecord` 不是 AgentScope 事件，会被静默丢成空结果），也不会在
+    事件循环里同步查库（那会被 Django 判为 SynchronousOnlyOperation）。
 
     Args:
         reason: 打断原因的文本（设备日志为空 / 时间不满足 5 秒等）。
@@ -96,7 +101,7 @@ async def _emit_interrupt(
         duration_ms=0,
     )
     try:
-        await show_event(record, {}, {}, flush=True)
+        await emit_record(record, flush=True)
     except Exception as exc:  # noqa: BLE001 - 台账失败不影响任务终态
         agent_event_log.warning(f"记录中断事件失败：{exc}")
 
@@ -128,15 +133,19 @@ class _ResilientSOPStep(SOPStep):
     从「还在跑」改成「已收口」，避免引擎把异常当成整轮失败。
     """
 
-    def __init__(self, *args, step_seq: int = 0, **kwargs) -> None:
+    def __init__(
+        self, *args, step_seq: int = 0, closed_steps: set[int] | None = None, **kwargs
+    ) -> None:
         """
         Args:
             *args: 透传给 SOPStep 的位置参数（subject / description / executor / verifier）。
             step_seq: 步骤序号，从 1 起；写入中断记录用。
+            closed_steps: 本次运行里被中断收口的步骤序号集合，与工作流共享。
             **kwargs: 透传给 SOPStep 的关键字参数。
         """
         super().__init__(*args, **kwargs)
         self.step_seq = step_seq
+        self.closed_steps = closed_steps if closed_steps is not None else set()
 
     def _close_interrupted(
         self, state, kind: str, reason: str, tool: str = "", *, noted: bool = False
@@ -152,6 +161,9 @@ class _ResilientSOPStep(SOPStep):
         """
         if not noted:
             note_interrupt(kind, reason, title=self.subject, tool=tool, step_seq=self.step_seq)
+        if self.step_seq:
+            # 记下「这一步是被中断收口的」：失败原因不能再把它算成「验收驳回」
+            self.closed_steps.add(int(self.step_seq))
         self.record(state, False, reason, "workflow")
         state.submission = [TextBlock(text=f"（本步中断：{reason}）")]
         state.phase = SOPPhase.COMPLETED
@@ -204,6 +216,80 @@ def _step_keywords(step: CaseStep, default_sku: str) -> str:
     return load_log_keywords(sku)
 
 
+@dataclass(frozen=True)
+class StepFailure:
+    """一步验收驳回到上限的记录：序号、标题、驳回次数与最后一条驳回说明。
+
+    Attributes:
+        step_seq: 步骤序号，从 1 起。
+        title: 该步的动作原文，用于失败原因。
+        attempts: 本步实际尝试次数（等于驳回判决条数）。
+        reason: 最后一次驳回说明（截断，够定位即可）。
+    """
+
+    step_seq: int
+    title: str
+    attempts: int
+    reason: str
+
+
+_TITLE_LIMIT = 40
+_REASON_LIMIT = 120
+
+
+def _clip(text: object, limit: int) -> str:
+    """把文本压成一行并截断，用于拼失败原因。
+
+    Args:
+        text: 原文。
+        limit: 最多保留的字符数。
+
+    Returns:
+        单行文本；超长时以省略号结尾。
+    """
+    flat = " ".join(str(text or "").split())
+    return flat if len(flat) <= limit else f"{flat[:limit]}…"
+
+
+def _failed_steps(
+    engine,
+    steps: Sequence[CaseStep],
+    interrupts: Sequence,
+    closed_steps: set[int] | None = None,
+) -> list[StepFailure]:
+    """取出「验收驳回到上限」的步骤；已中断的步骤不算，避免同一处报两次。
+
+    Args:
+        engine: 跑完的 SOPEngine，步骤状态在 engine.state.steps。
+        steps: 本次运行的步骤输入，用来取动作原文当标题。
+        interrupts: 本次运行的中断记录，按序号排除。
+        closed_steps: 被中断收口的步骤序号；中断记录缺序号时用它兜底。
+
+    Returns:
+        失败步骤列表，按序号升序；没有则为空。
+    """
+    interrupted = {int(item.step_seq) for item in interrupts if getattr(item, "step_seq", 0)}
+    interrupted |= set(closed_steps or ())
+    failures: list[StepFailure] = []
+    records = list(getattr(getattr(engine, "state", None), "steps", []) or [])
+    for index, record in enumerate(records, start=1):
+        if index in interrupted:
+            continue
+        verdicts = list(getattr(record, "verifications", []) or [])
+        if not verdicts or any(getattr(verdict, "passed", False) for verdict in verdicts):
+            continue
+        title = steps[index - 1].action if index <= len(steps) else ""
+        failures.append(
+            StepFailure(
+                step_seq=index,
+                title=_clip(title, _TITLE_LIMIT),
+                attempts=len(verdicts),
+                reason=_clip(getattr(verdicts[-1], "message", ""), _REASON_LIMIT),
+            )
+        )
+    return failures
+
+
 class AgentSOPWorkflow:
     """UI 自动 SOP 工作流：执行角色操作设备，验收角色判定步骤。"""
 
@@ -227,6 +313,10 @@ class AgentSOPWorkflow:
         self.model_name = "-"
         # 本次运行里被中断的步骤（StepInterrupt 列表），调用方据此写失败原因
         self.interrupts: list = []
+        # 本次运行里验收驳回到上限的步骤（StepFailure 列表），失败原因要一起汇总
+        self.failed_steps: list = []
+        # 本次运行里被中断收口的步骤序号，收集中断与汇总失败原因共用
+        self._closed_steps: set[int] = set()
 
         # 每一步被驳回几次后判失败, 由引擎执行, 不是步骤自己管
         self.MAX_ATTEMPTS = 2
@@ -300,6 +390,10 @@ class AgentSOPWorkflow:
         if not steps:
             raise ValueError("步骤列表为空，无法装配 SOP")
 
+        # 同一次运行内不残留上一次的收口记录与失败列表
+        self._closed_steps = set()
+        self.failed_steps = []
+
         # 每个步骤各建一对角色: 跨步不继承上下文; 同一步的重试仍复用该步的实例
         pairs = [self._build_agents() for _ in steps]
         first_executor, first_verifier = pairs[0]
@@ -323,6 +417,7 @@ class AgentSOPWorkflow:
                     verifier=verifier,  # 验收者: 本步新建
                     max_attempts=self.MAX_ATTEMPTS,  # 最大重试次数: 驳回几次后整轮失败
                     step_seq=index,
+                    closed_steps=self._closed_steps,  # 与工作流共享：中断收口的步骤
                 )
                 for index, (step, (executor, verifier)) in enumerate(
                     zip(steps, pairs, strict=True), start=1
@@ -364,6 +459,7 @@ class AgentSOPWorkflow:
             # 中断过就按 interrupted 收口，其余情况用引擎给的阶段
             self._log(f"运行阶段：{engine.phase}")
             self.dump(engine, sop)
+            self.failed_steps = _failed_steps(engine, steps, self.interrupts, self._closed_steps)
             if self.interrupts:
                 return self.INTERRUPTED_PHASE
             phase = getattr(engine.phase, "value", engine.phase)

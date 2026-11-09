@@ -234,7 +234,10 @@ async def _drive_real(
                 return _cancelled(completed, failed)
             else:
                 failed.append(case.title)
-                detail = _interrupt_reason(getattr(workflow, "interrupts", None))
+                detail = _failure_detail(
+                    getattr(workflow, "interrupts", None),
+                    getattr(workflow, "failed_steps", None),
+                )
                 if detail:
                     reasons[case.title] = detail
             if budget_exceeded():
@@ -249,26 +252,35 @@ async def _drive_real(
 _KIND_LABEL = {"log": "证据不可用", "exception": "执行异常"}
 
 
-def _interrupt_reason(interrupts) -> str:
-    """把一步或多步中断拼成一句可读原因：第几步、哪一类、原文。
+def _failure_detail(interrupts, failures=None) -> str:
+    """把中断的步骤与被驳回的步骤拼成一句可读原因。
+
+    两类都要写：只看中断会漏掉「验收驳回 N 次」这种真正判死用例的步骤，
+    只看驳回会漏掉「证据不可用」这种不是执行层失败的原因。
 
     Args:
-        interrupts: `StepInterrupt` 列表；为空表示不是中断导致的失败。
+        interrupts: `StepInterrupt` 列表；为空表示没有中断。
+        failures: `StepFailure` 列表；为空表示没有驳回失败的步骤。
 
     Returns:
-        形如「第 2 步中断证据不可用（工具 check_device_log）：日志为空…」；
-        没有中断时返回空串。
+        形如「第 7 步中断证据不可用（工具 check_device_log）：…；第 8 步「…」验收驳回 2 次：…」；
+        两类都为空时返回空串。
     """
-    if not interrupts:
-        return ""
+    interrupt_items = list(interrupts or [])
+    failure_items = list(failures or [])
     parts: list[str] = []
-    for item in list(interrupts)[:3]:
+    for item in interrupt_items[:3]:
         label = _KIND_LABEL.get(item.kind, item.kind)
         where = f"第 {item.step_seq} 步" if item.step_seq else "某步骤"
         tool = f"（工具 {item.tool}）" if item.tool else ""
         parts.append(f"{where}中断{label}{tool}：{item.reason}")
-    if len(interrupts) > 3:
-        parts.append(f"等 {len(interrupts)} 处中断")
+    for item in failure_items[:3]:
+        parts.append(
+            f"第 {item.step_seq} 步「{item.title}」验收驳回 {item.attempts} 次：{item.reason}"
+        )
+    total = len(interrupt_items) + len(failure_items)
+    if total > len(parts):
+        parts.append(f"等 {total - len(parts)} 处未通过")
     return "；".join(parts)
 
 

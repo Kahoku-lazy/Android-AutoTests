@@ -97,3 +97,17 @@ def test_other_users_project_is_not_found(user):
     response = _upload(other, project_id=project["id"])
     assert response.status_code == 404
     assert CaseDefinition.objects.count() == 0
+
+
+def test_business_type_is_taken_from_request(user, project):
+    response = _upload(user, project_id=project["id"], business_type="lighting")
+    assert response.status_code == 200, response.data
+    rows = CaseDefinition.objects.filter(file_id=response.data["file_id"])
+    assert {row.business_type for row in rows} == {"lighting"}
+
+
+def test_invalid_business_type_rejected(user, project):
+    response = _upload(user, project_id=project["id"], business_type="furniture")
+    assert response.status_code == 400
+    assert "业务类型" in str(response.data)
+    assert CaseDefinition.objects.count() == 0

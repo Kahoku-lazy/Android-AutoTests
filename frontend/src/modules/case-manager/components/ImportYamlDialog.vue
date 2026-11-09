@@ -9,7 +9,9 @@ import { computed, ref, watch } from "vue"
 import { ElMessage } from "element-plus"
 import { formatApiError } from "@/shared/api-client"
 import { importYaml } from "../api"
+import { BUSINESS_TYPE_OPTIONS } from "../types"
 import type { YamlImportResult } from "../api"
+import type { BusinessType } from "../types"
 
 const props = defineProps<{
   modelValue: boolean
@@ -26,6 +28,8 @@ const MAX_SIZE = 20 * 1024 * 1024
 
 const file = ref<File | null>(null)
 const fileName = ref("")
+/** YAML 没写 business 时落到哪一类；同一产品线通常是同一业务类型 */
+const businessType = ref<BusinessType>("appliance")
 const prune = ref(false)
 const submitting = ref(false)
 const result = ref<YamlImportResult | null>(null)
@@ -36,6 +40,7 @@ const canSubmit = computed(() => file.value !== null && fileName.value.trim() !=
 function reset() {
   file.value = null
   fileName.value = ""
+  businessType.value = "appliance"
   prune.value = false
   submitting.value = false
   result.value = null
@@ -78,6 +83,7 @@ async function submit() {
     form.append("file", file.value)
     form.append("project_id", String(props.projectId))
     form.append("file_name", fileName.value.trim())
+    form.append("business_type", businessType.value)
     form.append("prune", prune.value ? "1" : "0")
     const { data } = await importYaml(form)
     if (data.status && data.data) {
@@ -124,6 +130,14 @@ function close() {
         <el-form-item label="用例表名">
           <el-input v-model="fileName" maxlength="200" show-word-limit placeholder="默认取文件名" />
         </el-form-item>
+        <el-form-item label="业务类型">
+          <el-radio-group v-model="businessType">
+            <el-radio v-for="item in BUSINESS_TYPE_OPTIONS" :key="item.value" :value="item.value">
+              {{ item.label }}
+            </el-radio>
+          </el-radio-group>
+          <p class="yaml-import__field-hint">YAML 里写了 business 的用例以 YAML 为准</p>
+        </el-form-item>
         <el-form-item label="清理旧行">
           <el-checkbox v-model="prune">删除 YAML 中已不存在的用例</el-checkbox>
         </el-form-item>
@@ -160,6 +174,13 @@ function close() {
   margin: 0;
   font-size: var(--app-size-xs);
   line-height: var(--app-line-height-relaxed);
+  color: var(--app-text-secondary);
+}
+.yaml-import__field-hint {
+  margin: 0;
+  width: 100%;
+  font-size: var(--app-size-xs);
+  line-height: var(--app-line-height-tight);
   color: var(--app-text-secondary);
 }
 .yaml-import__error {

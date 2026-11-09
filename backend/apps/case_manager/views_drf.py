@@ -10,6 +10,7 @@ from rest_framework.response import Response
 
 from . import api as case_api
 from .api_projects import ConflictError
+from .api_yaml import DEFAULT_BUSINESS_TYPE
 from .models import CaseDirectory, CaseFile, CaseProject, TestDefinition
 
 #: YAML 导入的体积上限，与任务附件同口径。
@@ -325,6 +326,7 @@ def import_yaml(request):
     file_id = int(raw_file_id) if raw_file_id not in (None, "") else None
     file_name = str(body.get("file_name") or "").strip() or Path(filename).stem
     prune = str(body.get("prune") or "").strip().lower() in {"1", "true", "yes", "on"}
+    business_type = str(body.get("business_type") or "").strip() or DEFAULT_BUSINESS_TYPE
     try:
         data = case_api.import_yaml_text(
             project_id=int(project_id),
@@ -333,6 +335,7 @@ def import_yaml(request):
             file_id=file_id,
             file_name=file_name,
             prune=prune,
+            default_business_type=business_type,
         )
     except Exception as exc:
         return _raise_or_conflict(exc)

@@ -5,6 +5,7 @@ python -m 调试路径: backend.apps.case_manager.api_yaml
 1. parse_yaml_text: YAML 文本收敛为中性用例行，保留执行提示并把可选元数据映射成平台字段。
 2. import_yaml_text: 按「项目 + 用例表」幂等写入用例库，必要时清理 YAML 中已消失的行。
 3. export_yaml_text: 把选中的平台用例导出为可执行 YAML 文本，供任务执行物化配置。
+4. validate_business_type: 校验调用方传入的默认业务类型（YAML 没写 business 时用它）。
 """
 
 from __future__ import annotations
@@ -23,14 +24,23 @@ from .api_projects import ConflictError, get_project
 from .models import CaseFile, TestDefinition
 
 __all__ = [
+    "BUSINESS_TYPES",
+    "DEFAULT_BUSINESS_TYPE",
     "IMPORT_FILE_NAME_LIMIT",
     "export_yaml_text",
     "import_yaml_text",
     "parse_yaml_text",
+    "validate_business_type",
 ]
 
 IMPORT_FILE_NAME_LIMIT = 200
 """用例表名的字符上限，与 ``CaseFile.name`` 的模型上限一致。"""
+
+BUSINESS_TYPES: tuple[str, ...] = ("appliance", "lighting", "app")
+"""业务类型枚举：家电 / 照明 / APP。"""
+
+DEFAULT_BUSINESS_TYPE = "appliance"
+"""YAML 没写 ``business`` 且调用方也没指定时使用的业务类型。"""
 
 _SYSTEMS: tuple[str, ...] = ("ANDROID", "WEB", "IOS", "API")
 """系统取值白名单；YAML 里可能是 ``WEB/ANDROID/IOS`` 这种多值串。"""
@@ -81,17 +91,43 @@ def _case_type(value: object) -> str:
     return "FUNC"
 
 
-def _business_type(value: object) -> str:
-    """业务类型缺省 appliance；支持中文与英文枚举两种写法。"""
+def _business_type(value: object, *, default: str = DEFAULT_BUSINESS_TYPE) -> str:
+    """业务类型：YAML 显式给出时以 YAML 为准，否则用调用方指定的默认值。
+
+    Args:
+        value: YAML 里的 `business` 字段，可能是中文（家电 / 照明 / APP）或英文枚举。
+        default: 该条用例没写业务类型时使用的值。
+
+    Returns:
+        `appliance` / `lighting` / `app` 之一。
+    """
     text = _text(value)
     if not text:
-        return "appliance"
+        return default
     if text in _BUSINESS_BY_TEXT:
         return _BUSINESS_BY_TEXT[text]
     lowered = text.lower()
-    if lowered in {"appliance", "lighting", "app"}:
+    if lowered in BUSINESS_TYPES:
         return lowered
-    return _BUSINESS_BY_TEXT.get(text.upper(), "appliance")
+    return _BUSINESS_BY_TEXT.get(text.upper(), default)
+
+
+def validate_business_type(value: object) -> str:
+    """校验默认业务类型取值。
+
+    Args:
+        value: 调用方传入的默认业务类型。
+
+    Returns:
+        合法的 `appliance` / `lighting` / `app`。
+
+    Raises:
+        ValueError: 取值不在枚举内，或为空。
+    """
+    text = _text(value) or DEFAULT_BUSINESS_TYPE
+    if text not in BUSINESS_TYPES:
+        raise ValueError(f"业务类型无效，可选：{' / '.join(BUSINESS_TYPES)}")
+    return text
 
 
 def _step_payload(step) -> dict[str, Any]:
@@ -117,12 +153,15 @@ def _raw_cases(data: object) -> list[dict[str, Any]]:
     return []
 
 
-def parse_yaml_text(text: str) -> tuple[list[dict[str, Any]], str]:
+def parse_yaml_text(
+    text: str, *, default_business_type: str = DEFAULT_BUSINESS_TYPE
+) -> tuple[list[dict[str, Any]], str]:
     """
     把 YAML 文本收敛为可写入用例库的中性行。
 
     Args:
         text: YAML 正文（UTF-8 文本）。
+        default_business_type: YAML 没写 ``business`` 时使用的业务类型。
 
     Returns:
         (用例行列表, 失败原因)。成功时原因为空串；每行含 title / priority /
@@ -132,6 +171,10 @@ def parse_yaml_text(text: str) -> tuple[list[dict[str, Any]], str]:
     Raises:
         无：解析与结构问题一律通过返回值报出，由调用方决定如何提示。
     """
+    try:
+        default_business = validate_business_type(default_business_type)
+    except ValueError as exc:
+        return [], str(exc)
     try:
         data = yaml.safe_load(text)
     except yaml.YAMLError as exc:
@@ -148,7 +191,7 @@ def parse_yaml_text(text: str) -> tuple[list[dict[str, Any]], str]:
                 "priority": _priority(raw.get("priority")),
                 "system": _system(raw.get("system")),
                 "case_type": _case_type(raw.get("type")),
-                "business_type": _business_type(raw.get("business")),
+                "business_type": _business_type(raw.get("business"), default=default_business),
                 "module": _text(raw.get("module")),
                 "precondition": _text(raw.get("precondition")),
                 "source_case_id": _text(raw.get("case_id")),
@@ -191,6 +234,7 @@ def import_yaml_text(
     file_id: int | None = None,
     file_name: str = "",
     prune: bool = False,
+    default_business_type: str = DEFAULT_BUSINESS_TYPE,
 ) -> dict[str, Any]:
     """
     把一份 YAML 写入用例库，按标题幂等覆盖。
@@ -202,15 +246,16 @@ def import_yaml_text(
         file_id: 目标用例表编号；None 时按 ``file_name`` 复用或新建。
         file_name: 目标用例表名；``file_id`` 为空时使用。
         prune: 是否删除 YAML 中已不存在的旧用例行。
+        default_business_type: YAML 没写 ``business`` 时使用的业务类型。
 
     Returns:
         `{file_id, file_name, total, created, updated, removed, skipped}`。
 
     Raises:
-        ValueError: YAML 结构不合法，或表名为空。
+        ValueError: YAML 结构不合法、默认业务类型非法，或表名为空。
         LookupError: 项目 / 用例表不存在，或不属于当前用户。
     """
-    rows, reason = parse_yaml_text(text)
+    rows, reason = parse_yaml_text(text, default_business_type=default_business_type)
     if reason:
         raise ValueError(reason)
     if not rows:

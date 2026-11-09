@@ -17,7 +17,12 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from django.db import IntegrityError
 
-from backend.apps.case_manager.api_yaml import import_yaml_text, parse_yaml_text
+from backend.apps.case_manager.api_yaml import (
+    BUSINESS_TYPES,
+    DEFAULT_BUSINESS_TYPE,
+    import_yaml_text,
+    parse_yaml_text,
+)
 from backend.apps.case_manager.models import CaseProject
 
 DEFAULT_PROJECT = "YAML 用例库"
@@ -110,6 +115,15 @@ class Command(BaseCommand):
         )
         parser.add_argument("--dry-run", action="store_true", help="只解析不写库")
         parser.add_argument("--prune", action="store_true", help="删除 YAML 中已不存在的旧用例行")
+        parser.add_argument(
+            "--business",
+            default=DEFAULT_BUSINESS_TYPE,
+            choices=list(BUSINESS_TYPES),
+            help=(
+                "YAML 没写 business 时使用的业务类型："
+                f"{' / '.join(BUSINESS_TYPES)}（默认 {DEFAULT_BUSINESS_TYPE}）"
+            ),
+        )
 
     def handle(self, *args: Any, **options: Any) -> None:
         """遍历目录并逐份导入，最后打印汇总。
@@ -126,6 +140,7 @@ class Command(BaseCommand):
 
         dry_run = bool(options["dry_run"])
         prune = bool(options["prune"])
+        business = str(options["business"])
         owner = _resolve_owner(str(options["owner"]))
         project = (
             None if dry_run else _get_or_create_project(owner=owner, name=str(options["project"]))
@@ -139,7 +154,8 @@ class Command(BaseCommand):
                 f"项目：{project.name}（#{project.id}）  归属：{owner.get_username()}"
             )
         self.stdout.write(
-            f"目录：{root}  文件：{len(paths)}  模式：{'试运行' if dry_run else '写入'}"
+            f"目录：{root}  文件：{len(paths)}  模式：{'试运行' if dry_run else '写入'}  "
+            f"业务类型：{business}"
         )
 
         totals = {"files": 0, "cases": 0, "created": 0, "updated": 0, "removed": 0}
@@ -152,7 +168,7 @@ class Command(BaseCommand):
                 skipped.append((name, "不是 UTF-8 编码"))
                 continue
             if dry_run:
-                rows, reason = parse_yaml_text(text)
+                rows, reason = parse_yaml_text(text, default_business_type=business)
                 if reason:
                     skipped.append((name, reason))
                     continue
@@ -167,6 +183,7 @@ class Command(BaseCommand):
                     text=text,
                     file_name=name,
                     prune=prune,
+                    default_business_type=business,
                 )
             except (ValueError, LookupError) as exc:
                 skipped.append((name, str(exc)))

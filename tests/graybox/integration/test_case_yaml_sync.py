@@ -159,3 +159,26 @@ def test_duplicate_titles_inside_one_yaml_are_skipped(user, project):
     result = _import(user, project, text)
     assert result["created"] == 1
     assert result["skipped"] == [{"title": "甲", "reason": "同一份 YAML 内标题重复"}]
+
+
+def test_default_business_type_survives_reimport(user, project):
+    first = import_yaml_text(
+        project_id=project["id"],
+        user_id=str(user.id),
+        text=YAML_TWO_CASES,
+        file_name="H6810_structured_cases",
+        default_business_type="lighting",
+    )
+    sheet = case_api.get_file_sheet(file_id=first["file_id"], user_id=str(user.id))
+    assert {row["business_type"] for row in sheet["rows"]} == {"lighting"}
+
+    # 再同步一次（模拟日常重跑）：业务类型不能被刷回家电
+    import_yaml_text(
+        project_id=project["id"],
+        user_id=str(user.id),
+        text=YAML_TWO_CASES,
+        file_name="H6810_structured_cases",
+        default_business_type="lighting",
+    )
+    sheet = case_api.get_file_sheet(file_id=first["file_id"], user_id=str(user.id))
+    assert {row["business_type"] for row in sheet["rows"]} == {"lighting"}

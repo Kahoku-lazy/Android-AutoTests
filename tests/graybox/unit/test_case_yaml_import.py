@@ -89,6 +89,41 @@ def test_missing_metadata_uses_defaults():
     assert row["source_case_id"] == ""
 
 
+def test_default_business_type_applies_when_yaml_has_none():
+    rows, reason = parse_yaml_text(
+        "- title: 甲\n  steps:\n    - action: a\n      assert: b\n",
+        default_business_type="lighting",
+    )
+    assert reason == ""
+    assert rows[0]["business_type"] == "lighting"
+
+
+def test_yaml_business_wins_over_default():
+    text = """
+- title: 甲
+  business: 家电
+  steps:
+    - action: a
+      assert: b
+- title: 乙
+  steps:
+    - action: a
+      assert: b
+"""
+    rows, reason = parse_yaml_text(text, default_business_type="lighting")
+    assert reason == ""
+    assert [row["business_type"] for row in rows] == ["appliance", "lighting"]
+
+
+def test_invalid_default_business_type_returns_reason():
+    rows, reason = parse_yaml_text(
+        "- title: 甲\n  steps:\n    - action: a\n      assert: b\n",
+        default_business_type="furniture",
+    )
+    assert rows == []
+    assert "业务类型" in reason and "lighting" in reason
+
+
 @pytest.mark.parametrize(
     "text, fragment",
     [

@@ -17,7 +17,7 @@ Android 自动化测试与智能体平台：**前端只展示，后端只做通�
 1. 后端，纯 API：Django 4.2 + DRF + Channels  
 2. 前端，纯 SPA：Vue 3.4 + Vite + Element Plus  
 3. AGENT 框架：AgentScope 2.0  
-4. 其它：uiautomator2/ADB（设备）· MySQL/SQLite + Redis  
+4. 其它：uiautomator2/ADB（设备）· MySQL/SQLite  
 
 ### 1.3 请求链路
 
@@ -97,8 +97,8 @@ Android 自动化测试与智能体平台：**前端只展示，后端只做通�
                               │
         ┌─────────────────────┼──────────────────────────┐
         ▼                     ▼                          ▼
-   MySQL / SQLite          Redis :6379              engines（同进程）
-   （业务数据）        （JWT 吊销 / Channels）    AgentScope + device/uart/vision
+   MySQL / SQLite          engines（同进程）
+   （业务数据 / JWT 吊销）  AgentScope + device/uart/vision
                                                           │
                                               Android 设备 / 串口日志
 ```
@@ -107,8 +107,7 @@ Android 自动化测试与智能体平台：**前端只展示，后端只做通�
 
 | 进程 | 端口 | 入口 | 说明 |
 |------|------|------|------|
-| Redis | 6379 | `redis-server` | JWT 吊销、Channels layer；`run.py stop` **不**停 Redis |
-| Daphne | 8766 | `run_daphne.py` → `backend.config.asgi:application` | 开发态 autoreload 双进程；生产态单进程 |
+| Daphne | 8766 | `run_daphne.py` → `backend.config.asgi:application` | 开发态 autoreload 双进程；生产态单进程。`CHANNEL_LAYERS` 为 InMemory（Redis 已退役） |
 | Vite | 5173 | `npx vite --host` | 代理 `/api`、`/media`、`/ws` |
 
 - 统一运维：`python run.py start|stop|restart|status|logs|check`  
@@ -144,7 +143,7 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
    ▼
 引擎层：engines/agents（角色/Harness/SOP）· device · uart_log · vision
    ▼
-外部：Android、串口、模型 API、Redis、MySQL
+外部：Android、串口、模型 API、MySQL
 ```
 
 | # | 规则 | 强制手段 |
@@ -185,7 +184,7 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 
 | App | API 前缀（典型） | 职责 |
 |-----|------------------|------|
-| `accounts` | `/api/auth/` | JWT 双令牌 + Redis 吊销 |
+| `accounts` | `/api/auth/` | JWT 双令牌 + 落库吊销记录（`acc_token_revocations`） |
 | `dashboard` | `/api/dashboard/` 等 | KPI、趋势、用量费用、活动时间线（聚合） |
 | `device_pool` | `/api/devices/` | 设备扫描/连接/占用/心跳 |
 | `case_manager` | `/api/cases/` | 用例项目/目录/文件/步骤 |
@@ -215,7 +214,7 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 ### 6.3 鉴权与身份
 
 - access TTL 1h、refresh TTL 7d；同登录共享 `sid`  
-- 吊销：`jwt:blacklist:{jti}`、`jwt:session_revoked:{sid}`；读侧 fail-open，写侧 fail-closed  
+- 吊销：落库表 `acc_token_revocations`（`kind=session\|token` + `ref` + `expires_at`）；读侧 fail-open，写侧 fail-closed  
 - AI 智能体写操作仅超管；读按 owner 或共享规则过滤；`backend/shared/users.py::is_superuser` 为跨 App 唯一实现  
 
 ---

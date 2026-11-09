@@ -2,11 +2,11 @@
 Android-AutoTests platform manager — start / stop / restart / status / logs / check.
 
 Usage:
-    python run.py start [redis|backend|frontend ...]
-    python run.py stop  [redis|backend|frontend ...]
+    python run.py start [backend|frontend ...]
+    python run.py stop  [backend|frontend ...]
     python run.py restart [...]
     python run.py status
-    python run.py logs [redis|backend|frontend ...]
+    python run.py logs [backend|frontend ...]
     python run.py check          # 本地质量门禁（实现见 utils/check_gates.py）
 """
 
@@ -15,7 +15,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import socket
 import subprocess
 import sys
 import time
@@ -28,7 +27,12 @@ from backend.config.env import load_dotenv
 ROOT = Path(__file__).parent
 LOG_DIR = ROOT / "logs"
 IS_WIN = sys.platform == "win32"
-SERVICE_ORDER = ("redis", "backend", "frontend")
+# Redis 已退役（吊销记录落库、channel layer 用内存实现）；旧命令仍给提示而不是报未知服务。
+# 提示用英文：run.py 的其它输出同为英文，且避免 Windows 管道/CI 日志里的编码歧义。
+RETIRED_SERVICES = {
+    "redis": "Redis is retired (OpenSpec: retire-redis); the platform no longer uses it.",
+}
+SERVICE_ORDER = ("backend", "frontend")
 
 
 # ── .env（凭据只从这里来，BASE_ENV 不硬编码 DB_USER/DB_PASSWORD）；
@@ -36,7 +40,6 @@ SERVICE_ORDER = ("redis", "backend", "frontend")
 load_dotenv()
 
 SERVICES = {
-    "redis": 6379,
     "backend": int(os.environ.get("SERVER_PORT", "8766")),
     "frontend": 5173,
 }
@@ -53,15 +56,6 @@ BASE_ENV = {
 
 
 # ── 进程 / 端口工具 ───────────────────────────────────────────
-
-
-def port_in_use(port: int) -> bool:
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(0.5)
-            return s.connect_ex(("127.0.0.1", port)) == 0
-    except OSError:
-        return False
 
 
 def _run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
@@ -166,6 +160,10 @@ def spawn(cmd: list[str], log_name: str, cwd: Path | None = None, env: dict | No
 def resolve_services(names: list[str]) -> list[str]:
     if not names or "all" in names:
         return list(SERVICE_ORDER)
+    for name in names:
+        if name in RETIRED_SERVICES:
+            print(f"  Note: {RETIRED_SERVICES[name]}")
+    names = [n for n in names if n not in RETIRED_SERVICES]
     invalid = [n for n in names if n not in SERVICES]
     if invalid:
         print(f"Unknown services: {', '.join(invalid)}")
@@ -211,26 +209,6 @@ def cleanup_mysql_connections() -> None:
 # ── 各服务启停 ────────────────────────────────────────────────
 
 
-def start_redis() -> bool:
-    port = SERVICES["redis"]
-    if port_in_use(port):
-        print(f"  Redis            already running on :{port}")
-        return True
-    print(f"[Redis] Starting on port {port}...")
-    try:
-        spawn(["redis-server", "--port", str(port), "--save", "900", "1"], "redis.log")
-    except FileNotFoundError:
-        print("  FAILED: redis-server not found (install via scoop or MSI)")
-        return False
-    for _ in range(10):
-        if port_in_use(port):
-            print(f"  Redis            ready :{port}")
-            return True
-        time.sleep(0.5)
-    print("  FAILED: Redis did not start")
-    return False
-
-
 def start_backend() -> bool:
     port = SERVICES["backend"]
     print(f"[Backend] Starting Django on port {port}...")
@@ -264,10 +242,6 @@ def start_frontend() -> bool:
         return True
     print("  FAILED: frontend did not start (check logs/frontend.log)")
     return False
-
-
-def stop_redis() -> None:
-    print("[Redis] Skipped (keep running for other services)")
 
 
 def stop_backend() -> None:
@@ -319,9 +293,9 @@ def stop_frontend() -> None:
     kill_port(port)
 
 
-_START = {"redis": start_redis, "backend": start_backend, "frontend": start_frontend}
-_STOP = {"redis": stop_redis, "backend": stop_backend, "frontend": stop_frontend}
-_LOGS = {"redis": "redis.log", "backend": "backend.log", "frontend": "frontend.log"}
+_START = {"backend": start_backend, "frontend": start_frontend}
+_STOP = {"backend": stop_backend, "frontend": stop_frontend}
+_LOGS = {"backend": "backend.log", "frontend": "frontend.log"}
 
 
 # ── 命令 ─────────────────────────────────────────────────────
@@ -330,8 +304,7 @@ _LOGS = {"redis": "redis.log", "backend": "backend.log", "frontend": "frontend.l
 def cmd_start(services: list[str]) -> None:
     names = resolve_services(services)
     for s in names:
-        if s != "redis":
-            _STOP[s]()
+        _STOP[s]()
     time.sleep(1)
 
     order = [s for s in SERVICE_ORDER if s in names]
@@ -348,8 +321,6 @@ def cmd_start(services: list[str]) -> None:
     if "backend" in order:
         print(f"  API (Django): http://localhost:{SERVICES['backend']}")
         print("  AI (Agent)  : in-process (runs inside Django)")
-    if "redis" in order:
-        print(f"  Redis       : redis://localhost:{SERVICES['redis']}")
     print(f"  Admin       : http://localhost:{SERVICES['backend']}/admin/  (admin/admin123)")
     print("=" * 54)
 
@@ -364,8 +335,7 @@ def cmd_stop(services: list[str]) -> None:
 def cmd_restart(services: list[str]) -> None:
     names = resolve_services(services)
     for s in names:
-        if s != "redis":
-            _STOP[s]()
+        _STOP[s]()
     time.sleep(2)
     cmd_start(names)
 
@@ -378,12 +348,8 @@ def cmd_status() -> None:
         except Exception:
             return "OFFLINE"
 
-    redis_port = SERVICES["redis"]
     be_port = SERVICES["backend"]
     fe_port = SERVICES["frontend"]
-    print(
-        f"  Redis            (:{redis_port})  {'ONLINE' if port_in_use(redis_port) else 'OFFLINE'}"
-    )
     print(f"  Django backend   (:{be_port})  {http_ok(f'http://127.0.0.1:{be_port}/')}")
     print(f"  Vue frontend     (:{fe_port})  {http_ok(f'http://127.0.0.1:{fe_port}/')}")
 
@@ -409,7 +375,7 @@ def cmd_check() -> None:
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Android-AutoTests platform manager")
     p.add_argument("cmd", choices=["start", "stop", "restart", "status", "logs", "check"])
-    p.add_argument("services", nargs="*", default=[], help="redis backend frontend (default: all)")
+    p.add_argument("services", nargs="*", default=[], help="backend frontend (default: all)")
     args = p.parse_args()
 
     {

@@ -149,7 +149,7 @@ flowchart LR
 | 实时性 | 无 WebSocket / SSE；任务进度与列表靠 HTTP 轮询。唯一例外：知识库助手走 `/ws/knowledge-assistant/?mode=voice|text`，该通道只承载语音音频、转写、打断、播放进度与文字提问，不承载平台写操作 |
 | 安全 | 全部 `/api/` 走 JWT；公开面仅登录/注册/刷新、Admin、静态资源、API 文档；AI 智能体写操作仅超管 |
 | 契约 | 响应信封 `{status, data}`；错误 `{status, message}` + HTTP 状态码；JSON snake_case；`/api/` 尾斜杠 |
-| 数据 | 表前缀 `ai_ cm_ dp_ rg_ sl_ task_ wf_`；SQLite（开发）/ MySQL（生产）；Redis 承载 JWT 吊销与 Channels layer |
+| 数据 | 表前缀 `acc_ ai_ cm_ dp_ rg_ sl_ task_ wf_`；SQLite（开发）/ MySQL（生产）；JWT 吊销记录落库（`acc_token_revocations`），平台无外部 KV 依赖 |
 | 可观测 | 后端 / 智能体 / 设备 / 串口四组日志；任务事件与费用可回看 |
 | 质量 | 本地 `python run.py check` 与 CI 同一批门禁（23 项）；后端测试以 pytest 分层维护；接口契约基线由 drf-spectacular 生成并纳入门禁 |
 

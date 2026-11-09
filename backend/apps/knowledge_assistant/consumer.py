@@ -90,8 +90,8 @@ class KnowledgeAssistantConsumer(AsyncWebsocketConsumer):
     知识库助手 WebSocket consumer（语音 / 文字两种方式）。
 
     本 consumer **不接 channel layer**：语音音频是高频双向流，且没有分组广播，
-    让每条 100ms 音频帧都经过 Redis 的 channel layer 只会把 Redis 抖动放大成
-    会话中断（实测 Redis 读超时会直接 1011 关闭音频）。因此只保留客户端
+    让每条 100ms 音频帧都经过 channel layer 只会把外部存储的抖动放大成会话中断
+    （历史实现用 Redis 时，读超时曾直接 1011 关闭音频）。因此只保留客户端
     receive → dispatch 这条直连路径；鉴权、模型会话与日志都不需要 channel layer。
     """
 

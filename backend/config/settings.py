@@ -222,45 +222,14 @@ elif DB_ENGINE == "sqlite":
 else:
     raise RuntimeError(f"不支持的 DB_ENGINE={DB_ENGINE!r}，仅支持 mysql / sqlite")
 
-# ── Redis ──
-REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
-REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
-REDIS_URL = os.environ.get("REDIS_URL", f"redis://{REDIS_HOST}:{REDIS_PORT}/0")
-
-
 # ── Channels layer ──
-def _channel_layers_config():
-    """Redis channel layer; JSON serializer avoids msgpack ABI issues on some Python builds."""
-    try:
-        import redis as _redis_check  # noqa: F401
-
-        from channels_redis.core import RedisChannelLayer
-
-        RedisChannelLayer(hosts=[REDIS_URL], serializer_format="json")
-        return {
-            "default": {
-                "BACKEND": "channels_redis.core.RedisChannelLayer",
-                "CONFIG": {
-                    "hosts": [REDIS_URL],
-                    "serializer_format": "json",
-                },
-            },
-        }
-    except Exception as exc:
-        import logging
-
-        logging.getLogger("config").warning(
-            "Redis ChannelLayer unavailable (%s), using InMemoryChannelLayer",
-            exc,
-        )
-        return {
-            "default": {
-                "BACKEND": "channels.layers.InMemoryChannelLayer",
-            },
-        }
-
-
-CHANNEL_LAYERS = _channel_layers_config()
+# 单进程 Daphne + 无跨进程广播：固定用内存实现。Redis 已随 db-backed-token-revocation 退役，
+# 平台不再有外部 KV 依赖（见 openspec/changes/retire-redis）。
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
 
 # ── JWT ──
 JWT_ACCESS_TTL = int(os.environ.get("JWT_ACCESS_TTL", "3600"))  # 1 hour

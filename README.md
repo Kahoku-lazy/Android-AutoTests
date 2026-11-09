@@ -31,7 +31,7 @@
 
 ### 产品边界
 
-**本期范围**：Android 8.0+ UI 自动化 · USB + WiFi ADB · JWT 认证 · 文档式用例 · 设备执行 SOP（执行 + 验收）与用例编写 SOP（规划 + 编写 + 验收）· 知识库助手实时语音 · 设备日志取证 · MySQL / SQLite + Redis · 任务事件、报告与 BUG 单
+**本期范围**：Android 8.0+ UI 自动化 · USB + WiFi ADB · JWT 认证 · 文档式用例 · 设备执行 SOP（执行 + 验收）与用例编写 SOP（规划 + 编写 + 验收）· 知识库助手实时语音 · 设备日志取证 · MySQL / SQLite · 任务事件、报告与 BUG 单
 
 **非本期**：iOS、Web、API 自动化 · 设备云租用 · 多团队隔离 · OAuth / SSO · AI 自我修复失败用例 · 分布式执行集群
 
@@ -51,7 +51,7 @@ Vue SPA :5173 ──HTTP(/api,/media)──▶ Vite 代理 ──▶ Daphne :876
                                                 │
                                           api.py（唯一写库口）
                                                 │
-                                    MySQL / SQLite ＋ Redis
+                                    MySQL / SQLite
                                                 │
                        ┌────────────────────────┴────────────────────────┐
                        │  engines/agents（Model+Harness；Django 进程内 SOP） │
@@ -70,7 +70,7 @@ Vue SPA :5173 ──HTTP(/api,/media)──▶ Vite 代理 ──▶ Daphne :876
 | **后端** | Django 6.0.x（锁定 `Django==6.0.6`）+ DRF + Daphne | 12 个 App、21 张业务表；契约基线 `openspec/openapi.yaml`（当前 71 条 path、93 个 operation） |
 | **AI 引擎** | AgentScope 2.0（经 `engines/`，同进程） | **Model + Harness → 角色**；当前主场景 SOP：`executor` + `verifier`（及用例编写 planner/writer）；工具经 `tools_config` 装配；密钥 `DEEPSEEK_API_KEY` |
 | **设备控制** | ADB 为主 | `AndroidControl` 继承纯 adb 控制；uiautomator2 只在 xpath 查找和非 ASCII 输入时按需连接。上层不得直接 import `uiautomator2` |
-| **数据** | MySQL（默认）/ SQLite + Redis | 自有表前缀 `ai_ bug_ cm_ dp_ rg_ sl_ task_ wf_`。Redis 承载 JWT 吊销与 Channels layer |
+| **数据** | MySQL（默认）/ SQLite | 自有表前缀 `acc_ ai_ bug_ cm_ dp_ rg_ sl_ task_ wf_`。JWT 吊销记录落库（`acc_token_revocations`）；平台无外部 KV 依赖（Redis 已退役，channel layer 用内存实现） |
 | **实时性** | 任务走 HTTP 轮询 | 唯一 WebSocket 生产点是知识库助手 `/ws/knowledge-assistant/`（单连接，不走 channel layer）。任务进度不得复用这条通道 |
 
 Django 版本锁在 6.0.x：6.1 的模型字段检查会在没有数据库时连 MySQL，CI 的 `manage.py check` 会因此失败。
@@ -81,7 +81,7 @@ Django 版本锁在 6.0.x：6.1 的模型字段检查会在没有数据库时连
 
 | 模块 | 表前缀 | 数据表 | 核心能力 |
 |------|--------|--------|---------|
-| **登录鉴权** `accounts` | `auth_` | 复用 `auth_user` | 登录 · 注册 · 刷新 · 登出 · 当前身份；JWT 双令牌 + Redis 吊销 |
+| **登录鉴权** `accounts` | `acc_`（仅吊销记录） | 复用 `auth_user` | 登录 · 注册 · 刷新 · 登出 · 当前身份；JWT 双令牌 + 落库吊销记录 |
 | **仪表盘** `dashboard` | — | — | KPI · 执行趋势 · 任务结果 · 模型用量与费用 · 活动时间线 |
 | **设备管理** `device_pool` | `dp_` | 2 | 扫描 · 连接 · 断开 · 激活 · 占用锁 · 心跳 · 释放 |
 | **用例管理** `case_manager` | `cm_` | 5 | 项目 → 目录 → 文件 → 用例 → 步骤；移动 / 批量删 |
@@ -119,7 +119,6 @@ Django 版本锁在 6.0.x：6.1 的模型字段检查会在没有数据库时连
 | Python | 3.13（`ruff.toml` 的 `target-version = "py313"`） | `python --version` |
 | Node.js | 20 | `node --version` |
 | MySQL | 默认引擎；也可 `DB_ENGINE=sqlite` | 客户端能连上 `DB_HOST` |
-| Redis | 本机 `redis-server`，默认 6379 | `redis-cli ping` |
 | ADB | 在 `PATH` 中 | `adb version` |
 
 ### 安装
@@ -156,10 +155,10 @@ User.objects.filter(username='admin').exists() or User.objects.create_superuser(
 ### 启动
 
 ```bash
-python run.py start      # Redis :6379 + Daphne(:8766) + Vite(:5173)
-python run.py stop       # 停后端前先排空运行中任务；不停止 Redis
+python run.py start      # Daphne(:8766) + Vite(:5173)
+python run.py stop       # 停后端前先排空运行中任务
 python run.py restart
-python run.py status     # 三个服务是否 ONLINE
+python run.py status     # 两个服务是否 ONLINE
 python run.py logs       # 各服务日志尾部
 python run.py check      # 本地质量门禁（与 CI 同一批检查，不跑全量回归）
 ```
@@ -195,7 +194,7 @@ python run.py check      # 本地质量门禁（与 CI 同一批检查，不跑�
 | `dev_docs/DEV_TEST/` | 设计方案、分析报告、接口说明 |
 | `data/` | **运行时数据根**，已 gitignore。截图、上传、任务媒体、头像、RAG 索引都在这里。可用环境变量 `DATA_DIR` 指到仓库外的磁盘 |
 | `temps/` | **临时沙箱**，已 gitignore。探针、调试截图、门禁产物放这里。可以整目录清空 |
-| `logs/` | 运行日志：`backend.log` · `frontend.log` · `redis.log` · `agents/agent_events.log` · `device.log` · `serial.log` · `serial_logs/` |
+| `logs/` | 运行日志：`backend.log` · `frontend.log` · `agents/agent_events.log` · `device.log` · `serial.log` · `serial_logs/` |
 
 ### `temps/` 与 `data/` 的边界
 
@@ -261,7 +260,7 @@ python -m pytest -c tests/pytest.ini   # 全量用例；check 不会跑这个
 | 变更记录 | `openspec/changes/archive/` | 已归档变更 |
 | 开发规范 | 根目录 `AGENTS.md`，以及 `backend/`、`frontend/`、`engines/` 下的 `AGENTS.md` | 分层、模块防火墙、提交与 CI；创建角色见 `dev_docs/ARCH_PRD/GUIDE-创建Agent清单.md` |
 | 门禁清单 | `utils/check_gates.py` | 检查项与判定口径 |
-| 环境变量样例 | `.env.example` | 数据库、Redis、JWT、DeepSeek、知识库助手、可选的模型重试与 RAG |
+| 环境变量样例 | `.env.example` | 数据库、JWT、DeepSeek、知识库助手、可选的模型重试与 RAG |
 
 ### 外部引用
 

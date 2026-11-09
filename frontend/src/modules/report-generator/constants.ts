@@ -82,6 +82,7 @@ export const STATUS_LABEL_MAP = {
   interrupted: "已中断",
   running: "运行中",
   stopped: "已停止",
+  cancelled: "已取消",
   pending: "排队中",
 }
 

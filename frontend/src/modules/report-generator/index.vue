@@ -334,7 +334,6 @@ function openTaskReport(row) {
       <!-- 测试报告 -->
       <section class="doc-section report-table-section">
         <div class="doc-section__header report-table-section__header">
-          <h3 class="doc-section__title">测试报告 <span class="doc-tag">Reports</span></h3>
           <FilterTabs class="report-status-tabs" :tabs="statusFilterTabs" v-model="activeFilter" />
         </div>
         <ErrorState v-if="error && !loading" :message="error" @retry="fetchReports" />
@@ -603,7 +602,8 @@ function openTaskReport(row) {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  padding: var(--app-space-sm) var(--app-space-md) 0;
+  /* 上下等距 4px：工具条整体上移，左右仍是 16px */
+  padding: var(--app-space-xs) var(--app-space-md);
 }
 .page-info {
   font-size: var(--app-size-xs);
@@ -639,7 +639,8 @@ function openTaskReport(row) {
 
 /* 报告表格 */
 .table-card {
-  background: var(--app-bg-card);
+  /* 表格底：薄荷绿淡底，不再用纯白 */
+  background: color-mix(in srgb, var(--c-dashboard) 12%, var(--app-bg-card));
   border: 2.5px solid var(--c-report);
   border-radius: var(--app-radius-md);
   overflow: hidden;
@@ -652,21 +653,28 @@ function openTaskReport(row) {
 .report-table--flow :deep(.el-table__body tr) {
   cursor: pointer;
 }
-.report-table :deep(.el-table__header th) {
-  background: var(--app-bg-subtle) !important;
+/* 表头：薄荷绿淡底 + 字号 14px；用 .report-workbench 提高优先级，压过全局 .el-table th */
+.report-workbench :deep(.el-table__header th.el-table__cell) {
+  background: color-mix(in srgb, var(--c-dashboard) 22%, var(--app-bg-card)) !important;
   color: var(--app-text-primary) !important;
   font-weight: var(--app-font-weight-bold) !important;
-  font-size: var(--app-size-xs) !important;
+  font-size: var(--app-size-sm) !important;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   border-bottom: 2.5px solid var(--ink) !important;
 }
-.report-table :deep(.el-table__body td) {
+/* 表格底：薄荷绿淡底，连 .el-table__cell 一起覆盖，避免被全局 td 背景盖回白色 */
+.report-workbench :deep(.el-table),
+.report-workbench :deep(.el-table tr),
+.report-workbench :deep(.el-table__body td.el-table__cell) {
+  background: color-mix(in srgb, var(--c-dashboard) 12%, var(--app-bg-card)) !important;
+}
+.report-workbench :deep(.el-table__body td) {
   border-bottom: 1px solid var(--el-border-color-light) !important;
   color: var(--app-text-primary);
 }
-.report-table :deep(.el-table__body tr:hover td) {
-  background: var(--rg-hover-bg) !important;
+.report-workbench :deep(.el-table__body tr:hover > td.el-table__cell) {
+  background: color-mix(in srgb, var(--c-dashboard) 20%, var(--app-bg-card)) !important;
 }
 
 .cell-run-id {
@@ -701,5 +709,67 @@ function openTaskReport(row) {
 .badge-stopped {
   background: var(--app-offline);
   color: var(--app-text-secondary);
+}
+
+/* ── 2026-11-09 报告页视觉收敛：过滤标签 / 状态标签 / 表格字色 ── */
+.report-status-tabs :deep(.filter-tab) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 var(--app-space-sm);
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  border-radius: 3px;
+  /* 每个筛选项给一层淡色底，按状态语义取色 */
+  background: color-mix(in srgb, var(--c-report) 8%, var(--app-bg-card));
+  color: var(--app-text-secondary);
+  font-weight: var(--app-font-weight-semibold);
+}
+.report-status-tabs :deep(.filter-tab:hover) {
+  border-color: color-mix(in srgb, var(--ink) 26%, transparent);
+  color: var(--app-text-primary);
+}
+.report-status-tabs :deep(.filter-tab[data-key="completed"]) {
+  background: color-mix(in srgb, var(--app-status-success-bg) 70%, var(--app-bg-card));
+}
+.report-status-tabs :deep(.filter-tab[data-key="failed"]) {
+  background: color-mix(in srgb, var(--app-status-danger-bg) 70%, var(--app-bg-card));
+}
+.report-status-tabs :deep(.filter-tab[data-key="interrupted"]) {
+  background: color-mix(in srgb, var(--app-status-warning-bg) 80%, var(--app-bg-card));
+}
+.report-status-tabs :deep(.filter-tab[data-key="stopped"]) {
+  background: color-mix(in srgb, var(--ink) 6%, var(--app-bg-card));
+}
+.report-status-tabs :deep(.filter-tab.active) {
+  color: var(--app-text-primary);
+  border-color: var(--ink);
+  background: color-mix(in srgb, var(--c-report) 12%, var(--app-bg-card));
+  box-shadow: 2px 2px 0 0 color-mix(in srgb, var(--c-report) 30%, var(--paper));
+}
+.report-status-tabs :deep(.filter-tab-count) {
+  color: inherit;
+  font-weight: var(--app-font-weight-heavy);
+}
+.report-table :deep(.el-table__cell) {
+  font-size: var(--app-size-sm);
+}
+.cell-time,
+.cell-duration {
+  color: var(--app-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 var(--app-space-sm);
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  font-size: var(--app-size-xs);
+  font-weight: var(--app-font-weight-bold);
+}
+.table-toolbar {
+  gap: var(--app-space-sm);
 }
 </style>

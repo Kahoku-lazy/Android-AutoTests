@@ -5,19 +5,20 @@
 Python 调试：➡️ python -m engines.agents.models 🏁
 时间：➡️ 2026-11-03 🏁
 作者：➡️ kahoku 🏁
-版本：➡️ 1.0.0 🏁
-修改时间: ➡️ 2026-11-03 🏁
+版本：➡️ 1.1.0 🏁
+修改时间: ➡️ 2026-11-09 🏁
 类型: ➡️ 模型配置模块 🏁
 简介说明：➡️
-1. get_chat_model / get_fallback_chat_model: 按角色键取聊天模型与备用模型
+1. get_chat_model / get_fallback_chat_model: 按角色键取聊天模型与备用模型；聊天模型在同一循环内按配置复用
 2. get_realtime_model: 取 Omni 实时语音模型（按角色键补参数，或全部显式传）
 3. get_embedding_model / get_tts_model: 取嵌入模型与语音合成模型
 4. get_text / get_realtime / get_embedding / model_supports_image / DeepSeekModelConfig: 只读模型目录
-5. 子模块不对外：包外 MUST NOT import `models.<子模块>`，由 test_models_public_surface 守卫
+5. clear_chat_model_cache: 清空聊天模型实例复用，供测试隔离环境变量
+6. 子模块不对外：包外 MUST NOT import `models.<子模块>`，由 test_models_public_surface 守卫
 🏁
 关联模块：➡️
 1. engines.agents.models.catalog: 导入目录访问与能力查询
-2. engines.agents.models.chat_model: 导入 ChatModelFactory，建聊天模型
+2. engines.agents.models.chat_model: 导入按配置复用聊天模型与清空复用
 3. engines.agents.models.fallback: 导入 build_fallback_chat_model，建备用模型
 4. engines.agents.models.loader: 导入连接参数装载
 5. engines.agents.models.embedding_model: 导入 build_embedding_model
@@ -27,6 +28,7 @@ Python 调试：➡️ python -m engines.agents.models 🏁
 测试：➡️
 1. tests/graybox/unit/test_models_public_surface.py: 门面唯一入口守卫（包外不得 import 子模块）
 2. tests/engines/agents/test_models.py: 经门面建执行/验收模型（e2e）
+3. tests/graybox/unit/test_role_build_contract.py: 实例复用、循环亲和、配置变化即新实例
 🏁
 """
 
@@ -43,7 +45,7 @@ from .catalog import (
     get_text,
     model_supports_image,
 )
-from .chat_model import ChatModelFactory
+from .chat_model import clear_chat_model_cache, get_or_create_chat_model
 from .embedding_model import build_embedding_model
 from .fallback import build_fallback_chat_model
 from .loader import load_model_config, load_realtime_model_config
@@ -52,6 +54,7 @@ from .tts_model import build_tts_model
 
 __all__ = [
     "DeepSeekModelConfig",
+    "clear_chat_model_cache",
     "get_chat_model",
     "get_embedding",
     "get_embedding_model",
@@ -65,7 +68,10 @@ __all__ = [
 
 
 def get_chat_model(config_key: str) -> ChatModelBase:
-    """按角色键取一个已建好的聊天模型。
+    """按角色键取一个聊天模型；同一循环、同一配置复用已建实例。
+
+    复用的边界由 `chat_model.get_or_create_chat_model` 负责：连接参数任一变化，
+    或换到另一个事件循环，都会得到新实例。
 
     Args:
         config_key: agent_config.yaml 顶层键，如 UI_EXECUTOR_ROLE_CONFIG。
@@ -76,7 +82,7 @@ def get_chat_model(config_key: str) -> ChatModelBase:
     Raises:
         ValueError: 角色节或 ModelConfig 缺失，或 API 密钥环境变量未设置。
     """
-    return ChatModelFactory(load_model_config(config_key)).create()
+    return get_or_create_chat_model(load_model_config(config_key))
 
 
 def get_fallback_chat_model(config_key: str) -> ChatModelBase | None:

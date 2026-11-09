@@ -10,13 +10,13 @@
 | CSS 变量 | 实际值 | 来源原子 | 用途 |
 |----------|--------|----------|------|
 | `--ink` | `#1e1e24` | `--color-indigo-13` | 正文、标题、图标、**实色描边** |
-| `--paper` | `#fffef5` | `--color-lime-94` | L0 纸面底色：页面背景、侧栏、**页头底色** |
+| `--paper` | `#f3efe2` | `--color-lime-94` | L0 纸面底色：页面背景、侧栏、**页头底色** |
 | `--dot` | `#d8d2c4` | `--color-orange-76` | 暖灰点/纹理色（纸面本身**不画点阵**，见 1.16）|
-| `--app-bg-card` | `#ffffff` | `--color-white` | 卡片/纸张面（唯一的"白"）|
-| `--app-bg-input` | `#ffffff` | `--color-white` | 输入框底色 |
-| `--app-bg-subtle` | `#fffef5` | `--color-lime-94` | 表头、浅底块（与纸面同值，靠描边走层次）|
-| `--app-border-light` | `#ffffff` | `--color-white` | **只作占位**，禁止当可见边框色（见 1.16）|
-| `--app-border-lighter` | `#fffef5` | `--color-lime-94` | 同上 |
+| `--app-bg-card` | `#f7f3e8` | `--color-white` | 卡片/纸张面（唯一的"白"）|
+| `--app-bg-input` | `#f7f3e8` | `--color-white` | 输入框底色 |
+| `--app-bg-subtle` | `#f3efe2` | `--color-lime-94` | 表头、浅底块（与纸面同值，靠描边走层次）|
+| `--app-border-light` | `#f7f3e8` | `--color-white` | **只作占位**，禁止当可见边框色（见 1.16）|
+| `--app-border-lighter` | `#f3efe2` | `--color-lime-94` | 同上 |
 | `--app-highlight` | `#fcdc6b` | `--color-yellow-70` | hover 高亮底（default 按钮 hover、下拉项 hover）|
 | `--app-text` | = `--ink` | — | 正文文字 |
 | `--app-text-secondary` | `#96918c` | `--color-ink-57` | 辅助文字、占位符、禁用态 |
@@ -50,7 +50,7 @@
 | 危险/失败 | `#ffb5a7` | `#ffe9e8` | `#b23838` | `--app-status-danger` / `-bg` / `-text` |
 | 紫色/锁定 | `#c7b6f8` | `#f6eafe` | `#5b45a4` | `--app-status-purple` / `-bg` / `-text` |
 | 警告/等待 | `#f7c948` | `#fff8e0` | `#826208` | `--app-status-warning-bg` / `--app-warning-text` |
-| 离线/禁用 | `#c9cacc` | `#fffef5` | `#96918c` | `--app-offline` / `--app-text-secondary` |
+| 离线/禁用 | `#c9cacc` | `#f3efe2` | `#96918c` | `--app-offline` / `--app-text-secondary` |
 | 通过（旧档） | `#c8f5d0` | — | `#1a5c2a` | `--app-pass` / `--app-pass-text` |
 | 失败（旧档） | `#ffe9e8` | — | `#7a1c1c` | `--app-fail` / `--app-fail-text` |
 | 待定（旧档） | `#cbe8fd` | — | `#1a426f` | `--app-pending` / `--app-pending-text` |

@@ -267,7 +267,7 @@ h4 {
 }
 
 .doc-section {
-  background: #fff;
+  background: var(--color-white);
   border-radius: var(--app-radius-md);
   border: 2.5px solid var(--ink);
   padding: var(--app-space-lg);
@@ -307,7 +307,7 @@ h4 {
   font-size: var(--app-size-xs);
   padding: 2px var(--app-space-sm);
   border-radius: var(--el-border-radius-small);
-  background: #fff;
+  background: var(--color-white);
   color: var(--app-text-primary);
   font-weight: var(--app-font-weight-bold);
   border: 1.5px solid var(--ink);
@@ -334,7 +334,7 @@ h4 {
 }
 
 .doc-page--fixed .doc-section {
-  background: #fff;
+  background: var(--color-white);
   border: 2.5px solid var(--ink);
   border-radius: var(--app-radius-md);
   box-shadow: var(--app-shadow-sm);
@@ -349,7 +349,7 @@ h4 {
   font-weight: var(--app-font-weight-semibold);
 }
 .doc-page--fixed .doc-tag {
-  background: #fff;
+  background: var(--color-white);
   color: var(--app-text-primary);
   opacity: 0.6;
   border: 1.5px solid var(--ink);

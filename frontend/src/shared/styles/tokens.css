@@ -34,7 +34,7 @@
      ═══════════════════════════════════════════ */
 
   /* ── white ── */
-  --color-white: #ffffff;
+  --color-white: #f7f3e8;
   --color-white-a60: rgba(255, 255, 255, 0.6);
 
   /* ── ink ── */
@@ -82,7 +82,7 @@
   --color-yellow-24: #5a4e20;
 
   /* ── lime ── */
-  --color-lime-94: #fffef5;
+  --color-lime-94: #f3efe2;
   --color-lime-45: #6fba2c;
 
   /* ── green ── */

@@ -11,8 +11,8 @@
 ```css
 :root {
   /* 颜色原子（只抄用到的） */
-  --color-white: #ffffff;
-  --color-lime-94: #fffef5;   --color-orange-76: #d8d2c4;
+  --color-white: #f7f3e8;
+  --color-lime-94: #f3efe2;   --color-orange-76: #d8d2c4;
   --color-indigo-13: #1e1e24; --color-indigo-76: #a78bfa;
   --color-yellow-70: #fcdc6b; --color-yellow-63: #f7c948; --color-yellow-62: #ffd93d;
   --color-green-61: #6bcb77;  --color-green-87: #c8f5d0;  --color-green-33: #2d7a31;

@@ -54,7 +54,7 @@
   align-self: flex-start;
   border: 2px solid var(--ink);
   border-radius: 2px;
-  background: #fff;
+  background: var(--color-white);
   box-shadow: 2px 2px 0 0 var(--sidebar-teal);
   color: var(--app-text-primary);
   font-family: var(--app-font);
@@ -87,12 +87,40 @@
 .sidebar--collapsed .sidebar__footer {
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 10px 6px;
+  gap: var(--app-space-sm);
+  padding: var(--app-space-sm) 0;
 }
+/* 折叠态：头像 / 退出 / 展开三个控件统一为 32×32 小方块，等距竖向排列 */
+.sidebar--collapsed .sidebar__user-card {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+.sidebar--collapsed .sidebar__user-display {
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  background: var(--color-white);
+  box-shadow: 2px 2px 0 0 var(--sidebar-teal);
+}
+.sidebar--collapsed .sidebar__icon-logout,
 .sidebar--collapsed .sidebar__toggle {
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
   align-self: center;
-  margin: var(--app-space-xs) auto var(--app-space-sm);
+  display: grid;
+  place-items: center;
+  border-radius: 2px;
+  font-size: var(--app-size-md);
+  line-height: 1;
 }
 .sidebar__icon-logout {
   border: 2px solid var(--ink);
@@ -340,7 +368,7 @@
   font-weight: var(--app-font-weight-bold);
   letter-spacing: 0.03em;
   color: var(--app-text-primary);
-  background: #fff;
+  background: var(--color-white);
   border-radius: 2px;
   line-height: 16px;
   margin-left: auto;
@@ -361,7 +389,7 @@
   background: var(--sidebar-yellow);
 }
 .sidebar-menu__item.active .sidebar-menu__badge {
-  background: #fff;
+  background: var(--color-white);
   border-color: var(--ink);
 }
 /* 选中态保持红色语义，不被上面的白底覆盖 */
@@ -428,7 +456,7 @@
 .sidebar__user-card {
   margin: 10px;
   padding: 12px;
-  background: #fff;
+  background: var(--color-white);
   border-radius: 2px;
   border: var(--sidebar-border);
   box-shadow: 2px 2px 0 0 color-mix(in srgb, var(--sidebar-teal) 70%, transparent);

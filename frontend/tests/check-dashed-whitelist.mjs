@@ -1,9 +1,10 @@
 /**
- * 线型白名单门禁：虚线只属于 KpiCard 与 AgentRouteCard 两个组件。
+ * 线型白名单门禁：虚线只属于 AgentRouteCard 一个组件。
  *
  * 规则真相源：.agents/skills/doodle-craft/SKILL.md §线型规则
  *   - 虚线是组件皮肤，不是页面装饰；判定看组件，不看页面/功能
- *   - 只有 shared/components/KpiCard.vue 与 modules/ai-assistant/components/AgentRouteCard.vue 可声明 dashed
+ *   - 只有 modules/ai-assistant/components/AgentRouteCard.vue 可声明 dashed
+ *     （KpiCard 已于 2026-11-09 按需求改为实线，移出白名单）
  *   - 其余卡片、容器、分隔、轮廓一律 `1px solid color-mix(in srgb, var(--ink) 10%, transparent)`
  *
  * 迁移未完成，存量按「文件 → 次数」登记：只降不增。
@@ -19,11 +20,8 @@ const FRONTEND = join(dirname(fileURLToPath(import.meta.url)), "..")
 const SRC = join(FRONTEND, "src")
 const EXTS = [".vue", ".css"]
 
-/** 唯一允许虚线皮肤的两个组件 */
-const OWNERS = new Set([
-  "shared/components/KpiCard.vue",
-  "modules/ai-assistant/components/AgentRouteCard.vue",
-])
+/** 唯一允许虚线皮肤：助手角色卡 */
+const OWNERS = new Set(["modules/ai-assistant/components/AgentRouteCard.vue"])
 
 /** 存量已清零：任何非白名单文件出现 dashed 都直接阻断 */
 const BASELINE = new Map([])

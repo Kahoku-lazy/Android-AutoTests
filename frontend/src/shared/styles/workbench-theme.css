@@ -149,21 +149,29 @@
   border-color: var(--ink);
 }
 
-/* AppTable */
-.wb-shell .ac-table th.el-table__cell {
-  background: var(--app-bg-subtle);
-  color: var(--app-text-primary);
-  font-weight: var(--app-font-weight-bold);
+/* AppTable：表纸风格
+   - 表头无底色、细 1px 分隔线（需 !important 压过全局 .el-table th 的底色与 2px 墨线）
+   - 行分隔 1px 浅线、单元格纵向留白加大，读起来是一条条“笔迹行”而不是网格 */
+.wb-shell .ac-table th.el-table__cell,
+.workflow-workbench .ac-table th.el-table__cell {
+  background: transparent !important;
+  color: var(--app-text-secondary) !important;
+  font-weight: var(--app-font-weight-semibold) !important;
   font-size: var(--app-size-xs);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  /* 纸面风格不画网格线；表头底线由全局 .el-table th 的 2px 墨线（!important）接管 */
-  border-bottom: 1px solid transparent;
+  letter-spacing: 0.08em;
+  padding: var(--app-space-sm) 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 14%, transparent) !important;
 }
-.wb-shell .ac-table td.el-table__cell {
+.wb-shell .ac-table td.el-table__cell,
+.workflow-workbench .ac-table td.el-table__cell {
   color: var(--app-text-primary);
-  /* 纸面风格不画行网格线；保留 1px 占位以维持行高 */
-  border-bottom: 1px solid transparent;
+  padding: var(--app-space-md) 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 8%, transparent) !important;
+}
+.wb-shell .ac-table .el-table__body tr:hover > td.el-table__cell,
+.workflow-workbench .ac-table .el-table__body tr:hover > td.el-table__cell {
+  background: color-mix(in srgb, var(--ink) 3%, transparent) !important;
 }
 
 /* 斑马纹：同上，全局 .el-table td 底色带 !important，条纹也必须画在单元格上。

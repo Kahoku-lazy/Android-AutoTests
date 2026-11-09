@@ -48,7 +48,7 @@
 
 ```css
 /* L0 / 壳层：纯暖白纸面，禁止点阵与横线本 */
-background-color: var(--paper); /* #fffef5 */
+background-color: var(--paper); /* #f3efe2 */
 
 /* 主区稀疏涂鸦：shared/components/PaperDoodles.vue
    position:absolute; inset:0; pointer-events:none; 挂在 .main-content 内 */

@@ -19,6 +19,7 @@ const emit = defineEmits(["update:modelValue"])
       type="button"
       class="filter-tab"
       :class="{ active: modelValue === tab.key }"
+      :data-key="tab.key"
       @click="emit('update:modelValue', tab.key)"
     >
       {{ tab.label }}

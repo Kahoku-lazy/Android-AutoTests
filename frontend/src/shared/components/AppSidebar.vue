@@ -148,13 +148,7 @@ onUnmounted(() => {
   >
     <!-- 头部品牌（高度与主区 wb-header 底边对齐） -->
     <router-link to="/dashboard" class="sidebar__header" :title="collapsed ? '智能化测试平台' : ''">
-      <img
-        v-show="!collapsed"
-        class="brand-mark"
-        src="/brand/ai-mark.png"
-        alt=""
-        aria-hidden="true"
-      />
+      <img class="brand-mark" src="/brand/ai-mark.png" alt="" aria-hidden="true" />
       <div v-show="!collapsed" class="sidebar__brand">
         <span class="brand-title"><span class="brand-accent">智能化</span>测试平台</span>
       </div>

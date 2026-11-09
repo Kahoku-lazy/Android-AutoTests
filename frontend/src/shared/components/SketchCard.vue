@@ -113,7 +113,7 @@ function onDelete(e: MouseEvent) {
   padding: var(--app-space-md) var(--app-space-md) 28px;
   text-align: left;
   cursor: pointer;
-  background: #fff;
+  background: var(--color-white);
   border: 1px solid var(--ink);
   border-radius: 2px;
   box-shadow: 4px 4px 0 0 var(--sketch-accent);

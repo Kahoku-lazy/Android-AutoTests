@@ -4,7 +4,7 @@
 
 > **作用域警示**：`.ac-card` 的涂鸦皮肤**只在 `.wb-shell`（或 `.workflow-workbench`）内生效**。页面根忘带主题作用域 → 卡片变实线大圆角 + 灰阴影（EP 出厂皮肤）。
 
-> **线型规则（2026-11-04 起，强制）**：虚线是**组件皮肤**，不是页面装饰。只有 `KpiCard`（核心指标 / 统计汇总）与 `AgentRouteCard`（`.route-card` 助手角色卡）可以声明 `dashed`；这两个组件复用到任何页面都照样虚线，但把它们的虚线样式抄到别的组件里**不算白名单**，一律实线。判定口径见 [../../SKILL.md](../../SKILL.md) §线型规则。下表列的是**当前代码**，其中 AppCard / SketchCard / DoodleNote 基类 / TaskBoard 任务卡的 `dashed` 属待迁移存量，改到即改实线，不要照抄。
+> **线型规则（2026-11-04 起，强制；2026-11-09 修订）**：虚线是**组件皮肤**，不是页面装饰。目前**只有 `AgentRouteCard`（`.route-card` 助手角色卡）**可以声明 `dashed`；`KpiCard` 已于 2026-11-09 按需求改为实线（描边 = 硬阴影色 `--kpi-accent`），并移出白名单。把白名单组件的虚线样式抄到别的组件里**不算白名单**，一律实线。判定口径见 [../../SKILL.md](../../SKILL.md) §线型规则。下表列的是**当前代码**，其中 AppCard / SketchCard / DoodleNote 基类 / TaskBoard 任务卡的 `dashed` 属待迁移存量，改到即改实线，不要照抄。
 
 ## 1. AppCard 钉板卡（可复用数据块）
 
@@ -43,8 +43,8 @@
 原生 `<div>`，自包含样式：
 
 ```
-边框 2.5px dashed var(--ink)   背景 #fff   圆角 var(--comp-kpi-radius)=2px
-阴影 4px 4px 0 0 var(--kpi-accent)      微倾 默认 -0.8deg（--comp-kpi-tilt）
+边框 2.5px solid color-mix(in srgb, var(--ink) 12%, var(--paper))（淡灰白；2026-11-09 由 dashed 改实线）   背景 #fff   圆角 var(--comp-kpi-radius)=2px
+阴影 右下三层浅色硬影（同色相 42%/20%/8% 混纸白，偏移 4/8/12px，0 模糊；2026-11-09）      微倾 默认 -0.8deg（--comp-kpi-tilt）
 可点时 hover：回正 + translate(-1,-1) + 影 5px
 ```
 

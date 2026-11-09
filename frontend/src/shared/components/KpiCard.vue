@@ -101,7 +101,7 @@ function onKeydown(e: KeyboardEvent) {
       >
         <span v-if="shape !== 'circle'" class="kpi-card__shape-inner" />
       </div>
-      <div class="kpi-card__label" :style="{ color }">{{ label }}</div>
+      <div class="kpi-card__label">{{ label }}</div>
       <div class="kpi-card__value">
         <slot name="value">{{ value }}</slot>
       </div>
@@ -148,10 +148,16 @@ function onKeydown(e: KeyboardEvent) {
   --kpi-tilt: var(--comp-kpi-tilt);
   --kpi-radius: var(--comp-kpi-radius);
   position: relative;
-  background: #fff;
-  border: 2.5px dashed var(--ink);
+  background: var(--color-white);
+  /* 2026-11-09 按需求改：虚线 → 实线，描边色与硬阴影同为模块色（--kpi-accent） */
+  /* 描边与阴影同色：取阴影第一层（accent 42% 混纸白） */
+  border: 2.5px solid color-mix(in srgb, var(--kpi-accent) 42%, var(--paper));
   border-radius: var(--kpi-radius);
-  box-shadow: 4px 4px 0 0 var(--kpi-accent);
+  /* 2026-11-09：描边之外补回阴影，取同色相三层、逐层变浅（浅色渐变） */
+  box-shadow:
+    4px 4px 0 0 color-mix(in srgb, var(--kpi-accent) 42%, var(--paper)),
+    8px 8px 0 0 color-mix(in srgb, var(--kpi-accent) 20%, var(--paper)),
+    12px 12px 0 0 color-mix(in srgb, var(--kpi-accent) 8%, var(--paper));
   transform: rotate(var(--kpi-tilt));
   transition:
     transform var(--app-duration, 0.2s) var(--app-ease, ease),
@@ -164,7 +170,10 @@ function onKeydown(e: KeyboardEvent) {
 
 .kpi-card.is-clickable:hover {
   transform: rotate(0deg) translate(-1px, -1px);
-  box-shadow: 5px 5px 0 0 var(--kpi-accent);
+  box-shadow:
+    5px 5px 0 0 color-mix(in srgb, var(--kpi-accent) 42%, var(--paper)),
+    9px 9px 0 0 color-mix(in srgb, var(--kpi-accent) 20%, var(--paper)),
+    13px 13px 0 0 color-mix(in srgb, var(--kpi-accent) 8%, var(--paper));
 }
 
 .kpi-card:focus-visible {
@@ -229,7 +238,7 @@ function onKeydown(e: KeyboardEvent) {
 .kpi-card__shape-inner {
   width: 6px;
   height: 6px;
-  background: #fff;
+  background: var(--color-white);
   border-radius: 1px;
 }
 
@@ -267,14 +276,26 @@ function onKeydown(e: KeyboardEvent) {
   font-weight: var(--app-font-weight-bold);
   letter-spacing: 0.04em;
   margin-bottom: 2px;
+  /* 标题统一黑色，不再跟随 accent */
+  color: var(--app-text-primary);
 }
 
 .kpi-card--kpi .kpi-card__value {
   font-family: var(--app-font, inherit);
   font-size: var(--app-size-2xl, 28px);
   font-weight: var(--app-font-weight-heavy);
-  color: var(--app-text-primary);
   line-height: 1.1;
+  /* 数值：同色相深→浅渐变，颜色与卡片阴影（accent）同色系 */
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--kpi-accent) 55%, var(--ink)) 0%,
+    var(--kpi-accent) 55%,
+    color-mix(in srgb, var(--kpi-accent) 20%, var(--paper)) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: var(--app-text-primary);
+  -webkit-text-fill-color: transparent;
 }
 
 /* ── entry 变体 ── */
@@ -339,7 +360,7 @@ function onKeydown(e: KeyboardEvent) {
   flex-shrink: 0;
   border-radius: 50%;
   border: 2px solid var(--app-live);
-  background: #fff;
+  background: var(--color-white);
   animation: kpiLivePulse 1.5s ease-in-out infinite;
 }
 
@@ -373,7 +394,16 @@ function onKeydown(e: KeyboardEvent) {
   font-weight: var(--app-font-weight-heavy);
   letter-spacing: -0.03em;
   line-height: 1;
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--kpi-accent) 55%, var(--ink)) 0%,
+    var(--kpi-accent) 55%,
+    color-mix(in srgb, var(--kpi-accent) 20%, var(--paper)) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
   color: var(--kpi-accent);
+  -webkit-text-fill-color: transparent;
 }
 
 .kpi-card__stat :deep(small) {

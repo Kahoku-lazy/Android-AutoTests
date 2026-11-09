@@ -23,25 +23,26 @@ Doodle Craft 是本平台前端的**默认设计方案**：极简几何 · 粗�
 
 ## 线型规则（强制）：虚线是组件皮肤，不是页面装饰
 
-**默认实线。** 只有下列 **三个组件样式** 允许虚线；判定看**组件**，不看页面、不看功能名。同一组件被复用到任何页面、任何业务场景，虚线都随之成立；反过来，把这三个组件的虚线样式**抄到别的组件里不算数**。
+**默认实线。** 只有下列 **一个组件样式** 允许虚线；判定看**组件**，不看页面、不看功能名。同一组件被复用到任何页面、任何业务场景，虚线都随之成立；反过来，把这个组件的虚线样式**抄到别的组件里不算数**。
 
 | 允许虚线的样式 | 承载组件 | 长什么样 |
 | --- | --- | --- |
-| ① 核心指标卡 | `KpiCard` | 一个大数字 + 一行说明（平台运营的在线设备 / 活跃智能体 / 运行中任务 / 任务数量 / 工作流；报告页 KPI 同款） |
-| ② 统计汇总卡 | `KpiCard`（`shape` 变体：diamond / triangle / square / circle） | 图标 + 标签 + 数字（BUG 概览的按类型拆分统计） |
-| ③ 助手角色卡 | `AgentRouteCard`（`.route-card`，DoodleNote 皮） | 头像 + 职责 + 配置入口（助手看板 Agent-01 / Agent-02） |
+| 助手角色卡 | `AgentRouteCard`（`.route-card`，DoodleNote 皮） | 头像 + 职责 + 配置入口（助手看板 Agent-01 / Agent-02） |
+
+> **2026-11-09 变更**：`KpiCard`（核心指标卡 / 统计汇总卡）按需求由虚线改为**实线**，描边色 = 硬阴影色 `var(--kpi-accent)`（`2.5px solid var(--kpi-accent)`）。
+> 它**已移出虚线白名单**（门禁 `tests/check-dashed-whitelist.mjs` 的 OWNERS 同步移除）；若将来要回到虚线，需先在 SKILL.md 本表重新登记并放回 OWNERS。
 
 判据按顺序问，命中即止：
 
-1. 这段虚线的元素，是不是由 `KpiCard` 或 `AgentRouteCard` 渲染出来的？→ 是，**允许虚线**，且换页面复用照样允许
-2. 是不是把上面两个组件的虚线 CSS 复制到了别的组件 / 就地手写了一遍同款卡片？→ **不算白名单**，要么改用组件，要么写实线
+1. 这段虚线的元素，是不是由 `AgentRouteCard` 渲染出来的？→ 是，**允许虚线**，且换页面复用照样允许
+2. 是不是把它的虚线 CSS 复制到了别的组件 / 就地手写了一遍同款卡片？→ **不算白名单**，要么改用组件，要么写实线
 3. 其它所有 UI —— 图表卡、表格卡、入口卡、条目卡、任务卡、对话框、抽屉、表纸、缩略图、证据块、列表分隔、聚焦轮廓 → **实线**
 
 **实线口径**：`1px solid color-mix(in srgb, var(--ink) 10%, transparent)`；圆角取 `--app-radius-*`；不再用 1.5px / 2px / 2.5px 实线粗描边分层，层级靠「页面底 → 卡片 → 浅底内嵌 → 白卡」四层背景拉开。
 
-**虚线口径**（仅白名单）：`2.5px dashed var(--ink)`，**只此一档**；不得再出现 `1px / 1.5px / 2px` 虚线。虚线必须由 `KpiCard.vue` / `AgentRouteCard.vue` 自己声明，不得靠全局选择器或共享令牌批量染色。
+**虚线口径**（仅白名单）：`2.5px dashed var(--ink)`，**只此一档**；不得再出现 `1px / 1.5px / 2px` 虚线。虚线必须由 `AgentRouteCard.vue` 自己声明，不得靠全局选择器或共享令牌批量染色。
 
-**违规判定**：`grep -rn "dashed" frontend/src` 的结果里，只有 `KpiCard.vue`、`AgentRouteCard.vue` 两个文件可以出现 `dashed`；其它文件（含全局 `workbench-theme.css` / `style.css` / `tokens.css`）出现即违规。
+**违规判定**：`grep -rn "dashed" frontend/src` 的结果里，只有 `AgentRouteCard.vue` 一个文件可以出现 `dashed`；其它文件（含全局 `workbench-theme.css` / `style.css` / `tokens.css`）出现即违规。
 
 **存量待迁移**（规则已生效、代码尚未改完；动到下列文件时顺手改实线，不要新写虚线）：`workbench-theme.css` 的 `.wb-shell .ac-card` 全局虚线（连带 11 个 AppCard 实例）、`style.css` 的 `.el-dialog` / `.el-drawer`、`tokens.css` 的 `--comp-sheet-border` / `--comp-dialog-border`、`DoodleNote` 基类虚线（应下沉到 `AgentRouteCard` 自持，`TaskBoard` 的任务卡随之改实线）、`SketchCard`、`TaskMediaThumb`、`StepLogCheck`、`StepLogEvidence`、`TaskAttemptCard`、`CaseStepList`、`CaseImportCard`、`WorkflowDirTree`、`PageFlowNode`、`DashboardView`、`ActivityTimeline`、`DisconnectDialog`、`VoiceConsole`、`TranscriptPanel`、`CaseFileSheet`、`WifiPortPanel`、`LoginView` 内的本地 `dashed`。
 
@@ -56,7 +57,7 @@ Doodle Craft 是本平台前端的**默认设计方案**：极简几何 · 粗�
 
 ## 一段话说清风格
 
-暖白纸面（`--paper` `#fffef5`，不是纯白），墨色粗线勾边（`--ink` `#1e1e24`，2.5px 描边；**实线为主，虚线只留指标卡 / 助手角色卡 / 统计汇总卡三类**，见上节），立体感一律靠**硬偏移阴影**（模糊半径恒为 0），圆角是刻意**两角不同**的二值写法（按钮 `4px 8px`、卡片 `6px 10px`、胶囊 `4px 10px 6px 8px`），八支模块彩笔只做描边 / 图标 / 图表色与硬阴影色源，卡片网格按序号微倾 ±0.4°~1.5° 并在悬停时回正抬起，动效只走 `0.12 / 0.15 / 0.25s` 三档；全站字体一套（英文 Cascadia Mono 等宽 + 中文思源黑体），字号 7 档（12–48px）。
+暖白纸面（`--paper` `#f3efe2`，不是纯白），墨色粗线勾边（`--ink` `#1e1e24`，2.5px 描边；**实线为主，虚线只留指标卡 / 助手角色卡 / 统计汇总卡三类**，见上节），立体感一律靠**硬偏移阴影**（模糊半径恒为 0），圆角是刻意**两角不同**的二值写法（按钮 `4px 8px`、卡片 `6px 10px`、胶囊 `4px 10px 6px 8px`），八支模块彩笔只做描边 / 图标 / 图表色与硬阴影色源，卡片网格按序号微倾 ±0.4°~1.5° 并在悬停时回正抬起，动效只走 `0.12 / 0.15 / 0.25s` 三档；全站字体一套（英文 Cascadia Mono 等宽 + 中文思源黑体），字号 7 档（12–48px）。
 
 ## 设计令牌
 

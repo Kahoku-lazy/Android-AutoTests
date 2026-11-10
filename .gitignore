@@ -39,6 +39,7 @@ data/screenshots/
 data/avatars/
 data/uploads/
 data/sop_*.json
+/db.sqlite3
 /data
 
 # ── AgentScope Runtime ──

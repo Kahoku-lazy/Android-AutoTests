@@ -16,7 +16,7 @@
 
 #### Scenario: 四分段类型可被装载器独立引用
 
-- **WHEN** `load_role_config`（或等价装载入口）构造 `RoleConfig` / `ToolsConfig` / `ContextConfig` / `ReActConfig`
+- **WHEN** `load_role_spec`（或等价装载入口）构造 `RoleConfig` / `ToolsConfig` / `ContextConfig` / `ReActConfig`
 - **THEN** 装载实现不 import `AgentRoleFactory` 所在装配模块
 
 #### Scenario: Agent 不接收 ModelConfig
@@ -26,23 +26,23 @@
 
 ### Requirement: 模型配置唯一装载入口
 
-聊天 / 实时模型连接参数 SHALL 经 `engines.agents.config.models`（`ModelConfig` / `ChatModelFactory` / `load_role_config` / Omni 装载器）从 `config/data/agent_config.yaml` 读取。现成短名目录（`get_text` / `get_realtime` / `get_embedding` / `DeepSeekModelConfig`）亦由该模块提供。`load_role_config` SHALL 返回可直接交给 `AgentRoleFactory` 的 Model + 四分段五元组，且 MUST NOT 为构造四分段而依赖装配模块。`ModelConfig` MUST 止于建模型管线，MUST NOT 成为 Agent 对外构造参数。MUST NOT 再使用已删除的 `engines.agents.role.models`。
+聊天 / 实时模型连接参数 SHALL 经 `engines.agents.config.role_loader`（`ModelConfig` / `ChatModelFactory` / `load_role_spec` / Omni 装载器）从 `config/data/agent_config.yaml` 读取。现成短名目录（`get_text` / `get_realtime` / `get_embedding` / `DeepSeekModelConfig`）亦由该模块提供。`load_role_spec` SHALL 返回可直接交给 `AgentRoleFactory` 的 Model + 四分段五元组，且 MUST NOT 为构造四分段而依赖装配模块。`ModelConfig` MUST 止于建模型管线，MUST NOT 成为 Agent 对外构造参数。MUST NOT 再使用已删除的 `engines.agents.role.models`。
 
 #### Scenario: 装载执行角色模型
 
-- **WHEN** 调用 `load_role_config("UI_EXECUTOR_ROLE_CONFIG")` 或 `build_ui_executor()`
-- **THEN** ModelConfig 与四分段来自 `agent_config.yaml`，经 `config.models` 装载
+- **WHEN** 调用 `load_role_spec("UI_EXECUTOR_ROLE_CONFIG")` 或 `build_ui_executor()`
+- **THEN** ModelConfig 与四分段来自 `agent_config.yaml`，经 `config.role_loader` 装载
 
 #### Scenario: 装载与装配单向依赖
 
-- **WHEN** 检查 `engines.agents.config.models` 对装配入口模块的依赖
+- **WHEN** 检查 `engines.agents.config.role_loader` 对装配入口模块的依赖
 - **THEN** 不存在为角色创建服务的对 `agent_builders` 的导入（类型来自独立类型模块）
 
 ## ADDED Requirements
 
 ### Requirement: 基本角色创建清单与复杂度可追溯
 
-针对「基本 LLM 角色创建」的简化或重构变更，SHALL 在 OpenSpec 变更或 `temps/` 分析中保留当前 create 调用链说明（含 YAML → load_role_config → Factory → build_*），并引用 `temps/agents_architecture.md`（或其后继）与 `GUIDE-创建Agent清单.md`。变更 MUST NOT 在同一变更中捆绑 realtime 重命名、middleware 策略统一化、**skills 产品扩展**、或 workflow 对 `tool_*` 的旁路清理，除非该变更的 proposal 显式扩大范围。
+针对「基本 LLM 角色创建」的简化或重构变更，SHALL 在 OpenSpec 变更或 `temps/` 分析中保留当前 create 调用链说明（含 YAML → load_role_spec → Factory → build_*），并引用 `temps/agents_architecture.md`（或其后继）与 `GUIDE-创建Agent清单.md`。变更 MUST NOT 在同一变更中捆绑 realtime 重命名、middleware 策略统一化、**skills 产品扩展**、或 workflow 对 `tool_*` 的旁路清理，除非该变更的 proposal 显式扩大范围。
 
 #### Scenario: SPEC-1 范围隔离
 

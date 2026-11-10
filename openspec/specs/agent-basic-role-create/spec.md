@@ -1,8 +1,10 @@
+# agent-basic-role-create Specification
+
 ## Purpose
 
 定义平台「基本 LLM Agent 角色」的创建路径与模块边界：从 `agent_config.yaml` 装载 Model + 四分段 Harness 配置，经 `AgentRoleFactory` 与 `build_*` 得到独立 `agentscope.agent.Agent` 实例；按三节点（N1 ModelConfig 防火墙 / N2 Harness 1:1 / N3 Agent=角色 vs workflow）验收。不含 realtime Omni、middleware 统一化、**skills**、workflow `tool_*` 旁路清理。
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: 基本角色经 YAML 五段与 Factory 创建
 
@@ -16,7 +18,7 @@
 #### Scenario: 用例编写角色创建
 
 - **WHEN** 调用方请求创建用例编写类角色（如 `build_case_writer()`）
-- **THEN** 系统同样经 `load_role_config`（或等价装载）与 Factory 创建新 Agent，工具包来自 `tools_config` 的用例侧 API
+- **THEN** 系统同样经 `load_role_spec`（或等价装载）与 Factory 创建新 Agent，工具包来自 `tools_config` 的用例侧 API
 
 ### Requirement: N1 ModelConfig 不进入 Agent
 
@@ -34,11 +36,11 @@
 
 ### Requirement: N2 四分段配置类型无循环依赖且 1:1
 
-`RoleConfig` / `ToolsConfig` / `ContextConfig` / `ReActConfig` 的定义模块 MUST NOT 依赖 `AgentRoleFactory` 所在装配模块；角色 YAML 装载模块（`engines.agents.config.models`）MUST NOT 为解析四分段而 import 装配模块。装配模块可以依赖类型模块与装载模块。各分段 MUST 字段职责 1:1、MUST NOT 把另一分段的字段写入本分段。四分段配置 SHALL 留在 Agent 配置/装载层；无特殊需求 MUST NOT 作为稳定对外公共 API（对外以 `build_*` → `Agent` 为主）。
+`RoleConfig` / `ToolsConfig` / `ContextConfig` / `ReActConfig` 的定义模块 MUST NOT 依赖 `AgentRoleFactory` 所在装配模块；角色 YAML 装载模块（`engines.agents.config.role_loader`）MUST NOT 为解析四分段而 import 装配模块。装配模块可以依赖类型模块与装载模块。各分段 MUST 字段职责 1:1、MUST NOT 把另一分段的字段写入本分段。四分段配置 SHALL 留在 Agent 配置/装载层；无特殊需求 MUST NOT 作为稳定对外公共 API（对外以 `build_*` → `Agent` 为主）。
 
 #### Scenario: 装载模块可独立导入
 
-- **WHEN** 仅导入角色 YAML 装载模块以调用 `load_role_config`
+- **WHEN** 仅导入角色 YAML 装载模块以调用 `load_role_spec`
 - **THEN** 导入成功且不需要先导入 `agent_builders` 装配入口
 
 #### Scenario: 类型可被装载与装配双方使用

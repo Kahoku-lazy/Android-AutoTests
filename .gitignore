@@ -214,3 +214,6 @@ tests/reports/
 # ── 本地安装的 platform-tools（python run.py setup 产物，不入库）──
 tools/platform-tools/
 tools/.cache/
+
+# ── 设计方案与报告（只留本地，不入库；已入库部分已从最新版本移除）──
+dev_docs/DEV_TEST/设计方案与报告/

@@ -46,9 +46,6 @@
 .doc-section--board.ch-ai {
   --ch-accent: var(--c-ai);
 }
-.doc-section--board.ch-asset {
-  --ch-accent: var(--c-case);
-}
 .doc-section--board.ch-trend {
   --ch-accent: var(--c-report);
 }
@@ -166,15 +163,13 @@
   opacity: 0.45;
 }
 
-.asset-cols {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--app-space-md);
+/* 平台概览：运行指标组与测试用例资产子区之间的纵向间隔。
+   .subhead 自带 4px 上距，这里补到 --app-space-lg，避免指标卡的右下硬阴影压住分隔线。 */
+.overview-assets {
+  margin-top: var(--app-space-lg);
 }
+
 @media (max-width: 900px) {
-  .asset-cols {
-    grid-template-columns: 1fr;
-  }
   .chapter-head {
     flex-direction: column;
   }
@@ -225,6 +220,12 @@
   .ch-ai__body--solo {
     grid-template-columns: 1fr;
   }
+}
+
+/* 用量趋势区：账单/智能体卡之后承载四张用量图。
+   .subhead 自带 4px 上距，这里补到 --app-space-lg，把「快照」与「趋势」两层拉开。 */
+.ai-usage-trends {
+  margin-top: var(--app-space-lg);
 }
 
 /* ── DeepSeek 账单卡：标题 + 缓存命中率主指标 + 两行双列明细 ── */

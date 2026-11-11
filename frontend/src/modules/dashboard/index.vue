@@ -117,14 +117,19 @@ function formatUsageToken(tokens: number): string {
     <ErrorState v-if="error" :message="error" @retry="loadData" />
 
     <div class="doc-body">
-      <!-- ① 平台运营 -->
+      <!-- ① 平台概览：平台运行指标 + 测试用例资产 -->
       <section class="doc-section doc-section--board ch-ops">
         <header class="chapter-head">
           <div class="chapter-head__left">
             <div class="chapter-mark"><IconMonitor :size="16" /></div>
             <div>
-              <h3 class="chapter-title"><span class="marker">平台运营</span></h3>
+              <h3 class="chapter-title"><span class="marker">平台概览</span></h3>
             </div>
+          </div>
+          <div class="chip-row">
+            <span class="chip chip--teal"
+              >用例 <b>{{ stats.cases.total }}</b></span
+            >
           </div>
         </header>
         <div class="dashboard__stats-grid">
@@ -175,6 +180,29 @@ function formatUsageToken(tokens: number): string {
           >
             <template #icon><IconLayers :size="15" /></template>
           </StatsAppCard>
+        </div>
+
+        <div class="overview-assets">
+          <div class="subhead">测试用例 <span class="subhead__tag">Cases</span></div>
+          <div v-if="caseProjectCards.length" class="dashboard__stats-grid">
+            <StatsAppCard
+              v-for="item in caseProjectCards"
+              :key="item.projectId"
+              :label="item.name"
+              :value="item.total"
+              :color="item.color"
+              :path="item.path"
+              :loading="loading"
+            >
+              <template #icon>
+                <IconLayers :size="15" />
+              </template>
+            </StatsAppCard>
+          </div>
+          <div v-else-if="!loading" class="cases-empty">
+            <p class="cases-empty__text">暂无用例项目</p>
+            <RouterLink class="cases-empty__link" to="/cases">前往用例管理创建</RouterLink>
+          </div>
         </div>
       </section>
 
@@ -273,50 +301,50 @@ function formatUsageToken(tokens: number): string {
             </AppCard>
           </div>
         </div>
-      </section>
 
-      <!-- ③ 测试资产：用例 + 元素 -->
-      <section class="doc-section doc-section--board ch-asset">
-        <header class="chapter-head">
-          <div class="chapter-head__left">
-            <div class="chapter-mark"><IconLayers :size="16" /></div>
-            <div>
-              <h3 class="chapter-title"><span class="marker">测试资产</span></h3>
-            </div>
+        <div class="ai-usage-trends">
+          <div class="subhead">用量趋势 <span class="subhead__tag">Usage</span></div>
+          <div class="dashboard__trends dashboard__trends--ai">
+            <AppCard class="trends-chart-card" :tone="sketchToneAt(2)" :tilt="sketchTiltAt(2)">
+              <div class="trends-tasks-card__title">每日 Token 用量</div>
+              <SeriesBarChart :labels="aiTokenChart.labels" :series="tokenSeries" />
+            </AppCard>
+            <AppCard class="trends-chart-card" :tone="sketchToneAt(3)" :tilt="sketchTiltAt(3)">
+              <div class="trends-tasks-card__title">每日 DeepSeek 费用（元）</div>
+              <SeriesBarChart :labels="deepseekCostChart.labels" :series="costSeries" />
+            </AppCard>
           </div>
-          <div class="chip-row">
-            <span class="chip chip--teal"
-              >用例 <b>{{ stats.cases.total }}</b></span
-            >
+          <div class="dashboard__trends dashboard__trends--single">
+            <AppCard class="trends-chart-card" :tone="sketchToneAt(4)" :tilt="sketchTiltAt(4)">
+              <div class="trends-tasks-card__title">今日 Token 与费用（逐小时）</div>
+              <TodayUsageChart :series="todayUsageSeries" />
+            </AppCard>
           </div>
-        </header>
-        <div class="asset-cols">
-          <div>
-            <div class="subhead">测试用例 <span class="subhead__tag">Cases</span></div>
-            <div v-if="caseProjectCards.length" class="dashboard__stats-grid">
-              <StatsAppCard
-                v-for="item in caseProjectCards"
-                :key="item.projectId"
-                :label="item.name"
-                :value="item.total"
-                :color="item.color"
-                :path="item.path"
-                :loading="loading"
-              >
-                <template #icon>
-                  <IconLayers :size="15" />
-                </template>
-              </StatsAppCard>
-            </div>
-            <div v-else-if="!loading" class="cases-empty">
-              <p class="cases-empty__text">暂无用例项目</p>
-              <RouterLink class="cases-empty__link" to="/cases">前往用例管理创建</RouterLink>
-            </div>
+          <div class="dashboard__trends dashboard__trends--single">
+            <AppCard class="trends-chart-card" :tone="sketchToneAt(5)" :tilt="sketchTiltAt(5)">
+              <div class="trends-tasks-card__title">Voice 来源 Token 消耗</div>
+              <div class="voice-usage-summary">
+                <span
+                  >当天总用量
+                  <b>{{ formatUsageToken(stats.usageLedger.voiceToday.total.tokens) }}</b></span
+                >
+                <span
+                  >累计用量
+                  <b>{{ formatUsageToken(stats.usageLedger.voiceTotal.total.tokens) }}</b></span
+                >
+              </div>
+              <SeriesBarChart
+                v-if="voiceUsageLabels.length"
+                :labels="voiceUsageLabels"
+                :series="voiceUsageSeries"
+              />
+              <p v-else class="usage-empty">暂无 Voice 用量</p>
+            </AppCard>
           </div>
         </div>
       </section>
 
-      <!-- ④ 趋势与动态 -->
+      <!-- ③ 趋势与动态 -->
       <section class="doc-section doc-section--board ch-trend">
         <header class="chapter-head">
           <div class="chapter-head__left">
@@ -335,43 +363,6 @@ function formatUsageToken(tokens: number): string {
           <AppCard class="trends-tasks-card" :tone="sketchToneAt(1)" :tilt="sketchTiltAt(1)">
             <div class="trends-tasks-card__title">任务执行结果</div>
             <TaskResultPanel :tasks="recentTasks" :summary="executionSummary" />
-          </AppCard>
-        </div>
-        <div class="dashboard__trends dashboard__trends--ai">
-          <AppCard class="trends-chart-card" :tone="sketchToneAt(2)" :tilt="sketchTiltAt(2)">
-            <div class="trends-tasks-card__title">每日 Token 用量</div>
-            <SeriesBarChart :labels="aiTokenChart.labels" :series="tokenSeries" />
-          </AppCard>
-          <AppCard class="trends-chart-card" :tone="sketchToneAt(3)" :tilt="sketchTiltAt(3)">
-            <div class="trends-tasks-card__title">每日 DeepSeek 费用（元）</div>
-            <SeriesBarChart :labels="deepseekCostChart.labels" :series="costSeries" />
-          </AppCard>
-        </div>
-        <div class="dashboard__trends dashboard__trends--single">
-          <AppCard class="trends-chart-card" :tone="sketchToneAt(4)" :tilt="sketchTiltAt(4)">
-            <div class="trends-tasks-card__title">今日 Token 与费用（逐小时）</div>
-            <TodayUsageChart :series="todayUsageSeries" />
-          </AppCard>
-        </div>
-        <div class="dashboard__trends dashboard__trends--single">
-          <AppCard class="trends-chart-card" :tone="sketchToneAt(5)" :tilt="sketchTiltAt(5)">
-            <div class="trends-tasks-card__title">Voice 来源 Token 消耗</div>
-            <div class="voice-usage-summary">
-              <span
-                >当天总用量
-                <b>{{ formatUsageToken(stats.usageLedger.voiceToday.total.tokens) }}</b></span
-              >
-              <span
-                >累计用量
-                <b>{{ formatUsageToken(stats.usageLedger.voiceTotal.total.tokens) }}</b></span
-              >
-            </div>
-            <SeriesBarChart
-              v-if="voiceUsageLabels.length"
-              :labels="voiceUsageLabels"
-              :series="voiceUsageSeries"
-            />
-            <p v-else class="usage-empty">暂无 Voice 用量</p>
           </AppCard>
         </div>
 

@@ -9,6 +9,8 @@
 - `engines/`：可替换引擎层——设备控制、串口日志、视觉 OCR、智能体（SOP / 角色 / 工具）运行时等。导入边界：零 `apps.*`、零 `django.*`（业务工具经注入）。
 - 一级子包（一句话）：
   - `agents/`：控制设备任务的 SOP / 智能体角色、提示词、工具与工作流。
+  - `ae_harness/`：手机 UI 执行 + 验收的独立原型链路（不接后端、无调用方、无测试）；与 `agents/` 并存，不替代它。其中 `assistant/` **只服务控制台调试**。
+  - `backend_bridge/`：**平台侧智能体角色的唯一落点**（后端任务 / 前端卡片用）；与控制台入口 `ae_harness/assistant/` 分工，两者只共享原语。详见 [backend_bridge/AGENTS.md](backend_bridge/AGENTS.md)。
   - `device/`：设备引擎；对外入口是 `action`。
   - `uart_log/`：串口日志采集与处理。
   - `vision/`：页面文本识别（OCR）；主要供引擎侧工具调用。

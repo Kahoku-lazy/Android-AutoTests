@@ -14,10 +14,13 @@
 写库：全部经 api.py。
 """
 
+from django.http import StreamingHttpResponse
+from drf_spectacular.utils import OpenApiTypes, extend_schema
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from . import api
 from .models import AIAgent
@@ -151,3 +154,130 @@ class AgentViewSet(
         except ValueError as exc:
             raise ValidationError(str(exc))
         return Response(payload)
+
+
+# ═══════════════════════════════════════════════════════════════════
+class WorkflowStreamView(APIView):
+    """POST /api/ai/workflows/<key>/stream/ — 单智能体一轮对话。"""
+
+    @extend_schema(request=OpenApiTypes.OBJECT, responses={200: OpenApiTypes.STR})
+    def post(self, request, key: str):
+        """校验设备与消息后返回文本流。
+
+        Args:
+            request: DRF 请求，体为 serial、message、session_id。
+            key: 编排键。
+
+        Returns:
+            text/event-stream。本期只推文本增量。
+
+        Raises:
+            NotFound: 编排键不存在。
+            ValidationError: 缺序列号、缺消息或缺 session_id。
+        """
+        from engines.agents.workflow.single import get_single_agent, session_for
+
+        from . import platform_agents
+
+        if not platform_agents.is_platform_key(key):
+            try:
+                get_single_agent(key)
+            except KeyError as exc:
+                raise NotFound(str(exc)) from exc
+        serial = str(request.data.get("serial") or "").strip()
+        message = str(request.data.get("message") or "").strip()
+        session_id = str(request.data.get("session_id") or "").strip()
+        if not serial:
+            raise ValidationError("需要先选择设备")
+        if not message:
+            raise ValidationError("message 不能为空")
+        if not session_id:
+            raise ValidationError("session_id 不能为空")
+
+        # 参数先校验完再进生成器，缺字段时不会创建智能体。
+        def chunks():
+            import asyncio
+
+            from agentscope.message import TextBlock
+
+            if platform_agents.is_platform_key(key):
+                text = platform_agents.stream_turn(
+                    key=key, serial=serial, message=message, session_id=session_id
+                )
+                yield f"data: {text}\n\n"
+                return
+
+            session = session_for(session_id, serial, key)
+
+            async def collect():
+                parts: list[str] = []
+                async for event in session.reply(message):
+                    content = getattr(event, "content", None)
+                    if isinstance(content, list):
+                        parts.extend(
+                            block.text
+                            for block in content
+                            if isinstance(block, TextBlock) and block.text
+                        )
+                return "".join(parts)
+
+            text = asyncio.run(collect())
+            yield f"data: {text}\n\n"
+
+        response = StreamingHttpResponse(chunks(), content_type="text/event-stream")
+        response["Cache-Control"] = "no-cache"
+        return response
+
+
+class WorkflowEventsView(APIView):
+    """GET /api/ai/workflows/events/?session=... — 读本地事件日志里的会话段。"""
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        """返回当前会话最近的事件行。
+
+        Args:
+            request: DRF 请求，查询参数 session 为本次对话键。
+
+        Returns:
+            含 events 字符串列表的响应信封。
+
+        Raises:
+            ValidationError: session 缺失。
+        """
+        from engines.agents.workflow.single import read_session_events
+
+        session_id = str(request.query_params.get("session") or "").strip()
+        if not session_id:
+            raise ValidationError("session 不能为空")
+        return Response({"events": read_session_events(session_id)})
+
+
+class WorkflowListView(APIView):
+    """GET /api/ai/workflows/ — 单智能体编排卡片。"""
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        """返回单智能体编排清单。
+
+        Args:
+            request: DRF 请求。
+
+        Returns:
+            含 workflows 列表的响应信封。
+        """
+        from engines.agents.workflow.single import list_single_agents
+
+        from . import platform_agents
+
+        cards = [
+            {
+                "key": card.key,
+                "name": card.name,
+                "summary": card.summary,
+                "released_at": card.released_at,
+            }
+            for card in list_single_agents()
+        ]
+        cards.extend(platform_agents.list_cards())
+        return Response({"workflows": cards})

@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
+from django.conf import settings
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Count, Sum
 from django.utils import timezone
@@ -19,6 +20,96 @@ from .pricing import category_of, normalize_provider, price_usage
 def _as_decimal(value: Any) -> Decimal:
     """转成 8 位 Decimal。"""
     return Decimal(str(value or 0)).quantize(Decimal("0.00000001"))
+
+
+# 平台运行产物的时间戳格式：与事件记录器落盘时一致（下划线分隔，毫秒三位）。
+_USAGE_STAMP = "%Y-%m-%d_%H-%M-%S.%f"
+
+
+def _usage_moment(text: object) -> datetime:
+    """
+    把平台运行产物的时间戳解析成时刻。
+
+    Args:
+        text: `YYYY-MM-DD_HH-MM-SS.mmm` 形式的字符串。
+
+    Returns:
+        本地时区的时刻；解析失败时退回当前时间，绝不抛错。
+        是否带时区跟随项目配置（`USE_TZ`），与账本其它写入保持一致。
+    """
+    try:
+        naive = datetime.strptime(str(text or ""), _USAGE_STAMP)
+    except (TypeError, ValueError):
+        return timezone.now()
+    if settings.USE_TZ:
+        return timezone.make_aware(naive, timezone.get_current_timezone())
+    return naive
+
+
+def _provider_of(api_key_env: object) -> str:
+    """
+    由密钥环境变量名推断厂商标签。
+
+    Args:
+        api_key_env: 形如 `DEEPSEEK_API_KEY` / `GOVEE_API_KEY` 的名字。
+
+    Returns:
+        `deepseek` / `dashscope` / 其它原样小写；交给账本再归一。
+    """
+    text = str(api_key_env or "").upper()
+    if "DASHSCOPE" in text:
+        return "dashscope"
+    if "DEEPSEEK" in text:
+        return "deepseek"
+    if "GOVEE" in text:
+        return "govee"
+    return ""
+
+
+def record_run_usages(
+    usages: list[dict],
+    *,
+    execution_id: str,
+    model: str = "",
+    source: str = "agent",
+) -> int:
+    """
+    把一次平台运行的逐次用量写进账本。
+
+    幂等键取「来源:执行 ID:轮次」，同一轮重复写入会更新而非新增。
+    单条失败不影响其它条，也不向上抛错——入账不得阻断主流程。
+
+    Args:
+        usages: 逐次用量字典，键与事件层用量记录一致。
+        execution_id: 本次运行的执行 ID，写进账本用于追溯。
+        model: 模型名；为空时该条跳过模型字段的推断。
+        source: 来源标签，默认 `agent`。
+
+    Returns:
+        成功写入的条数。
+    """
+    written = 0
+    for index, item in enumerate(usages or [], 1):
+        if not isinstance(item, dict):
+            continue
+        round_index = item.get("round") or index
+        result = record_usage(
+            event_id=f"{source}:{execution_id}:{round_index}",
+            provider=_provider_of(item.get("api_key_env")),
+            model=model or str(item.get("model_name") or ""),
+            occurred_at=_usage_moment(item.get("started_at")),
+            input_tokens=int(item.get("input_tokens") or 0),
+            output_tokens=int(item.get("output_tokens") or 0),
+            cache_input_tokens=int(item.get("cache_input_tokens") or 0),
+            cache_creation_tokens=int(item.get("cache_creation_input_tokens") or 0),
+            category="LLM",
+            source=source,
+            execution_id=execution_id,
+            metadata={"api_key_env": str(item.get("api_key_env") or "")},
+        )
+        if result is not None:
+            written += 1
+    return written
 
 
 def _json_safe(value: Any) -> Any:

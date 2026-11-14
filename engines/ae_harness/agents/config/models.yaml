@@ -1,0 +1,14 @@
+# 模型资产表：唯一模型数据源
+# provider 与 api_key 必须对应：
+#   deepseek  → DEEPSEEK_API_KEY
+#   dashscope → DASHSCOPE_API_KEY
+#   govee     → GOVEE_API_KEY（OpenAI 兼容，base_url 固定 https://test-llm.lanjingerp.com/v1）
+deepseek_chat_flash:
+  provider: deepseek
+  api_key: DEEPSEEK_API_KEY
+  model_name: deepseek-flash
+
+govee_chat_flash:
+  provider: govee
+  api_key: GOVEE_API_KEY
+  model_name: deepseek-flash

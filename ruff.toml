@@ -69,8 +69,17 @@ section-order = ["future", "standard-library", "third-party", "first-party", "lo
 ".agents/skills/engines-agents-style-check/scripts/check_engines_agents_style.py" = ["T201"]
 # ─ engines docstring 读写 CLI（同一类技能脚本）: allow print()
 ".agents/skills/engines-docstring-check/scripts/*.py" = ["T201"]
+# ─ Django 6.1 文档读写 CLI（同一类技能脚本）: allow print()
+".agents/skills/django-61-docs/scripts/*.py" = ["T201"]
+".agents/skills/agentscope-docs/scripts/*.py" = ["T201"]
 # ─ Omni 本地 S2S 演示入口（run_local_s2s / main）: 用 print 输出，属 CLI 而非库代码
 "engines/agents/realtime_vocie_agent.py" = ["T201"]
+# ─ ae_harness 原型链的角色入口与 SOP 入口: 交互式控制台输出，属 CLI 而非库代码
+#   _bootstrap 是这几个入口共用的打印骨架（汇总 / 异常），本身也只服务 CLI
+"engines/ae_harness/assistant/_bootstrap.py" = ["T201"]
+"engines/ae_harness/assistant/agent_executor.py" = ["T201"]
+"engines/ae_harness/assistant/agent_verifier.py" = ["T201"]
+"engines/ae_harness/workflow/sop_runner.py" = ["T201"]
 # ─ tests/: 放宽限制
 "tests/**/*.py" = ["T201"]
 # ─ __init__.py: 允许未使用 import (re-export)

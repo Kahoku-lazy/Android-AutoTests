@@ -1,0 +1,85 @@
+# engines/ae_harness/agents AGENTS.md
+
+## 职责
+
+本目录负责把「模型配置 + 提示词」变成一个可直接运行的**智能体角色**。
+
+一个角色由三样东西组成：
+
+| 组成 | 来源 |
+| --- | --- |
+| 模型 | `models.py` 按短名造出实例 |
+| 系统提示词 | `config.py` 按文件名读成正文 |
+| 角色名称 | 调用方传入 |
+
+```text
+agents/
+  config.py      load_models / load_prompt / load_secret
+  models.py      ChatModel 校验 + create_model（顺带交出密钥环境变量名）
+  creator.py     create_agent → AgentBundle
+  config/        models.yaml + prompts/*.md
+```
+
+`create_agent` 是唯一出口，返回 `AgentBundle`：`.agent` 是可运行智能体，`.api_key_env` 是本次使用的密钥环境变量名（只有名字，没有值）。
+
+```python
+from engines.ae_harness.agents.creator import create_agent
+
+bundle = create_agent("ui_executor", "UI_EXECUTOR_PROMPT", "govee_chat_flash")
+agent = bundle.agent  # 挂工具、跑任务都从这里拿
+print(bundle.api_key_env)  # GOVEE_API_KEY；用量记账按这个名字归组
+```
+
+**为什么多一个 `api_key_env`，这不违反红线 2**：红线 2 禁止的是给**角色**加第四样能力（工具、记忆、**能力型**中间件、路由、编排参数）。`api_key_env` 不是能力，而是「这次用的是哪把密钥」的回执——它不改变智能体行为，只让调用方不必再读配置表。返回结构变了两段，但角色本身仍只有名称、模型、系统提示词三样。
+
+**禁止**为了省事让 `create_agent` 返回单个 `Agent` 再让调用方自己解析密钥名——那等于把配置读取重新散到调用方。
+
+## 红线（AI 禁止事项）
+
+1. **禁止绕过 `create_agent` 造 Agent** —— 不得在别处直接 `Agent(...)`，不得新增第二种创建入口、注册表或工厂族。
+2. **禁止给角色加第四样东西（能力型）** —— 角色只有名称、模型、系统提示词；不得往 `create_agent` 里塞工具、记忆、**能力型中间件**、角色表、路由或编排参数。
+
+   **唯一例外：只读观测中间件**。它经创建时的显式观测入参传入，且必须满足下方「观测中间件准入清单」全部条款。**能力型中间件（改变行为、扩展能力）一律禁止**，不论包装成什么名字。
+3. **禁止在 `agents/` 以外直接读配置文件** —— 模型表与提示词只能经 `config.py` 读取，不得自己 `import yaml`、`open()` 或 `read_text()`。
+4. **禁止 `creator.py` 自己构造模型客户端** —— 必须经 `models.create_model`，不得直接实例化 `DeepSeekChatModel` 之类的类。
+5. **禁止在 `create_agent` 里调用 `reply` / `reply_stream`** —— 只创建，不运行；何时开始对话由调用方决定。
+6. **禁止引入语音、TTS、向量、知识库** —— 本目录只服务 chat 角色；遇到这类需求先上报，不要自行扩展。
+7. **禁止改变三个参数的含义** —— `name` 只收角色名称、`prompt` 只收提示词文件名、`model_short` 只收模型短名；不得让它兼容正文或实例。
+8. **禁止在本目录新增第二套配置来源** —— 不得再加一个 `settings.py`、第二个 yaml 或另一个提示词目录。
+
+## 观测中间件准入清单
+
+背景：AgentScope 的中间件只能在 `Agent(...)` 构造时传入，而 `create_agent` 是唯一创建出口，所以「挂观测中间件」必然要经过本目录。为守住「角色只有三样东西」，边界按下面写死。
+
+### 允许（只读观测）
+
+1. **读取 hook 入参并计数、计时、采样**：模型名、token 数、消息内容、最终 system prompt、压缩前后的阈值与比例、工具名与执行结果。
+2. **通过注入的 `emit(record)` 回调投递记录**。投到哪、如何落盘、如何渲染，全由事件层决定；中间件不认识事件层，也不持有其容器。
+3. **对变换式 hook 原样透传**：读到值后一字不改地返回。
+
+### 禁止（按 hook 逐条）
+
+| hook | 形态 | 观测中间件可以做什么 | 绝对禁止 |
+| --- | --- | --- | --- |
+| `on_reply` | Onion | 包裹一次回复，读入参/出参 | 改输入或输出、吞异常、跳过 `next_handler` |
+| `on_reasoning` | Onion | 包裹一轮推理，计时 | 改输入、改返回、跳过 `next_handler` |
+| `on_acting` | Onion | 观察一次工具执行，记耗时与结果状态 | 改工具入参、改工具结果、跳过执行 |
+| `on_model_call` | Onion | 观测请求与响应，读 token 与模型名 | 改写 `kwargs`（含 `extra_body` / `tool_choice`）、换模型、跳过调用 |
+| `on_compress_context` | Onion | 观测是否压缩、压缩比例、注入的指令 | 改变压缩结果、改上下文 |
+| `on_system_prompt` | Transformer | **读到最终提示词后原样返回** | 改一个字符、注入任何指令（改了就是能力型） |
+| `on_check_permission` | Onion | 只读观测权限判定 | 改动判定结果（安全红线） |
+| `list_tools` | Tool source | —— | **完全禁止**：它直接扩展能力 |
+
+### 通用禁止
+
+1. **不得吞异常**：捕获后必须 `raise` 或交给下游，不得静默 `pass`。
+2. **不得写状态**：`agent.state`、`tool_context`、上下文消息一律只读。
+3. **不得做控制类行为**：重试、回退、缓存、并发控制、预算熔断、跳过步骤。
+4. **不得触碰外部资源**：不发网络请求、不读配置或密钥、不写文件（落盘归事件层）。
+5. **不得改变控制流**：提前 `return`、条件性跳过 `next_handler`、替换返回值。
+
+### 装配方式
+
+- 只允许在创建智能体时经**显式观测入参**传入：`create_agent(..., observers=[...])`。该入参与能力型中间件分开命名，**禁止**复用同一个参数名、禁止把观测中间件伪装成能力型中间件。
+- `create_agent` 只把 `observers` 透传给 `Agent(middlewares=...)`；本目录**不 import** `middleware`，不认识观测实现。
+- 一次运行**只挂一个**观测中间件；SOP 里两个角色可共用同一个实例，观测记录带 agent 名以区分归属。

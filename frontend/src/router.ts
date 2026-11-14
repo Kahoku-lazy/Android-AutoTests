@@ -18,6 +18,7 @@ import wfRoutes from "@/modules/workflow/routes"
 import slRoutes from "@/modules/serial-log/routes"
 import ksRoutes from "@/modules/knowledge-assistant/routes"
 import bugRoutes from "@/modules/bug-manager/routes"
+import arRoutes from "@/modules/agent-reports/routes"
 
 const routes = [
   { path: "/login", name: "login", component: () => import("@/views/LoginView.vue") },
@@ -31,6 +32,7 @@ const routes = [
   ...slRoutes,
   ...ksRoutes,
   ...bugRoutes,
+  ...arRoutes,
   { path: "/", redirect: "/dashboard" },
   {
     path: "/:pathMatch(.*)*",

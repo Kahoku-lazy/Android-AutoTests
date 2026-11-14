@@ -27,17 +27,25 @@ describe("[P0] 侧栏 AI任务 导航", () => {
 })
 
 describe("[P0] 侧栏 AI 功能分组", () => {
-  it("紧随仪表盘，且先 AI 助手后知识库助手", () => {
+  it("紧随仪表盘，且先 AI 助手后知识库助手，末尾是执行报告", () => {
     const keys = NAV_CATEGORIES.map((category) => category.key)
     expect(keys.slice(0, 2)).toEqual(["main", "ai"])
 
     const group = NAV_CATEGORIES.find((category) => category.key === "ai")
     expect(group?.label).toBe("AI 功能")
-    expect(group?.items.map((item) => item.label)).toEqual(["AI 助手", "知识库助手"])
-    expect(group?.items.map((item) => item.path)).toEqual(["/ai-assistant", "/knowledge-assistant"])
+    expect(group?.items.map((item) => item.label)).toEqual(["AI 助手", "知识库助手", "执行报告"])
+    expect(group?.items.map((item) => item.path)).toEqual([
+      "/ai-assistant",
+      "/knowledge-assistant",
+      "/agent-reports",
+    ])
   })
 
   it("知识库助手有独立模块色", () => {
     expect(MOD_COLORS["/knowledge-assistant"]).toBe("var(--c-element)")
+  })
+
+  it("执行报告用报告模块色，不与 AI 助手共用高亮", () => {
+    expect(MOD_COLORS["/agent-reports"]).toBe("var(--c-report)")
   })
 })

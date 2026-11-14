@@ -39,6 +39,7 @@ async def run_ui_task(
     *,
     model_short: str | None = None,
     report_root: Path | None = None,
+    controls: list | None = None,
 ) -> UiRunResult:
     """
     跑一次平台 UI 执行任务。
@@ -49,6 +50,7 @@ async def run_ui_task(
         task: 自然语言任务描述。
         model_short: 模型短名；不传则用平台角色的默认值。
         report_root: 报告根目录；不传则用配置里的平台报告根。
+        controls: 额外的中间件（重试 / 预算 / 取消）；不传则只挂观测。
 
     Returns:
         本次运行的产物路径与用量汇总。
@@ -58,7 +60,7 @@ async def run_ui_task(
         FileNotFoundError: 提示词文件不存在。
         OSError: 报告目录无法创建或写入。
     """
-    session = await open_session("", model_short=model_short)
+    session = await open_session("", model_short=model_short, controls=controls)
     return await session.run_turn(task, report_root=report_root)
 
 

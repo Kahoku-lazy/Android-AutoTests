@@ -6,15 +6,22 @@
 from __future__ import annotations
 
 import json
+
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import pytest
 
 import engines.backend_bridge.session as session_module
+
 from engines.ae_harness.agents.creator import AgentBundle
 from engines.ae_harness.middleware import ObservationMiddleware
-from engines.backend_bridge.session import UiExecutorSession, drop_session, open_session, session_for
+from engines.backend_bridge.session import (
+    UiExecutorSession,
+    drop_session,
+    open_session,
+    session_for,
+)
 
 pytestmark = [pytest.mark.unit]
 
@@ -78,7 +85,8 @@ class _Agent:
         yield TextBlockEndEvent()
 
 
-async def _fake_build(*, model_short=None, observer=None):
+async def _fake_build(*, model_short=None, observer=None, controls=None):
+    del controls
     """替身：装配角色。"""
     del model_short
     watcher = observer if observer is not None else ObservationMiddleware()
@@ -133,7 +141,6 @@ async def test_run_turn_writes_one_report_per_turn(tmp_path: Path, monkeypatch: 
     assert first.by_api_key_env == {"GOVEE_API_KEY": 1}
     assert first.usages[0]["api_key_env"] == "GOVEE_API_KEY"
     rows = [
-        json.loads(line)
-        for line in Path(first.log_path).read_text(encoding="utf-8").splitlines()
+        json.loads(line) for line in Path(first.log_path).read_text(encoding="utf-8").splitlines()
     ]
     assert any(row["event"] == "summary" for row in rows)

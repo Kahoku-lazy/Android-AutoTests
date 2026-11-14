@@ -61,6 +61,7 @@ async def build_ui_executor(
     *,
     model_short: str | None = None,
     observer: ObservationMiddleware | None = None,
+    controls: list | None = None,
 ) -> tuple[AgentBundle, ObservationMiddleware]:
     """
     装配平台侧 UI 执行角色。
@@ -70,6 +71,7 @@ async def build_ui_executor(
     Args:
         model_short: 模型短名；不传则用角色的默认值。
         observer: 观测中间件；不传则新建一个。
+        controls: 额外的中间件（重试 / 预算 / 取消）；不传则只挂观测。
 
     Returns:
         (角色 bundle, 观测中间件)；观测中间件已挂到智能体上。
@@ -83,7 +85,7 @@ async def build_ui_executor(
         UI_EXECUTOR_ROLE.role_key,
         UI_EXECUTOR_ROLE.prompt_name,
         model_short or UI_EXECUTOR_ROLE.model_short,
-        observers=[watcher],
+        observers=[watcher, *(controls or [])],
     )
     for tool in build_adb_tools():
         await bundle.agent.toolkit.add_tool(tool)

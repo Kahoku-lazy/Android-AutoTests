@@ -158,6 +158,7 @@ async def open_session(
     *,
     model_short: str | None = None,
     session_id: str = "",
+    controls: list | None = None,
 ) -> UiExecutorSession:
     """
     新建一个平台执行会话。
@@ -166,6 +167,7 @@ async def open_session(
         serial: 当前设备序列号；可为空，表示沿用工具默认设备。
         model_short: 模型短名；不传则用平台角色默认值。
         session_id: 前端本次对话的连接键。
+        controls: 额外的中间件（重试 / 预算 / 取消）；不传则只挂观测。
 
     Returns:
         已装配好角色的会话。
@@ -174,7 +176,7 @@ async def open_session(
         ValueError: 模型短名不存在或密钥没配。
         FileNotFoundError: 提示词文件不存在。
     """
-    bundle, observer = await build_ui_executor(model_short=model_short)
+    bundle, observer = await build_ui_executor(model_short=model_short, controls=controls)
     return UiExecutorSession(serial.strip(), bundle, observer, session_id=session_id)
 
 
@@ -183,6 +185,7 @@ async def session_for(
     serial: str,
     *,
     model_short: str | None = None,
+    controls: list | None = None,
 ) -> UiExecutorSession:
     """
     按连接键取会话。没有则创建；已有则只更新设备。
@@ -203,7 +206,9 @@ async def session_for(
         raise ValueError("session_id 不能为空")
     current = _SESSIONS.get(key)
     if current is None:
-        current = await open_session(serial, model_short=model_short, session_id=key)
+        current = await open_session(
+            serial, model_short=model_short, session_id=key, controls=controls
+        )
         _SESSIONS[key] = current
         return current
     current.set_serial(serial)

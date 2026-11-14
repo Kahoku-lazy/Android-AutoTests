@@ -82,10 +82,13 @@ class _Agent:
 
 
 async def _fake_build(
-    *, model_short: str | None = None, observer: ObservationMiddleware | None = None
+    *,
+    model_short: str | None = None,
+    observer: ObservationMiddleware | None = None,
+    controls: list | None = None,
 ) -> tuple[AgentBundle, ObservationMiddleware]:
     """替身：装配角色，返回假智能体与观测中间件。"""
-    del model_short
+    del model_short, controls
     watcher = observer if observer is not None else ObservationMiddleware()
     return AgentBundle(agent=_Agent(), api_key_env="GOVEE_API_KEY"), watcher
 

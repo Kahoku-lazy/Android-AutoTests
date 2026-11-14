@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>智能体功能模块 · Android-AutoTests</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" v-cloak>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="sidebar__brand">
+          <span class="sidebar__logo" aria-hidden="true">▲</span>
+          <div>
+            <p class="sidebar__title">项目可视化</p>
+            <p class="sidebar__sub">dev_docs · 静态快照</p>
+          </div>
+        </div>
+
+        <nav class="sidebar__nav" aria-label="导航">
+          <p class="sidebar__group">视图</p>
+          <a class="sidebar__nav-item" href="index.html">总览</a>
+          <p class="sidebar__group">前端</p>
+          <a class="sidebar__nav-item" href="frontend.html">前端功能模块</a>
+          <p class="sidebar__group">后端</p>
+          <a class="sidebar__nav-item" href="backend.html">后端功能模块</a>
+          <p class="sidebar__group">引擎</p>
+          <a class="sidebar__nav-item is-active" href="agents.html" aria-current="page">智能体功能模块</a>
+          <p class="sidebar__group">ae_harness</p>
+          <a class="sidebar__nav-item" href="ae-harness.html">原型链路</a>
+        </nav>
+
+        <p class="sidebar__foot">Vue {{ vueVersion }} · 免构建</p>
+      </aside>
+
+      <div class="main">
+        <div class="main__body">
+          <header class="wb-header">
+            <div class="wb-header__left">
+              <span class="wb-header__icon" aria-hidden="true">◆</span>
+              <div>
+                <h1 class="wb-header__title">engines</h1>
+                <p class="wb-header__sub">
+                  engines 下 {{ rows.length }} 个模块 · {{ totals.units || 0 }} 个子单元 ·
+                  {{ fmt(totals.files) }} 个 .py · {{ fmt(totals.loc) }} 行 · 生成于 {{ generatedAt }}
+                </p>
+              </div>
+            </div>
+            <div class="wb-header__right">
+              <span class="badge" :title="commitTitle">快照 {{ commit || '无 git' }}</span>
+            </div>
+          </header>
+
+          <div class="doc-body">
+            <div v-if="!hasData" class="empty">
+              <p class="empty__icon" aria-hidden="true">✎</p>
+              <p class="empty__title">还没有 engines 快照</p>
+              <p class="empty__hint">先跑 <code>python dev_docs/project-viz/tools/gen_board_data.py</code>，再刷新。</p>
+            </div>
+
+            <div v-else class="doc-sections">
+            <section class="doc-section" id="arch">
+              <h2 class="doc-section__title">1. 引擎模块架构：模块关系</h2>
+
+              <figure class="dep-diagram">
+                <svg class="dep-diagram__svg" viewBox="0 0 1180 480" style="aspect-ratio: 1180 / 480" role="group" aria-label="engines 各模块的关系图">
+                  <defs>
+                    <marker id="eng-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                            markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                      <path d="M 0 0 L 10 5 L 0 10 z" class="dep-arrowhead"></path>
+                    </marker>
+                    <marker id="eng-arrow-active" viewBox="0 0 10 10" refX="9" refY="5"
+                            markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                      <path d="M 0 0 L 10 5 L 0 10 z" class="dep-arrowhead-active"></path>
+                    </marker>
+                  </defs>
+
+                  <g v-for="edge in diagram.edges" :key="edge.key" class="dep-edge-group"
+                     :class="{ 'is-active': isEdgeActive(edge), 'is-secondary': true }">
+                    <path :d="edge.d" class="dep-edge"
+                          :marker-end="isEdgeActive(edge) ? 'url(#eng-arrow-active)' : 'url(#eng-arrow)'"></path>
+                    <text :x="edge.labelX" :y="edge.labelY" class="dep-edge__label"
+                          :text-anchor="edge.labelAnchor">{{ edge.label }}</text>
+                  </g>
+
+                  <g v-for="node in diagram.nodes" :key="node.key" class="dep-node-group"
+                     :class="{ 'is-selected': isNodeActive(node) }" tabindex="0" role="button"
+                     :aria-pressed="isNodeActive(node) ? 'true' : 'false'"
+                     :aria-label="node.title + '，点击高亮它的引用关系'"
+                     @click="toggleModule(node.key)" @keydown.enter.prevent="toggleModule(node.key)">
+                    <g :transform="'rotate(' + node.tilt + ' ' + node.cx + ' ' + (node.y + node.h / 2) + ')'">
+                      <rect :x="node.x + 5" :y="node.y + 5" :width="node.w" :height="node.h" rx="9"
+                            class="dep-node__shadow"></rect>
+                      <rect :x="node.x" :y="node.y" :width="node.w" :height="node.h" rx="9"
+                            class="dep-node" :style="{ '--node-color': node.color }"></rect>
+                      <text :x="node.cx" :y="node.cy + 5" class="dep-node__title" text-anchor="middle">
+                        {{ node.title }}
+                      </text>
+                    </g>
+                  <g
+                    v-if="node.doc"
+                    class="dep-doc-btn"
+                    :transform="'translate(' + (node.x + node.w - 54) + ',' + (node.y + node.h - 16) + ')'"
+                    role="button"
+                    tabindex="0"
+                    :aria-label="'查看 ' + node.key + ' 的 AGENTS.md'"
+                    @click.stop="openDoc(node.key)"
+                    @keydown.enter.stop.prevent="openDoc(node.key)"
+                  >
+                    <rect width="52" height="14" rx="3"></rect>
+                    <text x="26" y="10" text-anchor="middle">AGENTS</text>
+                  </g>
+                  </g>
+                </svg>
+              </figure>
+            <div v-if="docModule" class="doc-modal" @click.self="closeDoc()">
+              <article class="doc-modal__panel" role="dialog" :aria-label="docModule + ' 的 AGENTS.md'">
+                <header class="doc-modal__head">
+                  <p class="doc-modal__title">
+                    <span class="legend-chip__dot" :style="{ background: (docGroup || {}).color }"></span>
+                    {{ docModule }} · AGENTS.md
+                  </p>
+                  <button type="button" class="doc-modal__close" @click="closeDoc()" aria-label="关闭">关闭</button>
+                </header>
+                <div class="doc-modal__body" v-html="docHtml"></div>
+              </article>
+            </div>
+            </section>
+
+            <section class="doc-section" id="deps">
+              <h2 class="doc-section__title">2. 模块依赖关系 × 子单元代码量</h2>
+
+              <div class="pair">
+                <div class="pair__col">
+                  <h3 class="pair__title">模块依赖关系</h3>
+                  <p class="pair__hint">节点 = 模块；箭头与卡片都是数据流方向（被调用方 → 调用方），次数 = 调用方 import 被调用方的次数。AST 静态解析，只证明"引用了谁"，不等于运行期调用。</p>
+
+                  <div class="tabbar tabbar--inline" role="tablist" aria-label="切换依赖视图">
+                    <button type="button" role="tab" class="tab"
+                            :class="{ 'is-active': depTab === 'graph' }" @click="depTab = 'graph'">模块依赖图</button>
+                    <button type="button" role="tab" class="tab"
+                            :class="{ 'is-active': depTab === 'table' }" @click="depTab = 'table'">
+                      import 次数表<span class="tab__count">{{ depRows.length }}</span>
+                    </button>
+                  </div>
+
+                  <div v-if="depTab === 'graph'" class="chart-card chart-card--agents">
+                    <div class="chart-card__head">
+                      <p class="chart-card__title">模块级依赖图</p>
+                      <p class="chart-card__note">{{ relations.length }} 条跨模块引用</p>
+                    </div>
+                    <viz-chart :option="graphOption" height="400px" label="engines 模块依赖图"></viz-chart>
+                  </div>
+
+                  <div v-if="depTab === 'table'" class="sheet-wrap">
+                    <table class="sheet-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">被调用方</th>
+                          <th scope="col">调用方</th>
+                          <th scope="col" class="num">import 次数</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="row in relRows" :key="row.key">
+                          <td class="name-cell">{{ row.to }}</td>
+                          <td>{{ row.from }}</td>
+                          <td class="num">{{ fmt(row.count) }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div class="pair__col pair__col--narrow">
+                  <h3 class="pair__title">模块代码量</h3>
+                  <p class="pair__hint">按模块下一层的代码行数统计；饼图占比 = 该模块行数 / 全部模块行数。</p>
+                  <div class="chart-card chart-card--agents">
+                    <div class="chart-card__head">
+                      <p class="chart-card__title">模块代码量占比</p>
+                      <p class="chart-card__note">{{ fmt(totals.loc) }} 行 · {{ totals.modules }} 个模块</p>
+                    </div>
+                    <viz-chart :option="pieOption" height="420px" label="模块代码量占比饼图"></viz-chart>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="doc-section" id="units">
+              <h2 class="doc-section__title">3. 各模块子单元代码量</h2>
+              <p class="doc-section__hint">
+                一个模块一张图，<b>一个子单元一组柱</b>：本次 / 最近一次 / 最近两次。子目录按整目录汇总，单文件各算一个；
+                单元超过 10 个的模块独占一行（图更宽，标签看得清）。历史里没有的记录显示「待记录」，不补零。
+              </p>
+
+              <div class="cmp-list">
+                <article
+                  v-for="row in rows"
+                  :key="'chart-' + row.key"
+                  class="cmp"
+                  :class="{ 'cmp--wide': row.wide }"
+                >
+                  <header class="cmp__head">
+                    <h3 class="cmp__title">
+                      <span class="legend-chip__dot" :style="{ background: row.color }"></span>
+                      <b>{{ row.key }}</b>
+                      <span class="cmp__label">{{ row.label }}</span>
+                    </h3>
+                    <span class="cmp__files">{{ row.unitCount }} 个单元 · {{ fmt(row.files) }} 个 .py</span>
+                  </header>
+                  <p class="cmp__note">{{ row.note }}</p>
+
+                  <div class="cmp__cards">
+                    <div class="module-stat" :class="trendClass(row.trend, 0)">
+                      <p class="module-stat__label">本次</p>
+                      <p class="module-stat__value">{{ trendText(row.trend, 0) }}</p>
+                    </div>
+                    <div class="module-stat" :class="trendClass(row.trend, 1)">
+                      <p class="module-stat__label">最近一次</p>
+                      <p class="module-stat__value">{{ trendText(row.trend, 1) }}</p>
+                    </div>
+                    <div class="module-stat" :class="trendClass(row.trend, 2)">
+                      <p class="module-stat__label">最近两次</p>
+                      <p class="module-stat__value">{{ trendText(row.trend, 2) }}</p>
+                    </div>
+                  </div>
+
+                  <viz-chart :option="row.chart" :height="row.height" :label="row.key + ' 子单元代码量'"></viz-chart>
+                </article>
+              </div>
+            </section>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="data/board.js"></script>
+  <script src="data/history.js"></script>
+  <script src="vendor/vue.global.prod.js"></script>
+  <script src="vendor/echarts.min.js"></script>
+  <script src="charts/chart-framework.js"></script>
+  <script src="charts/board-options.js"></script>
+  <script src="markdown.js"></script>
+  <script src="agents.js"></script>
+</body>
+</html>

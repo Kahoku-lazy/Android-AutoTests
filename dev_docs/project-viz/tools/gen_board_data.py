@@ -713,322 +713,18 @@ def _totals(rows: list[dict[str, Any]]) -> dict[str, int]:
     return {key: sum(int(row.get(key) or 0) for row in rows) for key in keys}
 
 
-DOMAINS_PATH = PROJECT_VIZ / "tools" / "domains.json"
-DOCSTRING_SKILL = REPO / ".agents" / "skills" / "engines-docstring-check"
-# 健康分权重：改这里 → 页面脚注自动跟着变（唯一真相源）
-HEALTH_WEIGHTS = {"docs": 40, "tests": 30, "coupling": 20, "size": 10}
-SIZE_LIMIT = 400
-HUB_IN_DEGREE = 5
-# 扣分口径（每项扣多少分，直接写死在常量里，页面脚注展示）：
-# 文档/测试按比例；耦合 = 双向引用 4 分/组 + 枢纽 3 分/个；体量 = 4 分/个超限文件
-BIDIR_PENALTY = 4
-HUB_PENALTY = 3
-SIZE_PENALTY = 4
-
-
-def _load_domains() -> list[dict[str, Any]]:
-    """读人工维护的业务域对照表（tools/domains.json）。"""
-    raw = json.loads(DOMAINS_PATH.read_text(encoding="utf-8"))
-    return list(raw.get("domains") or [])
-
-
-def _docstring_health() -> dict[str, Any]:
-    """跑 engines-docstring-check 拿文档问题面（复用技能里的检查器）。"""
-    proc = subprocess.run(
-        [sys.executable, "-m", "scripts.docstrings", "check", "--all", "--format", "json"],
-        cwd=DOCSTRING_SKILL,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        check=False,
-    )
-    try:
-        payload = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        return {"available": False, "scanned": 0, "files_with_issues": 0, "error_count": 0}
-    paths = {
-        item.get("path")
-        for item in payload.get("violations") or []
-        if item.get("severity") == "error"
-    }
-    return {
-        "available": True,
-        "scanned": int(payload.get("files_scanned") or 0),
-        "files_with_issues": len(paths),
-        "error_count": int(payload.get("error_count") or 0),
-    }
-
-
-def _tests_corpus() -> str:
-    """把所有测试文件拼成一份文本，用于"模块有没有被测试文件提到"的粗略匹配。"""
-    chunks: list[str] = []
-    for path in sorted((REPO / "tests").rglob("*.py")):
-        if "__pycache__" in path.parts:
-            continue
-        try:
-            chunks.append(path.read_text(encoding="utf-8", errors="replace"))
-        except OSError:
-            continue
-    return "\n".join(chunks)
-
-
-def _health(payload: dict[str, Any]) -> dict[str, Any]:
-    """四项健康分（文档 / 测试 / 耦合 / 体量），全部可核对；不足的数据标 unavailable。"""
-    docs = _docstring_health()
-    agents_groups = payload["agents"]["groups"]
-    modules = [module for group in agents_groups for module in group["modules"]]
-    corpus = _tests_corpus()
-
-    with_test = 0
-    for module in modules:
-        stem = module["name"][:-3] if module["name"].endswith(".py") else module["name"]
-        path = module["path"]
-        if stem in corpus or path in corpus:
-            with_test += 1
-
-    imports = payload["agents"]["imports"]
-    edges = imports.get("edges") or []
-    inbound: Counter[str] = Counter()
-    for edge in edges:
-        inbound[edge["to"]] += int(edge["count"] or 0)
-    pairs = {(edge["from"], edge["to"]) for edge in edges}
-    bidirectional = {tuple(sorted(pair)) for pair in pairs if (pair[1], pair[0]) in pairs}
-    hubs = [node for node, count in inbound.items() if count >= HUB_IN_DEGREE]
-
-    engine_files = _walk_code(REPO / "engines", (".py",))
-    oversized = sum(1 for path in engine_files if _nonblank_lines(path) > SIZE_LIMIT)
-
-    def clamp(value: float) -> float:
-        return max(0.0, min(100.0, value))
-
-    parts = [
-        {
-            "key": "docs",
-            "label": "文档",
-            "weight": HEALTH_WEIGHTS["docs"],
-            "score": clamp(
-                100.0 * (1 - docs["files_with_issues"] / docs["scanned"])
-                if docs["scanned"]
-                else 0.0
-            ),
-            "detail": (
-                f"{docs['error_count']} 条 docstring error，涉及 {docs['files_with_issues']}/"
-                f"{docs['scanned']} 个引擎文件"
-            ),
-        },
-        {
-            "key": "tests",
-            "label": "测试",
-            "weight": HEALTH_WEIGHTS["tests"],
-            "score": 100.0 * with_test / len(modules) if modules else 0,
-            "detail": f"{with_test}/{len(modules)} 个 agents 模块在 tests/ 里被提到（按名字匹配，可能低估）",
-        },
-        {
-            "key": "coupling",
-            "label": "耦合",
-            "weight": HEALTH_WEIGHTS["coupling"],
-            "score": clamp(100.0 - BIDIR_PENALTY * len(bidirectional) - HUB_PENALTY * len(hubs)),
-            "detail": f"目录级双向引用 {len(bidirectional)} 组，入度 ≥{HUB_IN_DEGREE} 的枢纽 {len(hubs)} 个",
-        },
-        {
-            "key": "size",
-            "label": "体量",
-            "weight": HEALTH_WEIGHTS["size"],
-            "score": clamp(100.0 - SIZE_PENALTY * oversized),
-            "detail": f"引擎里超过 {SIZE_LIMIT} 行的文件 {oversized} 个（共 {len(engine_files)} 个）",
-        },
-    ]
-    for part in parts:
-        part["deduction"] = round(part["weight"] * (1 - part["score"] / 100), 1)
-        part["score"] = round(part["score"], 1)
-    total = round(sum(part["weight"] * part["score"] / 100 for part in parts), 1)
-    return {
-        "score": total,
-        "target": 85,
-        "weights": dict(HEALTH_WEIGHTS),
-        "scope": "engines/**（前端/后端暂不参与：没有 docstring 与测试字段可对齐）",
-        "parts": parts,
-        "docs": docs,
-    }
-
-
-def _overview(payload: dict[str, Any], history: list[dict[str, Any]]) -> dict[str, Any]:
-    """总览页数据：领域矩阵 + 健康分 + 北向 KPI + 快照变化。"""
-    fe_by_name = {row["name"]: row for row in payload["frontend"]["modules"]}
-    be_by_name = {row["name"]: row for row in payload["backend"]["apps"]}
-    agents_groups = {group["key"]: group for group in payload["agents"]["groups"]}
-    engines_by_name = {row["name"]: row for row in payload["categories"][2]["modules"]}
-
-    domains: list[dict[str, Any]] = []
-    for item in _load_domains():
-        fe_rows = [fe_by_name[name] for name in item.get("fe", []) if name in fe_by_name]
-        be_rows = [be_by_name[name] for name in item.get("be", []) if name in be_by_name]
-        engine_loc = engine_modules = 0
-        engine_dirs: list[str] = []
-        for path in item.get("engine", []):
-            if path.startswith("agents/"):
-                group = agents_groups.get(path.split("/", 1)[1])
-                if group:
-                    engine_loc += int(group["totals"].get("loc") or 0)
-                    engine_modules += int(group["totals"].get("modules") or 0)
-                    engine_dirs.append(path)
-            elif path in engines_by_name:
-                engine_loc += int(engines_by_name[path].get("loc") or 0)
-                engine_modules += int(engines_by_name[path].get("files") or 0)
-                engine_dirs.append(path)
-        domains.append(
-            {
-                "key": item["key"],
-                "label": item["label"],
-                "coverage": item.get("coverage", "none"),
-                "note": item.get("note", ""),
-                "fe": {
-                    "count": len(fe_rows),
-                    "routes": sum(int(row.get("features") or 0) for row in fe_rows),
-                    "loc": sum(int(row.get("loc") or 0) for row in fe_rows),
-                },
-                "be": {
-                    "count": len(be_rows),
-                    "endpoints": sum(int(row.get("features") or 0) for row in be_rows),
-                    "loc": sum(int(row.get("loc") or 0) for row in be_rows),
-                },
-                "engine": {
-                    "dirs": engine_dirs,
-                    "modules": engine_modules,
-                    "loc": engine_loc,
-                },
-            }
-        )
-
-    tiers: Counter[str] = Counter(domain["coverage"] for domain in domains)
-    health = _health(payload)
-
-    # 快照变化：取最近两个"含分层数据"的历史点
-    full = [row for row in history if "frontend" in row and "engine" in row]
-    delta: list[dict[str, Any]] = []
-    if len(full) >= 2:
-        previous, current = full[-2], full[-1]
-        for key, label in (
-            ("frontend", "前端"),
-            ("backend", "后端"),
-            ("engine", "引擎"),
-            ("agents", "智能体"),
-        ):
-            before = previous.get(key) or {}
-            after = current.get(key) or {}
-            before_loc = int(before.get("loc") or 0)
-            after_loc = int(after.get("loc") or 0)
-            if not before_loc:
-                continue
-            delta.append(
-                {
-                    "key": key,
-                    "label": label,
-                    "from": before_loc,
-                    "to": after_loc,
-                    "diff": after_loc - before_loc,
-                    "pct": round((after_loc / before_loc - 1) * 100, 1),
-                    "at": previous.get("at", ""),
-                    "modules_from": int(before.get("modules") or 0),
-                    "modules_to": int(after.get("modules") or 0),
-                }
-            )
-
-    aligned = tiers.get("direct", 0) + tiers.get("via", 0)
-    capability = int(payload["agents"]["totals"].get("features") or 0)
-    role_count = sum(
-        1
-        for path in _walk_code(REPO / "engines" / "agents", (".py",))
-        if path.name.startswith("role_")
-    )
-    total_delta = sum(item["diff"] for item in delta)
-
-    return {
-        "kpis": [
-            {
-                "key": "alignment",
-                "label": "领域打通率",
-                "value": f"{aligned}/{len(domains)}",
-                "pct": round(100 * aligned / len(domains), 0) if domains else 0,
-                "target": "100%",
-                "sub": f"直连 {tiers.get('direct', 0)} · 间接 {tiers.get('via', 0)} · 无 {tiers.get('none', 0)}",
-            },
-            {
-                "key": "capability",
-                "label": "引擎能力条目",
-                "value": str(capability),
-                "pct": None,
-                "target": "随需求增长",
-                "sub": (
-                    f"{len(payload['agents']['groups'])} 个目录 · "
-                    f"{sum(len(g['modules']) for g in payload['agents']['groups'])} 个模块 · "
-                    f"{payload['agents']['totals'].get('tests', 0)} 条测试条目"
-                ),
-            },
-            {
-                "key": "health",
-                "label": "引擎健康分",
-                "value": str(health["score"]),
-                "pct": health["score"],
-                "target": f"≥ {health['target']}",
-                "sub": "文档 / 测试 / 耦合 / 体量 四项加权",
-            },
-            {
-                "key": "churn",
-                "label": "最近一次快照净增",
-                "value": f"{total_delta:+d} 行",
-                "pct": None,
-                "target": "看方向，不看绝对量",
-                "sub": (delta[0]["at"] if delta else "快照不足 2 个基线"),
-            },
-        ],
-        "domains": domains,
-        "tiers": {key: tiers.get(key, 0) for key in ("direct", "via", "none")},
-        "health": health,
-        "delta": delta,
-        "roles": role_count,
-    }
-
-
 def build() -> dict[str, Any]:
     """Assemble the whole board payload."""
     frontend_raw = _frontend_raw()
     backend_rows = collect_backend()
     backend_files = collect_backend_files()
-    categories = [
-        ("frontend", "前端", collect_frontend(frontend_raw)),
-        ("backend", "后端", backend_rows),
-        ("engine", "引擎", collect_engines()),
-    ]
     payload: dict[str, Any] = {
         "generated_at": datetime.now(TZ).strftime("%Y-%m-%d %H:%M"),
         "git": _git_meta(),
-        "notes": {
-            "features": {
-                "frontend": "前端 = routes.ts 注册的路由条目数",
-                "backend": "后端 = DRF API 端点数（utils/gen_arch_stats.py）",
-                "engine": "引擎 = 模块 docstring「简介说明」声明的能力条目数",
-                "caveat": "三层口径不同，只做各自量级对照，不可横向相加比较",
-            },
-            "methods": "命名函数 / 方法定义数（不含 lambda、匿名回调）",
-            "loc": "非空物理行（前端含 template/style）",
-            "files": "代码文件数；排除 __pycache__、migrations、vendor、skill-creator",
-            "scope": "后端含基础设施行；前端含共享层行；引擎按一级子包汇总",
-        },
-        "categories": [],
-        "grand_totals": {},
         "agents": {},
         "frontend": {},
         "backend": {},
     }
-    for key, label, rows in categories:
-        rows.sort(key=lambda row: (-row["loc"], row["name"]))
-        payload["categories"].append(
-            {"key": key, "label": label, "modules": rows, "totals": _totals(rows)}
-        )
-    payload["grand_totals"] = _totals(
-        [row for category in payload["categories"] for row in category["modules"]]
-    )
     payload["agents"] = collect_agents()
     payload["frontend"] = frontend_page(frontend_raw)
     payload["frontend"]["pages"] = collect_frontend_pages()
@@ -1044,7 +740,774 @@ def build() -> dict[str, Any]:
         "totals": backend_totals,
     }
     payload["backend"].update(collect_backend_imports())
+    payload["ae_harness"] = collect_ae_harness()
+    payload["engineModules"] = collect_engine_modules()
+    payload["backendModules"] = collect_backend_modules()
+    payload["frontendModules"] = collect_frontend_modules(payload["frontend"])
+    payload["projectModules"] = collect_project_modules(payload["frontend"])
     return payload
+
+
+# 模块 = ae_harness 根目录下的五个文件夹（顺序按需求：agent / tools / assistant / workflow / event）
+AE_HARNESS_GROUPS = (
+    ("agents", "创建智能体", "创建智能体：模型配置 + 提示词 + create_agent"),
+    ("tools", "智能体工具箱", "智能体工具箱：给 Agent 提供工具（adb 设备动作）"),
+    ("assistant", "智能体助手", "智能体助手：Agent + tools 合成一个可运行角色"),
+    ("workflow", "工作流", "工作流：多个 Agent 组合成一条 SOP"),
+    ("event", "智能体事件", "智能体事件：可视化 assistant 与 workflow 的执行过程"),
+    ("middleware", "观测中间件", "观测中间件：只读 hook，采集事件流看不到的信息（system prompt / 上下文压缩）"),
+)
+
+# 跨组引用「为什么被调用」：import 只能证明引用了，因果得人写；key = "引用方->被引用方"
+AE_HARNESS_WHY = {
+    "assistant->agents": "入口要跑一轮角色，必须先经 create_agent 拿到 AgentBundle（Agent 实例 + 密钥名），工具挂载与 reply 都要用它。",
+    "assistant->tools": "工具不属于角色三要素，create_agent 不接收；入口建好 Agent 后，自己把 adb 工具 add_tool 挂上去（验收侧只挂只读集）。",
+    "assistant->event": "一轮执行的过程要落成结构化记录并出 HTML 报告，报告统一走 event/ 的记录器与渲染器，入口不自己拼页面。",
+    "workflow->agents": "SOP 每一步都要一对执行者与验收者，必须先经 create_agent 造出两个角色再交给 run_sop。",
+    "workflow->assistant": "编排入口复用 assistant/_bootstrap 的运行时骨架（编码、日志级别、汇总、异常包装），不重复实现一套。",
+    "workflow->event": "每步的执行与验收事件都要记下来并出报告，记录与渲染都用 event/，workflow 不碰 HTML。",
+    "workflow->tools": "执行者要写操作工具、验收者只要只读工具，两套工具集在编排入口装配后传给角色。",
+    "assistant->middleware": "入口创建角色时可注入只读观测中间件，采样本轮最终 system prompt 与上下文压缩决策；中间件不改行为、不落盘。",
+    "workflow->middleware": "SOP 里两个角色共用同一个观测实例，记录带 agent 名区分归属；同样只读，不参与编排。",
+}
+
+
+def collect_frontend_modules(frontend: dict[str, Any]) -> dict[str, Any]:
+    """frontend/src/modules 下每个业务模块按「一层」统计。
+
+    口径：
+    1. 模块 = frontend/src/modules/ 下的一个业务目录（共享层 shared/views/router 不计）。
+    2. 单元 = 模块下的直接子目录（递归汇总 .vue/.ts/.js，整体算一个）或直接文件（各算一个）；
+       样式 .css 与 AGENTS.md 不计入。
+    3. 依赖 = 业务模块之间的 import，复用 count_frontend.mjs 的 edges，过滤掉指向共享层的边。
+    """
+    base = REPO / "frontend" / "src" / "modules"
+    code_ext = {".vue", ".ts", ".js"}
+
+    def count_loc(files: list[Path]) -> int:
+        total = 0
+        for path in files:
+            try:
+                text = path.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            total += sum(1 for line in text.splitlines() if line.strip())
+        return total
+
+    names = [
+        module.get("name")
+        for module in frontend.get("modules", [])
+        if module.get("name") and not str(module.get("name")).startswith("共享层")
+    ]
+
+    modules: list[dict[str, Any]] = []
+    for name in names:
+        folder = base / name
+        if not folder.is_dir():
+            continue
+        units: list[dict[str, Any]] = []
+        for item in sorted(folder.iterdir()):
+            if item.name == "AGENTS.md":
+                continue
+            if item.is_dir():
+                files = [f for f in sorted(item.rglob("*")) if f.is_file() and f.suffix in code_ext]
+                if not files:
+                    continue
+                units.append(
+                    {"name": item.name + "/", "kind": "dir", "files": len(files), "loc": count_loc(files)}
+                )
+            elif item.suffix in code_ext:
+                units.append({"name": item.name, "kind": "file", "files": 1, "loc": count_loc([item])})
+        units.sort(key=lambda unit: (-int(unit["loc"]), unit["name"]))
+        modules.append(
+            {
+                "key": name,
+                # 前端模块没有中文名，label 留空，卡片上就只显示目录名
+                "label": "",
+                "units": units,
+                "totals": {
+                    "units": len(units),
+                    "files": sum(int(unit["files"]) for unit in units),
+                    "loc": sum(int(unit["loc"]) for unit in units),
+                },
+            }
+        )
+
+    business = {module["key"] for module in modules}
+    relations = []
+    for edge in frontend.get("edges", []):
+        source = edge.get("from")
+        target = edge.get("to")
+        if source not in business:
+            continue
+        relations.append(
+            {
+                "from": source,
+                "to": target,
+                "count": int(edge["count"]),
+                "shared": target not in business,
+            }
+        )
+    relations.sort(key=lambda row: (-row["count"], row["from"], row["to"]))
+    return {
+        "modules": modules,
+        "relations": relations,
+        "totals": {
+            "modules": len(modules),
+            "units": sum(int(module["totals"]["units"]) for module in modules),
+            "files": sum(int(module["totals"]["files"]) for module in modules),
+            "loc": sum(int(module["totals"]["loc"]) for module in modules),
+        },
+    }
+
+
+PROJECT_MODULES = (
+    ("backend", "后端"),
+    ("engines", "引擎"),
+    ("frontend", "前端"),
+    ("tests", "测试"),
+    ("utils", "公共工具"),
+)
+
+# 总览页排除的目录：缓存、临时、第三方资产、文档与本看板自身
+PROJECT_SKIP_DIRS = {
+    ".git",
+    ".venv",
+    "node_modules",
+    "__pycache__",
+    "dist",
+    "build",
+    "temps",
+    ".pytest_cache",
+    ".pytest-tmp",
+    ".testtmp",
+    ".ruff_cache",
+    ".mypy_cache",
+    ".cache",
+    "pytest-of-zhiyan",
+    "logs",
+    "vendor",
+    "platform-tools",
+}
+# 前端接口前缀 → 后端 app（人工对照 backend/apps/*/urls.py，前缀不是自动推出来的）
+HTTP_API_APPS = {
+    "/cases": "case_manager",
+    "/workflow": "workflow",
+    "/tasks": "task_list",
+    "/devices": "device_pool",
+    "/ai": "ai_assistant",
+    "/bugs": "bug_manager",
+    "/serial-log": "serial_log",
+    "/dashboard": "dashboard",
+    "/reports": "report_generator",
+    "/knowledge-assistant": "knowledge_assistant",
+}
+
+PROJECT_CODE_EXT = {".py", ".ts", ".tsx", ".vue", ".js", ".mjs", ".css", ".html"}
+PROJECT_SKIP_FILES = {"__init__.py"}
+
+
+def collect_project_modules(frontend: dict[str, Any] | None = None) -> dict[str, Any]:
+    """总览页：仓库一级目录 × 每个目录的第一层单元。
+
+    口径：
+    1. 模块 = 仓库根下的工程目录（backend / engines / frontend / tests / utils）。
+       缓存、临时时间戳目录、第三方 skill 资产（.agents）、文档（dev_docs，含本看板自身）
+       与运行数据（data）不计入。
+    2. 单元 = 模块下的直接子目录（递归汇总代码文件，整体算一个）或直接代码文件（各算一个）。
+    3. 依赖 = 目录之间的 Python import 次数；另外补一条 frontend → backend 的
+       **HTTP 调用**（前端是 TS/Vue，不产生 Python import，但它确实在调后端接口，
+       不补这条边图上就会有一个孤立节点）。
+    """
+    root = REPO
+
+    def count_loc(files: list[Path]) -> int:
+        total = 0
+        for path in files:
+            try:
+                text = path.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            total += sum(1 for line in text.splitlines() if line.strip())
+        return total
+
+    def code_files(folder: Path) -> list[Path]:
+        return [
+            f
+            for f in sorted(folder.rglob("*"))
+            if f.is_file()
+            and f.suffix in PROJECT_CODE_EXT
+            and "__pycache__" not in f.parts
+            and not any(part in PROJECT_SKIP_DIRS for part in f.parts)
+        ]
+
+    modules: list[dict[str, Any]] = []
+    module_of_path: dict[str, str] = {}
+
+    for key, label in PROJECT_MODULES:
+        base = root / key
+        if not base.is_dir():
+            continue
+        units: list[dict[str, Any]] = []
+        owned: list[Path] = []
+        for item in sorted(base.iterdir()):
+            if item.name in PROJECT_SKIP_DIRS or item.name in PROJECT_SKIP_FILES:
+                continue
+            if item.is_dir():
+                files = code_files(item)
+                if not files:
+                    continue
+                units.append(
+                    {"name": item.name + "/", "kind": "dir", "files": len(files), "loc": count_loc(files)}
+                )
+                owned.extend(files)
+            elif item.suffix in PROJECT_CODE_EXT:
+                units.append({"name": item.name, "kind": "file", "files": 1, "loc": count_loc([item])})
+                owned.append(item)
+        units.sort(key=lambda unit: (-int(unit["loc"]), unit["name"]))
+        for path in owned:
+            module_of_path[path.as_posix()] = key
+        modules.append(
+            {
+                "key": key,
+                "label": label,
+                "units": units,
+                "totals": {
+                    "units": len(units),
+                    "files": sum(int(unit["files"]) for unit in units),
+                    "loc": sum(int(unit["loc"]) for unit in units),
+                },
+            }
+        )
+
+    known = {key for key, _ in PROJECT_MODULES}
+    cross: dict[tuple[str, str], int] = {}
+    for path_text, source in module_of_path.items():
+        if not path_text.endswith(".py"):
+            continue
+        try:
+            tree = ast.parse(Path(path_text).read_text(encoding="utf-8", errors="ignore"))
+        except (SyntaxError, OSError):
+            continue
+        targets: set[str] = set()
+        for node in ast.walk(tree):
+            names: list[str] = []
+            if isinstance(node, ast.Import):
+                names = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
+                names = [node.module]
+            for name in names:
+                head = name.split(".")[0]
+                if head in known and head != source:
+                    targets.add(head)
+        for target in targets:
+            cross[(source, target)] = cross.get((source, target), 0) + 1
+
+    relations = [
+        {"from": source, "to": target, "count": count, "kind": "import"}
+        for (source, target), count in sorted(cross.items(), key=lambda item: (-item[1], item[0]))
+    ]
+
+    # 前端调后端的 HTTP 次数（数据来自 count_frontend.mjs 采集的 api-client 调用）
+    http_calls = 0
+    http_paths: set[str] = set()
+    http_by_app: dict[str, dict[str, Any]] = {}
+    for page in (frontend or {}).get("pages", []):
+        for call in page.get("calls", []):
+            count = int(call.get("count") or 0)
+            path = str(call.get("path") or "")
+            http_calls += count
+            http_paths.add(path)
+            prefix = "/" + path.strip("/").split("/")[0]
+            app = HTTP_API_APPS.get(prefix, "（未映射）")
+            bucket = http_by_app.setdefault(
+                app, {"app": app, "prefix": prefix, "calls": 0, "paths": set()}
+            )
+            bucket["calls"] += count
+            bucket["paths"].add(path)
+    if http_calls and any(module["key"] == "frontend" for module in modules):
+        relations.append(
+            {"from": "frontend", "to": "backend", "count": http_calls, "kind": "http"}
+        )
+        relations.sort(key=lambda row: (-int(row["count"]), str(row["from"])))
+
+    http_by_app_rows = [
+        {
+            "app": bucket["app"],
+            "prefix": bucket["prefix"],
+            "calls": bucket["calls"],
+            "paths": len(bucket["paths"]),
+        }
+        for bucket in sorted(http_by_app.values(), key=lambda item: (-item["calls"], item["app"]))
+    ]
+
+    return {
+        "modules": modules,
+        "relations": relations,
+        "http": {"calls": http_calls, "paths": len(http_paths), "byApp": http_by_app_rows},
+        "totals": {
+            "modules": len(modules),
+            "units": sum(int(module["totals"]["units"]) for module in modules),
+            "files": sum(int(module["totals"]["files"]) for module in modules),
+            "loc": sum(int(module["totals"]["loc"]) for module in modules),
+        },
+    }
+
+
+BACKEND_MODULES = (
+    ("accounts", "账号与权限"),
+    ("ai_assistant", "AI 助手"),
+    ("bug_manager", "缺陷管理"),
+    ("case_manager", "用例管理"),
+    ("dashboard", "看板聚合"),
+    ("device_pool", "设备池"),
+    ("knowledge_assistant", "知识问答"),
+    ("report_generator", "报告生成"),
+    ("serial_log", "串口日志"),
+    ("task_list", "任务清单"),
+    ("usage_ledger", "用量记账"),
+    ("workflow", "工作流"),
+)
+
+
+def collect_backend_modules() -> dict[str, Any]:
+    """backend/apps 下每个 Django app 按「一层」统计（口径同 engines 页）。
+
+    口径：
+    1. 模块 = backend/apps/ 下的一个 app。
+    2. 单元 = app 下的直接子目录（递归汇总，整体算一个）或直接 .py（各算一个）。
+    3. 排除 __init__.py、__pycache__、migrations/。
+    4. import 只算 app 之间，config/gateway/shared 属于基础设施，不计入跨模块关系。
+    """
+    root = REPO / "backend" / "apps"
+    skip_dirs = {"__pycache__", "migrations"}
+
+    def count_loc(files: list[Path]) -> int:
+        total = 0
+        for path in files:
+            try:
+                text = path.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            total += sum(1 for line in text.splitlines() if line.strip())
+        return total
+
+    modules: list[dict[str, Any]] = []
+    module_of_path: dict[str, str] = {}
+
+    for key, label in BACKEND_MODULES:
+        base = root / key
+        if not base.is_dir():
+            continue
+        units: list[dict[str, Any]] = []
+        owned: list[Path] = []
+        for item in sorted(base.iterdir()):
+            if item.name == "__init__.py" or item.name in skip_dirs:
+                continue
+            if item.is_dir():
+                files = [
+                    f
+                    for f in sorted(item.rglob("*.py"))
+                    if "__pycache__" not in f.parts and f.name != "__init__.py"
+                ]
+                if not files:
+                    continue
+                units.append(
+                    {"name": item.name + "/", "kind": "dir", "files": len(files), "loc": count_loc(files)}
+                )
+                owned.extend(files)
+            elif item.suffix == ".py":
+                units.append({"name": item.name, "kind": "file", "files": 1, "loc": count_loc([item])})
+                owned.append(item)
+        units.sort(key=lambda unit: (-int(unit["loc"]), unit["name"]))
+        for path in owned:
+            module_of_path[path.as_posix()] = key
+        modules.append(
+            {
+                "key": key,
+                "label": label,
+                "units": units,
+                "totals": {
+                    "units": len(units),
+                    "files": sum(int(unit["files"]) for unit in units),
+                    "loc": sum(int(unit["loc"]) for unit in units),
+                },
+            }
+        )
+
+    known = {key for key, _ in BACKEND_MODULES}
+    cross: dict[tuple[str, str], int] = {}
+    for path, source in module_of_path.items():
+        try:
+            tree = ast.parse(Path(path).read_text(encoding="utf-8", errors="ignore"))
+        except (SyntaxError, OSError):
+            continue
+        targets: set[str] = set()
+        for node in ast.walk(tree):
+            names: list[str] = []
+            if isinstance(node, ast.Import):
+                names = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
+                names = [node.module]
+            for name in names:
+                parts = name.split(".")
+                for index, part in enumerate(parts[:-1]):
+                    if part == "apps" and parts[index + 1] in known and parts[index + 1] != source:
+                        targets.add(parts[index + 1])
+        for target in targets:
+            cross[(source, target)] = cross.get((source, target), 0) + 1
+
+    relations = [
+        {"from": source, "to": target, "count": count, "kind": "import"}
+        for (source, target), count in sorted(cross.items(), key=lambda item: (-item[1], item[0]))
+    ]
+
+    return {
+        "modules": modules,
+        "relations": relations,
+        "totals": {
+            "modules": len(modules),
+            "units": sum(int(module["totals"]["units"]) for module in modules),
+            "files": sum(int(module["totals"]["files"]) for module in modules),
+            "loc": sum(int(module["totals"]["loc"]) for module in modules),
+        },
+    }
+
+
+ENGINE_MODULES = (
+    ("ae_harness", "原型链路", "多智能体编排原型：agents / tools / assistant / workflow / event / middleware"),
+    ("agents", "智能体", "角色装配、模型、工具、RAG、实时语音与知识问答"),
+    ("backend_bridge", "后端桥", "给 Django 用的入口：智能体调用、报告与用量回写"),
+    ("device", "设备", "Android 设备连接、动作执行与日志"),
+    ("uart_log", "串口日志", "串口检测、参数、接收、切换与落盘"),
+    ("utils", "通用工具", "文件与通用 IO"),
+    ("vision", "视觉", "截图 OCR 识别"),
+)
+
+
+def collect_engine_modules() -> dict[str, Any]:
+    """engines 下各模块按「一层」统计：只看模块下的直接子目录与直接文件，不再往里拆。
+
+    口径：
+    1. 模块 = engines/ 下的一个顶层目录。
+    2. 单元 = 该模块下的一个直接子目录（递归汇总其中全部 .py）或一个直接 .py 文件。
+    3. 排除 __init__.py、__pycache__、logs/ 这类不含业务代码的项，与 ae_harness 页一致。
+    4. 行数 = 非空物理行；import 只算 engines 内部模块之间的引用。
+    """
+    root = REPO / "engines"
+    skip_dirs = {"__pycache__", "logs", "vendor"}
+
+    def count_loc(files: list[Path]) -> int:
+        total = 0
+        for path in files:
+            try:
+                text = path.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            total += sum(1 for line in text.splitlines() if line.strip())
+        return total
+
+    modules: list[dict[str, Any]] = []
+    module_of_path: dict[str, str] = {}
+
+    for key, label, note in ENGINE_MODULES:
+        base = root / key
+        if not base.is_dir():
+            continue
+        units: list[dict[str, Any]] = []
+        all_files: list[Path] = []
+        for item in sorted(base.iterdir()):
+            if item.name == "__init__.py" or item.name in skip_dirs:
+                continue
+            if item.is_dir():
+                if item.name in skip_dirs:
+                    continue
+                files = [f for f in sorted(item.rglob("*.py")) if "__pycache__" not in f.parts and f.name != "__init__.py"]
+                if not files:
+                    continue
+                units.append(
+                    {
+                        "name": item.name + "/",
+                        "kind": "dir",
+                        "files": len(files),
+                        "loc": count_loc(files),
+                    }
+                )
+                all_files.extend(files)
+            elif item.suffix == ".py":
+                units.append(
+                    {
+                        "name": item.name,
+                        "kind": "file",
+                        "files": 1,
+                        "loc": count_loc([item]),
+                    }
+                )
+                all_files.append(item)
+
+        units.sort(key=lambda unit: (-int(unit["loc"]), unit["name"]))
+        for path in all_files:
+            module_of_path[path.as_posix()] = key
+        doc_path = base / "AGENTS.md"
+        modules.append(
+            {
+                "key": key,
+                "label": label,
+                "note": note,
+                "agentsDoc": doc_path.read_text(encoding="utf-8") if doc_path.is_file() else "",
+                "units": units,
+                "totals": {
+                    "units": len(units),
+                    "files": sum(int(unit["files"]) for unit in units),
+                    "loc": sum(int(unit["loc"]) for unit in units),
+                },
+            }
+        )
+
+    # 跨模块 import：source 模块 → target 模块 的次数
+    cross: dict[tuple[str, str], int] = {}
+    for path, source_key in module_of_path.items():
+        try:
+            tree = ast.parse(Path(path).read_text(encoding="utf-8", errors="ignore"))
+        except (SyntaxError, OSError):
+            continue
+        targets: set[str] = set()
+        for node in ast.walk(tree):
+            names: list[str] = []
+            if isinstance(node, ast.Import):
+                names = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
+                names = [node.module]
+            for name in names:
+                parts = name.split(".")
+                if len(parts) >= 2 and parts[0] == "engines" and parts[1] in {item[0] for item in ENGINE_MODULES}:
+                    if parts[1] != source_key:
+                        targets.add(parts[1])
+        for target in targets:
+            cross[(source_key, target)] = cross.get((source_key, target), 0) + 1
+
+    relations = [
+        {"from": source, "to": target, "count": count, "kind": "import"}
+        for (source, target), count in sorted(cross.items(), key=lambda item: (-item[1], item[0]))
+    ]
+
+    return {
+        "modules": modules,
+        "relations": relations,
+        "totals": {
+            "modules": len(modules),
+            "units": sum(int(module["totals"]["units"]) for module in modules),
+            "files": sum(int(module["totals"]["files"]) for module in modules),
+            "loc": sum(int(module["totals"]["loc"]) for module in modules),
+        },
+    }
+
+
+def collect_ae_harness() -> dict[str, Any]:
+    """engines/ae_harness 按角色/事件/工具/工作流分组的模块行数与 import 关系。
+
+    口径：一行一个 .py（排除 logs/ 与 vendor）；代码行 = 非空物理行。
+    assistant/ 是角色调试入口，并入「角色」组，不单开一栏。
+    import 只算本包内部模块之间的引用，外部依赖（agentscope 等）不计。
+    """
+    root = REPO / "engines" / "ae_harness"
+    modules: dict[str, Path] = {}
+    for path in _walk_code(root, (".py",)):
+        rel = path.relative_to(root).as_posix()
+        if rel.startswith("logs/") or "/vendor/" in rel:
+            continue
+        modules[path.relative_to(REPO).with_suffix("").as_posix().replace("/", ".")] = path
+
+    # 每个模块的一句话职责：取 docstring 模板的「模块功能」字段（读不到就空）
+    sys.path.insert(0, str(REPO))
+    from utils.module_docstring import extract_module_docstrings  # noqa: PLC0415 - 延迟导入
+
+    summary_of: dict[str, str] = {}
+    for record in extract_module_docstrings(root, repo_root=REPO):
+        rel = record["file"]
+        prefix = "engines/ae_harness/"
+        key = rel[len(prefix) :] if rel.startswith(prefix) else rel
+        summary_of[key] = (record["fields"].get("模块功能") or "").strip()
+
+    def group_of(module_name: str) -> str:
+        rest = (
+            module_name[len("engines.ae_harness.") :]
+            if module_name.startswith("engines.ae_harness.")
+            else ""
+        )
+        head = rest.split(".", 1)[0] if rest else "(根)"
+        return head if head in {item[0] for item in AE_HARNESS_GROUPS} else "(根)"
+
+    def rel_name(module_name: str) -> str:
+        rest = (
+            module_name[len("engines.ae_harness.") :]
+            if module_name.startswith("engines.ae_harness.")
+            else module_name
+        )
+        parts = rest.split(".")
+        if parts[-1] == "__init__":
+            return "/".join(parts[:-1]) + "/__init__.py" if len(parts) > 1 else "__init__.py"
+        return "/".join(parts) + ".py"
+
+    def candidates(src: Path, node: ast.ImportFrom) -> list[str]:
+        if node.level:
+            base = src.parent
+            for _ in range(node.level - 1):
+                base = base.parent
+            prefix = base.relative_to(REPO).as_posix().replace("/", ".")
+            if node.module:
+                prefix = prefix + "." + node.module
+        else:
+            prefix = node.module or ""
+        out = [prefix] if prefix else []
+        out.extend(prefix + "." + alias.name for alias in node.names if alias.name != "*")
+        return out
+
+    files_by_group: dict[str, list[dict[str, Any]]] = {key: [] for key, *_ in AE_HARNESS_GROUPS}
+    cross: Counter[tuple[str, str]] = Counter()
+    internal: Counter[str] = Counter()
+    pairs: list[dict[str, str]] = []
+    seen_pairs: set[tuple[str, str]] = set()
+
+    for module_name, path in sorted(modules.items()):
+        group = group_of(module_name)
+        _files, classes, methods, loc = _py_counts([path])
+        rel_in_pkg = path.relative_to(root).as_posix()
+        if group in files_by_group and path.name != "__init__.py":
+            files_by_group[group].append(
+                {
+                    "name": path.relative_to(root / group).as_posix()
+                    if group != "(根)"
+                    else path.name,
+                    "path": path.relative_to(REPO).as_posix(),
+                    "summary": summary_of.get(rel_in_pkg, ""),
+                    "classes": classes,
+                    "methods": methods,
+                    "loc": loc,
+                }
+            )
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except (OSError, SyntaxError, UnicodeDecodeError):
+            continue
+        targets: set[str] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                targets.update(candidates(path, node))
+            elif isinstance(node, ast.Import):
+                targets.update(alias.name for alias in node.names)
+        for target in sorted(targets):
+            resolved = target if target in modules else target + ".__init__"
+            if resolved not in modules or resolved == module_name:
+                continue
+            source_group = group_of(module_name)
+            target_group = group_of(resolved)
+            pair = (rel_name(module_name), rel_name(resolved))
+            if pair not in seen_pairs:
+                seen_pairs.add(pair)
+                pairs.append(
+                    {
+                        "from": pair[0],
+                        "to": pair[1],
+                        "fromGroup": source_group,
+                        "toGroup": target_group,
+                    }
+                )
+            if source_group == target_group:
+                internal[source_group] += 1
+            else:
+                cross[(source_group, target_group)] += 1
+
+    groups = []
+    for key, label, note in AE_HARNESS_GROUPS:
+        rows = sorted(files_by_group[key], key=lambda row: (-int(row["loc"]), row["name"]))
+        doc_path = root / key / "AGENTS.md"
+        groups.append(
+            {
+                "key": key,
+                "label": label,
+                "note": note,
+                "agentsDoc": doc_path.read_text(encoding="utf-8") if doc_path.is_file() else "",
+                "files": rows,
+                "totals": {
+                    "files": len(rows),
+                    "classes": sum(int(row["classes"]) for row in rows),
+                    "methods": sum(int(row["methods"]) for row in rows),
+                    "loc": sum(int(row["loc"]) for row in rows),
+                },
+            }
+        )
+    # 跨组引用：按「引用方组 → 被引用组」聚成关系卡（谁引了谁的文件 + 为什么）
+    by_key = {group["key"]: group for group in groups}
+    file_index: dict[str, dict[str, Any]] = {}
+    for group in groups:
+        for row in group["files"]:
+            rel = row["path"][len("engines/ae_harness/") :]
+            file_index[rel] = row
+
+    grouped: dict[tuple[str, str], list[dict[str, str]]] = {}
+    for pair in pairs:
+        if pair["fromGroup"] == pair["toGroup"]:
+            continue
+        grouped.setdefault((pair["fromGroup"], pair["toGroup"]), []).append(pair)
+
+    relations = []
+    for (from_group, to_group), items in sorted(grouped.items()):
+        from_files, to_files = [], []
+        seen_from, seen_to = set(), set()
+        for item in items:
+            source = file_index.get(item["from"], {})
+            target = file_index.get(item["to"], {})
+            if item["from"] not in seen_from:
+                seen_from.add(item["from"])
+                from_files.append(
+                    {
+                        "name": item["from"],
+                        "summary": source.get("summary") or summary_of.get(item["from"], ""),
+                        "loc": source.get("loc", 0),
+                    }
+                )
+            if item["to"] not in seen_to:
+                seen_to.add(item["to"])
+                to_files.append(
+                    {
+                        "name": item["to"],
+                        "summary": target.get("summary") or summary_of.get(item["to"], ""),
+                        "loc": target.get("loc", 0),
+                    }
+                )
+        relations.append(
+            {
+                "from": from_group,
+                "to": to_group,
+                "fromLabel": by_key.get(from_group, {}).get("label", from_group),
+                "toLabel": by_key.get(to_group, {}).get("label", to_group),
+                "count": int(cross.get((from_group, to_group), 0)),
+                "fromFiles": from_files,
+                "toFiles": to_files,
+                "why": AE_HARNESS_WHY.get(f"{from_group}->{to_group}", ""),
+            }
+        )
+
+    return {
+        "groups": groups,
+        "relations": relations,
+        "totals": {
+            "files": sum(int(group["totals"]["files"]) for group in groups),
+            "loc": sum(int(group["totals"]["loc"]) for group in groups),
+            "classes": sum(int(group["totals"]["classes"]) for group in groups),
+            "methods": sum(int(group["totals"]["methods"]) for group in groups),
+        },
+        "imports": {
+            "edges": [
+                {"from": source, "to": target, "count": count}
+                for (source, target), count in _ranked(cross)
+            ],
+            "internal": dict(sorted(internal.items())),
+            "pairs": sorted(pairs, key=lambda item: (item["from"], item["to"])),
+        },
+        "note": "独立原型链路，与 engines/agents 并存，不替代它。assistant 归入角色组。",
+    }
 
 
 def _canonical(payload: dict[str, Any]) -> str:
@@ -1088,13 +1551,39 @@ def _read_history() -> list[dict[str, Any]]:
 def _history_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
     """One history entry: 四个分层各自的模块量与代码量。"""
     snapshot: dict[str, Any] = {"at": datetime.now(TZ).strftime("%Y-%m-%d %H:%M")}
-    for category in payload["categories"]:
+    for category in payload.get("categories", []):
         totals = category["totals"]
         row = {key: int(totals.get(key) or 0) for key in HISTORY_KEYS}
         row["modules"] = len(category["modules"])  # 分类下的模块/App 个数
         snapshot[category["key"]] = row
     agents_totals = payload["agents"]["totals"]
     snapshot["agents"] = {key: int(agents_totals.get(key) or 0) for key in (*HISTORY_KEYS, "tests")}
+
+    # ae_harness 按组 + 按文件的代码行（供「每个模块的最近三次记录」对比）
+    ae_harness = payload.get("ae_harness") or {}
+    ae_groups: dict[str, int] = {}
+    ae_files: dict[str, int] = {}
+    for group in ae_harness.get("groups", []):
+        ae_groups[group["key"]] = int(group["totals"].get("loc") or 0)
+        for file_row in group.get("files", []):
+            ae_files[f"{group['key']}/{file_row['name']}"] = int(file_row.get("loc") or 0)
+    if ae_groups:
+        snapshot["ae_harness"] = {"groups": ae_groups, "files": ae_files}
+
+    # engines / backend 两页：每个模块的每个子单元行数（供「最近三次对比」）
+    for payload_key, history_key in (
+        ("engineModules", "engine_modules"),
+        ("backendModules", "backend_modules"),
+        ("frontendModules", "frontend_modules"),
+        ("projectModules", "project_modules"),
+    ):
+        units_by_module: dict[str, dict[str, int]] = {}
+        for module in (payload.get(payload_key) or {}).get("modules", []):
+            units_by_module[module["key"]] = {
+                unit["name"]: int(unit.get("loc") or 0) for unit in module.get("units", [])
+            }
+        if units_by_module:
+            snapshot[history_key] = units_by_module
     return snapshot
 
 
@@ -1115,11 +1604,114 @@ def _append_history(payload: dict[str, Any]) -> list[dict[str, Any]]:
         changed = any(
             {k: v for k, v in last.get(cat, {}).items() if k != "at"}
             != {k: v for k, v in snapshot.get(cat, {}).items() if k != "at"}
-            for cat in CATEGORY_KEYS
+            for cat in (
+        *CATEGORY_KEYS,
+        "ae_harness",
+        "engine_modules",
+        "backend_modules",
+        "frontend_modules",
+        "project_modules",
+    )
         )
     if changed:
         rows.append(snapshot)
     return rows[-HISTORY_LIMIT:]
+
+
+def _ae_comparison(payload: dict[str, Any], history: list[dict[str, Any]]) -> dict[str, Any]:
+    """ae_harness 每个组/文件的最近三次代码量（本次在前）。
+
+    Args:
+        payload: build() 的结果（用到 ae_harness.groups 的文件名）。
+        history: 已按时间升序的历史快照。
+
+    Returns:
+        {"at": [本次, 上次, 上上次], "groups": {key: [n, n-1, n-2]}, "files": {...}}；
+        历史里没有对应记录的位置是 null，页面据此显示"待记录"而不是 0。
+    """
+    scope = 3
+    entries = [row for row in history if isinstance(row.get("ae_harness"), dict)][-scope:]
+    ats = [row.get("at", "") for row in reversed(entries)]
+    while len(ats) < scope:
+        ats.append("")
+
+    groups: dict[str, list[int | None]] = {
+        group["key"]: [] for group in payload.get("ae_harness", {}).get("groups", [])
+    }
+    files: dict[str, list[int | None]] = {}
+    for group in payload.get("ae_harness", {}).get("groups", []):
+        for file_row in group.get("files", []):
+            files[f"{group['key']}/{file_row['name']}"] = []
+
+    for row in reversed(entries):
+        slice_ = row.get("ae_harness") or {}
+        group_values = slice_.get("groups") or {}
+        file_values = slice_.get("files") or {}
+        for key in groups:
+            groups[key].append(int(group_values[key]) if key in group_values else None)
+        for key in files:
+            files[key].append(int(file_values[key]) if key in file_values else None)
+
+    for mapping in (groups, files):
+        for key, values in mapping.items():
+            while len(values) < scope:
+                values.append(None)
+    return {"at": ats, "groups": groups, "files": files, "scope": scope}
+
+
+def _module_comparison(
+    payload: dict[str, Any],
+    history: list[dict[str, Any]],
+    *,
+    payload_key: str,
+    history_key: str,
+) -> dict[str, Any]:
+    """某个 payload 键下每个模块/单元的最近三次行数（本次在前）。
+
+    Args:
+        payload: build() 的结果。
+        history: 已按时间升序的历史快照。
+        payload_key: payload 里存模块结构的键，例如 engineModules。
+        history_key: history 里存行数的键，例如 engine_modules。
+
+    Returns:
+        {"at": [本次, 上次, 上上次], "units": {module: {unit: [n, n-1, n-2]}},
+         "totals": {module: [n, n-1, n-2]}, "scope": 3}；缺的位置是 null。
+    """
+    scope = 3
+    entries = [row for row in history if isinstance(row.get(history_key), dict)][-scope:]
+    ats = [row.get("at", "") for row in reversed(entries)]
+    while len(ats) < scope:
+        ats.append("")
+
+    modules = payload.get(payload_key, {}).get("modules", [])
+    units: dict[str, dict[str, list[int | None]]] = {
+        module["key"]: {unit["name"]: [] for unit in module.get("units", [])} for module in modules
+    }
+    totals: dict[str, list[int | None]] = {module["key"]: [] for module in modules}
+
+    for row in reversed(entries):
+        slice_ = row.get(history_key) or {}
+        for module in modules:
+            key = module["key"]
+            values = slice_.get(key) or {}
+            subtotal = 0
+            for unit in module.get("units", []):
+                name = unit["name"]
+                has = name in values
+                units[key][name].append(int(values[name]) if has else None)
+                if has:
+                    subtotal += int(values[name])
+            totals[key].append(subtotal if values else None)
+
+    for per_unit in units.values():
+        for values in per_unit.values():
+            while len(values) < scope:
+                values.append(None)
+    for values in totals.values():
+        while len(values) < scope:
+            values.append(None)
+    return {"at": ats, "units": units, "totals": totals, "scope": scope}
 
 
 def write_outputs(payload: dict[str, Any], *, check_only: bool) -> int:
@@ -1137,7 +1729,34 @@ def write_outputs(payload: dict[str, Any], *, check_only: bool) -> int:
 
     # 总览页的数据依赖历史快照：check 模式只读、write 模式追加（保证写出的文件与历史自洽）
     history = _read_history() if check_only else _append_history(payload)
-    payload["overview"] = _overview(payload, history)
+    payload["ae_harness"]["comparison"] = _ae_comparison(payload, history)
+    for payload_key, history_key in (
+        ("engineModules", "engine_modules"),
+        ("backendModules", "backend_modules"),
+        ("frontendModules", "frontend_modules"),
+        ("projectModules", "project_modules"),
+    ):
+        section = payload.get(payload_key)
+        if not section:
+            continue
+        comparison = _module_comparison(payload, history, payload_key=payload_key, history_key=history_key)
+        section["comparison"] = comparison
+        for module in section["modules"]:
+            for unit in module["units"]:
+                trend = comparison["units"].get(module["key"], {}).get(unit["name"]) or []
+                unit["trend"] = (trend + [None, None, None])[:3]
+            total = (comparison["totals"].get(module["key"]) or []) + [None, None, None]
+            module["totalTrend"] = total[:3]
+    # 把三次代码量挂到每个文件上，页面按模块一图一柱组直接用
+    comparison = payload["ae_harness"]["comparison"]
+    for group in payload["ae_harness"]["groups"]:
+        for file_row in group["files"]:
+            key = f"{group['key']}/{file_row['name']}"
+            file_row["trend"] = comparison["files"].get(key, [])[:3] or [
+                file_row["loc"],
+                None,
+                None,
+            ]
     js_text = (
         "/* 由 dev_docs/project-viz/tools/gen_board_data.py 生成，勿手改。 */\n"
         "window.__BOARD__ = "
@@ -1179,12 +1798,17 @@ def write_outputs(payload: dict[str, Any], *, check_only: bool) -> int:
         encoding="utf-8",
     )
 
-    totals = payload["grand_totals"]
+    summary = [
+        ("总览", payload["projectModules"]),
+        ("前端", payload["frontendModules"]),
+        ("后端", payload["backendModules"]),
+        ("引擎", payload["engineModules"]),
+    ]
+    detail = " · ".join(
+        f"{label} {section['totals']['modules']} 模块 / {section['totals']['loc']} 行" for label, section in summary
+    )
     print(  # noqa: T201
-        f"已写出 {json_path.name}, {js_path.name}, history.js："
-        f"{len(payload['categories'])} 类 / 模块 {sum(len(c['modules']) for c in payload['categories'])} 个 / "
-        f"功能 {totals['features']} · 文件 {totals['files']} · 类 {totals['classes']} · "
-        f"方法 {totals['methods']} · 代码行 {totals['loc']} · 历史 {len(history)} 次"
+        f"已写出 {json_path.name}, {js_path.name}, history.js：{detail} · 历史 {len(history)} 次"
     )
     return 0
 

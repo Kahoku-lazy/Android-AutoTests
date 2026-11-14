@@ -21,7 +21,6 @@
   --color-ink-57: #96918c;
   --color-ink-34: #5d5950;
   --color-orange-76: #d8d2c4;
-
   /* 核心色与模块色 */
   --ink: var(--color-indigo-13);
   --paper: var(--color-lime-94);
@@ -35,8 +34,8 @@
   --c-case: var(--color-teal-49);
   --c-ai: var(--color-purple-73);
   --c-runner: var(--color-red-83);
+  --c-tool: #f4a261; /* 工具箱暖橙：ae_harness 架构图专用，已登记 */
   --c-workflow: var(--color-cyan-74);
-
   /* 字体 / 字号 / 间距 / 圆角 / 阴影 / 动效 */
   --app-font: "Cascadia Mono", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", monospace, sans-serif;
   --app-size-xs: 12px;
@@ -152,7 +151,7 @@ body {
   box-shadow: var(--app-shadow-sm);
   cursor: pointer;
   transition: background var(--app-duration-fast) var(--app-ease),
-    transform var(--app-duration-fast) var(--app-ease);
+  transform var(--app-duration-fast) var(--app-ease);
 }
 
 .sidebar__nav-item:hover {
@@ -309,7 +308,7 @@ body {
   box-shadow: 4px 4px 0 0 var(--ac-accent, var(--c-dashboard));
   transform: rotate(var(--ac-tilt, 0.3deg));
   transition: transform var(--app-duration) var(--app-ease),
-    box-shadow var(--app-duration) var(--app-ease);
+  box-shadow var(--app-duration) var(--app-ease);
 }
 
 .ac-card:hover {
@@ -771,13 +770,11 @@ body {
 }
 
 .kpi__sub,
+
 .kpi__target {
   margin: 0;
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);
-}
-
-.kpi__target {
   margin-top: var(--app-space-xs);
   padding-top: var(--app-space-xs);
   border-top: 1px dashed color-mix(in srgb, var(--ink) 25%, transparent);
@@ -1188,6 +1185,33 @@ body {
   color: var(--app-text-secondary);
 }
 
+/* ── 分组图例：颜色 → 组（条形、图例、表格圆点共用一套色） ── */
+.legend-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-space-xs) var(--app-space-md);
+  margin: 0 0 var(--app-space-sm);
+  padding: 0;
+}
+
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+.legend-chip__dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: var(--app-space-xs);
+  vertical-align: middle;
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+}
+
 /* ── 表纸：虚线墨框 + 硬影，不画网格线 ── */
 .sheet-wrap {
   overflow-x: auto;
@@ -1304,7 +1328,7 @@ body {
   box-shadow: 4px 4px 0 0 var(--c-workflow);
   transform: rotate(var(--chart-tilt, 0.2deg));
   transition: transform var(--app-duration) var(--app-ease),
-    box-shadow var(--app-duration) var(--app-ease);
+  box-shadow var(--app-duration) var(--app-ease);
 }
 
 .chart-card:hover {
@@ -1443,4 +1467,2156 @@ body {
     transition: none;
     transform: none;
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ae_harness 页专用零件（架构图 / 模块代码量 / 每模块对比）
+   注意：这一段放在文件末尾，别再按区间批量删样式，否则会连坐。
+   ══════════════════════════════════════════════════════════════════ */
+
+/* 架构图：纸面方块 + 手绘箭头 */
+.dep-diagram {
+  margin: 0 0 var(--app-space-lg);
+  padding: var(--app-space-md);
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: 5px 5px 0 0 var(--c-element);
+}
+
+.dep-diagram__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1180 / 600;
+}
+
+.dep-node {
+  fill: color-mix(in srgb, var(--node-color) 58%, var(--app-bg-card));
+  stroke: var(--ink);
+  stroke-width: 2.4;
+}
+
+.dep-node__shadow {
+  fill: var(--ink);
+  opacity: 0.12;
+}
+
+.dep-node__title {
+  font-family: var(--app-font);
+  font-size: 15px;
+  font-weight: 800;
+  fill: var(--ink);
+}
+
+.dep-node__sub {
+  font-family: var(--app-font);
+  font-size: 12px;
+  fill: var(--app-stat-text);
+}
+
+.dep-node__meta {
+  font-family: var(--app-font);
+  font-size: 11px;
+  fill: var(--app-text-secondary);
+}
+
+.dep-edge {
+  fill: none;
+  stroke: var(--c-element);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 6 4;
+}
+
+.dep-arrowhead {
+  fill: var(--c-element);
+}
+
+.dep-edge__label {
+  font-family: var(--app-font);
+  font-size: 12px;
+  font-weight: 700;
+  fill: var(--ink);
+}
+
+.dep-diagram__caption {
+  margin: var(--app-space-sm) 0 0;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+/* 每模块一张柱状图 + 三张卡 */
+
+@media (max-width: 700px) {
+  .cmp__cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* 三张卡的格子本身 */
+
+/* 架构图 + 右侧档案面板 */
+
+/* 选中模块后：与它相连的调用线统一变绿 */
+
+/* 运行阶段才接入的观测链路：默认更淡，和创建链路区分 */
+
+@media (prefers-reduced-motion: reduce) {
+  .dep-node-group,
+  .dep-edge-group {
+    transition: none;
+  }
+}
+
+/* 次要依赖（workflow 自己也用 agents/tools）：细线，不与主链路争 */
+
+/* 两栏：左依赖关系，右模块代码量 */
+
+@media (max-width: 1180px) {
+  .pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* 代码量卡片：三列均分，主体（模块名/文件数/行数）同字号同基线 */
+.code-card {
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr) minmax(0, 1.2fr);
+  align-items: baseline;
+  gap: var(--app-space-sm);
+  padding: var(--app-space-lg) var(--app-space-lg);
+  background: var(--app-bg-card);
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: 3px 3px 0 0 var(--c-element);
+}
+
+.code-card > * {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  min-width: 0;
+}
+
+.code-card__name {
+  justify-content: flex-start;
+}
+
+/* 中文名与单位不参与收缩，否则会被挤成省略号 */
+.code-card__key,
+.code-card__label,
+.code-card__count,
+.code-card__num,
+.code-card__unit,
+.legend-chip__dot {
+  flex: 0 0 auto;
+}
+
+/* 主体：三块同字号，字号一致才谈得上对齐 */
+.code-card__key,
+.code-card__count,
+.code-card__num {
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 附属文案：中文名与单位都小一号，跟主体同基线 */
+.code-card__label,
+.code-card__unit {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--app-text-secondary);
+  white-space: nowrap;
+}
+
+.code-card__num {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 每模块一张柱状图 + 三张卡：两列并排，窄屏落回单列 */
+.cmp-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--app-space-md);
+  align-items: start;
+}
+
+@media (max-width: 1080px) {
+  .cmp-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.cmp {
+  padding: var(--app-space-md);
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: 4px 4px 0 0 var(--c-element);
+}
+
+.cmp__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--app-space-sm);
+  margin-bottom: var(--app-space-sm);
+}
+
+.cmp__title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--app-space-xs);
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+}
+
+.cmp__label {
+  font-size: var(--app-size-xs);
+  font-weight: 400;
+  color: var(--app-text-secondary);
+}
+
+.cmp__files {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+.cmp__cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--app-space-xs);
+  margin-bottom: var(--app-space-sm);
+}
+
+@media (max-width: 700px) {
+  .cmp__cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* 三张卡的格子本身 */
+.module-stat {
+  padding: var(--app-space-xs) var(--app-space-sm);
+  background: var(--app-bg-subtle);
+  border: 1.5px dashed var(--ink);
+  border-radius: 2px;
+}
+
+.module-stat__label {
+  margin: 0 0 2px;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+.module-stat__value {
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 架构图 + 右侧档案面板 */
+
+.dep-node-group {
+  cursor: pointer;
+  outline: none;
+  transition: opacity var(--app-duration-fast) ease;
+}
+
+.dep-node-group.is-selected .dep-node {
+  stroke-width: 3.6;
+  stroke: var(--c-device);
+}
+
+.dep-node-group.is-focus .dep-node {
+  stroke-width: 3.6;
+  stroke: var(--ink);
+}
+
+.dep-node-group:focus-visible .dep-node {
+  stroke: var(--c-dashboard);
+  stroke-width: 3.6;
+}
+
+.dep-edge-group {
+  transition: opacity var(--app-duration-fast) ease;
+}
+
+/* 选中模块后：与它相连的调用线统一变绿 */
+.dep-edge-group.is-active .dep-edge {
+  stroke: var(--c-device);
+  stroke-width: 3;
+  stroke-dasharray: none;
+}
+
+.dep-edge-group.is-active .dep-arrowhead-active {
+  fill: var(--c-device);
+}
+
+.dep-edge-group.is-active .dep-edge__label {
+  fill: var(--ink);
+  font-weight: 800;
+}
+
+.dep-arrowhead-active {
+  fill: var(--c-device);
+}
+
+.dep-edge-group.is-focus .dep-edge {
+  stroke-width: 3.2;
+}
+
+/* 运行阶段才接入的观测链路：默认更淡，和创建链路区分 */
+.dep-edge-group.is-runtime .dep-edge {
+  stroke: var(--app-text-secondary);
+  opacity: 0.75;
+}
+
+.dep-edge-group.is-runtime .dep-edge__label {
+  fill: var(--app-text-secondary);
+  font-weight: 400;
+}
+
+.dep-edge-group.is-focus .dep-edge__label {
+  font-weight: 800;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dep-node-group,
+  .dep-edge-group {
+    transition: none;
+  }
+}
+
+/* 次要依赖（workflow 自己也用 agents/tools）：细线，不与主链路争 */
+.dep-edge-group.is-secondary .dep-edge {
+  stroke-width: 1.4;
+  opacity: 0.8;
+}
+
+.dep-edge-group.is-secondary .dep-edge__label {
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.dep-edge-group.is-secondary.is-active .dep-edge {
+  stroke-width: 3;
+  opacity: 1;
+}
+
+/* 两栏：左依赖关系，右模块代码量 */
+.pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(420px, 1.15fr);
+  gap: var(--app-space-md);
+  align-items: start;
+}
+
+@media (max-width: 1180px) {
+  .pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.pair__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+}
+
+.pair__title {
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+}
+
+.pair__hint {
+  margin: 0;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+/* 第 2 节左栏内的视图切换：贴着图/表，不要额外留白 */
+.tabbar--inline {
+  margin: 0;
+}
+
+/* 架构图节点上的 AGENTS 入口 */
+.dep-doc-btn rect {
+  fill: var(--app-bg-card);
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.dep-doc-btn text {
+  font-family: var(--app-font);
+  font-size: 8.5px;
+  font-weight: 700;
+  fill: var(--ink);
+  letter-spacing: 0.4px;
+}
+
+.dep-doc-btn {
+  cursor: pointer;
+}
+
+.dep-doc-btn:hover rect {
+  fill: var(--c-dashboard);
+}
+
+/* AGENTS.md 弹层 */
+.doc-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--app-space-lg);
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+.doc-modal__panel {
+  display: flex;
+  flex-direction: column;
+  width: min(840px, 100%);
+  max-height: min(80vh, 760px);
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: 6px 6px 0 0 var(--c-element);
+}
+
+.doc-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-md);
+  padding: var(--app-space-sm) var(--app-space-md);
+  border-bottom: 2px solid var(--ink);
+}
+
+.doc-modal__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--app-space-xs);
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+}
+
+.doc-modal__close {
+  padding: 2px 10px;
+  font-family: var(--app-font);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--app-bg-card);
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.doc-modal__close:hover {
+  background: var(--c-dashboard);
+}
+
+.doc-modal__body {
+  overflow-y: auto;
+  padding: var(--app-space-md) var(--app-space-lg);
+  font-size: var(--app-size-sm);
+  line-height: 1.7;
+}
+
+.doc-modal__body h1,
+.doc-modal__body h2,
+.doc-modal__body h3,
+.doc-modal__body h4 {
+  margin: var(--app-space-md) 0 var(--app-space-xs);
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.doc-modal__body h1 {
+  font-size: var(--app-size-lg);
+}
+
+.doc-modal__body h2 {
+  font-size: var(--app-size-md);
+}
+
+.doc-modal__body h3,
+.doc-modal__body h4 {
+  font-size: var(--app-size-sm);
+}
+
+.doc-modal__body p,
+.doc-modal__body ul,
+.doc-modal__body ol {
+  margin: var(--app-space-xs) 0;
+}
+
+.doc-modal__body ul,
+.doc-modal__body ol {
+  padding-left: 22px;
+}
+
+.doc-modal__body blockquote {
+  margin: var(--app-space-xs) 0;
+  padding: 2px var(--app-space-sm);
+  color: var(--app-text-secondary);
+  border-left: 3px solid var(--c-element);
+}
+
+.doc-modal__body code {
+  padding: 1px 4px;
+  font-family: var(--app-font-mono, ui-monospace, monospace);
+  font-size: 0.92em;
+  background: var(--app-bg-subtle);
+  border-radius: 2px;
+}
+
+.doc-modal__body pre {
+  overflow-x: auto;
+  padding: var(--app-space-sm);
+  background: var(--app-bg-subtle);
+  border: 1.5px dashed var(--ink);
+  border-radius: 2px;
+}
+
+.doc-modal__body pre code {
+  padding: 0;
+  background: none;
+}
+
+.doc-modal__body table {
+  width: 100%;
+  margin: var(--app-space-sm) 0;
+  border-collapse: collapse;
+  font-size: var(--app-size-xs);
+}
+
+.doc-modal__body th,
+.doc-modal__body td {
+  padding: 4px 8px;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+.doc-modal__body th {
+  font-weight: 800;
+  background: var(--app-bg-subtle);
+}
+
+/* 单元多的模块独占一行：图更宽，X 轴标签不挤 */
+.cmp--wide {
+  grid-column: 1 / -1;
+}
+
+/* 缺记录的三点卡：虚线更淡，文字次要色 */
+.module-stat.is-pending .module-stat__value {
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  color: var(--app-text-secondary);
+}
+
+/* 每模块一张柱状图 + 三张卡：两列并排，窄屏落回单列 */
+.cmp-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--app-space-md);
+  align-items: start;
+}
+
+@media (max-width: 1080px) {
+  .cmp-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.cmp {
+  padding: var(--app-space-md);
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: 4px 4px 0 0 var(--c-element);
+}
+
+.cmp__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--app-space-sm);
+  margin-bottom: var(--app-space-sm);
+}
+
+.cmp__title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--app-space-xs);
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+}
+
+.cmp__label {
+  font-size: var(--app-size-xs);
+  font-weight: 400;
+  color: var(--app-text-secondary);
+}
+
+.cmp__files {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+.cmp__cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--app-space-xs);
+  margin-bottom: var(--app-space-sm);
+}
+
+@media (max-width: 700px) {
+  .cmp__cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* 三张卡的格子本身 */
+.module-stat {
+  padding: var(--app-space-xs) var(--app-space-sm);
+  background: var(--app-bg-subtle);
+  border: 1.5px dashed var(--ink);
+  border-radius: 2px;
+}
+
+.module-stat__label {
+  margin: 0 0 2px;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+.module-stat__value {
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 架构图 + 右侧档案面板 */
+
+.dep-node-group {
+  cursor: pointer;
+  outline: none;
+  transition: opacity var(--app-duration-fast) ease;
+}
+
+.dep-node-group.is-selected .dep-node {
+  stroke-width: 3.6;
+  stroke: var(--c-device);
+}
+
+.dep-node-group.is-focus .dep-node {
+  stroke-width: 3.6;
+  stroke: var(--ink);
+}
+
+.dep-node-group:focus-visible .dep-node {
+  stroke: var(--c-dashboard);
+  stroke-width: 3.6;
+}
+
+.dep-edge-group {
+  transition: opacity var(--app-duration-fast) ease;
+}
+
+/* 选中模块后：与它相连的调用线统一变绿 */
+.dep-edge-group.is-active .dep-edge {
+  stroke: var(--c-device);
+  stroke-width: 3;
+  stroke-dasharray: none;
+}
+
+.dep-edge-group.is-active .dep-arrowhead-active {
+  fill: var(--c-device);
+}
+
+.dep-edge-group.is-active .dep-edge__label {
+  fill: var(--ink);
+  font-weight: 800;
+}
+
+.dep-arrowhead-active {
+  fill: var(--c-device);
+}
+
+.dep-edge-group.is-focus .dep-edge {
+  stroke-width: 3.2;
+}
+
+/* 运行阶段才接入的观测链路：默认更淡，和创建链路区分 */
+.dep-edge-group.is-runtime .dep-edge {
+  stroke: var(--app-text-secondary);
+  opacity: 0.75;
+}
+
+.dep-edge-group.is-runtime .dep-edge__label {
+  fill: var(--app-text-secondary);
+  font-weight: 400;
+}
+
+.dep-edge-group.is-focus .dep-edge__label {
+  font-weight: 800;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dep-node-group,
+  .dep-edge-group {
+    transition: none;
+  }
+}
+
+/* 次要依赖（workflow 自己也用 agents/tools）：细线，不与主链路争 */
+.dep-edge-group.is-secondary .dep-edge {
+  stroke-width: 1.4;
+  opacity: 0.8;
+}
+
+.dep-edge-group.is-secondary .dep-edge__label {
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.dep-edge-group.is-secondary.is-active .dep-edge {
+  stroke-width: 3;
+  opacity: 1;
+}
+
+/* 两栏：左依赖关系，右模块代码量 */
+.pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(420px, 1.15fr);
+  gap: var(--app-space-md);
+  align-items: start;
+}
+
+@media (max-width: 1180px) {
+  .pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.pair__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+}
+
+.pair__title {
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+}
+
+.pair__hint {
+  margin: 0;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+/* 第 2 节左栏内的视图切换：贴着图/表，不要额外留白 */
+.tabbar--inline {
+  margin: 0;
+}
+
+/* 架构图节点上的 AGENTS 入口 */
+.dep-doc-btn rect {
+  fill: var(--app-bg-card);
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.dep-doc-btn text {
+  font-family: var(--app-font);
+  font-size: 8.5px;
+  font-weight: 700;
+  fill: var(--ink);
+  letter-spacing: 0.4px;
+}
+
+.dep-doc-btn {
+  cursor: pointer;
+}
+
+.dep-doc-btn:hover rect {
+  fill: var(--c-dashboard);
+}
+
+/* AGENTS.md 弹层 */
+.doc-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--app-space-lg);
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+.doc-modal__panel {
+  display: flex;
+  flex-direction: column;
+  width: min(840px, 100%);
+  max-height: min(80vh, 760px);
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: 6px 6px 0 0 var(--c-element);
+}
+
+.doc-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-md);
+  padding: var(--app-space-sm) var(--app-space-md);
+  border-bottom: 2px solid var(--ink);
+}
+
+.doc-modal__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--app-space-xs);
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+}
+
+.doc-modal__close {
+  padding: 2px 10px;
+  font-family: var(--app-font);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--app-bg-card);
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.doc-modal__close:hover {
+  background: var(--c-dashboard);
+}
+
+.doc-modal__body {
+  overflow-y: auto;
+  padding: var(--app-space-md) var(--app-space-lg);
+  font-size: var(--app-size-sm);
+  line-height: 1.7;
+}
+
+.doc-modal__body h1,
+.doc-modal__body h2,
+.doc-modal__body h3,
+.doc-modal__body h4 {
+  margin: var(--app-space-md) 0 var(--app-space-xs);
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.doc-modal__body h1 {
+  font-size: var(--app-size-lg);
+}
+
+.doc-modal__body h2 {
+  font-size: var(--app-size-md);
+}
+
+.doc-modal__body h3,
+.doc-modal__body h4 {
+  font-size: var(--app-size-sm);
+}
+
+.doc-modal__body p,
+.doc-modal__body ul,
+.doc-modal__body ol {
+  margin: var(--app-space-xs) 0;
+}
+
+.doc-modal__body ul,
+.doc-modal__body ol {
+  padding-left: 22px;
+}
+
+.doc-modal__body blockquote {
+  margin: var(--app-space-xs) 0;
+  padding: 2px var(--app-space-sm);
+  color: var(--app-text-secondary);
+  border-left: 3px solid var(--c-element);
+}
+
+.doc-modal__body code {
+  padding: 1px 4px;
+  font-family: var(--app-font-mono, ui-monospace, monospace);
+  font-size: 0.92em;
+  background: var(--app-bg-subtle);
+  border-radius: 2px;
+}
+
+.doc-modal__body pre {
+  overflow-x: auto;
+  padding: var(--app-space-sm);
+  background: var(--app-bg-subtle);
+  border: 1.5px dashed var(--ink);
+  border-radius: 2px;
+}
+
+.doc-modal__body pre code {
+  padding: 0;
+  background: none;
+}
+
+.doc-modal__body table {
+  width: 100%;
+  margin: var(--app-space-sm) 0;
+  border-collapse: collapse;
+  font-size: var(--app-size-xs);
+}
+
+.doc-modal__body th,
+.doc-modal__body td {
+  padding: 4px 8px;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+.doc-modal__body th {
+  font-weight: 800;
+  background: var(--app-bg-subtle);
+}
+
+/* 单元多的模块独占一行：图更宽，X 轴标签不挤 */
+.cmp--wide {
+  grid-column: 1 / -1;
+}
+
+/* 缺记录的三点卡：虚线更淡，文字次要色 */
+.module-stat.is-pending .module-stat__value {
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  color: var(--app-text-secondary);
+}
+
+/* 依赖关系卡片：单行，三色渐变（被调用=蓝 / 调用=绿 / 次数=紫），「次」保持墨色 */
+/* 每模块一张柱状图 + 三张卡：两列并排，窄屏落回单列 */
+.cmp-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--app-space-md);
+  align-items: start;
+}
+
+@media (max-width: 1080px) {
+  .cmp-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.cmp {
+  padding: var(--app-space-md);
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: 4px 4px 0 0 var(--c-element);
+}
+
+.cmp__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--app-space-sm);
+  margin-bottom: var(--app-space-sm);
+}
+
+.cmp__title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--app-space-xs);
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+}
+
+.cmp__label {
+  font-size: var(--app-size-xs);
+  font-weight: 400;
+  color: var(--app-text-secondary);
+}
+
+.cmp__files {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+.cmp__cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--app-space-xs);
+  margin-bottom: var(--app-space-sm);
+}
+
+@media (max-width: 700px) {
+  .cmp__cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* 三张卡的格子本身 */
+.module-stat {
+  padding: var(--app-space-xs) var(--app-space-sm);
+  background: var(--app-bg-subtle);
+  border: 1.5px dashed var(--ink);
+  border-radius: 2px;
+}
+
+.module-stat__label {
+  margin: 0 0 2px;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+.module-stat__value {
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 架构图 + 右侧档案面板 */
+
+.dep-node-group {
+  cursor: pointer;
+  outline: none;
+  transition: opacity var(--app-duration-fast) ease;
+}
+
+.dep-node-group.is-selected .dep-node {
+  stroke-width: 3.6;
+  stroke: var(--c-device);
+}
+
+.dep-node-group.is-focus .dep-node {
+  stroke-width: 3.6;
+  stroke: var(--ink);
+}
+
+.dep-node-group:focus-visible .dep-node {
+  stroke: var(--c-dashboard);
+  stroke-width: 3.6;
+}
+
+.dep-edge-group {
+  transition: opacity var(--app-duration-fast) ease;
+}
+
+/* 选中模块后：与它相连的调用线统一变绿 */
+.dep-edge-group.is-active .dep-edge {
+  stroke: var(--c-device);
+  stroke-width: 3;
+  stroke-dasharray: none;
+}
+
+.dep-edge-group.is-active .dep-arrowhead-active {
+  fill: var(--c-device);
+}
+
+.dep-edge-group.is-active .dep-edge__label {
+  fill: var(--ink);
+  font-weight: 800;
+}
+
+.dep-arrowhead-active {
+  fill: var(--c-device);
+}
+
+.dep-edge-group.is-focus .dep-edge {
+  stroke-width: 3.2;
+}
+
+/* 运行阶段才接入的观测链路：默认更淡，和创建链路区分 */
+.dep-edge-group.is-runtime .dep-edge {
+  stroke: var(--app-text-secondary);
+  opacity: 0.75;
+}
+
+.dep-edge-group.is-runtime .dep-edge__label {
+  fill: var(--app-text-secondary);
+  font-weight: 400;
+}
+
+.dep-edge-group.is-focus .dep-edge__label {
+  font-weight: 800;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dep-node-group,
+  .dep-edge-group {
+    transition: none;
+  }
+}
+
+/* 次要依赖（workflow 自己也用 agents/tools）：细线，不与主链路争 */
+.dep-edge-group.is-secondary .dep-edge {
+  stroke-width: 1.4;
+  opacity: 0.8;
+}
+
+.dep-edge-group.is-secondary .dep-edge__label {
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.dep-edge-group.is-secondary.is-active .dep-edge {
+  stroke-width: 3;
+  opacity: 1;
+}
+
+/* 两栏：左依赖关系，右模块代码量 */
+.pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(420px, 1.15fr);
+  gap: var(--app-space-md);
+  align-items: start;
+}
+
+@media (max-width: 1180px) {
+  .pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.pair__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+}
+
+.pair__title {
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+}
+
+.pair__hint {
+  margin: 0;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+/* 第 2 节左栏内的视图切换：贴着图/表，不要额外留白 */
+.tabbar--inline {
+  margin: 0;
+}
+
+/* 架构图节点上的 AGENTS 入口 */
+.dep-doc-btn rect {
+  fill: var(--app-bg-card);
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.dep-doc-btn text {
+  font-family: var(--app-font);
+  font-size: 8.5px;
+  font-weight: 700;
+  fill: var(--ink);
+  letter-spacing: 0.4px;
+}
+
+.dep-doc-btn {
+  cursor: pointer;
+}
+
+.dep-doc-btn:hover rect {
+  fill: var(--c-dashboard);
+}
+
+/* AGENTS.md 弹层 */
+.doc-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--app-space-lg);
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+.doc-modal__panel {
+  display: flex;
+  flex-direction: column;
+  width: min(840px, 100%);
+  max-height: min(80vh, 760px);
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: 6px 6px 0 0 var(--c-element);
+}
+
+.doc-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-md);
+  padding: var(--app-space-sm) var(--app-space-md);
+  border-bottom: 2px solid var(--ink);
+}
+
+.doc-modal__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--app-space-xs);
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+}
+
+.doc-modal__close {
+  padding: 2px 10px;
+  font-family: var(--app-font);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--app-bg-card);
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.doc-modal__close:hover {
+  background: var(--c-dashboard);
+}
+
+.doc-modal__body {
+  overflow-y: auto;
+  padding: var(--app-space-md) var(--app-space-lg);
+  font-size: var(--app-size-sm);
+  line-height: 1.7;
+}
+
+.doc-modal__body h1,
+.doc-modal__body h2,
+.doc-modal__body h3,
+.doc-modal__body h4 {
+  margin: var(--app-space-md) 0 var(--app-space-xs);
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.doc-modal__body h1 {
+  font-size: var(--app-size-lg);
+}
+
+.doc-modal__body h2 {
+  font-size: var(--app-size-md);
+}
+
+.doc-modal__body h3,
+.doc-modal__body h4 {
+  font-size: var(--app-size-sm);
+}
+
+.doc-modal__body p,
+.doc-modal__body ul,
+.doc-modal__body ol {
+  margin: var(--app-space-xs) 0;
+}
+
+.doc-modal__body ul,
+.doc-modal__body ol {
+  padding-left: 22px;
+}
+
+.doc-modal__body blockquote {
+  margin: var(--app-space-xs) 0;
+  padding: 2px var(--app-space-sm);
+  color: var(--app-text-secondary);
+  border-left: 3px solid var(--c-element);
+}
+
+.doc-modal__body code {
+  padding: 1px 4px;
+  font-family: var(--app-font-mono, ui-monospace, monospace);
+  font-size: 0.92em;
+  background: var(--app-bg-subtle);
+  border-radius: 2px;
+}
+
+.doc-modal__body pre {
+  overflow-x: auto;
+  padding: var(--app-space-sm);
+  background: var(--app-bg-subtle);
+  border: 1.5px dashed var(--ink);
+  border-radius: 2px;
+}
+
+.doc-modal__body pre code {
+  padding: 0;
+  background: none;
+}
+
+.doc-modal__body table {
+  width: 100%;
+  margin: var(--app-space-sm) 0;
+  border-collapse: collapse;
+  font-size: var(--app-size-xs);
+}
+
+.doc-modal__body th,
+.doc-modal__body td {
+  padding: 4px 8px;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+.doc-modal__body th {
+  font-weight: 800;
+  background: var(--app-bg-subtle);
+}
+
+/* 单元多的模块独占一行：图更宽，X 轴标签不挤 */
+.cmp--wide {
+  grid-column: 1 / -1;
+}
+
+/* 缺记录的三点卡：虚线更淡，文字次要色 */
+.module-stat.is-pending .module-stat__value {
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  color: var(--app-text-secondary);
+}
+
+/* 依赖关系卡片：单行，粗边 + 硬影，三个值各自着色（被调用方 → 调用方 · 次数） */
+/* 每模块一张柱状图 + 三张卡：两列并排，窄屏落回单列 */
+.cmp-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--app-space-md);
+  align-items: start;
+}
+
+@media (max-width: 1080px) {
+  .cmp-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.cmp {
+  padding: var(--app-space-md);
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: 4px 4px 0 0 var(--c-element);
+}
+
+.cmp__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--app-space-sm);
+  margin-bottom: var(--app-space-sm);
+}
+
+.cmp__title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--app-space-xs);
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+}
+
+.cmp__label {
+  font-size: var(--app-size-xs);
+  font-weight: 400;
+  color: var(--app-text-secondary);
+}
+
+.cmp__files {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+.cmp__cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--app-space-xs);
+  margin-bottom: var(--app-space-sm);
+}
+
+@media (max-width: 700px) {
+  .cmp__cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* 三张卡的格子本身 */
+.module-stat {
+  padding: var(--app-space-xs) var(--app-space-sm);
+  background: var(--app-bg-subtle);
+  border: 1.5px dashed var(--ink);
+  border-radius: 2px;
+}
+
+.module-stat__label {
+  margin: 0 0 2px;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+.module-stat__value {
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 架构图 + 右侧档案面板 */
+
+.dep-node-group {
+  cursor: pointer;
+  outline: none;
+  transition: opacity var(--app-duration-fast) ease;
+}
+
+.dep-node-group.is-selected .dep-node {
+  stroke-width: 3.6;
+  stroke: var(--c-device);
+}
+
+.dep-node-group.is-focus .dep-node {
+  stroke-width: 3.6;
+  stroke: var(--ink);
+}
+
+.dep-node-group:focus-visible .dep-node {
+  stroke: var(--c-dashboard);
+  stroke-width: 3.6;
+}
+
+.dep-edge-group {
+  transition: opacity var(--app-duration-fast) ease;
+}
+
+/* 选中模块后：与它相连的调用线统一变绿 */
+.dep-edge-group.is-active .dep-edge {
+  stroke: var(--c-device);
+  stroke-width: 3;
+  stroke-dasharray: none;
+}
+
+.dep-edge-group.is-active .dep-arrowhead-active {
+  fill: var(--c-device);
+}
+
+.dep-edge-group.is-active .dep-edge__label {
+  fill: var(--ink);
+  font-weight: 800;
+}
+
+.dep-arrowhead-active {
+  fill: var(--c-device);
+}
+
+.dep-edge-group.is-focus .dep-edge {
+  stroke-width: 3.2;
+}
+
+/* 运行阶段才接入的观测链路：默认更淡，和创建链路区分 */
+.dep-edge-group.is-runtime .dep-edge {
+  stroke: var(--app-text-secondary);
+  opacity: 0.75;
+}
+
+.dep-edge-group.is-runtime .dep-edge__label {
+  fill: var(--app-text-secondary);
+  font-weight: 400;
+}
+
+.dep-edge-group.is-focus .dep-edge__label {
+  font-weight: 800;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dep-node-group,
+  .dep-edge-group {
+    transition: none;
+  }
+}
+
+/* 次要依赖（workflow 自己也用 agents/tools）：细线，不与主链路争 */
+.dep-edge-group.is-secondary .dep-edge {
+  stroke-width: 1.4;
+  opacity: 0.8;
+}
+
+.dep-edge-group.is-secondary .dep-edge__label {
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.dep-edge-group.is-secondary.is-active .dep-edge {
+  stroke-width: 3;
+  opacity: 1;
+}
+
+/* 两栏：左依赖关系，右模块代码量 */
+.pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(420px, 1.15fr);
+  gap: var(--app-space-md);
+  align-items: start;
+}
+
+@media (max-width: 1180px) {
+  .pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.pair__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+}
+
+.pair__title {
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+}
+
+.pair__hint {
+  margin: 0;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+/* 第 2 节左栏内的视图切换：贴着图/表，不要额外留白 */
+.tabbar--inline {
+  margin: 0;
+}
+
+/* 架构图节点上的 AGENTS 入口 */
+.dep-doc-btn rect {
+  fill: var(--app-bg-card);
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.dep-doc-btn text {
+  font-family: var(--app-font);
+  font-size: 8.5px;
+  font-weight: 700;
+  fill: var(--ink);
+  letter-spacing: 0.4px;
+}
+
+.dep-doc-btn {
+  cursor: pointer;
+}
+
+.dep-doc-btn:hover rect {
+  fill: var(--c-dashboard);
+}
+
+/* AGENTS.md 弹层 */
+.doc-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--app-space-lg);
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+.doc-modal__panel {
+  display: flex;
+  flex-direction: column;
+  width: min(840px, 100%);
+  max-height: min(80vh, 760px);
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: 6px 6px 0 0 var(--c-element);
+}
+
+.doc-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-md);
+  padding: var(--app-space-sm) var(--app-space-md);
+  border-bottom: 2px solid var(--ink);
+}
+
+.doc-modal__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--app-space-xs);
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+}
+
+.doc-modal__close {
+  padding: 2px 10px;
+  font-family: var(--app-font);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--app-bg-card);
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.doc-modal__close:hover {
+  background: var(--c-dashboard);
+}
+
+.doc-modal__body {
+  overflow-y: auto;
+  padding: var(--app-space-md) var(--app-space-lg);
+  font-size: var(--app-size-sm);
+  line-height: 1.7;
+}
+
+.doc-modal__body h1,
+.doc-modal__body h2,
+.doc-modal__body h3,
+.doc-modal__body h4 {
+  margin: var(--app-space-md) 0 var(--app-space-xs);
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.doc-modal__body h1 {
+  font-size: var(--app-size-lg);
+}
+
+.doc-modal__body h2 {
+  font-size: var(--app-size-md);
+}
+
+.doc-modal__body h3,
+.doc-modal__body h4 {
+  font-size: var(--app-size-sm);
+}
+
+.doc-modal__body p,
+.doc-modal__body ul,
+.doc-modal__body ol {
+  margin: var(--app-space-xs) 0;
+}
+
+.doc-modal__body ul,
+.doc-modal__body ol {
+  padding-left: 22px;
+}
+
+.doc-modal__body blockquote {
+  margin: var(--app-space-xs) 0;
+  padding: 2px var(--app-space-sm);
+  color: var(--app-text-secondary);
+  border-left: 3px solid var(--c-element);
+}
+
+.doc-modal__body code {
+  padding: 1px 4px;
+  font-family: var(--app-font-mono, ui-monospace, monospace);
+  font-size: 0.92em;
+  background: var(--app-bg-subtle);
+  border-radius: 2px;
+}
+
+.doc-modal__body pre {
+  overflow-x: auto;
+  padding: var(--app-space-sm);
+  background: var(--app-bg-subtle);
+  border: 1.5px dashed var(--ink);
+  border-radius: 2px;
+}
+
+.doc-modal__body pre code {
+  padding: 0;
+  background: none;
+}
+
+.doc-modal__body table {
+  width: 100%;
+  margin: var(--app-space-sm) 0;
+  border-collapse: collapse;
+  font-size: var(--app-size-xs);
+}
+
+.doc-modal__body th,
+.doc-modal__body td {
+  padding: 4px 8px;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+.doc-modal__body th {
+  font-weight: 800;
+  background: var(--app-bg-subtle);
+}
+
+/* 单元多的模块独占一行：图更宽，X 轴标签不挤 */
+.cmp--wide {
+  grid-column: 1 / -1;
+}
+
+/* 缺记录的三点卡：虚线更淡，文字次要色 */
+.module-stat.is-pending .module-stat__value {
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  color: var(--app-text-secondary);
+}
+
+/* 依赖关系卡片：与代码量卡片同一套骨架（粗边 + 硬影 + 两行），三个值各自着色 */
+/* 每模块一张柱状图 + 三张卡：两列并排，窄屏落回单列 */
+.cmp-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--app-space-md);
+  align-items: start;
+}
+
+@media (max-width: 1080px) {
+  .cmp-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.cmp {
+  padding: var(--app-space-md);
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: 4px 4px 0 0 var(--c-element);
+}
+
+.cmp__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--app-space-sm);
+  margin-bottom: var(--app-space-sm);
+}
+
+.cmp__title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--app-space-xs);
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+}
+
+.cmp__label {
+  font-size: var(--app-size-xs);
+  font-weight: 400;
+  color: var(--app-text-secondary);
+}
+
+.cmp__files {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+.cmp__cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--app-space-xs);
+  margin-bottom: var(--app-space-sm);
+}
+
+@media (max-width: 700px) {
+  .cmp__cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* 三张卡的格子本身 */
+.module-stat {
+  padding: var(--app-space-xs) var(--app-space-sm);
+  background: var(--app-bg-subtle);
+  border: 1.5px dashed var(--ink);
+  border-radius: 2px;
+}
+
+.module-stat__label {
+  margin: 0 0 2px;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+.module-stat__value {
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 架构图 + 右侧档案面板 */
+
+.dep-node-group {
+  cursor: pointer;
+  outline: none;
+  transition: opacity var(--app-duration-fast) ease;
+}
+
+.dep-node-group.is-selected .dep-node {
+  stroke-width: 3.6;
+  stroke: var(--c-device);
+}
+
+.dep-node-group.is-focus .dep-node {
+  stroke-width: 3.6;
+  stroke: var(--ink);
+}
+
+.dep-node-group:focus-visible .dep-node {
+  stroke: var(--c-dashboard);
+  stroke-width: 3.6;
+}
+
+.dep-edge-group {
+  transition: opacity var(--app-duration-fast) ease;
+}
+
+/* 选中模块后：与它相连的调用线统一变绿 */
+.dep-edge-group.is-active .dep-edge {
+  stroke: var(--c-device);
+  stroke-width: 3;
+  stroke-dasharray: none;
+}
+
+.dep-edge-group.is-active .dep-arrowhead-active {
+  fill: var(--c-device);
+}
+
+.dep-edge-group.is-active .dep-edge__label {
+  fill: var(--ink);
+  font-weight: 800;
+}
+
+.dep-arrowhead-active {
+  fill: var(--c-device);
+}
+
+.dep-edge-group.is-focus .dep-edge {
+  stroke-width: 3.2;
+}
+
+/* 运行阶段才接入的观测链路：默认更淡，和创建链路区分 */
+.dep-edge-group.is-runtime .dep-edge {
+  stroke: var(--app-text-secondary);
+  opacity: 0.75;
+}
+
+.dep-edge-group.is-runtime .dep-edge__label {
+  fill: var(--app-text-secondary);
+  font-weight: 400;
+}
+
+.dep-edge-group.is-focus .dep-edge__label {
+  font-weight: 800;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dep-node-group,
+  .dep-edge-group {
+    transition: none;
+  }
+}
+
+/* 次要依赖（workflow 自己也用 agents/tools）：细线，不与主链路争 */
+.dep-edge-group.is-secondary .dep-edge {
+  stroke-width: 1.4;
+  opacity: 0.8;
+}
+
+.dep-edge-group.is-secondary .dep-edge__label {
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.dep-edge-group.is-secondary.is-active .dep-edge {
+  stroke-width: 3;
+  opacity: 1;
+}
+
+/* 两栏：左依赖关系，右模块代码量 */
+.pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(420px, 1.15fr);
+  gap: var(--app-space-md);
+  align-items: start;
+}
+
+@media (max-width: 1180px) {
+  .pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.pair__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+}
+
+.pair__title {
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+}
+
+.pair__hint {
+  margin: 0;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+/* 第 2 节左栏内的视图切换：贴着图/表，不要额外留白 */
+.tabbar--inline {
+  margin: 0;
+}
+
+/* 架构图节点上的 AGENTS 入口 */
+.dep-doc-btn rect {
+  fill: var(--app-bg-card);
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.dep-doc-btn text {
+  font-family: var(--app-font);
+  font-size: 8.5px;
+  font-weight: 700;
+  fill: var(--ink);
+  letter-spacing: 0.4px;
+}
+
+.dep-doc-btn {
+  cursor: pointer;
+}
+
+.dep-doc-btn:hover rect {
+  fill: var(--c-dashboard);
+}
+
+/* AGENTS.md 弹层 */
+.doc-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--app-space-lg);
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
+.doc-modal__panel {
+  display: flex;
+  flex-direction: column;
+  width: min(840px, 100%);
+  max-height: min(80vh, 760px);
+  background: var(--app-bg-card);
+  border: 2.5px solid var(--ink);
+  border-radius: 2px;
+  box-shadow: 6px 6px 0 0 var(--c-element);
+}
+
+.doc-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-md);
+  padding: var(--app-space-sm) var(--app-space-md);
+  border-bottom: 2px solid var(--ink);
+}
+
+.doc-modal__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--app-space-xs);
+  margin: 0;
+  font-size: var(--app-size-md);
+  font-weight: 800;
+}
+
+.doc-modal__close {
+  padding: 2px 10px;
+  font-family: var(--app-font);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--app-bg-card);
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.doc-modal__close:hover {
+  background: var(--c-dashboard);
+}
+
+.doc-modal__body {
+  overflow-y: auto;
+  padding: var(--app-space-md) var(--app-space-lg);
+  font-size: var(--app-size-sm);
+  line-height: 1.7;
+}
+
+.doc-modal__body h1,
+.doc-modal__body h2,
+.doc-modal__body h3,
+.doc-modal__body h4 {
+  margin: var(--app-space-md) 0 var(--app-space-xs);
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.doc-modal__body h1 {
+  font-size: var(--app-size-lg);
+}
+
+.doc-modal__body h2 {
+  font-size: var(--app-size-md);
+}
+
+.doc-modal__body h3,
+.doc-modal__body h4 {
+  font-size: var(--app-size-sm);
+}
+
+.doc-modal__body p,
+.doc-modal__body ul,
+.doc-modal__body ol {
+  margin: var(--app-space-xs) 0;
+}
+
+.doc-modal__body ul,
+.doc-modal__body ol {
+  padding-left: 22px;
+}
+
+.doc-modal__body blockquote {
+  margin: var(--app-space-xs) 0;
+  padding: 2px var(--app-space-sm);
+  color: var(--app-text-secondary);
+  border-left: 3px solid var(--c-element);
+}
+
+.doc-modal__body code {
+  padding: 1px 4px;
+  font-family: var(--app-font-mono, ui-monospace, monospace);
+  font-size: 0.92em;
+  background: var(--app-bg-subtle);
+  border-radius: 2px;
+}
+
+.doc-modal__body pre {
+  overflow-x: auto;
+  padding: var(--app-space-sm);
+  background: var(--app-bg-subtle);
+  border: 1.5px dashed var(--ink);
+  border-radius: 2px;
+}
+
+.doc-modal__body pre code {
+  padding: 0;
+  background: none;
+}
+
+.doc-modal__body table {
+  width: 100%;
+  margin: var(--app-space-sm) 0;
+  border-collapse: collapse;
+  font-size: var(--app-size-xs);
+}
+
+.doc-modal__body th,
+.doc-modal__body td {
+  padding: 4px 8px;
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+.doc-modal__body th {
+  font-weight: 800;
+  background: var(--app-bg-subtle);
+}
+
+/* 单元多的模块独占一行：图更宽，X 轴标签不挤 */
+.cmp--wide {
+  grid-column: 1 / -1;
+}
+
+/* 缺记录的三点卡：虚线更淡，文字次要色 */
+.module-stat.is-pending .module-stat__value {
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+  color: var(--app-text-secondary);
+}
+
+/* 依赖关系卡片：一行一条 import 关系，替代表格 */
+
+/* HTTP 调用边：与 import 边区分（虚线 + 蓝色） */
+.dep-edge.is-http {
+  stroke: var(--c-tool);
+  stroke-dasharray: 6 4;
+  stroke-width: 2.2;
+}
+
+/* 架构图下方的图例注：说明虚线含义（属于图的一部分） */
+.dep-diagram__note {
+  margin: var(--app-space-xs) 0 0;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+  text-align: center;
+}
+
+/* 主表下面挂的明细表 */
+.sheet-wrap--sub {
+  margin-top: var(--app-space-md);
+}
+
+.sheet__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--app-space-xs);
+  margin: 0 0 var(--app-space-xs);
+  font-size: var(--app-size-sm);
+  font-weight: 700;
+}
+
+.sheet__note {
+  font-size: var(--app-size-xs);
+  font-weight: 400;
+  color: var(--app-text-secondary);
 }

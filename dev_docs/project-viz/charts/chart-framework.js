@@ -38,8 +38,27 @@
       colors: {
         frontend: css("--c-case", "#4ecdc4"),
         backend: css("--c-device", "#6bcb77"),
-        engine: css("--c-element", "#a78bfa")
+        engine: css("--c-element", "#a78bfa"),
+        /* ae_harness 五个模块的固定色（架构图 / 条形 / 柱状图共用） */
+        agents: css("--c-runner", "#ffb5a7"),
+        tools: css("--c-tool", "#f4a261"),
+        assistant: css("--c-device", "#6bcb77"),
+        workflow: css("--c-case", "#4ecdc4"),
+        event: css("--c-workflow", "#89cff0"),
+        middleware: css("--c-element", "#a78bfa"),
+        /* engines 页的补充色：utils 用柠黄，和 backend_bridge 的绿区分开 */
+        utils: css("--c-dashboard", "#ffd166")
       },
+      /* 分组配色（同一批数据按模块/目录着色时用），顺序固定，便于跨图对应 */
+      palette: [
+        css("--c-element", "#a78bfa"),
+        css("--c-ai", "#c084fc"),
+        css("--c-case", "#4ecdc4"),
+        css("--c-device", "#6bcb77"),
+        css("--c-workflow", "#89cff0"),
+        css("--c-dashboard", "#f7c948"),
+        css("--c-runner", "#f4a3a3")
+      ],
       /* 单序列图（总量）用强调色；高亮/选中用 dashboard 黄 */
       accent: css("--c-workflow", "#89cff0"),
       highlight: css("--c-dashboard", "#f7c948")

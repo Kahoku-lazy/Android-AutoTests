@@ -10,8 +10,10 @@
 
 | 谁 | 入口在哪 | 形态 | 产物落在 |
 | --- | --- | --- | --- |
-| **控制台**（开发者调试） | 本包 `assistant/*` | CLI 脚本：读 `sys.argv`、打印汇总、交互循环 | 本包 `logs/` |
-| **平台**（后端任务 / 前端卡片） | `engines/backend_bridge/` | 库函数：收参数、返回结构化结果 | `logs/agents/backend_bridge/` |
+| **控制台**（开发者调试） | 本包 `assistant/*`，以及 `workflow/sop_runner.py` | CLI 脚本：读 `sys.argv`、打印汇总、交互循环 | 本包 `logs/` |
+| **平台**（后端任务 / 前端卡片） | `engines/backend_bridge/`（角色与编排装配都在那里） | 库函数：收参数、返回结构化结果 | `logs/agents/backend_bridge/` |
+
+**`workflow/sop/` 不属于控制台**：它是通用的 SOP 抽象（步骤模型、加载、编排执行、步骤 YAML），控制台与平台都从它调用。控制台侧的装配是 `workflow/sop_runner.py`；平台侧的装配在 `engines/backend_bridge/workflow/`。**两边都只调抽象，不复制实现。**
 
 本包只提供**原语**：`agents.create_agent`、`tools`、`event`（记录器与渲染器）、`middleware`（观测）。两份入口共享原语，各自装配。
 
@@ -33,7 +35,7 @@ ae_harness/
     _bootstrap.py      入口运行时引导：编码 / 日志级别 / 汇总 / 异常包装
   tools/adb/           adb 工具（16 个）+ 只读子集
   event/               事件记录与报告渲染（含用量记录、全量模式）
-  middleware/          只读观测中间件（采样事件流看不到的信息）
+  middleware/          三类中间件：只读观测、模型调用重试、运行控制（预算/取消）
   workflow/            多智能体编排：sop/ 是 SOP 实现，steps/*.yaml 是步骤定义
   logs/<时间戳>/        每轮一份 jsonl + html
 ```
@@ -46,7 +48,7 @@ ae_harness/
 | `assistant/` | 某个角色的可运行入口；`_bootstrap.py` 提供运行时骨架 | 定义角色、造模型、渲染报告 |
 | `tools/adb/` | 设备动作与返回值 | 决策、编排、读配置 |
 | `event/` | 记录事件、渲染报告、用量记录与汇总 | 改 Agent、写业务逻辑 |
-| `middleware/` | 只读观测（压缩决策、最终提示词） | 改行为、扩展能力、落盘 |
+| `middleware/` | 三类横切：只读观测、失败重试、预算/取消 | 扩展能力、换动作、落盘 |
 | `workflow/` | 多智能体编排（SOP）：步骤 YAML、执行者 + 验收者循环 | 建角色、造模型、渲染 HTML |
 
 ## 红线（AI 禁止事项）
@@ -66,6 +68,17 @@ ae_harness/
 8. **禁止 `event/` 引用具体工具名** —— 工具特有展示由调用方通过 `step_extras` 注册。
 9. **禁止 `tools/` 反向依赖 `agents/`** —— 工具不知道 Agent 存在，两者只在入口汇合。
 10. **禁止在 `tools/` 里做决策或编排** —— 每个工具只做一个动作，多步流程由 Agent 决定。
+
+### 二之二、异常类登记（按 engines 红线先立项）
+
+新增自定义异常必须先在子 AGENTS 立项。当前只有两个，且只在运行控制里用：
+
+| 异常 | 位置 | 语义 | 调用方该记成 |
+| --- | --- | --- | --- |
+| `BudgetExceeded` | `middleware/control.py` | 模型调用次数或时长超限 | **中止**，不是失败 |
+| `RunCancelled` | `middleware/control.py` | 外部置位取消 | **取消**，与失败分开 |
+
+**禁止**再新增同类异常（例如 `TimeoutStop`、`UserAborted`），要区分新语义先改本表。
 
 ### 三、能力边界
 

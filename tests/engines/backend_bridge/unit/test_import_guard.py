@@ -15,10 +15,11 @@ pytestmark = [pytest.mark.unit]
 
 BRIDGE_DIR = Path(__file__).resolve().parents[4] / "engines" / "backend_bridge"
 
-# 平台层绝对禁止的导入前缀：控制台入口、SOP 编排、后端与 Django。
+# 平台层绝对禁止的导入前缀：控制台入口（assistant 与 sop_runner）、后端与 Django。
+# 注意：`engines.ae_harness.workflow.sop` 是允许复用的通用抽象，不在禁用名单里。
 FORBIDDEN_PREFIXES = (
     "engines.ae_harness.assistant",
-    "engines.ae_harness.workflow",
+    "engines.ae_harness.workflow.sop_runner",
     "django",
     "apps",
     "backend",
@@ -82,6 +83,7 @@ def test_only_ae_harness_primitives_used():
         "engines.ae_harness.tools",
         "engines.ae_harness.event",
         "engines.ae_harness.middleware",
+        "engines.ae_harness.workflow.sop",
         "engines.backend_bridge",
     )
     offenders: list[str] = []

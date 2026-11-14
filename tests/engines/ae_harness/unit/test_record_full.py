@@ -155,6 +155,11 @@ def _tool_round(call_id: str = "t1") -> list:
     ]
 
 
+def _recorder(tmp_path: Path, **kwargs) -> AgentEventRecorder:
+    """建一个把产物落到临时目录的记录器，绝不写当前工作目录。"""
+    return AgentEventRecorder(tmp_path, "probe", **kwargs)
+
+
 def _rows(recorder: AgentEventRecorder, events: list) -> list[dict]:
     """把事件喂进记录器，返回落盘的 JSON 行。"""
     recorder.begin("probe")
@@ -166,42 +171,42 @@ def _rows(recorder: AgentEventRecorder, events: list) -> list[dict]:
     ]
 
 
-def test_full_mode_is_default():
+def test_full_mode_is_default(tmp_path: Path):
     """不传开关时按全量模式产出。"""
-    recorder = AgentEventRecorder(Path("."), "probe")
+    recorder = _recorder(tmp_path)
     assert recorder._full is True  # noqa: SLF001 - 直接断言默认值
 
 
-def test_full_mode_adds_public_fields():
+def test_full_mode_adds_public_fields(tmp_path: Path):
     """全量模式下事件行带绝对时刻与事件标识。"""
-    rows = _rows(AgentEventRecorder(Path("."), "probe"), [ReplyEndEvent()])
+    rows = _rows(_recorder(tmp_path), [ReplyEndEvent()])
     row = next(r for r in rows if r["event"] == "ReplyEndEvent")
     assert row["created_at"] == STAMP
     assert row["event_id"] == EVENT_ID
     assert row["session_id"] == SESSION
 
 
-def test_full_mode_writes_metadata_when_present():
+def test_full_mode_writes_metadata_when_present(tmp_path: Path):
     """metadata 非空才写。"""
-    empty = _rows(AgentEventRecorder(Path("."), "probe"), [ReplyEndEvent()])
+    empty = _rows(_recorder(tmp_path), [ReplyEndEvent()])
     assert "metadata" not in next(r for r in empty if r["event"] == "ReplyEndEvent")
 
-    filled = _rows(AgentEventRecorder(Path("."), "probe"), [ReplyEndEvent(metadata={"k": 1})])
+    filled = _rows(_recorder(tmp_path), [ReplyEndEvent(metadata={"k": 1})])
     assert next(r for r in filled if r["event"] == "ReplyEndEvent")["metadata"] == {"k": 1}
 
 
-def test_full_mode_adds_hint_source():
+def test_full_mode_adds_hint_source(tmp_path: Path):
     """提示块行同时有 hint 与 source。"""
-    rows = _rows(AgentEventRecorder(Path("."), "probe"), [HintBlockEvent()])
+    rows = _rows(_recorder(tmp_path), [HintBlockEvent()])
     row = next(r for r in rows if r["event"] == "HintBlockEvent")
     assert row["hint"] == "同一条提示"
     assert row["source"] == '{"label": "System"}'
 
 
-def test_full_mode_keeps_thinking_whole():
+def test_full_mode_keeps_thinking_whole(tmp_path: Path):
     """全量模式下思考正文不截断。"""
     long_text = "想" * 1200
-    recorder = AgentEventRecorder(Path("."), "probe")
+    recorder = _recorder(tmp_path)
     rows = _rows(
         recorder,
         [
@@ -213,10 +218,10 @@ def test_full_mode_keeps_thinking_whole():
     assert len(row["thinking"]) == 1200
 
 
-def test_compact_mode_truncates_and_omits_fields():
+def test_compact_mode_truncates_and_omits_fields(tmp_path: Path):
     """关闭全量后：思考被截断、公共字段不写。"""
     long_text = "想" * 1200
-    recorder = AgentEventRecorder(Path("."), "probe", full=False)
+    recorder = _recorder(tmp_path, full=False)
     rows = _rows(
         recorder,
         [
@@ -235,10 +240,10 @@ def test_compact_mode_truncates_and_omits_fields():
     assert "created_at" not in end
 
 
-def test_full_mode_keeps_tool_output_whole():
+def test_full_mode_keeps_tool_output_whole(tmp_path: Path):
     """全量模式下工具输出不截断。"""
     long_output = "o" * 5000
-    recorder = AgentEventRecorder(Path("."), "probe")
+    recorder = _recorder(tmp_path)
     recorder.begin("probe")
     event = ToolResultEndEvent()
     recorder._buf[f"res:{event.tool_call_id}"] = long_output  # noqa: SLF001
@@ -251,19 +256,19 @@ def test_full_mode_keeps_tool_output_whole():
     assert len(row["output"]) == 5000
 
 
-def test_delta_events_not_written_in_full_mode():
+def test_delta_events_not_written_in_full_mode(tmp_path: Path):
     """全量模式仍按块折叠：增量不单独成行。"""
     events = [ThinkingBlockDeltaEvent(delta="片") for _ in range(100)]
     events.append(ThinkingBlockEndEvent())
-    rows = _rows(AgentEventRecorder(Path("."), "probe"), events)
+    rows = _rows(_recorder(tmp_path), events)
     kinds = [r["event"] for r in rows]
     assert kinds.count("ThinkingBlockDeltaEvent") == 0
     assert kinds.count("ThinkingBlockEndEvent") == 1
 
 
-def test_tool_rows_share_call_id():
+def test_tool_rows_share_call_id(tmp_path: Path):
     """调用行与结果行带同一个工具调用标识，可据此配对。"""
-    rows = _rows(AgentEventRecorder(Path("."), "probe"), _tool_round("call-abc"))
+    rows = _rows(_recorder(tmp_path), _tool_round("call-abc"))
     call = next(r for r in rows if r["event"] == "ToolCallEndEvent")
     result = next(r for r in rows if r["event"] == "ToolResultEndEvent")
     assert call["tool_call_id"] == "call-abc"
@@ -273,9 +278,9 @@ def test_tool_rows_share_call_id():
     assert result["output"] == "1 台设备"
 
 
-def test_block_rows_carry_block_id():
+def test_block_rows_carry_block_id(tmp_path: Path):
     """思考块与文本块各带自己的块标识。"""
-    recorder = AgentEventRecorder(Path("."), "probe")
+    recorder = _recorder(tmp_path)
     rows = _rows(
         recorder,
         [
@@ -291,9 +296,9 @@ def test_block_rows_carry_block_id():
     assert think["block_id"] != text["block_id"]
 
 
-def test_association_keys_present_when_compact():
+def test_association_keys_present_when_compact(tmp_path: Path):
     """关联键与开关无关：非全量模式下仍然写入。"""
-    recorder = AgentEventRecorder(Path("."), "probe", full=False)
+    recorder = _recorder(tmp_path, full=False)
     rows = _rows(
         recorder,
         _tool_round("call-xyz") + [ThinkingBlockEndEvent(block_id="think-9")],
@@ -306,14 +311,14 @@ def test_association_keys_present_when_compact():
     assert think["block_id"] == "think-9"
 
 
-async def test_observation_rows_unaffected_by_full():
+async def test_observation_rows_unaffected_by_full(tmp_path: Path):
     """观测行字段集合与开关无关。"""
     from engines.ae_harness.middleware import ObservationMiddleware
 
     shapes = {}
     for full in (True, False):
         observer = ObservationMiddleware()
-        recorder = AgentEventRecorder(Path("."), "probe", observations=observer.records, full=full)
+        recorder = _recorder(tmp_path, observations=observer.records, full=full)
         recorder.begin("probe")
         await observer.on_system_prompt(None, "x")
         record = recorder.finish(0.1)

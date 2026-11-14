@@ -1,131 +1,136 @@
-/** AI 助手看板页 — 逻辑编排器（从 index.vue 提取） */
-import { ref, onMounted, onActivated, type Ref } from "vue"
-import { selectPop, iconBounce } from "@/shared/animations"
-import { listAgents } from "./api/agents"
-import type { AgentRecord } from "@/shared/types/ai"
-import { agentDetailRoute } from "./constants"
+/** 平台小助手入口：左侧竖排编排，右侧对话面板；可切换查看模型事件。 */
+import { computed, onMounted, ref, watch } from "vue"
+import { apiListDevices } from "@/modules/device-pool/api"
+import {
+  fetchWorkflowEvents,
+  listWorkflows,
+  sendWorkflowMessage,
+  type WorkflowCard,
+} from "./api/workflows"
 
-// ── 页面配置 ──
+export type BoardView = "chat" | "events"
 
-export const PAGE_HEADER = {
-  title: "AI 助手",
-  subtitle: "智能体看板贴便签，配置小助手身份与线路",
-  icon: "bot" as const,
-  iconGradient: "linear-gradient(135deg, var(--ai-teal), var(--ai-teal-hover))",
-}
-
-// ── 展示辅助 ──
-
-const TAPE_HUES = ["mint", "peach", "sky", "lilac", "honey"]
-const NOTE_ROTATIONS = [-2.8, 1.6, -1.4, 2.2, -2.1, 1.2, -1.8, 2.5]
-
-// ── 返回类型 ──
-
-export interface AgentBoardState {
-  agents: Ref<AgentRecord[]>
-  loading: Ref<boolean>
-  agentsError: Ref<string>
-  // helpers
-  PAGE_HEADER: typeof PAGE_HEADER
-  noteRotation: (agent: AgentRecord) => number
-  tapeHue: (agent: AgentRecord) => string
-  // actions
-  loadAgents: () => Promise<void>
-  openAgent: (agent: AgentRecord) => void
-  editAgent: (id: number, routeKey?: string) => void
-  onAgentCardClick: (ev: Event) => void
-}
-
-// ── Composable ──
-
-import { useRouter } from "vue-router"
-
-export function useAgentBoard(dutyRosterRef: Ref<HTMLElement | null>): AgentBoardState {
-  const router = useRouter()
-
-  // ── State ──
-  const agents = ref<AgentRecord[]>([])
+export function useSingleAgentBoard() {
+  const workflows = ref<WorkflowCard[]>([])
+  const selectedKey = ref("")
+  const serial = ref("")
+  const devices = ref<{ serial: string; model: string }[]>([])
+  const draft = ref("")
   const loading = ref(false)
-  const agentsError = ref("")
+  const sending = ref(false)
+  const errorText = ref("")
+  const view = ref<BoardView>("chat")
+  const events = ref<string[]>([])
+  const eventsLoading = ref(false)
 
-  // ── Derived ──
+  // 每张编排一条独立会话与一份回复，切换后互不串台。
+  const replies = ref<Record<string, string>>({})
+  const sessionIds = ref<Record<string, string>>({})
 
-  // ── Sticky note display ──
+  const selected = computed(() => workflows.value.find((item) => item.key === selectedKey.value) ?? null)
+  const currentReply = computed(() => (selectedKey.value ? replies.value[selectedKey.value] ?? "" : ""))
+  const currentSession = computed(() => (selectedKey.value ? sessionIds.value[selectedKey.value] ?? "" : ""))
+  const canSend = computed(() => Boolean(selected.value && serial.value && draft.value.trim() && !sending.value))
+  const sendHint = computed(() => (serial.value ? "" : "先选择设备"))
 
-  function hashString(s: string, mod: number): number {
-    let hash = 0
-    for (const c of s) hash = (hash * 31 + c.charCodeAt(0)) >>> 0
-    return mod ? hash % mod : hash
+  function sessionOf(key: string): string {
+    const existing = sessionIds.value[key]
+    if (existing) return existing
+    const created = crypto.randomUUID()
+    sessionIds.value = { ...sessionIds.value, [key]: created }
+    return created
   }
 
-  function noteRotation(agent: AgentRecord) {
-    return NOTE_ROTATIONS[hashString(String(agent.id), NOTE_ROTATIONS.length)]
-  }
-  function tapeHue(agent: AgentRecord) {
-    return TAPE_HUES[hashString(agent.name || String(agent.id), TAPE_HUES.length)]
-  }
-
-  // ── Animations ──
-
-  function onAgentCardClick(ev: Event) {
-    const card = (ev as unknown as { currentTarget?: HTMLElement }).currentTarget
-    if (card) selectPop(card as HTMLElement)
-    const container = dutyRosterRef.value
-    if (container) {
-      const mark = container.querySelector(".brand-mark")
-      if (mark) iconBounce(mark as HTMLElement)
-    }
-  }
-
-  // ── Data loading ──
-
-  // 首次进入由 onMounted 拉取；onActivated 只在「从其它页返回」时刷新，
-  // 避免 keep-alive 首挂载时 onMounted 与 onActivated 各打一次请求。
-  let loadedOnce = false
-
-  async function loadAgents() {
+  async function load() {
     loading.value = true
-    agentsError.value = ""
+    errorText.value = ""
     try {
-      const data = await listAgents()
-      if (data.status && data.data) {
-        agents.value = data.data.agents
-        loadedOnce = true
-      } else {
-        agentsError.value = data.message || "加载失败"
-      }
+      const [cards, devicePage] = await Promise.all([listWorkflows(), apiListDevices()])
+      workflows.value = cards
+      const records = devicePage.data.data?.devices ?? []
+      devices.value = records.map((item) => ({
+        serial: item.serial,
+        model: item.model || item.name || item.serial,
+      }))
+      selectedKey.value = cards[0]?.key ?? ""
     } catch {
-      agentsError.value = "加载智能体列表失败，请检查网络连接"
+      errorText.value = "编排清单加载失败"
+    } finally {
+      loading.value = false
     }
-    loading.value = false
   }
 
-  function openAgent(agent: AgentRecord) {
-    router.push(agentDetailRoute(agent.id))
-  }
-  function editAgent(id: number, routeKey?: string) {
-    router.push({ path: agentDetailRoute(id), query: routeKey ? { route: routeKey } : {} })
+  async function loadEvents() {
+    const session = currentSession.value
+    if (!session) {
+      events.value = []
+      return
+    }
+    eventsLoading.value = true
+    try {
+      events.value = await fetchWorkflowEvents(session)
+    } catch {
+      errorText.value = "事件读取失败"
+    } finally {
+      eventsLoading.value = false
+    }
   }
 
-  // ── Lifecycle ──
+  async function send() {
+    if (!canSend.value || !selected.value) return
+    const key = selected.value.key
+    sending.value = true
+    errorText.value = ""
+    try {
+      replies.value = {
+        ...replies.value,
+        [key]: await sendWorkflowMessage({
+          key,
+          serial: serial.value,
+          message: draft.value.trim(),
+          sessionId: sessionOf(key),
+        }),
+      }
+      draft.value = ""
+      if (view.value === "events") await loadEvents()
+    } catch {
+      errorText.value = "发送失败，请重试"
+    } finally {
+      sending.value = false
+    }
+  }
 
-  onMounted(async () => {
-    await loadAgents()
+  async function toggleView() {
+    view.value = view.value === "events" ? "chat" : "events"
+    if (view.value === "events") await loadEvents()
+  }
+
+  // 切换编排：清草稿与错误，回复各自保留。
+  watch(selectedKey, () => {
+    draft.value = ""
+    errorText.value = ""
+    events.value = []
   })
-  onActivated(() => {
-    if (loadedOnce) loadAgents()
-  })
 
+  onMounted(load)
   return {
-    agents,
+    workflows,
+    selectedKey,
+    serial,
+    devices,
+    draft,
+    view,
+    events,
+    eventsLoading,
+    currentReply,
     loading,
-    agentsError,
-    PAGE_HEADER,
-    noteRotation,
-    tapeHue,
-    loadAgents,
-    openAgent,
-    editAgent,
-    onAgentCardClick,
+    sending,
+    errorText,
+    canSend,
+    sendHint,
+    load,
+    loadEvents,
+    send,
+    toggleView,
   }
 }

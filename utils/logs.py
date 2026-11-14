@@ -103,6 +103,8 @@ def uart_capture_logger(sku: str, port: int, *, directory: Path | None = None) -
 
 
 backend_log = build_logger("backend", _LOG_DIR / "backend.log")
-agent_event_log = build_logger("agent_event", _LOG_DIR / "agents" / "agent_events.log")
+AGENT_EVENT_LOG_PATH = _LOG_DIR / "agents" / "agent_events.log"
+"""智能体事件日志路径：中间件折叠后的模型与工具事件都追加到这里。"""
+agent_event_log = build_logger("agent_event", AGENT_EVENT_LOG_PATH)
 device_log = build_logger("device", _LOG_DIR / "device.log")
 serial_log = build_logger("serial", _LOG_DIR / "serial.log")

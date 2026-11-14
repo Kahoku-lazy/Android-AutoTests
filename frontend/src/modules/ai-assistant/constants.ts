@@ -80,6 +80,9 @@ export function agentDetailRoute(id: number | string): string {
   return `/ai-assistant/agent/${id}`
 }
 
+/** AI 助手看板。模型不对外。 */
+export const ROUTE_AI_ASSISTANT_AGENTS = "/ai-assistant/agents"
+
 // ── Model Status Labels ──
 
 /** Mapping from SSE model status → { label, icon }. */

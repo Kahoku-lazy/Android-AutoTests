@@ -11,8 +11,6 @@ UI_EXECUTOR_ROLE_CONFIG:
   RoleConfig:
     name: ui_executor_role
     system_prompt: UI_EXECUTOR_PROMPT
-    # 可换 token（对应 config/data/app_info/{token}.md）；删掉本行即不加短卡
-    app_info: govee_home
 
   ToolsConfig:
 
@@ -41,8 +39,6 @@ UI_VERIFIER_ROLE_CONFIG:
   RoleConfig:
     name: ui_verifier_role
     system_prompt: UI_VERIFIER_PROMPT
-    # 可换 token（对应 config/data/app_info/{token}.md）；删掉本行即不加短卡
-    app_info: govee_home
 
   ToolsConfig:
 

@@ -43,7 +43,6 @@ __all__ = ["SPEC_KEYS", "SopRunResult", "SopStepResult", "run_sop_once"]
 STEPS_DIR = Path(sop_package.__file__).resolve().parent / "steps"
 SPEC_KEYS = {
     "ui_task": STEPS_DIR / "ui_task.yaml",
-    "govee_widget": STEPS_DIR / "govee_widget.yaml",
 }
 
 # 报告文件名里的角色名：与单角色的 ui_executor 区分开。

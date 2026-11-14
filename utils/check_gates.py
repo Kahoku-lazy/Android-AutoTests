@@ -311,6 +311,61 @@ def _openapi_text(path: Path) -> str:
 # ── 检查清单（对应 CI 的 6 个 job） ───────────────────────────
 
 
+# 受管业务资产目录：平台主干不得在此存放客户专项业务资料
+BUSINESS_ASSET_DIRS = (
+    ROOT / "engines" / "agents" / "config" / "data" / "app_info",
+    ROOT / "engines" / "ae_harness" / "workflow" / "sop" / "steps",
+)
+# 已禁用业务资产路径：被清除后不得重新引入
+FORBIDDEN_ASSET_PATHS = (
+    "engines/agents/config/data/app_info/govee_home.md",
+    "engines/ae_harness/workflow/sop/steps/govee_widget.yaml",
+)
+# 受限厂商标识，大小写不敏感
+RESTRICTED_VENDOR_TOKENS = ("govee",)
+
+
+def business_asset_gate() -> Gate:
+    """
+    业务资产门禁：受管目录不得出现厂商标识，已禁用路径不得复活。
+
+    只扫受管目录，平台代码里的厂商包名、模型别名、流程键不受影响。
+
+    Returns:
+        Gate: 门禁对象；run() 返回 (是否通过, 输出行)。
+    """
+
+    def run() -> "tuple[bool, list[str]]":
+        lines: list[str] = []
+        for rel in FORBIDDEN_ASSET_PATHS:
+            if (ROOT / rel).exists():
+                lines.append(f"{rel}：已禁用资产路径重新出现")
+        for directory in BUSINESS_ASSET_DIRS:
+            if not directory.is_dir():
+                continue
+            for path in sorted(directory.rglob("*")):
+                if not path.is_file():
+                    continue
+                try:
+                    rel = path.relative_to(ROOT).as_posix()
+                except ValueError:
+                    # 受管目录不在仓库内时（例如单测的临时目录）退回绝对路径，仍能报出命中项
+                    rel = path.as_posix()
+                body = path.read_text(encoding="utf-8", errors="ignore").lower()
+                for token in RESTRICTED_VENDOR_TOKENS:
+                    if token in rel.lower() or token in body:
+                        lines.append(f"{rel}：命中受限厂商标识")
+                        break
+        return (not lines, lines)
+
+    return Gate(
+        "business-asset",
+        "业务资产（受管目录禁厂商标识 / 禁用路径不复活）",
+        blocking=True,
+        run=run,
+    )
+
+
 def build_gates() -> list[Gate]:
     py = sys.executable
     return [
@@ -470,6 +525,7 @@ def build_gates() -> list[Gate]:
         inline_style_gate(),
         # 本次新增（不在 CI 内联项中）
         silent_except_gate(),
+        business_asset_gate(),
         # engines 风格检查（告警项：先看效果，暂不阻塞；正文 .agents/rules/engines-code-style.md，流程 engines/AGENTS.md）
         cmd_gate(
             "engines-agents-style",

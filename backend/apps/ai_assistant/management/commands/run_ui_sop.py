@@ -28,7 +28,7 @@ class Command(BaseCommand):
             "--spec",
             default="ui_task",
             choices=sorted(SPEC_KEYS),
-            help="流程键：ui_task（通用）或 govee_widget（Govee 专项）",
+            help="流程键：ui_task（通用）",
         )
         parser.add_argument("--model", default="", help="模型短名；留空用平台默认值")
         parser.add_argument(

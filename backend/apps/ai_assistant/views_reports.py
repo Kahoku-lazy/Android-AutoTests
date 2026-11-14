@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from drf_spectacular.utils import OpenApiTypes, extend_schema
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -19,6 +20,12 @@ class AgentReportListView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        operation_id="ai_agent_reports_list",
+        parameters=[],
+        responses=OpenApiTypes.OBJECT,
+        description="最近的平台运行报告列表；查询参数 limit 控制条数（缺省 50）。",
+    )
     def get(self, request: Request) -> Response:
         """返回报告列表，新的在前。
 
@@ -44,6 +51,12 @@ class AgentReportDetailView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        operation_id="ai_agent_reports_retrieve",
+        parameters=[],
+        responses=OpenApiTypes.OBJECT,
+        description="读取一份报告正文；路径须在报告目录白名单内。",
+    )
     def get(self, request: Request, run: str, name: str) -> Response:
         """返回报告正文。
 

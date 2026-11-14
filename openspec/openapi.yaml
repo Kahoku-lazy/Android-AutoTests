@@ -4,6 +4,49 @@ info:
   version: 2.0.0
   description: Android UI 自动化测试平台 — 覆盖设备管理、文档式用例、AI 任务执行与验收、串口日志、测试报告与仪表盘。
 paths:
+  /api/ai/agent-reports/:
+    get:
+      operationId: ai_agent_reports_list
+      description: 最近的平台运行报告列表；查询参数 limit 控制条数（缺省 50）。
+      tags:
+      - ai
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/ai/agent-reports/{run}/{name}/:
+    get:
+      operationId: ai_agent_reports_retrieve
+      description: 读取一份报告正文；路径须在报告目录白名单内。
+      parameters:
+      - in: path
+        name: name
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: run
+        schema:
+          type: string
+        required: true
+      tags:
+      - ai
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/ai/agents/:
     get:
       operationId: ai_agents_list
@@ -171,6 +214,102 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AgentDetail'
+          description: ''
+  /api/ai/workflows/:
+    get:
+      operationId: ai_workflows_retrieve
+      description: |-
+        返回单智能体编排清单。
+
+        Args:
+            request: DRF 请求。
+
+        Returns:
+            含 workflows 列表的响应信封。
+      tags:
+      - ai
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/ai/workflows/{key}/stream/:
+    post:
+      operationId: ai_workflows_stream_create
+      description: |-
+        校验设备与消息后返回文本流。
+
+        Args:
+            request: DRF 请求，体为 serial、message、session_id。
+            key: 编排键。
+
+        Returns:
+            text/event-stream。本期只推文本增量。
+
+        Raises:
+            NotFound: 编排键不存在。
+            ValidationError: 缺序列号、缺消息或缺 session_id。
+      parameters:
+      - in: path
+        name: key
+        schema:
+          type: string
+        required: true
+      tags:
+      - ai
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+          description: ''
+  /api/ai/workflows/events/:
+    get:
+      operationId: ai_workflows_events_retrieve
+      description: |-
+        返回当前会话最近的事件行。
+
+        Args:
+            request: DRF 请求，查询参数 session 为本次对话键。
+
+        Returns:
+            含 events 字符串列表的响应信封。
+
+        Raises:
+            ValidationError: session 缺失。
+      tags:
+      - ai
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
           description: ''
   /api/auth/login/:
     post:

@@ -27,10 +27,18 @@ export function useSingleAgentBoard() {
   const replies = ref<Record<string, string>>({})
   const sessionIds = ref<Record<string, string>>({})
 
-  const selected = computed(() => workflows.value.find((item) => item.key === selectedKey.value) ?? null)
-  const currentReply = computed(() => (selectedKey.value ? replies.value[selectedKey.value] ?? "" : ""))
-  const currentSession = computed(() => (selectedKey.value ? sessionIds.value[selectedKey.value] ?? "" : ""))
-  const canSend = computed(() => Boolean(selected.value && serial.value && draft.value.trim() && !sending.value))
+  const selected = computed(
+    () => workflows.value.find((item) => item.key === selectedKey.value) ?? null,
+  )
+  const currentReply = computed(() =>
+    selectedKey.value ? (replies.value[selectedKey.value] ?? "") : "",
+  )
+  const currentSession = computed(() =>
+    selectedKey.value ? (sessionIds.value[selectedKey.value] ?? "") : "",
+  )
+  const canSend = computed(() =>
+    Boolean(selected.value && serial.value && draft.value.trim() && !sending.value),
+  )
   const sendHint = computed(() => (serial.value ? "" : "先选择设备"))
 
   function sessionOf(key: string): string {

@@ -1,5 +1,18 @@
 # engines/ae_harness/workflow AGENTS.md
 
+## 定位：抽象层 + 一个控制台装配
+
+| 位置 | 是什么 | 谁能用 |
+| --- | --- | --- |
+| `sop/spec.py`、`sop/runner.py`、`sop/steps/*.yaml` | **通用的 SOP 抽象**：步骤模型、加载、编排执行、步骤 YAML | **任何调用方**——控制台、平台都从这里调用 |
+| `sop_runner.py` | **控制台装配**：读命令行、建两个角色、打印结论 | 只服务控制台调试 |
+
+`sop/` 不属于控制台，它是被复用的地基；换一个调用方（例如平台）只是换装配方式，不重写抽象。
+
+**平台（后端任务 / 前端卡片）用的执行 + 验收 SOP 在 [`engines/backend_bridge/workflow/`](../../backend_bridge/AGENTS.md) 新建装配**，由它调用本目录 `sop/` 的 `load_spec` / `run_sop`。
+
+判断：要人盯着终端看 → 用 `sop_runner.py`；结果是交给程序 → 在 `backend_bridge/workflow/` 自己装配，但**只调抽象、不复制实现**。
+
 ## 职责
 
 把**多个角色**按流程串起来。当前只有 SOP 一条链路：

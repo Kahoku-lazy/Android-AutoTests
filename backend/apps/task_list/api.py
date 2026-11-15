@@ -434,15 +434,17 @@ def finalize_task(
     status: str,
     result: str = "",
     usage: dict | None = None,
+    costs: dict | None = None,
     release_device: bool = True,
 ) -> Task:
-    """完成任务：状态/结果/完成时间 + 累计 token 用量（任务发布完成时调用）。
+    """完成任务：状态/结果/完成时间 + 累计 token 用量与费用（任务发布完成时调用）。
 
     Args:
         task: 要收口的任务。
         status: 终态。
         result: 写入 `Task.result` 的结果载荷。
         usage: 工作流返回的任务级 token 累加器（含按模型拆分），空则只落状态/结果。
+        costs: 本次运行按价目表算出的费用（input / cache / output / total），空则不写。
         release_device: 是否在收口后放行该设备槽。取消路径传 False，
             放行交给工作线程退出时统一执行，避免旧线程还在操作设备就拉起下一条任务。
 
@@ -460,6 +462,14 @@ def finalize_task(
         task.model_usage = usage.get("models") or {}
         task.by_role = usage.get("by_role") or {}
         fields += ["input_tokens", "output_tokens", "cache_input_tokens", "model_usage", "by_role"]
+    if costs:
+        from decimal import Decimal
+
+        task.cost_input = Decimal(str(costs.get("cost_input") or 0))
+        task.cost_cache = Decimal(str(costs.get("cost_cache") or 0))
+        task.cost_output = Decimal(str(costs.get("cost_output") or 0))
+        task.cost_total = Decimal(str(costs.get("cost_total") or 0))
+        fields += ["cost_input", "cost_cache", "cost_output", "cost_total"]
     task.save(update_fields=fields)
     _record_bug_safely(task)
     serial = (task.device_serial or "").strip()

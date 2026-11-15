@@ -28,6 +28,8 @@ from channels.utils import await_many_dispatch
 
 from backend.apps.usage_ledger.api import record_voice_event
 from backend.shared.auth.jwt_auth import verify_token
+from engines.agents.config.config import load_model_config
+from engines.agents.config.model_view import model_view
 from engines.agents.knowledge_chat import (
     DEFAULT_AGENT_NAME,
     KnowledgeChatSession,
@@ -36,8 +38,6 @@ from engines.agents.knowledge_chat import (
 from engines.agents.knowledge_chat import (
     build_status as build_chat_status,
 )
-from engines.agents.config.config import load_model_config
-from engines.agents.config.model_view import model_view
 from engines.agents.workflow.voice import WebSocketAudioTransport, load_config
 from utils.logs import backend_log
 

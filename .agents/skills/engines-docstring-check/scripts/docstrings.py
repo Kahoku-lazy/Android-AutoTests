@@ -78,8 +78,7 @@ DEFAULT_ROOT = ROOT / "engines"
 SKIP_DIR_NAMES = frozenset(
     {"__pycache__", ".venv", "venv", "node_modules", ".git", ".pytest-tmp", ".testtmp"}
 )
-# 供应商技能树（ruff.toml 同口径）：engines/agents/config/data/skills/**/skill-creator
-SKIP_PATH_PARTS = frozenset({"skill-creator"})
+# 供应商技能树已随 engines/agents 退役（变更 retire-engines-agents）。
 
 
 def should_skip(path: Path) -> bool:
@@ -92,7 +91,7 @@ def should_skip(path: Path) -> bool:
         命中跳过规则时为 True。
     """
     parts = set(path.parts)
-    return bool(SKIP_DIR_NAMES & parts) or bool(SKIP_PATH_PARTS & parts)
+    return bool(SKIP_DIR_NAMES & parts)
 
 
 def iter_py_files(base: Path) -> list[Path]:

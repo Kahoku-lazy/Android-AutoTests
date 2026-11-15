@@ -37,6 +37,7 @@ from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+
 def _find_repo_root(start: Path) -> Path:
     """Walk parents from *start* until a dir with engines/AGENTS.md is found.
 
@@ -127,8 +128,10 @@ def _module_docstring(tree: ast.Module) -> str | None:
 
 def _body_without_doc(tree: ast.Module) -> list[ast.stmt]:
     body = list(tree.body)
-    if body and isinstance(body[0], ast.Expr) and isinstance(
-        getattr(body[0], "value", None), ast.Constant
+    if (
+        body
+        and isinstance(body[0], ast.Expr)
+        and isinstance(getattr(body[0], "value", None), ast.Constant)
     ):
         if isinstance(body[0].value.value, str):
             return body[1:]
@@ -154,8 +157,7 @@ def check_module_docstring(path: Path, tree: ast.Module) -> list[Violation]:
     if path.name == "__init__.py":
         stmts = _body_without_doc(tree)
         has_defs = any(
-            isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
-            for n in tree.body
+            isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) for n in tree.body
         )
         if not has_defs and len(stmts) <= 2:
             return []
@@ -249,7 +251,9 @@ def check_raises_docs(path: Path, tree: ast.Module, source: str) -> list[Violati
     violations: list[Violation] = []
     source_lines = source.splitlines()
 
-    def visit_function(node: ast.FunctionDef | ast.AsyncFunctionDef, class_stack: list[str]) -> None:
+    def visit_function(
+        node: ast.FunctionDef | ast.AsyncFunctionDef, class_stack: list[str]
+    ) -> None:
         raised: dict[str, int] = {}
         # Collect raises only in this function body, not nested functions
         nested_defs = {
@@ -332,7 +336,9 @@ def check_raises_docs(path: Path, tree: ast.Module, source: str) -> list[Violati
                 walk_body(stmt.body, [*class_stack, stmt.name])
             elif isinstance(stmt, ast.ClassDef):
                 walk_body(stmt.body, [*class_stack, stmt.name])
-            elif isinstance(stmt, (ast.If, ast.For, ast.While, ast.With, ast.AsyncWith, ast.AsyncFor)):
+            elif isinstance(
+                stmt, (ast.If, ast.For, ast.While, ast.With, ast.AsyncWith, ast.AsyncFor)
+            ):
                 walk_body(stmt.body, class_stack)
                 for handler in getattr(stmt, "handlers", []) or []:
                     walk_body(handler.body, class_stack)
@@ -444,15 +450,14 @@ def check_tool_doc_order(path: Path, tree: ast.Module) -> list[Violation]:
                     walk(h.body, stack)
                 walk(stmt.orelse, stack)
                 walk(stmt.finalbody, stack)
-            elif isinstance(stmt, (ast.If, ast.For, ast.While, ast.With, ast.AsyncWith, ast.AsyncFor)):
+            elif isinstance(
+                stmt, (ast.If, ast.For, ast.While, ast.With, ast.AsyncWith, ast.AsyncFor)
+            ):
                 walk(stmt.body, stack)
                 walk(getattr(stmt, "orelse", []) or [], stack)
 
     walk(tree.body, [])
     return violations
-
-
-
 
 
 def check_no_django_apps_import(path: Path, tree: ast.Module) -> list[Violation]:
@@ -595,7 +600,9 @@ def main(argv: list[str] | None = None) -> int:
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
 
-    parser = argparse.ArgumentParser(description="Check engines/ against .agents/rules/engines-code-style.md (mechanizable subset; see engines/AGENTS.md for process)")
+    parser = argparse.ArgumentParser(
+        description="Check engines/ against .agents/rules/engines-code-style.md (mechanizable subset; see engines/AGENTS.md for process)"
+    )
     parser.add_argument(
         "--path",
         default=str(DEFAULT_ROOT),

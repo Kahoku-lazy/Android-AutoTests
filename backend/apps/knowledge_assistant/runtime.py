@@ -6,7 +6,7 @@ python -m 调试路径: backend.apps.knowledge_assistant.runtime
 2. build_status_payload(): 把引擎就绪状态与本地日志路径合成 HTTP 响应体。
 
 本模块只做后端接入层的配置拼装；实时模型与 AgentScope 配置在
-engines.agents.realtime_vocie.config。
+engines.agents.workflow.voice。
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Final
 
 from engines.agents.knowledge_chat import build_status as build_chat_status
-from engines.agents.realtime_vocie.config import build_runtime_status
+from engines.agents.workflow.voice import build_runtime_status
 
 from .transcript_log import describe_path, today_file
 

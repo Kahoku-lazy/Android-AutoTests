@@ -5,7 +5,7 @@
 ## 边界
 
 - HTTP：`GET /api/knowledge-assistant/status/` 返回就绪状态（无密钥），语音与文字两个入口各给就绪结果。
-- WS：`/ws/knowledge-assistant/?token=<access_token>&mode=voice|text` 是平台**唯一**问答通道；`voice` 承载本会话的音频、转写、打断与播放进度，`text` 承载文字提问与流式回答。
+- WS：`/ws/knowledge-assistant/?token=<access_token>&mode=voice|text` 是平台**唯一**问答通道；`voice` 承载本会话的音频、转写、打断与播放进度，`text` 承载文字提问与流式回答。语音模式可再带 `voice=<音色>`（来自 AI 助手模型卡片的音色选择），服务端按模型资产表声明的可选音色校验后覆盖默认音色；非法音色直接返回可读错误。
 - **AgentScope 相关实现**：语音（实时模型配置/工厂、提示词、事件桥、`RealtimeAgent` 会话、`TransportBase` 传输）在 `engines/agents/realtime_vocie`；文字会话在 `engines/agents/knowledge_chat`。本 App 只做鉴权、WS 接入与本地对话日志。
 - 产品路径：语音**仅** `omni` + 知识库 RAG（`RealtimeVoiceSession`），文字**仅** `deepseek-flash` + 同一 RAG 工具；livetranslate / pipeline 已移除。
 

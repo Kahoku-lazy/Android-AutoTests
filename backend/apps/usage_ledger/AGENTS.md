@@ -25,6 +25,6 @@
 
 ```powershell
 python manage.py check
-python -m pytest -c tests/pytest.ini tests/graybox/unit/test_usage_ledger.py -q
+python -m pytest -c tests/pytest.ini tests/task/unit/test_usage_ledger.py -q
 ruff check backend/apps/usage_ledger
 ```

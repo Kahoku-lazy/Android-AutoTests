@@ -1,7 +1,7 @@
 # model-usage-ledger Specification
 
 ## Purpose
-TBD - created by archiving change add-model-usage-ledger. Update Purpose after archive.
+定义平台全局模型用量账本：每次模型调用落一条明细记录，按小时与来源（task / voice）归集，向上支撑仪表盘统计、DeepSeek 费用与「AI 用量」章节的 Voice 用量图表。
 
 ## Requirements
 
@@ -51,7 +51,7 @@ TBD - created by archiving change add-model-usage-ledger. Update Purpose after a
 
 ### Requirement: Voice 用量图表
 
-仪表盘 SHALL 把 Voice 来源的模型用量展示为「趋势与动态」中的图表，而不是独立卡片或明细表。
+仪表盘 SHALL 把 Voice 来源的模型用量展示为「AI 用量」章节「用量趋势」区中的图表，而不是独立卡片或明细表。
 
 - 图表标题 MUST 为「Voice 来源 Token 消耗」。
 - 图表 x 轴 MUST 为模型分类：`LLM` / `TTS` / `Realtime` / `Embedding` / `ASR`。
@@ -63,7 +63,7 @@ TBD - created by archiving change add-model-usage-ledger. Update Purpose after a
 #### Scenario: Voice 图表
 
 - **WHEN** 今日存在 Voice 的 LLM 与 Embedding 用量
-- **THEN** 趋势区出现「Voice 来源 Token 消耗」
+- **THEN** 「AI 用量」章节的用量趋势区出现「Voice 来源 Token 消耗」
 - **AND** x 轴包含 LLM、Embedding
 - **AND** 图例包含当天总用量与累计用量
 

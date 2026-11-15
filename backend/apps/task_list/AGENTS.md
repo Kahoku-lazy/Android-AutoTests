@@ -28,7 +28,7 @@
 ```
 [ ] python manage.py check
 [ ] makemigrations --check
-[ ] python -m pytest -c tests/pytest.ini tests/api/test_task_*.py tests/graybox/unit/test_*task*.py
+[ ] python -m pytest -c tests/pytest.ini tests/task/api/test_task_*.py tests/task/unit/test_*task*.py
 [ ] 旧 /api/ai/tasks/*、/api/ai/agent-tasks/* 返回 404
 [ ] 迁移正向/反向均通过，五张表行数一致
 ```

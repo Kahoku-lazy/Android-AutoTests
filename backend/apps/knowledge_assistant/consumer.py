@@ -17,6 +17,7 @@ import asyncio
 import json
 import uuid
 
+from dataclasses import replace
 from functools import partial
 from urllib.parse import parse_qs
 
@@ -35,8 +36,9 @@ from engines.agents.knowledge_chat import (
 from engines.agents.knowledge_chat import (
     build_status as build_chat_status,
 )
-from engines.agents.realtime_vocie.config import load_config
-from engines.agents.realtime_vocie.transport import WebSocketAudioTransport
+from engines.agents.config.config import load_model_config
+from engines.agents.config.model_view import model_view
+from engines.agents.workflow.voice import WebSocketAudioTransport, load_config
 from utils.logs import backend_log
 
 from .runtime import session_log_dir
@@ -74,6 +76,23 @@ def mode_from_scope(scope: dict) -> str:
         `voice` 或 `text`；未携带时返回 `voice`（保持旧客户端行为）。
     """
     return _query_value(scope, "mode").lower() or MODE_VOICE
+
+
+def voice_from_scope(scope: dict) -> str:
+    """从握手 query string 里取音色；空或格式非法时返回空串。
+
+    Args:
+        scope: Channels 连接作用域。
+
+    Returns:
+        合法音色名，或空串（表示用模型默认音色）。
+    """
+    raw = _query_value(scope, "voice").strip()
+    if not raw or len(raw) > 32:
+        return ""
+    if not all(char.isalnum() or char in "_-" for char in raw):
+        return ""
+    return raw
 
 
 def _query_value(scope: dict, name: str) -> str:
@@ -114,6 +133,7 @@ class KnowledgeAssistantConsumer(AsyncWebsocketConsumer):
         self._user_id = ""
         self._session_id = uuid.uuid4().hex
         self._mode = mode_from_scope(self.scope)
+        self._voice = voice_from_scope(self.scope)
         self._log: DialogueLog | None = None
         self._chat: KnowledgeChatSession | None = None
         self._transport = WebSocketAudioTransport(self._send_json, self._send_bytes)
@@ -294,15 +314,24 @@ class KnowledgeAssistantConsumer(AsyncWebsocketConsumer):
                 await self._send_json({"type": "error", "message": str(exc)})
                 return
 
+            if self._voice:
+                allowed = model_view(load_model_config(), "omni").voices
+                if allowed and self._voice not in allowed:
+                    await self._send_json(
+                        {"type": "error", "message": f"不支持的音色：{self._voice}"},
+                    )
+                    return
+                config = replace(config, voice=self._voice)
+
             log = DialogueLog(
                 session_log_dir(),
                 self._session_id,
                 self._user_id,
                 usage_sink=self._enqueue_usage,
             )
-            from engines.agents.realtime_vocie.session import RealtimeVoiceSession
+            from engines.agents.workflow.voice import open_voice_session
 
-            session = RealtimeVoiceSession(
+            session = open_voice_session(
                 config,
                 self._transport,
                 self._send_json,

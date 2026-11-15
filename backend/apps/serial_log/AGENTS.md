@@ -30,7 +30,7 @@
 ```
 [ ] python manage.py check
 [ ] python manage.py makemigrations --check
-[ ] python -m pytest -c tests/pytest.ini tests/api/test_serial_log_api.py -q
+[ ] python -m pytest -c tests/pytest.ini tests/serial_log/api/test_serial_log_api.py -q
 [ ] python manage.py spectacular --validate
 [ ] 临时 SQLite 演练：全新安装 + 旧表升级（开关状态保留、旧表删除）
 ```

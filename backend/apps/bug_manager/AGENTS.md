@@ -28,7 +28,7 @@
 ```
 [ ] python manage.py check
 [ ] makemigrations --check
-[ ] python -m pytest -c tests/pytest.ini tests/graybox/unit/test_bug_ticket_*.py tests/api/test_bug_tickets.py
+[ ] python -m pytest -c tests/pytest.ini tests/bug_ticket/unit/test_bug_ticket_*.py tests/bug_ticket/api/test_bug_tickets.py
 [ ] python -m ruff check backend/apps/bug_manager backend/apps/task_list
 [ ] python utils/gen_arch_stats.py --check-boundaries
 ```

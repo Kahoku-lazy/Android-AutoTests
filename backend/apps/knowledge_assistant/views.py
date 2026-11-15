@@ -4,7 +4,7 @@ python -m 调试路径: backend.apps.knowledge_assistant.views
 本模块的业务功能如下：
 1. KnowledgeAssistantStatusAPIView: 返回知识库助手的就绪状态。
 
-视图只分发；引擎配置在 engines.agents.realtime_vocie，日志路径在 runtime.py。
+视图只分发；语音出口在 engines.agents.workflow.voice，日志路径在 runtime.py。
 """
 
 from __future__ import annotations

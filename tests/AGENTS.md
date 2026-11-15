@@ -12,16 +12,67 @@
 2. 测试报告统一输出到 `reports/`目录
 
 
+## 目录约定（按模块分类，模块内再按测试类型）
+
+**一级按被测功能（模块）分，二级才是测试类型**。新增测试一律按此放置：
+
+```
+tests/
+  <模块>/
+    unit/           # 单元：灰盒、纯逻辑、零 I/O 零 DB
+    integration/    # 集成：Django ORM / 多模块协作
+    api/            # 接口：黑盒 HTTP（需要时才有）
+    e2e/            # 端到端：真实浏览器 / 设备（需要时才有）
+```
+
+- `<模块>` = 被测功能的归属（`models` / `config` / `rag` / `agents` / `workflow` / `device` …），
+  不是被测文件的路径照抄。
+- pytest 主 marker（`unit` / `integration` / `api` / `e2e`）**仍然按测试类型打**，与目录分类正交。
+- 每级目录都要有 `__init__.py`（`tests/` 是包，缺一层会让 pytest 把同名目录当同一个包而导入冲突）。
+
+### 迁移状态
+
+大模块（平台功能）：`dashboard` / `ai_assistant` / `knowledge` / `device` / `page_flow` / `serial_log` / `task` / `case` / `report` / `bug_ticket`；
+引擎统一在 `engines/`（按子模块再分层）；跨模块契约在 `arch/`。
+
+| 目录 | 内容 | 状态 |
+|---|---|---|
+| `models/{unit,integration}` | 模型层 | ✅ |
+| `config/unit` | 配置层（读表、加解密、结构） | ✅ |
+| `dashboard/unit` | 仪表盘 | ✅ |
+| `ai_assistant/unit` | AI 助手（含 planner / verifier 提示词与任务） | ✅ |
+| `knowledge/{unit,integration}` | 知识库助理（文字 + 语音） | ✅ |
+| `device/{unit,integration}` | 设备管理 | ✅ |
+| `page_flow/unit` | 页面流 | ✅ |
+| `serial_log/unit` | 串口日志 | ✅ |
+| `task/unit` | 任务清单 | ✅ |
+| `case/{unit,integration}` | 用例管理 | ✅ |
+| `report/{unit,integration}` | 测试报告 | ✅ |
+| `bug_ticket/unit` | bug 单管理 | ✅ |
+| `engines/agents/{unit,e2e}` | 引擎：agents（SOP / 角色 / 工具 / 中间件 / RAG / 语音） | ✅ |
+| `engines/device/unit` | 引擎：device | ✅ |
+| `arch/unit` | 跨模块契约（API 路径、枚举 SSOT、鉴权、日志、DB 预检） | ✅ |
+| `auth/{api,e2e}` | 登录鉴权：4 个接口脚本 + 登录端到端 | ✅ |
+| `<模块>/api` | 接口脚本已按模块归位（device / serial_log / dashboard / task / case / bug_ticket） | ✅ |
+| `api_kit/` | 接口测试共享设施：`loader.py` / `schemas.py` | ✅ |
+| `api/` | 只留 `conftest.py`（夹具）与 `case/*.yaml`（用例数据） | 保留：契约测试硬编码了这两个路径 |
+| `e2e/` | 只留共享设施：`conftest.py` / `selectors.py` / `step_report.py` | 保留：端到端夹具 |
+
+已删除：`graybox/`（迁移后清空）、`ai_planner/`（无测试代码、`planner_eval` 命令已不存在）、`device_pool/`（迁入 `device/`）、
+`test_element_locator_views_split.py`（`backend/apps/element_locator` 已下线）、`test_example_integration.py`（模板示例）。
+
+
 ## 单元测试
 
-> 运行指令： `python -m pytest tests/graybox/unit -v`
+> 运行指令： `python -m pytest tests/<模块>/unit -v`
 
-1. 单元测试用例路径： `tests/graybox/unit`，文件以 `test_` 开头。
+1. 单元测试放 `tests/<模块>/unit/`。
+2. 文件以 `test_` 开头，`pytestmark = [pytest.mark.unit]`。
 
 ### 契约对拍测试（读源码）
 
-`tests/graybox/unit/test_api_path_callers.py`、`test_auth_endpoint_declaration.py`、
-`test_auth_validation_parity.py` 与 `test_auth_frontend_contract.py` 属于单元层，
+`tests/arch/unit/test_api_path_callers.py`、`arch/unit/test_auth_endpoint_declaration.py`、
+`arch/unit/test_auth_validation_parity.py` 与 `arch/unit/test_auth_frontend_contract.py` 属于单元层，
 但它们会**读取被测源码**做契约对拍。这是本仓的一个例外范式，边界如下：
 
 1. **只读**：只读 `frontend/src/**/*.{ts,vue}`、`tests/**/*.py`、`tests/api/case/*.yaml`，
@@ -53,15 +104,15 @@
 
 ## 集成测试
 
-> 运行指令： `python -m pytest tests/graybox/integration -v`
+> 运行指令： `python -m pytest tests/<模块>/integration -v`
 
-1. 集成测试用例路径： `tests/graybox/integration`，文件以 `test_` 开头。
+1. 集成测试放 `tests/<模块>/integration/`，文件以 `test_` 开头。
 
 ## 端到端测试
 
-> 运行指令： `python -m pytest tests/e2e -q`
+> 运行指令： `python -m pytest tests/<模块>/e2e -q`（共享设施：`tests/e2e/`）
 
-1. 端到端测试用例路径： `tests/e2e`，文件以 `test_` 开头；选择器常量集中在 `tests/e2e/selectors.py`，用例里禁止散写字面选择器。
+1. 端到端用例放 `tests/<模块>/e2e/`，文件以 `test_` 开头；选择器常量集中在 `tests/e2e/selectors.py`，用例里禁止散写字面选择器。
 2. 业务编号 `BF-##` / `TC-BF-UI-###` / `TC-SESSION-###` 与端到端 `E2E-###` 一一对应，映射写在用例 docstring 里。
 3. **零密钥**：本层不使用 `TEST_ADMIN_PASSWORD`。`conftest.py` 用公开注册端点自建固定账号 `e2e_probe` 并在后续运行中复用，因此不带任何环境变量也能跑，不会静默跳过。
 4. 前后端需已启动（`python run.py start`，前端 5173 / 后端 8766）；不可达时整组 skip —— 那是环境不可达，不是用例缺陷。
@@ -71,19 +122,23 @@
 
 ## 接口测试
 
-> 运行指令： `python -m pytest tests/api -v`
+> 运行指令： `python -m pytest tests/<模块>/api -v`（共享设施：`tests/api_kit/`；夹具与 YAML 用例：`tests/api/`）
 
-1. 接口测试用例路径： `tests/api`
-2. 接口测试使用Jsonschema来断言响应结果，测试用例使用YAML编写，文件放在tests/api/case中。YAML用例要有测试标题，测试点
+1. 接口脚本放 `tests/<模块>/api/`；共享加载器与 JSONSchema 在 `tests/api_kit/`。
+2. 接口测试使用 Jsonschema 断言响应，YAML 用例放 `tests/api/case/`（契约测试硬编码了该路径，不随脚本迁移）。
+3. YAML 用例要有测试标题、测试点。
 
 ## 接口测试脚本与模块映射
 
-> 按模块划分「哪些脚本测哪些功能」，运行指令与路径见「接口测试」节；模块 marker 见 `tests/pytest.ini`。
+> 模块 marker 见 `tests/pytest.ini`。
 
 | 模块 | 测试脚本 | YAML 用例 | 覆盖功能 |
 |---|---|---|---|
-| 登录鉴权 | tests/api/test_login_page.py | case/login.yaml、case/register.yaml | 登录 / 注册 |
-| 设备管理 | tests/api/test_devices.py | case/devices.yaml | 设备列表 / 锁定 / 连接 / 断开 / 释放 / 心跳 / 当前设备 |
-| 设备检查器 | tests/api/test_inspector.py | case/inspector.yaml | 快照抓取 / 列表 / 删除 / 保存到元素定位（覆盖未登录、非法入参、资源不存在）|
-
-> 其余模块（元素定位 / 用例管理 / 执行引擎 / 测试报告 / AI 助手 / 工作流 / 评估器）接口测试脚本待补充。
+| 登录鉴权 | `tests/auth/api/` | case/login.yaml、register.yaml、refresh.yaml、logout.yaml、me.yaml | 登录 / 注册 / 刷新 / 登出 / 当前用户 / 并发注册 |
+| 设备管理 | `tests/device/api/test_devices.py` | case/devices.yaml | 设备列表 / 锁定 / 连接 / 断开 / 释放 / 心跳 / 当前设备 |
+| 设备检查器 | `tests/device/api/test_inspector.py` | case/inspector.yaml | 快照抓取 / 列表 / 删除 / 保存到元素定位 |
+| 串口日志 | `tests/serial_log/api/test_serial_log_api.py` | — | 端口列表 / 开关 / 行读取 / 关键词 |
+| 仪表盘 | `tests/dashboard/api/test_dashboard_agent_usage.py` | — | 智能体用量 |
+| 任务清单 | `tests/task/api/` | — | 提交 / 统计 / 事件流 / 媒体 / 报告 / 取消 |
+| 用例管理 | `tests/case/api/` | — | 用例定义 / YAML 导入 |
+| bug 单 | `tests/bug_ticket/api/test_bug_tickets.py` | — | 列表 / 详情 / 状态 |

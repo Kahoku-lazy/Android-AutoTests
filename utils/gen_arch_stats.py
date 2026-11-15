@@ -217,8 +217,7 @@ def _tool_source_index():
 def scan_tools():
     """扫描工具注册表 `engines/agents/tools_config.py`，返回已装配给角色的工具。
 
-    常驻工具来自 `EXECUTOR_BASIC_TOOL_NAMES` / `VERIFIER_BASIC_TOOL_NAMES`，
-    可开关工具来自 `EXECUTOR_TOOL_GROUPS` 里每个 `ToolGroupSpec` 的 `tool_names`。
+    工具来自 `TOOL_MODULES` 的 device / observe / serial。角色由 `DEFAULT_ROLE_MODULES` 决定。
     同一工具只登记一次，角色列累计所有引用它的角色。
 
     Returns:
@@ -233,6 +232,13 @@ def scan_tools():
 
     files = _tool_source_index()
     tools = {}  # name → 记录；dict 保序，保证输出稳定
+    named_tuples = {
+        node.targets[0].id: _literal_str_tuple(node.value)
+        for node in tree.body
+        if isinstance(node, ast.Assign)
+        and len(node.targets) == 1
+        and isinstance(node.targets[0], ast.Name)
+    }
 
     def add(name, group, role):
         """登记一个工具；重复出现时只补角色，不覆盖首次出现的位置。"""
@@ -251,24 +257,18 @@ def scan_tools():
         if not isinstance(target, ast.Name) or node.value is None:
             continue
 
-        if target.id == "EXECUTOR_BASIC_TOOL_NAMES":
-            for name in _literal_str_tuple(node.value):
-                add(name, "basic", "executor")
-        elif target.id == "VERIFIER_BASIC_TOOL_NAMES":
-            for name in _literal_str_tuple(node.value):
-                add(name, "basic", "verifier")
-        elif target.id == "EXECUTOR_TOOL_GROUPS" and isinstance(node.value, ast.Tuple):
-            for call in node.value.elts:
-                if not isinstance(call, ast.Call):
+        if target.id == "TOOL_MODULES" and isinstance(node.value, ast.Dict):
+            for key, call in zip(node.value.keys, node.value.values):
+                if not isinstance(key, ast.Constant) or not isinstance(call, ast.Call):
                     continue
-                group_name, names = "", []
+                names = []
                 for kw in call.keywords:
-                    if kw.arg == "name" and isinstance(kw.value, ast.Constant):
-                        group_name = kw.value.value
-                    elif kw.arg == "tool_names":
+                    if kw.arg == "tool_names":
                         names = _literal_str_tuple(kw.value)
+                        if isinstance(kw.value, ast.Name):
+                            names = named_tuples.get(kw.value.id, [])
                 for name in names:
-                    add(name, group_name, "executor")
+                    add(name, key.value, key.value)
 
     return list(tools.values())
 

@@ -1,1 +1,0 @@
-/* module interactions live in index.html inline after common kit */

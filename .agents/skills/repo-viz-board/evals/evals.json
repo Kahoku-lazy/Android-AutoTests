@@ -1,0 +1,23 @@
+{
+  "skill_name": "repo-viz-board",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "帮我给 engines/ 做一张看板：先画 7 个模块之间的关系，再看每个模块下一层的代码量，子目录整体算一个、根级文件各算一个，别往里拆。要能离线双击打开。",
+      "expected_output": "生成器 + 三节页面；模块关系图（边来自 AST）；模块卡片；每模块一张子单元图；口径写在页面上",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "这个 dev_docs/project-viz 里的 agents 页，能不能加一个和上次比的功能？我想看到每个子模块最近三次的代码行数对比。",
+      "expected_output": "历史快照追加 engine_modules 口径；三系列柱 + 三张总量卡；缺失显示「待记录」；宽版布局",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "把 frontend/src 的页面和组件统计一下，出一张静态 HTML，我想知道每个业务模块多少行、谁依赖谁。",
+      "expected_output": "识别模块边界（业务目录）→ 生成器（AST 解析 import + 行数）→ 三节页面；不得编造不存在的依赖边",
+      "files": []
+    }
+  ]
+}

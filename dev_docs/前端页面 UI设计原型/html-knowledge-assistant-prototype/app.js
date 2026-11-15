@@ -1,1 +1,0 @@
-/* see inline script in index.html */

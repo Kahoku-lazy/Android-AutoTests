@@ -1,181 +1,95 @@
-# Vue Router Typing
+# Vue Router：本项目用法
 
-Type-safe routing patterns for Vue Router.
+本仓库用**静态路由表**（`src/router.ts` + 各模块 `routes.ts`），没有 `unplugin-vue-router`，也没有文件路由。因此这里只讲三件事：`route.meta` 类型、params 收窄、守卫类型。
 
-> **For Nuxt:** Use file-based routing instead. See `nuxt` skill for Nuxt routing patterns.
+## route.meta 类型
 
-## Route Meta Types
-
-Extend `RouteMeta` for typed route.meta:
+`routes.ts` 里每个路由都带 `meta.title`，把它补进 `RouteMeta` 就有补全：
 
 ```ts
-// router/types.ts
-import 'vue-router'
+// src/router/types.ts
+import "vue-router"
 
-declare module 'vue-router' {
+declare module "vue-router" {
   interface RouteMeta {
-    requiresAuth?: boolean
     title?: string
-    roles?: ('admin' | 'user')[]
+    requiresAuth?: boolean
   }
 }
 ```
 
-**Usage:**
-
 ```ts
 const route = useRoute()
-route.meta.requiresAuth // boolean | undefined (typed!)
 route.meta.title // string | undefined
 ```
 
-## Typed Route Params with unplugin-vue-router
+不扩展 `RouteMeta` 时，`route.meta.xxx` 是 `any`，拼错字段名不会报错——这是最常见的丢类型方式。
 
-Use `unplugin-vue-router` for fully typed routes:
+## params 收窄
 
-```bash
-pnpm add -D unplugin-vue-router
+静态路由的 `params` 一定是 `string | string[]`，组件里不要直接当 `number` 用：
+
+```ts
+// 本仓库的现有写法：先转再算
+const projectId = computed(() => Number(route.params.projectId))
 ```
 
 ```ts
-// vite.config.ts
-import VueRouter from 'unplugin-vue-router/vite'
-
-export default defineConfig({
-  plugins: [VueRouter(), Vue()], // VueRouter BEFORE Vue
-})
+// 可能命中 catch-all 时先判数组
+const raw = route.params.id
+const id = Array.isArray(raw) ? raw[0] : raw
 ```
 
-**Typed useRoute:**
+- 路由变化要重新取数时用 `watch(() => route.params.id, ...)`，不要只在 `onMounted` 里读一次。
+- `router.push` 用 name + params 比手拼字符串安全：
 
 ```ts
-// Auto-generated route types from file structure
-const route = useRoute('/users/[id]')
-route.params.id // string (typed!)
-
-const route = useRoute('/posts/[...slug]')
-route.params.slug // string[] (typed!)
+router.push({ name: "case-manager-workspace", params: { projectId } })
 ```
 
-**Typed router.push:**
+## 守卫
 
 ```ts
-const router = useRouter()
+import type { NavigationGuardWithThis } from "vue-router"
 
-// ✅ Type-checked
-router.push({ name: '/users/[id]', params: { id: '123' } })
-
-// ❌ TypeScript error - wrong param
-router.push({ name: '/users/[id]', params: { userId: '123' } })
-```
-
-## Scroll Behavior Types
-
-Type scroll behavior function:
-
-```ts
-import type { RouterScrollBehavior } from 'vue-router'
-
-const scrollBehavior: RouterScrollBehavior = (to, from, savedPosition) => {
-  if (savedPosition) return savedPosition
-  if (to.hash) return { el: to.hash, behavior: 'smooth' }
-  return { top: 0 }
-}
-
-const router = createRouter({
-  history: createWebHistory(),
-  routes,
-  scrollBehavior,
-})
-```
-
-## Dynamic Route Params
-
-Handle union types for dynamic segments:
-
-```ts
-// routes/[type].vue where type can be 'posts' | 'users' | 'comments'
-const route = useRoute()
-
-// Narrow params type
-type ContentType = 'posts' | 'users' | 'comments'
-
-const type = route.params.type as ContentType
-
-// Or use route guards
-if (route.params.type === 'posts') {
-  // TypeScript knows type is 'posts'
-}
-```
-
-## Navigation Guards Types
-
-Type navigation guards:
-
-```ts
-import type { NavigationGuardWithThis, RouteLocationNormalized } from 'vue-router'
-
-const authGuard: NavigationGuardWithThis<undefined> = (to, from) => {
-  if (to.meta.requiresAuth && !isAuthenticated()) {
-    return { name: 'login', query: { redirect: to.fullPath } }
+const authGuard: NavigationGuardWithThis<undefined> = (to) => {
+  if (to.meta.requiresAuth && !isLoggedIn()) {
+    return { name: "login", query: { redirect: to.fullPath } }
   }
 }
-
-router.beforeEach(authGuard)
 ```
 
-**Per-route guards:**
+- 本仓库目前只有一个全局 `beforeEach`；新增守卫先确认是否真的需要全局，能放在页面里就别放路由层。
+- 守卫里不要做重活（请求、解析大文件），会卡住整次导航。
 
-```ts
-const routes = [
-  {
-    path: '/admin',
-    component: AdminPage,
-    beforeEnter: (to: RouteLocationNormalized) => {
-      if (!hasAdminRole()) return { name: 'forbidden' }
-    },
-  },
-]
-```
-
-## RouteLocation Types
-
-Common route types:
+## 常用类型
 
 ```ts
 import type {
-  RouteLocationNormalized,     // Resolved route (after navigation)
-  RouteLocationNormalizedLoaded, // Current route (from useRoute)
-  RouteLocationRaw,            // Input to router.push()
-  RouteRecordRaw,              // Route config definition
-} from 'vue-router'
+  RouteLocationNormalized,       // 解析后的路由（守卫入参）
+  RouteLocationNormalizedLoaded, // useRoute() 的返回
+  RouteLocationRaw,              // router.push 的入参
+  RouteRecordRaw,                // 路由表定义
+} from "vue-router"
 ```
 
-## Common Mistakes
-
-**Not extending RouteMeta module:**
+## 常见错误
 
 ```ts
-// ❌ Loses type info
-route.meta.customField // any
+// ❌ 依赖 name 字符串手写，改名后静默 404
+router.push(`/cases/projects/${id}`)
 
-// ✅ Extend the interface
-declare module 'vue-router' {
-  interface RouteMeta { customField: string }
-}
+// ✅ 具名路由，改 path 不影响调用方
+router.push({ name: "case-manager-workspace", params: { projectId: id } })
+
+// ❌ 把 params 当 number
+route.params.projectId + 1
+
+// ✅ 显式转换
+Number(route.params.projectId) + 1
 ```
 
-**Assuming params are always strings:**
+## 相关
 
-```ts
-// Catch-all routes have string[] params
-const route = useRoute()
-
-// ❌ May be string[]
-const id = route.params.id
-
-// ✅ Handle both cases
-const id = Array.isArray(route.params.id)
-  ? route.params.id[0]
-  : route.params.id
-```
+- 懒加载路由的 `component: () => import(...)` 与 Vite 分包在 `guide/scaling-up/routing`；本仓库的路由表都在模块 `routes.ts`。
+- 页面级返回/面包屑：`WorkbenchCrumbs`（子页导航规范见 `frontend-doodle-subpage-nav`）。

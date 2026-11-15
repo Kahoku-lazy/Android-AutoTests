@@ -1,358 +1,154 @@
-# Vue Composables
+# 组合式函数（Composables）
 
-Reusable functions encapsulating stateful logic using Composition API.
+把有状态的逻辑收进 `use*` 函数，供多个组件复用。本仓库已有 `shared/composables/`（分页、筛选、图表、展开折叠、侧栏拖拽）与各模块私有 `composables/`，新函数先看这里有没有能复用的。
 
-## Core Rules
+## 核心规则
 
-1. **VueUse first** - check [vueuse.org](https://vueuse.org) before writing custom
-2. **No async composables** - lose lifecycle context when awaited in other composables
-3. **Top-level only** - never call in event handlers, conditionals, or loops
-4. **readonly() exports** - protect internal state from external mutation
-5. **useState() for SSR** - use Nuxt's `useState()` not global refs
+1. **只在 setup 顶层调用**，不要放进事件回调、条件分支或循环。
+2. **不做「异步 composable」**：在别的 composable 里 `await` 之后会丢生命周期上下文；需要异步就返回 `execute()`，由调用方触发。
+3. **返回具名对象**，不要返回数组或散装 ref。
+4. **内部状态用 `readonly()` 包一层**，除非确实要让调用方改。
+5. **必须有清理**：监听器、定时器、订阅在 `onUnmounted` / `onScopeDispose` 里收掉。
+6. **不引入 VueUse**（本仓库没有这个依赖）。需要 debounce/throttle 就写 20 行本地方案，或先在方案里说明要加依赖。
 
-## Quick Reference
-
-| Pattern   | Example                                          |
-| --------- | ------------------------------------------------ |
-| Naming    | `useAuth`, `useCounter`, `useDebounce`           |
-| State     | `const count = ref(0)`                           |
-| Computed  | `const double = computed(() => count.value * 2)` |
-| Lifecycle | `onMounted(() => ...)`, `onUnmounted(() => ...)` |
-| Return    | `return { count, increment }`                    |
-
-## Structure
+## 结构
 
 ```ts
-// composables/useCounter.ts
-import { readonly, ref } from 'vue'
+// 示例：shared/composables/usePager.ts（仓库已有 usePagination，先复用它）
+import { computed, readonly, ref } from "vue"
 
-export function useCounter(initialValue = 0) {
-  const count = ref(initialValue)
+export function usePager<T>(items: Ref<T[]>, pageSize = 10) {
+  const page = ref(1)
+  const totalPages = computed(() => Math.max(1, Math.ceil(items.value.length / pageSize)))
+  const paged = computed(() =>
+    items.value.slice((page.value - 1) * pageSize, page.value * pageSize),
+  )
 
-  function increment() { count.value++ }
-  function decrement() { count.value-- }
-  function reset() { count.value = initialValue }
-
-  return {
-    count: readonly(count), // readonly if shouldn't be mutated
-    increment,
-    decrement,
-    reset,
+  function go(next: number) {
+    page.value = Math.min(Math.max(1, next), totalPages.value)
   }
+
+  return { page: readonly(page), totalPages, paged, go }
 }
 ```
 
-## Naming
+- 文件名 = 函数名（`usePager.ts` → `usePager`）。
+- 选项多就收一个 options 对象，别堆位置参数。
+- 返回的 ref 在模板里自动解包，在 JS 里记得 `.value`。
 
-**Always prefix with `use`:** `useAuth`, `useLocalStorage`, `useDebounce`
-
-**File = function:** `useAuth.ts` exports `useAuth`
-
-## Best Practices
-
-**Do:**
-
-- Return object with named properties (destructuring-friendly)
-- Accept options object for configuration
-- Use `readonly()` for state that shouldn't mutate
-- Handle cleanup (`onUnmounted`, `onScopeDispose`)
-- Add JSDoc for complex functions
-
-## Lifecycle
-
-Hooks execute in component context:
+## 生命周期与清理
 
 ```ts
-export function useEventListener(target: EventTarget, event: string, handler: Function) {
-  onMounted(() => target.addEventListener(event, handler))
-  onUnmounted(() => target.removeEventListener(event, handler))
-}
-```
+import { onMounted, onScopeDispose } from "vue"
 
-**Watcher cleanup (Vue 3.5+):**
+export function useSerialStream(port: Ref<string>) {
+  let timer: ReturnType<typeof setInterval> | undefined
 
-```ts
-import { watch, onWatcherCleanup } from 'vue'
+  onMounted(() => {
+    timer = setInterval(() => poll(port.value), 1000)
+  })
 
-export function usePolling(url: Ref<string>) {
-  watch(url, (newUrl) => {
-    const interval = setInterval(() => {
-      fetch(newUrl).then(/* ... */)
-    }, 1000)
-
-    // Cleanup when watcher re-runs or stops
-    onWatcherCleanup(() => {
-      clearInterval(interval)
-    })
+  onScopeDispose(() => {
+    if (timer) clearInterval(timer)
   })
 }
 ```
 
-**Benefits of `onWatcherCleanup()`:**
+- `onScopeDispose` 比 `onUnmounted` 更通用：组件卸载、effect scope 结束都会触发。
+- 只在组件里用的监听器，`onMounted` + `onUnmounted` 成对出现即可。
 
-- Cleaner than returning cleanup functions
-- Works with async watchers
-- Can be called multiple times in same watcher
-
-## Async Pattern
+**侦听器清理（Vue 3.5+）**：`watch` 里开的定时器/请求用 `onWatcherCleanup()` 收，避免写成 return 函数。
 
 ```ts
-export function useAsyncData<T>(fetcher: () => Promise<T>) {
+import { watch, onWatcherCleanup } from "vue"
+
+watch(keyword, () => {
+  const controller = new AbortController()
+  onWatcherCleanup(() => controller.abort())
+  void search(keyword.value, controller.signal)
+})
+```
+
+## 异步与错误
+
+```ts
+export function useLoad<T>(fetcher: () => Promise<T>) {
   const data = ref<T | null>(null)
-  const error = ref<Error | null>(null)
+  const error = ref("")
   const loading = ref(false)
 
-  async function execute() {
+  async function run() {
     loading.value = true
-    error.value = null
+    error.value = ""
     try {
       data.value = await fetcher()
-    }
-    catch (e) {
-      error.value = e as Error
-    }
-    finally {
+    } catch (e) {
+      error.value = formatApiError(e, "加载失败")
+    } finally {
       loading.value = false
     }
   }
 
-  execute()
-  return { data, error, loading, refetch: execute }
+  return { data, error, loading, run }
 }
 ```
 
-**Data fetching:** Prefer Pinia Colada queries over custom composables.
+- 请求一律走 `shared/api-client.ts`，错误文案用 `formatApiError`，别在 composable 里手写 `axios`。
+- 三态（loading / error / empty）由组件用共享件渲染；composable 只提供状态，不塞 UI。
 
-## VueUse
+## 跨组件通信
 
-> For VueUse composable reference, use the `vueuse` skill.
+- 父子：`props` + `emits`，不要为了「方便」把事件一路 `$emit` 上去。
+- 远距离、非父子：本仓库已有 `mitt`（`shared/` 内使用），按现有总线约定发/收；**不要新造第二套事件总线**，也不要拿 `provide/inject` 当全局状态。
 
-Check VueUse before writing custom composables - most patterns already implemented.
+## 响应式坑
 
-> **For Nuxt-specific composables** (useFetch, useRequestURL): see `nuxt` skill nuxt-composables.md
-
-## Advanced Patterns
-
-### Singleton Composable
-
-Share state across all components using the same composable:
+**ref 在 reactive 对象里自动解包，在数组 / Map / Set 里不会：**
 
 ```ts
-import { createSharedComposable } from '@vueuse/core'
-
-function useMapControlsBase() {
-  const mapInstance = ref<Map | null>(null)
-  const flyTo = (coords: [number, number]) => mapInstance.value?.flyTo(coords)
-  return { mapInstance, flyTo }
-}
-
-export const useMapControls = createSharedComposable(useMapControlsBase)
-```
-
-### Cancellable Fetch with AbortController
-
-```ts
-export function useSearch() {
-  let abortController: AbortController | null = null
-
-  watch(query, async (newQuery) => {
-    abortController?.abort()
-    abortController = new AbortController()
-
-    try {
-      const data = await $fetch('/api/search', {
-        query: { q: newQuery },
-        signal: abortController.signal,
-      })
-    }
-    catch (e) {
-      if (e.name !== 'AbortError')
-        throw e
-    }
-  })
-}
-```
-
-### Step-Based State Machine
-
-```ts
-export function useSendFlow() {
-  const step = ref<'input' | 'confirm' | 'success'>('input')
-  const amount = ref('')
-
-  const next = () => {
-    if (step.value === 'input')
-      step.value = 'confirm'
-    else if (step.value === 'confirm')
-      step.value = 'success'
-  }
-
-  return { step, amount, next }
-}
-```
-
-### Client-Only Guards
-
-```ts
-export function useUserLocation() {
-  const location = ref<GeolocationPosition | null>(null)
-
-  if (import.meta.client) {
-    navigator.geolocation.getCurrentPosition(pos => location.value = pos)
-  }
-
-  return { location }
-}
-```
-
-### Custom Element Composables (Vue 3.5+)
-
-For custom element components, use built-in helpers:
-
-```ts
-import { useHost, useShadowRoot } from 'vue'
-
-export function useCustomElement() {
-  const host = useHost() // Host element reference
-  const shadowRoot = useShadowRoot() // Shadow DOM root
-
-  onMounted(() => {
-    console.log('Host:', host)
-    console.log('Shadow:', shadowRoot)
-  })
-
-  return { host, shadowRoot }
-}
-```
-
-**Available in:**
-
-- Components using `<script setup>` in custom elements
-- Access via `this.$host` in Options API
-
-### Auto-Save with Debounce
-
-```ts
-export function useAutoSave(content: Ref<string>) {
-  const hasChanges = ref(false)
-
-  const save = useDebounceFn(async () => {
-    if (!hasChanges.value)
-      return
-    await $fetch('/api/save', { method: 'POST', body: { content: content.value } })
-    hasChanges.value = false
-  }, 1000)
-
-  watch(content, () => {
-    hasChanges.value = true
-    save()
-  })
-
-  return { hasChanges }
-}
-```
-
-### Tagged Logger
-
-```ts
-import { consola } from 'consola'
-
-export function useSearch() {
-  const logger = consola.withTag('search')
-
-  watch(query, (q) => {
-    logger.info('Query changed:', q)
-  })
-}
-```
-
-## Reactivity Gotchas
-
-### Ref Unwrapping in Reactive
-
-Refs auto-unwrap in `reactive()` objects but **NOT** in arrays, Maps, or Sets:
-
-```ts
-// ✅ Object - auto unwraps
 const state = reactive({ count: ref(0) })
-state.count++ // No .value needed
+state.count++ // 正常
 
-// ❌ Array - NO unwrapping
-const arr = reactive([ref(1)])
-arr[0].value // Need .value!
+const list = reactive([ref(1)])
+list[0].value // 必须 .value
 
-// ❌ Map/Set - NO unwrapping
-const map = reactive(new Map([['key', ref(1)]]))
-map.get('key').value // Need .value!
+const map = reactive(new Map([["k", ref(1)]]))
+map.get("k")!.value // 必须 .value
 ```
 
-### watchEffect Conditional Tracking
-
-Dependencies inside conditional branches are **not tracked** when condition is false:
+**`watchEffect` 的条件分支不会补追踪：**
 
 ```ts
-// ❌ Wrong - dep not tracked when condition false
+// 条件为 false 时 dep 不会被追踪
 watchEffect(() => {
-  if (condition.value) {
-    console.log(dep.value) // Only tracked when condition=true
-  }
+  if (enabled.value) console.log(dep.value)
 })
 
-// ✅ Correct - use explicit watch for conditional deps
-watch([condition, dep], ([cond, d]) => {
-  if (cond) console.log(d)
+// 条件依赖用显式 watch
+watch([enabled, dep], ([on, value]) => {
+  if (on) console.log(value)
 })
 ```
 
-### Cleanup Patterns
+**keep-alive 页面里的轮询**：`onDeactivated` 停、`onActivated` 起，否则切走还在跑。
 
-**For keep-alive components** - use `onDeactivated`:
-
-```ts
-export function usePolling() {
-  let interval: NodeJS.Timeout
-
-  onMounted(() => { interval = setInterval(poll, 5000) })
-  onUnmounted(() => clearInterval(interval))
-  onDeactivated(() => clearInterval(interval)) // Pause when deactivated
-  onActivated(() => { interval = setInterval(poll, 5000) }) // Resume
-}
-```
-
-**For scope-aware cleanup** - use `tryOnScopeDispose` from VueUse:
+## 常见错误
 
 ```ts
-import { tryOnScopeDispose } from '@vueuse/core'
-
-export function useEventSource(url: string) {
-  const source = new EventSource(url)
-
-  // Cleans up when effect scope disposes (component unmount, watcher stop)
-  tryOnScopeDispose(() => source.close())
-
-  return { source }
-}
-```
-
-## Common Mistakes
-
-**Not using `readonly()` for internal state:**
-
-```ts
-// ❌ Wrong - exposes mutable ref
+// ❌ 内部状态直接暴露，调用方能改
 return { count }
 
-// ✅ Correct - prevents external mutation
-return { count: readonly(count) }
+// ✅ 只读出口 + 显式动作
+return { count: readonly(count), increment }
+
+// ❌ 在事件回调里调 composable
+function onClick() {
+  usePager(items) // 拿不到组件上下文
+}
 ```
 
-**Missing cleanup:**
+## 相关
 
-```ts
-// ❌ Wrong - listener never removed
-onMounted(() => target.addEventListener('click', handler))
-
-// ✅ Correct - cleanup on unmount
-onMounted(() => target.addEventListener('click', handler))
-onUnmounted(() => target.removeEventListener('click', handler))
-```
+- 纯函数（格式化、解析）放 `shared/helpers/`，见 [helpers.md](helpers.md)
+- 组件内 props/emits 见 [components.md](components.md)
+- 响应式基础见 [reactivity.md](reactivity.md)

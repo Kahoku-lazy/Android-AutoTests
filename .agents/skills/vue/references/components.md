@@ -155,34 +155,6 @@ const age = defineModel<number>('age')
 
 [v-model modifiers docs](https://vuejs.org/guide/components/v-model#handling-v-model-modifiers)
 
-## Reusable Templates
-
-For typed, scoped template snippets within a component:
-
-```vue
-<script setup lang="ts">
-import { createReusableTemplate } from '@vueuse/core'
-
-const [DefineItem, UseItem] = createReusableTemplate<{
-  item: SearchItem
-  icon: string
-  color?: 'red' | 'green' | 'blue'
-}>()
-</script>
-
-<template>
-  <DefineItem v-slot="{ item, icon, color }">
-    <div :class="color">
-      <Icon :name="icon" />
-      {{ item.name }}
-    </div>
-  </DefineItem>
-
-  <!-- Reuse multiple times -->
-  <UseItem v-for="item in items" :key="item.id" :item :icon="getIcon(item)" />
-</template>
-```
-
 ## Template Refs (Vue 3.5+)
 
 Use `useTemplateRef()` for type-safe template references with IDE support:

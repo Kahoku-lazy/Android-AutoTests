@@ -508,7 +508,7 @@ def cancel_running_task(task: Task) -> Task:
         raise ValueError("排队中的任务不能关闭")
     if task.status != TaskStatus.RUNNING:
         raise ValueError("只有运行中的任务可以关闭")
-    from engines.agents.workflow.platform_run import request_cancel
+    from engines.backend_bridge.workflow.cancel import request_cancel
 
     request_cancel(task.id)
     finalized = finalize_task(

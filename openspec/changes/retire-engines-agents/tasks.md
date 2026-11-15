@@ -23,7 +23,7 @@
 
 - [x] 4.1 在 `engines/backend_bridge/workflow/` 新增取消模块：按 `task_id` 登记 `CancelToken`，提供 `request_cancel` / `bind_cancel` / `clear_cancel`，并由 `run_sop_once` 把 `CancelMiddleware` 挂进 `controls`。验证：新增 `tests/engines/backend_bridge/unit/test_sop_cancel.py` 全绿
 - [x] 4.2 `backend/apps/task_list/task_runner.py` 改调 `backend_bridge.workflow.sop_ui.run_sop_once`：把报告定位（run 目录 + 文件名）写进任务结果，按运行结论映射任务终态，删掉对 `platform_run`、`event_sink`、`messaging.record` 的导入。验证：`python -m pytest -c tests/pytest.ini tests/task -q` 全绿
-- [ ] 4.3 `backend/apps/task_list/{api,event_store}.py`：取消改调新入口；任务执行不再绑定 sink、不再写事件明细行。验证：`python -m pytest -c tests/pytest.ini tests/task/api/test_task_cancel_dispatch.py -q` 全绿
+- [x] 4.3 `backend/apps/task_list/{api,event_store}.py`：取消改调新入口；任务执行不再绑定 sink、不再写事件明细行。验证：`python -m pytest -c tests/pytest.ini tests/task/api/test_task_cancel_dispatch.py -q` 全绿
 - [ ] 4.4 下线任务详情报告接口：移除 `/api/tasks/{id}/report/` 与其视图/序列化/契约，删除对应前端任务详情页。验证：`cd frontend; pnpm run typecheck` 通过，OpenAPI 基线重生成后 `openapi-schema` 门禁通过
 - [ ] 4.5 前端任务清单改为直达报告：行点击打开 `backend_bridge` 的报告（走既有报告读取接口），不再进详情页。验证：`cd frontend; pnpm run typecheck && npx vitest run tests/task-list` 通过
 - [ ] 4.6 合并提示词：执行者取 `ae_harness` 版为基线，验收者取 `agents` 版为基线，写入 `engines/ae_harness/agents/config/prompts/`，并在本任务勾选处记录差异比对结论。验证：`python -m pytest -c tests/pytest.ini tests/engines/ae_harness -q` 全绿

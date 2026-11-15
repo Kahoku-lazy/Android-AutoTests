@@ -1,8 +1,8 @@
 # engines/ae_harness AGENTS.md
 
-本目录是 `engines/` 下的**独立原型链路**：只做「手机 UI 执行 + 验收」这一条链，不接后端、不写事件库、不参与平台任务。
+本目录是 `engines/` 下的**Agent 原语层**：只提供可复用的原语（角色创建、设备工具、事件记录与报告渲染、中间件、SOP 抽象、只读知识检索），不接后端、不写数据库。
 
-> 与 [`engines/agents/`](../agents/AGENTS.md) 的关系：两者是同一能力的两种实现，`agents/` 是接平台的正式版，本目录不替代它。当前**无任何代码 import 本包**，也没有对应测试；是否合并/替换须先走 OpenSpec 变更。
+> 与 [`engines/backend_bridge/`](../backend_bridge/AGENTS.md) 的关系：本目录只出原语，**平台侧装配一律在 `backend_bridge`**。`backend_bridge` 的生产代码 import 本包的 `agents` / `tools` / `event` / `middleware` / `workflow.sop` 五个子包；`assistant/` 只服务控制台调试，平台不得引用。
 
 ## 与控制台 / 平台的分工（红线）
 
@@ -31,6 +31,8 @@
 ae_harness/
   agents/              角色定义：config → models → creator
     config/prompts/    各角色的系统提示词
+    config/app_info/   被测应用短卡（按 token 读取，供执行者提示词追加）
+    config/log_keywords/ 按机型的日志关键词目录（供验收者核对日志证据）
   assistant/           角色调试入口：建角色、挂工具、跑一轮、出报告
     _bootstrap.py      入口运行时引导：编码 / 日志级别 / 汇总 / 异常包装
   tools/adb/           adb 工具（16 个）+ 只读子集
@@ -45,7 +47,7 @@ ae_harness/
 
 | 位置 | 负责 | 不负责 |
 | --- | --- | --- |
-| `agents/` | 模型配置、提示词、Agent 创建 | 跑任务、挂工具、出报告 |
+| `agents/` | 模型配置、提示词、应用短卡、日志关键词目录、Agent 创建 | 跑任务、挂工具、出报告 |
 | `assistant/` | 某个角色的可运行入口；`_bootstrap.py` 提供运行时骨架 | 定义角色、造模型、渲染报告 |
 | `tools/adb/` | 设备动作与返回值 | 决策、编排、读配置 |
 | `knowledge/` | 向量模型配置、按库索引、只读检索工具 | 文档上传、知识库写接口、改 Agent、渲染报告 |

@@ -16,7 +16,7 @@ Python 调试：➡ python -m engines.device.android.recent_apps 🏁
 🏁
 关联模块：➡
 1. engines.device.action: 设备控制入口
-2. engines.agents.event_log: 事件日志
+2. utils.logs: 过程日志（agent_event_log），不依赖任何 Agent 包
 🏁
 测试：➡
 1. tests/engines/agents/test_close_recent_apps.py: 关闭最近应用
@@ -27,8 +27,8 @@ from __future__ import annotations
 
 import re
 
-from engines.agents.event_log import write_line
 from engines.device.action import System, open_device
+from utils.logs import agent_event_log
 
 SYSTEM_UI = "com.android.systemui"
 FALLBACK_LAUNCHERS = frozenset(
@@ -51,6 +51,15 @@ _HOME_CMD = [
     "-c",
     "android.intent.category.HOME",
 ]
+
+
+def _write_line(action: str) -> None:
+    """写一行过程日志，换行折叠成空格，保证一行一条。
+
+    Args:
+        action: 这一行的动作或汇总文本。
+    """
+    agent_event_log.info(" ".join(str(action or "").split()) or "-")
 
 
 def parse_recent_packages(text: str) -> list[str]:
@@ -93,7 +102,7 @@ def close_recent_apps(serial: str, *, opener=None) -> None:
     """
     target = str(serial or "").strip()
     if not target:
-        write_line("-", "收尾跳过：设备序列号为空")
+        _write_line("收尾跳过：设备序列号为空")
         return
     open_target = opener or _open_android
     connection = None
@@ -106,9 +115,9 @@ def close_recent_apps(serial: str, *, opener=None) -> None:
             control.app_stop(package)
         control.press_key("home")
         shown = "、".join(names) if names else "无"
-        write_line("-", f"收尾关闭应用：{shown}")
+        _write_line(f"收尾关闭应用：{shown}")
     except Exception as exc:
-        write_line("-", f"收尾关闭应用失败：{exc}")
+        _write_line(f"收尾关闭应用失败：{exc}")
     finally:
         if connection is not None:
             connection.disconnect()

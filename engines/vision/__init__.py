@@ -14,7 +14,7 @@ Python 调试：➡ python -m engines.vision 🏁
 🏁
 关联模块：➡
 1. engines.vision.ocr: recognize
-2. engines.agents.tools.tool_ocr: 调用方
+2. 无引擎内调用方：原调用方 `engines/agents/tools/tool_ocr.py` 随该包退役
 🏁
 测试：➡
 1. tests/engines/agents/test_ocr_tool.py: OCR 工具

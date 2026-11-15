@@ -1,7 +1,7 @@
 # engines/backend_bridge AGENTS.md
 
 > 层级：根 `AGENTS.md` → [`engines/AGENTS.md`](../AGENTS.md) → **本文件**。本目录仍在 `engines/` 内，上层红线全部适用。
-> 目录现状：已是 Python 包；已有 `agents/`（角色）、`reports/`（报告路径）、`session.py`（会话）、`run.py`（入口）、`event_log.py`（事件面板）。`workflow/` 待建。
+> 目录现状：已是 Python 包；已有 `agents/`（角色）、`workflow/`（SOP 装配）、`events/`（事件落库）、`model_billing/`（模型费用）、`reports/`（报告路径）、`session.py`（会话）、`run.py`（入口）、`event_log.py`（事件面板）。
 
 ## 1. 定位：平台侧智能体角色的唯一落点
 
@@ -22,9 +22,11 @@
 backend_bridge/
   agents/            平台角色定义：调 create_agent 装配角色，挂工具与观测
   workflow/          平台编排装配：调用 ae_harness 的 SOP 抽象（spec / runner / 步骤 YAML）
+  events/            事件落库：接收方绑定、运行上下文、预算计数、步骤中断、批量折叠
   reports/           报告落盘：logs/agents/backend_bridge/<时间戳>_<role>.html
   run.py             平台入口：跑一次 → 返回报告路径、token 汇总、逐次用量
   token_usage/       用量形状与上送前置（当前为空目录）
+  model_billing/     模型费用计算：DeepSeek 价目、高峰倍率、8 位小数
 ```
 
 ## 2.1 SOP 与单角色的分工
@@ -52,11 +54,13 @@ backend_bridge/
 6. **禁止在未定事项上自行决策** —— 见第 5 节，动手前先问。
 7. **禁止自创 SOP** —— 步骤格式、重试、验收判定一律用 `ae_harness.workflow.sop` 的现成实现；本目录不得出现第二套编排循环或第二份步骤 YAML 格式。
 8. **禁止给验收角色挂写操作工具** —— 验收侧固定 `build_adb_readonly_tools()`。
+9. **事件落库只在本目录** —— 接收方绑定、运行上下文、预算计数、步骤中断与批量折叠归 `events/`；`ae_harness` 只写本地记录与报告，**禁止**在 `ae_harness` 写库或依赖后端事件类型。
+10. **运行取消归本目录** —— 取消置位、当前步骤中断与清理只在本目录实现，禁止在 `ae_harness` 或后端另立第二套取消。
 
-## 4. 与后端的分工（仍在演进，动手前确认）
+## 4. 与后端的分工
 
-- 本目录**负责**：建角色、跑一次、产 HTML 报告、把 token 用量整理成结构化数据返回。
-- 后端**负责**：从 DB 取角色配置、调用本目录入口、把用量写库、对外提供报告读取接口、前端契约。
+- 本目录**负责**：建角色、跑一次、产 HTML 报告、把 token 用量整理成结构化数据返回、**任务事件落库前的绑定与折叠**、**运行取消**。
+- 后端**负责**：从 DB 取角色配置、调用本目录入口、把用量与事件写库、对外提供报告读取接口、前端契约。
 - 本目录**不负责**：DB 读写、Django 依赖、鉴权、HTTP 路由、前端。
 
 ## 5. 已定事项（曾列为未定，现已拍板）

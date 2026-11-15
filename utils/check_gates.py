@@ -366,6 +366,77 @@ def business_asset_gate() -> Gate:
     )
 
 
+# ── engines/agents 退役 ────────────────────────────────────────
+
+# 退役进度开关：每批完成把对应项改为 True，检查随之收紧；关闭时该条不检查（对应批次尚未执行）。
+# 见 openspec/changes/retire-engines-agents。
+RETIRE_PHASE = {
+    # 2.1 / 2.2 完成后：底座包不得依赖 Agent 包
+    "reverse_dependency": True,
+    # B1 完成后：知识助手产品面必须不存在
+    "knowledge_assistant": False,
+    # B4 完成后：engines/agents 必须不存在，且全仓不得再导入它
+    "agents_package": False,
+}
+
+_BASE_PKG_AGENT_IMPORT = re.compile(
+    r"^\s*(?:from|import)\s+engines\.(?:agents|backend_bridge|ae_harness)\b"
+)
+_ENGINES_AGENTS_IMPORT = re.compile(r"^\s*(?:from|import)\s+engines\.agents\b")
+
+KNOWLEDGE_ASSISTANT_PATHS = (
+    "backend/apps/knowledge_assistant",
+    "frontend/src/modules/knowledge-assistant",
+)
+
+
+def _import_hits(root: str, pattern: re.Pattern[str]) -> "list[str]":
+    """在某个目录下逐行匹配 import 语句，返回违规行。"""
+    hits: list[str] = []
+    for path in _iter_files([root], {".py"}):
+        rel = path.relative_to(ROOT).as_posix()
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            if pattern.match(line):
+                hits.append(f"{rel}:{lineno}: {line.strip()}")
+    return hits
+
+
+def engines_agents_retirement_gate() -> Gate:
+    """
+    Agent 退役门禁：底座不反向依赖、下线面无残留、旧包不复活。
+
+    检查项随 `RETIRE_PHASE` 逐批收紧；开关关闭时该项不参与判定，
+    因此退役进行中也能保持全绿，完成后转为强制拦截。
+
+    Returns:
+        Gate: 门禁对象；run() 返回 (是否通过, 输出行)。
+    """
+
+    def run() -> "tuple[bool, list[str]]":
+        lines: list[str] = []
+        if RETIRE_PHASE["reverse_dependency"]:
+            for root in ("engines/device", "engines/vision", "engines/uart_log"):
+                lines.extend(_import_hits(root, _BASE_PKG_AGENT_IMPORT))
+        if RETIRE_PHASE["knowledge_assistant"]:
+            for rel in KNOWLEDGE_ASSISTANT_PATHS:
+                if (ROOT / rel).exists():
+                    lines.append(f"{rel}：该产品面已下线，目录不得存在")
+        if RETIRE_PHASE["agents_package"]:
+            if (ROOT / "engines" / "agents").exists():
+                lines.append("engines/agents：包已退役，目录不得存在")
+            for root in ("engines", "backend", "tests", "utils"):
+                lines.extend(_import_hits(root, _ENGINES_AGENTS_IMPORT))
+        return (not lines, lines)
+
+    return Gate(
+        "engines-agents-retirement",
+        "Agent 退役（底座不反向依赖 / 下线面无残留 / 旧包不复活）",
+        blocking=True,
+        run=run,
+    )
+
+
 def build_gates() -> list[Gate]:
     py = sys.executable
     return [
@@ -526,6 +597,7 @@ def build_gates() -> list[Gate]:
         # 本次新增（不在 CI 内联项中）
         silent_except_gate(),
         business_asset_gate(),
+        engines_agents_retirement_gate(),
         # engines 风格检查（告警项：先看效果，暂不阻塞；正文 .agents/rules/engines-code-style.md，流程 engines/AGENTS.md）
         cmd_gate(
             "engines-agents-style",

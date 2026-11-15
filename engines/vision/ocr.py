@@ -11,10 +11,10 @@ Python 调试：➡ python -m engines.vision.ocr 🏁
 简介说明：➡
 1. recognize: 对页面图像做文本识别
 2. cnocr 在本模块被导入时加载；调用方必须在函数内部导入本模块，避免引擎启动拉起重依赖
-3. 只供 engines.agents.tools.tool_ocr 调用
+3. 只供引擎侧 OCR 工具调用（原调用方 `engines/agents/tools/tool_ocr.py` 随该包退役，当前无生产调用方）
 🏁
 关联模块：➡
-1. engines.agents.tools.tool_ocr: 唯一预期调用方
+1. 无引擎内调用方：本包作为底座能力保留，供后续工具层按需接入
 🏁
 测试：➡
 1. tests/engines/agents/test_ocr_tool.py: OCR 工具

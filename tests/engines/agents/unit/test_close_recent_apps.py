@@ -104,8 +104,8 @@ def test_close_stops_apps_then_home(monkeypatch):
     info = _Info(RECENTS, HOME)
     control = _Control()
     monkeypatch.setattr(
-        "engines.device.android.recent_apps.write_line",
-        lambda model, action: logs.append(action),
+        "engines.device.android.recent_apps._write_line",
+        lambda action: logs.append(action),
     )
 
     def opener(serial: str):
@@ -127,8 +127,8 @@ def test_close_failure_is_logged(monkeypatch):
     logs: list[str] = []
     conn = _Conn()
     monkeypatch.setattr(
-        "engines.device.android.recent_apps.write_line",
-        lambda model, action: logs.append(action),
+        "engines.device.android.recent_apps._write_line",
+        lambda action: logs.append(action),
     )
 
     def opener(serial: str):

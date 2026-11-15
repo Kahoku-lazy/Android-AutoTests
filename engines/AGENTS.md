@@ -8,23 +8,25 @@
 - **平台总思路**（前端展示 / 后端通道与记账 / engines 能力核心；Agent = Model + Harness）见根 [AGENTS.md](../AGENTS.md)「平台架构定位」；本文只写 engines 落地与红线。
 - `engines/`：可替换引擎层——设备控制、串口日志、视觉 OCR、智能体（SOP / 角色 / 工具）运行时等。导入边界：零 `apps.*`、零 `django.*`（业务工具经注入）。
 - 一级子包（一句话）：
-  - `agents/`：控制设备任务的 SOP / 智能体角色、提示词、工具与工作流。
-  - `ae_harness/`：手机 UI 执行 + 验收的独立原型链路（不接后端、无调用方、无测试）；与 `agents/` 并存，不替代它。其中 `assistant/` **只服务控制台调试**。
-  - `backend_bridge/`：**平台侧智能体角色的唯一落点**（后端任务 / 前端卡片用）；与控制台入口 `ae_harness/assistant/` 分工，两者只共享原语。详见 [backend_bridge/AGENTS.md](backend_bridge/AGENTS.md)。
+  - `ae_harness/`：**Agent 原语层**——`create_agent`、设备工具（adb）、事件记录与报告渲染、中间件、SOP 抽象、只读知识检索。其中 `assistant/` **只服务控制台调试**。
+  - `backend_bridge/`：**平台侧智能体角色的唯一落点**（后端任务 / 前端卡片用），在 `ae_harness` 原语上装配，并承接**事件落库、运行取消、报告与用量**。详见 [backend_bridge/AGENTS.md](backend_bridge/AGENTS.md)。
   - `device/`：设备引擎；对外入口是 `action`。
   - `uart_log/`：串口日志采集与处理。
   - `vision/`：页面文本识别（OCR）；主要供引擎侧工具调用。
-- 领域架构与目录细则见 [`engines/agents/AGENTS.md`](agents/AGENTS.md) 等子文档，本文不展开。
+- **依赖方向只有一条**：`backend/` →（注入）→ `engines/backend_bridge/` → `engines/ae_harness/`。`device/`、`vision/`、`uart_log/` 是底座，**不得**反向依赖 `backend_bridge` 或 `ae_harness`；需要写过程日志时经 `utils.logs`。
+- 领域架构与目录细则见 [`ae_harness/AGENTS.md`](ae_harness/AGENTS.md)、[`backend_bridge/AGENTS.md`](backend_bridge/AGENTS.md) 等子文档，本文不展开。
+- `engines/agents/` 正在退役（见 `openspec/changes/retire-engines-agents`）：删除前对它的任何改动**只允许**修退役相关缺陷，不得新增能力。
 
 ## 红线（禁止）
 
 - **禁止**跳过本文件与下方「AI 阅读与检查流程」直接改 `engines/**` 代码。
-- **agents 工具**：必须 `tools/tool_*.py` 命名，且经 `tools_config.py` 分配；**禁止**业务代码直接 `import` 绑工具。
-- **agents 提示词**：角色提示词**必须**经 `role_sys_prompts.py` 配置，禁止旁路硬编码绕过配置入口。
+- **禁止**恢复 `engines/agents/` 为包：平台角色一律经 `backend_bridge` 装配，原语一律来自 `ae_harness`。
+- **ae_harness 角色**：只经 `agents/creator.create_agent` 创建；**禁止**在别处直接构造 `Agent(...)`，禁止新增第二种创建入口。
+- **ae_harness 工具**：实现放 `tools/<域>/`，由该域门面函数分配（设备域 `build_adb_tools()`、只读 `build_adb_readonly_tools()`）；**禁止**业务代码直接 `import` 工具实现绑到角色。
+- **提示词**：正文只放 `ae_harness/agents/config/prompts/*.md` 并经 `agents/config.py` 读取；禁止旁路硬编码。
+- **禁止** `device/`、`vision/`、`uart_log/` 反向依赖 `backend_bridge` 或 `ae_harness`。
 - **禁止**在 engines 内随意新增自定义异常类（确有需要须先在对应子 AGENTS 立项）。
 - **禁止**无关业务塞进同一文件；避免强依赖扩散与循环导入（细则见规范原文 §3 / §4）。
-- **禁止**再使用已废弃工具示例名 `test_device.py` / `test_serial.py`（应为 `tool_device.py` / `tool_serial.py`）。
-- agents 角色经 `AgentRoleFactory` / `agent_builders.build_*`（语音经 `realtime_vocie_agent`）装配；改 agents 架构时仍须遵守 [`engines/agents/AGENTS.md`](agents/AGENTS.md)「创建 Agent 统一流程」。
 
 ## AI 阅读与检查流程（必读）
 
@@ -51,7 +53,7 @@
    python -m scripts.check_engines_agents_style
    ```
    两个检查器都只覆盖机械化子集；**过检 ≠ 整份规范合规**。
-5. **改 agents 架构 / 目录职责时**：另读 [`engines/agents/AGENTS.md`](agents/AGENTS.md)。涉及 RAG / 语音 / device / uart_log / vision 时再读对应子目录 AGENTS（见速查）。
+5. **改 Agent 装配 / 目录职责时**：另读 [`engines/ae_harness/AGENTS.md`](ae_harness/AGENTS.md) 与 [`engines/backend_bridge/AGENTS.md`](backend_bridge/AGENTS.md)。涉及 device / uart_log / vision 时再读对应子目录 AGENTS（见速查）。
 
 ## 相关路径速查
 
@@ -61,9 +63,8 @@
 | 规范原文（风格正文） | [`.agents/rules/engines-code-style.md`](../.agents/rules/engines-code-style.md) |
 | 注释 / docstring 读写技能 | [`.agents/skills/engines-docstring-check/`](../.agents/skills/engines-docstring-check/) |
 | 风格检查技能 | [`.agents/skills/engines-agents-style-check/`](../.agents/skills/engines-agents-style-check/) |
-| agents 架构 | [`engines/agents/AGENTS.md`](agents/AGENTS.md) |
-| RAG 子约束 | [`engines/agents/rag/AGENTS.md`](agents/rag/AGENTS.md) |
-| 语音子约束 | [`engines/agents/realtime_vocie/AGENTS.md`](agents/realtime_vocie/AGENTS.md) |
+| Agent 原语层 | [`engines/ae_harness/AGENTS.md`](ae_harness/AGENTS.md) |
+| 平台角色落点 | [`engines/backend_bridge/AGENTS.md`](backend_bridge/AGENTS.md) |
 | 设备引擎 | [engines/device/AGENTS.md](device/AGENTS.md) |
 | 串口采集 | [engines/uart_log/AGENTS.md](uart_log/AGENTS.md) |
 | 视觉 OCR | [engines/vision/AGENTS.md](vision/AGENTS.md) |

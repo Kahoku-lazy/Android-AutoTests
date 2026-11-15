@@ -14,7 +14,7 @@ Python 调试：➡️ python -m engines.agents.config.log_keywords 🏁
 3. 目录缺失或不可读时返回空串，不抛异常：该步照常开始，由提示词降级为截图核对
 🏁
 关联模块：➡️
-1. 暂无本地 engines/utils 依赖
+1. engines.agents.config.config: 导入 load_log_keyword_text，正文只经配置读取口打开
 🏁
 测试：➡️
 1. tests/graybox/unit/test_log_keywords.py: 按型号读取、缺失降级、非法型号名
@@ -26,15 +26,15 @@ from __future__ import annotations
 
 import re
 
-from pathlib import Path
 from typing import Final
 
-LOG_KEYWORDS_DIR: Final[Path] = Path(__file__).resolve().parent / "data" / "log_keywords"
+from engines.agents.config.config import load_log_keyword_text
+
 """按型号的关键词目录所在目录。"""
 
 _SKU_PATTERN: Final[re.Pattern[str]] = re.compile(r"^[A-Za-z0-9_-]+$")
 
-__all__ = ["LOG_KEYWORDS_DIR", "load_log_keywords"]
+__all__ = ["load_log_keywords"]
 
 
 def _safe_sku(sku: str) -> str:
@@ -62,8 +62,7 @@ def load_log_keywords(sku: str) -> str:
     name = _safe_sku(sku)
     if not name:
         return ""
-    path = LOG_KEYWORDS_DIR / f"{name}.md"
     try:
-        return path.read_text(encoding="utf-8").strip()
+        return load_log_keyword_text(name).strip()
     except OSError:
         return ""

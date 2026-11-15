@@ -11,13 +11,11 @@ Python 调试：➡️ python -m engines.agents.knowledge_chat.session 🏁
 简介说明：➡️
 1. KnowledgeChatSession: 一条连接内的文字问答会话，多轮历史留在 Agent 实例里。
 2. answer(): 先回显用户消息，再把 Agent 事件翻成既有线格式流式下发。
-3. build_chat_toolkit(): 按 RAG 是否启用装配 search_knowledge 工具包。
+3. 本期不挂载本地知识检索工具。
 🏁
 关联模块：➡️
 1. engines.agents.agent_builders: 导入 build_knowledge_chat，按角色键装配 Agent
-2. engines.agents.rag.service: 导入 RagService，本地知识检索
-3. engines.agents.rag.tool: 导入 build_rag_tool，Omni 与文字共用同一工具
-4. engines.agents.realtime_vocie.events: 导入 TranscriptBridge，复用线格式与日志
+2. engines.agents.workflow.voice: 导入 TranscriptBridge，复用线格式与日志
 🏁
 测试：➡️
 1. tests/graybox/unit/test_knowledge_chat_session.py: 回显、流式回答、用量记账：不联网
@@ -32,12 +30,9 @@ from collections.abc import Awaitable, Callable
 from typing import Final
 
 from agentscope.message import UserMsg
-from agentscope.tool import Toolkit
 
 from engines.agents.agent_builders import build_knowledge_chat
-from engines.agents.rag.service import RagService
-from engines.agents.rag.tool import build_rag_tool
-from engines.agents.realtime_vocie.events import TranscriptBridge, VoiceLogSink
+from engines.agents.workflow.voice import TranscriptBridge, VoiceLogSink
 
 from .config import ChatConfig, load_chat_config
 
@@ -47,19 +42,16 @@ PROVIDER: Final[str] = "deepseek"
 CATEGORY: Final[str] = "LLM"
 
 
-def build_chat_toolkit(rag: RagService) -> Toolkit | None:
+def build_chat_toolkit() -> None:
     """
-    按 RAG 是否启用装配文字会话的工具包。
+    返回文字会话工具包。
 
-    Args:
-        rag: 已配置的 RAG 服务。
+    本期知识库只做独立索引和检索，文字会话不消费检索结果。
 
     Returns:
-        含 `search_knowledge` 的工具包；RAG 未启用时返回 None。
+        None。始终不挂载本地知识检索工具。
     """
-    if not rag.enabled:
-        return None
-    return Toolkit(tools=[build_rag_tool(rag)])
+    return None
 
 
 class KnowledgeChatSession:
@@ -99,7 +91,12 @@ class KnowledgeChatSession:
 
     @property
     def model(self) -> str:
-        """当前回答模型名。"""
+        """
+        当前回答模型名。
+
+        Returns:
+            配置中的模型名。
+        """
         return self.config.model
 
     async def answer(self, text: str) -> None:
@@ -150,8 +147,7 @@ class KnowledgeChatSession:
     def _ensure_agent(self):
         """取得 Agent；首次调用时按 RAG 启用情况装配工具包。"""
         if self._agent is None:
-            rag = RagService.from_env()
-            self._agent = build_knowledge_chat(toolkit=build_chat_toolkit(rag))
+            self._agent = build_knowledge_chat(toolkit=build_chat_toolkit())
         return self._agent
 
 

@@ -26,8 +26,8 @@ from __future__ import annotations
 
 from utils.logs import agent_event_log
 
-from ..event_log import write_line
-from ..event_sink import budget_exceeded, count_model_call, current_sink, flush_sink
+from .event_log import write_line
+from .event_sink import budget_exceeded, count_model_call, current_sink, flush_sink
 from .fold import step
 
 __all__ = [

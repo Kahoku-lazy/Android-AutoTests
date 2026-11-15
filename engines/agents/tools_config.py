@@ -1,31 +1,27 @@
 """
 文件名: ➡️ tools_config.py 🏁
 路径: ➡️ engines/agents/tools_config.py 🏁
-模块功能：➡️ 角色工具与技能选择。改下面的名字表即可 🏁
+模块功能：➡️ 按模块把工具集合装成 Toolkit，并在创建时激活已授予的组 🏁
 Python 调试：➡️ python -m engines.agents.tools_config 🏁
 时间：➡️ 2026-10-30 🏁
 作者：➡️ kahoku 🏁
-版本：➡️ 1.0.0 🏁
-修改时间: ➡️ 2026-10-30 🏁
+版本：➡️ 2.0.0 🏁
+修改时间: ➡️ 2026-11-11 🏁
 类型: ➡️ Harness 配置模块 🏁
 简介说明：➡️
-1. ToolGroupSpec: 一个可开关工具组的标识、说明和成员
-2. select_tools: 按名字表取出 ToolSpec，顺序与名字表一致。未知名字直接报错
-3. resolve_skill_dirs: 把技能目录收成绝对路径。相对路径按仓库根目录解析，空字符串跳过
-4. build_executor_toolkit: 按组表组装一份新的执行角色工具包
-5. build_verifier_toolkit: 组装验收角色工具包：截图与日志检查常驻，不带设备操作
-6. build_case_authoring_toolkit: 组装规划/验收角色共用的空工具包：不操作设备，也不读写文件
-7. build_case_writer_toolkit: 组装写用例角色的工具包：只带计划模式四件套，不操作设备
-8. build_case_module_store_tools: 组装 GoalPipeline 模块存储工具：编写角色可写，验收角色只读
-9. register_skills: 把 skill 来源追加到工具包的指定组
+1. TOOL_MODULES: device / observe / serial 三个模块，授予一个就给该集合全部工具。
+2. build_toolkit_for_modules: 按模块名装 Toolkit；组可被 reset_tools 关闭，创建时由调用方激活。
+3. role_modules: 从角色表的 ToolsConfig.modules 取模块名；空节表示不授静态工具。
+4. activate_modules: 把已授予的组写进 Agent 状态，模型第一轮就能看见。
+5. select_tools / register_skills: 按名字取规格、追加技能，仍供测试与技能注册使用。
 🏁
 关联模块：➡️
 1. 暂无本地 engines/utils 依赖
 🏁
 测试：➡️
-1. tests/engines/agents/test_ocr_tool.py: 引擎 OCR 工具：实现存在、只读、且不装配给任何角色
-2. tests/engines/agents/test_tool_img_b64.py: 单文件调试指令：python -m pytest tests/engines/agents/test_tool_img_b64.py -vv --tb=shor
-3. tests/graybox/unit/test_case_plan_tools.py: 计划模式工具：装配四件套，并验证它们读写同一份 AgentState
+1. tests/engines/agents/unit/test_ocr_tool.py: OCR 不进入任何静态模块
+2. tests/engines/agents/unit/test_tool_img_b64.py: mark_dot 属于 observe
+3. tests/engines/agents/unit/test_tool_modules.py: 模块授予、初始激活与 reset_tools 覆盖
 🏁
 """
 
@@ -40,13 +36,28 @@ from pathlib import Path
 from agentscope.skill import LocalSkillLoader, Skill, SkillLoaderBase
 from agentscope.tool import ToolGroup, Toolkit
 
-from .tools import build_toolkit
 from .tools.tool_device import device_tool_specs
 from .tools.tool_img_b64 import img_b64_tool_specs
 from .tools.tool_serial import serial_tool_specs
-from .tools.tool_wrapper import PlatformFunctionTool
+from .tools.tool_wrapper import PlatformFunctionTool, build_toolkit
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
+
+__all__ = [
+    "DEFAULT_ROLE_MODULES",
+    "TOOL_MODULES",
+    "ToolGroupSpec",
+    "activate_modules",
+    "build_case_artifact_tools",
+    "build_case_authoring_toolkit",
+    "build_executor_toolkit",
+    "build_toolkit_for_modules",
+    "build_verifier_toolkit",
+    "register_skills",
+    "resolve_skill_dirs",
+    "role_modules",
+    "select_tools",
+]
 _SkillSource = str | Skill | SkillLoaderBase
 
 
@@ -135,95 +146,144 @@ def _assigned_tools(
     return owner
 
 
-# 执行角色常驻工具。截图、坐标核对和返回键始终交给模型。
-EXECUTOR_BASIC_TOOL_NAMES = (
+# 三个静态模块。授予模块名即给该集合全部工具，配置里不写单个函数名。
+# device 只含写操作；截图与坐标核对在 observe，避免验收角色一授权就拿到点击。
+_DEVICE_TOOLS = (
+    "click_ratio",
+    "tap_screen",
+    "xpath_action",
+    "swipe_screen",
+    "drag_ratio",
+    "input_text",
+    "press_key",
+    "app_control",
+)
+_OBSERVE_TOOLS = (
     "screenshot_page",
     "mark_dot",
-    "press_key",
-)
-
-# 验收角色常驻工具。截图看页面，日志只走关键词检查。
-VERIFIER_BASIC_TOOL_NAMES = (
-    "screenshot_page",
     "check_device_log",
 )
+_SERIAL_TOOLS = ("check_device_log",)
 
-# 执行角色启用的技能目录。删掉一行即不交给模型。目录下的子目录也会扫描。
-EXECUTOR_SKILLS_NAMES = [
-    "engines/agents/skills/executor",
-]
+TOOL_MODULES: dict[str, ToolGroupSpec] = {
+    "device": ToolGroupSpec(
+        name="device",
+        description="设备操作。点击、滑动、输入、按键、启停应用、按文案取坐标。",
+        instructions="看图核对后再点击；有文案时先取坐标，再按标记点操作。",
+        tool_names=_DEVICE_TOOLS,
+    ),
+    "observe": ToolGroupSpec(
+        name="observe",
+        description="只读观察。截图、坐标核对、日志关键词检查。",
+        instructions="只看不操作；截图与日志结果用来核对，不产生手势。",
+        tool_names=_OBSERVE_TOOLS,
+    ),
+    "serial": ToolGroupSpec(
+        name="serial",
+        description="串口日志。在当前抓取文件里检查关键词。",
+        instructions="只查已抓取的日志，不启动采集，也不操作设备。",
+        tool_names=_SERIAL_TOOLS,
+    ),
+}
 
-# 执行角色可开关组。模型用组开关一次写完全部组的最终状态。
-EXECUTOR_TOOL_GROUPS = (
-    ToolGroupSpec(
-        name="gesture",
-        description="点击滑动。按坐标或方向点击、长按、滑动、拖动。",
-        instructions="看图后的点击、长按、滑动、拖动；有相对位置时用归一化坐标。",
-        tool_names=("click_ratio", "tap_screen", "swipe_screen", "drag_ratio"),
-    ),
-    ToolGroupSpec(
-        name="xpath",
-        description="xpath。获取页面 xpath 元素的文本与中心坐标。",
-        instructions="已有 xpath 时先取文本和坐标，再用 tap_screen 按像素坐标点击或长按。",
-        tool_names=("xpath_action",),
-    ),
-    ToolGroupSpec(
-        name="text_input",
-        description="输入。向当前输入框输入文本。",
-        instructions="向当前输入框输入，默认先清空。",
-        tool_names=("input_text",),
-    ),
-    ToolGroupSpec(
-        name="app",
-        description="启停应用。启动或停止指定应用。",
-        instructions="启动或停止前确认包名。",
-        tool_names=("app_control",),
-    ),
-    ToolGroupSpec(
-        name="platform_business",
-        description="平台业务工具。查阅平台可调用工具的用途、组合与校验规则。",
-        instructions="先读取技能全文，再按全文选择工具；技能本身不能当工具调用。",
-        skill_dirs=tuple(EXECUTOR_SKILLS_NAMES),
-    ),
-)
+# 角色未写 ToolsConfig.modules 时的默认。空元组表示不授静态工具。
+DEFAULT_ROLE_MODULES = {
+    "UI_EXECUTOR_ROLE_CONFIG": ("device", "observe"),
+    "UI_VERIFIER_ROLE_CONFIG": ("observe",),
+}
 
 
-def build_executor_toolkit(
-    basic_tool_names: tuple[str, ...] | None = None,
-    groups: tuple[ToolGroupSpec, ...] | None = None,
-) -> Toolkit:
-    """按组表组装一份新的执行角色工具包。
+def role_modules(roles: dict, role_key: str) -> tuple[str, ...]:
+    """从角色表读取该角色授予的模块名。
 
     Args:
-        basic_tool_names: 常驻工具名。省略时用执行角色常驻表。
-        groups: 可开关组。省略时用执行角色组表。
+        roles: 整张角色表。
+        role_key: 角色键。
 
     Returns:
-        新的 Toolkit。常驻工具在 basic，其余工具和技能在对应组。
+        模块名。节里没写 modules 时用默认；默认也没有则为空。
+
+    Raises:
+        ValueError: modules 不是字符串列表，或含未知模块名。
     """
-    basic = EXECUTOR_BASIC_TOOL_NAMES if basic_tool_names is None else basic_tool_names
-    chosen = EXECUTOR_TOOL_GROUPS if groups is None else groups
-    owner = _assigned_tools(basic, chosen)
+    section = roles.get(role_key) if isinstance(roles, dict) else None
+    tools = section.get("ToolsConfig") if isinstance(section, dict) else None
+    raw = tools.get("modules") if isinstance(tools, dict) else None
+    if raw is None:
+        return DEFAULT_ROLE_MODULES.get(role_key, ())
+    if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
+        raise ValueError(f"{role_key}.ToolsConfig.modules 必须是模块名列表")
+    unknown = [item for item in raw if item not in TOOL_MODULES]
+    if unknown:
+        known = ", ".join(sorted(TOOL_MODULES))
+        raise ValueError(f"{role_key} 未知工具模块：{', '.join(unknown)}；可选：{known}")
+    return tuple(raw)
+
+
+def build_toolkit_for_modules(modules: tuple[str, ...] | list[str]) -> Toolkit:
+    """按模块名装一份新的 Toolkit。
+
+    每个模块是一个可开关组。basic 留空，因此框架会注册 reset_tools。
+    组在创建时是未激活的，调用方必须再调用 activate_modules。
+
+    Args:
+        modules: 模块名，顺序即组顺序。
+
+    Returns:
+        新的 Toolkit。
+
+    Raises:
+        ValueError: 模块名未知，或两个模块登记了同一个工具名。
+    """
+    unknown = [name for name in modules if name not in TOOL_MODULES]
+    if unknown:
+        known = ", ".join(sorted(TOOL_MODULES))
+        raise ValueError(f"未知工具模块：{', '.join(unknown)}；可选：{known}")
+    chosen = tuple(TOOL_MODULES[name] for name in modules)
+    owner = _assigned_tools((), chosen)
     by_name = {spec.name: spec for spec in select_tools(tuple(owner))}
-    tool_groups = [
+    groups = [
         ToolGroup(
             name=group.name,
             description=group.description,
             instructions=group.instructions,
             tools=[PlatformFunctionTool(by_name[name]) for name in group.tool_names],
-            skills_or_loaders=[
-                LocalSkillLoader(directory=directory, scan_subdir=True)
-                for directory in resolve_skill_dirs(group.skill_dirs)
-            ],
         )
         for group in chosen
     ]
-    return build_toolkit([by_name[name] for name in basic], tool_groups=tool_groups)
+    return build_toolkit([], tool_groups=groups)
+
+
+def activate_modules(agent, modules: tuple[str, ...] | list[str]) -> None:
+    """把已授予的工具组写进 Agent 状态，使模型第一轮就能看见。
+
+    之后模型仍可调用 reset_tools 覆盖。没授予的模块不会出现在工具包里。
+
+    Args:
+        agent: 已创建的智能体，需有 state.tool_context。
+        modules: 要激活的模块名，必须已注册在该智能体的工具包中。
+    """
+    groups = agent.state.tool_context.activated_groups
+    groups.clear()
+    groups.extend(modules)
+
+
+def build_executor_toolkit() -> Toolkit:
+    """执行角色工具包：设备操作 + 只读观察，两组都可被 reset_tools 关闭。
+
+    Returns:
+        含 device 与 observe 两组的新 Toolkit。组尚未激活。
+    """
+    return build_toolkit_for_modules(DEFAULT_ROLE_MODULES["UI_EXECUTOR_ROLE_CONFIG"])
 
 
 def build_verifier_toolkit() -> Toolkit:
-    """组装验收角色工具包：截图与日志检查常驻，不带设备操作。"""
-    return build_executor_toolkit(VERIFIER_BASIC_TOOL_NAMES, ())
+    """验收角色工具包：只有只读观察，不含设备操作。
+
+    Returns:
+        只含 observe 组的新 Toolkit。组尚未激活。
+    """
+    return build_toolkit_for_modules(DEFAULT_ROLE_MODULES["UI_VERIFIER_ROLE_CONFIG"])
 
 
 def build_case_authoring_toolkit() -> Toolkit:

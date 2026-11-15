@@ -1,7 +1,7 @@
 """
 文件名: ➡️ config.py 🏁
 路径: ➡️ engines/agents/rag/config.py 🏁
-模块功能：➡️ RAG 配置：从环境变量读数据/索引目录、切块与检索参数 🏁
+模块功能：➡️ RAG 检索参数：从环境变量读取嵌入、切块和过滤阈值 🏁
 Python 调试：➡️ python -m engines.agents.rag.config 🏁
 时间：➡️ 2026-10-29 🏁
 作者：➡️ kahoku 🏁
@@ -9,11 +9,12 @@ Python 调试：➡️ python -m engines.agents.rag.config 🏁
 修改时间: ➡️ 2026-10-30 🏁
 类型: ➡️ Harness 配置模块 🏁
 简介说明：➡️
-1. RagConfig: RAG 数据目录、索引目录、嵌入模型、切块与检索参数。
-2. load_rag_config(): 从环境变量读取并做基本归一化。
+1. RagConfig: 索引目录、嵌入模型、切块与检索参数。
+2. load_rag_config(): 从环境变量读取检索参数；资料范围由知识库目录决定。
 🏁
 关联模块：➡️
-1. engines.agents.models: 导入 get_embedding，取嵌入模型默认名与维度
+1. engines.agents.config.config: 导入 load_model_config，读已装载模型表
+2. engines.agents.config.model_view: 导入 model_view，取嵌入默认名与维度
 🏁
 测试：➡️
 1. tests/graybox/unit/test_rag_store.py: RAG 本地向量库与上下文格式化单测：不联网、不依赖 rag_data
@@ -29,14 +30,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Final
 
-from engines.agents.models import get_embedding
+from engines.agents.config.config import load_model_config
+from engines.agents.config.model_view import model_view
 
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
-DEFAULT_DATA_DIR: Final[str] = r"D:\Govee\data\rag_data"
 DEFAULT_INDEX_DIR: Final[str] = "data/rag_index"
-DEFAULT_COLLECTION: Final[str] = "voice_knowledge"
-_EMBEDDING = get_embedding("text_embedding_v4")
-DEFAULT_EMBEDDING_MODEL: Final[str] = _EMBEDDING.model
+_EMBEDDING = model_view(load_model_config(), "text_embedding_v4")
+DEFAULT_EMBEDDING_MODEL: Final[str] = _EMBEDDING.model_name
 DEFAULT_EMBEDDING_DIMENSIONS: Final[int] = _EMBEDDING.dimensions
 DEFAULT_CHUNK_SIZE: Final[int] = 400
 DEFAULT_CHUNK_OVERLAP: Final[int] = 60
@@ -51,10 +51,8 @@ class RagConfig:
     RAG 配置。
 
     Attributes:
-        enabled: 是否启用 RAG。
-        data_dir: 资料目录（只读）。
+        enabled: 是否具备嵌入检索条件。
         index_dir: 本地索引目录。
-        collection: 向量集合名。
         api_key: 嵌入模型密钥；repr 中隐藏。
         embedding_model: 嵌入模型名。
         embedding_dimensions: 向量维度。
@@ -66,9 +64,7 @@ class RagConfig:
     """
 
     enabled: bool
-    data_dir: Path
     index_dir: Path
-    collection: str
     api_key: str = field(repr=False)
     embedding_model: str = DEFAULT_EMBEDDING_MODEL
     embedding_dimensions: int = DEFAULT_EMBEDDING_DIMENSIONS
@@ -149,20 +145,10 @@ def load_rag_config(environ: Mapping[str, str] | None = None) -> RagConfig:
     )
     return RagConfig(
         enabled=_parse_bool(environ, "KNOWLEDGE_ASSISTANT_RAG_ENABLED", True) and bool(api_key),
-        data_dir=_resolve_path(
-            _read(environ, "KNOWLEDGE_ASSISTANT_RAG_DATA_DIR"),
-            DEFAULT_DATA_DIR,
-        ),
         index_dir=_resolve_path(
             _read(environ, "KNOWLEDGE_ASSISTANT_RAG_INDEX_DIR"),
             DEFAULT_INDEX_DIR,
         ),
-        collection=_read(
-            environ,
-            "KNOWLEDGE_ASSISTANT_RAG_COLLECTION",
-            DEFAULT_COLLECTION,
-        )
-        or DEFAULT_COLLECTION,
         api_key=api_key,
         embedding_model=_read(
             environ,

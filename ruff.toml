@@ -74,6 +74,7 @@ section-order = ["future", "standard-library", "third-party", "first-party", "lo
 ".agents/skills/agentscope-docs/scripts/*.py" = ["T201"]
 # ─ Omni 本地 S2S 演示入口（run_local_s2s / main）: 用 print 输出，属 CLI 而非库代码
 "engines/agents/realtime_vocie_agent.py" = ["T201"]
+"engines/agents/realtime_vocie/demo.py" = ["T201"]
 # ─ ae_harness 原型链的角色入口与 SOP 入口: 交互式控制台输出，属 CLI 而非库代码
 #   _bootstrap 是这几个入口共用的打印骨架（汇总 / 异常），本身也只服务 CLI
 "engines/ae_harness/assistant/_bootstrap.py" = ["T201"]

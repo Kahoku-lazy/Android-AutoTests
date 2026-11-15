@@ -1,7 +1,7 @@
 """
 文件名: ➡️ __init__.py 🏁
 路径: ➡️ engines/agents/rag/__init__.py 🏁
-模块功能：➡️ AgentScope RAG 引擎：本地资料索引、检索与 LLM 上下文格式化 🏁
+模块功能：➡️ 本地知识库：按库索引、检索和命令行探针 🏁
 Python 调试：➡️ python -m engines.agents.rag 🏁
 时间：➡️ 2026-10-30 🏁
 作者：➡️ kahoku 🏁
@@ -19,17 +19,18 @@ Python 调试：➡️ python -m engines.agents.rag 🏁
 🏁
 """
 
+from .catalog import KnowledgeBaseSpec, load_knowledge_catalog
 from .config import RagConfig, load_rag_config
-from .service import RagHit, RagService, format_context
+from .service import KnowledgeBaseService, KnowledgeHit, RagService
 from .store import SQLiteVectorStore
-from .tool import build_rag_tool
 
 __all__ = [
+    "KnowledgeBaseService",
+    "KnowledgeBaseSpec",
+    "KnowledgeHit",
     "RagConfig",
-    "RagHit",
     "RagService",
     "SQLiteVectorStore",
-    "build_rag_tool",
-    "format_context",
+    "load_knowledge_catalog",
     "load_rag_config",
 ]

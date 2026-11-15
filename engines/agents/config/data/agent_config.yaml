@@ -1,11 +1,7 @@
 # UI 控制执行角色（设备操作）
 UI_EXECUTOR_ROLE_CONFIG:
   ModelConfig:
-    api_key: DEEPSEEK_API_KEY
-    base_url: https://api.deepseek.com/v1
-    provider: deepseek
-    model_name: deepseek-flash
-    vision: true
+    model: deepseek_flash
     stream: false
 
   RoleConfig:
@@ -13,6 +9,7 @@ UI_EXECUTOR_ROLE_CONFIG:
     system_prompt: UI_EXECUTOR_PROMPT
 
   ToolsConfig:
+    modules: [device, observe]
 
   ContextConfig:
     trigger_ratio: 0.7
@@ -29,11 +26,7 @@ UI_EXECUTOR_ROLE_CONFIG:
 # UI 控制验收角色
 UI_VERIFIER_ROLE_CONFIG:
   ModelConfig:
-    api_key: DEEPSEEK_API_KEY
-    base_url: https://api.deepseek.com/v1
-    provider: deepseek
-    model_name: deepseek-flash
-    vision: true
+    model: deepseek_flash
     stream: false
 
   RoleConfig:
@@ -41,6 +34,7 @@ UI_VERIFIER_ROLE_CONFIG:
     system_prompt: UI_VERIFIER_PROMPT
 
   ToolsConfig:
+    modules: [observe]
 
   ContextConfig:
 
@@ -53,11 +47,7 @@ UI_VERIFIER_ROLE_CONFIG:
 # 用例编写执行角色
 CASE_WRITER_ROLE_CONFIG:
   ModelConfig:
-    api_key: DEEPSEEK_API_KEY
-    base_url: https://api.deepseek.com/v1
-    provider: deepseek
-    model_name: deepseek-flash
-    vision: false
+    model: deepseek_flash
     stream: true
 
   RoleConfig:
@@ -78,11 +68,7 @@ CASE_WRITER_ROLE_CONFIG:
 # 用例编写验收角色
 CASE_VERIFIER_ROLE_CONFIG:
   ModelConfig:
-    api_key: DEEPSEEK_API_KEY
-    base_url: https://api.deepseek.com/v1
-    provider: deepseek
-    model_name: deepseek-flash
-    vision: false
+    model: deepseek_flash
     stream: true
 
   RoleConfig:
@@ -101,26 +87,17 @@ CASE_VERIFIER_ROLE_CONFIG:
 
 OMNI_ROLE_CONFIG:
   ModelConfig:
-    provider: dashscope
-    model_name: qwen3.5-omni-plus-realtime
-    api_key: DASHSCOPE_API_KEY
-    base_url: ""
-    voice: Tina
+    model: omni
 
   RoleConfig:
     name: realtime_vocie_agent
-    system_prompt: |
-      你是实时语音助手。用简洁自然的中文回答用户问题；不确定时如实说明。
+    system_prompt: 
 
 
 # 知识库文字问答角色（DeepSeek Flash + 本地知识检索工具）
 KNOWLEDGE_CHAT_ROLE_CONFIG:
   ModelConfig:
-    api_key: DEEPSEEK_API_KEY
-    base_url: https://api.deepseek.com/v1
-    provider: deepseek
-    model_name: deepseek-flash
-    vision: false
+    model: deepseek_flash
     stream: true
 
   RoleConfig:

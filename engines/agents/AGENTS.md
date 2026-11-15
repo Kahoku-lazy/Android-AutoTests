@@ -1,119 +1,66 @@
 # engines/agents AGENTS.md
 
-> 层级：根 `AGENTS.md` → [`engines/AGENTS.md`](../AGENTS.md) → **本文件** → 更具体子目录 AGENTS。进入 engines 任务时仍先读上层入口；**冲突时更具体子目录的领域规则优先**。  
-> **改本包架构 / 目录职责 / 工具·提示词配置方式时必读。** 完整代码风格正文在 [`.agents/rules/engines-code-style.md`](../../.agents/rules/engines-code-style.md)；**何时读规范、何时用检查技能以下方「AI 阅读与检查流程」及上层 `engines/AGENTS.md` 为准**——勿跳过流程直接改代码。
+## 设计初衷
 
-## 职责
+本包要驾驭 AI，不是把模型调用散落在业务里。做法是两步：先按任务需要创建 Agent 角色，再用特定工作流编排这些角色，让它们按既定分工协作，完成指定任务。
 
-`engines/agents/`：控制设备任务的 SOP / 智能体运行时——角色装配、提示词、工具、消息与计费、工作流、中间件、RAG、语音等。导入边界与上层一致：零 `apps.*`、零 `django.*`（业务能力经注入）。
+角色是可替换的执行单元：一个角色 = 选定的 Model + 跑起来所需的 Harness（提示词、工具、上下文、中间件）。工作流不另造角色，只决定这一次由谁做、按什么顺序做、做到什么算完成。
 
-| 路径 | 职责 |
-| --- | --- |
-| `config/role_types.py` | Harness 四分段类型（`RoleConfig`/`ToolsConfig`/`ContextConfig`/`ReActConfig`）；装载与装配单向依赖，拆环 |
-| `agent_builders.py` | **LLM agents**：`AgentRoleFactory` + `build_*`（再导出四分段类型，过渡期） |
-| `realtime_vocie_agent.py` | **Voice agents**：Omni 实时语音角色装配 |
-| `models/` | **模型唯一归属**：连接参数类型、命名目录、按 provider 造模型（聊天 / Omni / 嵌入 / 合成）、备用模型；包外只经包入口，细则见 [`models/AGENTS.md`](models/AGENTS.md) |
-| `config/role_loader.py` | 角色四分段 YAML 装载（`load_role_spec` → `RoleBundle`）；不碰模型连接参数 |
-| `config/data/agent_config.yaml` | 角色 ModelConfig + 四分段配置数据 |
-| `config/data/prompts/` | 角色系统提示词正文（`*.md`） |
-| `config/data/skills/` | 角色 skill |
-| `role_sys_prompts.py` | **唯一**角色提示词脚本入口（加载 md + 导出常量） |
-| `tools_config.py` | **唯一**角色工具分配入口 |
-| `tools/` | 角色工具实现；按模块分组，文件名 `tool_*.py` |
-| `messaging/` | 事件上屏、折叠日志、结构化记录、Token 费用；接收方协议见 `event_sink` |
-| `case_roles.py` | 用例编写/验收角色的**成对装配**（建角色 + 挂产物工具）；workflow 只编排 |
-| `workflow/` | SOP 步骤输入与单次运行；**不在此**创建角色、配置提示词或绑定工具 |
-| `middleware/` | 智能体生命周期关键点拦截与扩展 |
-| `rag/` | 检索增强；细则见 [`rag/AGENTS.md`](rag/AGENTS.md) |
-| `realtime_vocie/` | 知识库语音会话（Omni + RAG）；细则见 [`realtime_vocie/AGENTS.md`](realtime_vocie/AGENTS.md) |
-| `knowledge_chat/` | 知识库文字会话（DeepSeek Flash + RAG 工具）；细则见 [`knowledge_chat/AGENTS.md`](knowledge_chat/AGENTS.md) |
+| 现有协作 | 角色 | 工作流怎么驾驭 |
+| --- | --- | --- |
+| 设备 SOP | 执行者动手，验收者核对 | 每步新建一对，跨步不继承上下文；验收不通过就在本步内重试 |
+| 用例编写 | 编写者增量写产物，验收者核对事实 | 一条目标流水线跑完；有确定性问题时即使验收通过也不放行 |
+| 单智能体 | 只有执行者 | 一次连接复用一个实例，不调用 SOP，不建第二个角色 |
+| 知识助手 | 语音角色或文字角色 | 两条会话不共享上下文；检索走同一份知识库 |
 
-支持的模型系列（配置层）：DeepSeek、Dashscope。
+新增能力先问「需要哪个角色、进哪条工作流」，再写代码。禁止在 View、workflow 或会话里旁路造模型、写提示词、绑工具。
 
-## 创建 Agent 统一流程（必读）
+## 编排怎么实现
 
-后续新增 LLM / 语音 Agent **必须**按此装配，禁止在 View / workflow 旁路硬编码。
+编排不是 workflow 里再写一套角色。它是一条单向链：config 提供数据，model 变成实例，agent 变成可运行角色，workflow 只消费这个角色。
 
-三节点边界（OpenSpec `simplify-basic-agent-role-create` / `agent-basic-role-create`）：
+```text
+config/data
+  │  models.yaml + agent_config.yaml + prompts/
+  ▼
+config.py                      只读文件，密钥加密成 SecretKey
+  │  两张表
+  ├─ model_view                只看规格，不造实例
+  ▼
+models.create_model            按 family 造 chat / realtime / embedding / tts
+  │  模型实例，不带角色
+  ▼
+assistant                      create_chat_agent / create_voice_agent，只创建不使用
+  │  未传中间件时，聊天角色挂 middleware：事件、交卷、重试
+  ▼
+agent_builders.build_*         读表、解析提示词、按模块装工具，然后转调聊天出口
+  │  每次返回新的 Agent
+  ▼
+workflow                       只拿工厂或已装配角色，决定顺序、重试和完成条件
+```
 
-1. **N1 ModelConfig**：YAML 数据 → `engines.agents.models` 门面 → **仅把 `ChatModelBase` 交给 Agent**；`Agent` MUST NOT 接收/持有 `ModelConfig`，包外 MUST NOT 直接构造模型实例。
-2. **N2 Harness 1:1**：`RoleConfig`=name+system_prompt；`ToolsConfig`=toolkit（**skills 延后**）；`ContextConfig`；`ReActConfig`。类型定义在 `config/role_types.py`（非长期公共 API；`agent_builders` 过渡期再导出）。
-3. **N3 Agent vs workflow**：Agent 只提供已装配角色；workflow 编排消费 `build_*`；**本期不清理** workflow `tool_*` 旁路。
+四层各做一件事：
 
-步骤：
+| 层 | 做 | 不做 |
+| --- | --- | --- |
+| config | 读表、读正文、加密密钥、提供只读规格 | 不造模型，不选这次用谁 |
+| model | 按短名和 family 造实例 | 不读文件，不做缓存，不挂工具 |
+| agent | 把模型、提示词、工具、中间件装成角色 | 不跑 SOP，不决定步骤顺序 |
+| workflow | 选择角色、安排协作、判定完成 | 不读配置，不造模型，不绑工具 |
 
-1. **模型配置**  
-   - 在 `config/data/agent_config.yaml` 增加角色节（`ModelConfig` + 下方四分段）；**数据只在 config/data**。  
-   - 运行时经 `engines.agents.models` 包入口取模型（`get_chat_model(角色键)` / `get_realtime_model(...)`）；密钥只存环境变量名，连接参数与工厂都在 `models/`。
+workflow 编排角色的方式只有两种，都不再往回碰 config 和 model：
 
-2. **系统提示词**  
-   - 正文写入 `config/data/prompts/<TOKEN>.md`。  
-   - YAML `RoleConfig.system_prompt` 写 token；运行时由 `role_sys_prompts.resolve_system_prompt` 解析。  
-   - 模块常量 / 类加载器只经 `role_sys_prompts.py` 导出。
+1. **要工厂，不拿长生命周期实例。** 设备 SOP 收到 `build_executor` 和 `build_verifier`。每一步调用一次工厂，得到一对新实例；这一步的上下文不带进下一步。验收不通过时，本步复用这对实例重试，次数由工作流控制。
+2. **要一次运行的已装配角色。** 用例编写先由 `assistant/case_roles.py` 把编写者和验收者装好并挂上产物工具，再交给目标流水线。编写者在这一次运行内保留上下文，验收者按流水线重置。单智能体和知识会话同样只复用本次连接里的一个角色。
 
-3. **角色四分段（`config/role_types.py`）**  
-   - `RoleConfig`（name + system_prompt）  
-   - `ToolsConfig`（toolkit；空节 `Toolkit()`，设备工具由 `tools_config` 注入；skills DEFERRED）  
-   - `ContextConfig` / `ReActConfig`（可空，用默认）
-
-4. **创建运行实例**  
-   - **LLM**：`AgentRoleFactory(model, role, tools, context, react).create()` → `agentscope.agent.Agent`（`model` 由 `engines.agents.models` 门面提供，Agent 内部只持有实例）；对外暴露 `build_*() -> Agent`（每次新实例）。实现落点：`agent_builders.py`。  
-   - **Voice（Omni）**：`realtime_vocie_agent.build_realtime_vocie_agent()`；会话路径走 `realtime_vocie/`（含 RAG 工具注入）。
-   - **Text（知识库文字问答）**：`agent_builders.build_knowledge_chat()`；会话路径走 `knowledge_chat/`（DeepSeek Flash + 同一 RAG 工具，不装 TTS）。
-
-5. **工具与技能**  
-   - 工具实现：`tools/tool_*.py`；分配：`tools_config.build_*_toolkit()`。  
-   - 技能目录：`config/data/skills/`（产品语义本期不扩展 ToolsConfig）。
-
-6. **工作流**  
-   - SOP 只编排调用 `build_*`；禁止在 `workflow/` 内创建模型、旁路提示词或直接 import `tool_*`（旁路清理另列变更）。
-
-## 记忆与上下文（现状落点）
-
-Harness「记忆与上下文」**当前没有独立 `memory/` 包**，落点如下（改行为先读对应模块，勿平行再造一套写库记忆）：
-
-| 关切 | 现状落点 |
-| --- | --- |
-| 角色上下文窗口 / 压缩触发 | `config.role_types.ContextConfig` → AgentScope `ContextConfig` |
-| 过程事件上屏、折叠、结构化记录 | `messaging/`（`messages` / `fold` / `record`） |
-| Token 与费用 | `messaging/billing.py`；语音侧 session 的 `model_usage` |
-| 多轮对话历史（用例/SOP） | 各 `Agent` 运行实例内；**每次 `build_*` 新实例，不跨任务共享** |
-| 语音多轮 | `realtime_vocie/` Omni 会话 |
-| 文字多轮 | `knowledge_chat/` 的 Agent 实例；只在一次连接内，不跨会话 |
-| RAG 知识 | `rag/`：只注入**当轮**上下文（见 `rag/AGENTS.md`） |
+所以「编排 Agent」的含义是：工作流通过 `build_*` 或成对装配拿到角色，再用步骤、验收、重试和完成条件约束它们。换模型改 `models.yaml`，换角色行为改提示词和工具分配，换协作方式只改 workflow。三处不互相抄实现。
 
 ## 红线（禁止）
 
-1. **禁止**跳过本文件与下方「AI 阅读与检查流程」直接改本包架构、目录职责或工具/提示词配置方式。
-2. **工具**：必须放在 `tools/`，文件名 `tool_xxx.py`；**必须**经 `tools_config.py` 分配；**禁止**业务代码直接 `import` 绑工具。
+1. **禁止**跳过本文件直接改本包架构、目录职责或工具/提示词配置方式。
+2. **工具**：必须放在 `tools/`，文件名 `tool_xxx.py`；**必须**经 `tools_config.py` 分配。分配模块不放进 `tools/`。**禁止**业务代码直接 `import` 绑工具。
 3. **提示词**：必须经 `role_sys_prompts.py` + `config/data/prompts/*.md`；禁止旁路硬编码。
-4. **角色**：新建 LLM 角色经 `AgentRoleFactory` + `agent_builders.build_*`；语音经 `realtime_vocie_agent`；**禁止**恢复已删除的 `role/` 包或 `BaseRole` 旁路。
+4. **角色**：新建 LLM 角色经 `assistant.create_chat_agent`（`build_*` 只转调）；语音经 `assistant.create_voice_agent`；**禁止**恢复已删除的 `role/` 包或 `BaseRole` 旁路。
 5. **workflow**：禁止在 `workflow/` 创建角色、配置提示词或绑定工具。
 6. **RAG 路径与密钥**：以 [`rag/AGENTS.md`](rag/AGENTS.md) 为准。
 7. **导入与异常**：遵守上层 engines 红线（不反向依赖 `apps.*` / `django.*`）。
-
-## AI 阅读与检查流程（必读）
-
-1. **任何 engines 任务**：先读 [`engines/AGENTS.md`](../AGENTS.md)。
-2. **改本包架构、目录职责、工具/提示词配置、新建 Agent 时**：再读**本文件**全文；涉及 RAG / 语音时另读对应子目录 AGENTS。
-3. **即将编写或修改 `engines/agents/**` 代码时**：先读 [`.agents/rules/engines-code-style.md`](../../.agents/rules/engines-code-style.md)。
-4. **只做只读分析且不改代码时**：可以不读 style rules。
-5. **需要机械化风格检查时**：使用 [`.agents/skills/engines-agents-style-check/`](../../.agents/skills/engines-agents-style-check/)：
-   ```text
-   cd .agents/skills/engines-agents-style-check
-   python -m scripts.check_engines_agents_style
-   ```
-
-## 相关路径速查
-
-| 用途 | 路径 |
-|------|------|
-| 上层 engines 必读入口 | [`engines/AGENTS.md`](../AGENTS.md) |
-| 规范原文（风格） | [`.agents/rules/engines-code-style.md`](../../.agents/rules/engines-code-style.md) |
-| 风格检查技能 | [`.agents/skills/engines-agents-style-check/`](../../.agents/skills/engines-agents-style-check/) |
-| RAG 子约束 | [`rag/AGENTS.md`](rag/AGENTS.md) |
-| 语音子约束 | [`realtime_vocie/AGENTS.md`](realtime_vocie/AGENTS.md) |
-| 提示词配置入口 | `role_sys_prompts.py` |
-| 创建 Agent 清单 | [`../../dev_docs/ARCH_PRD/GUIDE-创建Agent清单.md`](../../dev_docs/ARCH_PRD/GUIDE-创建Agent清单.md) |
-| OpenSpec Harness | [`../../openspec/specs/agent-harness/spec.md`](../../openspec/specs/agent-harness/spec.md) |
-| 工具分配入口 | `tools_config.py` |

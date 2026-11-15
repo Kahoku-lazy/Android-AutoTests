@@ -11,6 +11,7 @@ Python 调试：➡️ python -m engines.agents.rag.store 🏁
 简介说明：➡️
 1. SQLiteVectorStore: AgentScope VectorStoreBase 的本地 SQLite 实现。
 2. 支持 create/delete/has_collection、insert/delete、search/list_documents。
+3. 提供空的异步上下文，调用方统一用 async with 管理生命周期。
 🏁
 关联模块：➡️
 1. 暂无本地 engines/utils 依赖
@@ -57,6 +58,13 @@ class SQLiteVectorStore(VectorStoreBase):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
+
+    async def __aenter__(self) -> "SQLiteVectorStore":
+        """进入异步上下文；SQLite 按次连接，这里不保留长连接。"""
+        return self
+
+    async def __aexit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
+        """退出异步上下文；没有需要关闭的长连接。"""
 
     def _connect(self) -> sqlite3.Connection:
         """打开数据库连接。"""

@@ -1,7 +1,7 @@
 """
 文件名: ➡️ indexer.py 🏁
 路径: ➡️ engines/agents/rag/indexer.py 🏁
-模块功能：➡️ 索引构建：扫描资料、切块写入知识库，并按 mtime/大小/切块版本增量重建 🏁
+模块功能：➡️ 单库索引：扫描一个资料目录并按变化增量重建 🏁
 Python 调试：➡️ python -m engines.agents.rag.indexer 🏁
 时间：➡️ 2026-10-29 🏁
 作者：➡️ kahoku 🏁
@@ -9,7 +9,7 @@ Python 调试：➡️ python -m engines.agents.rag.indexer 🏁
 修改时间: ➡️ 2026-10-30 🏁
 类型: ➡️ Harness 配置模块 🏁
 简介说明：➡️
-1. RagIndexer: 扫描 rag_data 的 .md/.txt，解析、切块并写入 KnowledgeBase。
+1. RagIndexer: 扫描一个知识库的 .md/.txt，解析、切块并写入 KnowledgeBase。
 2. 按文件 mtime/size/切块策略版本做增量重建；未变化文件不重复嵌入。
 🏁
 关联模块：➡️
@@ -27,6 +27,7 @@ import json
 
 from agentscope.rag import KnowledgeBase, TextParser
 
+from .catalog import KnowledgeBaseSpec
 from .chunker import CHUNKER_VERSION, MarkdownHeadingChunker
 from .config import RagConfig
 
@@ -36,21 +37,29 @@ class RagIndexer:
     本地 RAG 索引器。
 
     Attributes:
-        config: RAG 配置。
+        config: 检索参数。
+        base: 当前索引的知识库。
         knowledge_base: AgentScope KnowledgeBase。
     """
 
-    def __init__(self, config: RagConfig, knowledge_base: KnowledgeBase) -> None:
+    def __init__(
+        self,
+        config: RagConfig,
+        base: KnowledgeBaseSpec,
+        knowledge_base: KnowledgeBase,
+    ) -> None:
         """
-        初始化索引器。
+        初始化一个库的索引器。
 
         Args:
-            config: RAG 配置。
-            knowledge_base: 已绑定嵌入模型与向量库的知识库句柄。
+            config: 检索参数。
+            base: 当前索引的知识库。
+            knowledge_base: 已绑定嵌入模型、向量库和该库 collection 的句柄。
         """
         self.config = config
+        self.base = base
         self.knowledge_base = knowledge_base
-        self._state_path = config.index_dir / "index_state.json"
+        self._state_path = config.index_dir / "collections" / base.name / "index_state.json"
         self._parser = TextParser()
         self._chunker = MarkdownHeadingChunker(
             parameters=MarkdownHeadingChunker.Parameters(
@@ -69,8 +78,8 @@ class RagIndexer:
         Raises:
             RuntimeError: 数据目录不存在。
         """
-        if not self.config.data_dir.exists():
-            raise RuntimeError(f"RAG 数据目录不存在：{self.config.data_dir}")
+        if not self.base.data_dir.exists():
+            raise RuntimeError(f"知识库资料目录不存在：{self.base.name}: {self.base.data_dir}")
         self.config.index_dir.mkdir(parents=True, exist_ok=True)
         state = self._load_state()
         documents = {
@@ -80,18 +89,18 @@ class RagIndexer:
         current: dict[str, list[int | str]] = {}
         reindexed = 0
 
-        for path in sorted(self.config.data_dir.rglob("*")):
+        for path in sorted(self.base.data_dir.rglob("*")):
             if not path.is_file() or path.suffix.lower() not in (".md", ".txt"):
                 continue
-            relative = path.relative_to(self.config.data_dir).as_posix()
+            relative = path.relative_to(self.base.data_dir).as_posix()
             signature = [
-                path.stat().st_mtime_ns,
-                path.stat().st_size,
+                int(path.stat().st_mtime_ns),
+                int(path.stat().st_size),
                 CHUNKER_VERSION,
             ]
             current[relative] = signature
             document_id = _document_id(relative)
-            if state.get(relative) == signature and document_id in documents:
+            if list(state.get(relative, [])) == signature and document_id in documents:
                 continue
             if document_id in documents:
                 await self.knowledge_base.delete_document(document_id)
@@ -112,6 +121,7 @@ class RagIndexer:
             await self.knowledge_base.delete_document(_document_id(relative))
             state.pop(relative, None)
 
+        self._state_path.parent.mkdir(parents=True, exist_ok=True)
         self._write_state(state)
         return reindexed
 

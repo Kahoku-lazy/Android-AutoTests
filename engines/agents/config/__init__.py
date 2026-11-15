@@ -1,7 +1,7 @@
 """
 文件名: ➡️ __init__.py 🏁
 路径: ➡️ engines/agents/config/__init__.py 🏁
-模块功能：➡️ Agent 配置：agent_config 角色四分段装载（模型代码在 engines.agents.models） 🏁
+模块功能：➡️ Agent 配置：角色四分段装载与模型规格只读视图 🏁
 Python 调试：➡️ python -m engines.agents.config 🏁
 时间：➡️ 2026-10-30 🏁
 作者：➡️ kahoku 🏁

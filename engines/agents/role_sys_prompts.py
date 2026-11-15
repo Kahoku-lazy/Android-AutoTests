@@ -19,7 +19,7 @@ Python 调试：➡️ python -m engines.agents.role_sys_prompts 🏁
 8. build_system_prompt: 兼容 realtime_vocie.knowledge：返回语音助手系统提示词
 🏁
 关联模块：➡️
-1. 暂无本地 engines/utils 依赖
+1. engines.agents.config.config: 导入 load_prompt_text / load_app_info_text，正文只经配置读取口打开
 🏁
 测试：➡️
 1. tests/graybox/unit/test_case_authoring_prompts.py: 家电测试用例编写/验收提示词的纪律断言
@@ -33,8 +33,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Final
 
+from engines.agents.config.config import load_app_info_text, load_prompt_text
+
 _PROMPTS_DIR: Final[Path] = Path(__file__).resolve().parent / "config" / "data" / "prompts"
-_APP_INFO_DIR: Final[Path] = Path(__file__).resolve().parent / "config" / "data" / "app_info"
 
 
 def load_prompt_md(token: str) -> str:
@@ -55,15 +56,23 @@ def load_prompt_md(token: str) -> str:
     text = token.strip()
     if "/" in text or "\\" in text or "\n" in text:
         raise ValueError(f"prompt token 非法: {text!r}")
-    name = text if text.endswith(".md") else f"{text}.md"
-    path = _PROMPTS_DIR / name
-    if not path.is_file():
-        raise FileNotFoundError(f"未找到提示词文件: {path}")
-    return path.read_text(encoding="utf-8")
+    return load_prompt_text(text)
 
 
 def resolve_system_prompt(raw: object, *, where: str = "system_prompt") -> str:
-    """解析 RoleConfig.system_prompt：多行正文原样；短 token 读 md。"""
+    """解析 RoleConfig.system_prompt：多行正文原样；短 token 读 md。
+
+    Args:
+        raw: YAML 里的提示词字段。
+        where: 报错时点名的配置位置。
+
+    Returns:
+        可直接交给角色的提示词正文。
+
+    Raises:
+        ValueError: 字段缺失或为空。
+        FileNotFoundError: token 对应的提示词文件不存在。
+    """
     if not isinstance(raw, str) or not raw.strip():
         raise ValueError(f"{where} 缺失或为空")
     if "\n" in raw:
@@ -74,10 +83,7 @@ def resolve_system_prompt(raw: object, *, where: str = "system_prompt") -> str:
     try:
         return load_prompt_md(text)
     except FileNotFoundError as exc:
-        expected = _PROMPTS_DIR / (text if text.endswith(".md") else f"{text}.md")
-        raise FileNotFoundError(
-            f"{where}={text!r} 未找到提示词文件，期望路径: {expected}",
-        ) from exc
+        raise FileNotFoundError(f"{where}={text!r} 未找到提示词文件") from exc
 
 
 def load_app_info_md(token: str) -> str:
@@ -98,11 +104,7 @@ def load_app_info_md(token: str) -> str:
     text = token.strip()
     if "/" in text or "\\" in text or "\n" in text:
         raise ValueError(f"app_info token 非法: {text!r}")
-    name = text if text.endswith(".md") else f"{text}.md"
-    path = _APP_INFO_DIR / name
-    if not path.is_file():
-        raise FileNotFoundError(f"未找到应用短卡文件: {path}")
-    return path.read_text(encoding="utf-8")
+    return load_app_info_text(text)
 
 
 def with_app_info(system_prompt: str, app_info_token: object | None) -> str:
@@ -205,7 +207,7 @@ VERIFIER_PROMPT = UiControlPrompts.verifier()
 
 
 # ── DeepSeek 模型目录（正式模型名 → 是否支持图片输入）──
-# 已迁至 engines.agents.models.catalog：提示词模块只负责提示词，不再持有模型元数据。
+# 模型规格在 engines.agents.config.model_view：提示词模块只负责提示词。
 
 
 __all__ = [

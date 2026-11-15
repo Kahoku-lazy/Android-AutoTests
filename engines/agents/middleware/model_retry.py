@@ -38,7 +38,7 @@ from agentscope.model import ChatModelBase
 
 from utils.logs import agent_event_log
 
-from ..event_sink import emit_record
+from ..messaging.event_sink import emit_record
 from ..messaging.record import EventRecord
 
 # 值得重试的 HTTP 状态：限流、超时、服务端临时故障。
@@ -191,7 +191,7 @@ class RetrySettings:
     """
     重试的运行参数，全部来自环境变量。
 
-    备用模型的连接参数不在这里：由 `engines.agents.models` 造好实例后传进来，
+    备用模型的连接参数不在这里：调用方传入已建好的实例；未传入则不回退。
     本模块只管「重试几次、等多久」。
 
     Attributes:

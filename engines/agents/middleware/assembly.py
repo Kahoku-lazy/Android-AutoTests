@@ -1,7 +1,7 @@
 """
 文件名: ➡️ assembly.py 🏁
 路径: ➡️ engines/agents/middleware/assembly.py 🏁
-模块功能：➡️ 按固定顺序装配中间件：最外层在前 🏁
+模块功能：➡️ 聊天助手默认中间件：事件流在外，模型重试在内 🏁
 Python 调试：➡️ python -m engines.agents.middleware.assembly 🏁
 时间：➡️ 2026-10-28 🏁
 作者：➡️ kahoku 🏁
@@ -9,14 +9,17 @@ Python 调试：➡️ python -m engines.agents.middleware.assembly 🏁
 修改时间: ➡️ 2026-10-30 🏁
 类型: ➡️ Harness 配置模块 🏁
 简介说明：➡️
-1. build_agent_middlewares: 按固定顺序装配全部中间件，单项失败只跳过该项。
-2. 单步收敛只由 ReAct 轮次上限决定，装配链里不含任何按 token 量禁工具的护栏。
+1. build_agent_middlewares: 默认装配事件流、交卷关思考与模型重试。
+2. 不装配链路追踪、语音合成、长期记忆，也不按 token 量禁工具。
 🏁
 关联模块：➡️
-1. utils.logs: 导入 agent_event_log
+1. engines.agents.middleware.reply_events: 导入 ReplyEventsMiddleware
+2. engines.agents.middleware.handover: 导入 ForcedHandoverMiddleware
+3. engines.agents.middleware.model_retry: 导入重试装配
+4. utils.logs: 导入 agent_event_log
 🏁
 测试：➡️
-1. 暂无专门单测
+1. tests/engines/agents/unit/test_agent_middleware_assembly.py: 默认只剩事件流与重试
 🏁
 """
 
@@ -29,11 +32,9 @@ from agentscope.model import ChatModelBase
 
 from utils.logs import agent_event_log
 
-from .memory import build_memory_middleware
+from .handover import ForcedHandoverMiddleware
 from .model_retry import build_model_retry_middleware, load_retry_settings
-from .rag_context import build_rag_middleware
-from .tracing import build_tracing_middleware
-from .tts import build_tts_middleware
+from .reply_events import ReplyEventsMiddleware
 
 
 def _safe(builder: Callable[[], object], name: str) -> object | None:
@@ -56,39 +57,29 @@ def _safe(builder: Callable[[], object], name: str) -> object | None:
 def build_agent_middlewares(
     *,
     fallback_model: ChatModelBase | None = None,
-    with_rag: bool = False,
-    with_tts: bool = True,
     extra: Sequence[MiddlewareBase] = (),
+    with_events: bool = True,
 ) -> list[MiddlewareBase]:
-    """按固定顺序装配中间件：最外层在前。
+    """按固定顺序装配中间件：事件流在外，模型重试在内。
 
-    顺序：链路追踪 → RAG 上下文 → 语音合成 → 长期记忆入口 → 模型重试。
-    追踪放最外，才能把整次回复（含收尾）算进同一棵 span；重试放最内，才能只重发
-    那一次模型调用、不重放已产出的事件。
+    事件流只给没有外层记录的聊天助手。SOP 自己折叠事件，传入
+    `with_events=False`，避免同一条事件写两遍。
 
-    单步收敛只由 ReAct 轮次上限决定（执行者 `max_iters=60`，另有 5 轮结构化
-    输出宽限）。这里 MUST NOT 再装配按 token 量把 `tool_choice` 改成 `none` 的
-    护栏：它与 SOP「必须用 GenerateStructuredOutput 交卷」互斥，会让模型把工具
-    调用写进正文并空转到轮次上限（见变更 executor-budget-and-handover-simplify）。
-
-    RAG 默认不装配：`data/rag_index` 是产品资料，只有知识类／语音类角色才该带上，
-    设备控制角色拿到这些片段只会被带偏。调用方要显式传 `with_rag=True`。
+    不装配链路追踪、语音合成和长期记忆。单步收敛只由 ReAct 轮次上限决定，
+    这里 MUST NOT 再按 token 量把 `tool_choice` 改成 `none`。
 
     Args:
         fallback_model: 备用模型；None 表示模型重试不启用回退。
-        with_rag: 该角色是否属于知识类／语音类（决定是否尝试装配 RAG）。
-        with_tts: 是否允许按全局开关装配语音中间件；语音链路自带 TTS 时传 False。
-        extra: 调用方自带的中间件，排在语音之后、重试之前。
+        extra: 调用方自带的中间件，排在事件流之后、重试之前。
+        with_events: 是否挂回复事件流。SOP 传 False。
 
     Returns:
-        交给 `Agent(middlewares=...)` 的列表，未开启的能力不出现。
+        交给 `Agent(middlewares=...)` 的列表。重试未开启时不出现。
     """
     middlewares = [
-        _safe(build_tracing_middleware, "链路追踪"),
-        _safe(build_rag_middleware, "RAG 上下文") if with_rag else None,
-        _safe(build_tts_middleware, "语音合成") if with_tts else None,
-        _safe(build_memory_middleware, "长期记忆"),
+        ReplyEventsMiddleware() if with_events else None,
         *extra,
+        ForcedHandoverMiddleware(),
         _safe(
             lambda: build_model_retry_middleware(
                 load_retry_settings(),

@@ -12,7 +12,8 @@ Python 调试：➡️ python -m engines.agents.messaging.billing 🏁
 1. DeepSeekBilling: 只计算 deepseek-flash 与 deepseek-v4-pro 的费用。
 🏁
 关联模块：➡️
-1. engines.agents.models: 导入 DeepSeekModelConfig，取计费档名
+1. engines.agents.config.config: 导入 load_model_config，读已装载模型表
+2. engines.agents.config.model_view: 导入 model_view，取 Flash / Pro 正式模型名
 🏁
 测试：➡️
 1. tests/engines/agents/test_billing_eight_decimals.py: DeepSeek 费用保留小数点后 8 位
@@ -27,14 +28,15 @@ from zoneinfo import ZoneInfo
 
 import chinese_calendar
 
-from engines.agents.models import DeepSeekModelConfig
+from engines.agents.config.config import load_model_config
+from engines.agents.config.model_view import model_view
 
 _SHANGHAI = ZoneInfo("Asia/Shanghai")
 _MILLION = Decimal(1_000_000)
 _PEAK_MULTIPLIER = Decimal(2)
 
-_FLASH = DeepSeekModelConfig.FLASH
-_PRO = DeepSeekModelConfig.PRO
+_FLASH = model_view(load_model_config(), "deepseek_flash").model_name
+_PRO = model_view(load_model_config(), "deepseek_pro").model_name
 
 # 官方价目页注 1：旧名仍被接受，但模型已下线，请求由 Flash-1017 提供并按 Flash 价计费。
 _MODEL_ALIASES = {
@@ -88,7 +90,7 @@ class DeepSeekBilling:
         按与用量相同的三项，返回费用（元，各保留小数点后 8 位、四舍五入）。
 
         Args:
-            model_name: 模型名。取 `DeepSeekModelConfig.FLASH` 或 `PRO`；
+            model_name: 模型名。取模型表里 deepseek_flash / deepseek_pro 的正式名；
                 官方旧名按 Flash 价计费；未登记模型三项为 0。
             input_tokens: 输入 token。
             output_tokens: 输出 token。

@@ -22,7 +22,6 @@ Python 调试：➡️ python -m engines.agents.realtime_vocie 🏁
 from .config import (
     RealtimeVoiceConfig,
     build_runtime_status,
-    create_realtime_model,
     load_config,
 )
 from .events import TranscriptBridge, VoiceLogSink
@@ -35,7 +34,6 @@ __all__ = [
     "VoiceLogSink",
     "WebSocketAudioTransport",
     "build_runtime_status",
-    "create_realtime_model",
     "load_config",
 ]
 

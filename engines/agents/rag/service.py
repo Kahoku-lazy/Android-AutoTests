@@ -1,24 +1,26 @@
 """
 文件名: ➡️ service.py 🏁
 路径: ➡️ engines/agents/rag/service.py 🏁
-模块功能：➡️ 检索服务：懒建索引、检索并把命中片段格式化成注入上下文 🏁
+模块功能：➡️ 按库懒建索引，并返回未经聊天模型改写的检索命中 🏁
 Python 调试：➡️ python -m engines.agents.rag.service 🏁
 时间：➡️ 2026-10-28 🏁
 作者：➡️ kahoku 🏁
-版本：➡️ 1.0.0 🏁
-修改时间: ➡️ 2026-10-30 🏁
+版本：➡️ 1.1.0 🏁
+修改时间: ➡️ 2026-11-11 🏁
 类型: ➡️ Harness 配置模块 🏁
 简介说明：➡️
-1. RagService: 懒加载索引、检索、把命中片段格式化为 LLM 上下文。
-2. format_context(): 控制注入上下文的来源、相关度与长度。
+1. KnowledgeBaseService: 按库名索引、检索并保留每个库的错误原因。
+2. KnowledgeHit: 一条未经改写的检索命中。
+3. RagService: 过渡别名，新增调用应使用 KnowledgeBaseService。
 🏁
 关联模块：➡️
-1. engines.agents.models: 导入 get_embedding_model，取嵌入模型实例
-2. utils.logs: 导入 agent_event_log
+1. engines.agents.config.config: 导入 load_model_config，读已注入密钥的模型表
+2. engines.agents.models: 导入 create_model，按短名造嵌入模型
+3. utils.logs: 导入 agent_event_log
 🏁
 测试：➡️
-1. tests/graybox/unit/test_agent_middleware_assembly.py: 中间件装配：默认集合、顺序、各能力开关与单项失败隔离
-2. tests/graybox/unit/test_rag_store.py: RAG 本地向量库与上下文格式化单测：不联网、不依赖 rag_data
+1. tests/engines/agents/unit/test_rag_retrieve.py: 按库检索、禁用库和失败重试
+2. tests/engines/agents/unit/test_rag_store.py: 本地向量库单测
 🏁
 """
 
@@ -28,21 +30,37 @@ import asyncio
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
+from agentscope.embedding import EmbeddingResponse
 from agentscope.rag import KnowledgeBase
 
-from engines.agents.models import get_embedding_model
+from engines.agents.config.config import load_model_config
+from engines.agents.models import create_model
 from utils.logs import agent_event_log
 
+from .catalog import KnowledgeBaseSpec, load_knowledge_catalog
 from .config import RagConfig, load_rag_config
 from .indexer import RagIndexer
 from .store import SQLiteVectorStore
 
 
 @dataclass(frozen=True)
-class RagHit:
-    """一条检索命中。"""
+class KnowledgeHit:
+    """
+    一条未经改写的检索命中。
 
+    Attributes:
+        base: 实际检索的库名。
+        source: 来源文件。
+        text: 片段正文。
+        score: 余弦相似度。
+        chunk_index: 文件内片段序号。
+        document_id: 稳定文档编号。
+    """
+
+    base: str
     source: str
     text: str
     score: float
@@ -50,139 +68,177 @@ class RagHit:
     document_id: str
 
 
-class RagService:
+class KnowledgeBaseService:
     """
-    语音 LLM 的 RAG 服务。
+    按库名提供索引和检索。
 
     Attributes:
-        config: RAG 配置。
-        enabled: 是否启用。
-        error: 最近一次索引/检索失败原因；空字符串表示正常。
+        config: 检索参数。
+        enabled: 嵌入检索条件是否具备。
     """
 
     def __init__(
         self,
         config: RagConfig,
+        catalog: tuple[KnowledgeBaseSpec, ...],
         usage_sink: Callable[[int], None] | None = None,
     ) -> None:
         """
-        初始化 RAG 服务；不立即建索引。
+        初始化服务；不立即建索引。
 
         Args:
-            config: RAG 配置。
-            usage_sink: 嵌入 token 用量回调；用于写入用量账本。
+            config: 检索参数。
+            catalog: 已校验的知识库目录。
+            usage_sink: 嵌入 token 用量回调。
         """
         self.config = config
         self.enabled = config.enabled
-        self.error = ""
+        self._catalog = {spec.name: spec for spec in catalog}
         self._usage_sink = usage_sink
-        self._knowledge_base: KnowledgeBase | None = None
-        self._indexer: RagIndexer | None = None
         self._lock = asyncio.Lock()
-        self._ready = False
-        self._failed = False
-        self._indexed_count = 0
+        self._ready: set[str] = set()
+        self._errors: dict[str, str] = {}
+        self._indexed_counts: dict[str, int] = {}
 
     @classmethod
     def from_env(
         cls,
         environ: Mapping[str, str] | None = None,
+        *,
+        catalog_path: str | Path | None = None,
         usage_sink: Callable[[int], None] | None = None,
-    ) -> "RagService":
+    ) -> "KnowledgeBaseService":
         """
-        从环境变量创建服务。
+        从环境变量和知识库目录创建服务。
 
         Args:
-            environ: 测试注入的配置映射。
+            environ: 测试注入的检索参数。
+            catalog_path: 测试注入的库表路径。
             usage_sink: 嵌入 token 用量回调。
 
         Returns:
-            RagService 实例。
-        """
-        return cls(load_rag_config(environ), usage_sink=usage_sink)
+            未建索引的服务。
 
-    @property
-    def indexed_count(self) -> int:
-        """本次运行最近一次重建的文件数。"""
-        return self._indexed_count
-
-    async def ensure_index(self) -> int:
+        Raises:
+            ValueError: 知识库目录不合法。
         """
-        懒加载并增量更新索引。
+        return cls(
+            load_rag_config(environ),
+            load_knowledge_catalog(catalog_path),
+            usage_sink=usage_sink,
+        )
+
+    def bases(self) -> tuple[str, ...]:
+        """
+        返回目录中的库名。
 
         Returns:
-            本次重建的文件数；未启用/失败时返回 0。
+            按目录顺序排列的库名。
         """
-        if not self.enabled:
-            return 0
-        async with self._lock:
-            if self._ready:
-                return self._indexed_count
-            if self._failed:
-                return 0
-            try:
-                embedding = get_embedding_model(
-                    self.config.api_key,
-                    model_name=self.config.embedding_model,
-                    dimensions=self.config.embedding_dimensions,
-                    usage_sink=self._usage_sink,
-                )
-                store = SQLiteVectorStore(
-                    self.config.index_dir / "rag.sqlite3",
-                )
-                knowledge_base = KnowledgeBase(
-                    name="voice_knowledge",
-                    description="语音助手本地产品资料",
-                    embedding_model=embedding,
-                    vector_store=store,
-                    collection=self.config.collection,
-                )
-                indexer = RagIndexer(self.config, knowledge_base)
-                self._indexed_count = await indexer.ensure_index()
-                self._knowledge_base = knowledge_base
-                self._indexer = indexer
-                self._ready = True
-            except Exception as exc:  # noqa: BLE001
-                self._failed = True
-                self.error = str(exc)
-                agent_event_log.exception("RAG 索引失败: %s", exc)
-            return self._indexed_count
+        return tuple(self._catalog)
 
-    async def search(
-        self,
-        query: str,
-        top_k: int | None = None,
-    ) -> list[RagHit]:
+    def error(self, base: str) -> str:
         """
-        检索相关资料。
+        返回一个库最近的可读错误。
 
         Args:
-            query: 用户问题。
-            top_k: 覆盖配置的返回条数。
+            base: 库名。
 
         Returns:
-            按相关度降序的命中；未启用/失败/无命中返回空列表。
+            错误原因；没有错误时为空字符串。
+        """
+        return self._errors.get(base, "")
+
+    def indexed_count(self, base: str) -> int:
+        """
+        返回一个库最近一次重建的文件数。
+
+        Args:
+            base: 库名。
+
+        Returns:
+            重建文件数；尚未索引时为 0。
+        """
+        return self._indexed_counts.get(base, 0)
+
+    async def ensure_index(self, base: str) -> int:
+        """
+        懒加载并增量更新一个库。
+
+        Args:
+            base: 库名。
+
+        Returns:
+            本次重建文件数；库不可用时返回 0。
+        """
+        spec = self._catalog.get(base)
+        if spec is None:
+            self._errors[base] = f"知识库不存在：{base}"
+            return 0
+        if not spec.enabled:
+            self._errors[base] = f"知识库已禁用：{base}"
+            return 0
+        if not self.enabled:
+            self._errors[base] = "嵌入检索未启用"
+            return 0
+        async with self._lock:
+            if base in self._ready:
+                return self._indexed_counts.get(base, 0)
+            self._errors.pop(base, None)
+            try:
+                async with self._store() as store:
+                    knowledge = self._knowledge(spec, store)
+                    count = await RagIndexer(self.config, spec, knowledge).ensure_index()
+            except Exception as exc:  # noqa: BLE001
+                self._errors[base] = str(exc)
+                agent_event_log.exception("知识库 %s 索引失败: %s", base, exc)
+                return 0
+            self._indexed_counts[base] = count
+            self._ready.add(base)
+            return count
+
+    async def retrieve(
+        self,
+        base: str,
+        query: str,
+        top_k: int | None = None,
+    ) -> list[KnowledgeHit]:
+        """
+        检索一个指定库。
+
+        Args:
+            base: 库名。
+            query: 检索问题。
+            top_k: 覆盖默认返回条数。
+
+        Returns:
+            按相似度降序的原始命中；不可用或无命中时返回空列表。
         """
         query = query.strip()
-        if not query or not self.enabled:
+        if not query:
+            self._errors[base] = "检索问题不能为空"
             return []
-        await self.ensure_index()
-        if self._knowledge_base is None or self.error:
+        await self.ensure_index(base)
+        if self.error(base):
             return []
+        spec = self._catalog[base]
         try:
-            results = await self._knowledge_base.search(
-                [query],
-                top_k=top_k or self.config.top_k,
-                score_threshold=self.config.score_threshold,
-            )
+            async with self._store() as store:
+                results = await self._knowledge(spec, store).search(
+                    [query],
+                    top_k=top_k or self.config.top_k,
+                    score_threshold=self.config.score_threshold,
+                )
         except Exception as exc:  # noqa: BLE001
-            self.error = str(exc)
-            agent_event_log.exception("RAG 检索失败: %s", exc)
+            self._ready.discard(base)
+            self._errors[base] = str(exc)
+            agent_event_log.exception("知识库 %s 检索失败: %s", base, exc)
             return []
-        return [
-            RagHit(
+        hits = [
+            KnowledgeHit(
+                base=base,
                 source=result.chunk.source,
-                text=result.chunk.content.text if hasattr(result.chunk.content, "text") else "",
+                text=getattr(result.chunk.content, "text", ""),
                 score=float(result.score),
                 chunk_index=int(result.chunk.chunk_index),
                 document_id=result.document_id,
@@ -190,56 +246,92 @@ class RagService:
             for result in results
             if getattr(result.chunk.content, "text", "")
         ]
+        return _truncate_hits(hits, self.config.max_context_chars)
 
-    async def build_context(self, query: str) -> str:
-        """
-        检索并格式化为可注入 LLM 的上下文。
+    def _store(self) -> SQLiteVectorStore:
+        """打开本地向量库。"""
+        return SQLiteVectorStore(self.config.index_dir / "rag.sqlite3")
+
+    def _knowledge(self, spec: KnowledgeBaseSpec, store: SQLiteVectorStore) -> KnowledgeBase:
+        """绑定一个库自己的 collection。"""
+        return KnowledgeBase(
+            name=spec.name,
+            description=spec.description,
+            embedding_model=_UsageEmbedding(
+                create_model(load_model_config(), "text_embedding_v4"),
+                self._usage_sink,
+            ),
+            vector_store=store,
+            collection=spec.name,
+        )
+
+
+class _UsageEmbedding:
+    """在已建好的嵌入模型外包一层用量记录，不把回调传进创建出口。"""
+
+    def __init__(self, model: Any, usage_sink: Callable[[int], None] | None) -> None:
+        """保存模型和回调。
 
         Args:
-            query: 用户问题。
+            model: create_model 返回的嵌入模型。
+            usage_sink: 嵌入 token 用量回调；None 表示不记录。
+        """
+        self._model = model
+        self._usage_sink = usage_sink
+
+    def __getattr__(self, name: str) -> Any:
+        """其余属性转给底层模型。
+
+        Args:
+            name: 属性名。
 
         Returns:
-            命中时返回带来源/相关度的上下文；否则空字符串。
+            底层模型的同名属性。
         """
-        hits = await self.search(query)
-        return format_context(hits, self.config.max_context_chars)
+        return getattr(self._model, name)
+
+    async def __call__(self, *args: Any, **kwargs: Any) -> EmbeddingResponse:
+        """调用嵌入模型，成功后上报 token；上报失败不打断检索。
+
+        Args:
+            *args: 传给底层模型。
+            **kwargs: 传给底层模型。
+
+        Returns:
+            底层模型的嵌入响应。
+        """
+        response = await self._model(*args, **kwargs)
+        tokens = getattr(getattr(response, "usage", None), "tokens", None)
+        if tokens and self._usage_sink is not None:
+            try:
+                self._usage_sink(int(tokens))
+            except Exception:  # noqa: BLE001
+                agent_event_log.exception("嵌入用量回调失败")
+        return response
 
 
-def format_context(hits: list[RagHit], max_chars: int) -> str:
-    """
-    把检索命中格式化为 LLM 上下文。
-
-    Args:
-        hits: 检索命中。
-        max_chars: 上下文最大字符数。
-
-    Returns:
-        以「【检索资料】」开头的上下文；无命中返回空字符串。
-    """
-    if not hits:
-        return ""
-    lines = [
-        "【检索资料】请优先依据以下资料回答；资料没有覆盖的内容不要编造。",
-    ]
-    used = len(lines[0])
-    for index, hit in enumerate(hits, start=1):
+def _truncate_hits(hits: list[KnowledgeHit], max_chars: int) -> list[KnowledgeHit]:
+    """按单条正文截断，不把多条命中拼成提示词。"""
+    truncated: list[KnowledgeHit] = []
+    for hit in hits:
         text = hit.text.strip()
         if not text:
             continue
-        block = (
-            f"[{index}] 来源：{hit.source}"
-            f"（片段 {hit.chunk_index}，相关度 {hit.score:.2f}）\n{text}"
+        if len(text) > max_chars:
+            text = text[:max_chars]
+        truncated.append(
+            KnowledgeHit(
+                hit.base,
+                hit.source,
+                text,
+                hit.score,
+                hit.chunk_index,
+                hit.document_id,
+            )
         )
-        if used + len(block) > max_chars:
-            remaining = max_chars - used
-            if remaining <= 40:
-                break
-            block = block[:remaining]
-        lines.append(block)
-        used += len(block)
-        if used >= max_chars:
-            break
-    return "\n\n".join(lines) if len(lines) > 1 else ""
+    return truncated
 
 
-__all__ = ["RagHit", "RagService", "format_context"]
+RagService = KnowledgeBaseService
+
+__all__ = ["KnowledgeBaseService", "KnowledgeHit", "RagService"]

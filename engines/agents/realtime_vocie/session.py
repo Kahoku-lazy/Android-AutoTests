@@ -1,21 +1,21 @@
 """
 文件名: ➡️ session.py 🏁
 路径: ➡️ engines/agents/realtime_vocie/session.py 🏁
-模块功能：➡️ Omni 实时语音会话：事件循环、RAG 工具注入与音频透传 🏁
+模块功能：➡️ Omni 实时语音会话：事件循环与音频透传 🏁
 Python 调试：➡️ python -m engines.agents.realtime_vocie.session 🏁
 时间：➡️ 2026-10-30 🏁
 作者：➡️ kahoku 🏁
-版本：➡️ 1.0.0 🏁
-修改时间: ➡️ 2026-10-30 🏁
+版本：➡️ 1.1.0 🏁
+修改时间: ➡️ 2026-11-11 🏁
 类型: ➡️ Agent 能力模块 🏁
 简介说明：➡️
 1. RealtimeVoiceSession.run(): 连接 AgentScope Omni 实时模型，跑一轮语音会话的事件循环。
-2. 在 Omni 会话上注入知识库 RAG 工具（启用时）。
+2. 本期不注入知识库检索工具。
 3. 把 ready / 转写 / 状态事件写给浏览器，并在会话收尾写 session_end。
 🏁
 关联模块：➡️
-1. engines.agents.rag.service: 导入 RagService
-2. engines.agents.rag.tool: 导入 build_rag_tool
+1. engines.agents.assistant: 导入 create_voice_agent，会话不再自己构造 RealtimeAgent
+2. engines.agents.config.config: 导入 load_agent_config / load_model_config，把两张表交给创建层
 3. utils.logs: 导入 agent_event_log
 🏁
 测试：➡️
@@ -29,13 +29,11 @@ import asyncio
 
 from collections.abc import Awaitable, Callable
 
-from agentscope.tool import Toolkit
-
-from engines.agents.rag.service import RagService
-from engines.agents.rag.tool import build_rag_tool
+from engines.agents.assistant import create_voice_agent
+from engines.agents.config.config import load_agent_config, load_model_config
 from utils.logs import agent_event_log
 
-from .config import RealtimeVoiceConfig, create_realtime_model
+from .config import RealtimeVoiceConfig
 from .events import TranscriptBridge, VoiceLogSink
 from .transport import WebSocketAudioTransport
 
@@ -81,29 +79,16 @@ class RealtimeVoiceSession:
         Raises:
             RuntimeError: 模型/依赖配置无效，或模型会话启动失败。
         """
-        from agentscope.agent import RealtimeAgent
-
-        model = create_realtime_model(self.config)
+        agent = create_voice_agent(
+            load_agent_config(),
+            load_model_config(),
+            "OMNI_ROLE_CONFIG",
+            system_prompt=self.config.system_prompt,
+            name=self.config.agent_name,
+        )
+        model = agent.model
         self.transport.input_sample_rate = model.input_sample_rate
         self.transport.output_sample_rate = model.output_sample_rate
-        rag = RagService.from_env()
-        toolkit: Toolkit | None = None
-        system_prompt = self.config.system_prompt
-        if rag.enabled:
-            toolkit = Toolkit(tools=[build_rag_tool(rag)])
-            system_prompt = (
-                f"{system_prompt}\n"
-                "当用户询问按键、指示灯、固件、恢复出厂、H717D 等产品资料时，"
-                "先调用 search_knowledge 工具检索；依据检索结果回答，"
-                "资料没有覆盖的内容不要编造。需要检索时直接调用工具，"
-                "不要在调用前先回复“稍等/我查一下”。"
-            )
-        agent = RealtimeAgent(
-            name=self.config.agent_name,
-            system_prompt=system_prompt,
-            model=model,
-            toolkit=toolkit,
-        )
         bridge = TranscriptBridge(self.log, model=self.config.model)
         reason = "closed"
         watchdog: asyncio.Task | None = None
@@ -119,7 +104,7 @@ class RealtimeVoiceSession:
                         "voice": self.config.voice,
                         "turn_detection": self.config.turn_detection,
                         "mode": self.config.mode,
-                        "rag_enabled": rag.enabled,
+                        "rag_enabled": False,
                         "input_sample_rate": model.input_sample_rate,
                         "output_sample_rate": model.output_sample_rate,
                         "log_path": self.log.display_path,
@@ -130,7 +115,7 @@ class RealtimeVoiceSession:
                     model=self.config.model,
                     voice=self.config.voice,
                     turn_detection=self.config.turn_detection,
-                    rag=rag.enabled,
+                    rag=False,
                 )
                 watchdog = asyncio.create_task(
                     self._watch_microphone(),

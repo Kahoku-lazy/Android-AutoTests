@@ -14,7 +14,8 @@ Python 调试：➡️ python -m engines.agents.knowledge_chat.config 🏁
 3. build_status(): 生成 text_model / text_ready / text_reason，不含任何密钥。
 🏁
 关联模块：➡️
-1. engines.agents.models: 导入 get_text，取目录里的文字模型名与密钥变量名
+1. engines.agents.config.config: 导入 load_model_config，读已装载模型表
+2. engines.agents.config.model_view: 导入 model_view，取正式模型名与密钥变量名
 🏁
 测试：➡️
 1. tests/graybox/unit/test_knowledge_chat_session.py: 文字问答配置与会话单测：不联网
@@ -29,7 +30,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Final
 
-from engines.agents.models import get_text
+from engines.agents.config.config import load_model_config
+from engines.agents.config.model_view import model_view
 
 CHAT_MODEL_KEY: Final[str] = "deepseek_flash"
 DEFAULT_AGENT_NAME: Final[str] = "知识库助手"
@@ -105,7 +107,7 @@ def load_chat_config(environ: Mapping[str, str] | None = None) -> ChatConfig:
     Raises:
         RuntimeError: 文字入口被关闭，或配置值非法。
     """
-    ready = get_text(CHAT_MODEL_KEY)
+    ready = model_view(load_model_config(), CHAT_MODEL_KEY)
     enabled = _parse_bool(environ, _ENABLED_ENV, True)
     if not enabled:
         raise RuntimeError(f"文字问答已关闭（{_ENABLED_ENV}=false）")
@@ -127,7 +129,7 @@ def build_status(environ: Mapping[str, str] | None = None) -> dict:
     Returns:
         含 `text_model` / `text_ready` / `text_reason` 的字典。
     """
-    ready = get_text(CHAT_MODEL_KEY)
+    ready = model_view(load_model_config(), CHAT_MODEL_KEY)
     try:
         config = load_chat_config(environ)
     except RuntimeError as exc:

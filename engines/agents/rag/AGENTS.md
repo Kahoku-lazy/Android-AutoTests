@@ -38,7 +38,7 @@
 ```powershell
 python -c "from engines.agents.rag import RagService; print(RagService.from_env())"
 ruff check engines/agents/rag
-python -m pytest -c tests/pytest.ini tests/graybox/unit/test_rag_*.py -q
+python -m pytest -c tests/pytest.ini tests/engines/agents/unit/test_rag_*.py -q
 ```
 
 ## 相关路径速查

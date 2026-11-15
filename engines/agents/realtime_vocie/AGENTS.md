@@ -2,6 +2,10 @@
 
 > **AGENTS 层级**：二级约束 —— 根 `AGENTS.md` 与上级 `engines/agents/AGENTS.md` 优先于本文件（本文件只写增量）。
 
+## 对外边界
+
+本包是 `engines/agents/workflow/voice` 的内部实现。`backend/` 与 `knowledge_chat/` MUST NOT 直接 import 本包。前后端只经 workflow 出口使用会话、传输、就绪状态和转写桥。
+
 ## 产品路径
 
 本包**只保留 Omni 实时语音 + 知识库问答（RAG）**：
@@ -23,12 +27,12 @@
 | `session.py` | `RealtimeVoiceSession`：Omni RealtimeAgent + RAG toolkit |
 | `events.py` | 转写 / 状态事件桥与用量落盘 |
 | `transport.py` | 浏览器 PCM 音频传输 |
-| `role/realtime_vocie_agent.py` + `OMNI_ROLE_CONFIG` | 角色侧 Omni 配置（与本包会话路径对齐，勿破坏 UI 角色） |
+| `demo.py` | 本地麦克风演示；根上 `realtime_vocie_agent.py` 只再导出，不直接构造智能体 |
 
 ## 红线
 
 1. **engines 不 import django / `backend.apps`**。
-2. **不直连浏览器**：本包只被 `backend/apps/knowledge_assistant` 接入。
+2. **不直连浏览器**：本包只被 `workflow/voice` 引用；后端不得直接 import 本包。
 3. **不复制提示词到后端**：直接对话提示词只在本包 `knowledge.py` 维护。
 4. **会话释放**：`RealtimeVoiceSession` 必须保证 `session_end` 落盘与看门狗取消。
 5. **Token 记录**：Omni 从 `ModelCallEndEvent` 写 `model_usage`。
@@ -38,5 +42,5 @@
 
 ```powershell
 python -c "from engines.agents.realtime_vocie import RealtimeVoiceSession, load_config; print('ok')"
-pytest tests/graybox/unit/test_knowledge_assistant_config.py tests/graybox/unit/test_realtime_vocie_models.py -q
+pytest tests/knowledge/unit/test_knowledge_assistant_config.py tests/engines/agents/unit/test_realtime_vocie_models.py -q
 ```

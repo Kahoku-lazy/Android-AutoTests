@@ -34,7 +34,7 @@ from typing import Any
 
 from utils.logs import capture_file_path
 
-from ..event_sink import note_interrupt
+from ..messaging.event_sink import note_interrupt
 from .tool_base import ToolSpec
 
 __all__ = [

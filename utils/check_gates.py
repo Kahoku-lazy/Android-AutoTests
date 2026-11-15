@@ -157,7 +157,7 @@ def grep_gate(
 
 LOG_METHODS = {"debug", "info", "warning", "warn", "error", "exception", "critical", "log"}
 # 供应商产物：与 ruff.toml 的 exclude 一致，改了会在下次 skill 更新时丢失
-VENDORED = ("engines/agents/skills/common/skill-creator",)
+VENDORED = ()
 
 
 def _has_log_call(node: ast.AST) -> bool:
@@ -376,7 +376,7 @@ RETIRE_PHASE = {
     # B1 完成后：知识助手产品面必须不存在
     "knowledge_assistant": True,
     # B4 完成后：engines/agents 必须不存在，且全仓不得再导入它
-    "agents_package": False,
+    "agents_package": True,
 }
 
 _BASE_PKG_AGENT_IMPORT = re.compile(

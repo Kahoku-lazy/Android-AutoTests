@@ -6,7 +6,7 @@
 
 ### Requirement: 知识库是零依赖的独立模块
 
-知识库 MUST 位于根级 `engines/ae_harness/knowledge/`，MUST NOT 位于 `tools/`。它 MUST NOT import `engines.ae_harness` 下的其它子包（`agents`、`assistant`、`event`、`middleware`、`workflow`、`tools`）。Harness 其余模块 MUST NOT import 知识库，唯一例外是角色入口处的一处可选导入。
+知识库 MUST 位于根级 `engines/ae_harness/knowledge/`，MUST NOT 位于 `tools/`。它 MUST NOT import `engines.ae_harness` 下的其它子包（`agents`、`assistant`、`event`、`middleware`、`workflow`、`tools`）。Harness 其余模块 MUST NOT import 知识库：效果评测完成前，引用数 MUST 为零。
 
 #### Scenario: 删除后其余模块不受影响
 

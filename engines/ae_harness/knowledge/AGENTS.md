@@ -21,7 +21,7 @@ Harness 内的**独立知识库模块**：自带向量模型配置与库目录�
 
 ## 红线（禁止）
 
-1. **禁止被 Harness 其它模块 import** —— 唯一例外是 `assistant/agent_executor.py` 的可选导入。`tools/__init__.py`、`event/`、`workflow/`、`agents/` 一律不得引用本模块。
+1. **禁止被 Harness 其它模块 import** —— 本期引用数为零，由 `tests/engines/ae_harness/unit/test_knowledge_independence.py` 守护。评测达标要接回时，只允许在目标入口加一处局部可选导入，并同一提交里更新该测试的期望引用清单。
 2. **禁止 import Harness 其它子包** —— 不 import `agents/`、`assistant/`、`event/`、`middleware/`、`workflow/`、`tools/`。本模块要能整目录删除而不牵连任何一处。
 3. **禁止把知识库放进 `tools/`** —— `tools/` 只收 Python 内置函数工具、Skill、MCP；带配置与状态的模块一律留在根级子包。
 4. **`config/models.yaml` 只允许向量模型** —— 出现 chat / realtime / tts 字段即视为配置非法；不得改成「共用 agents 的模型表」。
@@ -34,6 +34,29 @@ Harness 内的**独立知识库模块**：自带向量模型配置与库目录�
 密钥取值（仓库根 `.env` → 进程环境）与 `agents/config.load_secret` 重复约十余行。这是**故意**的：红线 2 要求本模块不依赖 `agents/`，用一份小重复换整目录可删。
 
 `.env` 全仓只有仓库根一份，本模块只读不写，也不得新增第二份 `.env`。
+
+## 当前状态：未挂载
+
+本期**不接到任何角色**。原因：只验证了能跑通（索引成功、命中字段齐全、三种返回文案正确），**准确率与召回率没测**。评测（Recall@k / MRR / 误命中率）达标前，知识库只能经探针使用。
+
+## 如何接回 Agent（评测通过后再做）
+
+在目标入口 `assistant/agent_<role>.py` 的 `build_agent` 里加一处局部可选导入并挂载：
+
+```python
+try:  # 知识库可选：整目录删除后自动跳过
+    from engines.ae_harness.knowledge import build_knowledge_tools
+except ModuleNotFoundError as exc:  # 只吞本模块的缺失，内部写错仍要抛
+    if not (exc.name or "").startswith("engines.ae_harness.knowledge"):
+        raise
+    build_knowledge_tools = None
+
+if build_knowledge_tools is not None:
+    for tool in build_knowledge_tools():
+        await agent.toolkit.add_tool(tool)
+```
+
+同时把 `test_knowledge_independence.py` 的期望引用清单从 `[]` 改成该入口的相对路径——改动必须是**显式**的，不允许静默放开。
 
 ## 快速验证
 
@@ -57,5 +80,5 @@ python -m pytest -c tests/pytest.ini tests/engines/ae_harness/unit/test_knowledg
 | --- | --- |
 | 上层 Harness 约束 | [`../AGENTS.md`](../AGENTS.md) |
 | 工具目录准入 | [`../tools/AGENTS.md`](../tools/AGENTS.md) |
-| 调用方入口 | [`../assistant/agent_executor.py`](../assistant/agent_executor.py) |
+| 接回时的落点（当前未挂载） | [`../assistant/agent_executor.py`](../assistant/agent_executor.py) |
 | 风格规范 | [`.agents/rules/engines-code-style.md`](../../../.agents/rules/engines-code-style.md) |

@@ -3,7 +3,7 @@
 只读源码做导入扫描（契约对拍），不导入被测模块、不联网。
 两侧边界都查：
 - 知识库不得 import Harness 其它子包（否则删掉它会带走别人）；
-- Harness 其它模块除执行者入口外不得 import 知识库（否则删掉它会让别人崩）。
+- Harness 其它模块不得 import 知识库（本期尚未挂载，引用数必须为零）。
 """
 
 from __future__ import annotations
@@ -28,8 +28,6 @@ FORBIDDEN_SIBLINGS = (
     "engines.ae_harness.workflow",
     "engines.ae_harness.tools",
 )
-# 允许引用知识库的唯一 Harness 模块。
-ALLOWED_CALLER = "assistant/agent_executor.py"
 # 最小规模：识别规则退化时计数骤降，测试随即失败。
 MIN_KNOWLEDGE_FILES = 8
 
@@ -66,8 +64,8 @@ def test_knowledge_does_not_import_harness_siblings():
     assert offenders == []
 
 
-def test_only_executor_entry_references_knowledge():
-    """除执行者入口外，Harness 其它模块不引用知识库。"""
+def test_no_harness_module_references_knowledge():
+    """本期不挂载：Harness 其它模块对知识库的引用数必须为零。"""
     callers: list[str] = []
     for path in sorted(HARNESS_DIR.rglob("*.py")):
         if KNOWLEDGE_DIR in path.parents:
@@ -75,12 +73,4 @@ def test_only_executor_entry_references_knowledge():
         text = path.read_text(encoding="utf-8")
         if "engines.ae_harness.knowledge" in text:
             callers.append(path.relative_to(HARNESS_DIR).as_posix())
-    assert callers == [ALLOWED_CALLER]
-
-
-def test_executor_entry_degrades_when_module_missing():
-    """执行者入口用可选导入，缺模块时降级为 None 而不是崩溃。"""
-    source = (HARNESS_DIR / ALLOWED_CALLER).read_text(encoding="utf-8")
-    assert "except ModuleNotFoundError" in source
-    assert "build_knowledge_tools = None" in source
-    assert "if build_knowledge_tools is not None:" in source
+    assert callers == []

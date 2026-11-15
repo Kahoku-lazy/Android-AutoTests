@@ -65,11 +65,13 @@
 
 `KnowledgeBase.search(queries, top_k, score_threshold)` 每次只接受这两个筛选参数；`metadata_filter` 只能在构造句柄时固定。本期只用前两个。不传 `base` 时检索全部启用库，合并后按分数排序取 `top_k`。
 
-### 7. 删除安全：唯一耦合点是一个可选导入
+### 7. 本期不挂载：引用数为零
 
-`assistant/agent_executor.py` 是**唯一**引用知识库的 Harness 模块，引用方式为局部可选导入：`ModuleNotFoundError` 且模块名以 `engines.ae_harness.knowledge` 开头时跳过，其它 ImportError 照常抛出（避免内部写错被静默吞掉）。
+效果没有测过——目前只验证了「能跑通」（索引成功、命中字段齐全、三种返回文案正确），**没有测准确率与召回率**。所以**不接到任何角色上**。
 
-其余模块（`tools/__init__.py`、`event/`、`workflow/`）一律不引用知识库。
+Harness 其余模块（`tools/__init__.py`、`assistant/`、`event/`、`workflow/`）一律不引用知识库，引用数由测试守成零；知识库只能经 `python -m engines.ae_harness.knowledge` 探针使用。
+
+接回方式写在 `knowledge/AGENTS.md`：评测达标后，在目标入口加一处局部可选导入并挂载 `build_knowledge_tools()`；那一步本身也是一个独立变更。
 
 ## 红线变更
 
@@ -91,7 +93,8 @@
 
 ## Risks / Trade-offs
 
-- [删除知识库后入口少一组工具] → 预期行为；入口不报错，模型只是查不到资料。
+- [效果未知：可能命中不准，也可能该说「没有」时硬凑片段] → 本期不挂载任何角色；先补评测集与 Recall@k 基线（`tasks.md` 第 7 节），达标才接回。
+- [删除知识库后 Harness 无任何变化] → 这正是本期目标：引用数为零。
 - [首轮检索会现建索引，可能几十秒] → 用 `python -m engines.ae_harness.knowledge index <库名>` 预热；探针也是人工验收口。
 - [SQLite 全表余弦扫描随资料增长变慢] → 当前资料 4 个文档、百级片段，够用；库边界已按 collection 分开，后续可换向量库。
 - [与 `engines/agents/rag` 两份实现并存会漂移] → 明确记录为已知代价；差异只在配置来源与目录归属，算法链路两处都走 `KnowledgeBase`。

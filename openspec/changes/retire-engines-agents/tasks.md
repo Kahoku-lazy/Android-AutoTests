@@ -39,21 +39,21 @@
 ## 5. 用例 YAML 通道下线（B3，需先过决策点）
 
 - [x] 5.1 **决策点（阻塞后续）**：与需求方确认 `case_manager` 用例库在 YAML 通道下线后的数据来源（只读历史 / 改录 SOP steps / 在 `backend_bridge` 重建用例模型），把结论写进 `design.md` 的 Open Questions。验证：`design.md` 该条标记为已决，且 5.2 起按结论执行
-- [ ] 5.2 删 `engines/agents/workflow/{case_file,case_goal_workflow,case_artifact,case_artifact_facts,case_artifact_render,step_brief}.py`。验证：`grep -rn "case_file\|case_goal_workflow\|case_artifact\|step_brief" engines backend` 无输出
+- [x] 5.2 删 `engines/agents/workflow/{case_file,case_goal_workflow,case_artifact,case_artifact_facts,case_artifact_render,step_brief}.py`。验证：`grep -rn "case_file\|case_goal_workflow\|case_artifact\|step_brief" engines backend` 无输出
 - [x] 5.3a 把 `api_definitions._normalize_steps` 对 `parse_step_hints` 的依赖换成后端自带的 `_parse_step_hints`（anchor 必须是对象；log 固定 sku/port/keywords，单关键词收敛成列表，port 非整数报错）。验证：`python -m pytest -c tests/pytest.ini tests/case -q` → 141 passed（4 个失败为既有，已确认 HEAD 上同样失败）
 - [x] 5.3b1 下线「YAML 导入用例库」：删 `api_yaml.py`(347 行) + `api.py` 三处再导出 + `views_drf.import_yaml` 视图与 `import-yaml/` 路由 + `management/commands/import_case_yaml.py` + 前端 `ImportYamlDialog.vue` 与 `ProjectWorkspace` 的导入按钮/处理函数 + `api.ts` 的 `importYaml`/`YamlImportResult`；后端同时删掉 `_platform_case_config`（改用例执行靠导出 YAML，已随通道下线）。验证：`django check` 通过、`pnpm typecheck` 通过、OpenAPI 基线重生成后两个门禁绿、`tests/task + tests/case` 211 passed（4 个既有失败）
 - [ ] 5.3b2 前端任务发布弹窗移除「选用例执行」入口（`task-list/components/PlatformCasePicker.vue` 与 `CASE_SOURCE_*` 常量、`usePlatformCases`），后端已不再读取 `case_ids`。验证：`pnpm typecheck` + `vitest tests/task-list` 通过，发布弹窗无平台用例选择
-- [ ] 5.3c 删 `engines/agents/workflow/case_file.py`，并把 `task_list/{attachments,task_reports}.py` 两处 `validate_platform_yaml` 调用一并处理
+- [x] 5.3c 删 `engines/agents/workflow/case_file.py`，并把 `task_list/{attachments,task_reports}.py` 两处 `validate_platform_yaml` 调用一并处理
   - **执行顺序陷阱（已查证，勿按字面整文件删）**：`api_definitions.py`(335 行) 是**用例定义 CRUD**（create/get/update/delete + 枚举与必填校验），只有 `_normalize_steps`(110–127) 内部调用 `parse_step_hints`；整文件删除会连带打掉用例库。正确做法：把 `_normalize_steps` 里的 `parse_step_hints` 换成后端本地可选字段校验（anchor / log / reason），其余函数全部保留。`api_yaml.py`(347 行) 才是 YAML 导入/导出模块，连同路由与前端控件整体删除。
   - 允许顺序：先删 `api_yaml.py` + 路由 + 前端导入导出控件（自成一体）→ 再改 `api_definitions._normalize_steps` → 最后才删 `engines/agents/workflow/case_file.py`。
-- [ ] 5.4 删 `backend/apps/task_list/{attachments,task_reports}.py` 的 `validate_platform_yaml` 调用与 `task_runner.py:254` 的用例编写入口。验证：`python -m pytest -c tests/pytest.ini tests/task -q` 全绿
-- [ ] 5.5 删 `openspec/specs/appliance-case-authoring/` 与 `openspec/specs/case-manager-yaml-sync/`（按 5.1 结论确认后者范围），删对应 `tests/case/` 用例。验证：`openspec validate --all` 通过
+- [x] 5.4 删 `backend/apps/task_list/{attachments,task_reports}.py` 的 `validate_platform_yaml` 调用与 `task_runner.py:254` 的用例编写入口。验证：`python -m pytest -c tests/pytest.ini tests/task -q` 全绿
+- [x] 5.5 删 `openspec/specs/appliance-case-authoring/` 与 `openspec/specs/case-manager-yaml-sync/`（按 5.1 结论确认后者范围），删对应 `tests/case/` 用例。验证：`openspec validate --all` 通过
 
 ## 6. 整包删除与文档收尾（B4）
 
-- [ ] 6.1 删 `engines/agents` 余下全部内容（`config/`、`models/`、`assistant/`、`agent_builders.py`、`role_sys_prompts.py`、`tools/`、`tools_config.py`、`middleware/`、`messaging/`、`event_log.py`、`event_sink.py`、`workflow/`、`AGENTS.md`）与 6 类配置资产。验证：`git rm -r engines/agents` 后 `grep -rn "engines.agents" . --include=*.py` 无输出
-- [ ] 6.2 退役门禁转为强制：`engines/agents` 目录必须不存在，`engines.agents` 导入出现即失败。验证：`python run.py check` 全绿；临时造一条 `import engines.agents` 应使检查失败（验证后删除）
+- [x] 6.1 删 `engines/agents` 余下全部内容（`config/`、`models/`、`assistant/`、`agent_builders.py`、`role_sys_prompts.py`、`tools/`、`tools_config.py`、`middleware/`、`messaging/`、`event_log.py`、`event_sink.py`、`workflow/`、`AGENTS.md`）与 6 类配置资产。验证：`git rm -r engines/agents` 后 `grep -rn "engines.agents" . --include=*.py` 无输出
+- [x] 6.2 退役门禁转为强制：`engines/agents` 目录必须不存在，`engines.agents` 导入出现即失败。验证：`python run.py check` 全绿；临时造一条 `import engines.agents` 应使检查失败（验证后删除）
 - [ ] 6.3 清理 `utils/check_gates.py:160` 的失效 `VENDORED` 路径与 `.agents/skills/{engines-agents-style-check,engines-docstring-check}` 中 `skill-creator` 的跳过路径。验证：`python -m utils.check_gates` 通过，`grep -rn "engines/agents" .agents/skills utils` 无输出
 - [ ] 6.4 更新 `dev_docs/project-viz/tools/gen_board_data.py` 的采集范围（去掉 `engines/agents`）与 `dev_docs/ARCH_PRD/ARCH-Engines架构.md` 的目录描述。验证：`python dev_docs/project-viz/tools/gen_board_data.py` 可运行并生成看板数据
-- [ ] 6.5 处理 68 个引用 `engines.agents` 的测试文件：改落点到 `backend_bridge` / `ae_harness`，随能力删除的整文件删除。验证：`grep -rln "engines.agents" tests` 无输出，`python -m pytest -c tests/pytest.ini` 全绿
+- [x] 6.5 处理 68 个引用 `engines.agents` 的测试文件：改落点到 `backend_bridge` / `ae_harness`，随能力删除的整文件删除。验证：`grep -rln "engines.agents" tests` 无输出，`python -m pytest -c tests/pytest.ini` 全绿
 - [ ] 6.6 收尾门禁：`python run.py check` 24 项阻塞全绿，`openspec validate retire-engines-agents --strict` 通过

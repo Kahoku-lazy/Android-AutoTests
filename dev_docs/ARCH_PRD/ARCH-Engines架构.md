@@ -28,7 +28,7 @@ engines
 
 | 包 | 做什么 | 对外入口 | 不做什么 |
 | --- | --- | --- | --- |
-| `agents/` | 智能体运行时 | `assistant.create_*`、`agent_builders.build_*`、`workflow` | 不写任务表、不持有密钥明文 |
+| `backend_bridge/` | 平台智能体运行时 | `workflow.sop_ui`、`workflow.cancel`、`session`、`model_billing` | 不写任务表、不持有密钥明文 |
 | `device/` | Android 连接与动作 | `action.py` | 不让上层 import `device.android` |
 | `uart_log/` | 串口 / TCP 日志采集 | `PortSwitch` | 不持有端口台账的最终真相 |
 | `vision/` | 整图 OCR | `ocr.recognize` | 不在引擎启动时加载 cnocr |
@@ -65,7 +65,7 @@ config.load_model_config()         模型表；密钥已是 SecretKey
 
 ### 3.2 模型
 
-`engines/agents/models/` 只有一个出口：`create_model(表, 短名, stream=)`。内部按 `family` 分派 chat / realtime / embedding / tts。包外不得 import 子模块，也不得自己 `DeepSeekChatModel(...)`。
+`engines/ae_harness/agents/models.py` 是唯一的聊天模型创建出口：`create_model(短名)`。`engines/agents` 已整体退役（变更 retire-engines-agents），realtime / tts 两族随之取消，嵌入模型只由 `ae_harness/knowledge` 自建。
 
 它不做的事：
 
@@ -169,7 +169,7 @@ RAG 只索引 `.md` / `.txt`，索引写在配置的本地目录。检索失败�
 
 | 旧写法 | 现状 |
 | --- | --- |
-| `models_new` 与 `models` 并存 | 只剩 `engines/agents/models/`，出口是 `create_model` |
+| `models_new` 与 `models` 并存 | 两者都已随 `engines/agents` 删除，出口是 `ae_harness/agents/models.py` 的 `create_model` |
 | `prompt_config.py` | `role_sys_prompts.py` |
 | `skills/`、`mcp_config/` | 技能在 `config/data/skills/`；没有 `mcp_config/` |
 | 语音 pipeline / livetranslate | 已删除。语音只有 Omni |

@@ -33,7 +33,8 @@
   - 比对结论：`UI_EXECUTOR_PROMPT.md` 保留 harness 版（9945 B，含锚点与工具说明，比 agents 版 6042 B 新）；`UI_VERIFIER_PROMPT.md` 改用 agents 版（4793 B / 2061 字，判据更厚），覆盖 harness 原 3835 B 版；`CASE_WRITER` / `CASE_VERIFIER` 两份完全一致，随用例编写流水线在 B3 一起删除
 - [x] 4.7 迁 `app_info/` 与 `log_keywords/` 到 `engines/ae_harness/agents/config/`，并在 `ae_harness` 增加按 token 读取短卡与按机型读取关键词的读取口。验证：新增单测覆盖「短卡命中 / token 缺失报错 / 关键词按机型命中」，全绿
   - 实际范围：`app_info/` 目录在 Govee 业务资产清理后**已无文件**，随包删除、不迁移；只迁 `log_keywords/H6810.md`，读取口 `agents/config.py:load_log_keywords`（型号白名单 + 缺失降级为空串），单测 `tests/engines/ae_harness/unit/test_agents_config.py`
-- [ ] 4.8 真机回归一轮：跑一条平台任务，确认状态、费用、报告三处正确，并记录报告路径。验证：`logs/agents/backend_bridge/<时间戳>/` 下有本次报告，任务列表能直达
+- [x] 4.8a 真机跑通「执行 + 验收」全链路（设备 RF8N21MSW7A）：`python manage.py run_ui_sop "回到桌面"` → phase=completed，两步各 1 次尝试即通过；报告 `logs/agents/backend_bridge/20261115_184315/20261115_184315_sop_ui.html`（1.06 MB）+ jsonl（272 KB）；用量 input 81499 / output 1716 / cache_hit 70016，入账 12 条（execution_id=20261115_184315）
+- [ ] 4.8b 平台任务链路真机验证：提交一条真实任务，确认 `Task.status` / `cost_*` / `result.report_run+report_name` 三处正确，且任务列表「报告」按钮能打开该报告。验证：任务详情接口返回的 `report_run`/`report_name` 与磁盘报告一致
 
 ## 5. 用例 YAML 通道下线（B3，需先过决策点）
 

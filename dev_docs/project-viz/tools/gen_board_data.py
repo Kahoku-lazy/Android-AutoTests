@@ -171,6 +171,7 @@ def frontend_page(raw: dict[str, Any]) -> dict[str, Any]:
     return {
         "modules": rows,
         "edges": raw.get("edges", []),
+        "unitEdges": raw.get("unitEdges", {}),
         "routesByModule": raw.get("routesByModule", {}),
         "totals": totals,
     }
@@ -558,11 +559,17 @@ def collect_agents() -> dict[str, Any]:
 
     口径：一行 = 一个 .py 模块；功能条目 = 模块 docstring「简介说明」的编号条目数；
     类/方法/代码行 = AST 统计；测试 = docstring「测试」字段的条目数。
+
+    该包已退役（变更 retire-engines-agents）：目录不存在时返回空骨架，
+    视图照常渲染，只是没有数据。
     """
+    agents_root = REPO / "engines" / "agents"
+    if not agents_root.is_dir():
+        return {"groups": [], "totals": _totals([]), "imports": {}}
+
     sys.path.insert(0, str(REPO))
     from utils.module_docstring import extract_module_docstrings  # noqa: PLC0415 - 延迟导入
 
-    agents_root = REPO / "engines" / "agents"
     records = extract_module_docstrings(agents_root, repo_root=REPO)
     rows: list[dict[str, Any]] = []
     for record in records:
@@ -825,6 +832,10 @@ def collect_frontend_modules(frontend: dict[str, Any]) -> dict[str, Any]:
                 # 前端模块没有中文名，label 留空，卡片上就只显示目录名
                 "label": "",
                 "units": units,
+                "edges": sorted(
+                    frontend.get("unitEdges", {}).get(name, []),
+                    key=lambda row: (-int(row["count"]), row["from"], row["to"]),
+                ),
                 "totals": {
                     "units": len(units),
                     "files": sum(int(unit["files"]) for unit in units),
@@ -1070,6 +1081,91 @@ BACKEND_MODULES = (
 )
 
 
+def _unit_import_edges(
+    app_key: str, base: Path, files: list[Path], units: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """app 内部「单元 → 单元」的 import 次数（含相对导入）。
+
+    Args:
+        app_key: app 目录名（用于识别绝对导入 backend.apps.<app>）。
+        base: app 根目录。
+        files: 该 app 下的全部 .py 文件（只含计入统计的单元）。
+        units: 单元列表（用来把目标路径映射回单元名）。
+
+    Returns:
+        [{"from": 单元, "to": 单元, "count": n}]，只保留 app 内部的引用。
+    """
+    unit_names = {str(unit["name"]) for unit in units}
+
+    def unit_of(path: Path) -> str | None:
+        """文件 → 单元名；不在单元列表里（如 __init__.py）返回 None。"""
+        try:
+            rel = path.relative_to(base)
+        except ValueError:
+            return None
+        head = rel.parts[0] + "/" if len(rel.parts) > 1 else rel.parts[0]
+        return head if head in unit_names else None
+
+    def resolve_target(source: Path, node: ast.ImportFrom) -> Path | None:
+        """把 ImportFrom 解析成 app 内的真实文件（相对导入 + backend.apps.<app> 绝对导入）。"""
+        if not node.level:
+            # 绝对导入：只认 backend.apps.<app>.<rest> 这种本 app 的写法
+            parts = (node.module or "").split(".")
+            if len(parts) < 4 or parts[0] != "backend" or parts[1] != "apps" or parts[2] != app_key:
+                return None
+            rest = parts[3:]
+            base_path = base.joinpath(*rest)
+            for candidate in (base_path.with_suffix(".py"), base_path / "__init__.py", base_path):
+                if candidate.is_file() and candidate.suffix == ".py":
+                    return candidate
+            return None
+        # level=1 表示当前文件所在目录；向上 (level-1) 层
+        anchor_dir = source.parent
+        for _ in range(node.level - 1):
+            anchor_dir = anchor_dir.parent
+        if not str(anchor_dir).startswith(str(base)):
+            return None
+        module = (node.module or "").replace(".", "/")
+        base_path = anchor_dir / module if module else anchor_dir
+        for candidate in (
+            base_path.with_suffix(".py"),
+            base_path / "__init__.py",
+            base_path,
+        ):
+            if candidate.is_file() and candidate.suffix == ".py":
+                return candidate
+        # `from . import models` 这种：模块名在 names 里
+        for alias in node.names:
+            candidate = (anchor_dir / alias.name).with_suffix(".py")
+            if candidate.is_file():
+                return candidate
+        return None
+
+    edges: dict[tuple[str, str], int] = {}
+    for path in files:
+        source_unit = unit_of(path)
+        if source_unit is None:
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8", errors="ignore"))
+        except (SyntaxError, OSError):
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ImportFrom):
+                continue
+            target = resolve_target(path, node)
+            if target is None:
+                continue
+            target_unit = unit_of(target)
+            if target_unit is None or target_unit == source_unit:
+                continue
+            edges[(source_unit, target_unit)] = edges.get((source_unit, target_unit), 0) + 1
+    return [
+        {"from": source, "to": target, "count": count}
+        for (source, target), count in sorted(edges.items(), key=lambda item: (-item[1], item[0]))
+    ]
+
+
 def collect_backend_modules() -> dict[str, Any]:
     """backend/apps 下每个 Django app 按「一层」统计（口径同 engines 页）。
 
@@ -1127,6 +1223,7 @@ def collect_backend_modules() -> dict[str, Any]:
                 "key": key,
                 "label": label,
                 "units": units,
+                "edges": _unit_import_edges(key, base, owned, units),
                 "totals": {
                     "units": len(units),
                     "files": sum(int(unit["files"]) for unit in units),

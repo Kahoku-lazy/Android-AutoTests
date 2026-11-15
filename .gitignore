@@ -50,6 +50,9 @@ agentscope_workspaces/
 logs/
 *.log
 
+# ── 知识库本地索引（生成物，可重建） ──
+engines/ae_harness/knowledge/index/
+
 # ── Test Exports & Results ──
 exports/
 result_*.csv

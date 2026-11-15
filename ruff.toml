@@ -81,6 +81,8 @@ section-order = ["future", "standard-library", "third-party", "first-party", "lo
 "engines/ae_harness/assistant/agent_executor.py" = ["T201"]
 "engines/ae_harness/assistant/agent_verifier.py" = ["T201"]
 "engines/ae_harness/workflow/sop_runner.py" = ["T201"]
+# ─ 知识库探针（index / retrieve）与模块自测入口：控制台工具，非库代码
+"engines/ae_harness/knowledge/probe.py" = ["T201"]
 # ─ tests/: 放宽限制
 "tests/**/*.py" = ["T201"]
 # ─ __init__.py: 允许未使用 import (re-export)

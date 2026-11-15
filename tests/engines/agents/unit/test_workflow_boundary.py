@@ -26,7 +26,6 @@ BUILDER_NAMES = frozenset(
     {
         "build_case_writer",
         "build_case_verifier",
-        "build_knowledge_chat",
         "build_executor",
         "build_verifier",
         "build_ui_executor",

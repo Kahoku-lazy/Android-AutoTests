@@ -14,9 +14,6 @@ Python 调试：➡️ python -m engines.agents.role_sys_prompts 🏁
 3. load_app_info_md / with_app_info: 按 token 读 config/data/app_info/{token}.md，追加「被测应用短卡」
 4. UiControlPrompts: UI 控制（设备操作）提示词：执行 / 验收
 5. CaseAuthoringPrompts: 用例编写提示词：编写 / 验收
-6. VoiceKnowledgePrompts: 知识库 Omni 语音助手系统提示词
-7. KnowledgeChatPrompts: 知识库文字问答角色系统提示词
-8. build_system_prompt: 兼容 realtime_vocie.knowledge：返回语音助手系统提示词
 🏁
 关联模块：➡️
 1. engines.agents.config.config: 导入 load_prompt_text / load_app_info_text，正文只经配置读取口打开
@@ -168,37 +165,6 @@ class CaseAuthoringPrompts:
         return load_prompt_md(cls.VERIFIER_TOKEN)
 
 
-class VoiceKnowledgePrompts:
-    """知识库 Omni 语音助手系统提示词。"""
-
-    SYSTEM_PROMPT: Final[str] = (
-        "你是一个中文语音助手，正在通过语音和用户直接对话。回答尽量简短、口语化，通常不超过三句话。"
-    )
-
-    @classmethod
-    def system(cls) -> str:
-        """返回实时语音助手的直接对话系统提示词。"""
-        return cls.SYSTEM_PROMPT
-
-
-class KnowledgeChatPrompts:
-    """知识库文字问答角色系统提示词。"""
-
-    TOKEN = "KNOWLEDGE_CHAT_PROMPT"
-
-    @classmethod
-    def system(cls) -> str:
-        """返回文字问答角色的系统提示词正文。"""
-        return load_prompt_md(cls.TOKEN)
-
-
-def build_system_prompt() -> str:
-    """兼容 realtime_vocie.knowledge：返回语音助手系统提示词。"""
-    return VoiceKnowledgePrompts.system()
-
-
-SYSTEM_PROMPT: Final[str] = VoiceKnowledgePrompts.SYSTEM_PROMPT
-
 # 智能体提示词分配（正文在 config/data/prompts/）
 CASE_WRITER_PROMPT = CaseAuthoringPrompts.writer()
 CASE_VERIFIER_PROMPT = CaseAuthoringPrompts.verifier()
@@ -216,12 +182,8 @@ __all__ = [
     "CHINESE_DEMAND",
     "CaseAuthoringPrompts",
     "EXECUTOR_PROMPT",
-    "KnowledgeChatPrompts",
-    "SYSTEM_PROMPT",
     "UiControlPrompts",
     "VERIFIER_PROMPT",
-    "VoiceKnowledgePrompts",
-    "build_system_prompt",
     "load_app_info_md",
     "load_prompt_md",
     "resolve_system_prompt",

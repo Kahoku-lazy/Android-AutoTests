@@ -27,7 +27,6 @@ export const NAV_CATEGORIES: NavCategory[] = [
     label: "AI 功能",
     items: [
       { path: "/ai-assistant", icon: "bot", label: "AI 助手" },
-      { path: "/knowledge-assistant", icon: "book-open", label: "知识库助手", isDev: true },
       { path: "/agent-reports", icon: "clock", label: "执行报告" },
     ],
   },
@@ -62,7 +61,6 @@ export const MOD_COLORS = {
   "/bugs": "var(--c-runner)",
   "/ai-assistant": "var(--c-ai)",
   "/ai-assistant/agents": "var(--c-ai)",
-  "/knowledge-assistant": "var(--c-element)",
   "/workflow": "var(--c-workflow)",
   "/serial-log": "var(--c-device)",
   "/agent-reports": "var(--c-report)",

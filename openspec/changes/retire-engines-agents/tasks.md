@@ -12,12 +12,12 @@
 
 ## 3. 下线知识助手（B1）
 
-- [ ] 3.1 删 `backend/apps/knowledge_assistant/` 整个 app，并从 `backend/config/settings.py` 的 `INSTALLED_APPS`、根 `urls` 与 ASGI 路由中移除引用。验证：`python -c "import django; django.setup()"`（在 backend 环境下）无导入错误，`python run.py check` 通过
-- [ ] 3.2 删前端 `frontend/src/modules/knowledge-assistant/`（17 文件），移除 `router.ts` 的导入与路由、`shared/components/sidebarNavConfig.ts` 的侧栏项与图标映射。验证：`cd frontend; pnpm run type-check` 与 `pnpm run build` 通过，侧栏「AI 功能」分组只剩「AI 助手」
-- [ ] 3.3 删 `engines/agents/knowledge_chat/`、`realtime_vocie/`、`realtime_vocie_agent.py`、`workflow/voice/`。验证：`grep -rn "knowledge_chat\|realtime_vocie\|workflow.voice" engines backend` 无输出
-- [ ] 3.4 删 `engines/agents/rag/`，保留 `engines/ae_harness/knowledge/`；用源文档重建一次索引后删除 `data/rag_index/`。验证：`python -m engines.ae_harness.knowledge retrieve product_manuals "指示灯"` 返回命中，`git status` 不含索引文件
-- [ ] 3.5 删 `openspec/specs/knowledge-assistant-voice/`、`openspec/specs/knowledge-assistant-text-chat/` 与 `tests/knowledge/` 目录。验证：`python -m pytest -c tests/pytest.ini tests/knowledge` 报目录不存在属预期，`openspec list` 正常
-- [ ] 3.6 清理 `engines/agents/config/data/knowledge_bases.yaml` 与 `KNOWLEDGE_CHAT_PROMPT.md` 的残留引用。验证：`grep -rn "KNOWLEDGE_CHAT_PROMPT\|knowledge_bases" engines backend` 无输出
+- [x] 3.1 删 `backend/apps/knowledge_assistant/` 整个 app，并从 `backend/config/settings.py` 的 `INSTALLED_APPS`、根 `urls` 与 ASGI 路由中移除引用。验证：`python -c "import django; django.setup()"`（在 backend 环境下）无导入错误，`python run.py check` 通过
+- [x] 3.2 删前端 `frontend/src/modules/knowledge-assistant/`（17 文件），移除 `router.ts` 的导入与路由、`shared/components/sidebarNavConfig.ts` 的侧栏项与图标映射。验证：`cd frontend; pnpm run type-check` 与 `pnpm run build` 通过，侧栏「AI 功能」分组只剩「AI 助手」
+- [x] 3.3 删 `engines/agents/knowledge_chat/`、`realtime_vocie/`、`realtime_vocie_agent.py`、`workflow/voice/`。验证：`grep -rn "knowledge_chat\|realtime_vocie\|workflow.voice" engines backend` 无输出
+- [x] 3.4 删 `engines/agents/rag/`，保留 `engines/ae_harness/knowledge/`；用源文档重建一次索引后删除 `data/rag_index/`。验证：`python -m engines.ae_harness.knowledge retrieve product_manuals "指示灯"` 返回命中，`git status` 不含索引文件
+- [x] 3.5 删 `openspec/specs/knowledge-assistant-voice/`、`openspec/specs/knowledge-assistant-text-chat/` 与 `tests/knowledge/` 目录。验证：`python -m pytest -c tests/pytest.ini tests/knowledge` 报目录不存在属预期，`openspec list` 正常
+- [x] 3.6 清理 `engines/agents/config/data/knowledge_bases.yaml` 与 `KNOWLEDGE_CHAT_PROMPT.md` 的残留引用。验证：`grep -rn "KNOWLEDGE_CHAT_PROMPT\|knowledge_bases" engines backend` 无输出
 
 ## 4. 平台任务链切换（B2）
 

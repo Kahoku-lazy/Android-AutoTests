@@ -87,7 +87,6 @@ INSTALLED_APPS = [
     "backend.apps.serial_log",
     "backend.apps.dashboard",
     "backend.apps.usage_ledger",
-    "backend.apps.knowledge_assistant",
 ]
 
 MIDDLEWARE = [
@@ -322,10 +321,6 @@ SPECTACULAR_SETTINGS = {
         {
             "name": "serial-log",
             "description": "串口日志：端口监听开关、当前日志查看与关键词对照表",
-        },
-        {
-            "name": "knowledge-assistant",
-            "description": "知识库助手：实时语音会话的就绪状态",
         },
         {"name": "schema", "description": "OpenAPI schema 端点（drf-spectacular 自带）"},
     ],

@@ -58,14 +58,12 @@ class TestHttpChannel:
 class TestWebSocketChannel:
     """② Django → 前端 — WebSocket + JWT"""
 
-    def test_ws_routing_has_only_knowledge_assistant(self):
-        """用例编辑锁 WS 已下线；当前唯一生产点是知识库助手语音，新增须先走 OpenSpec。"""
+    def test_ws_routing_is_empty(self):
+        """知识助手语音下线后不再有 WS 生产点；新增须先走 OpenSpec。"""
         from backend.gateway.routing import websocket_urlpatterns
 
         patterns = [str(pattern.pattern) for pattern in websocket_urlpatterns]
-        assert patterns == ["ws/knowledge-assistant/"], (
-            f"WS 生产点应为且仅为知识库助手语音，实际 {patterns}"
-        )
+        assert patterns == [], f"当前不应有任何 WS 生产点，实际 {patterns}"
 
 
 class TestAgentScopeChannel:

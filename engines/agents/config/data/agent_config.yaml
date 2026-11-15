@@ -92,23 +92,3 @@ OMNI_ROLE_CONFIG:
   RoleConfig:
     name: realtime_vocie_agent
     system_prompt: 
-
-
-# 知识库文字问答角色（DeepSeek Flash + 本地知识检索工具）
-KNOWLEDGE_CHAT_ROLE_CONFIG:
-  ModelConfig:
-    model: deepseek_flash
-    stream: true
-
-  RoleConfig:
-    name: knowledge_chat_role
-    system_prompt: KNOWLEDGE_CHAT_PROMPT
-
-  ToolsConfig:
-
-  ContextConfig:
-
-  ReActConfig:
-    max_iters: 4
-    structured_output_grace_iters: 2
-    stop_on_reject: true

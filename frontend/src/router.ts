@@ -16,7 +16,6 @@ import aiRoutes from "@/modules/ai-assistant/routes"
 import tlRoutes from "@/modules/task-list/routes"
 import wfRoutes from "@/modules/workflow/routes"
 import slRoutes from "@/modules/serial-log/routes"
-import ksRoutes from "@/modules/knowledge-assistant/routes"
 import bugRoutes from "@/modules/bug-manager/routes"
 import arRoutes from "@/modules/agent-reports/routes"
 
@@ -30,7 +29,6 @@ const routes = [
   ...tlRoutes,
   ...wfRoutes,
   ...slRoutes,
-  ...ksRoutes,
   ...bugRoutes,
   ...arRoutes,
   { path: "/", redirect: "/dashboard" },

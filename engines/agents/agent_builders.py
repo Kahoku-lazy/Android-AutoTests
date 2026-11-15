@@ -12,9 +12,8 @@ Python 调试：➡️ python -m engines.agents.agent_builders 🏁
 1. RoleConfig / ToolsConfig / ContextConfig / ReActConfig: 过渡期再导出四分段类型
 2. AgentRoleFactory: 用已建好的模型 + 四分段配置装配 agentscope.Agent
 3. build_ui_executor / build_ui_verifier / build_case_*: 角色键 → 模型 + 四分段 + 工具包
-4. build_knowledge_chat: 知识库文字问答角色（纯文字，不装语音合成）
-5. executor_agent / verifier_agent / build_executor / build_verifier: 兼容旧名的快捷入口
-6. _build: 兼容入口，读两张表后转调 assistant.create_chat_agent
+4. executor_agent / verifier_agent / build_executor / build_verifier: 兼容旧名的快捷入口
+5. _build: 兼容入口，读两张表后转调 assistant.create_chat_agent
 🏁
 关联模块：➡️
 1. engines.agents.config.role_types: 四分段类型仍由本文件再导出，供旧调用方使用
@@ -68,7 +67,6 @@ __all__ = [
     "build_ui_verifier",
     "build_case_writer",
     "build_case_verifier",
-    "build_knowledge_chat",
     "build_executor",
     "build_verifier",
     "executor_agent",
@@ -300,17 +298,3 @@ def executor_agent() -> Agent:
 def verifier_agent() -> Agent:
     """兼容旧名：等同 build_ui_verifier。"""
     return build_ui_verifier()
-
-
-def build_knowledge_chat(toolkit: Toolkit | None = None) -> Agent:
-    """知识库文字问答角色：KNOWLEDGE_CHAT_ROLE_CONFIG + 知识检索工具包。
-
-    纯文字角色不装语音合成中间件，避免把回答再合成一遍音频。
-
-    Args:
-        toolkit: 调用方注入的工具包（如 RAG 的 search_knowledge）；None 用空包。
-
-    Returns:
-        装配好的 Agent（每次调用都是独立实例，多轮历史留在实例内）。
-    """
-    return _build("KNOWLEDGE_CHAT_ROLE_CONFIG", toolkit or Toolkit(), with_events=False)

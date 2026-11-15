@@ -374,7 +374,7 @@ RETIRE_PHASE = {
     # 2.1 / 2.2 完成后：底座包不得依赖 Agent 包
     "reverse_dependency": True,
     # B1 完成后：知识助手产品面必须不存在
-    "knowledge_assistant": False,
+    "knowledge_assistant": True,
     # B4 完成后：engines/agents 必须不存在，且全仓不得再导入它
     "agents_package": False,
 }

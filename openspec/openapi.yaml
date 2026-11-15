@@ -1416,22 +1416,6 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
-  /api/knowledge-assistant/status/:
-    get:
-      operationId: knowledge_assistant_status_retrieve
-      description: 返回知识库助手是否启用、是否就绪、不可用原因、模型/音色与日志路径。
-      tags:
-      - knowledge-assistant
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
   /api/reports/:
     get:
       operationId: report_list
@@ -3115,7 +3099,5 @@ tags:
   description: 测试报告：任务报告列表、用例分解、报告文件下载与查看
 - name: serial-log
   description: 串口日志：端口监听开关、当前日志查看与关键词对照表
-- name: knowledge-assistant
-  description: 知识库助手：实时语音会话的就绪状态
 - name: schema
   description: OpenAPI schema 端点（drf-spectacular 自带）

@@ -1,16 +1,12 @@
 """Central WebSocket URL routing — aggregates all module consumers.
 
-知识库助手实时语音是本平台当前唯一的 WebSocket 生产点：
-`/ws/knowledge-assistant/?token=<access_token>`。
+当前**没有** WebSocket 生产点：知识助手（实时语音 + 文字问答）已整体下线
+（变更 retire-engines-agents），平台不再有语音通道。任务进度与列表走 HTTP 轮询。
 
-该通道只承载知识库助手的音频、转写、打断与播放进度；任务进度与列表
-仍走 HTTP 轮询（见 PRD 非功能约束的唯一例外）。
+保留本模块与空清单，是为了让 `backend/config/asgi.py` 的装配保持稳定：
+将来真出现 WebSocket 需求时，在这里登记 consumer 即可，不改 ASGI 入口。
 """
 
-from django.urls import URLPattern, path
+from django.urls import URLPattern
 
-from backend.apps.knowledge_assistant.consumer import KnowledgeAssistantConsumer
-
-websocket_urlpatterns: list[URLPattern] = [
-    path("ws/knowledge-assistant/", KnowledgeAssistantConsumer.as_asgi()),
-]
+websocket_urlpatterns: list[URLPattern] = []

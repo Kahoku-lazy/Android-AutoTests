@@ -14,7 +14,6 @@ pytestmark = [pytest.mark.unit]
         "/api/tasks/submit/",
         "/api/tasks/clear/",
         "/api/tasks/1/",
-        "/api/tasks/1/report/",
         "/api/tasks/1/rerun/",
         "/api/tasks/1/cancel/",
         "/api/tasks/1/delete/",

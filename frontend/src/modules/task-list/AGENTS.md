@@ -5,23 +5,22 @@
 ## 职责
 
 - `/tasks` 任务清单：任务卡分组、新建任务、重跑、关闭、删除、清空。
-- `/tasks/:id` 任务详情：事件流程报告、步骤尝试、日志证据、日志检查。
+- 任务**没有详情页**（变更 retire-engines-agents）：一行任务跑完产出一份 HTML 报告，点「报告」直接打开该报告。
 - 接口统一走 `api/tasks.ts` → `/api/tasks/*`，不直打 `/api/reports/*` 或 `/api/ai/*` 的任务接口。
-- 任务发布时读取助手列表可复用 `@/modules/ai-assistant/api/agents`；本模块不得被 `ai-assistant` 反向 import。
 
 ## 红线
 
 | 只做 | 禁止 |
 |------|------|
 | 任务查看 / 创建 / 重跑 / 关闭 / 删除 / 清空 | 写助手配置、改 `AIAgent` |
-| 只读展示事件、日志证据、费用 | 在前端重算计费或重排日志证据 |
+| 只读展示状态、费用、报告入口 | 在前端重算计费 |
 | `/api/tasks/*` 单一 HTTP 出口 | 直打 `/api/reports/task/*`、`/api/ai/agent-tasks/*` |
 
 ## 契约
 
 - 任务列表/详情/写操作响应为全局 `{status, data}`。
-- 任务详情报告 `GET /api/tasks/{id}/report/` 为全局 `{status, data}` 信封，负载在 `data`（`task` / `rounds` / `cases` / `conclusion`）。
-- 任务卡「详情」、测试报告行点击、仪表盘任务点击统一进入 `/tasks/:id`。
+- 任务行带 `report_run` / `report_name`（由 `Task.result` 派生）；两者都在时，前端打开 `/api/ai/agent-reports/<run>/<name>/`。
+- 已下线：`GET /api/tasks/{id}/report/` 与 `/tasks/:id` 路由。恢复任一项须先走 OpenSpec 变更。
 
 ## 快速验证
 
@@ -29,5 +28,4 @@
 cd frontend
 npx vitest run tests/task-list
 npm run typecheck
-npm run build:check
 ```

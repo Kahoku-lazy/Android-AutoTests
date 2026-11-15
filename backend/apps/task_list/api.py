@@ -622,6 +622,27 @@ def assistant_names_by_agent(agent_ids) -> dict[int, str]:
     return {int(agent_id): str(route_name or name or "") for agent_id, name, route_name in rows}
 
 
+def _report_locator(task: Task) -> dict:
+    """从任务结果里取出报告定位。
+
+    Args:
+        task: 任务对象；`result` 是 JSON 文本，可能为空或非字典。
+
+    Returns:
+        含 `report_run` / `report_name` 的字典；没有报告时两者都是空串。
+    """
+    try:
+        payload = json.loads(task.result or "{}")
+    except (TypeError, ValueError):
+        return {"report_run": "", "report_name": ""}
+    if not isinstance(payload, dict):
+        return {"report_run": "", "report_name": ""}
+    return {
+        "report_run": str(payload.get("report_run") or ""),
+        "report_name": str(payload.get("report_name") or ""),
+    }
+
+
 def serialize_agent_task_row(task: Task, *, assistant_name: str | None = None) -> dict:
     """任务发布列表行。正文不下发。
 
@@ -649,6 +670,7 @@ def serialize_agent_task_row(task: Task, *, assistant_name: str | None = None) -
         "started_at": str(task.started_at) if task.started_at else "",
         "finished_at": str(task.finished_at) if task.finished_at else "",
         "deepseek_cost": task_cost(task),
+        **_report_locator(task),
     }
 
 

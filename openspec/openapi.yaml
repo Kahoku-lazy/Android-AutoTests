@@ -1935,33 +1935,6 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
-  /api/tasks/{task_id}/report/:
-    get:
-      operationId: task_flow_report
-      description: |-
-        GET /api/tasks/{task_id}/report — 任务事件流程（标准 {status, data} 信封）。
-
-        终态任务的报告按「任务编号 + 最大事件序号」缓存，并给出 ETag；运行中任务每次重建。
-      parameters:
-      - in: path
-        name: task_id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - tasks
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-        '304':
-          description: No response body
   /api/tasks/{task_id}/rerun/:
     post:
       operationId: tasks_rerun_create

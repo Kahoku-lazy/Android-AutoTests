@@ -95,11 +95,6 @@ EXCEPTIONS = (
         "/api/workflow/directories/create/",
         "同上：断言旧写地址不再被任何实现应答",
     ),
-    (
-        "tests/report/integration/test_report_envelope.py",
-        "/api/reports/run/1/",
-        "该用例断言的就是“已删除的 Run 详情端点必须 404”，是负向用例",
-    ),
 )
 
 # 各面的规模下限（后方为实测值，下限取 ~95%）。

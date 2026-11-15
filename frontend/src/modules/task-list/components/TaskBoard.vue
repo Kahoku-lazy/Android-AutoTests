@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref } from "vue"
-import { useRouter } from "vue-router"
 import type { FormInstance, UploadFile } from "element-plus"
 import { ElMessage } from "element-plus"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
@@ -13,7 +12,6 @@ import {
   CASE_SOURCE_OPTIONS,
   CASE_SOURCE_PLATFORM,
   TASK_STATUS_LABELS,
-  taskDetailRoute,
   taskStatusTone,
   type TaskStatusTone,
 } from "../constants"
@@ -47,7 +45,6 @@ function statusLabel(status: string): string {
   return TASK_STATUS_LABELS[status] || TASK_STATUS_LABELS[taskStatusTone(status)] || status || "—"
 }
 
-const router = useRouter()
 const {
   form,
   submitting,
@@ -113,8 +110,12 @@ const {
   cancellingId,
 } = useTaskList()
 
-function openDetail(taskId: number) {
-  router.push(taskDetailRoute(taskId))
+function openReport(task: TaskRecord) {
+  const run = task.report_run
+  const name = task.report_name
+  if (!run || !name) return
+  const url = `/api/ai/agent-reports/${encodeURIComponent(run)}/${encodeURIComponent(name)}/`
+  window.open(url, "_blank", "noopener")
 }
 
 function isFailed(t: TaskRecord): boolean {
@@ -446,7 +447,7 @@ async function onSubmit() {
                   >
                     {{ rerunningId === t.id ? "重新执行中…" : "重新执行" }}
                   </DoodleBtn>
-                  <DoodleBtn tone="teal" @click="openDetail(t.id)">详情</DoodleBtn>
+                  <DoodleBtn tone="teal" @click="openReport(t)">报告</DoodleBtn>
                 </template>
               </DoodleNote>
             </div>

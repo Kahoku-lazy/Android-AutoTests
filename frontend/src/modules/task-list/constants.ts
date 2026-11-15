@@ -33,11 +33,6 @@ export const REPORT_POLL_MAX_FAILURES = 5
 /** 任务详情：默认只展开第一个用例 */
 export const DEFAULT_OPEN_CASE_INDEX = 0
 
-/** 任务详情全屏页 */
-export function taskDetailRoute(id: number | string): string {
-  return `/tasks/${id}`
-}
-
 /** 任务详情：执行侧「日志检查」区块（StepLogCheck）文案 */
 export const STEP_LOG_CHECK_TITLE = "日志检查"
 

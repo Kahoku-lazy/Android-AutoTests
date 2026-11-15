@@ -12,7 +12,6 @@ from .views import (
     AgentTaskRerunAPIView,
     AgentTaskStatsAPIView,
     TaskMediaAPIView,
-    TaskReportAPIView,
     TaskSubmitAPIView,
 )
 from .views_upload import UploadFileAPIView
@@ -25,7 +24,6 @@ urlpatterns = [
     path("", AgentTaskListAPIView.as_view(), name="task_list"),
     path("stats/", AgentTaskStatsAPIView.as_view(), name="task_stats"),
     path("clear/", AgentTaskClearAPIView.as_view(), name="task_clear"),
-    path("<int:task_id>/report/", TaskReportAPIView.as_view(), name="task_report"),
     path("<int:task_id>/media/<int:media_id>/", TaskMediaAPIView.as_view(), name="task_media"),
     path(
         "<int:task_id>/media/<int:media_id>/link/",

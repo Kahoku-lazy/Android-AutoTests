@@ -70,6 +70,10 @@ export interface TaskRecord {
   started_at?: string
   finished_at?: string
   deepseek_cost?: number
+  /** 本次运行的报告目录名（backend_bridge 报告根下的时间戳目录）；没有报告时为空 */
+  report_run?: string
+  /** 本次运行的报告文件名；没有报告时为空 */
+  report_name?: string
 }
 
 export interface TaskSubmitPayload {

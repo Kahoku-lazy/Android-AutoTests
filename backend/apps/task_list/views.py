@@ -1,10 +1,5 @@
 """task-list views — task submit/list/detail/rerun/cancel/delete/clear."""
 
-import gzip
-import hashlib
-import json
-
-from django.core.cache import cache
 from django.http import HttpResponse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
@@ -18,27 +13,7 @@ from backend.apps.ai_assistant.models import AIAgent
 from backend.apps.task_list import api
 from backend.apps.task_list.models import Task
 from backend.apps.task_list.serializers import TaskSubmitInputSerializer
-from backend.apps.task_list.task_reports import build_task_flow, report_cache_meta
 from backend.models.constants import TaskKind, TaskStatus
-
-# 任务进入终态后事件不再变化，报告可缓存；运行中任务每轮都可能新增事件，不缓存。
-_REPORT_CACHE_TTL = 600
-_REPORT_TERMINAL_STATUSES = {"completed", "failed", "interrupted", "cancelled", "stopped"}
-
-
-def _report_body(payload: dict) -> tuple[bytes, bytes, str]:
-    """把报告渲染成信封字节、gzip 字节与 ETag。
-
-    Args:
-        payload: 报告数据。
-
-    Returns:
-        (明文 JSON 字节, gzip 字节, ETag)。ETag 取明文摘要，与压缩无关。
-    """
-    raw = json.dumps(
-        {"status": True, "data": payload}, ensure_ascii=False, separators=(",", ":"), default=str
-    ).encode("utf-8")
-    return raw, gzip.compress(raw), hashlib.sha1(raw).hexdigest()
 
 
 def _visible_task(request, task_id: int) -> Task | None:
@@ -291,49 +266,6 @@ class AgentTaskDetailAPIView(APIView):
         if task is None:
             raise NotFound("任务不存在")
         return Response(api.serialize_agent_task_detail(task))
-
-
-class TaskReportAPIView(APIView):
-    """GET /api/tasks/{task_id}/report — 任务事件流程（标准 {status, data} 信封）。
-
-    终态任务的报告按「任务编号 + 最大事件序号」缓存，并给出 ETag；运行中任务每次重建。
-    """
-
-    @extend_schema(
-        responses={200: OpenApiTypes.OBJECT, 304: None},
-        operation_id="task_flow_report",
-    )
-    def get(self, request, task_id: int):
-        user_id = getattr(request, "user_id", None)
-        meta = report_cache_meta(user_id, task_id)
-        if meta is None:
-            raise NotFound("任务不存在")
-
-        status, max_seq = meta
-        terminal = status in _REPORT_TERMINAL_STATUSES
-        cache_key = f"task-flow:{task_id}:{max_seq}"
-        cached = cache.get(cache_key)
-        if cached is None:
-            payload = build_task_flow(user_id, task_id)
-            if payload is None:
-                raise NotFound("任务不存在")
-            cached = _report_body(payload)
-            # 运行中任务：短缓存 2 秒，多个查看者共用一次构建，事件序号变化后自然换键
-            cache.set(cache_key, cached, _REPORT_CACHE_TTL if terminal else 2)
-
-        raw, zipped, etag = cached
-        quoted = f'"{etag}"'
-        if (request.headers.get("If-None-Match") or "").replace("W/", "").strip() == quoted:
-            response = HttpResponse(status=304)
-        elif "gzip" in (request.headers.get("Accept-Encoding") or ""):
-            response = HttpResponse(zipped, content_type="application/json")
-            response["Content-Encoding"] = "gzip"
-        else:
-            response = HttpResponse(raw, content_type="application/json")
-        response["ETag"] = quoted
-        response["Cache-Control"] = "private, max-age=60"
-        response["Vary"] = "Authorization, Accept-Encoding"
-        return response
 
 
 class TaskMediaAPIView(APIView):

@@ -15,7 +15,7 @@ Python 调试：➡️ python -m engines.backend_bridge.event_log 🏁
 🏁
 关联模块：➡️
 1. utils.logs: 导入 agent_event_log，与引擎侧共用同一份事件日志。
-2. engines.agents.workflow.single.event_tail: 只读它的分段读取实现，本模块不导入它。
+2. 分段标记与历史引擎侧实现保持一致；引擎侧已退役（变更 retire-engines-agents）。
 🏁
 测试：➡️
 1. tests/engines/backend_bridge/unit/test_event_log.py: 分段标记一致、全量内容、增量折叠

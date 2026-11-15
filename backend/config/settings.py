@@ -186,7 +186,7 @@ DB_ENGINE = os.environ.get("DB_ENGINE", "mysql")
 # 注：设备交互无中间层（原 L2 会话层已于 2026-09-03 扁平化删除）。
 DEVICE_ENGINE = os.environ.get("DEVICE_ENGINE", "u2")
 
-# 控制设备任务由 engines.agents 的 SOP 执行，不再按引擎名加载实现。
+# 控制设备任务由 engines.backend_bridge 的 SOP 执行，不再按引擎名加载实现。
 
 
 if DB_ENGINE == "mysql":

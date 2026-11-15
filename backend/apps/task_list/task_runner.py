@@ -297,7 +297,6 @@ def run_task_async(task_id: int, agent_id: int) -> None:
         close_old_connections()
 
 
-
 def spawn_task_thread(task_id: int, agent_id: int) -> None:
     """启动 daemon 线程执行任务，并登记线程供取消兜底判断是否已退出。"""
     thread = threading.Thread(

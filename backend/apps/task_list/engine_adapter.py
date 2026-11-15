@@ -1,6 +1,6 @@
 """任务装配：设备串兜底解析。
 
-模型与工具包全部写死在 `engines.agents.agent_builders`，本模块不再读数据库里的
+模型与工具包全部由 `engines.backend_bridge` 装配，本模块不再读数据库里的
 模型配置、不再构造 `ModelConfig`，也不再做 provider / 密钥校验。
 """
 

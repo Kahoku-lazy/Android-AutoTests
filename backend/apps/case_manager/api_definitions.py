@@ -7,8 +7,6 @@ from typing import Any
 from django.db import transaction
 from django.utils import timezone
 
-from engines.agents.workflow.case_file import parse_step_hints
-
 from .api_files import get_file
 from .api_ids import allocate_case_id_on_create
 from .api_projects import ConflictError, get_project
@@ -107,6 +105,49 @@ def _owned_case(*, case_id: str, user_id: str) -> TestDefinition:
     return obj
 
 
+def _parse_step_hints(
+    anchor: object, log: object, *, where: str = "步骤"
+) -> tuple[dict[str, str], dict[str, object], str]:
+    """校验一步的可选执行提示，返回可入库的纯字典。
+
+    用例 YAML 模型已下线（变更 retire-engines-agents），本函数是后端自带的收口，
+    不再依赖引擎侧实现。
+
+    Args:
+        anchor: 接口里的 `anchor` 节点；None 表示该步没有页面锚点。
+        log: 接口里的 `log` 节点；None 表示该步没有日志证据。
+        where: 报错定位用的路径，例如「第 2 步」。
+
+    Returns:
+        (页面锚点字典, 日志证据字典, 失败原因)。成功时原因为空串，缺失项为空字典；
+        日志证据固定为 `{sku, port, keywords}`，单关键词收敛成列表。
+    """
+    anchor_map: dict[str, str] = {}
+    if anchor is not None:
+        if not isinstance(anchor, dict):
+            return {}, {}, f"{where}的 anchor 必须是对象"
+        anchor_map = {str(key): str(value) for key, value in anchor.items()}
+    payload: dict[str, object] = {}
+    if log is not None:
+        if not isinstance(log, dict):
+            return {}, {}, f"{where}的 log 必须是对象"
+        keywords = log.get("keywords")
+        if keywords is None:
+            items: list[str] = []
+        elif isinstance(keywords, str):
+            items = [keywords]
+        elif isinstance(keywords, (list, tuple)):
+            items = [str(item) for item in keywords]
+        else:
+            return {}, {}, f"{where}的 log.keywords 必须是字符串或数组"
+        try:
+            port = int(log.get("port") or 0)
+        except (TypeError, ValueError):
+            return {}, {}, f"{where}的 log.port 必须是整数"
+        payload = {"sku": str(log.get("sku") or ""), "port": port, "keywords": items}
+    return anchor_map, payload, ""
+
+
 def _normalize_steps(steps: Any) -> list[dict[str, Any]]:
     """把入参收敛为 ``[{"action", "assertion", "anchor", "log"}]``，保持提交顺序。
 
@@ -124,7 +165,7 @@ def _normalize_steps(steps: Any) -> list[dict[str, Any]]:
     for index, item in enumerate(steps, start=1):
         if not isinstance(item, dict):
             raise ValueError(f"第 {index} 步格式无效")
-        anchor, log, reason = parse_step_hints(
+        anchor, log, reason = _parse_step_hints(
             item.get("anchor"),
             item.get("log"),
             where=f"第 {index} 步",

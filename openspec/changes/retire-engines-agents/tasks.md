@@ -22,7 +22,7 @@
 ## 4. 平台任务链切换（B2）
 
 - [x] 4.1 在 `engines/backend_bridge/workflow/` 新增取消模块：按 `task_id` 登记 `CancelToken`，提供 `request_cancel` / `bind_cancel` / `clear_cancel`，并由 `run_sop_once` 把 `CancelMiddleware` 挂进 `controls`。验证：新增 `tests/engines/backend_bridge/unit/test_sop_cancel.py` 全绿
-- [ ] 4.2 `backend/apps/task_list/task_runner.py` 改调 `backend_bridge.workflow.sop_ui.run_sop_once`：把报告定位（run 目录 + 文件名）写进任务结果，按运行结论映射任务终态，删掉对 `platform_run`、`event_sink`、`messaging.record` 的导入。验证：`python -m pytest -c tests/pytest.ini tests/task -q` 全绿
+- [x] 4.2 `backend/apps/task_list/task_runner.py` 改调 `backend_bridge.workflow.sop_ui.run_sop_once`：把报告定位（run 目录 + 文件名）写进任务结果，按运行结论映射任务终态，删掉对 `platform_run`、`event_sink`、`messaging.record` 的导入。验证：`python -m pytest -c tests/pytest.ini tests/task -q` 全绿
 - [ ] 4.3 `backend/apps/task_list/{api,event_store}.py`：取消改调新入口；任务执行不再绑定 sink、不再写事件明细行。验证：`python -m pytest -c tests/pytest.ini tests/task/api/test_task_cancel_dispatch.py -q` 全绿
 - [ ] 4.4 下线任务详情报告接口：移除 `/api/tasks/{id}/report/` 与其视图/序列化/契约，删除对应前端任务详情页。验证：`cd frontend; pnpm run typecheck` 通过，OpenAPI 基线重生成后 `openapi-schema` 门禁通过
 - [ ] 4.5 前端任务清单改为直达报告：行点击打开 `backend_bridge` 的报告（走既有报告读取接口），不再进详情页。验证：`cd frontend; pnpm run typecheck && npx vitest run tests/task-list` 通过
@@ -32,7 +32,7 @@
 
 ## 5. 用例 YAML 通道下线（B3，需先过决策点）
 
-- [ ] 5.1 **决策点（阻塞后续）**：与需求方确认 `case_manager` 用例库在 YAML 通道下线后的数据来源（只读历史 / 改录 SOP steps / 在 `backend_bridge` 重建用例模型），把结论写进 `design.md` 的 Open Questions。验证：`design.md` 该条标记为已决，且 5.2 起按结论执行
+- [x] 5.1 **决策点（阻塞后续）**：与需求方确认 `case_manager` 用例库在 YAML 通道下线后的数据来源（只读历史 / 改录 SOP steps / 在 `backend_bridge` 重建用例模型），把结论写进 `design.md` 的 Open Questions。验证：`design.md` 该条标记为已决，且 5.2 起按结论执行
 - [ ] 5.2 删 `engines/agents/workflow/{case_file,case_goal_workflow,case_artifact,case_artifact_facts,case_artifact_render,step_brief}.py`。验证：`grep -rn "case_file\|case_goal_workflow\|case_artifact\|step_brief" engines backend` 无输出
 - [ ] 5.3 删 `backend/apps/case_manager/{api_yaml,api_definitions}.py` 中的 YAML 导入与步骤提示入口（按 5.1 结论决定整文件删除或收窄）；同步前端用例页面的导入/导出控件。验证：`cd frontend; pnpm run type-check` 通过，用例页面无 YAML 导入按钮
 - [ ] 5.4 删 `backend/apps/task_list/{attachments,task_reports}.py` 的 `validate_platform_yaml` 调用与 `task_runner.py:254` 的用例编写入口。验证：`python -m pytest -c tests/pytest.ini tests/task -q` 全绿

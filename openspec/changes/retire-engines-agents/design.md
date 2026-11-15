@@ -113,7 +113,20 @@
 
 **回退**：逐批 `git revert` 对应 commit。B2 之前回退无数据影响；B3 之后若需恢复 YAML 通道，需从归档规格重建，成本较高，故 B3 单独成 commit 且不与其他批次合并。
 
+### D9 总口径：Harness 里没有的功能一律放弃
+
+需求方定调：**`ae_harness` + `backend_bridge` 已有的能力之外，一律不做补偿性重建。** 据此关闭全部待定项：
+
+| 待定 | 结论 |
+| --- | --- |
+| `case_manager` 的 YAML 通道下线后数据从哪来 | **放弃**：不重建、不改造，YAML 导入/导出与用例编写流水线一起下线 |
+| 任务取消超时告警是否仍进数据库 | **放弃**：只留后端日志，不写 `task_events` |
+| 任务详情报告的替代形态 | **放弃**：任务清单直达 `backend_bridge` 的 HTML 报告，不另做详情 |
+| 语音 / TTS / 实时语音 | **放弃**：Harness 无此能力，不迁入 |
+| 四分段角色配置、技能目录、单智能体清单 | **放弃**：Harness 用 `models.yaml` + `prompts/*.md` + `create_agent` |
+
+因此本变更在实施阶段**不再有需要产品判断的开口**，剩余工作全是机械替换与删除。
+
 ## Open Questions
 
-1. **`case_manager` 用例库的数据来源**（阻塞 B3，不阻塞立单）：YAML 导入/导出下线后，用例库是转为只读历史数据、改由 `sop/steps` YAML 替代录入、还是在 `backend_bridge` 重建一套用例模型？三者工作量差异大，需在 B3 前定。
-2. `data/rag_index/` 删除后是否需要保留一份只读归档（当前判定：不需要，`ae_harness/knowledge` 从 `product_manuals` 源文档重建）。
+无。原第 1 条（用例库数据来源）已由 D9 关闭；原第 2 条（`data/rag_index` 归档）在 B1 已按「直接重建」执行完毕。

@@ -13,6 +13,7 @@ from pathlib import Path
 from django.db import close_old_connections
 
 from backend.models.constants import TaskKind, TaskStatus
+from engines.ae_harness.middleware.control import RunCancelled
 from utils.logs import backend_log
 
 from . import api
@@ -30,6 +31,111 @@ CANCEL_RELEASE_SECONDS = 60
 # 正在跑任务的工作线程与取消兜底计时器，都按任务 id 登记。
 _workers: dict[int, threading.Thread] = {}
 _release_timers: dict[int, threading.Timer] = {}
+
+
+def _sop_task_text(task: Task) -> str:
+    """平台 SOP 的任务描述：用户目标 + 设备 serial 指令。
+
+    Args:
+        task: 要执行的任务。
+
+    Returns:
+        交给 SOP 第一步的任务文本。
+    """
+    goal = (task.goal or task.title or "").strip()
+    return f"{goal}\n\n{api.build_sop_run_input(task)}".strip()
+
+
+def _usage_totals(tokens: dict) -> dict:
+    """把 SOP 汇总的四类 token 收成任务用量字段。
+
+    Args:
+        tokens: `SopRunResult.tokens`，键为 input / output / cache_hit / cache_creation。
+
+    Returns:
+        写入任务的用量字典。
+    """
+    return {
+        "input_tokens": int(tokens.get("input") or 0),
+        "output_tokens": int(tokens.get("output") or 0),
+        "cache_input_tokens": int(tokens.get("cache_hit") or 0),
+        "models": {},
+        "by_role": {},
+    }
+
+
+def _price_costs(usages: list[dict], model: str) -> dict:
+    """按价目表把逐次用量算成任务费用。
+
+    Args:
+        usages: `SopRunResult.usages`，逐次调用的用量明细。
+        model: 本次运行的模型名；价目表按模型名匹配。
+
+    Returns:
+        含四类费用的字典，金额为 Decimal，保留价目表精度。
+    """
+    from decimal import Decimal
+
+    from backend.apps.usage_ledger.pricing import price_usage
+
+    totals = {
+        "cost_input": Decimal("0"),
+        "cost_cache": Decimal("0"),
+        "cost_output": Decimal("0"),
+    }
+    for item in usages or []:
+        priced = price_usage(
+            "",
+            model,
+            input_tokens=int(item.get("input_tokens") or 0),
+            output_tokens=int(item.get("output_tokens") or 0),
+            cache_input_tokens=int(item.get("cache_input_tokens") or 0),
+            cache_creation_tokens=int(item.get("cache_creation_input_tokens") or 0),
+        )
+        for key in totals:
+            totals[key] += Decimal(str(priced.get(key) or 0))
+    totals["cost_total"] = totals["cost_input"] + totals["cost_cache"] + totals["cost_output"]
+    return totals
+
+
+def _report_locator(report_path) -> dict:
+    """把报告绝对路径拆成「运行目录 + 文件名」，前端据此拼读取地址。
+
+    Args:
+        report_path: 本次运行的 HTML 报告路径；没有报告时为 None。
+
+    Returns:
+        含 report_run / report_name / report_path 的字典；没有报告时为空字典。
+    """
+    from engines.backend_bridge.reports import REPORT_ROOT
+
+    if not report_path:
+        return {}
+    path = Path(report_path)
+    try:
+        parts = path.relative_to(REPORT_ROOT).parts
+    except ValueError:
+        return {"report_path": path.as_posix()}
+    return {
+        "report_run": parts[0] if parts else "",
+        "report_name": parts[-1] if parts else "",
+        "report_path": path.as_posix(),
+    }
+
+
+async def _run_ui_sop(task: Task, task_id: int):
+    """跑一次平台 UI 执行 + 验收 SOP。
+
+    Args:
+        task: 要执行的任务。
+        task_id: 平台任务 id，用于挂取消令牌。
+
+    Returns:
+        `SopRunResult`：每步结论、产物路径与用量汇总。
+    """
+    from engines.backend_bridge.workflow.sop_ui import run_sop_once
+
+    return await run_sop_once(_sop_task_text(task), task_id=task_id)
 
 
 def schedule_cancel_release(
@@ -102,76 +208,40 @@ def _force_release_device(task_id: int, serial: str, agent_id: int) -> None:
 
 
 def _record_cancel_timeout(task_id: int, agent_id: int) -> None:
-    """把「关闭后工作线程超时未退出」写成一条任务事件，供详情页与排障查看。
+    """把「关闭后工作线程超时未退出」写进后端日志，供排障查看。
+
+    任务不再落事件明细（见 retire-engines-agents），这条告警只留日志。
 
     Args:
         task_id: 被关闭的任务 id。
         agent_id: 任务所属智能体 id。
 
     Returns:
-        None。落库失败只记日志。
+        None。
     """
-    from datetime import datetime
-
-    from engines.agents.event_sink import (
-        bind_run_context,
-        bind_sink,
-        reset_run_context,
-        reset_sink,
+    backend_log.warning(
+        "取消超时：关闭后 %s 秒工作线程仍未退出，已强制放行设备 task_id=%s agent_id=%s",
+        CANCEL_RELEASE_SECONDS,
+        task_id,
+        agent_id,
     )
-    from engines.agents.messaging.record import EventRecord
-
-    from .event_store import TaskEventSink
-
-    now = datetime.now()
-    record = EventRecord(
-        event_type="TaskCancelTimeoutEvent",
-        phase="结束",
-        block_type="interrupt",
-        payload={
-            "reason": f"关闭后 {CANCEL_RELEASE_SECONDS} 秒工作线程仍未退出，已强制放行设备",
-            "task_id": task_id,
-        },
-        started_at=now,
-        ended_at=now,
-        duration_ms=0,
-    )
-    sink = TaskEventSink()
-    sink_token = bind_sink(sink)
-    run_token = bind_run_context(task_id, agent_id, "")
-    try:
-        sink.emit(record)
-    except Exception:  # noqa: BLE001 - 告警事件写不进去也不影响放行
-        backend_log.exception("记录取消超时事件失败 task_id=%s", task_id)
-    finally:
-        sink.close()
-        reset_sink(sink_token)
-        reset_run_context(run_token)
 
 
 def run_task_async(task_id: int, agent_id: int) -> None:
-    """后台线程入口：启动平台 SOP，并把加载结论与终态写回任务。"""
-    from backend.apps.task_list.event_store import TaskEventSink
-    from engines.agents.event_sink import bind_run_context, bind_sink, reset_run_context, reset_sink
-    from engines.agents.workflow.platform_run import bind_cancel, run_platform_sop
+    """后台线程入口：启动平台 SOP，并把终态与报告定位写回任务。"""
+    from engines.backend_bridge.workflow.cancel import bind_cancel, clear_cancel
 
     close_old_connections()
     ephemeral = False
     yaml_path = ""
-    sink = None
-    sink_token = None
-    run_token = None
     serial = ""
     try:
         task = Task.objects.get(id=task_id)
         serial = task.device_serial or ""
-        cancel_event = bind_cancel(task_id)
-        sink = TaskEventSink()
-        sink_token = bind_sink(sink)
-        run_token = bind_run_context(task_id, agent_id, task.case_title or "")
+        cancel_token = bind_cancel(task_id)
 
         if task.task_kind == TaskKind.CASE_AUTHORING:
-            result = _run_case_authoring(task, cancel_event)
+            result = _run_case_authoring(task, cancel_token.event)
             task.refresh_from_db()
             if task.status != TaskStatus.CANCELLED:
                 status = RESULT_STATUS_MAP.get(result.get("status") or "", TaskStatus.FAILED)
@@ -183,33 +253,42 @@ def run_task_async(task_id: int, agent_id: int) -> None:
                 )
             return
 
-        yaml_path, ephemeral = api.materialize_config_file(task)
-        result = run_platform_sop(
-            yaml_path,
-            api.build_sop_run_input(task),
-            task_id=task_id,
-            case_title=task.case_title or "",
-            device_serial=task.device_serial or "",
-        )
-        api.set_config_load_message(task, result.get("load_message") or "")
+        outcome = asyncio.run(_run_ui_sop(task, task_id))
         # 取消优先：用户在跑的过程中关闭了任务，收尾不能把 cancelled 改写成别的终态
         task.refresh_from_db()
         if task.status == TaskStatus.CANCELLED:
             return
-        status = RESULT_STATUS_MAP.get(result.get("status") or "", TaskStatus.FAILED)
+        passed = bool(outcome.steps) and all(item.passed for item in outcome.steps)
+        failed_steps = [item for item in outcome.steps if not item.passed]
         payload = {
-            "status": result.get("status") or "fail",
-            "summary": result.get("load_message") or "",
-            "reason": result.get("reason") or "",
-            "completed": result.get("completed") or [],
-            "failed": result.get("failed") or [],
+            "status": "success" if passed else "fail",
+            "summary": "",
+            "reason": ""
+            if passed
+            else "；".join(f"{i.subject}：{i.message}" for i in failed_steps),
+            "completed": [item.subject for item in outcome.steps if item.passed],
+            "failed": [item.subject for item in failed_steps],
+            "cost_s": outcome.cost_s,
+            **_report_locator(outcome.report_path),
         }
         api.finalize_task(
             task,
-            status=status,
+            status=TaskStatus.COMPLETED if passed else TaskStatus.FAILED,
             result=api.dump_task_run_payload(payload),
+            usage=_usage_totals(outcome.tokens),
+            costs=_price_costs(outcome.usages, outcome.model),
             release_device=False,
         )
+    except RunCancelled:
+        try:
+            api.finalize_task(
+                Task.objects.get(id=task_id),
+                status=TaskStatus.CANCELLED,
+                result=api.dump_task_run_payload({"status": "cancelled", "reason": "用户取消"}),
+                release_device=False,
+            )
+        except Exception:
+            backend_log.exception("finalize cancelled task failed id=%s", task_id)
     except Exception as exc:
         backend_log.exception("async task failed id=%s", task_id)
         try:
@@ -222,19 +301,8 @@ def run_task_async(task_id: int, agent_id: int) -> None:
         except Exception:
             backend_log.exception("finalize async task failed id=%s", task_id)
     finally:
-        if sink is not None:
-            try:
-                sink.close()
-            except Exception:
-                backend_log.exception("flush task events failed id=%s", task_id)
-        if sink_token is not None:
-            reset_sink(sink_token)
-        if run_token is not None:
-            reset_run_context(run_token)
         if ephemeral and yaml_path:
             Path(yaml_path).unlink(missing_ok=True)
-        from engines.agents.workflow.platform_run import clear_cancel
-
         clear_cancel(task_id)
         # 设备槽只在这里放行：取消路径不提前放行，避免两条任务抢同一台手机
         release_device_now(task_id, serial)

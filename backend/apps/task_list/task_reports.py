@@ -17,7 +17,6 @@ from backend.apps.ai_assistant.models import AIAgent
 from backend.apps.task_list.api import list_task_attachments, parse_task_result
 from backend.apps.task_list.models import Task, TaskAttachment, TaskEvent
 from backend.models.constants import TaskKind
-from engines.agents.workflow.case_file import validate_platform_yaml
 
 # 分组只需要这 6 列；阶段、展示、明细与起止时间只补给每组的第一行。
 _SLIM_COLUMNS = ("seq", "event_type", "is_delta", "step_seq", "attempt", "delta_count")
@@ -617,20 +616,13 @@ def _role_kind(item: dict) -> str:
 
 
 def _task_cases(task: Task):
-    """按执行顺序取出要跑的用例。指定了用例标题时只留那一条。"""
-    config = next(
-        (row for row in list_task_attachments(task) if row.kind == TaskAttachment.KIND_CONFIG),
-        None,
-    )
-    if config is None or not (config.body or "").strip():
-        return []
-    cases, reason = validate_platform_yaml(config.body)
-    if reason or not cases:
-        return []
-    wanted = (task.case_title or "").strip()
-    if wanted:
-        return [case for case in cases if case.title == wanted]
-    return list(cases)
+    """按执行顺序取出要跑的用例。
+
+    用例 YAML 模型已下线（变更 retire-engines-agents）：任务不再携带可解析的用例清单，
+    恒返回空列表，调用方按「无用例」处理。
+    """
+    del task
+    return []
 
 
 def _duty(kind: str, step_seq, attempt, steps) -> str:

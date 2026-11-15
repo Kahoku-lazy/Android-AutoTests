@@ -1,9 +1,9 @@
 """任务费用读取（元）。本模块只读，不重算。
 
-唯一计算口径在引擎侧：`engines/agents/messaging/billing.py::DeepSeekBilling`
-（8 位小数、按每次模型调用时刻、含中国法定节假日）。结果经事件入库汇总到
-`task_tasks.cost_total`：`fold.py` 算价 → `TaskEventSink` 写事件 →
-`api.rollup_task_cost` 回写任务。
+价目口径：`engines/agents/messaging/billing.py::DeepSeekBilling` 与平台侧副本
+`engines/backend_bridge/model_billing/billing.py::DeepSeekBilling` 逐项对拍，两份结果一致。
+任务路径由 `fold.py` 算价 → `TaskEventSink` 写事件 → `api.rollup_task_cost` 回写任务；
+平台账本路径由 `usage_ledger.pricing` 用 backend_bridge 副本算价。
 
 业务侧（任务列表 / 任务详情 / 任务报告 / 仪表盘）统一读这一列，避免"再算一遍"
 导致同一任务在不同页面出现两个数。

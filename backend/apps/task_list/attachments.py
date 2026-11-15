@@ -182,9 +182,11 @@ def _upload_pair(item) -> tuple[str, bytes]:
 
 
 def collect_task_files(configs: list, documents: list) -> list[PreparedUpload]:
-    """检查一次提交的配置与文档。失败抛 AttachmentError。不写库、不落盘。"""
-    from engines.agents.workflow.case_file import validate_platform_yaml
+    """检查一次提交的配置与文档。失败抛 AttachmentError。不写库、不落盘。
 
+    配置附件不再按用例 YAML 深度校验（用例 YAML 模型已下线，见 retire-engines-agents）：
+    只保留体积、扩展名与编码检查，文件作为任务记录随任务保存。
+    """
     if not configs:
         raise AttachmentError("需要一份 YAML 配置")
     if len(configs) != 1:
@@ -198,9 +200,6 @@ def collect_task_files(configs: list, documents: list) -> list[PreparedUpload]:
         text = content.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise AttachmentError("YAML 必须是 UTF-8") from exc
-    _cases, reason = validate_platform_yaml(text)
-    if reason:
-        raise AttachmentError(reason)
     prepared = [PreparedUpload(kind="config", filename=filename, body=text, content=content)]
     for item in documents:
         doc_name, doc_bytes = _upload_pair(item)

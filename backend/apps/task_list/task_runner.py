@@ -12,7 +12,7 @@ from pathlib import Path
 
 from django.db import close_old_connections
 
-from backend.models.constants import TaskKind, TaskStatus
+from backend.models.constants import TaskStatus
 from engines.ae_harness.middleware.control import RunCancelled
 from utils.logs import backend_log
 
@@ -239,19 +239,7 @@ def run_task_async(task_id: int, agent_id: int) -> None:
         task = Task.objects.get(id=task_id)
         serial = task.device_serial or ""
         cancel_token = bind_cancel(task_id)
-
-        if task.task_kind == TaskKind.CASE_AUTHORING:
-            result = _run_case_authoring(task, cancel_token.event)
-            task.refresh_from_db()
-            if task.status != TaskStatus.CANCELLED:
-                status = RESULT_STATUS_MAP.get(result.get("status") or "", TaskStatus.FAILED)
-                api.finalize_task(
-                    task,
-                    status=status,
-                    result=api.dump_task_run_payload(result),
-                    release_device=False,
-                )
-            return
+        del cancel_token
 
         outcome = asyncio.run(_run_ui_sop(task, task_id))
         # 取消优先：用户在跑的过程中关闭了任务，收尾不能把 cancelled 改写成别的终态
@@ -308,190 +296,6 @@ def run_task_async(task_id: int, agent_id: int) -> None:
         release_device_now(task_id, serial)
         close_old_connections()
 
-
-def _run_case_authoring(task: Task, cancel_event=None) -> dict:
-    """跑一次状态机三段式用例编写，返回可写入 Task.result 的结果字典。
-
-    Args:
-        task: 用例编写任务。
-        cancel_event: 任务的取消信号；已置位时不再开跑。
-
-    Returns:
-        status / summary / phase / passed / artifact / facts / verdicts / document / reason。
-    """
-    from engines.agents.workflow.case_goal_workflow import run_case_authoring_artifact
-
-    if cancel_event is not None and cancel_event.is_set():
-        return _case_failed("用户关闭", status="cancelled")
-    requirement = api.build_case_requirement(task)
-    if not requirement.strip():
-        return _case_failed("任务没有可解析的需求文档")
-
-    try:
-        result = asyncio.run(
-            _await_case_run(
-                run_case_authoring_artifact(
-                    requirement,
-                    project_code=api.case_project_code(task),
-                    version="V1",
-                ),
-                cancel_event,
-            )
-        )
-    except asyncio.CancelledError:
-        return _case_failed("用户关闭", status="cancelled")
-    if result is None:
-        return _case_failed("用户关闭", status="cancelled")
-    verdicts = [
-        {"passed": passed, "message": message, "verifier": verifier}
-        for passed, message, verifier in result.verdicts
-    ]
-    passed = bool(result.passed)
-    reason = "" if passed else (result.reason or "未通过验收")
-    case_import = (
-        _import_case_artifact(task, result)
-        if passed
-        else _skipped_import("验收未通过或产物为空，未写入用例库")
-    )
-    counts = result.artifact.counts
-    return {
-        "status": "success" if passed else "fail",
-        "summary": (
-            f"用例已生成并通过验收（状态 {counts['states']} 个 / 迁移 {counts['transitions']} 条"
-            f" / 场景 {counts['scenarios']} 条 / 用例 {counts['cases']} 条）"
-            if passed
-            else f"用例验收未通过（用例 {counts['cases']} 条）"
-        ),
-        "phase": result.phase,
-        "passed": passed,
-        "artifact": result.artifact.payload(),
-        "facts": result.facts.payload(),
-        "document": result.document,
-        "verdicts": verdicts,
-        "case_import": case_import,
-        "reason": reason,
-        "max_output_tokens": result.max_output_tokens,
-    }
-
-
-def _skipped_import(message: str) -> dict:
-    """构造「未写入用例库」的结论，字段与导入服务保持一致。"""
-    return {
-        "status": "skipped",
-        "project_id": None,
-        "file_id": None,
-        "path": "",
-        "case_count": 0,
-        "skipped_count": 0,
-        "skipped": [],
-        "message": message,
-    }
-
-
-def _import_case_artifact(task: Task, result) -> dict:
-    """把验收通过的三段式产物写入用例库；失败只降级为结果字段。
-
-    Args:
-        task: 用例编写任务。
-        result: 目标流水线结果，含 `artifact`。
-
-    Returns:
-        导入结论；失败时 status 为 failed 并带原因。
-    """
-    from backend.apps.case_manager.api import import_case_rows
-
-    owner = str(task.created_by or getattr(task.agent, "owner_id", "") or "")
-    if not owner:
-        return _skipped_import("任务缺少发起人，未写入用例库")
-    artifact = result.artifact
-    state_names = {state.id: state.name for state in artifact.states}
-    scenario_titles = {scenario.id: scenario.title for scenario in artifact.scenarios}
-    fallback_module = artifact.states[0].name if artifact.states else ""
-    rows = [
-        {
-            "source_case_id": case.id,
-            "title": case.title,
-            "priority": case.priority,
-            "module": scenario_titles.get(case.scenario_id) or fallback_module,
-            "precondition": state_names.get(case.pre_state, case.pre_state),
-            "steps": [
-                {
-                    "action": step.action,
-                    "assertion": state_names.get(step.expect_state, step.expect_state),
-                }
-                for step in case.steps
-            ],
-        }
-        for case in artifact.cases
-    ]
-    if not rows:
-        return _skipped_import("产物里没有用例，未写入用例库")
-    try:
-        return import_case_rows(
-            user_id=owner,
-            task_id=task.id,
-            task_title=task.title or "",
-            rows=rows,
-        )
-    except Exception as exc:  # noqa: BLE001 - 导入失败不能改变任务验收结论
-        backend_log.exception("import case authoring artifact failed task=%s", task.id)
-        return {
-            **_skipped_import(f"写入用例库失败：{exc}"),
-            "status": "failed",
-        }
-
-
-def _case_failed(reason: str, *, status: str = "fail") -> dict:
-    """用例编写任务在开跑前终止时的结果。"""
-    return {
-        "status": status,
-        "summary": reason,
-        "phase": status,
-        "passed": False,
-        "artifact": {
-            "states": [],
-            "transitions": [],
-            "scenarios": [],
-            "cases": [],
-            "diagram": "",
-            "report": "",
-            "counts": {},
-        },
-        "facts": {"blocking": [], "warnings": []},
-        "document": "",
-        "verdicts": [],
-        "case_import": _skipped_import(reason),
-        "reason": reason,
-        "max_output_tokens": 0,
-    }
-
-
-async def _await_case_run(run, cancel_event):
-    """跑模块化用例编写；取消信号置位时中断 asyncio 任务并返回 None。
-
-    Args:
-        run: `run_case_authoring_modules(...)` 返回的协程。
-        cancel_event: `threading.Event` 取消信号；None 表示不监听。
-
-    Returns:
-        工作流结果；被取消时返回 None。
-
-    Raises:
-        asyncio.CancelledError: 工作流自身被取消时由调用方接住。
-    """
-    if cancel_event is None:
-        return await run
-    job = asyncio.create_task(run)
-    while not job.done():
-        if cancel_event.is_set():
-            job.cancel()
-            try:
-                await job
-            except asyncio.CancelledError:
-                return None
-            return None
-        await asyncio.sleep(0.2)
-    return job.result()
 
 
 def spawn_task_thread(task_id: int, agent_id: int) -> None:

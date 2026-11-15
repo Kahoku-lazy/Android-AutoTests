@@ -175,15 +175,10 @@ class WorkflowStreamView(APIView):
             NotFound: 编排键不存在。
             ValidationError: 缺序列号、缺消息或缺 session_id。
         """
-        from engines.agents.workflow.single import get_single_agent, session_for
-
         from . import platform_agents
 
         if not platform_agents.is_platform_key(key):
-            try:
-                get_single_agent(key)
-            except KeyError as exc:
-                raise NotFound(str(exc)) from exc
+            raise NotFound(f"未知编排 {key!r}；引擎侧单智能体已下线，只支持平台编排")
         serial = str(request.data.get("serial") or "").strip()
         message = str(request.data.get("message") or "").strip()
         session_id = str(request.data.get("session_id") or "").strip()
@@ -196,32 +191,9 @@ class WorkflowStreamView(APIView):
 
         # 参数先校验完再进生成器，缺字段时不会创建智能体。
         def chunks():
-            import asyncio
-
-            from agentscope.message import TextBlock
-
-            if platform_agents.is_platform_key(key):
-                text = platform_agents.stream_turn(
-                    key=key, serial=serial, message=message, session_id=session_id
-                )
-                yield f"data: {text}\n\n"
-                return
-
-            session = session_for(session_id, serial, key)
-
-            async def collect():
-                parts: list[str] = []
-                async for event in session.reply(message):
-                    content = getattr(event, "content", None)
-                    if isinstance(content, list):
-                        parts.extend(
-                            block.text
-                            for block in content
-                            if isinstance(block, TextBlock) and block.text
-                        )
-                return "".join(parts)
-
-            text = asyncio.run(collect())
+            text = platform_agents.stream_turn(
+                key=key, serial=serial, message=message, session_id=session_id
+            )
             yield f"data: {text}\n\n"
 
         response = StreamingHttpResponse(chunks(), content_type="text/event-stream")
@@ -236,6 +208,9 @@ class WorkflowEventsView(APIView):
     def get(self, request):
         """返回当前会话最近的事件行。
 
+        引擎侧单智能体已下线（变更 retire-engines-agents），平台会话的过程日志改由
+        `engines/backend_bridge.event_log` 写、按报告接口读取，这里恒返回空列表。
+
         Args:
             request: DRF 请求，查询参数 session 为本次对话键。
 
@@ -245,12 +220,10 @@ class WorkflowEventsView(APIView):
         Raises:
             ValidationError: session 缺失。
         """
-        from engines.agents.workflow.single import read_session_events
-
         session_id = str(request.query_params.get("session") or "").strip()
         if not session_id:
             raise ValidationError("session 不能为空")
-        return Response({"events": read_session_events(session_id)})
+        return Response({"events": []})
 
 
 class WorkflowListView(APIView):
@@ -266,18 +239,7 @@ class WorkflowListView(APIView):
         Returns:
             含 workflows 列表的响应信封。
         """
-        from engines.agents.workflow.single import list_single_agents
-
         from . import platform_agents
 
-        cards = [
-            {
-                "key": card.key,
-                "name": card.name,
-                "summary": card.summary,
-                "released_at": card.released_at,
-            }
-            for card in list_single_agents()
-        ]
-        cards.extend(platform_agents.list_cards())
+        cards = platform_agents.list_cards()
         return Response({"workflows": cards})

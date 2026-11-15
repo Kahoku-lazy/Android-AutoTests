@@ -53,7 +53,7 @@
 
 - [x] 6.1 删 `engines/agents` 余下全部内容（`config/`、`models/`、`assistant/`、`agent_builders.py`、`role_sys_prompts.py`、`tools/`、`tools_config.py`、`middleware/`、`messaging/`、`event_log.py`、`event_sink.py`、`workflow/`、`AGENTS.md`）与 6 类配置资产。验证：`git rm -r engines/agents` 后 `grep -rn "engines.agents" . --include=*.py` 无输出
 - [x] 6.2 退役门禁转为强制：`engines/agents` 目录必须不存在，`engines.agents` 导入出现即失败。验证：`python run.py check` 全绿；临时造一条 `import engines.agents` 应使检查失败（验证后删除）
-- [ ] 6.3 清理 `utils/check_gates.py:160` 的失效 `VENDORED` 路径与 `.agents/skills/{engines-agents-style-check,engines-docstring-check}` 中 `skill-creator` 的跳过路径。验证：`python -m utils.check_gates` 通过，`grep -rn "engines/agents" .agents/skills utils` 无输出
-- [ ] 6.4 更新 `dev_docs/project-viz/tools/gen_board_data.py` 的采集范围（去掉 `engines/agents`）与 `dev_docs/ARCH_PRD/ARCH-Engines架构.md` 的目录描述。验证：`python dev_docs/project-viz/tools/gen_board_data.py` 可运行并生成看板数据
+- [x] 6.3 清理 `utils/check_gates.py:160` 的失效 `VENDORED` 路径与 `.agents/skills/{engines-agents-style-check,engines-docstring-check}` 中 `skill-creator` 的跳过路径。验证：`python -m utils.check_gates` 通过，`grep -rn "engines/agents" .agents/skills utils` 无输出
+- [x] 6.4 更新 `dev_docs/project-viz/tools/gen_board_data.py` 的采集范围（去掉 `engines/agents`）与 `dev_docs/ARCH_PRD/ARCH-Engines架构.md` 的目录描述。验证：`python dev_docs/project-viz/tools/gen_board_data.py` 可运行并生成看板数据
 - [x] 6.5 处理 68 个引用 `engines.agents` 的测试文件：改落点到 `backend_bridge` / `ae_harness`，随能力删除的整文件删除。验证：`grep -rln "engines.agents" tests` 无输出，`python -m pytest -c tests/pytest.ini` 全绿
 - [ ] 6.6 收尾门禁：`python run.py check` 24 项阻塞全绿，`openspec validate retire-engines-agents --strict` 通过

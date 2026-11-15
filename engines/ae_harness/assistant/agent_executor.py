@@ -5,11 +5,11 @@
 Python 调试：➡️ python -m engines.ae_harness.assistant.agent_executor "点击设置" 🏁
 时间：➡️ 2026-11-13 🏁
 作者：➡️ kahoku 🏁
-版本：➡️ 6.0.0 🏁
-修改时间: ➡️ 2026-11-13 🏁
+版本：➡️ 6.1.0 🏁
+修改时间: ➡️ 2026-11-15 🏁
 类型: ➡️ Agent 能力模块 🏁
 简介说明：➡️
-1. build_agent: 按 UI_EXECUTOR_PROMPT 建执行者，并挂上 16 个 adb 工具。
+1. build_agent: 按 UI_EXECUTOR_PROMPT 建执行者，挂上 16 个 adb 工具；知识库模块存在时再挂只读检索工具。
 2. run_task: 跑一轮任务，用 AgentEventRecorder 记录、HtmlReportRenderer 出页面。
 3. main: 带参数执行单任务；不带参数进入交互模式，每轮各产出一份报告。
 🏁
@@ -39,6 +39,13 @@ from engines.ae_harness.middleware import ObservationMiddleware
 from engines.ae_harness.tools import build_adb_tools
 from engines.ae_harness.tools.adb.render import render_grid_marks
 
+try:  # 知识库是独立模块：整目录删除后这里自动跳过，不影响执行者其它能力
+    from engines.ae_harness.knowledge import build_knowledge_tools
+except ModuleNotFoundError as exc:  # pragma: no cover - 取决于知识库目录是否存在
+    if not (exc.name or "").startswith("engines.ae_harness.knowledge"):
+        raise
+    build_knowledge_tools = None  # type: ignore[assignment]
+
 # 用哪个模型；换成 deepseek_chat_flash 可直连官方。
 MODEL_SHORT = "govee_chat_flash"
 ROLE_KEY = "ui_executor"
@@ -59,6 +66,9 @@ async def build_agent() -> tuple[AgentBundle, ObservationMiddleware]:
     bundle = create_agent(ROLE_KEY, PROMPT_NAME, MODEL_SHORT, observers=[observer])
     for tool in build_adb_tools():
         await bundle.agent.toolkit.add_tool(tool)
+    if build_knowledge_tools is not None:
+        for tool in build_knowledge_tools():
+            await bundle.agent.toolkit.add_tool(tool)
     return bundle, observer
 
 

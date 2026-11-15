@@ -48,10 +48,10 @@ print(bundle.api_key_env)  # GOVEE_API_KEY；用量记账按这个名字归组
 | 运行控制 | 按上限或外部信号**提前中止** | 只会更早结束，不会多做一件事 |
 
 三类都经创建时的显式入参传入（`observers=[...]`），默认一个都不挂。**能力型中间件（改变行为、扩展能力）一律禁止**，不论包装成什么名字。
-3. **禁止在 `agents/` 以外直接读配置文件** —— 模型表与提示词只能经 `config.py` 读取，不得自己 `import yaml`、`open()` 或 `read_text()`。
+3. **禁止在 `agents/` 以外直接读 `agents/config/models.yaml` 与 `agents/config/prompts/`** —— 这两样只能经 `config.py` 读取，不得自己 `import yaml`、`open()` 或 `read_text()`。**其它子包自带的配置（例如 `knowledge/config/`）不属本条**，由该子包自己读、自己校验。
 4. **禁止 `creator.py` 自己构造模型客户端** —— 必须经 `models.create_model`，不得直接实例化 `DeepSeekChatModel` 之类的类。
 5. **禁止在 `create_agent` 里调用 `reply` / `reply_stream`** —— 只创建，不运行；何时开始对话由调用方决定。
-6. **禁止引入语音、TTS、向量、知识库** —— 本目录只服务 chat 角色；遇到这类需求先上报，不要自行扩展。
+6. **禁止引入语音、TTS** —— 本目录只服务 chat 角色；遇到这类需求先上报，不要自行扩展。**知识库检索**由调用方把根级 `knowledge/` 的工具挂到角色上（工具不算角色第四要素），本目录**不感知、不 import**。
 7. **禁止改变三个参数的含义** —— `name` 只收角色名称、`prompt` 只收提示词文件名、`model_short` 只收模型短名；不得让它兼容正文或实例。
 8. **禁止在本目录新增第二套配置来源** —— 不得再加一个 `settings.py`、第二个 yaml 或另一个提示词目录。
 

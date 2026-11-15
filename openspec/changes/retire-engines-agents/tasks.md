@@ -29,8 +29,10 @@
   - 前端（已查证）：删 `/tasks/:id` 路由与 `TaskDetailPage.vue`(404 行)；删详情专用 `components/{CaseStepList,RoundProcess,StepLogCheck,StepLogEvidence,TaskAttemptCard}.vue`(含 .style.css)、`composables/useReportPoll.ts`、`helpers/report-steps.ts`；**保留** `helpers/task-detail.ts`（`TaskBoard.vue:20` 仍在用 `formatTaskCost` / `formatTaskDuration`）；删 `api/tasks.ts` 的 `fetchTaskReport`
 - [x] 4.5 前端任务清单改为直达报告：行点击打开 `backend_bridge` 的报告（走既有报告读取接口），不再进详情页。验证：`cd frontend; pnpm run typecheck && npx vitest run tests/task-list` 通过
   - 接线（已查证）：`TaskBoard.vue:117` 现为 `router.push(taskDetailRoute(taskId))`，改为在任务结果带 `report_run` / `report_name` 时打开 `/api/ai/agent-reports/<run>/<name>/`；需让任务列表序列化带出这两个字段（从 `Task.result` 的 JSON 派生，不新增表字段）
-- [ ] 4.6 合并提示词：执行者取 `ae_harness` 版为基线，验收者取 `agents` 版为基线，写入 `engines/ae_harness/agents/config/prompts/`，并在本任务勾选处记录差异比对结论。验证：`python -m pytest -c tests/pytest.ini tests/engines/ae_harness -q` 全绿
-- [ ] 4.7 迁 `app_info/` 与 `log_keywords/` 到 `engines/ae_harness/agents/config/`，并在 `ae_harness` 增加按 token 读取短卡与按机型读取关键词的读取口。验证：新增单测覆盖「短卡命中 / token 缺失报错 / 关键词按机型命中」，全绿
+- [x] 4.6 合并提示词：执行者取 `ae_harness` 版为基线，验收者取 `agents` 版为基线，写入 `engines/ae_harness/agents/config/prompts/`，并在本任务勾选处记录差异比对结论。验证：`python -m pytest -c tests/pytest.ini tests/engines/ae_harness -q` 全绿
+  - 比对结论：`UI_EXECUTOR_PROMPT.md` 保留 harness 版（9945 B，含锚点与工具说明，比 agents 版 6042 B 新）；`UI_VERIFIER_PROMPT.md` 改用 agents 版（4793 B / 2061 字，判据更厚），覆盖 harness 原 3835 B 版；`CASE_WRITER` / `CASE_VERIFIER` 两份完全一致，随用例编写流水线在 B3 一起删除
+- [x] 4.7 迁 `app_info/` 与 `log_keywords/` 到 `engines/ae_harness/agents/config/`，并在 `ae_harness` 增加按 token 读取短卡与按机型读取关键词的读取口。验证：新增单测覆盖「短卡命中 / token 缺失报错 / 关键词按机型命中」，全绿
+  - 实际范围：`app_info/` 目录在 Govee 业务资产清理后**已无文件**，随包删除、不迁移；只迁 `log_keywords/H6810.md`，读取口 `agents/config.py:load_log_keywords`（型号白名单 + 缺失降级为空串），单测 `tests/engines/ae_harness/unit/test_agents_config.py`
 - [ ] 4.8 真机回归一轮：跑一条平台任务，确认状态、费用、报告三处正确，并记录报告路径。验证：`logs/agents/backend_bridge/<时间戳>/` 下有本次报告，任务列表能直达
 
 ## 5. 用例 YAML 通道下线（B3，需先过决策点）

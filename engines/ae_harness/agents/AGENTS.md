@@ -14,10 +14,10 @@
 
 ```text
 agents/
-  config.py      load_models / load_prompt / load_secret
+  config.py      load_models / load_prompt / load_log_keywords / load_secret
   models.py      ChatModel 校验 + create_model（顺带交出密钥环境变量名）
   creator.py     create_agent → AgentBundle
-  config/        models.yaml + prompts/*.md
+  config/        models.yaml + prompts/*.md + log_keywords/<SKU>.md
 ```
 
 `create_agent` 是唯一出口，返回 `AgentBundle`：`.agent` 是可运行智能体，`.api_key_env` 是本次使用的密钥环境变量名（只有名字，没有值）。

@@ -42,11 +42,15 @@
 
 **备选**：先把 `task_list` 切到 `sop_ui`、再分批删子集（我原先提的 B 方案）——在多轮决策收缩后收益不再成立，改为一次性收口。
 
-### D2 事件落库迁 `backend_bridge`，不放 `ae_harness`
+### D2 任务不再落事件明细，改为直出报告 + 列表直达
 
-`messaging/event_sink.py` 自称「引擎不写库」，其职责是接收方绑定、运行上下文、预算计数与步骤中断收集。放进 `ae_harness` 会破坏「`ae_harness` 只出本地记录与报告」的边界，也会让 harness 依赖后端事件形状。
+平台任务的事件落库链（`EventRecord` → 折叠 → `TaskEventSink`）与 `ae_harness` 的记录模型不是同一种形状：前者按 `ModelCallEndEvent` / delta / 媒体分片落 `task_events`，后者产 `RunRecord`（步骤 + 观测 + 用量）。要让两者对齐得写一层逐字段翻译，且保真度只能靠真机比对。
 
-**备选**：直接把折叠逻辑放后端 `apps/task_list`——会迫使 `backend_bridge` 反向依赖 `apps`，违反 `engines` 零 `apps` 依赖红线。
+需求方决定**不迁移这层翻译**：任务清单不要详情，跑完直接看 `backend_bridge` 生成的 HTML 报告（`REPORT_ROOT`）。于是 `EventRecord`、事件折叠与 `task_events` 写入随旧包退役，报告改为「一份 HTML 直出」。
+
+**备选**：给 `run_sop` 加 `on_event` 钩子 + 翻译适配器（约 200–300 行）—— 被否决，因为产品不再需要事件明细。
+
+**影响**：`/api/tasks/{id}/report/` 的任务详情报告下线；用量与费用仍走既有账本，口径不变。
 
 ### D3 用例 YAML 通道直接下线，不搬去 `backend_bridge`
 

@@ -21,13 +21,14 @@
 
 ## 4. 平台任务链切换（B2）
 
-- [ ] 4.1 在 `engines/backend_bridge` 新建事件落库模块，迁入 `messaging/{event_sink,record,fold}` 的接收方绑定、运行上下文、预算计数、步骤中断与批量折叠；引擎侧零数据库写入。验证：新增 `tests/engines/backend_bridge/unit/test_event_sink.py` 全绿，且 `grep -rn "django\|apps\." engines/backend_bridge` 无输出
-- [ ] 4.2 在 `engines/backend_bridge/workflow/sop_ui.py` 补取消能力（置位、当前步骤中断、清理），与 `run_sop_once` 同包。验证：新增 `tests/engines/backend_bridge/unit/test_sop_cancel.py` 全绿
-- [ ] 4.3 `backend/apps/task_list/task_runner.py` 改调 `backend_bridge.workflow.sop_ui.run_sop_once` 与新的取消入口，删掉对 `platform_run`、`event_sink`、`messaging.record` 的导入。验证：`python -m pytest -c tests/pytest.ini tests/task -q` 全绿
-- [ ] 4.4 `backend/apps/task_list/{api,event_store}.py` 改用新落库与取消入口。验证：`python -m pytest -c tests/pytest.ini tests/task/api/test_task_cancel_dispatch.py tests/task/api/test_task_event_store.py -q` 全绿
-- [ ] 4.5 合并提示词：执行者取 `ae_harness` 版为基线，验收者取 `agents` 版为基线，写入 `engines/ae_harness/agents/config/prompts/`，并在本任务勾选处记录差异比对结论。验证：`python -m pytest -c tests/pytest.ini tests/engines/ae_harness -q` 全绿
-- [ ] 4.6 迁 `app_info/` 与 `log_keywords/` 到 `engines/ae_harness/agents/config/`，并在 `ae_harness` 增加按 token 读取短卡与按机型读取关键词的读取口。验证：新增单测覆盖「短卡命中 / token 缺失报错 / 关键词按机型命中」，全绿
-- [ ] 4.7 真机回归一轮：`python manage.py run_ui_sop "回到桌面"` 跑通并出报告；对比切换前后的步骤驳回情况并在本任务记录。验证：报告文件生成于 `logs/agents/backend_bridge/<时间戳>/`
+- [x] 4.1 在 `engines/backend_bridge/workflow/` 新增取消模块：按 `task_id` 登记 `CancelToken`，提供 `request_cancel` / `bind_cancel` / `clear_cancel`，并由 `run_sop_once` 把 `CancelMiddleware` 挂进 `controls`。验证：新增 `tests/engines/backend_bridge/unit/test_sop_cancel.py` 全绿
+- [ ] 4.2 `backend/apps/task_list/task_runner.py` 改调 `backend_bridge.workflow.sop_ui.run_sop_once`：把报告定位（run 目录 + 文件名）写进任务结果，按运行结论映射任务终态，删掉对 `platform_run`、`event_sink`、`messaging.record` 的导入。验证：`python -m pytest -c tests/pytest.ini tests/task -q` 全绿
+- [ ] 4.3 `backend/apps/task_list/{api,event_store}.py`：取消改调新入口；任务执行不再绑定 sink、不再写事件明细行。验证：`python -m pytest -c tests/pytest.ini tests/task/api/test_task_cancel_dispatch.py -q` 全绿
+- [ ] 4.4 下线任务详情报告接口：移除 `/api/tasks/{id}/report/` 与其视图/序列化/契约，删除对应前端任务详情页。验证：`cd frontend; pnpm run typecheck` 通过，OpenAPI 基线重生成后 `openapi-schema` 门禁通过
+- [ ] 4.5 前端任务清单改为直达报告：行点击打开 `backend_bridge` 的报告（走既有报告读取接口），不再进详情页。验证：`cd frontend; pnpm run typecheck && npx vitest run tests/task-list` 通过
+- [ ] 4.6 合并提示词：执行者取 `ae_harness` 版为基线，验收者取 `agents` 版为基线，写入 `engines/ae_harness/agents/config/prompts/`，并在本任务勾选处记录差异比对结论。验证：`python -m pytest -c tests/pytest.ini tests/engines/ae_harness -q` 全绿
+- [ ] 4.7 迁 `app_info/` 与 `log_keywords/` 到 `engines/ae_harness/agents/config/`，并在 `ae_harness` 增加按 token 读取短卡与按机型读取关键词的读取口。验证：新增单测覆盖「短卡命中 / token 缺失报错 / 关键词按机型命中」，全绿
+- [ ] 4.8 真机回归一轮：跑一条平台任务，确认状态、费用、报告三处正确，并记录报告路径。验证：`logs/agents/backend_bridge/<时间戳>/` 下有本次报告，任务列表能直达
 
 ## 5. 用例 YAML 通道下线（B3，需先过决策点）
 

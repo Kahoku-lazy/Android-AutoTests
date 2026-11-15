@@ -12,12 +12,14 @@ Python 调试：➡️ python -m engines.backend_bridge.workflow.sop_ui 🏁
 1. SopStepResult / SopRunResult: 一次运行的每步结论与整体结果。
 2. run_sop_once: 选流程 → 覆盖任务描述 → 调 ae_harness 的 run_sop → 整理结果；不打印、不交互。
 3. 每次调用新建一对角色，跑完即弃，不跨运行复用上下文。
+4. 传入 task_id 时自动挂取消中间件，取消信号来自本包的 cancel 模块。
 🏁
 关联模块：➡️
 1. engines.ae_harness.workflow.sop: 导入 load_spec / run_sop，编排实现全在那里。
 2. engines.backend_bridge.workflow.roles: 导入 build_sop_roles，装配两个角色。
-3. engines.backend_bridge.reports: 报告路径唯一来源。
-4. engines.ae_harness.event: 导入 summarize，汇总四类 token。
+3. engines.backend_bridge.workflow.cancel: 导入 cancel_controls，按任务号挂取消中间件。
+4. engines.backend_bridge.reports: 报告路径唯一来源。
+5. engines.ae_harness.event: 导入 summarize，汇总四类 token。
 🏁
 测试：➡️
 1. tests/engines/backend_bridge/unit/test_sop_ui.py: 结果字段、不打印、两次运行互不影响
@@ -35,6 +37,7 @@ import engines.ae_harness.workflow.sop as sop_package
 from engines.ae_harness.event import summarize
 from engines.ae_harness.workflow.sop import load_spec, run_sop
 from engines.backend_bridge.reports import REPORT_ROOT
+from engines.backend_bridge.workflow.cancel import cancel_controls
 from engines.backend_bridge.workflow.roles import build_sop_roles
 
 __all__ = ["SPEC_KEYS", "SopRunResult", "SopStepResult", "run_sop_once"]
@@ -102,6 +105,7 @@ async def run_sop_once(
     model_short: str | None = None,
     report_root: Path | None = None,
     controls: list | None = None,
+    task_id: int = 0,
 ) -> SopRunResult:
     """
     跑一次执行 + 验收 SOP。
@@ -113,7 +117,8 @@ async def run_sop_once(
         spec_key: 流程键，取 `SPEC_KEYS` 里的键；默认通用 UI 流程。
         model_short: 模型短名；不传则用默认值。
         report_root: 报告根目录；不传则用平台报告根。
-        controls: 额外的中间件（重试 / 预算 / 取消）；不传则只挂观测。两个角色共用。
+        controls: 额外的中间件（重试 / 预算）；不传则只挂观测。两个角色共用。
+        task_id: 平台任务 id；登记过取消令牌时自动挂上取消中间件。
 
     Returns:
         本次运行的每步结论、产物路径与用量汇总。
@@ -129,7 +134,8 @@ async def run_sop_once(
     if task.strip():
         spec.task = task.strip()
 
-    roles = await build_sop_roles(model_short=model_short, controls=controls)
+    merged = [*(controls or []), *cancel_controls(task_id)]
+    roles = await build_sop_roles(model_short=model_short, controls=merged)
     root = report_root if report_root is not None else REPORT_ROOT
 
     result = await run_sop(

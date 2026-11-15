@@ -6,8 +6,9 @@
 
 - **BREAKING** 删除 `engines/agents` 整包（88 文件 / 14106 行）：`config/`、`models/`、`assistant/`、`agent_builders.py`、`role_sys_prompts.py`、`tools/`、`tools_config.py`、`middleware/`、`messaging/`、`event_log.py`、`event_sink.py`、`workflow/`、`rag/`、`knowledge_chat/`、`realtime_vocie/`。
 - 平台任务执行链改由 `engines/backend_bridge/workflow/sop_ui.py` 提供；步骤一律来自 `engines/ae_harness/workflow/sop/steps/*.yaml`；`task_list` 不再 import 旧包。
-- 平台任务事件落库（原 `messaging/{event_sink,record,fold}`）迁入 `engines/backend_bridge`，引擎侧仍不写库。
-- 平台 SOP 补齐取消能力（原 `workflow/platform_run.request_cancel` / `bind_cancel` / `clear_cancel`）。
+- **BREAKING** 任务清单不再有「任务详情」：一行任务跑完直接产出一份 HTML 报告（落 `engines/backend_bridge/reports/paths.py` 的 `REPORT_ROOT`），页面从任务列表直接跳到该报告。原有的任务详情报告（轮次 / 用例分解 / 事件面板）停止提供。
+- **BREAKING** 任务事件落库链路随旧包一起退役：不再写 `task_events` / 事件缩略图；`EventRecord`、事件折叠与 `TaskEventSink` 不再被任务执行使用。用量与费用仍写既有账本，口径不变。
+- 平台 SOP 补齐取消能力（原 `workflow/platform_run.request_cancel`），基于 `ae_harness` 的 `CancelToken` / `CancelMiddleware`。
 - **BREAKING** 知识助手整体下线：`backend/apps/knowledge_assistant`、前端 `modules/knowledge-assistant`（含麦克风采集与音频播放）、路由 `/knowledge-assistant`、侧栏「知识库助手」入口、语音与文字问答引擎实现一并退役。知识库只保留 `engines/ae_harness/knowledge/` 的只读检索原语。
 - **BREAKING** 用例 YAML 模型下线：`workflow/case_file.py`、`case_goal_workflow.py`、`case_artifact*.py`、`step_brief.py` 删除；`case_manager` 与 `task_list` 的 YAML 导入/校验入口下线，用例步骤改走 SOP steps YAML。
 - **BREAKING** 角色配置统一到 `ae_harness` 的 `models.yaml` + `prompts/*.md`；四分段（ModelConfig / RoleConfig / ToolsConfig / ReactConfig）、`role_loader.py`、`agent_config.yaml` 下线。

@@ -187,6 +187,10 @@ export function useAssistantSession() {
   function openSocket(token: string, nextMode: AssistantMode): void {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
     const params = new URLSearchParams({ token, mode: nextMode })
+    // 语音模式可带音色（来源：模型卡片的音色选择）→ 后端按音色建 Omni 会话。
+    // 直接读 location.search：本 composable 也会在无路由的测试环境里被调用。
+    const voice = new URLSearchParams(window.location.search).get("voice")?.trim() ?? ""
+    if (nextMode === KB_MODE_VOICE && voice) params.set("voice", voice)
     const url = `${protocol}//${window.location.host}${KB_WS_PATH}?${params}`
     socket = new WebSocket(url)
     socket.binaryType = "arraybuffer"

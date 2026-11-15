@@ -1,0 +1,610 @@
+"""任务报告：按时间把事件折成开始 / 推理 / 执行 / 结束。"""
+
+from __future__ import annotations
+
+import asyncio
+
+from types import SimpleNamespace
+
+import pytest
+
+from django.contrib.auth import get_user_model
+
+from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.task_list.event_store import TaskEventSink
+from backend.apps.task_list.models import Task, TaskAttachment, TaskEvent, TaskMedia
+from backend.apps.task_list.task_reports import _load_events, build_task_flow
+from engines.agents.event_sink import (
+    bind_run_context,
+    bind_sink,
+    reset_run_context,
+    reset_sink,
+    set_step_context,
+)
+from engines.agents.middleware.model_retry import ModelRetryMiddleware
+
+pytestmark = [pytest.mark.django_db, pytest.mark.unit]
+
+
+class _NamedModel:
+    """只有 model 属性的假模型。"""
+
+    def __init__(self, name: str) -> None:
+        self.model = name
+
+
+class _Flaky(Exception):
+    """带状态码的假瞬态错误。"""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.status_code = 503
+
+
+class _SleepRecorder:
+    """把退避与警告记下来，避免测试真的等待。"""
+
+    def __init__(self) -> None:
+        self.delays: list[float] = []
+        self.warnings: list[str] = []
+
+    async def sleep(self, delay: float) -> None:
+        self.delays.append(delay)
+
+    def warning(self, message: str) -> None:
+        self.warnings.append(message)
+
+
+def _case_rounds(flow: dict, index: int) -> list[dict]:
+    """按 round_ids 取出某条用例的轮次（报告不再内嵌轮次副本）。"""
+    by_id = {round_row["round_id"]: round_row for round_row in flow["rounds"]}
+    return [by_id[round_id] for round_id in flow["cases"][index]["round_ids"]]
+
+
+def _task(owner) -> Task:
+    agent = AIAgent.objects.create(name="报告助手", owner=owner)
+    return Task.objects.create(
+        agent=agent,
+        title="流程任务",
+        case_title="卡片页",
+        status="completed",
+        device_label="测试机",
+    )
+
+
+def _event(
+    task,
+    seq,
+    event_type,
+    phase,
+    *,
+    is_delta=False,
+    payload=None,
+    role="executor_role",
+    step_seq=1,
+    attempt=1,
+    started_at=None,
+    ended_at=None,
+    duration_ms=0,
+):
+    return TaskEvent.objects.create(
+        task=task,
+        seq=seq,
+        event_type=event_type,
+        phase=phase,
+        block_type="reply",
+        is_delta=is_delta,
+        role_name=role,
+        step_seq=step_seq,
+        attempt=attempt,
+        payload=payload or {},
+        started_at=started_at,
+        ended_at=ended_at,
+        duration_ms=duration_ms,
+    )
+
+
+def test_flow_groups_phases_and_collapses_deltas():
+    owner = get_user_model().objects.create_user(username="flow-owner", password="pass")
+    task = _task(owner)
+    _event(task, 1, "ReplyStartEvent", "开始", payload={"role": "executor_role"})
+    _event(task, 2, "ToolCallDeltaEvent", "推理", is_delta=True, payload={"delta": "a", "idx": 0})
+    _event(task, 3, "ToolCallDeltaEvent", "推理", is_delta=True, payload={"delta": "b", "idx": 1})
+    _event(task, 4, "ToolCallDeltaEvent", "推理", is_delta=True, payload={"delta": "c", "idx": 2})
+    _event(
+        task,
+        5,
+        "ToolCallEndEvent",
+        "推理",
+        payload={"tool_name": "tap", "args": '{"x": 1}'},
+    )
+    _event(
+        task,
+        6,
+        "ToolResultEndEvent",
+        "执行",
+        payload={"tool_name": "tap", "status": "ok", "result": "已点击"},
+    )
+    _event(task, 7, "ReplyEndEvent", "结束", payload={"finished_reason": "stop"})
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    assert flow is not None
+    assert flow["task"]["title"] == "流程任务"
+    assert len(flow["rounds"]) == 1
+    titles = [block["title"] for block in flow["rounds"][0]["blocks"]]
+    assert titles == ["开始", "推理阶段", "执行阶段", "结束"]
+    reason_items = flow["rounds"][0]["blocks"][1]["items"]
+    assert reason_items[0]["event_type"] == "ToolCallDeltaEvent"
+    assert reason_items[0]["count"] == 3
+    assert reason_items[1]["event_type"] == "ToolCallEndEvent"
+    assert "tap" in reason_items[1]["detail"]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_model_retry_and_fallback_events_reach_task_detail():
+    """重试与回退事件经接收方落库后，详情页能拿到中文标签与明细。"""
+    owner = get_user_model().objects.create_user(username="flow-owner-retry", password="pass")
+    task = _task(owner)
+    result = asyncio.run(_run_retrying_call(task))
+
+    assert result == "from-fallback"
+    rows = list(TaskEvent.objects.filter(task=task).order_by("seq"))
+    assert [row.event_type for row in rows] == ["ModelRetryEvent", "ModelFallbackEvent"]
+    assert rows[0].phase == "推理"
+    assert rows[0].block_type == "retry"
+    assert rows[0].step_seq == 1
+    assert rows[0].payload["attempt"] == 1
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    assert flow is not None
+    items = [item for block in flow["rounds"][0]["blocks"] for item in block["items"]]
+    assert [item["label"] for item in items] == ["模型调用重试", "模型回退到备用模型"]
+    assert "deepseek-flash" in items[0]["detail"]
+    assert "500 ms" in items[0]["detail"]
+    assert items[1]["detail"] == "deepseek-flash → deepseek-pro · 主模型重试用尽"
+
+
+async def _run_retrying_call(task):
+    """绑好接收方与运行上下文，跑一次「主模型失败 → 回退成功」的调用。"""
+    sink = TaskEventSink()
+    sink_token = bind_sink(sink)
+    run_token = bind_run_context(task.id, task.agent_id, task.case_title)
+    set_step_context(1, 1)
+    try:
+        recorder = _SleepRecorder()
+        middleware = ModelRetryMiddleware(
+            attempts=2,
+            base_delay=0.5,
+            fallback_model=_NamedModel("deepseek-pro"),
+            sleep=recorder.sleep,
+            log=recorder,
+        )
+
+        async def next_handler(**kwargs):
+            if kwargs["current_model"].model == "deepseek-pro":
+                return "from-fallback"
+            raise _Flaky("503 service unavailable")
+
+        return await middleware.on_model_call(
+            agent=SimpleNamespace(name="executor_role"),
+            input_kwargs={"current_model": _NamedModel("deepseek-flash")},
+            next_handler=next_handler,
+        )
+    finally:
+        reset_run_context(run_token)
+        reset_sink(sink_token)
+
+
+def test_conclusion_comes_from_verifier_output():
+    owner = get_user_model().objects.create_user(username="flow-owner-pass", password="pass")
+
+    task = _task(owner)
+    _event(
+        task,
+        1,
+        "ToolCallEndEvent",
+        "推理",
+        payload={"tool_name": "submit", "args": '{"handover": "步骤：已打开首页"}'},
+    )
+    _event(
+        task,
+        2,
+        "ToolCallEndEvent",
+        "推理",
+        role="verifier_role",
+        payload={
+            "tool_name": "GenerateStructuredOutput",
+            "args": '{"passed": true, "message": "截图显示用户已登录"}',
+        },
+    )
+    flow = build_task_flow(str(owner.id), str(task.id))
+    assert flow["conclusion"]["outcome"] == "PASS"
+    assert flow["conclusion"]["verdicts"][0]["message"] == "截图显示用户已登录"
+    assert flow["conclusion"]["delivery"] == "步骤：已打开首页"
+
+
+def test_executor_round_keeps_handover():
+    owner = get_user_model().objects.create_user(username="flow-owner-hand", password="pass")
+    task = _task(owner)
+    _event(task, 1, "ReplyStartEvent", "开始", step_seq=1)
+    _event(
+        task,
+        2,
+        "ToolCallEndEvent",
+        "推理",
+        step_seq=1,
+        payload={"tool_name": "submit", "args": '{"handover": "已打开首页并停在设备列表"}'},
+    )
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    round_row = _case_rounds(flow, 0)[0]
+    assert round_row["handover"] == "已打开首页并停在设备列表"
+    assert round_row["verdict"] is None
+    leaked = [item.get("handover") for block in round_row["blocks"] for item in block["items"]]
+    assert all(value is None for value in leaked)
+
+
+def test_flow_hides_another_users_task():
+    owner = get_user_model().objects.create_user(username="flow-owner-2", password="pass")
+    other = get_user_model().objects.create_user(username="flow-other", password="pass")
+    task = _task(owner)
+    assert build_task_flow(str(other.id), str(task.id)) is None
+    assert build_task_flow(str(owner.id), "abc") is None
+
+
+def test_two_cases_keep_step_and_result():
+    owner = get_user_model().objects.create_user(username="flow-owner-cases", password="pass")
+    task = _task(owner)
+    task.case_title = ""
+    task.save(update_fields=["case_title"])
+    TaskAttachment.objects.create(
+        task=task,
+        kind=TaskAttachment.KIND_CONFIG,
+        body=(
+            "- title: 卡片页\n"
+            "  steps:\n"
+            "    - action: 启动应用\n"
+            "      assert: 进入主页\n"
+            "    - action: 点击开关\n"
+            "      assert: 日志有开关记录\n"
+            "- title: 基础模式\n"
+            "  steps:\n"
+            "    - action: 返回桌面\n"
+            "      assert: 应用已关闭\n"
+        ),
+    )
+    _event(task, 1, "ReplyStartEvent", "开始", step_seq=1)
+    _event(task, 2, "ReplyStartEvent", "开始", role="verifier_role", step_seq=1)
+    _event(
+        task,
+        3,
+        "ToolCallEndEvent",
+        "推理",
+        role="verifier_role",
+        step_seq=1,
+        payload={
+            "tool_name": "GenerateStructuredOutput",
+            "args": '{"passed": true, "message": "已进主页"}',
+        },
+    )
+    _event(task, 4, "ReplyStartEvent", "开始", step_seq=2)
+    _event(task, 5, "ReplyStartEvent", "开始", role="verifier_role", step_seq=2)
+    _event(
+        task,
+        6,
+        "ToolCallEndEvent",
+        "推理",
+        role="verifier_role",
+        step_seq=2,
+        payload={
+            "tool_name": "GenerateStructuredOutput",
+            "args": '{"passed": true, "message": "开关日志已看到"}',
+        },
+    )
+    _event(task, 7, "ReplyStartEvent", "开始", step_seq=1)
+    _event(task, 8, "ReplyStartEvent", "开始", role="verifier_role", step_seq=1)
+    _event(
+        task,
+        9,
+        "ToolCallEndEvent",
+        "推理",
+        role="verifier_role",
+        step_seq=1,
+        payload={
+            "tool_name": "GenerateStructuredOutput",
+            "args": '{"passed": false, "message": "还在应用里"}',
+        },
+    )
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    cases = flow["cases"]
+    assert [item["title"] for item in cases] == ["卡片页", "基础模式"]
+    assert "rounds" not in cases[0]
+    assert cases[0]["round_ids"] and cases[1]["round_ids"]
+    assert cases[0]["outcome"] == "PASS"
+    assert [step["outcome"] for step in cases[0]["steps"]] == ["PASS", "PASS"]
+    first, second = _case_rounds(flow, 0), _case_rounds(flow, 1)
+    assert first[0]["role_kind"] == "executor"
+    assert first[0]["subject"] == "启动应用"
+    assert first[0]["verdict"] is None
+    assert first[0]["handover"] == ""
+    assert first[1]["role_kind"] == "verifier"
+    assert first[1]["subject"] == "进入主页"
+    assert first[1]["verdict"] == {"passed": True, "message": "已进主页"}
+    assert first[2]["subject"] == "点击开关"
+    assert cases[1]["outcome"] == "FAIL"
+    assert cases[1]["steps"][0]["outcome"] == "FAIL"
+    assert second[0]["subject"] == "返回桌面"
+    assert second[1]["subject"] == "应用已关闭"
+    assert second[1]["verdict"] == {"passed": False, "message": "还在应用里"}
+
+
+def test_delta_events_load_without_payload():
+    """增量事件不取 payload：报告聚合只为非增量事件读载荷。"""
+    import json
+
+    owner = get_user_model().objects.create_user(username="flow-owner-delta", password="pass")
+    task = _task(owner)
+    marker = "x" * 100_000
+    _event(
+        task,
+        1,
+        "ToolCallDeltaEvent",
+        "推理",
+        is_delta=True,
+        payload={"delta": marker, "idx": 0},
+    )
+    _event(task, 2, "ToolCallEndEvent", "推理", payload={"tool_name": "tap", "args": "{}"})
+
+    rows = _load_events(task.id)
+    assert rows[0].is_delta is True
+    assert rows[0].payload is None
+    assert rows[1].payload["tool_name"] == "tap"
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    assert marker not in json.dumps(flow, ensure_ascii=False)
+
+
+def test_detail_keeps_full_text_and_task_result_stays_short():
+    """事件明细不截断；任务头部的 result 仍只给 240 字摘要。"""
+    owner = get_user_model().objects.create_user(username="flow-owner-full", password="pass")
+    task = _task(owner)
+    text = "文本块内容。" * 500
+    args = '{"handover": "' + "交" * 2800 + '"}'
+    task.result = "结果内容。" * 250
+    task.save(update_fields=["result"])
+    _event(task, 1, "TextBlockEndEvent", "推理", payload={"text": text})
+    _event(
+        task,
+        2,
+        "ToolCallEndEvent",
+        "推理",
+        payload={"tool_name": "GenerateStructuredOutput", "args": args},
+    )
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    items = [item for block in flow["rounds"][0]["blocks"] for item in block["items"]]
+    text_item = next(item for item in items if item["event_type"] == "TextBlockEndEvent")
+    call_item = next(item for item in items if item["event_type"] == "ToolCallEndEvent")
+
+    assert text_item["detail"] == text
+    assert call_item["detail"].endswith(args)
+    assert not text_item["detail"].endswith("…")
+    assert not call_item["detail"].endswith("…")
+
+    assert flow["task"]["result"] == ("结果内容。" * 250)[:240] + "…"
+
+
+def test_folded_delta_count_is_used_directly():
+    """写库已折叠成一行时，报告直接采用 delta_count，不再按行数计算。"""
+    owner = get_user_model().objects.create_user(username="flow-owner-folded", password="pass")
+    task = _task(owner)
+    TaskEvent.objects.create(
+        task=task,
+        seq=1,
+        event_type="ToolCallDeltaEvent",
+        phase="推理",
+        block_type="tool_call",
+        is_delta=True,
+        delta_count=17447,
+        role_name="executor_role",
+        step_seq=1,
+        attempt=1,
+        payload={"delta_count": 17447},
+    )
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    items = [item for block in flow["rounds"][0]["blocks"] for item in block["items"]]
+
+    assert items[0]["count"] == 17447
+    assert items[0]["event_type"] == "ToolCallDeltaEvent"
+
+
+def test_flow_reports_media_id_instead_of_inline_image():
+    """报告只给 media_id：不内联 base64、不带 thumb 字段。"""
+    import json
+
+    owner = get_user_model().objects.create_user(username="flow-owner-media", password="pass")
+    task = _task(owner)
+    media = TaskMedia.objects.create(
+        task=task,
+        sha256="b" * 64,
+        media_type="image/jpeg",
+        byte_size=3,
+        thumb_b64="AAA",
+    )
+    _event(task, 1, "ReplyStartEvent", "开始", step_seq=1)
+    TaskEvent.objects.create(
+        task=task,
+        seq=2,
+        event_type="ToolResultEndEvent",
+        phase="执行",
+        block_type="tool_result",
+        role_name="executor_role",
+        step_seq=1,
+        attempt=1,
+        payload={"tool_name": "screenshot_page", "status": "ok", "result": ""},
+        media=media,
+    )
+    _event(task, 3, "ReplyEndEvent", "结束", step_seq=1, payload={"finished_reason": "stop"})
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    items = [item for block in flow["rounds"][0]["blocks"] for item in block["items"]]
+    screenshot_item = next(item for item in items if item["event_type"] == "ToolResultEndEvent")
+
+    assert screenshot_item["media_id"] == media.id
+    assert "thumb" not in screenshot_item
+    dumped = json.dumps(flow, ensure_ascii=False)
+    assert "data:image" not in dumped
+    assert "AAA" not in dumped
+    plain_item = next(item for item in items if item["event_type"] == "ReplyStartEvent")
+    assert plain_item["media_id"] is None
+
+
+def test_flow_reports_step_and_case_durations():
+    """步骤与用例给墙钟耗时：步覆盖执行 + 验收，用例覆盖全部步骤。"""
+    from datetime import datetime
+
+    owner = get_user_model().objects.create_user(username="flow-owner-duration", password="pass")
+    task = _task(owner)
+    # 第 1 步：执行轮 09:00:00–09:00:30，验收轮 09:00:31–09:00:34
+    _event(
+        task,
+        1,
+        "ReplyStartEvent",
+        "开始",
+        started_at=datetime(2026, 11, 3, 9, 0, 0),
+        ended_at=datetime(2026, 11, 3, 9, 0, 0),
+    )
+    _event(
+        task,
+        2,
+        "ReplyEndEvent",
+        "结束",
+        started_at=datetime(2026, 11, 3, 9, 0, 29),
+        ended_at=datetime(2026, 11, 3, 9, 0, 30),
+    )
+    _event(
+        task,
+        3,
+        "ReplyStartEvent",
+        "开始",
+        role="verifier_role",
+        started_at=datetime(2026, 11, 3, 9, 0, 31),
+        ended_at=datetime(2026, 11, 3, 9, 0, 31),
+    )
+    _event(
+        task,
+        4,
+        "ReplyEndEvent",
+        "结束",
+        role="verifier_role",
+        started_at=datetime(2026, 11, 3, 9, 0, 33),
+        ended_at=datetime(2026, 11, 3, 9, 0, 34),
+    )
+    # 第 2 步：09:01:00–09:02:00
+    _event(
+        task,
+        5,
+        "ReplyStartEvent",
+        "开始",
+        step_seq=2,
+        started_at=datetime(2026, 11, 3, 9, 1, 0),
+        ended_at=datetime(2026, 11, 3, 9, 1, 0),
+    )
+    _event(
+        task,
+        6,
+        "ReplyEndEvent",
+        "结束",
+        step_seq=2,
+        started_at=datetime(2026, 11, 3, 9, 1, 59),
+        ended_at=datetime(2026, 11, 3, 9, 2, 0),
+    )
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    case = flow["cases"][0]
+    by_seq = {step["seq"]: step for step in case["steps"]}
+
+    assert by_seq[1]["duration_ms"] == 34000
+    assert by_seq[2]["duration_ms"] == 60000
+    assert case["duration_ms"] == 120000
+    assert by_seq[1]["duration_ms"] + by_seq[2]["duration_ms"] <= case["duration_ms"]
+
+
+def test_flow_round_model_ms_counts_model_calls_only():
+    """轮级 model_ms 只统计模型调用，不拿轮次墙钟冒充。"""
+    from datetime import datetime
+
+    owner = get_user_model().objects.create_user(username="flow-owner-model", password="pass")
+    task = _task(owner)
+    _event(
+        task,
+        1,
+        "ReplyStartEvent",
+        "开始",
+        started_at=datetime(2026, 11, 3, 9, 0, 0),
+        ended_at=datetime(2026, 11, 3, 9, 0, 0),
+    )
+    _event(
+        task,
+        2,
+        "ModelCallEndEvent",
+        "推理",
+        started_at=datetime(2026, 11, 3, 9, 0, 5),
+        ended_at=datetime(2026, 11, 3, 9, 0, 17),
+        duration_ms=12000,
+    )
+    _event(
+        task,
+        3,
+        "ReplyEndEvent",
+        "结束",
+        started_at=datetime(2026, 11, 3, 9, 0, 29),
+        ended_at=datetime(2026, 11, 3, 9, 0, 30),
+    )
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    round_row = flow["rounds"][0]
+
+    assert round_row["model_ms"] == 12000
+    assert round_row["running"] is False
+
+
+def test_flow_marks_running_round_without_digits():
+    """只有开始没有结束的轮次标 running，步骤与用例同步标记。"""
+    from datetime import datetime
+
+    owner = get_user_model().objects.create_user(username="flow-owner-running", password="pass")
+    task = _task(owner)
+    task.status = "running"
+    task.save(update_fields=["status"])
+    _event(
+        task,
+        1,
+        "ReplyStartEvent",
+        "开始",
+        started_at=datetime(2026, 11, 3, 9, 0, 0),
+    )
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+
+    assert flow["rounds"][0]["running"] is True
+    assert flow["cases"][0]["running"] is True
+
+
+def test_flow_without_timestamps_does_not_fake_durations():
+    """存量事件没有时间戳时，四层耗时给 0 且不判运行中。"""
+    owner = get_user_model().objects.create_user(username="flow-owner-legacy", password="pass")
+    task = _task(owner)
+    _event(task, 1, "ReplyStartEvent", "开始")
+    _event(task, 2, "ModelCallEndEvent", "推理")
+    _event(task, 3, "ReplyEndEvent", "结束")
+
+    flow = build_task_flow(str(owner.id), str(task.id))
+    case = flow["cases"][0]
+
+    assert flow["rounds"][0]["model_ms"] == 0
+    assert flow["rounds"][0]["running"] is False
+    assert case["duration_ms"] == 0
+    assert case["steps"][0]["duration_ms"] == 0

@@ -1,4 +1,4 @@
-/** case-manager API — 项目 / 目录 / 文件 / 文档用例（DRF {status,data} 信封） */
+﻿/** case-manager API — 项目 / 目录 / 文件 / 文档用例（DRF {status,data} 信封） */
 import client from "@/shared/api-client"
 import type { DjangoResponse } from "@/shared/api-client"
 import type {
@@ -135,25 +135,6 @@ export function deleteDefinition(id: string): Envelope<{ id: string }> {
 export function batchDeleteDefinitions(ids: string[]): Envelope<{ deleted: number }> {
   return client.post<DjangoResponse<{ deleted: number }>>("/cases/definitions/batch-delete/", {
     ids,
-  })
-}
-
-// ── YAML 导入 ──
-
-export interface YamlImportResult {
-  file_id: number
-  file_name: string
-  total: number
-  created: number
-  updated: number
-  removed: number
-  skipped: Array<{ title: string; reason: string }>
-}
-
-/** 上传一份 YAML，导入当前项目的用例表（同名表复用，按标题覆盖） */
-export function importYaml(form: FormData): Envelope<YamlImportResult> {
-  return client.post<DjangoResponse<YamlImportResult>>("/cases/import-yaml/", form, {
-    headers: { "Content-Type": "multipart/form-data" },
   })
 }
 

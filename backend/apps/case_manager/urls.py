@@ -8,7 +8,6 @@ from .views_drf import (
     CaseFileViewSet,
     CaseProjectViewSet,
     TestDefinitionViewSet,
-    import_yaml,
     move_items,
 )
 
@@ -22,6 +21,5 @@ router.register(r"definitions", TestDefinitionViewSet, basename="cm_def")
 
 urlpatterns = [
     *router.urls,
-    path("import-yaml/", import_yaml, name="cm_import_yaml"),
     path("move/", move_items, name="cm_move"),
 ]

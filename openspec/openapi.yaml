@@ -849,36 +849,6 @@ paths:
       responses:
         '204':
           description: No response body
-  /api/cases/import-yaml/:
-    post:
-      operationId: cases_import_yaml_create
-      description: 把上传的 YAML 用例导入当前用户的用例项目。
-      tags:
-      - cases
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: {}
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              additionalProperties: {}
-          multipart/form-data:
-            schema:
-              type: object
-              additionalProperties: {}
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
   /api/cases/move/:
     post:
       operationId: cases_move_create

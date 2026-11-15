@@ -1,4 +1,4 @@
-## 1. 规则与门禁先行（B0）
+﻿## 1. 规则与门禁先行（B0）
 
 - [x] 1.1 改 `engines/AGENTS.md`：一级子包删 `agents/`，依赖边界写明 `backend → backend_bridge → ae_harness` 单向，删除以 `agents/` 为落点的红线条目（工具命名、`tools_config` 分配、`role_sys_prompts` 提示词入口、`AgentRoleFactory` / `agent_builders` 装配）。验证：`git diff -- engines/AGENTS.md` 人工核对四条红线不再指向已删目录
 - [x] 1.2 改 `engines/backend_bridge/AGENTS.md`：定位补「事件落库、运行取消、报告与用量」；改掉「`workflow/` 待建」的过期描述。验证：`git diff -- engines/backend_bridge/AGENTS.md`
@@ -40,6 +40,8 @@
 - [x] 5.1 **决策点（阻塞后续）**：与需求方确认 `case_manager` 用例库在 YAML 通道下线后的数据来源（只读历史 / 改录 SOP steps / 在 `backend_bridge` 重建用例模型），把结论写进 `design.md` 的 Open Questions。验证：`design.md` 该条标记为已决，且 5.2 起按结论执行
 - [ ] 5.2 删 `engines/agents/workflow/{case_file,case_goal_workflow,case_artifact,case_artifact_facts,case_artifact_render,step_brief}.py`。验证：`grep -rn "case_file\|case_goal_workflow\|case_artifact\|step_brief" engines backend` 无输出
 - [ ] 5.3 删 `backend/apps/case_manager/{api_yaml,api_definitions}.py` 中的 YAML 导入与步骤提示入口（按 5.1 结论决定整文件删除或收窄）；同步前端用例页面的导入/导出控件。验证：`cd frontend; pnpm run type-check` 通过，用例页面无 YAML 导入按钮
+  - **执行顺序陷阱（已查证，勿按字面整文件删）**：`api_definitions.py`(335 行) 是**用例定义 CRUD**（create/get/update/delete + 枚举与必填校验），只有 `_normalize_steps`(110–127) 内部调用 `parse_step_hints`；整文件删除会连带打掉用例库。正确做法：把 `_normalize_steps` 里的 `parse_step_hints` 换成后端本地可选字段校验（anchor / log / reason），其余函数全部保留。`api_yaml.py`(347 行) 才是 YAML 导入/导出模块，连同路由与前端控件整体删除。
+  - 允许顺序：先删 `api_yaml.py` + 路由 + 前端导入导出控件（自成一体）→ 再改 `api_definitions._normalize_steps` → 最后才删 `engines/agents/workflow/case_file.py`。
 - [ ] 5.4 删 `backend/apps/task_list/{attachments,task_reports}.py` 的 `validate_platform_yaml` 调用与 `task_runner.py:254` 的用例编写入口。验证：`python -m pytest -c tests/pytest.ini tests/task -q` 全绿
 - [ ] 5.5 删 `openspec/specs/appliance-case-authoring/` 与 `openspec/specs/case-manager-yaml-sync/`（按 5.1 结论确认后者范围），删对应 `tests/case/` 用例。验证：`openspec validate --all` 通过
 

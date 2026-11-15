@@ -2,7 +2,7 @@
 
 ## 平台架构定位（Model + Harness）
 
-**结论先行：** 本平台的核心是 **Agent**。前端负责展示；后端是通道与记账；**`engines/` 集中平台全部可执行能力**。一个 Agent **角色** = **Model + Harness**。
+**结论先行：** 本平台的核心是 **Agent**。前端负责展示；后端是通道与记账；
 
 ### 三层分工
 
@@ -13,40 +13,14 @@
 | 能力核心 | `engines/` | 平台能力全集：Agent 运行时 + Harness + 设备/串口/视觉等支撑 |
 
 依赖方向：**backend →（注入）→ engines**；`engines` **禁止**反向依赖 `apps.*` / `django.*`。
-
-### Agent = Model + Harness
-
-- **Model**：推理与生成（如 DeepSeek、Dashscope / Omni 等），由角色配置选用。
-- **Harness**：角色跑起来所需的外围能力，集中在 `engines/agents/`：
-  - **工具** `tools/` + `tools_config.py`
-  - **技能** `config/data/skills/`（资产已就位，装配入口尚未接上，见 `engines/agents/AGENTS.md`）
-  - **知识库** `rag/`（MCP 等扩展配置尚未落地，当前无 `mcp_config/`）
-  - **记忆与上下文**：会话/历史与当轮上下文装配（含 messaging、语音 session/pipeline 等；RAG 结果只注入当轮，不写进长期历史）
-  - **提示词** `config/data/prompts/` + `role_sys_prompts.py`
-- **角色** `agent_builders.py`（`AgentRoleFactory` + `build_*`）：把选定的 Model 与上述 Harness 装配成可下发、可计量的 Agent；四分段类型在 `config/role_types.py`，语音角色在 `realtime_vocie_agent.py`。
-- **工作流** `workflow/`：SOP 步骤与单次运行；不在此创建角色或旁路绑定工具/提示词。
-
-### Harness 的控制与数据底座
-
-`engines/device`、`engines/uart_log`、`engines/vision` 为 Harness 提供控制与感知（设备动作、串口日志、OCR 等），经 `tool_*.py` 暴露给角色，而不是由业务层直接绑实现。
-
-### 花费、任务与展示闭环
-
-角色的**花费、能力与任务下发**经后端写入数据库并记录；再由前端展示。engines 负责产生可观测事件与用量（如 messaging / billing、语音 `model_usage`），**不在 engines 内写业务库**。
-
-### 文档落点
-
-- **本文件**：平台总思路（本节）。
-- **架构说明书**：[dev_docs/ARCH_PRD/ARCH-平台架构设计.md](dev_docs/ARCH_PRD/ARCH-平台架构设计.md)
-- **创建 Agent 清单**：[dev_docs/ARCH_PRD/GUIDE-创建Agent清单.md](dev_docs/ARCH_PRD/GUIDE-创建Agent清单.md)（新增角色必循）
-- **落地与红线**：[`engines/AGENTS.md`](engines/AGENTS.md) 及子目录 AGENTS（agents / rag / realtime_vocie）；风格正文见 [`.agents/rules/engines-code-style.md`](.agents/rules/engines-code-style.md)。
-
 ---
 ## 行为规范
 
 1. **必须** 遵循`OpenSpec` 规范驱动流程的四步（`/opsx:explore`、 `/opsx:propose <change-id>`、 `/opsx:apply`、`/opsx:archive`）开发功能
 
-3. **必须** 遵循结论先行原则，；先给出总的结论，再给出详细说明，最后罗列需要我决策的内容。
+2. **必须** 遵循结论先行原则，；先给出总的结论，再给出详细说明，最后罗列需要我决策的内容。
+
+3. **禁止带着不确定性的因素去行动**-- 发现有冲突的、有疑惑的、或者前后矛盾等问题必须要先提出来，解决后再执行；
 
 4. **改规则必须先请示（硬约束）**-- 下列四类改动**必须先提交「变更申请」并经需求方确认，才能动代码与文档**，**不得先改后报**：
    - 修改任何 `AGENTS.md`（含各级子目录）的**红线 / 禁止事项 / 准入清单 / 依赖边界**条款；

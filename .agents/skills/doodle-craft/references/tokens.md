@@ -25,7 +25,7 @@
 | `--app-stat-text` | `#5d5950` | `--color-ink-34` | 统计卡主文字 |
 | `--app-marker-red` | `#f56b6a` | `--color-red-69` | 马克笔红：**仅**危险 CTA（侧栏退出）|
 
-## 1.2 8 支彩笔令牌
+## 1.2 9 支彩笔令牌
 
 | 令牌 | CSS 变量 | 色值 | 现消费方 |
 |------|----------|------|----------|
@@ -37,6 +37,7 @@
 | 报告 | `--c-report` | `#7C6F83` | report-generator |
 | AI | `--c-ai` | `#E879F9` | ai-assistant、任务清单 |
 | 流程 | `--c-workflow` | `#89CFF0` | workflow |
+| 运营 | `--c-ops` | `#B2710C` | ops-console（运营后台） |
 
 > `--c-element` / `--c-runner` 已无同名模块页面，但仍被共享表格、看板卡片与报告页引用，**不得**当死令牌删除。
 

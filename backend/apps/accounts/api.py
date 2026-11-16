@@ -28,6 +28,8 @@ __all__ = [
     "purge_expired",
     "revoke_session",
     "revoke_token",
+    "set_user_active",
+    "set_user_password",
 ]
 
 
@@ -140,3 +142,72 @@ def purge_expired(limit: int = 100) -> int:
         return 0
     deleted, _ = TokenRevocation.objects.filter(id__in=expired_ids).delete()
     return deleted
+
+
+def set_user_active(user_id: int, active: bool) -> User:
+    """启用或停用一个账号（运营后台的唯一停用写口）。
+
+    已是目标状态时不写库：运营后台的停用/启用按幂等语义对外承诺。
+
+    Args:
+        user_id: 目标账号主键。
+        active: True 启用、False 停用。
+
+    Returns:
+        User: 更新后的账号实例。
+
+    Raises:
+        ValueError: 账号不存在。
+    """
+    user = _get_user_or_raise(user_id)
+    target = bool(active)
+    if user.is_active != target:
+        user.is_active = target
+        user.save(update_fields=["is_active"])
+    return user
+
+
+def set_user_password(user_id: int, new_password: str) -> User:
+    """直接设定账号密码（运营后台重置密码的唯一写口）。
+
+    走 `set_password` 落哈希，明文不入库；不校验密码强度——调用方负责生成
+    随机密码或保证强度。
+
+    Args:
+        user_id: 目标账号主键。
+        new_password: 新明文密码，只在这次调用里存在。
+
+    Returns:
+        User: 更新后的账号实例。
+
+    Raises:
+        ValueError: 账号不存在，或新密码为空。
+    """
+    if not str(new_password or ""):
+        raise ValueError("新密码不能为空")
+    user = _get_user_or_raise(user_id)
+    user.set_password(str(new_password))
+    user.save(update_fields=["password"])
+    return user
+
+
+def _get_user_or_raise(user_id: int) -> User:
+    """按主键取账号，取不到即抛 ValueError（供两个写口共用）。
+
+    Args:
+        user_id: 目标账号主键。
+
+    Returns:
+        User: 命中的账号实例。
+
+    Raises:
+        ValueError: 主键非法或账号不存在。
+    """
+    try:
+        pk = int(str(user_id))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("账号不存在") from exc
+    user = User.objects.filter(pk=pk).first()
+    if user is None:
+        raise ValueError("账号不存在")
+    return user

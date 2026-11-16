@@ -71,7 +71,7 @@ Doodle Craft 是本平台前端的**默认设计方案**：极简几何 · 粗�
 | Element Plus 外观 | `tokens.css` 的 `--el-*` 段（值只能是 `var(...)`）；模块确需差异才写 `:deep()` | [tokens.md](references/tokens.md) §1.17 |
 | 模块专属色板 | `modules/<模块>/tokens.css`，作用域 = 该模块页面根类 | [tokens.md](references/tokens.md) §1.14 |
 
-**8 支彩笔令牌**（跨技能对齐的语义映射，记错就穿帮，故留在入口）：
+**9 支彩笔令牌**（跨技能对齐的语义映射，记错就穿帮，故留在入口）：
 
 | 令牌 | 变量 | 色值 | 现消费方 |
 | --- | --- | --- | --- |
@@ -83,6 +83,7 @@ Doodle Craft 是本平台前端的**默认设计方案**：极简几何 · 粗�
 | 报告 | `--c-report` | `#7C6F83` 灰紫 | report-generator |
 | AI | `--c-ai` | `#E879F9` 柔粉紫 | ai-assistant、任务清单 |
 | 流程 | `--c-workflow` | `#89CFF0` 天蓝 | workflow |
+| 运营 | `--c-ops` | `#B2710C` 赭橙 | ops-console（运营后台） |
 
 > `--c-element` / `--c-runner` 已无同名模块页面，但仍被共享表格、看板卡片与报告页引用，**不得**当死令牌删除。
 

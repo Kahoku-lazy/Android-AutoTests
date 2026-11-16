@@ -330,6 +330,7 @@
   --c-report: var(--color-ink-47) /* alias -> --color-ink-47 */;
   --c-ai: var(--color-purple-73) /* alias -> --color-purple-73 */;
   --c-workflow: var(--color-cyan-74) /* alias -> --color-cyan-74 */;
+  --c-ops: var(--color-orange-37) /* alias -> --color-orange-37 */;
 
   /* ── 状态色（现行 --app-status-*）── */
   --app-status-success: var(--color-green-61) /* alias -> --color-green-61 */;

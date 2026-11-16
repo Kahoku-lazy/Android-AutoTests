@@ -1,0 +1,238 @@
+"""运营后台的编排与边界校验。
+
+业务：
+1. list_users: 分页列出账号，带身份标签与启用状态。
+2. set_active: 停用或启用一个普通账号，写库经 `accounts.api`。
+3. reset_password: 为普通账号生成一次性临时密码并落库，写库经 `accounts.api`。
+4. check_manageable: 判定操作者能否管理目标账号，不能则抛 PermissionError。
+
+边界（openspec/changes/add-ops-user-console）：不能操作自己、不能操作超级管理员、
+非超管不能操作其他运营、不提供删除账号。
+"""
+
+from __future__ import annotations
+
+import secrets
+
+from django.contrib.auth import get_user_model
+from django.db.models import Q
+
+from backend.apps.accounts.api import set_user_active, set_user_password
+from backend.shared.users import OPERATOR_GROUP, is_superuser
+from utils.logs import backend_log
+
+from .serializers import OpsUserRowSerializer
+
+__all__ = [
+    "DEFAULT_PAGE_SIZE",
+    "MAX_PAGE_SIZE",
+    "check_manageable",
+    "list_users",
+    "reset_password",
+    "set_active",
+]
+
+DEFAULT_PAGE_SIZE = 20
+MAX_PAGE_SIZE = 100
+
+# 临时密码字符集：剔除 0/O/1/l/I 等易混字符，避免运营抄错转述错。
+_PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
+_PASSWORD_LENGTH = 16
+
+IDENTITY_LABELS = {"superuser": "超级管理员", "operator": "运营", "user": "普通用户"}
+
+
+def list_users(
+    *,
+    page: int = 1,
+    page_size: int = DEFAULT_PAGE_SIZE,
+    keyword: str = "",
+    active: bool | None = None,
+) -> dict:
+    """分页列出账号。
+
+    Args:
+        page: 页码，从 1 开始；小于 1 按 1 处理。
+        page_size: 每页条数，夹紧到 1..MAX_PAGE_SIZE。
+        keyword: 用户名或邮箱的模糊匹配；空串表示不筛选。
+        active: True 只看启用、False 只看停用、None 不筛。
+
+    Returns:
+        含 users / total / page / page_size 的字典。
+    """
+    user_model = get_user_model()
+    queryset = user_model.objects.all()
+
+    text = (keyword or "").strip()
+    if text:
+        queryset = queryset.filter(Q(username__icontains=text) | Q(email__icontains=text))
+    if active is not None:
+        queryset = queryset.filter(is_active=bool(active))
+
+    total = queryset.count()
+    safe_page = max(int(page or 1), 1)
+    safe_size = min(max(int(page_size or DEFAULT_PAGE_SIZE), 1), MAX_PAGE_SIZE)
+    start = (safe_page - 1) * safe_size
+    rows = queryset.order_by("-date_joined", "-id")[start : start + safe_size]
+
+    return {
+        "users": _serialize_rows(rows),
+        "total": total,
+        "page": safe_page,
+        "page_size": safe_size,
+    }
+
+
+def set_active(actor_id: int, target_id: int, active: bool) -> dict:
+    """停用或启用目标账号，成功后记一条运营日志。
+
+    Args:
+        actor_id: 发起操作的账号主键。
+        target_id: 目标账号主键。
+        active: True 启用、False 停用。
+
+    Returns:
+        含 target 最新一行的字典：`{"user": {...}}`。
+
+    Raises:
+        LookupError: 目标账号不存在。
+        PermissionError: 目标不可被当前操作者管理。
+    """
+    target = _get_target(target_id)
+    check_manageable(actor_id, target)
+    user = set_user_active(target.id, active)
+    backend_log.info(
+        "ops actor=%s action=%s target=%s result=ok",
+        actor_id,
+        "enable" if active else "disable",
+        target.id,
+    )
+    return {"user": OpsUserRowSerializer(user, context=_row_context()).data}
+
+
+def reset_password(actor_id: int, target_id: int) -> dict:
+    """为目标账号生成一次性临时密码并落库。
+
+    明文只出现在本次返回值里，日志与数据库都不留。
+
+    Args:
+        actor_id: 发起操作的账号主键。
+        target_id: 目标账号主键。
+
+    Returns:
+        含 `username` 与一次性 `password` 的字典。
+
+    Raises:
+        LookupError: 目标账号不存在。
+        PermissionError: 目标不可被当前操作者管理。
+    """
+    target = _get_target(target_id)
+    check_manageable(actor_id, target)
+    password = _generate_password()
+    user = set_user_password(target.id, password)
+    backend_log.info("ops actor=%s action=reset-password target=%s result=ok", actor_id, target.id)
+    return {"username": user.username, "password": password}
+
+
+def check_manageable(actor_id: int, target) -> None:
+    """判定操作者能否管理目标账号。
+
+    规则：谁都不能动自己；超级管理员可管理运营与普通用户；运营只能管理普通用户。
+
+    Args:
+        actor_id: 发起操作的账号主键。
+        target: 目标账号实例。
+
+    Returns:
+        None：通过校验。
+
+    Raises:
+        PermissionError: 目标是自己、是超级管理员，或非超管要动其他运营。
+    """
+    if int(target.id) == _safe_int(actor_id):
+        raise PermissionError("不能操作自己的账号")
+    if is_superuser(actor_id):
+        return
+    if target.is_superuser:
+        raise PermissionError("不能操作超级管理员")
+    if _is_operator_user(target):
+        raise PermissionError("不能操作其他运营账号")
+
+
+def _is_operator_user(user) -> bool:
+    """判定账号是否属于运营组（单账号查询，列表场景请用 operator_ids 集合）。
+
+    Args:
+        user: 账号实例。
+
+    Returns:
+        属于运营组返回 True。
+    """
+    return user.groups.filter(name=OPERATOR_GROUP).exists()
+
+
+def _get_target(user_id: int):
+    """按主键取目标账号。
+
+    Args:
+        user_id: 目标账号主键。
+
+    Returns:
+        账号实例。
+
+    Raises:
+        LookupError: 主键非法或账号不存在。
+    """
+    pk = _safe_int(user_id)
+    target = get_user_model().objects.filter(pk=pk).first() if pk else None
+    if target is None:
+        raise LookupError("账号不存在")
+    return target
+
+
+def _serialize_rows(rows) -> list[dict]:
+    """把账号查询结果序列化成行列表（运营主键集合只查一次）。
+
+    Args:
+        rows: 账号查询集或列表。
+
+    Returns:
+        行字典列表。
+    """
+    return OpsUserRowSerializer(rows, many=True, context=_row_context()).data
+
+
+def _row_context() -> dict:
+    """构造序列化上下文：一次查出运营账号主键集合，避免逐行查组关系。
+
+    Returns:
+        含 operator_ids 的上下文字典。
+    """
+    operator_ids = set(
+        get_user_model().objects.filter(groups__name=OPERATOR_GROUP).values_list("id", flat=True)
+    )
+    return {"operator_ids": operator_ids}
+
+
+def _generate_password() -> str:
+    """生成一次性临时密码。
+
+    Returns:
+        16 位随机密码。
+    """
+    return "".join(secrets.choice(_PASSWORD_ALPHABET) for _ in range(_PASSWORD_LENGTH))
+
+
+def _safe_int(value) -> int:
+    """把入参转成主键；非法值返回 0。
+
+    Args:
+        value: 任意入参。
+
+    Returns:
+        正整数主键或 0。
+    """
+    try:
+        return int(str(value))
+    except (TypeError, ValueError):
+        return 0

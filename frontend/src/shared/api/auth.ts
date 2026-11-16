@@ -35,11 +35,12 @@ export async function logout(): Promise<AuthResponse> {
   return data
 }
 
-/** 当前登录用户，含是否管理员。 */
+/** 当前登录用户，含是否管理员与是否运营。 */
 export interface MeUser {
   id: number
   username: string
   is_superuser: boolean
+  is_operator: boolean
 }
 
 export async function me(): Promise<MeUser> {

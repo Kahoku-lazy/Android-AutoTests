@@ -9,13 +9,14 @@
 - 网络中断或会话已失效时，仍清掉本地会话回到登录页
 -->
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick, watch } from "vue"
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue"
 import { useRouter, useRoute } from "vue-router"
 import { ElMessage } from "element-plus"
 import { animate } from "animejs"
 import { sidebarNavEnter } from "../animations"
 import { NAV_CATEGORIES, MOD_COLORS } from "./sidebarNavConfig"
 import { useSidebarResize } from "../composables/useSidebarResize"
+import { useAuthUser } from "../composables/useAuthUser"
 import { clearSession, getUsername } from "@/shared/auth/token-storage"
 import { logout as logoutApi } from "@/shared/api/auth"
 import AnimatedMascot from "./AnimatedMascot.vue"
@@ -56,7 +57,11 @@ const {
   initSidebarWidth,
 } = useSidebarResize()
 
-const categories = NAV_CATEGORIES
+/** 运营分组只在运营/超管登录时出现：其余分组原样保留。 */
+const { isOperator } = useAuthUser()
+const categories = computed(() =>
+  NAV_CATEGORIES.filter((cat) => !cat.requiresOperator || isOperator.value),
+)
 
 // ── 可展开分组（元素定位）：父项点击展开/收起；进入子页时自动展开 ──
 const expandedGroups = ref(new Set())
@@ -100,7 +105,7 @@ function onGroupClick(item) {
 watch(
   () => route.path,
   () => {
-    for (const cat of categories) {
+    for (const cat of categories.value) {
       for (const item of cat.items) {
         if (item.children?.some((sub) => isActive(sub.path))) {
           const next = new Set(expandedGroups.value)

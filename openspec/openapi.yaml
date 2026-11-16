@@ -291,6 +291,9 @@ paths:
       description: |-
         返回当前会话最近的事件行。
 
+        引擎侧单智能体已下线（变更 retire-engines-agents），平台会话的过程日志改由
+        `engines/backend_bridge.event_log` 写、按报告接口读取，这里恒返回空列表。
+
         Args:
             request: DRF 请求，查询参数 session 为本次对话键。
 
@@ -1376,6 +1379,88 @@ paths:
       description: GET /api/devices/stats/ — device pool summary.
       tags:
       - devices
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/ops/users/:
+    get:
+      operationId: ops_users_retrieve
+      description: GET /api/ops/users/ — 分页账号列表（运营可读）。
+      tags:
+      - ops
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/ops/users/{user_id}/disable/:
+    post:
+      operationId: ops_users_disable_create
+      description: POST /api/ops/users/<int:user_id>/disable/ — 停用普通账号（运营）。
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ops
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/ops/users/{user_id}/enable/:
+    post:
+      operationId: ops_users_enable_create
+      description: POST /api/ops/users/<int:user_id>/enable/ — 启用普通账号（运营）。
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ops
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/ops/users/{user_id}/reset-password/:
+    post:
+      operationId: ops_users_reset_password_create
+      description: POST /api/ops/users/<int:user_id>/reset-password/ — 重置普通账号密码（运营）。
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ops
       security:
       - jwtAuth: []
       responses:
@@ -3042,5 +3127,7 @@ tags:
   description: 测试报告：任务报告列表、用例分解、报告文件下载与查看
 - name: serial-log
   description: 串口日志：端口监听开关、当前日志查看与关键词对照表
+- name: ops
+  description: 运营后台：账号列表 / 停用启用 / 重置密码
 - name: schema
   description: OpenAPI schema 端点（drf-spectacular 自带）

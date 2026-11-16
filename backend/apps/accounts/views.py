@@ -27,6 +27,7 @@ from backend.shared.auth.jwt_auth import (
     session_id_of,
     verify_token,
 )
+from backend.shared.users import is_operator
 
 from . import api
 from .serializers import LoginSerializer, RefreshSerializer, RegisterSerializer
@@ -195,6 +196,7 @@ class MeView(APIView):
                     "id": user.id,
                     "username": user.username,
                     "is_superuser": user.is_superuser,
+                    "is_operator": is_operator(user.id),
                 }
             }
         )

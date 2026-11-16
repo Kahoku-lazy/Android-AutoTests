@@ -14,6 +14,8 @@ export interface NavCategory {
   key: string
   label: string
   items: NavItem[]
+  /** 仅运营/超管可见的分组：为真时按当前用户身份过滤 */
+  requiresOperator?: boolean
 }
 
 export const NAV_CATEGORIES: NavCategory[] = [
@@ -49,6 +51,12 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { path: "/bugs", icon: "bug", label: "BUG单管理" },
     ],
   },
+  {
+    key: "ops",
+    label: "运营",
+    requiresOperator: true,
+    items: [{ path: "/ops/users", icon: "users", label: "用户管理" }],
+  },
 ]
 
 // ── Doodle Craft 协调：path → 模块色（active 书签条），与主区模块色同源 ──
@@ -64,4 +72,5 @@ export const MOD_COLORS = {
   "/workflow": "var(--c-workflow)",
   "/serial-log": "var(--c-device)",
   "/agent-reports": "var(--c-report)",
+  "/ops/users": "var(--c-ops)",
 }

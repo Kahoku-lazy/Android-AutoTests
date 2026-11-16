@@ -87,6 +87,7 @@ INSTALLED_APPS = [
     "backend.apps.serial_log",
     "backend.apps.dashboard",
     "backend.apps.usage_ledger",
+    "backend.apps.ops_console",
 ]
 
 MIDDLEWARE = [
@@ -322,6 +323,7 @@ SPECTACULAR_SETTINGS = {
             "name": "serial-log",
             "description": "串口日志：端口监听开关、当前日志查看与关键词对照表",
         },
+        {"name": "ops", "description": "运营后台：账号列表 / 停用启用 / 重置密码"},
         {"name": "schema", "description": "OpenAPI schema 端点（drf-spectacular 自带）"},
     ],
 }

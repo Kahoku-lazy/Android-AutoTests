@@ -12,12 +12,13 @@ import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import { formatApiError } from "@/shared/api-client"
 import { useAuthUser } from "@/shared/composables/useAuthUser"
 import OpsUserDrawer from "./components/OpsUserDrawer.vue"
-import { resetOpsUserPassword, setOpsUserActive } from "./api"
+import { resetOpsUserPassword, setOpsUserActive, setOpsUserOperator } from "./api"
 import { useOpsUsers } from "./composables/useOpsUsers"
 import {
   identityClass,
   OPS_DISABLE_HINT,
   OPS_EMPTY_TEXT,
+  OPS_GRANT_HINT,
   OPS_FILTER_TABS,
   OPS_IDENTITY_LABELS,
   OPS_KEYWORD_PLACEHOLDER,
@@ -27,6 +28,7 @@ import {
   OPS_PAGE_SUBTITLE,
   OPS_PAGE_TITLE,
   OPS_RESET_HINT,
+  OPS_REVOKE_HINT,
   OPS_TABLE_COLUMNS,
 } from "./constants"
 import type { OpsUser } from "./types"
@@ -104,6 +106,26 @@ async function toggleActive(user: OpsUser): Promise<void> {
     if (!data.status || !data.data) throw data
     applyRow(data.data.user)
     ElMessage.success(`已${verb}「${user.username}」`)
+  } catch (e) {
+    ElMessage.error(formatApiError(e as never, `${verb}失败`))
+  } finally {
+    busy.value = false
+  }
+}
+
+async function grantOperator(user: OpsUser, enabled: boolean): Promise<void> {
+  const verb = enabled ? "设为运营" : "取消运营"
+  const ok = await confirm(
+    `将「${user.username}」${verb}？`,
+    enabled ? OPS_GRANT_HINT : OPS_REVOKE_HINT,
+  )
+  if (!ok) return
+  busy.value = true
+  try {
+    const { data } = await setOpsUserOperator(user.id, enabled)
+    if (!data.status || !data.data) throw data
+    applyRow(data.data.user)
+    ElMessage.success(`已将「${user.username}」${verb}`)
   } catch (e) {
     ElMessage.error(formatApiError(e as never, `${verb}失败`))
   } finally {
@@ -243,9 +265,11 @@ async function resetPassword(user: OpsUser): Promise<void> {
       :user="selected"
       :busy="busy"
       :can-manage="selectedManageable"
+      :can-grant="isSuperuser"
       :one-time-password="oneTimePassword"
       @toggle="toggleActive"
       @reset="resetPassword"
+      @grant="grantOperator"
     />
   </div>
 </template>

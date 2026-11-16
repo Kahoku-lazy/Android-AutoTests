@@ -12,6 +12,8 @@ const props = defineProps<{
   busy: boolean
   /** 当前操作者能否管理这一行（超管行与其它运营行会置灰） */
   canManage: boolean
+  /** 当前操作者是否为超管：只有超管看得到授予/取消运营 */
+  canGrant: boolean
   /** 重置后的一次性密码；空串表示本次没有 */
   oneTimePassword: string
 }>()
@@ -20,6 +22,7 @@ const emit = defineEmits<{
   "update:modelValue": [value: boolean]
   "toggle": [user: OpsUser]
   "reset": [user: OpsUser]
+  "grant": [user: OpsUser, enabled: boolean]
 }>()
 
 const roleHint = computed(() => {
@@ -80,6 +83,22 @@ const roleHint = computed(() => {
         </DoodleBtn>
         <DoodleBtn tone="paper" :disabled="!canManage || busy" @click="emit('reset', user)">
           重置密码
+        </DoodleBtn>
+        <DoodleBtn
+          v-if="canGrant && user.identity === 'user'"
+          tone="yellow"
+          :disabled="busy"
+          @click="emit('grant', user, true)"
+        >
+          设为运营
+        </DoodleBtn>
+        <DoodleBtn
+          v-if="canGrant && user.identity === 'operator'"
+          tone="paper"
+          :disabled="busy"
+          @click="emit('grant', user, false)"
+        >
+          取消运营
         </DoodleBtn>
       </div>
 

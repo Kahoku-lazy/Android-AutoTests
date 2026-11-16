@@ -5,8 +5,10 @@ from django.urls import path
 from .views import (
     OpsUserDisableView,
     OpsUserEnableView,
+    OpsUserGrantOperatorView,
     OpsUserListView,
     OpsUserResetPasswordView,
+    OpsUserRevokeOperatorView,
 )
 
 app_name = "ops"
@@ -22,6 +24,16 @@ urlpatterns = [
         "users/<int:user_id>/enable/",
         OpsUserEnableView.as_view(),
         name="ops_user_enable",
+    ),
+    path(
+        "users/<int:user_id>/grant-operator/",
+        OpsUserGrantOperatorView.as_view(),
+        name="ops_user_grant_operator",
+    ),
+    path(
+        "users/<int:user_id>/revoke-operator/",
+        OpsUserRevokeOperatorView.as_view(),
+        name="ops_user_revoke_operator",
     ),
     path(
         "users/<int:user_id>/reset-password/",

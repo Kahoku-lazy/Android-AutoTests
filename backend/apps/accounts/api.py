@@ -30,6 +30,7 @@ __all__ = [
     "revoke_token",
     "set_user_active",
     "set_user_password",
+    "set_operator",
 ]
 
 
@@ -188,6 +189,36 @@ def set_user_password(user_id: int, new_password: str) -> User:
     user = _get_user_or_raise(user_id)
     user.set_password(str(new_password))
     user.save(update_fields=["password"])
+    return user
+
+
+def set_operator(user_id: int, enabled: bool) -> User:
+    """把账号加入或移出运营组（运营后台授予/取消的唯一写口）。
+
+    组不存在时顺手建出来，避免「还没在后台建组」导致授予失败。已是目标状态时
+    不写库，供调用方按幂等对外承诺。本函数不判权限，谁能调用由运营后台决定。
+
+    Args:
+        user_id: 目标账号主键。
+        enabled: True 加入运营组、False 移出。
+
+    Returns:
+        User: 更新后的账号实例。
+
+    Raises:
+        ValueError: 账号不存在。
+    """
+    from django.contrib.auth.models import Group
+
+    from backend.shared.users import OPERATOR_GROUP
+
+    user = _get_user_or_raise(user_id)
+    group, _ = Group.objects.get_or_create(name=OPERATOR_GROUP)
+    already = user.groups.filter(pk=group.pk).exists()
+    if enabled and not already:
+        user.groups.add(group)
+    elif not enabled and already:
+        user.groups.remove(group)
     return user
 
 

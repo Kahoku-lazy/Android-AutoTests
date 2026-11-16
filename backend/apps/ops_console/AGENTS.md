@@ -15,6 +15,8 @@
 | POST | `/api/ops/users/<id>/disable/` | 运营，且目标必须是普通用户 |
 | POST | `/api/ops/users/<id>/enable/` | 运营，且目标必须是普通用户 |
 | POST | `/api/ops/users/<id>/reset-password/` | 运营，且目标必须是普通用户 |
+| POST | `/api/ops/users/<id>/grant-operator/` | 仅超级管理员，且目标必须是普通用户 |
+| POST | `/api/ops/users/<id>/revoke-operator/` | 仅超级管理员，且目标必须是运营或普通用户 |
 
 - 路径必须带尾斜杠；响应遵循 `{status, data}` 与 snake_case。
 - 运营判定用 `shared.users.is_operator`（超级管理员天然算运营），禁止在本 App 另写组判定。
@@ -23,9 +25,9 @@
 
 | 只做 | 禁止 |
 |------|------|
-| 经 `accounts.api` 的 `set_user_active` / `set_user_password` 写库 | 在本 App 直接 `user.save()` 改账号字段 |
+| 经 `accounts.api` 的 `set_user_active` / `set_user_password` / `set_operator` 写库 | 在本 App 直接 `user.save()` 或 `groups.add` 改账号 |
 | 读 `auth.User` Model 做列表与身份展示 | import `accounts` 的 views / serializers / jwt_auth 内部实现 |
-| 四个端点的运营边界校验 | 新增删除账号、批量操作、授予运营的端点（需另开变更） |
+| 授予/取消运营仅超管、仅「运营」这一档 | 新增删除账号、批量授权、第二档角色，或让运营互相授权 |
 
 ## 边界口径
 

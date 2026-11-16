@@ -50,6 +50,46 @@ def test_set_user_password_rejects_empty(user):
         api.set_user_password(user.id, "")
 
 
+def test_set_operator_grants_and_revokes(user):
+    """授予后属于运营组，取消后移出。"""
+    from backend.shared.users import OPERATOR_GROUP
+
+    granted = api.set_operator(user.id, True)
+    assert granted.groups.filter(name=OPERATOR_GROUP).exists()
+
+    revoked = api.set_operator(user.id, False)
+    assert not revoked.groups.filter(name=OPERATOR_GROUP).exists()
+
+
+def test_set_operator_is_idempotent(user):
+    """重复授予、对普通人重复取消都不报错，也不多写一条组关系。"""
+    from backend.shared.users import OPERATOR_GROUP
+
+    api.set_operator(user.id, True)
+    api.set_operator(user.id, True)
+    assert user.groups.filter(name=OPERATOR_GROUP).count() == 1
+
+    api.set_operator(user.id, False)
+    assert api.set_operator(user.id, False).groups.filter(name=OPERATOR_GROUP).count() == 0
+
+
+def test_set_operator_creates_group_when_missing(user):
+    """运营组还没建时，授予会把组建出来。"""
+    from django.contrib.auth.models import Group
+
+    from backend.shared.users import OPERATOR_GROUP
+
+    Group.objects.filter(name=OPERATOR_GROUP).delete()
+    api.set_operator(user.id, True)
+    assert Group.objects.filter(name=OPERATOR_GROUP).exists()
+
+
+def test_set_operator_rejects_unknown_user():
+    """账号不存在时抛 ValueError。"""
+    with pytest.raises(ValueError):
+        api.set_operator(999999, True)
+
+
 def test_writers_reject_unknown_user():
     """账号不存在时抛 ValueError，而不是静默成功。"""
     with pytest.raises(ValueError):

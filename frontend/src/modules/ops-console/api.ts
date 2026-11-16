@@ -16,6 +16,15 @@ export function setOpsUserActive(
   return client.post(`/ops/users/${userId}/${active ? "enable" : "disable"}/`)
 }
 
+/** 设为运营 / 取消运营：仅超管可调用，两个动作各一个端点。 */
+export function setOpsUserOperator(
+  userId: number,
+  enabled: boolean,
+): Promise<{ data: DjangoResponse<{ user: OpsUser }> }> {
+  const action = enabled ? "grant-operator" : "revoke-operator"
+  return client.post(`/ops/users/${userId}/${action}/`)
+}
+
 /** 重置密码：一次性密码只在这次响应里返回。 */
 export function resetOpsUserPassword(
   userId: number,

@@ -17,7 +17,7 @@ import secrets
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 
-from backend.apps.accounts.api import set_user_active, set_user_password
+from backend.apps.accounts.api import set_operator, set_user_active, set_user_password
 from backend.shared.users import OPERATOR_GROUP, is_superuser
 from utils.logs import backend_log
 
@@ -27,8 +27,10 @@ __all__ = [
     "DEFAULT_PAGE_SIZE",
     "MAX_PAGE_SIZE",
     "check_manageable",
+    "grant_operator",
     "list_users",
     "reset_password",
+    "revoke_operator",
     "set_active",
 ]
 
@@ -132,6 +134,90 @@ def reset_password(actor_id: int, target_id: int) -> dict:
     user = set_user_password(target.id, password)
     backend_log.info("ops actor=%s action=reset-password target=%s result=ok", actor_id, target.id)
     return {"username": user.username, "password": password}
+
+
+def grant_operator(actor_id: int, target_id: int) -> dict:
+    """把普通用户设为运营。仅超级管理员可调用。
+
+    Args:
+        actor_id: 发起操作的账号主键。
+        target_id: 目标账号主键。
+
+    Returns:
+        含目标最新一行的字典。
+
+    Raises:
+        LookupError: 目标账号不存在。
+        PermissionError: 操作者不是超管，或目标是自己、是超管。
+    """
+    return _set_operator(actor_id, target_id, enabled=True)
+
+
+def revoke_operator(actor_id: int, target_id: int) -> dict:
+    """把运营恢复为普通用户。仅超级管理员可调用。
+
+    Args:
+        actor_id: 发起操作的账号主键。
+        target_id: 目标账号主键。
+
+    Returns:
+        含目标最新一行的字典。
+
+    Raises:
+        LookupError: 目标账号不存在。
+        PermissionError: 操作者不是超管，或目标是自己、是超管。
+    """
+    return _set_operator(actor_id, target_id, enabled=False)
+
+
+def _set_operator(actor_id: int, target_id: int, *, enabled: bool) -> dict:
+    """授予与取消共用：校验超管边界后调账号写口。
+
+    Args:
+        actor_id: 发起操作的账号主键。
+        target_id: 目标账号主键。
+        enabled: True 授予、False 取消。
+
+    Returns:
+        含目标最新一行的字典。
+
+    Raises:
+        LookupError: 目标账号不存在。
+        PermissionError: 操作者不是超管，或目标不可被授予。
+    """
+    target = _get_target(target_id)
+    _check_grantable(actor_id, target)
+    user = set_operator(target.id, enabled)
+    backend_log.info(
+        "ops actor=%s action=%s target=%s result=ok",
+        actor_id,
+        "grant-operator" if enabled else "revoke-operator",
+        target.id,
+    )
+    return {"user": OpsUserRowSerializer(user, context=_row_context()).data}
+
+
+def _check_grantable(actor_id: int, target) -> None:
+    """判定操作者能否授予或取消目标的运营身份。
+
+    只有超管能授权；谁都不能授给自己，也不能授给超管（超管不靠用户组判定）。
+
+    Args:
+        actor_id: 发起操作的账号主键。
+        target: 目标账号实例。
+
+    Returns:
+        None：通过校验。
+
+    Raises:
+        PermissionError: 操作者不是超管，或目标是自己、是超管。
+    """
+    if not is_superuser(actor_id):
+        raise PermissionError("仅超级管理员可授予或取消运营")
+    if int(target.id) == _safe_int(actor_id):
+        raise PermissionError("不能操作自己的账号")
+    if target.is_superuser:
+        raise PermissionError("不能对超级管理员授予运营")
 
 
 def check_manageable(actor_id: int, target) -> None:

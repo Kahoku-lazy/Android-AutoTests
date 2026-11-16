@@ -43,6 +43,8 @@ export const OPS_EMPTY_TEXT = {
 
 export const OPS_DISABLE_HINT = "停用后该账号将无法再登录；已签发的登录状态最长 1 小时内仍有效。"
 export const OPS_RESET_HINT = "新密码由服务端生成，只在本次显示一次，请立即转告对方。"
+export const OPS_GRANT_HINT = "对方将能进入运营后台，查看账号并停用、重置普通用户。"
+export const OPS_REVOKE_HINT = "对方将失去运营入口；已打开的页面会在下一次操作时失效。"
 
 /** 身份标签的样式类后缀 */
 export function identityClass(identity: OpsIdentity): string {

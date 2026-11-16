@@ -120,6 +120,24 @@ class OpsUserEnableView(APIView):
         return Response(_toggle(request, user_id, active=True))
 
 
+class OpsUserGrantOperatorView(APIView):
+    """POST /api/ops/users/<int:user_id>/grant-operator/ — 设为运营（仅超管）。"""
+
+    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
+    def post(self, request, user_id: int):
+        _require_operator(request)
+        return Response(_grant(request, user_id, enabled=True))
+
+
+class OpsUserRevokeOperatorView(APIView):
+    """POST /api/ops/users/<int:user_id>/revoke-operator/ — 取消运营（仅超管）。"""
+
+    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
+    def post(self, request, user_id: int):
+        _require_operator(request)
+        return Response(_grant(request, user_id, enabled=False))
+
+
 class OpsUserResetPasswordView(APIView):
     """POST /api/ops/users/<int:user_id>/reset-password/ — 重置普通账号密码（运营）。"""
 
@@ -133,6 +151,30 @@ class OpsUserResetPasswordView(APIView):
         except PermissionError as exc:
             raise PermissionDenied(str(exc)) from exc
         return Response(payload)
+
+
+def _grant(request, user_id: int, *, enabled: bool) -> dict:
+    """授予/取消运营共用分发：把 api 层的内置异常映射成 HTTP 状态码。
+
+    Args:
+        request: DRF 请求。
+        user_id: 目标账号主键。
+        enabled: True 授予、False 取消。
+
+    Returns:
+        含该账号最新一行的字典。
+
+    Raises:
+        NotFound: 目标账号不存在。
+        PermissionDenied: 操作者不是超管，或目标不可被授予。
+    """
+    action = api.grant_operator if enabled else api.revoke_operator
+    try:
+        return action(_actor_id(request), user_id)
+    except LookupError as exc:
+        raise NotFound(str(exc)) from exc
+    except PermissionError as exc:
+        raise PermissionDenied(str(exc)) from exc
 
 
 def _toggle(request, user_id: int, *, active: bool) -> dict:

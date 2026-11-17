@@ -1,43 +1,37 @@
-"""ai-assistant DRF views — Agent 组（Batch 1 迁移）。
+"""ai-assistant DRF 视图 — 角色注册表。
 
-路径与方法保持旧契约不变（等行为迁移）：
-  GET  /api/ai/agents                    列表（按 owner 过滤）
-  POST /api/ai/agents/create             创建
-  GET  /api/ai/agents/{id}               详情（api_key 脱敏）
-  POST /api/ai/agents/{id}/update        更新
-  POST /api/ai/agents/{id}/delete        删除
-  POST /api/ai/agents/{id}/reveal-key    一次性查看 Key
+路径：
+  GET    /api/ai/roles/             列表
+  POST   /api/ai/roles/             创建
+  GET    /api/ai/roles/{role_id}/   详情
+  PATCH  /api/ai/roles/{role_id}/   部分更新
+  DELETE /api/ai/roles/{role_id}/   删除
 
 鉴权：JWT 中间件已先校验并注入 request.user_id；DRF 全局 IsAuthenticated 兜底。
-对象级权限：复用 permissions.py 函数（行为与旧视图完全一致，
-包括「权限检查先于存在性检查 → 不存在资源返回 403」）。
-写库：全部经 api.py。
+写库：全部经 api.py。成功信封由 EnvelopeJSONRenderer 统一包裹。
 """
 
-from django.http import StreamingHttpResponse
+from django.db import IntegrityError
 from drf_spectacular.utils import OpenApiTypes, extend_schema
-from rest_framework import mixins, viewsets
-from rest_framework.decorators import action
+from rest_framework import status, viewsets
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import api
-from .models import AIAgent
-from .permissions import (
-    check_agent_owner,
-    check_agent_visible,
-    check_can_create_agent,
-    check_can_update_agent,
-    filter_agents_for_user,
-)
-from .serializers import (
-    AgentDetailSerializer,
-    AgentInputSerializer,
-    AgentListSerializer,
-)
+from backend.shared.users import is_operator
 
-_MODEL_LIST_PATHS = ["/models", "/v1/models"]
+from . import api
+from .models import AIAssistant, AIModelConfig, AIRole
+from .serializers import (
+    AssistantInputSerializer,
+    AssistantOutputSerializer,
+    ModelConfigSerializer,
+    RoleInputSerializer,
+    RoleOutputSerializer,
+    SopWorkflowInputSerializer,
+    SopWorkflowOutputSerializer,
+)
 
 
 def _user_id(request) -> str:
@@ -51,195 +45,512 @@ def _user_id(request) -> str:
     return ""
 
 
-def _agent_pk(request) -> int | None:
-    """解析路由 pk 为 int；非数字返回 None（旧路由 int 转换器下即 404）。"""
-    raw = str(request.parser_context["kwargs"]["pk"])
-    return int(raw) if raw.isdigit() else None
+class ModelConfigDiscoverView(APIView):
+    """POST /api/ai/model-configs/discover/ — 向厂商查询模型名，不写库。"""
 
-
-# ═══════════════════════════════════════════════════════════════════
-# Agent ViewSet
-# ═══════════════════════════════════════════════════════════════════
-
-
-class AgentViewSet(
-    mixins.ListModelMixin,
-    mixins.RetrieveModelMixin,
-    viewsets.GenericViewSet,
-):
-    """Agent 资源 — 路径与旧函数视图一一对应（见模块 docstring）。"""
-
-    queryset = AIAgent.objects.all()
-    serializer_class = AgentDetailSerializer
-
-    def _require_owner(self, request) -> int:
-        """返回当前用户拥有的 agent_id；权限检查失败 → 403（含资源不存在）。"""
-        agent_id = _agent_pk(request)
-        if agent_id is None:
-            raise NotFound("not found")
-        if not check_agent_owner(_user_id(request), agent_id):
+    @extend_schema(request=ModelConfigSerializer, responses=OpenApiTypes.OBJECT)
+    def post(self, request):
+        if not is_operator(_user_id(request)):
             raise PermissionDenied("Forbidden")
-        return agent_id
+        serializer = ModelConfigSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            found = api.discover_model_names(
+                data["provider"], data["api_key_env"], data.get("base_url") or ""
+            )
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response(found)
 
-    def _require_visible(self, request) -> int:
-        """返回当前用户可见的 agent_id（owner 或共享智能体）；否则 403。"""
-        agent_id = _agent_pk(request)
-        if agent_id is None:
-            raise NotFound("not found")
-        if not check_agent_visible(_user_id(request), agent_id):
-            raise PermissionDenied("Forbidden")
-        return agent_id
 
-    def _require_admin(self, request) -> int:
-        """仅超级管理员可写：非超管 403；超管但资源不存在 404。"""
-        agent_id = _agent_pk(request)
-        if agent_id is None:
-            raise NotFound("not found")
-        if not check_can_update_agent(_user_id(request), agent_id):
-            raise PermissionDenied("Forbidden")
-        if not AIAgent.objects.filter(id=agent_id).exists():
-            raise NotFound("not found")
-        return agent_id
+class ModelConfigViewSet(viewsets.ModelViewSet):
+    """模型配置 — /api/ai/model-configs/。登录可读，运营可写。"""
 
-    # ── 列表 ──
+    queryset = AIModelConfig.objects.all()
+    serializer_class = ModelConfigSerializer
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
+
+    def get_queryset(self):
+        return api.list_model_configs()
 
     def list(self, request, *args, **kwargs):
-        qs = filter_agents_for_user(AIAgent.objects.all(), _user_id(request))
-        return Response({"agents": AgentListSerializer(qs, many=True).data})
+        return Response({"configs": ModelConfigSerializer(self.get_queryset(), many=True).data})
 
-    # ── 详情 ──
-
-    def retrieve(self, request, *args, **kwargs):
-        agent_id = self._require_visible(request)
-        a = AIAgent.objects.get(id=agent_id)
-        return Response({"agent": AgentDetailSerializer(a, context={"request": request}).data})
-
-    # ── 创建 ──
-
-    @action(detail=False, methods=["post"], url_path="create")
-    def create_agent(self, request, *args, **kwargs):
-        if not check_can_create_agent(_user_id(request)):
-            raise PermissionDenied("Forbidden")
-        serializer = AgentInputSerializer(data=request.data)
+    def create(self, request, *args, **kwargs):
+        self._require_operator(request)
+        serializer = ModelConfigSerializer(data=request.data, context={"require_model_name": True})
         serializer.is_valid(raise_exception=True)
-        agent = api.create_agent(_user_id(request), serializer.validated_data)
-        return Response({"id": agent.id})
+        try:
+            config = api.create_model_config(serializer.validated_data)
+        except IntegrityError as exc:
+            raise ValidationError("该密钥下已有同名模型") from exc
+        return Response(ModelConfigSerializer(config).data, status=status.HTTP_201_CREATED)
 
-    # ── 更新 ──
-
-    @action(detail=True, methods=["post"], url_path="update")
-    def update_agent(self, request, *args, **kwargs):
-        agent_id = self._require_admin(request)
-        serializer = AgentInputSerializer(data=request.data)
+    def partial_update(self, request, *args, **kwargs):
+        self._require_operator(request)
+        config = self.get_object()
+        serializer = ModelConfigSerializer(
+            data=request.data, partial=True, context={"require_model_name": True}
+        )
         serializer.is_valid(raise_exception=True)
-        agent = api.update_agent(AIAgent.objects.get(id=agent_id), serializer.validated_data)
-        return Response({"id": agent.id})
+        config = api.update_model_config(config, serializer.validated_data)
+        return Response(ModelConfigSerializer(config).data)
 
-    # ── 删除 ──
-
-    @action(detail=True, methods=["post"], url_path="delete")
-    def delete_agent(self, request, *args, **kwargs):
-        agent_id = self._require_admin(request)
-        api.delete_agent(AIAgent.objects.get(id=agent_id))
+    def destroy(self, request, *args, **kwargs):
+        self._require_operator(request)
+        config = self.get_object()
+        try:
+            api.delete_model_config(config)
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
         return Response({})
 
-    # ── 一次性查看 Key ──
+    def _require_operator(self, request) -> None:
+        if not is_operator(_user_id(request)):
+            raise PermissionDenied("Forbidden")
 
-    @action(detail=True, methods=["post"], url_path="reveal-key")
-    def reveal_key(self, request, *args, **kwargs):
-        agent_id = self._require_admin(request)
-        a = AIAgent.objects.get(id=agent_id)
+
+class RoleViewSet(viewsets.ModelViewSet):
+    """角色增删改查 — /api/ai/roles/ 与 /api/ai/roles/{role_id}/。"""
+
+    queryset = AIRole.objects.all()
+    lookup_field = "role_id"
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
+
+    def get_serializer_class(self):
+        if self.action in ("create", "partial_update"):
+            return RoleInputSerializer
+        return RoleOutputSerializer
+
+    def get_queryset(self):
+        return api.list_roles()
+
+    def list(self, request, *args, **kwargs):
+        return Response(RoleOutputSerializer(self.get_queryset(), many=True).data)
+
+    def retrieve(self, request, *args, **kwargs):
+        return Response(RoleOutputSerializer(self.get_object()).data)
+
+    def create(self, request, *args, **kwargs):
+        if not is_operator(_user_id(request)):
+            raise PermissionDenied("Forbidden")
+        serializer = RoleInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        if "name" not in data or "model_config_id" not in data:
+            raise ValidationError("名称与模型配置不能为空")
         try:
-            payload = api.reveal_agent_key(a)
-        except ValueError as exc:
-            raise ValidationError(str(exc))
-        return Response(payload)
-
-
-# ═══════════════════════════════════════════════════════════════════
-class WorkflowStreamView(APIView):
-    """POST /api/ai/workflows/<key>/stream/ — 单智能体一轮对话。"""
-
-    @extend_schema(request=OpenApiTypes.OBJECT, responses={200: OpenApiTypes.STR})
-    def post(self, request, key: str):
-        """校验设备与消息后返回文本流。
-
-        Args:
-            request: DRF 请求，体为 serial、message、session_id。
-            key: 编排键。
-
-        Returns:
-            text/event-stream。本期只推文本增量。
-
-        Raises:
-            NotFound: 编排键不存在。
-            ValidationError: 缺序列号、缺消息或缺 session_id。
-        """
-        from . import platform_agents
-
-        if not platform_agents.is_platform_key(key):
-            raise NotFound(f"未知编排 {key!r}；引擎侧单智能体已下线，只支持平台编排")
-        serial = str(request.data.get("serial") or "").strip()
-        message = str(request.data.get("message") or "").strip()
-        session_id = str(request.data.get("session_id") or "").strip()
-        if not serial:
-            raise ValidationError("需要先选择设备")
-        if not message:
-            raise ValidationError("message 不能为空")
-        if not session_id:
-            raise ValidationError("session_id 不能为空")
-
-        # 参数先校验完再进生成器，缺字段时不会创建智能体。
-        def chunks():
-            text = platform_agents.stream_turn(
-                key=key, serial=serial, message=message, session_id=session_id
+            role = api.create_role(
+                data["name"], data["model_config_id"], data.get("system_prompt", "")
             )
-            yield f"data: {text}\n\n"
+        except api.ModelConfigMissingError as exc:
+            raise ValidationError(str(exc)) from exc
+        except api.RoleConflictError as exc:
+            return Response({"message": str(exc)}, status=status.HTTP_409_CONFLICT)
+        except api.RoleIdExhaustedError as exc:
+            return Response({"message": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response(RoleOutputSerializer(role).data, status=status.HTTP_201_CREATED)
 
-        response = StreamingHttpResponse(chunks(), content_type="text/event-stream")
-        response["Cache-Control"] = "no-cache"
-        return response
+    def partial_update(self, request, *args, **kwargs):
+        if not is_operator(_user_id(request)):
+            raise PermissionDenied("Forbidden")
+        serializer = RoleInputSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        try:
+            role = api.update_role(self.get_object(), serializer.validated_data)
+        except api.ModelConfigMissingError as exc:
+            raise ValidationError(str(exc)) from exc
+        except api.RoleConflictError as exc:
+            return Response({"message": str(exc)}, status=status.HTTP_409_CONFLICT)
+        return Response(RoleOutputSerializer(role).data)
+
+    def destroy(self, request, *args, **kwargs):
+        if not is_operator(_user_id(request)):
+            raise PermissionDenied("Forbidden")
+        role = self.get_object()
+        role_id = role.role_id
+        api.delete_role(role)
+        return Response({"role_id": role_id})
 
 
-class WorkflowEventsView(APIView):
-    """GET /api/ai/workflows/events/?session=... — 读本地事件日志里的会话段。"""
+class AssistantViewSet(viewsets.ModelViewSet):
+    """助手名片 — /api/ai/assistants/ 与 /api/ai/assistants/{assistant_id}/。"""
+
+    queryset = AIAssistant.objects.all()
+    lookup_field = "assistant_id"
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
+
+    def get_serializer_class(self):
+        if self.action in ("create", "partial_update"):
+            return AssistantInputSerializer
+        return AssistantOutputSerializer
+
+    def get_queryset(self):
+        return api.list_assistants()
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        role_ids = list(self.get_queryset().values_list("role_id", flat=True))
+        context["role_names"] = dict(
+            AIRole.objects.filter(role_id__in=role_ids).values_list("role_id", "name")
+        )
+        return context
+
+    def list(self, request, *args, **kwargs):
+        return Response(self.get_serializer(self.get_queryset(), many=True).data)
+
+    def retrieve(self, request, *args, **kwargs):
+        return Response(self.get_serializer(self.get_object()).data)
+
+    def create(self, request, *args, **kwargs):
+        self._require_operator(request)
+        payload = _assistant_payload(request)
+        serializer = AssistantInputSerializer(data=payload)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        if "display_name" not in data or "role_id" not in data:
+            raise ValidationError("名称与 Agent 配置不能为空")
+        try:
+            card = api.create_assistant(
+                data["display_name"],
+                data["role_id"],
+                avatar=_avatar_bytes(request),
+                tools=data.get("tools") or [],
+            )
+        except api.AssistantRoleMissingError as exc:
+            raise ValidationError(str(exc)) from exc
+        except api.AvatarRejectedError as exc:
+            raise ValidationError(str(exc)) from exc
+        except api.AssistantIdExhaustedError as exc:
+            return Response({"message": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response(
+            AssistantOutputSerializer(card, context=self._names_for([card])).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    def partial_update(self, request, *args, **kwargs):
+        self._require_operator(request)
+        serializer = AssistantInputSerializer(data=_assistant_payload(request), partial=True)
+        serializer.is_valid(raise_exception=True)
+        payload = dict(serializer.validated_data)
+        if "avatar" in request.FILES or request.data.get("clear_avatar"):
+            payload["avatar"] = _avatar_bytes(request)
+        try:
+            card = api.update_assistant(self.get_object(), payload)
+        except api.AssistantRoleMissingError as exc:
+            raise ValidationError(str(exc)) from exc
+        except api.AvatarRejectedError as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response(AssistantOutputSerializer(card, context=self._names_for([card])).data)
+
+    def destroy(self, request, *args, **kwargs):
+        self._require_operator(request)
+        card = self.get_object()
+        assistant_id = card.assistant_id
+        api.delete_assistant(card)
+        return Response({"assistant_id": assistant_id})
+
+    def _names_for(self, cards) -> dict:
+        role_ids = [card.role_id for card in cards]
+        return {
+            "role_names": dict(
+                AIRole.objects.filter(role_id__in=role_ids).values_list("role_id", "name")
+            )
+        }
+
+    def _require_operator(self, request) -> None:
+        if not is_operator(_user_id(request)):
+            raise PermissionDenied("Forbidden")
+
+
+class AssistantThreadView(APIView):
+    """测试对话栏：建栏、列表、发送、轮询、取消。发送只落库并排队，不在请求里跑模型。"""
+
+    @extend_schema(operation_id="ai_assistant_threads_list", responses=OpenApiTypes.OBJECT)
+    def get(self, request, assistant_id: str):
+        return Response(
+            [
+                {
+                    "thread_id": item.thread_id,
+                    "status": item.status,
+                    "title": item.title,
+                }
+                for item in api.list_threads(assistant_id)
+            ]
+        )
+
+    @extend_schema(
+        operation_id="ai_assistant_threads_create", request=None, responses=OpenApiTypes.OBJECT
+    )
+    def post(self, request, assistant_id: str):
+        try:
+            thread = api.create_thread(assistant_id)
+        except AIAssistant.DoesNotExist:
+            return Response({"message": "助手不存在"}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"thread_id": thread.thread_id, "status": thread.status}, status=status.HTTP_201_CREATED
+        )
+
+
+class AssistantThreadLogView(APIView):
+    """列出该栏日志，或用 ticket 打开一份 HTML。report_id 为空时只列目录。"""
+
+    def get_permissions(self):
+        if self.kwargs.get("report_id"):
+            return [AllowAny()]
+        return super().get_permissions()
+
+    @extend_schema(operation_id="ai_assistant_thread_logs_list", responses=OpenApiTypes.OBJECT)
+    def get(self, request, thread_id: str, report_id: str = ""):
+        if report_id:
+            return AssistantThreadLogFileView().get(request, thread_id, report_id)
+        thread = api.get_thread(thread_id)
+        if thread is None:
+            return Response({"message": "对话栏不存在"}, status=status.HTTP_404_NOT_FOUND)
+        return Response(api.list_thread_logs(thread))
+
+    @extend_schema(
+        operation_id="ai_assistant_thread_log_ticket", request=None, responses=OpenApiTypes.OBJECT
+    )
+    def post(self, request, thread_id: str, report_id: str = ""):
+        return AssistantThreadLogFileView().post(request, thread_id, report_id)
+
+
+class AssistantThreadLogFileView(APIView):
+    """用一次性 ticket 打开一份已写完的 HTML 日志。只挂带 report_id 的路径。"""
+
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        operation_id="ai_assistant_thread_log_file",
+        responses={(200, "text/html"): OpenApiTypes.BINARY},
+    )
+    def get(self, request, thread_id: str, report_id: str):
+        thread = api.get_thread(thread_id)
+        if thread is None:
+            return Response({"message": "对话栏不存在"}, status=status.HTTP_404_NOT_FOUND)
+        if thread.status == "running":
+            return Response({"message": "还在写"}, status=status.HTTP_409_CONFLICT)
+        from backend.apps.ai_assistant.services.log_ticket import LogTicketError, consume_log_ticket
+
+        try:
+            consume_log_ticket(str(request.GET.get("ticket") or ""), thread_id, report_id)
+        except LogTicketError as exc:
+            return Response({"message": str(exc)}, status=status.HTTP_401_UNAUTHORIZED)
+        path = api.resolve_thread_report(thread, report_id)
+        if path is None or not path.is_file():
+            return Response({"message": "日志不存在"}, status=status.HTTP_404_NOT_FOUND)
+        from django.http import FileResponse
+
+        return FileResponse(path.open("rb"), content_type="text/html")
+
+    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
+    def post(self, request, thread_id: str, report_id: str = ""):
+        thread = api.get_thread(thread_id)
+        if thread is None:
+            return Response({"message": "对话栏不存在"}, status=status.HTTP_404_NOT_FOUND)
+        if thread.status == "running" or not report_id:
+            return Response({"message": "还在写"}, status=status.HTTP_409_CONFLICT)
+        from backend.apps.ai_assistant.services.log_ticket import issue_log_ticket
+
+        return Response({"ticket": issue_log_ticket(thread_id, report_id)})
+
+
+class AssistantThreadDetailView(APIView):
+    """GET 轮询消息；POST 发送；PATCH 重命名；DELETE 取消。"""
+
+    @extend_schema(operation_id="ai_assistant_thread_detail", responses=OpenApiTypes.OBJECT)
+    def get(self, request, thread_id: str):
+        thread = api.get_thread(thread_id)
+        if thread is None:
+            return Response({"message": "对话栏不存在"}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {
+                "thread_id": thread.thread_id,
+                "status": thread.status,
+                "messages": api.message_rows(thread),
+            }
+        )
+
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    def patch(self, request, thread_id: str):
+        thread = api.get_thread(thread_id)
+        if thread is None:
+            return Response({"message": "对话栏不存在"}, status=status.HTTP_404_NOT_FOUND)
+        title = str(request.data.get("title") or "").strip()
+        api.rename_thread(thread, title)
+        return Response({"thread_id": thread.thread_id, "title": thread.title})
+
+    @extend_schema(
+        operation_id="ai_assistant_thread_send",
+        request=OpenApiTypes.OBJECT,
+        responses=OpenApiTypes.OBJECT,
+    )
+    def post(self, request, thread_id: str):
+        thread = api.get_thread(thread_id)
+        if thread is None:
+            return Response({"message": "对话栏不存在"}, status=status.HTTP_404_NOT_FOUND)
+        content = str(request.data.get("content") or "").strip()
+        if not content:
+            raise ValidationError("消息不能为空")
+        if thread.status == "running":
+            return Response({"message": "这一轮还在跑"}, status=status.HTTP_409_CONFLICT)
+        try:
+            api.send_message(thread, content)
+        except api.AssistantRoleMissingError as exc:
+            return Response({"message": str(exc)}, status=status.HTTP_409_CONFLICT)
+        return Response(
+            {"thread_id": thread.thread_id, "status": "running"}, status=status.HTTP_202_ACCEPTED
+        )
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def delete(self, request, thread_id: str):
+        thread = api.get_thread(thread_id)
+        if thread is None:
+            return Response({"message": "对话栏不存在"}, status=status.HTTP_404_NOT_FOUND)
+        from engines.backend_bridge.agents.thread_run import request_thread_cancel
+
+        request_thread_cancel(thread_id)
+        api.cancel_thread(thread)
+        return Response({"thread_id": thread_id, "status": thread.status})
+
+
+class AssistantThreadDeleteView(APIView):
+    """POST /api/ai/assistants/threads/{thread_id}/delete/ — 删除对话栏与其消息。
+
+    进行中的轮次先请求取消，再删记录；后台线程写回时发现栏已不存在会跳过。
+    """
+
+    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
+    def post(self, request, thread_id: str):
+        thread = api.get_thread(thread_id)
+        if thread is None:
+            return Response({"message": "对话栏不存在"}, status=status.HTTP_404_NOT_FOUND)
+        from engines.backend_bridge.agents.thread_run import request_thread_cancel
+
+        request_thread_cancel(thread_id)
+        api.delete_thread(thread)
+        return Response({"thread_id": thread_id, "deleted": True})
+
+
+def _sop_workflow_or_404(workflow_id: int):
+    """按主键取工作流；不存在时抛 404。"""
+    try:
+        return api.get_sop_workflow(workflow_id)
+    except api.AISopWorkflow.DoesNotExist as exc:
+        raise NotFound("工作流不存在") from exc
+
+
+class AgentReportView(APIView):
+    """GET /api/ai/agent-reports/{run}/{name}/ — 只读平台报告正文。"""
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request, run: str, name: str):
+        from engines.backend_bridge.reports import REPORT_ROOT
+
+        root = REPORT_ROOT.resolve()
+        path = (root / run / name).resolve()
+        if (
+            path.parent != (root / run).resolve()
+            or not path.is_file()
+            or path.suffix.lower() != ".html"
+        ):
+            return Response({"message": "报告不存在"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"run": run, "name": name, "content": path.read_text(encoding="utf-8")})
+
+
+class SopWorkflowView(APIView):
+    """GET/POST /api/ai/sop-workflows/ — 列出与创建 SOP 工作流。"""
+
+    @extend_schema(responses=SopWorkflowOutputSerializer(many=True))
+    def get(self, request):
+        return Response(SopWorkflowOutputSerializer(api.list_sop_workflows(), many=True).data)
+
+    @extend_schema(request=SopWorkflowInputSerializer, responses=SopWorkflowOutputSerializer)
+    def post(self, request):
+        serializer = SopWorkflowInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            workflow = api.create_sop_workflow(
+                data["name"],
+                data["executor_assistant_id"],
+                data["verifier_assistant_id"],
+            )
+        except api.WorkflowNameError as exc:
+            raise ValidationError(str(exc)) from exc
+        except api.WorkflowAssistantMissingError as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response(SopWorkflowOutputSerializer(workflow).data, status=status.HTTP_201_CREATED)
+
+
+class SopWorkflowDetailView(APIView):
+    """PATCH/DELETE /api/ai/sop-workflows/{workflow_id}/ — 编辑或删除一条工作流。
+
+    编辑与创建共用同一份入参与校验；删除只删工作流记录，
+    名片、Agent 配置与历史任务都不受影响。
+    """
+
+    @extend_schema(request=SopWorkflowInputSerializer, responses=SopWorkflowOutputSerializer)
+    def patch(self, request, workflow_id: int):
+        workflow = _sop_workflow_or_404(workflow_id)
+        serializer = SopWorkflowInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            workflow = api.update_sop_workflow(
+                workflow,
+                data["name"],
+                data["executor_assistant_id"],
+                data["verifier_assistant_id"],
+            )
+        except api.WorkflowNameError as exc:
+            raise ValidationError(str(exc)) from exc
+        except api.WorkflowAssistantMissingError as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response(SopWorkflowOutputSerializer(workflow).data)
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def delete(self, request, workflow_id: int):
+        workflow = _sop_workflow_or_404(workflow_id)
+        api.delete_sop_workflow(workflow)
+        return Response({"id": workflow_id, "deleted": True})
+
+
+class ToolCatalogView(APIView):
+    """GET /api/ai/tool-catalog/ — 只读工具目录，不含实现。"""
 
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
-        """返回当前会话最近的事件行。
+        from engines.ae_harness.tools import list_tool_catalog
 
-        引擎侧单智能体已下线（变更 retire-engines-agents），平台会话的过程日志改由
-        `engines/backend_bridge.event_log` 写、按报告接口读取，这里恒返回空列表。
-
-        Args:
-            request: DRF 请求，查询参数 session 为本次对话键。
-
-        Returns:
-            含 events 字符串列表的响应信封。
-
-        Raises:
-            ValidationError: session 缺失。
-        """
-        session_id = str(request.query_params.get("session") or "").strip()
-        if not session_id:
-            raise ValidationError("session 不能为空")
-        return Response({"events": []})
+        return Response(list_tool_catalog())
 
 
-class WorkflowListView(APIView):
-    """GET /api/ai/workflows/ — 单智能体编排卡片。"""
+class AssistantAvatarView(APIView):
+    """GET /api/ai/assistants/{assistant_id}/avatar/ — 只返回压缩后的头像正文。"""
 
     @extend_schema(responses=OpenApiTypes.OBJECT)
-    def get(self, request):
-        """返回单智能体编排清单。
+    def get(self, request, assistant_id: str):
+        card = api.get_assistant(assistant_id)
+        if card is None:
+            return Response({"message": "助手不存在"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"assistant_id": card.assistant_id, "avatar": card.avatar})
 
-        Args:
-            request: DRF 请求。
 
-        Returns:
-            含 workflows 列表的响应信封。
-        """
-        from . import platform_agents
+def _assistant_payload(request) -> dict:
+    """表单里的 tools 是 JSON 字符串，先解开再交给序列化器。"""
+    data = request.data.dict() if hasattr(request.data, "dict") else dict(request.data)
+    raw_tools = data.get("tools")
+    if isinstance(raw_tools, str) and raw_tools:
+        data["tools"] = __import__("json").loads(raw_tools)
+    return data
 
-        cards = platform_agents.list_cards()
-        return Response({"workflows": cards})
+
+def _avatar_bytes(request) -> bytes | None:
+    """从表单文件读取头像；没有文件时返回 None。"""
+    upload = request.FILES.get("avatar")
+    if upload is None:
+        return None
+    return upload.read()

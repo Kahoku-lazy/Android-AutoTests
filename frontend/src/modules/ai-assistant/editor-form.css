@@ -1,0 +1,62 @@
+/* AI 助手模块的表单皮肤：助手配置弹窗与工作流弹窗共用一套「主线实线控件」
+   （墨框 2px + 纸底 + 2px 圆角，虚线只属于颜料片）。
+   作用域挂在 .ai-assistant-page 上：弹窗不 append-to-body，始终落在该根内，
+   因此这些类名不会外溢到其它模块。 */
+
+.ai-assistant-page .assistant-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+}
+
+.ai-assistant-page .assistant-field__label {
+  color: var(--ink);
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-medium);
+}
+
+.ai-assistant-page .assistant-input {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 var(--app-space-sm);
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  background: var(--app-bg-card);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--app-size-sm);
+}
+
+.ai-assistant-page .assistant-input::placeholder {
+  color: var(--app-text-muted);
+}
+
+.ai-assistant-page .assistant-input:focus-visible {
+  outline: 2px solid var(--c-dashboard);
+  outline-offset: 2px;
+}
+
+.ai-assistant-page .assistant-select {
+  position: relative;
+  display: block;
+}
+
+.ai-assistant-page .assistant-select select {
+  appearance: none;
+  padding-right: var(--app-space-xl);
+  cursor: pointer;
+}
+
+/* 自绘下拉箭头：用墨色描边走令牌，不用图片 */
+.ai-assistant-page .assistant-select::after {
+  position: absolute;
+  top: 50%;
+  right: var(--app-space-md);
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+  content: "";
+  pointer-events: none;
+  transform: translateY(-70%) rotate(45deg);
+}

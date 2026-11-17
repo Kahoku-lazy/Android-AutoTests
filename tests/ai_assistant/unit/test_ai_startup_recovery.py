@@ -8,12 +8,12 @@
 from __future__ import annotations
 
 import inspect
+import json
 
 from decimal import Decimal
 
 import pytest
 
-from backend.apps.ai_assistant.models import AIAgent
 from backend.apps.task_list import api as task_api
 from backend.apps.task_list import apps as apps_module
 from backend.apps.task_list.models import Task, TaskEvent
@@ -24,10 +24,9 @@ pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 
 def test_recover_orphaned_tasks_marks_running_interrupted():
     """遗留 running 变 interrupted；pending / completed 不动。"""
-    agent = AIAgent.objects.create(name="recovery-agent")
-    running = Task.objects.create(agent=agent, title="r", status=TaskStatus.RUNNING)
-    pending = Task.objects.create(agent=agent, title="p", status=TaskStatus.PENDING)
-    done = Task.objects.create(agent=agent, title="d", status=TaskStatus.COMPLETED)
+    running = Task.objects.create(title="r", status=TaskStatus.RUNNING)
+    pending = Task.objects.create(title="p", status=TaskStatus.PENDING)
+    done = Task.objects.create(title="d", status=TaskStatus.COMPLETED)
 
     recovered = task_api.recover_orphaned_tasks()
 
@@ -35,15 +34,15 @@ def test_recover_orphaned_tasks_marks_running_interrupted():
     running.refresh_from_db()
     assert running.status == "interrupted"
     assert running.finished_at is not None
-    assert "服务重启" in running.result
+    assert json.loads(running.result)["cause"] == "process_lost"
+    assert "服务重启" not in running.result
     assert Task.objects.get(id=pending.id).status == "pending"
     assert Task.objects.get(id=done.id).status == "completed"
 
 
 def test_recover_orphaned_tasks_rolls_up_cost_before_interrupting():
     """中断前先用模型调用事件回写费用，避免中断任务费用为 0。"""
-    agent = AIAgent.objects.create(name="recovery-agent")
-    task = Task.objects.create(agent=agent, title="cost", status=TaskStatus.RUNNING)
+    task = Task.objects.create(title="cost", status=TaskStatus.RUNNING)
     TaskEvent.objects.create(
         task=task,
         seq=1,
@@ -75,5 +74,6 @@ def test_apps_config_has_no_direct_orm_write():
 
     assert "objects.filter" not in src
     assert ".update(" not in src
-    assert "recover_orphaned_tasks" in src
+    assert "sweep_stale_tasks" in src
+    assert "makemigrations" in src
     assert "interrupted" in src

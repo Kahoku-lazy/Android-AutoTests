@@ -1,108 +1,143 @@
-"""ai-assistant serializers — DRF 入参校验与输出 DTO。
+"""字段形状校验。不查库。存在性由 agent_configs / model_configs 负责。"""
 
-分层约定（apps/AGENTS.md）：serializers 只做校验与 DTO，写库副作用全部走 api.py。
-Batch 1/2 已全部迁移到 DRF；手写校验函数已随迁移移除。
-"""
-
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-# ═══════════════════════════════════════════════════════════════════
-# Agent 输入（创建/更新共用；业务默认值仍在 api.py 应用，与旧视图一致）
-# ═══════════════════════════════════════════════════════════════════
+
+def _valid_http_url(value, schemes: set[str] | None = None) -> str:
+    """地址必须是带主机名的链接。实时语音额外允许 ws 与 wss。"""
+    from urllib.parse import urlparse
+
+    url = str(value or "").strip()
+    if not url:
+        raise serializers.ValidationError("API 地址不能为空")
+    parsed = urlparse(url)
+    allowed = schemes or {"http", "https"}
+    if parsed.scheme not in allowed or not parsed.netloc:
+        names = "、".join(sorted(allowed))
+        raise serializers.ValidationError(f"API 地址必须是 {names} 链接")
+    return url
 
 
-class AgentInputSerializer(serializers.Serializer):
-    """Agent 基本信息入参 — 模型/线路改由后台维护，不再经配置页提交。"""
+class ModelConfigSerializer(serializers.Serializer):
+    """模型配置入参与出参。只校验字段形状，不创建模型。"""
 
-    name = serializers.CharField(required=False, allow_blank=True, max_length=200)
-    # 头像是固定内置图标；限制长度，避免再把 MB 级 base64 写进库
-    avatar = serializers.CharField(required=False, allow_blank=True, max_length=4096)
-    tags = serializers.CharField(required=False, allow_blank=True)
-    description = serializers.CharField(required=False, allow_blank=True)
+    id = serializers.IntegerField(read_only=True)
+    provider = serializers.ChoiceField(choices=["deepseek", "dashscope", "govee"])
+    api_protocol = serializers.ChoiceField(choices=["deepseek", "dashscope", "openai"])
+    model_kind = serializers.ChoiceField(choices=["chat", "tts", "realtime"], default="chat")
+    voice = serializers.CharField(required=False, allow_blank=True, max_length=64)
+    api_key_env = serializers.ChoiceField(
+        choices=["DEEPSEEK_API_KEY", "DASHSCOPE_API_KEY", "GOVEE_API_KEY"]
+    )
+    base_url = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    model_name = serializers.CharField(required=False, allow_blank=True, max_length=100)
+
+    def validate(self, attrs):
+        provider = attrs.get("provider")
+        key = attrs.get("api_key_env")
+        if provider and key:
+            from engines.backend_bridge.models.catalog import expected_key
+
+            try:
+                expected = expected_key(provider)
+            except ValueError as exc:
+                raise serializers.ValidationError(str(exc)) from exc
+            if key != expected:
+                raise serializers.ValidationError("厂商与密钥环境变量不匹配")
+        kind = attrs.get("model_kind") or "chat"
+        if kind in {"chat", "realtime"} and ("base_url" in attrs or not self.partial):
+            schemes = {"http", "https", "ws", "wss"} if kind == "realtime" else {"http", "https"}
+            attrs["base_url"] = _valid_http_url(attrs.get("base_url"), schemes)
+        attrs["model_name"] = (attrs.get("model_name") or "").strip()
+        if self.context.get("require_model_name") and not attrs["model_name"]:
+            raise serializers.ValidationError("模型名称不能为空")
+        return attrs
+
+
+class RoleInputSerializer(serializers.Serializer):
+    """Agent 配置入参。不查模型配置是否存在。"""
+
+    name = serializers.CharField(required=False, max_length=200)
+    model_config_id = serializers.IntegerField(required=False, min_value=1)
+    system_prompt = serializers.CharField(required=False, allow_blank=True)
 
     def validate_name(self, value):
         name = (value or "").strip()
         if not name:
-            raise serializers.ValidationError("Agent 名称不能为空")
+            raise serializers.ValidationError("名称不能为空")
         return name
 
 
-# ═══════════════════════════════════════════════════════════════════
-# Agent 输出 DTO（字段契约与需求一致）
-# ═══════════════════════════════════════════════════════════════════
+class AssistantInputSerializer(serializers.Serializer):
+    """助手名片入参。头像字节由视图解码后传入写库层。"""
+
+    display_name = serializers.CharField(required=False, max_length=200)
+    role_id = serializers.CharField(required=False, max_length=11)
+    tools = serializers.ListField(required=False, child=serializers.DictField())
+
+    def validate_display_name(self, value):
+        name = (value or "").strip()
+        if not name:
+            raise serializers.ValidationError("名称不能为空")
+        return name
 
 
-class AgentListSerializer(serializers.Serializer):
+class AssistantOutputSerializer(serializers.Serializer):
+    """助手列表出参。不下发头像正文。"""
+
+    assistant_id = serializers.CharField()
+    display_name = serializers.CharField()
+    has_avatar = serializers.SerializerMethodField()
+    marker = serializers.CharField()
+    role_id = serializers.CharField()
+    role_name = serializers.SerializerMethodField()
+    tools = serializers.JSONField()
+    created_at = serializers.DateTimeField()
+
+    def get_has_avatar(self, obj) -> bool:
+        return bool(obj.avatar)
+
+    def get_role_name(self, obj) -> str:
+        names = self.context.get("role_names") or {}
+        return names.get(obj.role_id, "")
+
+
+class SopWorkflowInputSerializer(serializers.Serializer):
+    """新建 SOP 工作流入参。只收名称与两个名片编号。"""
+
+    name = serializers.CharField(max_length=200)
+    executor_assistant_id = serializers.CharField(max_length=12)
+    verifier_assistant_id = serializers.CharField(max_length=12)
+
+    def validate_name(self, value: str) -> str:
+        name = (value or "").strip()
+        if not name:
+            raise serializers.ValidationError("名称不能为空")
+        return name
+
+
+class SopWorkflowOutputSerializer(serializers.Serializer):
+    """工作流出参。不下发提示词、模型参数或工具勾选。"""
+
     id = serializers.IntegerField()
     name = serializers.CharField()
-    tags = serializers.CharField()
-    description = serializers.CharField()
-    model_provider = serializers.CharField()
-    model_name = serializers.CharField()
-    task_kind = serializers.CharField()
-    route_configs = serializers.SerializerMethodField()
-    status = serializers.CharField()
-    created_at = serializers.CharField()
-
-    def get_route_configs(self, obj):
-        """看板展示用：线路 name + 各角色 model_name/provider，不含头像与 api_key。"""
-        result = {}
-        for route, route_data in (obj.route_configs or {}).items():
-            if not isinstance(route_data, dict):
-                continue
-            entry = {"name": route_data.get("name") or ""}
-            for role in ("planner", "executor", "verifier"):
-                cfg = route_data.get(role)
-                if isinstance(cfg, dict):
-                    entry[role] = {
-                        "model_name": cfg.get("model_name") or "",
-                        "provider": cfg.get("provider") or "",
-                    }
-            result[route] = entry
-        return result
+    executor_assistant_id = serializers.CharField()
+    verifier_assistant_id = serializers.CharField()
+    created_at = serializers.DateTimeField()
+    updated_at = serializers.DateTimeField()
 
 
-class AgentDetailSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
+class RoleOutputSerializer(serializers.Serializer):
+    """Agent 配置出参。关联字段由写库层 select_related 后交给这里。"""
+
+    role_id = serializers.CharField()
     name = serializers.CharField()
-    tags = serializers.CharField()
-    description = serializers.CharField()
-    model_provider = serializers.CharField()
-    model_name = serializers.CharField()
-    task_kind = serializers.CharField()
-    vision_model_name = serializers.CharField()
-    strong_model_name = serializers.CharField()
-    strong_enabled = serializers.BooleanField()
-    api_key = serializers.SerializerMethodField()
-    base_url = serializers.SerializerMethodField()
-    route_configs = serializers.SerializerMethodField()
-    max_loops = serializers.IntegerField()
-    status = serializers.CharField()
-    created_at = serializers.CharField()
-
-    def _is_superuser(self):
-        request = self.context.get("request")
-        user = getattr(request, "user", None) if request else None
-        return bool(user is not None and getattr(user, "is_superuser", False))
-
-    @extend_schema_field(OpenApiTypes.STR)
-    def get_api_key(self, obj):
-        if not self._is_superuser():
-            return ""
-        from .api import decrypt_key, mask_key
-
-        return mask_key(decrypt_key(obj.api_key) if obj.api_key else "")
-
-    @extend_schema_field(OpenApiTypes.STR)
-    def get_base_url(self, obj):
-        return obj.base_url if self._is_superuser() else ""
-
-    @extend_schema_field(OpenApiTypes.OBJECT)
-    def get_route_configs(self, obj):
-        if not self._is_superuser():
-            return {}
-        from .api import decrypt_route_configs, mask_route_configs
-
-        return mask_route_configs(decrypt_route_configs(obj.route_configs or {}))
+    model_config_id = serializers.IntegerField(source="model_config.id", allow_null=True)
+    provider = serializers.CharField(source="model_config.provider", default="")
+    api_key_env = serializers.CharField(source="model_config.api_key_env", default="")
+    model_name = serializers.CharField(source="model_config.model_name", default="")
+    base_url = serializers.CharField(source="model_config.base_url", default="")
+    api_protocol = serializers.CharField(source="model_config.api_protocol", default="")
+    system_prompt = serializers.CharField()
+    created_at = serializers.DateTimeField()
+    updated_at = serializers.DateTimeField()

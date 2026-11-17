@@ -28,8 +28,8 @@ const emit = defineEmits<{
 const roleHint = computed(() => {
   if (!props.user) return ""
   if (props.canManage) return ""
-  if (props.user.identity === "superuser") return "超级管理员账号不能被停用或重置密码。"
-  return "只有超级管理员可以操作运营账号。"
+  if (props.user.identity === "superuser") return "超级管理员账号不能被停用或注销。"
+  return "运营账号不能被停用或注销。"
 })
 </script>
 
@@ -191,52 +191,50 @@ const roleHint = computed(() => {
   flex-wrap: wrap;
 }
 
-/* 身份标签与启用状态：抽屉内容被 teleport 到 body，页面级 scoped 样式到不了这里 */
+/* 身份标签与启用状态：抽屉内容被 teleport 到 body，页面级 scoped 样式到不了这里。
+   皮肤与列表页表格 chip 同一套：1.5px 墨边 + 混底 + 14px 粗字（仓库表格口径）。 */
 .ops-identity {
   display: inline-flex;
   align-items: center;
-  padding: 1px var(--app-space-xs);
-  font-size: var(--app-size-xs);
-  font-weight: var(--app-font-weight-bold);
-  border-radius: var(--app-radius-pill);
-  border: 1px solid var(--app-border-light);
-  background: var(--app-bg-card);
+  padding: 3px 9px;
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-heavy);
+  border-radius: var(--app-radius-sm);
+  border: 1.5px solid var(--ink);
+  background: color-mix(in srgb, var(--paper) 55%, var(--app-bg-card));
   color: var(--app-text-primary);
 }
 
 .ops-identity--superuser {
-  border-color: var(--app-status-purple);
-  color: var(--app-status-purple-text);
+  background: color-mix(in srgb, var(--c-element) 32%, var(--app-bg-card));
 }
 
 .ops-identity--operator {
-  border-color: var(--c-ops);
-  color: var(--c-ops);
+  background: color-mix(in srgb, var(--c-ops) 30%, var(--app-bg-card));
 }
 
 .ops-identity--user {
-  border-color: var(--app-border-light);
-  color: var(--app-text-secondary);
+  border-color: var(--app-border-strong);
+  font-weight: var(--app-font-weight-bold);
 }
 
 .ops-state {
   display: inline-flex;
   align-items: center;
-  padding: 1px var(--app-space-xs);
-  font-size: var(--app-size-xs);
+  padding: 3px 9px;
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-heavy);
   border-radius: var(--app-radius-sm);
-  border: 1px solid transparent;
+  border: 1.5px solid var(--ink);
 }
 
 .ops-state--on {
   color: var(--app-status-success-text);
-  background: var(--app-status-success-bg);
-  border-color: var(--app-status-success);
+  background: color-mix(in srgb, var(--c-device) 32%, var(--app-bg-card));
 }
 
 .ops-state--off {
   color: var(--app-status-danger-text);
-  background: var(--app-status-danger-bg);
-  border-color: var(--app-status-danger);
+  background: color-mix(in srgb, var(--c-runner) 45%, var(--app-bg-card));
 }
 </style>

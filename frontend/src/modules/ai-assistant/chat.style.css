@@ -1,0 +1,242 @@
+.ai-chat {
+  /* 由行内 --assistant-marker 现算：浅底、渐变与描边都跟随该助手的笔色 */
+  --assistant-marker-soft: color-mix(in srgb, var(--assistant-marker) 34%, var(--paper));
+  --assistant-marker-tint: color-mix(in srgb, var(--assistant-marker) 10%, var(--paper));
+  --assistant-marker-gradient: linear-gradient(
+    180deg,
+    var(--assistant-marker) 0%,
+    var(--assistant-marker-soft) 100%
+  );
+}
+
+/* 对话页把 L3 容器改成纵向填满：内容短时输入框贴底，内容长时仍由 .doc-body 滚动 */
+.ai-chat .doc-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-chat__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+}
+
+.ai-chat__body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: var(--app-space-lg);
+  align-items: stretch;
+  transition: grid-template-columns var(--app-duration) var(--app-ease);
+}
+
+/* 日志展开：只加宽左栏（对话栏 + 日志卡同列），把聊天气泡右侧那块空白收回来 */
+.ai-chat__body.is-logs-open {
+  grid-template-columns: clamp(320px, 30%, 420px) minmax(0, 1fr);
+}
+
+.ai-chat__pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-md);
+  min-width: 0;
+}
+
+.ai-chat__stream {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+}
+
+.ai-chat__empty {
+  max-width: 420px;
+  margin: var(--app-space-lg) auto 0;
+  padding: var(--app-space-lg);
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--app-radius-md);
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-sm);
+  text-align: center;
+}
+
+.ai-chat__row {
+  display: flex;
+}
+
+.ai-chat__row--user {
+  justify-content: flex-end;
+}
+
+.ai-chat__row--assistant {
+  justify-content: flex-start;
+}
+
+/* 气泡与其时刻同一列：时刻贴着自己那条气泡的外沿，不按位置猜 */
+.ai-chat__bubble-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-xs);
+  max-width: 72ch;
+  min-width: 0;
+}
+
+.ai-chat__row--user .ai-chat__bubble-wrap {
+  align-items: flex-end;
+}
+
+.ai-chat__time {
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+}
+
+.ai-chat__bubble {
+  max-width: 100%;
+  margin: 0;
+  padding: var(--app-space-sm) var(--app-space-md);
+  border-radius: var(--app-radius-sm);
+  font-size: var(--app-size-sm);
+  line-height: var(--app-line-height-normal);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 用户气泡保持纸色，只靠实线分隔；助手气泡用该助手的笔色描边 */
+.ai-chat__row--user .ai-chat__bubble {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+}
+
+.ai-chat__row--assistant .ai-chat__bubble {
+  background: var(--app-bg-card);
+  border: 2px solid var(--assistant-marker);
+}
+
+.ai-chat__running {
+  margin: 0;
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-sm);
+}
+
+.ai-chat__anchor {
+  height: 1px;
+}
+
+.ai-chat__composer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: var(--app-space-sm);
+  padding: var(--app-space-sm) 0;
+  background: var(--paper);
+}
+
+.ai-chat__input {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 var(--app-space-sm);
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  background: var(--app-bg-card);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--app-size-sm);
+}
+
+.ai-chat__input:focus-visible {
+  outline: 2px solid var(--c-dashboard);
+  outline-offset: 2px;
+}
+
+/* 发送钮：该助手笔色的深到浅（全模块允许渐变的第二处） */
+.ai-chat__send {
+  min-height: 36px;
+  padding: 0 var(--app-space-lg);
+  border: 2.5px solid var(--ink);
+  border-radius: 2px;
+  background: var(--assistant-marker-gradient);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-heavy);
+  box-shadow: 3px 3px 0 0 var(--ink);
+  cursor: pointer;
+  transition:
+    transform var(--app-duration-fast) var(--app-ease),
+    box-shadow var(--app-duration-fast) var(--app-ease);
+}
+
+.ai-chat__send:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 0 var(--ink);
+}
+
+.ai-chat__send:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 0 var(--ink);
+}
+
+.ai-chat__send:focus-visible {
+  outline: 2px solid var(--c-dashboard);
+  outline-offset: 2px;
+}
+
+.ai-chat__send:disabled {
+  background: var(--app-bg-subtle);
+  color: var(--app-text-secondary);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.ai-chat__cancel {
+  min-height: 36px;
+  padding: 0 var(--app-space-md);
+  border: 2px solid var(--app-status-danger-text);
+  border-radius: 2px;
+  background: var(--paper);
+  color: var(--app-status-danger-text);
+  font-family: inherit;
+  font-size: var(--app-size-sm);
+  cursor: pointer;
+}
+
+.ai-chat__cancel:focus-visible {
+  outline: 2px solid var(--c-dashboard);
+  outline-offset: 2px;
+}
+
+.ai-chat__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+}
+
+.ai-chat__meta-text {
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+}
+
+.ai-chat__status {
+  padding: 2px var(--app-space-sm);
+  border: 1px solid var(--app-border-strong);
+  border-radius: 2px;
+  color: var(--ink);
+}
+
+.ai-chat__status[data-state="running"] {
+  border-color: var(--assistant-marker);
+  background: var(--assistant-marker-tint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-chat__body {
+    transition: none;
+  }
+  .ai-chat__send,
+  .ai-chat__send:hover:not(:disabled),
+  .ai-chat__send:active:not(:disabled) {
+    transform: none;
+    transition: none;
+  }
+}

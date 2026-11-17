@@ -10,9 +10,10 @@ from backend.apps.task_list import api as task_api
 pytestmark = [pytest.mark.unit, pytest.mark.ai_assistant]
 
 
-def test_filter_agents_for_user_is_exported():
-    assert "filter_agents_for_user" in api.__all__
-    assert callable(api.filter_agents_for_user)
+def test_config_writes_are_exported():
+    assert "create_model_config" in api.__all__
+    assert "create_role" in api.__all__
+    assert callable(api.create_role)
 
 
 def test_task_api_owns_task_writes():

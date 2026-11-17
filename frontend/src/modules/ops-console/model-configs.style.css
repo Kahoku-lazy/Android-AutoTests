@@ -1,0 +1,37 @@
+/* 行间距：搜索行 / 翻页行 / 表格之间取 --app-space-md（16px），与 Agent 配置页一致 */
+.ops-section {
+  gap: var(--app-space-md);
+}
+/* 表单骨架与控件皮肤由 Sketched UI Kit（shared/styles/sketched-kit.css）提供，
+   这里只留本页私有的「名称行列表」布局。 */
+.sketch-names {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-sm);
+}
+.sketch-names__row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--app-space-sm);
+}
+.sketch-names__row :deep(.el-input) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* 行内删除按钮不参与伸缩（否则 40px 宽会把两个字挤成竖排），高度随行拉伸对齐输入框 */
+.sketch-names__row :deep(.doodle-btn) {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.sketch-names__foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--app-space-sm);
+  margin-bottom: var(--app-space-xs);
+}
+.sketch-names__hint {
+  margin: 0;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}

@@ -1,236 +1,221 @@
-"""ai-assistant API — agent / route configuration only.
+"""登记数据对外入口。视图和其它 App 只从这里导入。"""
 
-Cross-module writes must go through this module (firewall #2).
-"""
+from django.db import IntegrityError, transaction
 
-import base64
-import hashlib
-
-from cryptography.fernet import Fernet
-from django.conf import settings
-from django.contrib.auth import get_user_model
-from django.db.models import Q
-
-from backend.apps.ai_assistant.models import AIAgent
-from backend.models.constants import AgentStatus
-from utils.logs import backend_log
+from backend.apps.ai_assistant.models import (
+    AIAssistant,
+    AIAssistantThread,
+    AIModelConfig,
+    AIRole,
+    AISopWorkflow,
+)
+from backend.apps.ai_assistant.services.agent_configs import (
+    RoleConflictError,
+    RoleIdExhaustedError,
+    delete_role,
+    get_role,
+    list_roles,
+    prepare_role,
+    update_role,
+)
+from backend.apps.ai_assistant.services.assistant_cards import (
+    AssistantIdExhaustedError,
+    AssistantRoleMissingError,
+    AvatarRejectedError,
+    delete_assistant,
+    get_assistant,
+    list_assistants,
+    prepare_create,
+    update_assistant,
+)
+from backend.apps.ai_assistant.services.assistant_threads import (
+    cancel_thread,
+    delete_thread,
+    finish_message,
+    get_thread,
+    list_messages,
+    list_thread_logs,
+    list_threads,
+    message_rows,
+    new_thread_fields,
+    rename_thread,
+    resolve_thread_report,
+    send_message,
+)
+from backend.apps.ai_assistant.services.discover import discover_model_names
+from backend.apps.ai_assistant.services.model_configs import (
+    ModelConfigMissingError,
+    delete_model_config,
+    get_model_config,
+    list_model_configs,
+    prepare_model_config,
+    update_model_config,
+)
+from backend.apps.ai_assistant.services.sop_workflows import (
+    WorkflowAssistantMissingError,
+    WorkflowNameError,
+    WorkflowRoleMissingError,
+    get_workflow,
+    list_workflows,
+    prepare_workflow,
+    resolve_workflow,
+)
 
 __all__ = [
-    "create_agent",
-    "update_agent",
-    "delete_agent",
-    "reveal_agent_key",
-    "get_platform_agent",
-    "get_agent",
-    "resolve_assistant_name",
-    "encrypt_key",
-    "decrypt_key",
-    "mask_key",
-    "decrypt_route_configs",
-    "mask_route_configs",
-    "filter_agents_for_user",
+    "AISopWorkflow",
+    "AssistantIdExhaustedError",
+    "AssistantRoleMissingError",
+    "AvatarRejectedError",
+    "ModelConfigMissingError",
+    "RoleConflictError",
+    "RoleIdExhaustedError",
+    "WorkflowAssistantMissingError",
+    "WorkflowNameError",
+    "WorkflowRoleMissingError",
+    "cancel_thread",
+    "create_assistant",
+    "create_thread",
+    "finish_message",
+    "create_model_config",
+    "create_role",
+    "create_sop_workflow",
+    "delete_assistant",
+    "delete_model_config",
+    "delete_role",
+    "delete_sop_workflow",
+    "delete_thread",
+    "discover_model_names",
+    "get_assistant",
+    "get_thread",
+    "get_model_config",
+    "get_role",
+    "get_sop_workflow",
+    "list_assistants",
+    "list_messages",
+    "list_thread_logs",
+    "message_rows",
+    "resolve_thread_report",
+    "list_threads",
+    "list_model_configs",
+    "list_roles",
+    "list_sop_workflows",
+    "rename_thread",
+    "resolve_sop_workflow",
+    "send_message",
+    "update_assistant",
+    "update_model_config",
+    "update_role",
+    "update_sop_workflow",
 ]
 
 
-def filter_agents_for_user(queryset, user_id: str | None):
-    """Scope agent list：超级管理员全量；普通用户 = 无主智能体 ∪ 超级管理员拥有的共享智能体 ∪ 自己拥有的（遗留）。
-
-    无主（`owner_id IS NULL`）来自迁移种子：种子执行时可能还没有超级管理员
-    （标准启动顺序是先 migrate 再 createsuperuser），这类行按平台共享处理，
-    使可见性不依赖启动顺序。
-    """
-    if not user_id:
-        return queryset.none()
-    try:
-        is_super = get_user_model().objects.filter(pk=int(user_id), is_superuser=True).exists()
-    except (ValueError, TypeError):
-        is_super = False
-    if is_super:
-        return queryset
-    superuser_ids = list(
-        get_user_model().objects.filter(is_superuser=True).values_list("id", flat=True)
+def create_assistant(
+    display_name: str, role_id: str, *, avatar: bytes | None = None, tools: list | None = None
+):
+    """创建助手名片。写库只在本文件。"""
+    latest = (
+        AIAssistant.objects.order_by("-created_at", "-id").values_list("marker", flat=True).first()
     )
-    return queryset.filter(
-        Q(owner_id__isnull=True) | Q(owner_id=user_id) | Q(owner_id__in=superuser_ids)
-    )
-
-
-_AGENT_CREATE_DEFAULTS = {
-    "avatar": "🤖",
-    "model_provider": "dashscope",
-    "model_name": "qwen-max",
-}
-
-
-def _identity_route_config(name: str, avatar: str) -> dict:
-    """把基本信息里的名称/头像写进控制设备线路（卡片与任务列表的显示源）。"""
-    return {"device_control": {"name": name, "avatar": avatar}}
-
-
-def create_agent(user_id: int, data: dict) -> AIAgent:
-    """创建 Agent：只收基本信息，模型/线路用默认值（改由后台维护）。"""
-    name = data.get("name", "")
-    avatar = data.get("avatar", _AGENT_CREATE_DEFAULTS["avatar"])
-    return AIAgent.objects.create(
-        owner_id=int(user_id),
-        name=name,
+    fields = prepare_create(
+        display_name,
+        role_id,
+        latest_marker=latest,
+        is_taken=lambda candidate: AIAssistant.objects.filter(assistant_id=candidate).exists(),
         avatar=avatar,
-        tags=data.get("tags", ""),
-        description=data.get("description", ""),
-        model_provider=_AGENT_CREATE_DEFAULTS["model_provider"],
-        model_name=_AGENT_CREATE_DEFAULTS["model_name"],
-        route_configs=_identity_route_config(name, avatar),
-        key_revealed=False,
+        tools=tools,
     )
-
-
-def update_agent(agent: AIAgent, data: dict) -> AIAgent:
-    """更新基本信息；名称/头像镜像写入控制设备线路，模型配置与 health 保持不变。"""
-    data = dict(data)  # 避免修改调用方（Serializer.validated_data）的字典
-    for field in ("name", "avatar", "tags", "description"):
-        if field in data:
-            setattr(agent, field, data[field])
-
-    configs = dict(agent.route_configs or {})
-    route = dict(configs.get("device_control") or {})
-    identity_changed = False
-    for field in ("name", "avatar"):
-        if field in data:
-            route[field] = data[field]
-            identity_changed = True
-    if identity_changed:
-        configs["device_control"] = route
-        agent.route_configs = configs
-    agent.save()
-    return agent
-
-
-def delete_agent(agent: AIAgent) -> None:
-    """删除 Agent（级联删除其工具/对话/消息）。"""
-    agent.delete()
-
-
-def reveal_agent_key(agent: AIAgent) -> dict:
-    """一次性查看 API Key。返回 {api_key, revealed, hint}。"""
-    if not agent.api_key:
-        raise ValueError("未配置 API Key")
-    if agent.key_revealed:
-        decrypted = decrypt_key(agent.api_key)
-        return {
-            "api_key": mask_key(decrypted),
-            "revealed": False,
-            "hint": "API Key 仅支持一次性查看，已过期",
-        }
-    decrypted = decrypt_key(agent.api_key)
-    agent.key_revealed = True
-    agent.save(update_fields=["key_revealed", "updated_at"])
-    return {
-        "api_key": decrypted,
-        "revealed": True,
-        "hint": "请立即复制保存，此 Key 仅显示一次",
-    }
-
-
-def get_platform_agent() -> AIAgent | None:
-    """返回平台唯一智能体（超级管理员拥有的活跃共享智能体，无则回退首个活跃智能体）。"""
-    from django.contrib.auth import get_user_model
-
-    qs = AIAgent.objects.filter(status=AgentStatus.ACTIVE)
-    superuser_ids = list(
-        get_user_model().objects.filter(is_superuser=True).values_list("id", flat=True)
-    )
-    if superuser_ids:
-        agent = qs.filter(owner_id__in=superuser_ids).order_by("id").first()
-        if agent:
-            return agent
-    return qs.order_by("id").first()
-
-
-def get_agent(agent_id: int) -> AIAgent | None:
-    """按 id 取智能体；不存在返回 None（提交入口用于校验）。"""
     try:
-        return AIAgent.objects.filter(id=int(agent_id)).first()
-    except (TypeError, ValueError):
-        return None
+        return AIAssistant.objects.create(**fields)
+    except IntegrityError as exc:
+        raise AssistantIdExhaustedError("助手编号冲突") from exc
 
 
-def resolve_assistant_name(agent: AIAgent | None) -> str:
-    """当前控制设备线路名；空则回退智能体 name。"""
-    if agent is None:
-        return ""
-    route = (agent.route_configs or {}).get("device_control") or {}
-    route_name = str(route.get("name") or "").strip()
-    if route_name:
-        return route_name
-    return str(agent.name or "").strip()
+def create_model_config(data: dict):
+    """新增一条模型配置。同一密钥下的同名模型拒绝重复。"""
+    return AIModelConfig.objects.create(**prepare_model_config(data))
 
 
-def _get_cipher() -> Fernet:
-    key = hashlib.sha256(settings.SECRET_KEY.encode()).digest()
-    return Fernet(base64.urlsafe_b64encode(key))
-
-
-def encrypt_key(plain: str) -> str:
-    """加密 API Key（供数据初始化/测试构造线路配置使用）。"""
-    if not plain:
-        return ""
-    return _get_cipher().encrypt(plain.encode()).decode()
-
-
-def decrypt_key(encrypted: str) -> str:
-    """解密 API Key。解密失败时返回空字符串而非崩溃。"""
-    if not encrypted:
-        return ""
-    try:
-        return _get_cipher().decrypt(encrypted.encode()).decode()
-    except Exception:
-        backend_log.exception(
-            "API key decryption failed — key may be corrupted or SECRET_KEY rotated"
-        )
-        return ""
-
-
-def mask_key(key: str) -> str:
-    """脱敏显示 API Key：保留前 3 位 + *** + 后 4 位。"""
-    if not key or len(key) < 8:
-        return "***"
-    return key[:3] + "***" + key[-4:]
-
-
-ROUTE_MODEL_ROLES = ("planner", "executor", "verifier")
-
-
-def _copy_route_meta(src: dict, dest: dict) -> None:
-    """保留线路级展示字段（name/avatar 等），不进入模型角色加密逻辑。"""
-    for key, val in src.items():
-        if key not in ROUTE_MODEL_ROLES:
-            dest[key] = val
-
-
-def _transform_route_configs(route_configs: dict, transform) -> dict:
-    """对 route_configs 内每条线路模型的 api_key 应用 transform。"""
-    result = {}
-    for route, models in (route_configs or {}).items():
-        if not isinstance(models, dict):
-            continue
-        result[route] = {}
-        _copy_route_meta(models, result[route])
-        for role in ROUTE_MODEL_ROLES:
-            cfg = models.get(role)
-            if not isinstance(cfg, dict):
+def create_role(name: str, model_config_id: int, system_prompt: str = ""):
+    """创建 Agent 配置。名称冲突时换一个短标识再试一次。"""
+    for attempt in range(2):
+        try:
+            with transaction.atomic():
+                role = AIRole.objects.create(**prepare_role(name, model_config_id, system_prompt))
+        except IntegrityError as exc:
+            if attempt == 0 and not AIRole.objects.filter(name=name).exists():
                 continue
-            new_cfg = dict(cfg)
-            if new_cfg.get("api_key"):
-                new_cfg["api_key"] = transform(new_cfg["api_key"])
-            result[route][role] = new_cfg
-    return result
+            raise RoleConflictError("名称已存在") from exc
+        return AIRole.objects.select_related("model_config").get(pk=role.pk)
+    raise RoleConflictError("名称已存在")
 
 
-def decrypt_route_configs(route_configs: dict) -> dict:
-    """解密 route_configs 内 api_key。"""
-    return _transform_route_configs(route_configs, decrypt_key)
+def create_sop_workflow(
+    name: str, executor_assistant_id: str, verifier_assistant_id: str
+) -> AISopWorkflow:
+    """创建 SOP 工作流。写库只在本文件。"""
+    return AISopWorkflow.objects.create(
+        **prepare_workflow(name, executor_assistant_id, verifier_assistant_id)
+    )
 
 
-def mask_route_configs(route_configs: dict) -> dict:
-    """脱敏 route_configs 内 api_key。"""
-    return _transform_route_configs(route_configs, mask_key)
+def update_sop_workflow(
+    workflow: AISopWorkflow,
+    name: str,
+    executor_assistant_id: str,
+    verifier_assistant_id: str,
+) -> AISopWorkflow:
+    """编辑 SOP 工作流的名称与两侧名片。
+
+    先算完整字段字典再赋值，校验失败时记录不会有任何字段被改。
+
+    Args:
+        workflow: 已存在的工作流记录。
+        name: 新名称。
+        executor_assistant_id: 新执行助手编号。
+        verifier_assistant_id: 新验收助手编号。
+
+    Returns:
+        回写后的同一条工作流记录。
+
+    Raises:
+        WorkflowNameError: 名称为空。
+        WorkflowAssistantMissingError: 任一侧名片不存在。
+    """
+    fields = prepare_workflow(name, executor_assistant_id, verifier_assistant_id)
+    for key, value in fields.items():
+        setattr(workflow, key, value)
+    workflow.save(update_fields=[*fields, "updated_at"])
+    return workflow
+
+
+def delete_sop_workflow(workflow: AISopWorkflow) -> None:
+    """删除一条 SOP 工作流。
+
+    只删工作流记录；助手名片、Agent 配置与历史任务都不动。
+
+    Args:
+        workflow: 要删除的工作流记录。调用方负责先取出记录。
+    """
+    workflow.delete()
+
+
+def list_sop_workflows() -> list[AISopWorkflow]:
+    """列出全部 SOP 工作流。"""
+    return list_workflows()
+
+
+def get_sop_workflow(workflow_id: int) -> AISopWorkflow:
+    """按主键取工作流。不存在时抛 DoesNotExist。"""
+    return get_workflow(workflow_id)
+
+
+def resolve_sop_workflow(workflow_id: int) -> dict:
+    """现读工作流两侧名片。只读，不写工作流表。"""
+    return resolve_workflow(get_workflow(workflow_id))
+
+
+def create_thread(assistant_id: str):
+    """新建空对话栏。助手不存在时抛 DoesNotExist。"""
+    if not AIAssistant.objects.filter(assistant_id=assistant_id).exists():
+        raise AIAssistant.DoesNotExist(assistant_id)
+    return AIAssistantThread.objects.create(**new_thread_fields(assistant_id))

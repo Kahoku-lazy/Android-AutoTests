@@ -2,8 +2,8 @@
  * [P0] 必测 — 用户管理列表的分页与筛选契约（spec: ops-user-console）
  *
  * 目录：tests/ops-console/p0/
- * 断言：① 首次加载请求第 1 页与默认每页条数；② 切状态筛选回到第 1 页并带上 active；
- * ③ 翻页请求目标页；④ 改每页条数回到第 1 页；⑤ 失败时给出错误文案且不清空已加载数据。
+ * 断言：① 首次加载请求第 1 页与固定每页 10 条；② 切状态筛选回到第 1 页并带上 active；
+ * ③ 翻页请求目标页；④ 失败时给出错误文案且不清空已加载数据。
  */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useOpsUsers } from "@/modules/ops-console/composables/useOpsUsers"
@@ -17,7 +17,7 @@ vi.mock("@/modules/ops-console/api", () => ({
 const mockedList = vi.mocked(listOpsUsers)
 
 function ok(page: Partial<OpsUserPage> = {}) {
-  const data: OpsUserPage = { users: [], total: 0, page: 1, page_size: 20, ...page }
+  const data: OpsUserPage = { users: [], total: 0, page: 1, page_size: 10, ...page }
   return { data: { status: true, data } }
 }
 
@@ -46,7 +46,7 @@ describe("[P0] useOpsUsers", () => {
 
     expect(mockedList).toHaveBeenCalledWith({
       page: 1,
-      page_size: 20,
+      page_size: 10,
       keyword: undefined,
       active: undefined,
     })
@@ -63,10 +63,23 @@ describe("[P0] useOpsUsers", () => {
     expect(state.page.value).toBe(1)
     expect(mockedList).toHaveBeenLastCalledWith({
       page: 1,
-      page_size: 20,
+      page_size: 10,
       keyword: undefined,
       active: "false",
     })
+  })
+
+  it("翻页清空上页勾选，不把上页 id 留在选中集合", async () => {
+    mockedList.mockResolvedValue(ok({ users: [user(1, "a"), user(2, "b")], total: 40 }))
+    const state = useOpsUsers()
+    await state.load()
+    state.toggleSelected(1, true)
+
+    state.goPage(2)
+    await Promise.resolve()
+
+    expect(state.selectedIds.value).toEqual([])
+    expect(state.page.value).toBe(2)
   })
 
   it("翻页请求目标页，越界被夹到最后一页", async () => {
@@ -80,24 +93,8 @@ describe("[P0] useOpsUsers", () => {
 
     state.goPage(99)
     await Promise.resolve()
-    expect(state.page.value).toBe(3)
-  })
-
-  it("改每页条数会回到第 1 页", async () => {
-    mockedList.mockResolvedValue(ok())
-    const state = useOpsUsers()
-    state.page.value = 2
-
-    state.setPageSize(50)
-    await Promise.resolve()
-
-    expect(state.page.value).toBe(1)
-    expect(mockedList).toHaveBeenLastCalledWith({
-      page: 1,
-      page_size: 50,
-      keyword: undefined,
-      active: undefined,
-    })
+    // 每页固定 10 条：45 条共 5 页，越界夹到最后一页
+    expect(state.page.value).toBe(5)
   })
 
   it("加载成功后写入账号，空列表进入空态", async () => {

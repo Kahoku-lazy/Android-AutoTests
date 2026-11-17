@@ -8,13 +8,22 @@
 
 ```text
 tools/
+  catalog.py 只读目录：域、预设、函数名与一句说明；不含实现
   adb/       设备操作：16 个函数 + build_adb_tools / build_adb_readonly_tools
 ```
+
+`list_tool_catalog()` 只给配置页下拉用。勾选过滤在 `backend_bridge`，不在本目录。
 
 工具不属于角色三要素，`create_agent` 不接收。调用方先建 Agent，再挂工具：
 
 ```python
-agent = create_agent("ui_executor", "UI_EXECUTOR_PROMPT", "govee_chat_flash")
+agent = create_agent(
+    "ui_executor",
+    "你是 UI 执行者。",
+    provider="govee",
+    api_key_env="GOVEE_API_KEY",
+    model_name="deepseek-flash",
+).agent
 for tool in build_adb_tools():
     await agent.toolkit.add_tool(tool)
 ```

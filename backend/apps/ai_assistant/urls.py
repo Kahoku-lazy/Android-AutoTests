@@ -1,34 +1,79 @@
-"""ai-assistant URL routing — agents and workflow sessions.
+"""ai-assistant URL routing — 角色注册表与执行报告。
 
-Task endpoints have moved to /api/tasks/ (apps.task_list).
-模型不对外：没有模型卡片，也没有直连模型的对话流。
+智能体配置页与对话工作流已随 AI 助手重设计下线，只保留创建入口；
+报告接口保留，任务清单的「报告」按钮与执行报告页仍在读取。
 """
 
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from .views_drf import (
-    AgentViewSet,
-    WorkflowEventsView,
-    WorkflowListView,
-    WorkflowStreamView,
+    AgentReportView,
+    AssistantAvatarView,
+    AssistantThreadDeleteView,
+    AssistantThreadDetailView,
+    AssistantThreadLogFileView,
+    AssistantThreadLogView,
+    AssistantThreadView,
+    AssistantViewSet,
+    ModelConfigDiscoverView,
+    ModelConfigViewSet,
+    RoleViewSet,
+    SopWorkflowDetailView,
+    SopWorkflowView,
+    ToolCatalogView,
 )
-from .views_reports import AgentReportDetailView, AgentReportListView
 
 app_name = "ai"
 
 router = DefaultRouter()
-router.register("agents", AgentViewSet, basename="ai_agent")
+router.register("model-configs", ModelConfigViewSet, basename="ai_model_config")
+router.register("roles", RoleViewSet, basename="ai_role")
+router.register("assistants", AssistantViewSet, basename="ai_assistant_card")
 
 urlpatterns = [
-    path("workflows/", WorkflowListView.as_view(), name="workflow_list"),
-    path("workflows/events/", WorkflowEventsView.as_view(), name="workflow_events"),
-    path("workflows/<str:key>/stream/", WorkflowStreamView.as_view(), name="workflow_stream"),
-    path("agent-reports/", AgentReportListView.as_view(), name="agent_report_list"),
+    path("tool-catalog/", ToolCatalogView.as_view(), name="ai_tool_catalog"),
+    path("agent-reports/<str:run>/<str:name>/", AgentReportView.as_view(), name="ai_agent_report"),
+    path("sop-workflows/", SopWorkflowView.as_view(), name="ai_sop_workflows"),
     path(
-        "agent-reports/<str:run>/<str:name>/",
-        AgentReportDetailView.as_view(),
-        name="agent_report_detail",
+        "sop-workflows/<int:workflow_id>/",
+        SopWorkflowDetailView.as_view(),
+        name="ai_sop_workflow_detail",
+    ),
+    path(
+        "assistants/<str:assistant_id>/threads/",
+        AssistantThreadView.as_view(),
+        name="ai_assistant_threads",
+    ),
+    path(
+        "assistants/threads/<str:thread_id>/logs/",
+        AssistantThreadLogView.as_view(),
+        name="ai_assistant_thread_logs",
+    ),
+    path(
+        "assistants/threads/<str:thread_id>/logs/<str:report_id>/",
+        AssistantThreadLogFileView.as_view(),
+        name="ai_assistant_thread_log_file",
+    ),
+    path(
+        "assistants/threads/<str:thread_id>/",
+        AssistantThreadDetailView.as_view(),
+        name="ai_assistant_thread_detail",
+    ),
+    path(
+        "assistants/threads/<str:thread_id>/delete/",
+        AssistantThreadDeleteView.as_view(),
+        name="ai_assistant_thread_delete",
+    ),
+    path(
+        "assistants/<str:assistant_id>/avatar/",
+        AssistantAvatarView.as_view(),
+        name="ai_assistant_avatar",
+    ),
+    path(
+        "model-configs/discover/",
+        ModelConfigDiscoverView.as_view(),
+        name="ai_model_config_discover",
     ),
     *router.urls,
 ]

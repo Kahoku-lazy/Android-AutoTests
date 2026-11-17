@@ -19,14 +19,16 @@ export function useOpsUsers() {
   const users = ref<OpsUser[]>([])
   const total = ref(0)
   const page = ref(1)
-  const pageSize = ref(OPS_DEFAULT_PAGE_SIZE)
+  /** 每页固定 10 条：行数选择已下线，口径与设备 / 任务 / BUG 页一致 */
+  const pageSize = OPS_DEFAULT_PAGE_SIZE
   const keyword = ref("")
   const status = ref<OpsStatusFilter>("all")
   const loading = ref(false)
   const loaded = ref(false)
   const error = ref("")
+  const selectedIds = ref<number[]>([])
 
-  const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)))
+  const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize)))
   const showEmpty = computed(() => loaded.value && !loading.value && users.value.length === 0)
 
   async function load(): Promise<void> {
@@ -35,7 +37,7 @@ export function useOpsUsers() {
     try {
       const { data } = await listOpsUsers({
         page: page.value,
-        page_size: pageSize.value,
+        page_size: pageSize,
         keyword: keyword.value.trim() || undefined,
         active: status.value === "all" ? undefined : status.value === "active" ? "true" : "false",
       })
@@ -50,9 +52,15 @@ export function useOpsUsers() {
     }
   }
 
+  /** 翻页、改筛选、改每页条数都清空勾选：批量只认当前页。 */
+  function clearSelection(): void {
+    selectedIds.value = []
+  }
+
   /** 换筛选条件后回到第 1 页再拉，避免停在第 N 页拿到空片。 */
   function reloadFromFirstPage(): void {
     page.value = 1
+    clearSelection()
     void load()
   }
 
@@ -62,16 +70,25 @@ export function useOpsUsers() {
     reloadFromFirstPage()
   }
 
-  function setPageSize(size: number): void {
-    pageSize.value = size
-    reloadFromFirstPage()
-  }
-
   function goPage(next: number): void {
     const target = Math.max(1, Math.min(next, totalPages.value))
     if (target === page.value) return
     page.value = target
+    clearSelection()
     void load()
+  }
+
+  /** 全选只替换当前页勾选，不累积上一页的 id。 */
+  function setSelected(ids: number[]): void {
+    selectedIds.value = [...ids]
+  }
+
+  function toggleSelected(id: number, checked: boolean): void {
+    if (checked) {
+      if (!selectedIds.value.includes(id)) selectedIds.value = [...selectedIds.value, id]
+      return
+    }
+    selectedIds.value = selectedIds.value.filter((item) => item !== id)
   }
 
   // 关键字防抖：连打不连发
@@ -88,17 +105,19 @@ export function useOpsUsers() {
     users,
     total,
     page,
-    pageSize,
     keyword,
     status,
     loading,
     loaded,
     error,
+    selectedIds,
     totalPages,
     showEmpty,
     load,
     setStatus,
-    setPageSize,
     goPage,
+    toggleSelected,
+    setSelected,
+    clearSelection,
   }
 }

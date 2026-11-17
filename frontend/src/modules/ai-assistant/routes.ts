@@ -1,18 +1,17 @@
 import type { RouteRecordRaw } from "vue-router"
 
 const routes: RouteRecordRaw[] = [
-  { path: "/ai-assistant", redirect: "/ai-assistant/agents" },
   {
-    path: "/ai-assistant/agents",
-    name: "ai-assistant-agents",
+    path: "/ai-assistant",
+    name: "ai-assistant",
     component: () => import("@/modules/ai-assistant/index.vue"),
-    meta: { title: "平台小助手" },
+    meta: { title: "平台助手" },
   },
   {
-    path: "/ai-assistant/agent/:agentId",
-    name: "ai-agent-detail",
-    component: () => import("@/modules/ai-assistant/AgentDetail.vue"),
-    meta: { title: "智能体详情" },
+    path: "/ai-assistant/:assistantId/chat",
+    name: "ai-assistant-chat",
+    component: () => import("@/modules/ai-assistant/chat.vue"),
+    meta: { title: "助手对话" },
   },
 ]
 

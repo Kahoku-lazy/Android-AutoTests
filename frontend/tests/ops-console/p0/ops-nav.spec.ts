@@ -32,8 +32,15 @@ describe("[P0] 侧栏运营入口", () => {
 
   it("入口路径与模块色已登记", () => {
     const ops = NAV_CATEGORIES.find((cat) => cat.key === "ops")
-    expect(ops?.items.map((item) => item.path)).toEqual([OPS_PATH])
-    expect(MOD_COLORS[OPS_PATH]).toBe("var(--c-ops)")
+    expect(ops?.items.map((item) => item.path)).toEqual([
+      OPS_PATH,
+      "/ops/agents",
+      "/ops/model-configs",
+    ])
+    // 同分组内入口不得同色：用户管理 --c-account、Agent 配置 --c-element、模型配置 --c-ops
+    expect(MOD_COLORS[OPS_PATH]).toBe("var(--c-account)")
+    expect(MOD_COLORS["/ops/agents"]).toBe("var(--c-element)")
+    expect(MOD_COLORS["/ops/model-configs"]).toBe("var(--c-ops)")
   })
 
   it("其余分组没有被标成运营专属", () => {

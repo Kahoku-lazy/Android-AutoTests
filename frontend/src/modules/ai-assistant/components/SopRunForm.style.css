@@ -1,0 +1,225 @@
+.sop-run {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-md);
+}
+
+.sop-run__meta {
+  margin: 0;
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-sm);
+}
+
+/* 两栏：左固定轨（基本信息），右自适应（用例选择）。窄屏回退单列 */
+.sop-run__grid {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: var(--app-space-lg);
+  align-items: start;
+}
+
+.sop-run__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-md);
+  min-width: 0;
+}
+
+.sop-run__main {
+  min-width: 0;
+}
+
+/* 用例来源分段控件：两段等宽、墨框、选中段用流程色浅底 */
+.sop-run__seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  background: var(--app-bg-card);
+}
+
+.sop-run__seg-btn {
+  min-height: 34px;
+  padding: 0 var(--app-space-sm);
+  border: 0;
+  border-right: 2px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-bold);
+  cursor: pointer;
+  transition: background var(--app-duration-fast) var(--app-ease);
+}
+
+.sop-run__seg-btn:last-child {
+  border-right: 0;
+}
+
+.sop-run__seg-btn:hover:not(.is-on) {
+  background: var(--app-bg-subtle);
+}
+
+.sop-run__seg-btn.is-on {
+  background: color-mix(in srgb, var(--c-workflow) 55%, var(--app-bg-card));
+}
+
+.sop-run__seg-btn:focus-visible {
+  outline: 2px solid var(--c-dashboard);
+  outline-offset: -4px;
+}
+
+/* 已选摘要：浅底内嵌卡，只陈述事实，不承载交互 */
+.sop-run__summary {
+  padding: var(--app-space-sm) var(--app-space-md);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-subtle);
+}
+
+.sop-run__summary-k {
+  margin: 0 0 var(--app-space-xs);
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+}
+
+.sop-run__summary-v {
+  margin: 0 0 var(--app-space-xs);
+  font-size: var(--app-size-md);
+}
+
+.sop-run__summary-v b {
+  font-size: var(--app-size-lg);
+}
+
+.sop-run__summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+  line-height: var(--app-line-height-snug);
+  word-break: break-all;
+}
+
+.sop-run__summary-note {
+  margin: var(--app-space-sm) 0 0;
+  padding-top: var(--app-space-sm);
+  border-top: 1px solid var(--app-border-subtle);
+  color: var(--app-text-tertiary);
+  font-size: var(--app-size-xs);
+  line-height: var(--app-line-height-snug);
+}
+
+/* 本地 YAML 面板：与右列等宽的一块纸面，实线框、不滚动 */
+.sop-run__yaml {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-md);
+  padding: var(--app-space-lg);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-subtle);
+}
+
+.sop-run__yaml-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--app-space-sm);
+}
+
+.sop-run__pick-row {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  min-width: 0;
+}
+
+/* 文件选择器本体不可控外观：留在无障碍树里（可 Tab 到、可回车触发），视觉上藏起来 */
+.sop-run__pick {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 var(--app-space-md);
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: var(--app-size-xs);
+  font-weight: var(--app-font-weight-heavy);
+  cursor: pointer;
+}
+
+.sop-run__pick:hover {
+  background: var(--app-highlight);
+}
+
+.sop-run__pick:focus-within {
+  outline: 2px solid var(--c-dashboard);
+  outline-offset: 2px;
+}
+
+.sop-run__file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sop-run__filename {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sop-run__hint {
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+  line-height: var(--app-line-height-snug);
+}
+
+.sop-run__error {
+  margin: 0;
+  color: var(--app-status-danger-text);
+  font-size: var(--app-size-sm);
+}
+
+/* footer：左侧写缺哪一项，右侧两枚按钮 */
+.sop-run__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-md);
+  padding-top: var(--app-space-sm);
+}
+
+.sop-run__status {
+  margin: 0;
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+}
+
+.sop-run__status.is-blocked {
+  color: var(--app-status-danger-text);
+}
+
+.sop-run__btns {
+  display: flex;
+  flex: none;
+  gap: var(--app-space-sm);
+}
+
+@media (max-width: 1023px) {
+  .sop-run__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

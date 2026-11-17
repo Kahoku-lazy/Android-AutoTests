@@ -23,5 +23,6 @@ Python 调试：➡️ python -m engines.ae_harness.tools 🏁
 from __future__ import annotations
 
 from .adb import build_adb_readonly_tools, build_adb_tools
+from .catalog import list_tool_catalog
 
-__all__ = ["build_adb_readonly_tools", "build_adb_tools"]
+__all__ = ["build_adb_readonly_tools", "build_adb_tools", "list_tool_catalog"]

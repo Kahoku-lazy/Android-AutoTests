@@ -89,6 +89,7 @@ class TaskKind(StrEnum):
 
     DEVICE_CONTROL = "device_control"
     CASE_AUTHORING = "case_authoring"
+    ASSISTANT_SOP = "assistant_sop"
 
 
 class BugCategory(StrEnum):

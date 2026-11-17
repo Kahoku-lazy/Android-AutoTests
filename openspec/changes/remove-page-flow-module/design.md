@@ -42,7 +42,7 @@
 
 **D8 依赖卸载。** `npm uninstall @vue-flow/core @vue-flow/background @vue-flow/controls @vue-flow/minimap`（frontend 目录），lockfile 随命令更新；卸载前 grep 确认 `@vue-flow` 在 `src/` 零残留。
 
-**D9 提交策略。** 单个 Conventional Commit：`refactor(workflow): 退役页面流模块，同步删除前后端代码与规格引用`（沿用 retire 系列先例的 refactor 类型）。逐文件暂存本单范围清单内的文件；暂存前 `git status` 核对不混入并行改动。推送后 CI 全绿受并行改动阻塞——如实汇报，不强行修无关失败。
+**D9 提交策略。** 单个 Conventional Commit：`refactor(workflow): 退役页面流模块，同步删除前后端代码与规格引用`（沿用 retire 系列先例的 refactor 类型）。逐文件暂存本单范围清单内的文件；暂存前 `git status` 核对不混入并行改动。推送后 CI 全绿受并行改动阻塞——如实汇报，不强行修无关失败。**实施修正（2026-11-17）**：共享 checkout 在实施期间被并行会话推进（b63f9caf → 7de51919），首提交 df45dd86 的 7 个重叠文件误用旧基线（混入并行未提交的 knowledge→ops 替换、回退并行已提交内容），且扫描下限按脏工作树实测 57 登记（提交树实测 45）。按「已推送提交用新提交修正」纪律，以 7de51919 为基线重建 7 文件目标版（仅含页面流删除），下限校准 42，工作树原样保留并行未提交内容，修正提交收口。
 
 ## 模块防火墙自检
 

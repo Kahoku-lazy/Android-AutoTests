@@ -1,0 +1,189 @@
+/* ═══ 运营后台 · 表格皮肤（用户管理 / 模型配置共用） ═══
+   与设备管理、BUG 单同一套口径：
+   - 表纸走「无影变体」：保留共享描边与圆角，只在本模块作用域内去影
+     （登记见 openspec/specs/frontend-doodle-sketch-table「无影页清单」）；
+   - 表头 16px + 图标 + 居中；正文 14px；次级（邮箱、绝对时间）12px —— 三档字号；
+   - 不画行/列网格线，靠行距与 hover 分层；
+   - 身份 / 状态用同一套 chip：1.5px 墨边 + 模块色混底 + 14px 粗字。 */
+
+.ops-workbench :deep(.sketch-sheet) {
+  box-shadow: none;
+}
+
+/* 表头：字号与字重由全局 `.el-table th` 唯一定义，这里只补居中、浅底与内边距 */
+.ops-workbench :deep(.el-table th.el-table__cell) {
+  text-align: center;
+  padding: 13px 12px !important;
+  background: linear-gradient(
+    180deg,
+    var(--app-bg-subtle),
+    color-mix(in srgb, var(--app-bg-subtle) 40%, transparent)
+  ) !important;
+}
+
+/* 表头图标：与列名同源渲染，只做扫读加速，不参与列宽计算 */
+.ops-workbench .th-ico {
+  margin-right: 4px;
+  font-weight: var(--app-font-weight-heavy);
+}
+
+/* 表体：正文 14px，不画网格线 */
+.ops-workbench :deep(.el-table td.el-table__cell) {
+  font-size: var(--app-size-sm);
+  padding: 13px 12px !important;
+}
+
+.ops-workbench :deep(.el-table__body tr:hover > td.el-table__cell) {
+  background: color-mix(in srgb, var(--c-ops) 12%, var(--app-bg-card)) !important;
+}
+
+/* 固定布局下不需要横向滚动：EP 的 scrollbar wrap 会多算 10px，表现成表底一条无用的横向滚动条 */
+.ops-workbench :deep(.el-table .el-scrollbar__wrap) {
+  overflow-x: hidden !important;
+}
+
+/* ── 时间列：相对时间 14 + 绝对时间 12 双行 ── */
+.ops-time {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: var(--app-line-height-tight);
+  white-space: nowrap;
+}
+
+.ops-time__rel {
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
+}
+
+.ops-time__abs {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+/* ── 身份 / 状态 / 类型 chip ── */
+.ops-identity,
+.ops-state,
+.ops-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-heavy);
+  line-height: var(--app-line-height-tight);
+  white-space: nowrap;
+}
+
+.ops-kind--chat {
+  background: color-mix(in srgb, var(--c-device) 28%, var(--app-bg-card));
+  color: var(--app-text-primary);
+}
+
+.ops-kind--tts {
+  background: color-mix(in srgb, var(--c-runner) 45%, var(--app-bg-card));
+  color: var(--app-text-primary);
+}
+
+.ops-kind--realtime {
+  background: color-mix(in srgb, var(--c-ai) 28%, var(--app-bg-card));
+  color: var(--app-text-primary);
+}
+
+.ops-identity--superuser {
+  background: color-mix(in srgb, var(--c-element) 32%, var(--app-bg-card));
+  color: var(--app-text-primary);
+}
+
+.ops-identity--operator {
+  background: color-mix(in srgb, var(--c-ops) 30%, var(--app-bg-card));
+  color: var(--app-text-primary);
+}
+
+.ops-identity--user {
+  background: color-mix(in srgb, var(--paper) 55%, var(--app-bg-card));
+  border-color: var(--app-border-strong);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-primary);
+}
+
+.ops-state--on {
+  background: color-mix(in srgb, var(--c-device) 32%, var(--app-bg-card));
+  color: var(--app-status-success-text);
+}
+
+.ops-state--off {
+  background: color-mix(in srgb, var(--c-runner) 45%, var(--app-bg-card));
+  color: var(--app-status-danger-text);
+}
+
+/* ── 表格里的主操作胶囊 + ⋯ 次操作 ── */
+.ops-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+  justify-content: flex-end;
+  /* 表格最后一列贴右边界：留一点内缩，胶囊与 ⋯ 不压到表纸描边 */
+  padding-right: var(--app-space-xs);
+}
+
+.ops-action-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: color-mix(in srgb, var(--c-ops) 24%, var(--app-bg-card));
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
+  box-shadow: 2px 2px 0 0 var(--ink);
+  cursor: pointer;
+  transition:
+    transform var(--app-duration-fast) var(--app-ease),
+    box-shadow var(--app-duration-fast) var(--app-ease);
+}
+
+.ops-action-pill:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 0 var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ops-action-pill {
+    transition: none;
+  }
+
+  .ops-action-pill:hover {
+    transform: none;
+  }
+}
+
+/* 勾选框：颜色跟随运营模块色 */
+.ops-check {
+  width: var(--app-size-sm);
+  height: var(--app-size-sm);
+  accent-color: var(--c-ops);
+}
+
+/* ⋯ 次操作：与主操作胶囊同几何，白底、无模块色 */
+.ops-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 30px;
+  padding: 0 var(--app-space-xs);
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-card);
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
+  box-shadow: 2px 2px 0 0 var(--ink);
+  cursor: pointer;
+}

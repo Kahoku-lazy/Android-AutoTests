@@ -4,32 +4,34 @@
  *
  * useDevicePoolView：KPI 按状态聚合、切换筛选过滤并重置页码、挂载联动 loadDevices/startHeartbeat。
  */
-import { ref, nextTick } from 'vue'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ref, nextTick } from "vue"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   useDevicePoolState,
   type UseDevicePoolStateReturn,
-} from '@/modules/device-pool/composables/useDevicePoolState'
-import { useHeartbeat } from '@/modules/device-pool/composables/useHeartbeat'
+} from "@/modules/device-pool/composables/useDevicePoolState"
+import { useHeartbeat } from "@/modules/device-pool/composables/useHeartbeat"
 import {
   useDeviceActions,
   type UseDeviceActionsReturn,
-} from '@/modules/device-pool/composables/useDeviceActions'
-import { useDevicePoolView } from '@/modules/device-pool/DevicePoolView.logic'
-import type { DeviceRecord } from '@/shared/types/device'
-import { mountComposable } from '../../helpers/mountComposable'
+} from "@/modules/device-pool/composables/useDeviceActions"
+import { useDevicePoolView } from "@/modules/device-pool/DevicePoolView.logic"
+import type { DeviceRecord } from "@/shared/types/device"
+import { mountComposable } from "../../helpers/mountComposable"
 
-vi.mock('@/modules/device-pool/composables/useDevicePoolState', () => ({ useDevicePoolState: vi.fn() }))
-vi.mock('@/modules/device-pool/composables/useHeartbeat', () => ({ useHeartbeat: vi.fn() }))
-vi.mock('@/modules/device-pool/composables/useDeviceActions', () => ({ useDeviceActions: vi.fn() }))
+vi.mock("@/modules/device-pool/composables/useDevicePoolState", () => ({
+  useDevicePoolState: vi.fn(),
+}))
+vi.mock("@/modules/device-pool/composables/useHeartbeat", () => ({ useHeartbeat: vi.fn() }))
+vi.mock("@/modules/device-pool/composables/useDeviceActions", () => ({ useDeviceActions: vi.fn() }))
 
-function makeDevice(serial: string, status: DeviceRecord['status'] = 'ONLINE'): DeviceRecord {
+function makeDevice(serial: string, status: DeviceRecord["status"] = "ONLINE"): DeviceRecord {
   return {
     serial,
-    model: 'Pixel 6',
+    model: "Pixel 6",
     status,
-    connection_type: 'USB',
-    last_seen: '2026-08-13 10:00',
+    connection_type: "USB",
+    last_seen: "2026-08-13 10:00",
   }
 }
 
@@ -50,14 +52,14 @@ function makeActions() {
   return {
     disconnectDialog: ref({
       visible: false,
-      serial: '',
-      model: '',
-      status: '',
-      lockedBy: '',
+      serial: "",
+      model: "",
+      status: "",
+      lockedBy: "",
       isBusyOthers: false,
     }),
     networkDialog: ref({ visible: false, loading: false }),
-    currentUser: 'u1',
+    currentUser: "u1",
     loadDevices: vi.fn().mockResolvedValue(undefined),
     handleRefresh: vi.fn(),
     openNetworkDialog: vi.fn(),
@@ -79,7 +81,7 @@ function makeHeartbeat() {
   return { heartbeatActive: ref(false), startHeartbeat: vi.fn(), stopHeartbeat: vi.fn() }
 }
 
-describe('[P0] DevicePoolView.logic', () => {
+describe("[P0] DevicePoolView.logic", () => {
   let poolStub: ReturnType<typeof makePool>
   let actionsStub: ReturnType<typeof makeActions>
   let heartbeatStub: ReturnType<typeof makeHeartbeat>
@@ -94,21 +96,18 @@ describe('[P0] DevicePoolView.logic', () => {
     vi.mocked(useHeartbeat).mockReturnValue(heartbeatStub)
   })
 
-  it('KPI 统计：按状态聚合 online/busy/total', async () => {
-    poolStub.devices.value = [
-      makeDevice('S1', 'ONLINE'),
-      makeDevice('S2', 'BUSY'),
-    ]
+  it("KPI 统计：按状态聚合 online/busy/total", async () => {
+    poolStub.devices.value = [makeDevice("S1", "ONLINE"), makeDevice("S2", "BUSY")]
 
     const { result } = await mountComposable(() => useDevicePoolView())
 
     expect(result.kpiStats.value).toEqual({ online: 1, busy: 1, total: 2 })
   })
 
-  it('切换 activeFilter：过滤列表并重置页码', async () => {
+  it("切换 activeFilter：过滤列表并重置页码", async () => {
     poolStub.devices.value = [
-      ...Array.from({ length: 6 }, (_, i) => makeDevice(`O${i + 1}`, 'ONLINE')),
-      ...Array.from({ length: 6 }, (_, i) => makeDevice(`B${i + 1}`, 'BUSY')),
+      ...Array.from({ length: 6 }, (_, i) => makeDevice(`O${i + 1}`, "ONLINE")),
+      ...Array.from({ length: 6 }, (_, i) => makeDevice(`B${i + 1}`, "BUSY")),
     ]
 
     const { result } = await mountComposable(() => useDevicePoolView())
@@ -116,15 +115,25 @@ describe('[P0] DevicePoolView.logic', () => {
     result.goPage(2)
     expect(result.currentPage.value).toBe(2)
 
-    result.activeFilter.value = 'online'
+    result.activeFilter.value = "online"
     await nextTick()
 
     expect(result.filteredDevices.value).toHaveLength(6)
-    expect(result.filteredDevices.value.every((d) => d.status === 'ONLINE')).toBe(true)
+    expect(result.filteredDevices.value.every((d) => d.status === "ONLINE")).toBe(true)
     expect(result.currentPage.value).toBe(1)
   })
 
-  it('挂载：调用 loadDevices 与 startHeartbeat', async () => {
+  it("每页固定 7 行：10 台设备只呈现 7 行", async () => {
+    poolStub.devices.value = Array.from({ length: 10 }, (_, i) => makeDevice(`D${i + 1}`))
+
+    const { result } = await mountComposable(() => useDevicePoolView())
+
+    expect(result.pageSize.value).toBe(7)
+    expect(result.pagedDevices.value).toHaveLength(7)
+    expect(result.totalPages.value).toBe(2)
+  })
+
+  it("挂载：调用 loadDevices 与 startHeartbeat", async () => {
     await mountComposable(() => useDevicePoolView())
 
     expect(actionsStub.loadDevices).toHaveBeenCalledTimes(1)

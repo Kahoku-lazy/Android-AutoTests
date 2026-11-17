@@ -5,6 +5,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { AxiosError, InternalAxiosRequestConfig } from "axios"
 import { createAuthInterceptors } from "@/shared/api-auth-interceptors"
+import { resetAccountDisabledCountdown } from "@/shared/auth/account-disabled"
+import {
+  ACCOUNT_DISABLED_CODE,
+  ACCOUNT_DISABLED_SECONDS,
+} from "@/shared/auth/account-disabled.constants"
 
 function make401(config: InternalAxiosRequestConfig): AxiosError {
   return {
@@ -38,6 +43,8 @@ describe("[P0] createAuthInterceptors", () => {
     vi.clearAllMocks()
     getToken.mockReturnValue("old-access")
     getRefreshToken.mockReturnValue("valid-refresh")
+    resetAccountDisabledCountdown()
+    vi.useRealTimers()
     interceptors = createAuthInterceptors({
       getToken,
       setToken,
@@ -60,6 +67,35 @@ describe("[P0] createAuthInterceptors", () => {
     const config = { headers: {} } as InternalAxiosRequestConfig
     interceptors.authRequestInterceptor(config)
     expect(config.headers.Authorization).toBeUndefined()
+  })
+
+  it("停用专用拒绝：有 refresh 也不续期，10 秒后清会话", async () => {
+    vi.useFakeTimers()
+    const config = { headers: {}, url: "/dashboard/stats/" } as InternalAxiosRequestConfig
+    const err = {
+      isAxiosError: true,
+      name: "AxiosError",
+      message: "disabled",
+      response: {
+        status: 403,
+        statusText: "Forbidden",
+        data: { status: false, code: ACCOUNT_DISABLED_CODE, message: "停用" },
+        headers: {},
+        config,
+      },
+      config,
+      toJSON: () => ({}),
+    } as AxiosError
+
+    await expect(interceptors.authErrorInterceptor(err)).rejects.toBe(err)
+    await expect(interceptors.authErrorInterceptor(err)).rejects.toBe(err)
+    expect(refreshRequest).not.toHaveBeenCalled()
+    expect(retryRequest).not.toHaveBeenCalled()
+    expect(clearToken).not.toHaveBeenCalled()
+
+    vi.advanceTimersByTime(ACCOUNT_DISABLED_SECONDS * 1000)
+    expect(clearToken).toHaveBeenCalledTimes(1)
+    expect(redirectToLogin).toHaveBeenCalledTimes(1)
   })
 
   it("401 后 refresh 成功：写新 token 并重试原请求", async () => {

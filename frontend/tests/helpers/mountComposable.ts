@@ -1,11 +1,11 @@
-import { defineComponent, h, KeepAlive, nextTick, ref, type Component } from 'vue'
-import { mount, type VueWrapper } from '@vue/test-utils'
-import { createMemoryHistory, createRouter, type Router, type RouteRecordRaw } from 'vue-router'
+import { defineComponent, h, KeepAlive, nextTick, ref, type Component } from "vue"
+import { mount, type VueWrapper } from "@vue/test-utils"
+import { createMemoryHistory, createRouter, type Router, type RouteRecordRaw } from "vue-router"
 
 const defaultRoutes: RouteRecordRaw[] = [
-  { path: '/', component: { template: '<div />' } },
-  { path: '/login', component: { template: '<div />' } },
-  { path: '/dashboard', component: { template: '<div />' } },
+  { path: "/", component: { template: "<div />" } },
+  { path: "/login", component: { template: "<div />" } },
+  { path: "/dashboard", component: { template: "<div />" } },
 ]
 
 export interface MountComposableOptions {
@@ -45,17 +45,17 @@ export async function mountComposable<T>(
     })
 
   await router.push({
-    path: options.initialPath ?? '/',
+    path: options.initialPath ?? "/",
     query: options.initialQuery,
   })
   await router.isReady()
 
   let result!: T
   const Comp = defineComponent({
-    name: 'ComposableProbe',
+    name: "ComposableProbe",
     setup() {
       result = factory()
-      return () => h('div')
+      return () => h("div")
     },
   }) as Component
 
@@ -67,15 +67,16 @@ export async function mountComposable<T>(
   }
 
   const Placeholder = defineComponent({
-    name: 'ComposableProbePlaceholder',
-    setup: () => () => h('span'),
+    name: "ComposableProbePlaceholder",
+    setup: () => () => h("span"),
   })
   const visible = ref(true)
   const Host = defineComponent({
-    name: 'ComposableProbeHost',
+    name: "ComposableProbeHost",
     setup: () => () =>
       h(KeepAlive, null, {
-        default: () => (visible.value ? h(Comp, { key: 'probe' }) : h(Placeholder, { key: 'other' })),
+        default: () =>
+          visible.value ? h(Comp, { key: "probe" }) : h(Placeholder, { key: "other" }),
       }),
   })
 

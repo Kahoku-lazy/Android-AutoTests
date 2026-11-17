@@ -5,12 +5,12 @@
  * useHeartbeat：startHeartbeat 按 HEARTBEAT_INTERVAL 周期调用 tick、
  * 重复 start 不产生双定时器、组件卸载后 onUnmounted 停止轮询。
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useHeartbeat } from '@/modules/device-pool/composables/useHeartbeat'
-import { HEARTBEAT_INTERVAL } from '@/modules/device-pool/constants'
-import { mountComposable } from '../../helpers/mountComposable'
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { useHeartbeat } from "@/modules/device-pool/composables/useHeartbeat"
+import { HEARTBEAT_INTERVAL } from "@/modules/device-pool/constants"
+import { mountComposable } from "../../helpers/mountComposable"
 
-describe('[P0] useHeartbeat', () => {
+describe("[P0] useHeartbeat", () => {
   beforeEach(() => {
     vi.useFakeTimers()
   })
@@ -20,7 +20,7 @@ describe('[P0] useHeartbeat', () => {
     vi.useRealTimers()
   })
 
-  it('启动后：按 HEARTBEAT_INTERVAL 周期调用 tick', async () => {
+  it("启动后：按 HEARTBEAT_INTERVAL 周期调用 tick", async () => {
     const tick = vi.fn().mockResolvedValue(undefined)
     const { result } = await mountComposable(() => useHeartbeat())
 
@@ -31,7 +31,7 @@ describe('[P0] useHeartbeat', () => {
     expect(tick).toHaveBeenCalledTimes(3)
   })
 
-  it('二次 start：不产生双定时器', async () => {
+  it("二次 start：不产生双定时器", async () => {
     const tick = vi.fn().mockResolvedValue(undefined)
     const { result } = await mountComposable(() => useHeartbeat())
 
@@ -43,7 +43,7 @@ describe('[P0] useHeartbeat', () => {
     expect(result.heartbeatActive.value).toBe(true)
   })
 
-  it('unmount 后：不再调用 tick', async () => {
+  it("unmount 后：不再调用 tick", async () => {
     const tick = vi.fn().mockResolvedValue(undefined)
     const { result, wrapper } = await mountComposable(() => useHeartbeat())
 

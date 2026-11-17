@@ -5,24 +5,26 @@
  * useDeviceActions：他人锁定仅弹 warning 不发请求、scanning/loading 中刷新短路、
  * runner 前缀占用拒绝释放、空 target 网络连接短路。
  */
-import { ref } from 'vue'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ElMessage } from 'element-plus'
-import { useDeviceActions } from '@/modules/device-pool/composables/useDeviceActions'
-import type { DeviceRecord } from '@/shared/types/device'
-import type { UseDevicePoolStateReturn } from '@/modules/device-pool/composables/useDevicePoolState'
+import { ref } from "vue"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+import { ElMessage } from "element-plus"
+import { useDeviceActions } from "@/modules/device-pool/composables/useDeviceActions"
+import type { DeviceRecord } from "@/shared/types/device"
+import type { UseDevicePoolStateReturn } from "@/modules/device-pool/composables/useDevicePoolState"
 
-vi.mock('animejs', () => ({ animate: vi.fn(), stagger: vi.fn() }))
-vi.mock('element-plus', () => ({ ElMessage: { success: vi.fn(), warning: vi.fn(), error: vi.fn() } }))
-vi.mock('@/shared/auth/token-storage', () => ({ getUsername: vi.fn(() => 'u1') }))
+vi.mock("animejs", () => ({ animate: vi.fn(), stagger: vi.fn() }))
+vi.mock("element-plus", () => ({
+  ElMessage: { success: vi.fn(), warning: vi.fn(), error: vi.fn() },
+}))
+vi.mock("@/shared/auth/token-storage", () => ({ getUsername: vi.fn(() => "u1") }))
 
 function makeDevice(serial: string, extra: Partial<DeviceRecord> = {}): DeviceRecord {
   return {
     serial,
-    model: 'Pixel 6',
-    status: 'ONLINE',
-    connection_type: 'USB',
-    last_seen: '2026-08-13 10:00',
+    model: "Pixel 6",
+    status: "ONLINE",
+    connection_type: "USB",
+    last_seen: "2026-08-13 10:00",
     ...extra,
   }
 }
@@ -33,7 +35,7 @@ function makePool(overrides: Partial<UseDevicePoolStateReturn> = {}): UseDeviceP
     scanning: ref(false),
     loading: ref(false),
     fetchDevices: vi.fn().mockResolvedValue(undefined),
-    doScan: vi.fn().mockResolvedValue({ status: false, message: '扫描失败' }),
+    doScan: vi.fn().mockResolvedValue({ status: false, message: "扫描失败" }),
     doLock: vi.fn().mockResolvedValue({ status: true }),
     doRelease: vi.fn().mockResolvedValue({ status: true }),
     selectDevice: vi.fn(),
@@ -41,12 +43,12 @@ function makePool(overrides: Partial<UseDevicePoolStateReturn> = {}): UseDeviceP
   } as unknown as UseDevicePoolStateReturn
 }
 
-describe('[P0] useDeviceActions', () => {
+describe("[P0] useDeviceActions", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('handleRefresh：scanning/loading 中短路不发请求', async () => {
+  it("handleRefresh：scanning/loading 中短路不发请求", async () => {
     const pool = makePool()
     const actions = useDeviceActions(pool)
 
@@ -63,32 +65,32 @@ describe('[P0] useDeviceActions', () => {
     expect(vi.mocked(ElMessage.success)).not.toHaveBeenCalled()
   })
 
-  it('handleNetworkConnect：空 target 短路不调扫描', async () => {
+  it("handleNetworkConnect：空 target 短路不调扫描", async () => {
     const pool = makePool()
     const actions = useDeviceActions(pool)
 
-    await actions.handleNetworkConnect({ target: '' })
+    await actions.handleNetworkConnect({ target: "" })
 
     expect(pool.doScan).not.toHaveBeenCalled()
     expect(actions.networkDialog.value.loading).toBe(false)
     expect(vi.mocked(ElMessage.error)).not.toHaveBeenCalled()
   })
 
-  it('handleNetworkConnect：带配对字段时透传 doScan extra', async () => {
+  it("handleNetworkConnect：带配对字段时透传 doScan extra", async () => {
     const pool = makePool()
     vi.mocked(pool.doScan).mockResolvedValue({ status: true, data: { count: 1 } } as never)
     const actions = useDeviceActions(pool)
     actions.networkDialog.value.visible = true
 
     await actions.handleNetworkConnect({
-      target: '10.162.95.96:43523',
-      pair_port: '41395',
-      pair_code: '387429',
+      target: "10.162.95.96:43523",
+      pair_port: "41395",
+      pair_code: "387429",
     })
 
-    expect(pool.doScan).toHaveBeenCalledWith('10.162.95.96:43523', {
-      pair_port: '41395',
-      pair_code: '387429',
+    expect(pool.doScan).toHaveBeenCalledWith("10.162.95.96:43523", {
+      pair_port: "41395",
+      pair_code: "387429",
     })
     expect(actions.networkDialog.value.visible).toBe(false)
   })

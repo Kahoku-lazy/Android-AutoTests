@@ -272,7 +272,7 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 .kpi-card--kpi .kpi-card__label {
-  font-size: var(--app-size-sm, 13px);
+  font-size: var(--app-size-md, 16px);
   font-weight: var(--app-font-weight-bold);
   letter-spacing: 0.04em;
   margin-bottom: 2px;
@@ -285,16 +285,18 @@ function onKeydown(e: KeyboardEvent) {
   font-size: var(--app-size-2xl, 28px);
   font-weight: var(--app-font-weight-heavy);
   line-height: 1.1;
-  /* 数值：同色相深→浅渐变，颜色与卡片阴影（accent）同色系 */
+  /* 数值：同色相深→浅渐变。
+     2026-11-17 修订（上一版 80%→30% 混纸色对比度只有 1.1~3.0:1，读不动）：
+     两端改为 accent 与墨色混合（48% → 30%），既保留色相差异，又把对比度拉到 7:1 以上；
+     不支持 background-clip:text 时回落到起点色，仍然可读。 */
   background-image: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--kpi-accent) 55%, var(--ink)) 0%,
-    var(--kpi-accent) 55%,
-    color-mix(in srgb, var(--kpi-accent) 20%, var(--paper)) 100%
+    color-mix(in srgb, var(--kpi-accent) 48%, var(--ink)) 0%,
+    color-mix(in srgb, var(--kpi-accent) 30%, var(--ink)) 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
-  color: var(--app-text-primary);
+  color: color-mix(in srgb, var(--kpi-accent) 30%, var(--ink));
   -webkit-text-fill-color: transparent;
 }
 
@@ -345,7 +347,7 @@ function onKeydown(e: KeyboardEvent) {
 .kpi-card__title {
   flex: 1;
   min-width: 0;
-  font-size: var(--app-size-sm, 13px);
+  font-size: var(--app-size-md, 16px);
   font-weight: var(--app-font-weight-heavy);
   color: var(--app-text-primary);
   overflow: hidden;
@@ -394,26 +396,26 @@ function onKeydown(e: KeyboardEvent) {
   font-weight: var(--app-font-weight-heavy);
   letter-spacing: -0.03em;
   line-height: 1;
+  /* 与 kpi 变体同一套：accent 与墨色 48% → 30%，保色相、保对比度 */
   background-image: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--kpi-accent) 55%, var(--ink)) 0%,
-    var(--kpi-accent) 55%,
-    color-mix(in srgb, var(--kpi-accent) 20%, var(--paper)) 100%
+    color-mix(in srgb, var(--kpi-accent) 48%, var(--ink)) 0%,
+    color-mix(in srgb, var(--kpi-accent) 30%, var(--ink)) 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
-  color: var(--kpi-accent);
+  color: color-mix(in srgb, var(--kpi-accent) 30%, var(--ink));
   -webkit-text-fill-color: transparent;
 }
 
 .kpi-card__stat :deep(small) {
-  font-size: var(--app-size-xs, 11px);
+  font-size: var(--app-size-sm, 14px);
   font-weight: var(--app-font-weight-bold);
   color: var(--app-status-success-text);
 }
 
 .kpi-card__desc {
-  font-size: var(--app-size-xs, 11px);
+  font-size: var(--app-size-sm, 14px);
   font-weight: var(--app-font-weight-semibold);
   color: var(--app-text-secondary);
   line-height: var(--app-line-height-snug);

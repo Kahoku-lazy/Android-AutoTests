@@ -36,6 +36,7 @@ doodle-craft/
         ├── layout.md            # 页头 / 面包屑 / 侧栏 / 分区 / 标签页
         ├── cards.md             # 钉板卡 / 撕纸卡 / 指标卡 / 涂鸦条目卡
         ├── form-controls.md     # 输入 / 选择 / 开关 / 分段控件
+        ├── sketched-ui-kit.md   # 分类：Sketched UI Kit（手稿控件皮肤，按钮五态 + 输入四态，作用域 .sketch-kit）
         ├── data-display.md      # 表格皮肤 / 表纸 / 分页
         ├── overlays.md          # 弹窗 / 抽屉 / 确认框
         ├── feedback.md          # 加载 / 失败 / 空三态、消息提示
@@ -44,7 +45,7 @@ doodle-craft/
 
 ## 怎么用
 
-1. 先读 `SKILL.md` 的「默认设计口径」「线型规则」与「先选场景」，确定是平台内 Vue 开发还是单文件 HTML；**画边框前先看虚线白名单**——不是 `KpiCard` / `AgentRouteCard` 这两个组件的皮肤，就写实线。
+1. 先读 `SKILL.md` 的「默认设计口径」「线型规则」与「先选场景」，确定是平台内 Vue 开发还是单文件 HTML；**画边框前先看虚线白名单**——不是 `AgentRouteCard` 或 `.sketch-kit` 手稿控件皮肤的虚线，就写实线。
 2. 按场景进 `references/vue-project.md` 或 `references/standalone-html.md`。
 3. 具体到某个组件/视觉属性时，才去读对应的 `references/components/*.md` 或 `references/tokens.md`——**改什么读什么**，不必整包读完。
 4. 收尾走 `SKILL.md` 的「提交前自检」，机械项交给门禁：`cd frontend && npm run lint:styles`。

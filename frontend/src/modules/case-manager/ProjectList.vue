@@ -4,11 +4,13 @@ import { useRouter } from "vue-router"
 import { ElMessageBox, type FormInstance } from "element-plus"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import SketchCard from "@/shared/components/SketchCard.vue"
+import SectionDivider from "@/shared/components/SectionDivider.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
 import { sketchTiltAt, sketchToneAt } from "@/shared/helpers/sketchCard"
 import { useProjects } from "./composables/useProjects"
+import { LIBRARY_OPTIONS, type LibraryKind } from "./types"
 
 const router = useRouter()
 const { projects, loading, creating, error, isEmpty, loadProjects, addProject, removeProject } =
@@ -17,6 +19,7 @@ const { projects, loading, creating, error, isEmpty, loadProjects, addProject, r
 const createDialogVisible = ref(false)
 const newProjectName = ref("")
 const newProjectDesc = ref("")
+const newLibraryKind = ref<LibraryKind>("automation")
 
 const createFormRef = ref<FormInstance>()
 /** 新建项目的字段级校验（按 L4 口径走 EP :rules，取代原 Toast 空值守卫） */
@@ -31,6 +34,7 @@ onMounted(() => {
 function openCreateDialog() {
   newProjectName.value = ""
   newProjectDesc.value = ""
+  newLibraryKind.value = "automation"
   createDialogVisible.value = true
 }
 
@@ -41,7 +45,7 @@ async function confirmCreate() {
     // 校验失败：EP 的 validate 以 reject 表示，交由字段内联提示（非静默吞错）
     return
   }
-  const created = await addProject(newProjectName.value, newProjectDesc.value)
+  const created = await addProject(newProjectName.value, newLibraryKind.value, newProjectDesc.value)
   if (created) {
     createDialogVisible.value = false
     router.push(`/cases/projects/${created.id}`)
@@ -70,14 +74,9 @@ async function onDeleteProject(id: number, name: string) {
   <div class="doc-page doc-page--fixed wb-shell case-workbench project-list-page">
     <WorkbenchHeader
       title="用例管理"
-      subtitle="按项目组织文档型测试用例，维护目录结构与用例表单"
       icon="layers"
       :icon-gradient="'linear-gradient(135deg,var(--c-case),var(--case-icon-accent))'"
-    >
-      <template #actions>
-        <el-button type="primary" class="wb-btn" @click="openCreateDialog">+ 新建项目</el-button>
-      </template>
-    </WorkbenchHeader>
+    />
 
     <div v-if="loading" class="doc-body">
       <SkeletonCard variant="list" :lines="4" />
@@ -86,11 +85,16 @@ async function onDeleteProject(id: number, name: string) {
     <ErrorState v-else-if="error" :message="error" @retry="loadProjects" />
 
     <div v-else class="doc-body">
+      <div class="project-toolbar">
+        <el-button type="primary" @click="openCreateDialog">新建项目</el-button>
+      </div>
+      <!-- 操作带与内容之间的分区虚线：只做分区，可点元素一律在线下 -->
+      <SectionDivider class="project-divider" />
       <EmptyState
         v-if="isEmpty"
         icon="📁"
         text="还没有用例项目"
-        hint="创建第一个项目，开始维护目录与文档用例"
+        hint="创建一个自动化或功能项目，用例直接写在这一张表里"
       >
         <el-button type="primary" @click="openCreateDialog">创建项目</el-button>
       </EmptyState>
@@ -101,7 +105,7 @@ async function onDeleteProject(id: number, name: string) {
           :key="item.id"
           :title="item.name"
           :description="item.description"
-          :meta="`${item.case_count} 条用例 · ${item.updated_at?.slice(0, 10) || '—'}`"
+          :meta="`${item.library_kind === 'automation' ? '自动化' : '功能'} · ${item.case_count}/999`"
           icon="layers"
           :tone="sketchToneAt(index)"
           :tilt="sketchTiltAt(index)"
@@ -125,6 +129,13 @@ async function onDeleteProject(id: number, name: string) {
         :rules="createRules"
         label-position="top"
       >
+        <el-form-item label="库类型">
+          <el-radio-group v-model="newLibraryKind">
+            <el-radio-button v-for="item in LIBRARY_OPTIONS" :key="item.value" :value="item.value">
+              {{ item.label }}
+            </el-radio-button>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item label="项目名称" prop="name">
           <el-input
             v-model="newProjectName"
@@ -158,6 +169,16 @@ async function onDeleteProject(id: number, name: string) {
 .project-list-page .doc-body {
   overflow-y: auto;
   padding: var(--app-space-lg);
+}
+.project-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--app-space-sm);
+}
+
+/* 分区虚线：与上方操作带留 8px、与下方卡片留 16px（间距由使用方给，组件自身不带外边距） */
+.project-divider {
+  margin-bottom: var(--app-space-md);
 }
 .project-grid {
   display: grid;

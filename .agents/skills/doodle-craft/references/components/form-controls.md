@@ -17,6 +17,10 @@
 
 **约束**：需要校验的表单必须 `:model` + `:rules` + `el-form-item prop` + `validate()`；**只有 `required` 没有 `:rules` 属误导性 UI**；实际非必填的字段不许标必填星号；弹窗内单列、宽度 ≤ 520px。
 
+**手稿控件皮肤（`.sketch-kit` 作用域）**：框改 `1.5px dashed var(--comp-kit-line-soft)` 浅墨虚线、无影、`min-height: 36px`；label 12px + `letter-spacing: 0.08em`；禁用态浅灰底 + 更淡虚线；多行框同款虚线 + `resize: vertical`。规格见 [sketched-ui-kit.md](sketched-ui-kit.md) §2，落点 `shared/styles/sketched-kit.css`。
+
+**设备页控制条（`device-pool`）· 已登记的渐变偏离**：筛选下拉与名称搜索 MUST 呈现为输入件、MUST NOT 套按键皮肤——`2px solid var(--ink)` 边框保留，圆角 `var(--app-radius-sm)`，**撤掉硬偏移影**、字重回 `--app-font-weight-regular`；填充取 `--comp-device-field-fill`（135° 斜向，`--c-device` 45% → 20%，令牌见 [../tokens.md](../tokens.md) §1.19）。hover / focus 仍走本节的柠黄语言（模块 `!important` 会压掉全局规则，须在模块内补回）。渐变抬亮底色后 EP 出厂 placeholder 与下拉箭头只剩约 `1.7:1`，两处一并提到 `--app-text-secondary`。落点 `modules/device-pool/DevicePoolView.style.css`；只此一处，**不得**扩散成全局输入框皮肤。
+
 ## 2. Select 选择器
 
 输入区同 §1；**下拉弹层未覆盖**（底色经 `--el-bg-color-overlay` → 白）。

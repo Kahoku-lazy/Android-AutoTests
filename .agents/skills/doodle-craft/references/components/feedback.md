@@ -37,7 +37,11 @@
 
 ## 4. el-message 消息提示
 
-底 `--app-bg-card`、圆角 `--app-radius-sm`、框 `2.5px solid var(--ink)`、影 `2px 3px 0 rgba(0,0,0,0.06)`。用于"操作已受理/已创建"一类**短反馈**，不承担错误态职责。
+底 `--paper`（暖白纸面）、圆角 `--app-radius-sm`、框 `2.5px solid var(--ink)`、影 `3px 3px 0 0 var(--ink)`（**硬影，与卡片同一套**）、内距 `--app-space-sm --app-space-md`、等宽字体 `--app-font`、正文 `--app-size-sm` / 600。用于"操作已受理/已创建"一类**短反馈**，不承担错误态职责。
+
+> **2026-11-17 重修**：旧口径是白卡 + `0.06` 透明度的柔影，浮在纸面上没有层次，被需求方判为"与主题不符"。现在影改成硬偏移、底色回到纸面，图标跟状态色走（success → `--app-status-success`、error → `--color-red-46`、warning → `--c-ops`）。
+
+**提示里的行动入口**（如"去任务清单"）用 `.el-message__action`：按钮语义、链接外观（墨字 + `underline wavy var(--c-task)`、`--app-font-weight-heavy`、focus 有 `2px` 柠黄 outline）。**不要把整条提示做成一个按钮**——那就分不出"读"和"点"了。
 
 **el-alert**：**未覆盖**；错误面配色经 `--el-color-error*` → 项目红色族（`--color-red-46` / `-49` / `-85` / `-95` / `-29`）。仅在需要**内联告警块**时使用，取数失败仍走 `ErrorState`。
 

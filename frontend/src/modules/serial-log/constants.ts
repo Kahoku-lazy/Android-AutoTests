@@ -29,6 +29,13 @@ export const KEYWORDS_PANEL_DESC = "关键词 → 功能模块 / 功能点（判
 /** 无权限说明 */
 export const SERIAL_LOG_READONLY_HINT = "仅超级管理员可以开关监听"
 
+/** 端口表分页：固定 10 行/页（单取值不渲染选择器） */
+export const PORTS_PAGE_SIZE = 10
+export const PORTS_PAGE_SIZE_OPTIONS = [PORTS_PAGE_SIZE]
+
+/** 端口表筛选与计数文案 */
+export const PORTS_ONLY_LISTENING_LABEL = "只看监听中"
+
 /** 日志关键词表格列 */
 export const LOG_KEYWORD_SEARCH_PLACEHOLDER = "搜索关键词 / 功能模块 / 功能点…"
 export const LOG_KEYWORD_COL_KEYWORD = "关键词"

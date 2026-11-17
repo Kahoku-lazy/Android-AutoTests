@@ -299,6 +299,22 @@
   --comp-dialog-shadow: 4px 4px 0 0 var(--color-indigo-13);
   --comp-dialog-radius: 6px 10px 6px 10px;
   --comp-dialog-bg: var(--color-white);
+  /* 设备页控制条输入件（筛选下拉 / 名称搜索）：135° 斜向渐变填充，浓度 45% → 20%。
+     色相取模块色 --c-device，两端由原子 color-mix 派生，不新增颜色原子；
+     终点混到 transparent 即"浓度"，不写死纸面色。规格与偏离登记见
+     .agents/skills/doodle-craft/references/components/form-controls.md §1。 */
+  --comp-device-field-fill: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--c-device) 45%, transparent),
+    color-mix(in srgb, var(--c-device) 20%, transparent)
+  );
+  /* BUG 单详情「错误内容」卡：135° 浅红渐变填充（18% → 6%），色相取标记红。
+     两端由原子 color-mix 派生，不新增颜色原子；浓度刻意压低，正文压在它上面不抢字。 */
+  --comp-bug-error-fill: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-red-69) 18%, transparent),
+    color-mix(in srgb, var(--color-red-69) 6%, transparent)
+  );
   --comp-ss-type-assert: var(--color-lime-45);
   --comp-ss-type-gesture: var(--color-red-69);
   --comp-ss-type-input: var(--color-blue-64);
@@ -306,6 +322,29 @@
   --comp-ss-type-other: var(--color-ink-57);
   --comp-ss-type-wait: var(--color-orange-63);
   --comp-wb-icon-gradient-end: var(--color-blue-68);
+
+  /* ── Sketched UI Kit（手稿控件皮肤分类）：只有颜色/几何原语落在这里，
+     虚线边框组合值声明在 shared/styles/sketched-kit.css 的 .sketch-kit 作用域内
+     （虚线口径须由白名单文件声明，见 doodle-craft SKILL.md §线型规则）。
+     规格：.agents/skills/doodle-craft/references/components/sketched-ui-kit.md ── */
+  --comp-kit-line: color-mix(in srgb, var(--color-indigo-13) 62%, transparent);
+  --comp-kit-line-soft: color-mix(in srgb, var(--color-indigo-13) 30%, transparent);
+  --comp-kit-line-faint: color-mix(in srgb, var(--color-indigo-13) 18%, transparent);
+  --comp-kit-danger-line: color-mix(in srgb, var(--color-red-46) 72%, transparent);
+  --comp-kit-danger-ink: var(--color-red-46);
+  --comp-kit-radius: 3px;
+  /* 保存（提交）按钮：绿色由深到淡的填充，色相取自成功色，两端都由原子 color-mix 派生 */
+  --comp-kit-save-from: color-mix(
+    in srgb,
+    var(--app-status-success) 85%,
+    var(--app-status-success-text)
+  );
+  --comp-kit-save-to: color-mix(in srgb, var(--app-status-success) 45%, var(--color-white));
+  --comp-kit-save-gradient: linear-gradient(
+    180deg,
+    var(--comp-kit-save-from),
+    var(--comp-kit-save-to)
+  );
 
   /* ═══════════════════════════════════════════
      兼容别名层：以下声明名保留（消费点零改动），值 = var(主 token 原子)
@@ -331,6 +370,11 @@
   --c-ai: var(--color-purple-73) /* alias -> --color-purple-73 */;
   --c-workflow: var(--color-cyan-74) /* alias -> --color-cyan-74 */;
   --c-ops: var(--color-orange-37) /* alias -> --color-orange-37 */;
+  /* 侧栏入口级模块色：同一分组内的入口不能同色（用户管理 / 任务清单各有独立色）。
+     两者都复用调色板已有原子 —— 调色板按 frontend-l0-design-tokens 只降不增。
+     任务清单取紫：它与同组的「用例管理」青绿、TAB 相邻的青色系拉得最开。 */
+  --c-account: var(--color-blue-68-s64) /* alias -> --color-blue-68-s64 */;
+  --c-task: var(--color-purple-56) /* alias -> --color-purple-56 */;
 
   /* ── 状态色（现行 --app-status-*）── */
   --app-status-success: var(--color-green-61) /* alias -> --color-green-61 */;

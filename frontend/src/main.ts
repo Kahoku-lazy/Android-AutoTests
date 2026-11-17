@@ -14,6 +14,8 @@ import "./modules/ai-assistant/tokens.css"
 import "./modules/case-manager/tokens.css"
 import "./shared/styles/workbench-theme.css"
 import "./shared/styles/motion.css"
+// 手稿控件皮肤（分类 Sketched UI Kit）：只在 `.sketch-kit` 作用域内生效，规格见 doodle-craft 技能
+import "./shared/styles/sketched-kit.css"
 
 // 注：Element Plus 组件由 unplugin-vue-components 按需引入（样式见上方全量 import）
 // 注：ElMessage / ElMessageBox 等 API 由 unplugin-auto-import 按需引入

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-/** Serial Log — 串口日志：无线端口 / 日志关键词两个 Tab。 */
+/** Serial Log — 串口日志：无线端口 / 日志关键词两个 Tab（模块私有手稿 chip） */
 import { ref } from "vue"
-import AppTabs from "@/shared/components/AppTabs.vue"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import SerialLogTabs from "./components/SerialLogTabs.vue"
 import WifiPortPanel from "./components/WifiPortPanel.vue"
 import LogKeywordPanel from "./components/LogKeywordPanel.vue"
 import { useAuthUser } from "@/shared/composables/useAuthUser"
@@ -31,14 +31,17 @@ const activeTab = ref<string>(SERIAL_LOG_DEFAULT_TAB)
 
     <div class="doc-body">
       <section class="serial-log-section" data-testid="serial-log-page">
-        <AppTabs v-model="activeTab" :items="SERIAL_LOG_TABS">
-          <template #ports>
-            <WifiPortPanel v-if="activeTab === 'ports'" :can-manage="isSuperuser" />
-          </template>
-          <template #keywords>
-            <LogKeywordPanel v-if="activeTab === 'keywords'" />
-          </template>
-        </AppTabs>
+        <div class="serial-log-section__head">
+          <SerialLogTabs
+            :items="SERIAL_LOG_TABS"
+            :model-value="activeTab"
+            @update:model-value="activeTab = $event"
+          />
+        </div>
+        <div class="serial-log-section__body">
+          <WifiPortPanel v-if="activeTab === 'ports'" :can-manage="isSuperuser" />
+          <LogKeywordPanel v-else />
+        </div>
       </section>
     </div>
   </div>

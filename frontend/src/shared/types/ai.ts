@@ -60,6 +60,10 @@ export interface TaskRecord {
   device_label?: string
   /** 指定用例标题；空串/缺省=全部用例 */
   case_title?: string
+  /** 冻结身份算出的一句文案；空表示旧任务 */
+  case_label?: string
+  /** 悬停用的冻结行，顺序与提交一致 */
+  case_rows?: { project: string; id: string; title: string }[]
   /** 当前线路助手名（实时派生，随改名同步） */
   assistant_name?: string
   /** 附件原始文件名（仅文件名，正文只在详情下发） */
@@ -74,6 +78,8 @@ export interface TaskRecord {
   report_run?: string
   /** 本次运行的报告文件名；没有报告时为空 */
   report_name?: string
+  workflow_id?: number | null
+  workflow_name?: string
 }
 
 export interface TaskSubmitPayload {
@@ -83,9 +89,14 @@ export interface TaskSubmitPayload {
   case_title?: string
 }
 
+export interface WorkflowFilterOption {
+  id: number
+  name: string
+}
+
 export interface TaskListResponse {
   status?: boolean
-  data?: { tasks: TaskRecord[] }
+  data?: { tasks: TaskRecord[]; workflows?: WorkflowFilterOption[] }
   message?: string
 }
 

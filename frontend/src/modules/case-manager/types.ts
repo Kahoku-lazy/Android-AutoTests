@@ -1,153 +1,122 @@
-/** case-manager 项目化文档用例类型（wire snake_case） */
+/** 用例项目表类型。一个项目只有一张表。 */
 
+export type LibraryKind = "automation" | "functional"
 export type SystemType = "ANDROID" | "WEB" | "IOS" | "API"
-export type CaseType = "FUNC" | "AUTO"
 export type Priority = "P0" | "P1" | "P2"
 export type BusinessType = "appliance" | "lighting" | "app"
 
-/** 一步可选的页面锚点：只注入执行角色，减少「找入口」的盲试 */
-export interface CaseStepAnchor {
+/**
+ * 步骤执行提示（仅自动化项目）。
+ *
+ * 服务端对空提示的序列化结果是 `{}` 而不是缺键（见 api_rows._serialize_steps），
+ * 所以字段一律可选，判空必须看内容而不是看对象是否为真。
+ */
+export interface StepAnchorHint {
   page?: string
   entry?: string
   target?: string
 }
 
-/** 一步可选的日志证据：只注入验收角色；同一关键词出现两次表示要命中两次 */
-export interface CaseStepLog {
-  sku: string
-  port: number
-  keywords: string[]
+export interface StepLogHint {
+  sku?: string
+  port?: number
+  keywords?: string[]
 }
 
-/** 一条步骤：动作 + 断言；id 只在读接口回来时存在，保存时按位置整段替换 */
 export interface CaseStep {
   id?: number
   action: string
   assertion: string
-  /** 执行提示：来自 YAML 导入，步骤面板只读展示，保存时原样回传 */
-  anchor?: CaseStepAnchor
-  log?: CaseStepLog
+  anchor?: StepAnchorHint
+  log?: StepLogHint
 }
 
 export interface CaseProject {
   id: number
   name: string
   description: string
+  library_kind: LibraryKind
   created_by: string
   created_at: string
   updated_at: string
   case_count: number
+  case_limit: number
 }
 
-export interface TreeDirectoryNode {
-  type: "directory"
-  id: number
-  name: string
-  sort_order: number
-  children: TreeNode[]
-}
-
-export interface TreeFileNode {
-  type: "file"
-  id: number
-  name: string
-  sort_order: number
-  updated_at: string
-}
-
-export type TreeNode = TreeDirectoryNode | TreeFileNode
-
-export interface ProjectTreePayload {
-  project: CaseProject
-  tree: TreeNode[]
-}
-
-export interface CaseFileMeta {
-  id: number
-  project_id: number
-  directory_id: number | null
-  name: string
-  sort_order: number
-  created_by: string
-  created_at: string
-  updated_at: string
-  case_count: number
-}
-
-export interface CaseDefinition {
+export interface CaseRow {
   id: string
   project_id: number
-  file_id: number
-  directory_id: number | null
   title: string
   priority: Priority
   system: SystemType
-  case_type: CaseType
   business_type: BusinessType
   module: string
   precondition: string
-  source_case_id?: string
-  source_task_id?: string
   steps: CaseStep[]
   step_count: number
   sort_order: number
-  created_by: string
-  updated_by: string
-  created_at: string
   updated_at: string
 }
 
-export interface CaseFileSheet {
-  file: CaseFileMeta
-  rows: CaseDefinition[]
+export interface SheetView {
+  hidden_columns: string[]
+  filters: Record<string, string>
+  sort: { field: string; direction: "asc" | "desc" }
+  group_by: string
 }
 
-export interface SheetRowDraft {
-  /** 已保存行用真实 id；新建未保存用 temp-* */
-  id: string
-  title: string
-  priority: Priority
-  system: SystemType
-  case_type: CaseType
-  business_type: BusinessType
-  module: string
-  precondition: string
-  steps: CaseStep[]
-  updated_at: string
-  dirty: boolean
-  isNew: boolean
+export interface ProjectSheet {
+  project: Pick<CaseProject, "id" | "name" | "library_kind" | "case_count" | "case_limit">
+  rows: CaseRow[]
+  view: SheetView
 }
 
-export interface EnumOption<T extends string = string> {
-  value: T
-  label: string
-  /** 选项附注（如 IOS 暂不支持执行） */
-  note?: string
-}
-
-export const PRIORITY_OPTIONS: EnumOption<Priority>[] = [
-  { value: "P0", label: "P0 必测" },
-  { value: "P1", label: "P1 应测" },
-  { value: "P2", label: "P2 可测" },
+export const LIBRARY_OPTIONS: { value: LibraryKind; label: string }[] = [
+  { value: "automation", label: "自动化" },
+  { value: "functional", label: "功能" },
 ]
 
-export const SYSTEM_OPTIONS: EnumOption<SystemType>[] = [
+export const PRIORITY_OPTIONS = [
+  { value: "P0", label: "P0" },
+  { value: "P1", label: "P1" },
+  { value: "P2", label: "P2" },
+]
+
+export const SYSTEM_OPTIONS = [
   { value: "ANDROID", label: "ANDROID" },
   { value: "WEB", label: "WEB" },
-  { value: "IOS", label: "IOS", note: "暂不支持执行" },
+  { value: "IOS", label: "IOS" },
   { value: "API", label: "API" },
 ]
 
-export const CASE_TYPE_OPTIONS: EnumOption<CaseType>[] = [
-  { value: "FUNC", label: "功能" },
-  { value: "AUTO", label: "自动化" },
-]
-
-export const BUSINESS_TYPE_OPTIONS: EnumOption<BusinessType>[] = [
+export const BUSINESS_OPTIONS = [
   { value: "appliance", label: "家电" },
   { value: "lighting", label: "照明" },
   { value: "app", label: "APP" },
 ]
 
-/** 单段动作 / 断言的字符上限，与后端 api_definitions.MAX_STEP_TEXT 同口径 */
-export const MAX_STEP_TEXT = 2000
+export const SHEET_COLUMNS = [
+  { key: "id", label: "编号" },
+  { key: "priority", label: "优先级" },
+  { key: "system", label: "系统" },
+  { key: "business_type", label: "业务" },
+  { key: "module", label: "模块" },
+  { key: "title", label: "标题" },
+  { key: "steps", label: "步骤" },
+  { key: "updated_at", label: "更新时间" },
+]
+
+/** 分组可选项（FilterTabs 的 tabs）；key 直接写进 view.group_by */
+export const GROUP_OPTIONS = [
+  { key: "", label: "不分组" },
+  { key: "module", label: "按模块" },
+  { key: "priority", label: "按优先级" },
+]
+
+/** 新用户 / 视图缺失时的默认视图（顺序按 sort_order 升序） */
+export const DEFAULT_SHEET_VIEW: SheetView = {
+  hidden_columns: [],
+  filters: {},
+  sort: { field: "sort_order", direction: "asc" },
+  group_by: "",
+}

@@ -5,7 +5,6 @@
 export type DeviceStatus = "ONLINE" | "BUSY" | "OFFLINE" | "DISCONNECTED"
 export type ConnectionType = "USB" | "WIFI"
 export type DeviceFilterKey = "all" | "online" | "busy"
-export type DeviceViewMode = "table" | "cards"
 
 // ── 核心数据 ──
 
@@ -73,6 +72,8 @@ export interface FilterTabConfig {
 export interface ColumnConfig {
   dataIndex: string
   title: string
+  /** 表头图标（emoji）：只进表头，不进列名与数据单元格 */
+  icon?: string
   minWidth?: number
   width?: number
   align?: string

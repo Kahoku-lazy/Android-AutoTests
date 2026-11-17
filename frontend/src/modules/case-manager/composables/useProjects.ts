@@ -3,7 +3,7 @@ import { ref, computed } from "vue"
 import { ElMessage } from "element-plus"
 import { formatApiError } from "@/shared/api-client"
 import { createProject, deleteProject, listProjects } from "../api"
-import type { CaseProject } from "../types"
+import type { CaseProject, LibraryKind } from "../types"
 
 export function useProjects() {
   const projects = ref<CaseProject[]>([])
@@ -32,7 +32,7 @@ export function useProjects() {
     }
   }
 
-  async function addProject(name: string, description = "") {
+  async function addProject(name: string, libraryKind: LibraryKind, description = "") {
     const trimmed = name.trim()
     if (!trimmed) {
       ElMessage.warning("请输入项目名称")
@@ -40,7 +40,11 @@ export function useProjects() {
     }
     creating.value = true
     try {
-      const { data } = await createProject({ name: trimmed, description: description.trim() })
+      const { data } = await createProject({
+        name: trimmed,
+        description: description.trim(),
+        library_kind: libraryKind,
+      })
       if (data.status && data.data) {
         projects.value = [data.data, ...projects.value]
         ElMessage.success("项目已创建")

@@ -122,9 +122,16 @@ body {
   color: var(--app-text-primary) !important;
   font-weight: var(--app-font-weight-bold) !important;
   border-bottom: 2px solid var(--ink) !important;
-  font-size: var(--app-size-xs);
+  /* 表头字号单一来源：16px（平台表格字号三档 16 / 14 / 12，见 doodle-craft data-display §1.1）；
+     模块不得再覆写字号或字重 */
+  font-size: var(--app-size-md);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+/* 表头单行：EP 把文字包在 .cell 里，nowrap 必须落在 .cell 上；
+   列宽不足时由 showOverflowTooltip 省略，不折行 */
+.el-table th .cell {
+  white-space: nowrap;
 }
 .el-table td {
   background: var(--app-bg-card) !important;
@@ -232,12 +239,70 @@ h4 {
   line-height: var(--app-line-height-snug);
 }
 
-/* ── Toast ── */
+/* ── Toast（纸片提示）──
+   2026-11-17 重修：原来只有 0.06 透明度的柔影，浮在纸面上像一块没有层次的白板。
+   现在与卡片同一套语言：暖白纸面 + 2.5px 墨边 + 3px 硬偏移影 + 等宽字体；
+   提示里的行动入口（如「去任务清单」）用波浪下划线，不再整条提示都做成按钮。 */
 .el-message {
-  background: var(--app-bg-card) !important;
-  border-radius: var(--app-radius-sm) !important;
+  background: var(--paper) !important;
   border: 2.5px solid var(--ink) !important;
-  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.06) !important;
+  border-radius: var(--app-radius-sm) !important;
+  box-shadow: 3px 3px 0 0 var(--ink) !important;
+  padding: var(--app-space-sm) var(--app-space-md) !important;
+  gap: var(--app-space-sm) !important;
+  font-family: var(--app-font) !important;
+  color: var(--app-text-primary) !important;
+}
+
+.el-message .el-message__content {
+  font-size: var(--app-size-sm) !important;
+  font-weight: var(--app-font-weight-semibold) !important;
+  line-height: var(--app-line-height-snug) !important;
+  color: var(--app-text-primary) !important;
+}
+
+/* 图标跟状态色走（EP 出厂色与纸面不搭） */
+.el-message--success .el-message__icon {
+  color: var(--app-status-success) !important;
+}
+
+.el-message--error .el-message__icon {
+  color: var(--color-red-46) !important;
+}
+
+.el-message--warning .el-message__icon {
+  color: var(--c-ops) !important;
+}
+
+.el-message .el-message__closeBtn {
+  color: var(--app-text-secondary) !important;
+}
+
+.el-message .el-message__closeBtn:hover {
+  color: var(--app-text-primary) !important;
+}
+
+/* 提示里的行动入口：按钮语义、链接外观（墨字 + 波浪下划线取任务清单入口色） */
+.el-message .el-message__action {
+  margin-left: var(--app-space-xs);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
+  text-decoration: underline wavy var(--c-task);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.el-message .el-message__action:hover {
+  color: var(--c-task);
+}
+
+.el-message .el-message__action:focus-visible {
+  outline: 2px solid var(--c-dashboard);
+  outline-offset: 2px;
 }
 
 /* ═══════════════════════════════════════════════

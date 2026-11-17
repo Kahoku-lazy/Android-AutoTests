@@ -206,7 +206,7 @@
   width: 32px;
   height: 32px;
   object-fit: contain;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   mix-blend-mode: multiply;
 }
 .brand-title {
@@ -357,7 +357,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: var(--app-size-sm);
+  /* 导航文字取 16px（--app-size-md）：比分组标题（14px）大一档，层级靠字号分开 */
+  font-size: var(--app-size-md);
   font-weight: var(--app-font-weight-bold);
 }
 

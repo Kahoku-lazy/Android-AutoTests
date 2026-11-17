@@ -1,17 +1,27 @@
-"""case-manager ORM models — cm_ prefix tables (document cases + projects)."""
+"""
+python -m 调试路径: backend.apps.case_manager.models
+
+本模块的业务功能如下：
+1. CaseProject: 一个项目对应一张用例表，创建时锁定库类型。
+2. AutomationCase / FunctionalCase: 两种用例分表存放，行直接属于项目。
+3. CaseSheetView: 登录用户在某个项目上的个人视图。
+"""
 
 from django.db import models
+
+LIBRARY_AUTOMATION = "automation"
+LIBRARY_FUNCTIONAL = "functional"
+
+LIBRARY_KIND_CHOICES = [
+    (LIBRARY_AUTOMATION, "自动化"),
+    (LIBRARY_FUNCTIONAL, "功能"),
+]
 
 SYSTEM_CHOICES = [
     ("ANDROID", "ANDROID"),
     ("WEB", "WEB"),
     ("IOS", "IOS"),
     ("API", "API"),
-]
-
-CASE_TYPE_CHOICES = [
-    ("FUNC", "功能"),
-    ("AUTO", "自动化"),
 ]
 
 PRIORITY_CHOICES = [
@@ -26,12 +36,15 @@ BUSINESS_TYPE_CHOICES = [
     ("app", "APP"),
 ]
 
+CASE_ROW_LIMIT = 999
+
 
 class CaseProject(models.Model):
-    """Test-case project container → cm_case_projects."""
+    """一个用例项目，库类型创建后不可改。"""
 
     name = models.CharField(max_length=200)
     description = models.TextField(default="", blank=True)
+    library_kind = models.CharField(max_length=16, choices=LIBRARY_KIND_CHOICES)
     created_by = models.CharField(max_length=200, default="", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -51,114 +64,17 @@ class CaseProject(models.Model):
         return self.name
 
 
-class CaseDirectory(models.Model):
-    """Unlimited-depth directory tree inside a project → cm_case_directories."""
-
-    project = models.ForeignKey(
-        CaseProject,
-        on_delete=models.CASCADE,
-        related_name="directories",
-    )
-    name = models.CharField(max_length=200)
-    parent = models.ForeignKey(
-        "self",
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="children",
-    )
-    sort_order = models.IntegerField(default=0)
-    created_by = models.CharField(max_length=200, default="", blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = "cm_case_directories"
-        constraints = [
-            models.UniqueConstraint(
-                fields=["project", "parent", "name"],
-                name="unique_directory_project_parent_name",
-            ),
-        ]
-        verbose_name = "用例目录"
-        verbose_name_plural = "用例目录"
-
-    def __str__(self) -> str:
-        prefix = f"{self.parent.name} / " if self.parent_id else ""
-        return f"{prefix}{self.name}"
-
-
-class CaseFile(models.Model):
-    """Case sheet (tree leaf file) → cm_case_files. Rows live in TestDefinition."""
-
-    project = models.ForeignKey(
-        CaseProject,
-        on_delete=models.CASCADE,
-        related_name="files",
-    )
-    directory = models.ForeignKey(
-        CaseDirectory,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="files",
-    )
-    name = models.CharField(max_length=200)
-    sort_order = models.IntegerField(default=0)
-    created_by = models.CharField(max_length=200, default="", blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = "cm_case_files"
-        constraints = [
-            models.UniqueConstraint(
-                fields=["project", "directory", "name"],
-                name="unique_file_project_directory_name",
-            ),
-        ]
-        verbose_name = "用例文件"
-        verbose_name_plural = "用例文件"
-        indexes = [
-            models.Index(
-                fields=["project", "directory", "sort_order"],
-                name="cm_case_fil_project_9a1b2c_idx",
-            ),
-        ]
-
-    def __str__(self) -> str:
-        return self.name
-
-
-class TestDefinition(models.Model):
-    """Document-style test case row → cm_test_definitions."""
+class CaseRow(models.Model):
+    """两种用例行的共同字段。具体表由子类声明。"""
 
     id = models.CharField(max_length=200, primary_key=True)
-    project = models.ForeignKey(
-        CaseProject,
-        on_delete=models.CASCADE,
-        related_name="cases",
-    )
-    file = models.ForeignKey(
-        CaseFile,
-        on_delete=models.CASCADE,
-        related_name="cases",
-    )
-    directory = models.ForeignKey(
-        CaseDirectory,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="cases",
-    )
+    project = models.ForeignKey(CaseProject, on_delete=models.CASCADE)
     title = models.CharField(max_length=500)
     priority = models.CharField(max_length=4, choices=PRIORITY_CHOICES, default="P1")
     system = models.CharField(max_length=16, choices=SYSTEM_CHOICES, default="ANDROID")
-    case_type = models.CharField(max_length=8, choices=CASE_TYPE_CHOICES, default="AUTO")
     business_type = models.CharField(max_length=16, choices=BUSINESS_TYPE_CHOICES)
     module = models.CharField(max_length=200, default="", blank=True)
     precondition = models.TextField(default="", blank=True)
-    # 来源追溯：源文档用例编号与来源任务编号；平台用例编号仍由平台分配。
     source_case_id = models.CharField(max_length=200, default="", blank=True, db_index=True)
     source_task_id = models.CharField(max_length=64, default="", blank=True, db_index=True)
     sort_order = models.IntegerField(default=0)
@@ -168,56 +84,132 @@ class TestDefinition(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = "cm_test_definitions"
-        verbose_name = "用例定义"
-        verbose_name_plural = "用例定义"
+        abstract = True
+
+
+class AutomationCase(CaseRow):
+    """自动化用例行。"""
+
+    project = models.ForeignKey(
+        CaseProject,
+        on_delete=models.CASCADE,
+        related_name="automation_cases",
+    )
+
+    class Meta:
+        db_table = "cm_automation_cases"
+        verbose_name = "自动化用例"
+        verbose_name_plural = "自动化用例"
         indexes = [
-            models.Index(
-                fields=["project", "file", "sort_order"],
-                name="cm_test_def_project_file_idx",
-            ),
-            models.Index(
-                fields=["project", "directory", "sort_order"],
-                name="cm_test_def_project_032175_idx",
-            ),
+            models.Index(fields=["project", "sort_order"], name="cm_auto_case_project_idx"),
         ]
 
     def __str__(self) -> str:
         return self.title
 
 
-class CaseStep(models.Model):
-    """Ordered step of a document case → cm_case_steps.
+class FunctionalCase(CaseRow):
+    """功能用例行。"""
 
-    步骤顺序即执行顺序：``sort_order`` 由服务端按提交顺序重编号，客户端不指定。
-    ``anchor`` / ``log`` 是执行侧可选提示（页面锚点 / 日志证据），只由 YAML 导入与
-    步骤面板产生，空字典表示该步没有提示。
-    """
-
-    case = models.ForeignKey(
-        TestDefinition,
+    project = models.ForeignKey(
+        CaseProject,
         on_delete=models.CASCADE,
-        related_name="steps",
+        related_name="functional_cases",
     )
+
+    class Meta:
+        db_table = "cm_functional_cases"
+        verbose_name = "功能用例"
+        verbose_name_plural = "功能用例"
+        indexes = [
+            models.Index(fields=["project", "sort_order"], name="cm_func_case_project_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class StepRow(models.Model):
+    """用例步骤的共同字段。"""
+
     sort_order = models.PositiveIntegerField(default=1)
     action = models.TextField(default="", blank=True)
     assertion = models.TextField(default="", blank=True)
-    anchor = models.JSONField(default=dict, blank=True)
-    log = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = "cm_case_steps"
+        abstract = True
+
+
+class AutomationStep(StepRow):
+    """自动化步骤，可带页面锚点与日志证据。"""
+
+    case = models.ForeignKey(
+        AutomationCase,
+        on_delete=models.CASCADE,
+        related_name="steps",
+    )
+    anchor = models.JSONField(default=dict, blank=True)
+    log = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "cm_automation_steps"
         ordering = ["sort_order", "id"]
-        verbose_name = "用例步骤"
-        verbose_name_plural = "用例步骤"
+        verbose_name = "自动化步骤"
+        verbose_name_plural = "自动化步骤"
         indexes = [
-            models.Index(
-                fields=["case", "sort_order"],
-                name="cm_case_step_case_idx",
-            ),
+            models.Index(fields=["case", "sort_order"], name="cm_auto_step_case_idx"),
         ]
 
     def __str__(self) -> str:
         return f"{self.case_id}#{self.sort_order}"
+
+
+class FunctionalStep(StepRow):
+    """功能步骤，不保存执行提示。"""
+
+    case = models.ForeignKey(
+        FunctionalCase,
+        on_delete=models.CASCADE,
+        related_name="steps",
+    )
+
+    class Meta:
+        db_table = "cm_functional_steps"
+        ordering = ["sort_order", "id"]
+        verbose_name = "功能步骤"
+        verbose_name_plural = "功能步骤"
+        indexes = [
+            models.Index(fields=["case", "sort_order"], name="cm_func_step_case_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.case_id}#{self.sort_order}"
+
+
+class CaseSheetView(models.Model):
+    """一个用户在一个项目上的表格视图。"""
+
+    project = models.ForeignKey(
+        CaseProject,
+        on_delete=models.CASCADE,
+        related_name="sheet_views",
+    )
+    user_id = models.CharField(max_length=200)
+    payload = models.JSONField(default=dict, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "cm_case_sheet_views"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "user_id"],
+                name="unique_case_sheet_view_owner",
+            ),
+        ]
+        verbose_name = "用例表视图"
+        verbose_name_plural = "用例表视图"
+
+    def __str__(self) -> str:
+        return f"{self.user_id}:{self.project_id}"

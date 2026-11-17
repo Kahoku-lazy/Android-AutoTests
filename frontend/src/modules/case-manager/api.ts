@@ -1,151 +1,61 @@
-﻿/** case-manager API — 项目 / 目录 / 文件 / 文档用例（DRF {status,data} 信封） */
+/** case-manager API — 项目表、导入与个人视图。 */
 import client from "@/shared/api-client"
 import type { DjangoResponse } from "@/shared/api-client"
-import type {
-  BusinessType,
-  CaseDefinition,
-  CaseFileMeta,
-  CaseFileSheet,
-  CaseProject,
-  CaseStep,
-  CaseType,
-  Priority,
-  ProjectTreePayload,
-  SystemType,
-} from "./types"
+import type { CaseProject, CaseRow, LibraryKind, ProjectSheet, SheetView } from "./types"
 
 type Envelope<T> = Promise<{ data: DjangoResponse<T> }>
-
-// ── Projects ──
 
 export function listProjects(): Envelope<CaseProject[]> {
   return client.get<DjangoResponse<CaseProject[]>>("/cases/projects/")
 }
 
-export function createProject(body: { name: string; description?: string }): Envelope<CaseProject> {
+export function createProject(body: {
+  name: string
+  description?: string
+  library_kind: LibraryKind
+}): Envelope<CaseProject> {
   return client.post<DjangoResponse<CaseProject>>("/cases/projects/", body)
-}
-
-export function updateProject(
-  id: number,
-  body: { name?: string; description?: string },
-): Envelope<CaseProject> {
-  return client.patch<DjangoResponse<CaseProject>>(`/cases/projects/${id}/`, body)
 }
 
 export function deleteProject(id: number): Envelope<{ id: number }> {
   return client.delete<DjangoResponse<{ id: number }>>(`/cases/projects/${id}/`)
 }
 
-export function getProjectTree(projectId: number): Envelope<ProjectTreePayload> {
-  return client.get<DjangoResponse<ProjectTreePayload>>(`/cases/projects/${projectId}/tree/`)
+export function getProjectSheet(projectId: number): Envelope<ProjectSheet> {
+  return client.get<DjangoResponse<ProjectSheet>>(`/cases/projects/${projectId}/`)
 }
 
-// ── Directories ──
-
-export function createDirectory(body: {
-  project_id: number
-  name: string
-  parent_id?: number | null
-  sort_order?: number
-}): Envelope<Record<string, unknown>> {
-  return client.post<DjangoResponse<Record<string, unknown>>>("/cases/directories/", body)
+export function createRow(
+  projectId: number,
+  body: Partial<CaseRow> & { title: string; steps: CaseRow["steps"] },
+): Envelope<CaseRow> {
+  return client.post<DjangoResponse<CaseRow>>(`/cases/projects/${projectId}/rows/`, body)
 }
 
-export function updateDirectory(
-  id: number,
-  body: { name?: string; sort_order?: number },
-): Envelope<Record<string, unknown>> {
-  return client.patch<DjangoResponse<Record<string, unknown>>>(`/cases/directories/${id}/`, body)
+export function updateRow(
+  projectId: number,
+  caseId: string,
+  body: Partial<CaseRow>,
+): Envelope<CaseRow> {
+  return client.patch<DjangoResponse<CaseRow>>(`/cases/projects/${projectId}/rows/${caseId}/`, body)
 }
 
-export function deleteDirectory(id: number): Envelope<{ id: number }> {
-  return client.delete<DjangoResponse<{ id: number }>>(`/cases/directories/${id}/`)
+export function deleteRow(projectId: number, caseId: string): Envelope<{ id: string }> {
+  return client.delete<DjangoResponse<{ id: string }>>(
+    `/cases/projects/${projectId}/rows/${caseId}/`,
+  )
 }
 
-// ── Files (Excel sheets) ──
-
-export function createFile(body: {
-  project_id: number
-  name: string
-  directory_id?: number | null
-  sort_order?: number
-}): Envelope<CaseFileMeta> {
-  return client.post<DjangoResponse<CaseFileMeta>>("/cases/files/", body)
+export function importProjectYaml(projectId: number, file: File): Envelope<{ imported: number }> {
+  const body = new FormData()
+  body.set("file", file)
+  return client.post<DjangoResponse<{ imported: number }>>(
+    `/cases/projects/${projectId}/import-yaml/`,
+    body,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  )
 }
 
-export function getFileSheet(fileId: number): Envelope<CaseFileSheet> {
-  return client.get<DjangoResponse<CaseFileSheet>>(`/cases/files/${fileId}/`)
-}
-
-export function updateFile(
-  id: number,
-  body: { name?: string; sort_order?: number },
-): Envelope<CaseFileMeta> {
-  return client.patch<DjangoResponse<CaseFileMeta>>(`/cases/files/${id}/`, body)
-}
-
-export function deleteFile(id: number): Envelope<{ id: number }> {
-  return client.delete<DjangoResponse<{ id: number }>>(`/cases/files/${id}/`)
-}
-
-// ── Definitions (rows) ──
-
-export function createDefinition(body: {
-  project_id: number
-  file_id: number
-  title?: string
-  priority?: Priority
-  system?: SystemType
-  case_type?: CaseType
-  business_type?: BusinessType
-  module?: string
-  precondition?: string
-  steps?: CaseStep[]
-  sort_order?: number
-}): Envelope<CaseDefinition> {
-  return client.post<DjangoResponse<CaseDefinition>>("/cases/definitions/", body)
-}
-
-export function getDefinition(id: string): Envelope<CaseDefinition> {
-  return client.get<DjangoResponse<CaseDefinition>>(`/cases/definitions/${id}/`)
-}
-
-export function updateDefinition(
-  id: string,
-  body: Partial<{
-    title: string
-    priority: Priority
-    system: SystemType
-    case_type: CaseType
-    business_type: BusinessType
-    module: string
-    precondition: string
-    steps: CaseStep[]
-    sort_order: number
-  }>,
-): Envelope<CaseDefinition> {
-  return client.patch<DjangoResponse<CaseDefinition>>(`/cases/definitions/${id}/`, body)
-}
-
-export function deleteDefinition(id: string): Envelope<{ id: string }> {
-  return client.delete<DjangoResponse<{ id: string }>>(`/cases/definitions/${id}/`)
-}
-
-export function batchDeleteDefinitions(ids: string[]): Envelope<{ deleted: number }> {
-  return client.post<DjangoResponse<{ deleted: number }>>("/cases/definitions/batch-delete/", {
-    ids,
-  })
-}
-
-// ── Move ──
-
-export function moveItem(body: {
-  project_id: number
-  item_type: "directory" | "file"
-  item_id: number | string
-  target_directory_id?: number | null
-  sort_order?: number
-}): Envelope<Record<string, unknown>> {
-  return client.post<DjangoResponse<Record<string, unknown>>>("/cases/move/", body)
+export function saveSheetView(projectId: number, view: SheetView): Envelope<SheetView> {
+  return client.put<DjangoResponse<SheetView>>(`/cases/projects/${projectId}/view/`, view)
 }

@@ -142,7 +142,39 @@ body { margin: 0; font-family: var(--app-font); font-size: var(--app-size-sm);
 }
 ```
 
-## 4. 交付前自检（单文件版）
+## 4. 执行报告：仓内既有的单文件报告
+
+`engines/ae_harness/event/render.py` 的 `HtmlReportRenderer` 是本仓唯一长期使用的单文件 HTML。它踩过三个坑，新写单文件页时按这三条来（2026-11-17 需求方验收后定稿）：
+
+**① 品牌字体必须内联，不能写相对路径。**
+单文件页常被 `blob:` 或 `file://` 打开（前端「执行报告」页走 `URL.createObjectURL(new Blob([html]))`），这两种文档都解析不了文件系统相对路径，`@font-face` 的 `src: url("../../frontend/public/fonts/xxx.ttf")` 会静默 404、标题回落系统黑体——观感就是"字体和平台不一样"。
+
+```css
+@font-face {
+  font-family: "Ziku FeiYang";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("data:font/ttf;base64,…") format("truetype");  /* 读文件 → base64，别写路径 */
+}
+```
+
+代价要认：`ziku-feiyang.ttf` 1.45MB → base64 约 1.9MB/份。品牌图（logo PNG）同理内联（`_brand_mark()`）。读不到字体文件时才回落相对路径，保证页面仍能渲染。
+
+**② 字号只三档：12 / 14 / 16。**
+
+| 角色 | 令牌 | 例子 |
+| --- | --- | --- |
+| 时间 / 日期 / 次数 / 耗时 / 标签 / Badge | `--app-size-xs` | `147.5 ms`、`7 次调用`、卡片小标题 |
+| 正文 | `--app-size-sm` | 任务描述、验收事项、提示语、结果 JSON、事件字段 |
+| 标题 / 小标题 | `--app-size-md` | 子目标标题、工具卡标题、图表卡标题、表头 |
+
+页面标题栏不在此列：侧栏品牌 20px、页头 24px（与 `WorkbenchHeader` 同档）。指标数字（`.kpi strong`，20px）属展示级，也不收进来。
+
+**③ 侧栏默认占三成宽，并给分栏手柄。**
+`--side-w: 30%`，上下限靠脚本按容器夹取（下限 220px，上限 `min(760px, 容器宽 - 480px)`）。手柄行为照抄 `shared/components/SplitHandle.vue`：8px 命中区 + 居中 2px 线（常态 `--color-orange-76`，hover/拖拽转 `--ink`）、拖拽期间 `col-resize` 且正文不可选、←/→ 16px（Shift 48px）、Home/End 到两端、双击回默认、`role="separator"` + 三个 aria 值；≤900px 两栏退化成单栏时不渲染手柄。宽度可落 `localStorage`，取不到就退回默认。
+
+## 5. 交付前自检（单文件版）
 
 ```
 [ ] 令牌逐值对齐 tokens.css，用到的每个 var() 都已声明（含 SVG 描边色）
@@ -150,5 +182,8 @@ body { margin: 0; font-family: var(--app-font); font-size: var(--app-size-sm);
 [ ] 卡片有微倾且 hover 回正；字号 ≥12px；间距取刻度
 [ ] 三态齐备（加载/失败/空）；危险操作用马克笔红而非 primary
 [ ] 动 transform 的类有 prefers-reduced-motion 降级
+[ ] 用了品牌字体：`@font-face` 是 base64 data URI，不是相对路径（blob:/file:// 取不到）
+[ ] 字号只有 12 / 14 / 16 三档（页面标题栏与指标数字除外）
+[ ] 两栏布局给了分栏手柄，默认三成宽，窄屏不渲染手柄
 [ ] 文件放 temps/；标题里写清是"预览稿"，不冒充平台真实页面
 ```

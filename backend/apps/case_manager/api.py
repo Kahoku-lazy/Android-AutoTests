@@ -1,75 +1,53 @@
-"""case-manager public API — write-path facade for cross-app / View / Tool callers."""
+"""
+python -m 调试路径: backend.apps.case_manager.api
 
-from .api_definitions import (
-    batch_delete_definitions,
-    create_definition,
-    delete_definition,
-    get_definition,
-    serialize_definition,
-    update_definition,
-)
-from .api_directories import (
-    create_directory,
-    delete_directory,
-    move_item,
-    serialize_directory,
-    update_directory,
-)
-from .api_files import (
-    create_file,
-    delete_file,
-    get_file,
-    get_file_sheet,
-    list_file_cases,
-    serialize_file,
-    update_file,
-)
-from .api_ids import next_case_id
+本模块的业务功能如下：
+1. 对外只暴露项目表、导入、视图和里程碑编译。目录与文件接口已删除。
+"""
+
 from .api_import import PROJECT_NAME, import_case_rows
 from .api_projects import (
     ConflictError,
     create_project,
     delete_project,
     get_project,
-    get_project_tree,
     list_projects,
     serialize_project,
     update_project,
 )
-from .models import CaseDirectory, CaseFile, CaseProject, TestDefinition
+from .api_rows import (
+    automation_case_identity,
+    compile_automation_cases,
+    create_row,
+    delete_row,
+    get_sheet,
+    import_yaml_text,
+    list_automation_projects,
+    save_sheet_view,
+    update_row,
+)
+from .models import LIBRARY_AUTOMATION, LIBRARY_FUNCTIONAL, CaseProject
 
 __all__ = [
-    "CaseDirectory",
-    "CaseFile",
+    "LIBRARY_AUTOMATION",
+    "LIBRARY_FUNCTIONAL",
+    "PROJECT_NAME",
     "CaseProject",
     "ConflictError",
-    "PROJECT_NAME",
-    "TestDefinition",
-    "batch_delete_definitions",
-    "create_definition",
-    "create_directory",
-    "create_file",
+    "automation_case_identity",
+    "compile_automation_cases",
     "create_project",
-    "delete_definition",
-    "delete_directory",
-    "delete_file",
+    "create_row",
     "delete_project",
-    "get_definition",
-    "get_file",
-    "get_file_sheet",
+    "delete_row",
     "get_project",
-    "get_project_tree",
+    "get_sheet",
     "import_case_rows",
-    "list_file_cases",
+    "import_yaml_text",
+    "list_automation_projects",
     "list_projects",
-    "move_item",
-    "next_case_id",
-    "serialize_definition",
-    "serialize_directory",
-    "serialize_file",
+    "save_sheet_view",
     "serialize_project",
-    "update_definition",
-    "update_directory",
-    "update_file",
     "update_project",
+    "update_row",
 ]

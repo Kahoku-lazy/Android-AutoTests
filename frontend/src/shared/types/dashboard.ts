@@ -46,6 +46,9 @@ export interface AiUsage {
   cacheHitRate: AiUsageMetric
   avgTokensPerTask: AiUsageMetric
   deepseekCost: AiUsageMetric
+  unpricedTokens: AiUsageMetric
+  displayFx: { date: string; usdCny: string }
+  archivedHourlyCost: number
   byRole: ByRoleMetric
   agents: AgentUsage[]
 }
@@ -95,11 +98,20 @@ export interface UsageLedger {
   recent: UsageRecord[]
 }
 
+export interface OpsCounts {
+  users: number
+  agents: number
+  models: number
+}
+
 export interface DashboardStats {
   devices: { online: number; total: number }
   cases: { total: number; enabled: number; breakdown: CaseBreakdownItem[] }
-  runs: { total: number; active: number }
-  agents: { total: number; active: number }
+  assistants: { total: number }
+  workflows: { total: number }
+  runs: { active: number; pending: number }
+  /** 仅超级管理员与运营的响应带此字段；普通用户为 null */
+  ops: OpsCounts | null
   aiUsage: AiUsage
   usageLedger: UsageLedger
 }
@@ -112,10 +124,18 @@ export interface ExecutionChart {
   failed: number[]
 }
 
+export interface ModelDailySeries {
+  name: string
+  tokens: number[]
+  cost: number[]
+}
+
 export interface AiTokenChart {
   labels: string[]
   totalTokens: number[]
   cacheTokens: number[]
+  byModel: ModelDailySeries[]
+  voiceByModel: ModelDailySeries[]
 }
 
 export interface DeepSeekCostChart {
@@ -145,10 +165,18 @@ export interface TodayUsageChartRaw {
 }
 
 /** GET /api/dashboard/stats/ charts.ai_tokens 原始 snake_case 字段 */
+export interface ModelDailySeriesRaw {
+  name: string
+  tokens: number[]
+  cost: number[]
+}
+
 export interface AiTokenChartRaw {
   labels: string[]
   total_tokens: number[]
   cache_tokens: number[]
+  by_model?: ModelDailySeriesRaw[]
+  voice_by_model?: ModelDailySeriesRaw[]
 }
 
 /** GET /api/dashboard/stats/ charts.deepseek_cost 原始字段 */
@@ -170,6 +198,7 @@ export interface RecentTask {
   run_id?: string
   status: string
   title?: string
+  case_label?: string
   timestamp?: string
   passed?: number
   failed?: number
@@ -194,8 +223,11 @@ export interface ActivityItem {
 export interface DashboardRawData {
   devices: { online: number; total: number }
   cases: { total: number; enabled: number; breakdown: CaseBreakdownItem[] }
-  runs: { total: number; active: number }
-  agents: { total: number; active: number }
+  assistants?: { total: number }
+  workflows?: { total: number }
+  runs: { active: number; pending?: number }
+  /** 普通用户响应不含此字段 */
+  ops?: { users: number; agents: number; models: number }
   ai_usage: {
     task_count: AiUsageMetric
     input_tokens: AiUsageMetric
@@ -205,6 +237,9 @@ export interface DashboardRawData {
     cache_hit_rate: AiUsageMetric
     avg_tokens_per_task: AiUsageMetric
     deepseek_cost: AiUsageMetric
+    unpriced_tokens?: AiUsageMetric
+    display_fx?: { date: string; usd_cny: string }
+    archived_hourly_cost?: number
     by_role: ByRoleMetric
     agents?: AgentUsage[]
   }

@@ -44,7 +44,8 @@
   gap: var(--app-space-xs);
   padding: 6px 12px;
   border-radius: var(--app-radius-sm);
-  font-size: var(--app-size-xs);
+  /* 与卡头 Tab chip（SerialLogTabs）同档 14px，避免同一行两种字号 */
+  font-size: var(--app-size-sm);
   font-weight: var(--app-font-weight-bold);
   border: 2px solid var(--ink);
   cursor: pointer;
@@ -233,6 +234,131 @@
 /* 减少动效：关闭位移 / 旋转 / 缩放（颜色过渡不受影响） */
 @media (prefers-reduced-motion: reduce) {
   .sl-btn {
+    transition: none;
+  }
+}
+
+/* ══════ 2026-11 B 档：字号三档 / 首列身份 / 状态胶囊 / 筛选与分页 ══════ */
+
+/* 表头 16 / 单行由全局定；这里只补本页内边距与表体字号 */
+.sl-cat-body :deep(.el-table th .cell) {
+  white-space: nowrap;
+}
+.sl-cat-body :deep(.el-table__body td.el-table__cell) {
+  font-size: var(--app-size-sm) !important;
+  padding: 12px 14px !important;
+}
+
+.th-ico {
+  margin-right: 4px;
+}
+
+/* 筛选条：只看监听中 + 命中计数 */
+.lp-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-md);
+  margin-bottom: var(--app-space-md);
+}
+.lp-count {
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-semibold);
+  color: var(--app-text-secondary);
+  white-space: nowrap;
+}
+
+/* 首列身份单元：图标圆 + 端口号 + SKU 副行 */
+.lp-id {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+.lp-badge {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  font-size: var(--app-size-sm);
+  background: color-mix(in srgb, var(--c-workflow) 28%, var(--app-bg-card));
+}
+.lp-port-no {
+  display: block;
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-md);
+  font-weight: var(--app-font-weight-heavy);
+  line-height: 1.2;
+}
+.lp-port-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+/* 监听状态：状态色 20%→5% 渐变胶囊（开关本体保留在旁边） */
+.lp-st {
+  --sp-color: var(--app-border-strong);
+  display: inline-flex;
+  align-items: center;
+  border: 1.5px solid color-mix(in srgb, var(--sp-color) 75%, transparent);
+  border-radius: var(--app-radius-pill);
+  padding: 1px 9px;
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-bold);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--sp-color) 20%, var(--app-bg-card)),
+    color-mix(in srgb, var(--sp-color) 5%, var(--app-bg-card))
+  );
+  color: var(--ink);
+  white-space: nowrap;
+}
+.lp-st.is-on {
+  --sp-color: var(--app-status-success);
+}
+.lp-st.is-idle {
+  --sp-color: var(--c-workflow);
+}
+.lp-st.is-off {
+  --sp-color: var(--c-report);
+}
+
+/* 分页：常驻，靠右 */
+.lp-pager {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  margin-top: var(--app-space-md);
+  justify-content: flex-end;
+}
+.lp-pager .lp-count {
+  margin-right: auto;
+}
+
+/* 说明条：替代原来的三行提示 */
+.lp-hintbar {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: var(--app-space-md);
+  padding: 10px 12px;
+  border: 1.5px solid color-mix(in srgb, var(--ink) 22%, transparent);
+  border-radius: 3px;
+  background: var(--app-bg-subtle);
+  font-size: var(--app-size-sm);
+  line-height: 1.55;
+}
+.lp-hintbar b {
+  font-weight: var(--app-font-weight-heavy);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-id,
+  .lp-st {
     transition: none;
   }
 }

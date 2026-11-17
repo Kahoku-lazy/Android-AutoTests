@@ -1,5 +1,10 @@
 <script setup lang="ts">
-/** 设备操作列 — 锁定/公开、强制释放、删除 */
+/**
+ * 设备操作列 — 主操作胶囊（锁定 / 公开）+ 「⋯」次操作菜单（强制释放 / 删除）
+ *
+ * 权限与请求语义不变：三个 emit 仍由父级 `useDeviceActions` 消费，
+ * 删除仍走 `DisconnectDialog` 二次确认；USB 行保持无操作。
+ */
 import { computed } from "vue"
 import type { DeviceRecord } from "@/shared/types/device"
 import { isRunnerOccupied } from "@/shared/helpers/deviceOccupancy"
@@ -14,74 +19,126 @@ const emit = defineEmits<{
   disconnect: [device: DeviceRecord]
 }>()
 
+/** 执行引擎占用：此时不提供「强制释放」（与改动前条件一致） */
 const runnerOccupied = computed(() => isRunnerOccupied(props.device.occupied_by))
+const isWifi = computed(() => props.device.connection_type === "WIFI")
+/** 次操作：强制释放（被占用且非执行占用）、删除（仅 Wi-Fi） */
+const canRelease = computed(() => Boolean(props.device.occupied_by) && !runnerOccupied.value)
+const hasSecondary = computed(() => canRelease.value || isWifi.value)
+/** 主操作只有 Wi-Fi 行有；两样都没有时整列留空标记 */
+const hasPrimary = computed(() => isWifi.value)
+
+function onCommand(command: string) {
+  if (command === "release") emit("release", props.device)
+  else if (command === "disconnect") emit("disconnect", props.device)
+}
 </script>
 
 <template>
-  <div class="action-bar">
-    <el-button
-      v-if="device.connection_type === 'WIFI'"
-      size="small"
-      type="primary"
-      :class="{ 'is-locked': device.locked }"
+  <!-- 点操作区不冒泡到行：避免顺手改掉行选中（行点击本身仍由父级处理） -->
+  <div v-if="hasPrimary || hasSecondary" class="action-bar" @click.stop>
+    <button
+      v-if="hasPrimary"
+      type="button"
+      class="act-pill"
+      :class="device.locked ? 'act-pill--locked' : 'act-pill--open'"
       @click="emit('lock', device)"
-      >{{ device.locked ? "已锁定" : "公开" }}</el-button
     >
-    <el-button
-      v-if="device.occupied_by && !runnerOccupied"
-      size="small"
-      type="warning"
-      plain
-      @click="emit('release', device)"
-      >强制释放</el-button
-    >
-    <el-button
-      v-if="device.connection_type === 'WIFI'"
-      size="small"
-      type="danger"
-      plain
-      :disabled="device.status === 'BUSY'"
-      @click="emit('disconnect', device)"
-      >删除</el-button
-    >
+      {{ device.locked ? "已锁定" : "公开" }}
+    </button>
+    <el-dropdown v-if="hasSecondary" trigger="click" placement="bottom-end" @command="onCommand">
+      <button type="button" class="act-more" aria-label="更多操作" title="更多操作">⋯</button>
+      <template #dropdown>
+        <el-dropdown-menu>
+          <el-dropdown-item v-if="canRelease" command="release">强制释放</el-dropdown-item>
+          <el-dropdown-item v-if="isWifi" command="disconnect" :disabled="device.status === 'BUSY'">
+            删除
+          </el-dropdown-item>
+        </el-dropdown-menu>
+      </template>
+    </el-dropdown>
   </div>
+  <span v-else class="act-empty">—</span>
 </template>
 
 <style scoped>
 .action-bar {
-  display: flex;
-  flex-direction: row;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  width: 100%;
-  flex-wrap: wrap;
 }
-.action-bar :deep(.el-button) {
-  margin: 0 !important;
-  min-height: 26px;
-  padding: var(--app-space-xs) 10px;
-  font-size: var(--app-size-xs);
+
+/* 主操作胶囊：外形沿用页面统一按键皮肤（2px 墨边 + 2px 硬影 + 近直角） */
+.act-pill {
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  padding: 4px 12px;
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-bold);
   line-height: var(--app-line-height-tight);
+  color: var(--app-text-primary);
   white-space: nowrap;
+  box-shadow: 2px 2px 0 0 var(--ink);
+  transition:
+    transform var(--app-duration-fast) var(--app-ease),
+    box-shadow var(--app-duration-fast) var(--app-ease);
 }
-/* 底色保留操作语义；外形（边/圆角/阴影/文字色）由页面统一按键皮肤承担 */
-.action-bar :deep(.el-button--primary) {
-  background: var(--app-status-purple-bg) !important;
+
+.act-pill:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 0 var(--ink);
 }
-.action-bar :deep(.el-button--primary:hover) {
-  background: var(--app-btn-hover-purple) !important;
+
+/* 底色取状态令牌：锁定紫、公开绿（与可见性列同源，语义不靠行号轮转） */
+.act-pill--locked {
+  background: var(--app-status-purple-bg);
 }
-.action-bar :deep(.el-button--danger.is-plain) {
-  background: var(--app-status-danger-bg) !important;
+
+.act-pill--open {
+  background: var(--app-status-success-bg);
 }
-.action-bar :deep(.el-button--danger.is-plain:hover) {
-  background: var(--app-btn-hover-danger) !important;
+
+.act-more {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--app-bg-card);
+  color: var(--app-text-primary);
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-bold);
+  line-height: 1;
+  box-shadow: 2px 2px 0 0 var(--ink);
+  transition:
+    transform var(--app-duration-fast) var(--app-ease),
+    box-shadow var(--app-duration-fast) var(--app-ease);
 }
-.action-bar :deep(.el-button--warning.is-plain) {
-  background: var(--app-status-warning-bg) !important;
+
+.act-more:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 0 var(--ink);
 }
-.action-bar :deep(.el-button.is-disabled) {
-  background: var(--app-bg-subtle) !important;
+
+.act-empty {
+  color: var(--app-text-secondary);
+  opacity: 0.5;
+  font-size: var(--app-size-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .act-pill,
+  .act-more {
+    transition: none;
+  }
+
+  .act-pill:hover,
+  .act-more:hover {
+    transform: none;
+    box-shadow: 2px 2px 0 0 var(--ink);
+  }
 }
 </style>

@@ -44,7 +44,8 @@
   gap: var(--app-space-xs);
   padding: 6px 12px;
   border-radius: var(--app-radius-sm);
-  font-size: var(--app-size-xs);
+  /* 与卡头 Tab chip（SerialLogTabs）同档 14px，避免同一行两种字号 */
+  font-size: var(--app-size-sm);
   font-weight: var(--app-font-weight-bold);
   border: 2px solid var(--ink);
   cursor: pointer;
@@ -99,26 +100,22 @@
   color: var(--app-text-muted);
 }
 
-/* 单元格：关键词等宽、功能点编号弱化、名称加粗 */
-.lk-keyword {
-  font-family: var(--app-font-mono);
-  font-size: var(--app-size-xs);
-  color: var(--app-text-primary);
-  word-break: break-all;
-}
+/* 单元格：功能点编号弱化、名称加粗（关键词样式见下方「首列身份」段） */
 .lk-module {
-  font-size: var(--app-size-xs);
-  color: var(--app-text-secondary);
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-semibold);
+  /* 与同行的关键词同色：同一模块在整张表里是一个色相 */
+  color: color-mix(in srgb, var(--mod-color, var(--app-text-secondary)) 58%, var(--ink));
 }
 .lk-feature-id {
   margin-right: var(--app-space-xs);
   font-family: var(--app-font-mono);
-  font-size: var(--app-size-xs);
+  font-size: var(--app-size-sm);
   font-weight: var(--app-font-weight-bold);
   color: var(--app-text-muted);
 }
 .lk-feature-name {
-  font-size: var(--app-size-xs);
+  font-size: var(--app-size-md);
   font-weight: var(--app-font-weight-bold);
   color: var(--app-text-primary);
 }
@@ -127,4 +124,81 @@
   .sl-btn {
     transition: none;
   }
+}
+
+/* ══════ 2026-11 B 档：表头字号 / 首列身份 / 手稿搜索 / 说明条 ══════ */
+.th-ico {
+  margin-right: 4px;
+}
+
+.sl-cat-body :deep(.el-table__body td.el-table__cell) {
+  font-size: var(--app-size-sm) !important;
+  padding: 12px 14px !important;
+}
+
+/* 首列：图标圆 + 关键词 */
+.lk-id {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lk-badge {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  font-size: var(--app-size-sm);
+  background: color-mix(in srgb, var(--c-device) 28%, var(--app-bg-card));
+}
+/* 模块色相：同一「功能模块」的图标圆、关键词与模块名共用一个令牌，
+   文字用「令牌 58% + 墨色」压深，浅底上仍可读 */
+.lk-badge {
+  background: color-mix(in srgb, var(--mod-color, var(--c-device)) 28%, var(--app-bg-card));
+}
+
+/* 字号按列位：首列（功能点）16，其余列 14 —— 列序换成「功能点 / 功能模块 / 关键词」后同步对调 */
+.lk-keyword {
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-heavy);
+  color: color-mix(in srgb, var(--mod-color, var(--app-text-primary)) 58%, var(--ink));
+  /* 长关键词（如 color_configs_set_success）在定宽列里折行，不撑破表格 */
+  word-break: break-all;
+}
+
+/* 搜索：宽度由容器控制，皮肤来自 .sketch-kit（虚线 + 无影） */
+.lk-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-md);
+  margin-bottom: var(--app-space-md);
+}
+.lk-search {
+  width: 360px;
+}
+.lk-count {
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-semibold);
+  color: var(--app-text-secondary);
+  white-space: nowrap;
+}
+
+/* 说明条：取值来源 + 更新时间 + 重启提示合并为一条 */
+.lk-hintbar {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: var(--app-space-md);
+  padding: 10px 12px;
+  border: 1.5px solid color-mix(in srgb, var(--ink) 22%, transparent);
+  border-radius: 3px;
+  background: var(--app-bg-subtle);
+  font-size: var(--app-size-sm);
+  line-height: 1.55;
+}
+.lk-origin-dim {
+  color: var(--app-text-secondary);
 }

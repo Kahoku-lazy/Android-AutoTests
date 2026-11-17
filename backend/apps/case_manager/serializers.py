@@ -1,102 +1,20 @@
-"""case_manager DRF serializers — projects, directories, document cases."""
+"""case-manager serializers — project input only. Row checks live in api_rows."""
 
 from rest_framework import serializers
 
-from .models import (
-    BUSINESS_TYPE_CHOICES,
-    CASE_TYPE_CHOICES,
-    PRIORITY_CHOICES,
-    SYSTEM_CHOICES,
-    CaseDirectory,
-    CaseProject,
-    TestDefinition,
-)
+from .models import LIBRARY_KIND_CHOICES, CaseProject
 
 
 class CaseProjectSerializer(serializers.ModelSerializer):
-    case_count = serializers.IntegerField(read_only=True, required=False, default=0)
-
     class Meta:
         model = CaseProject
         fields = [
             "id",
             "name",
             "description",
-            "created_by",
-            "created_at",
-            "updated_at",
-            "case_count",
-        ]
-        read_only_fields = ["id", "created_by", "created_at", "updated_at", "case_count"]
-
-
-class CaseDirectorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CaseDirectory
-        fields = [
-            "id",
-            "project",
-            "parent",
-            "name",
-            "sort_order",
+            "library_kind",
             "created_by",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_by", "created_at", "updated_at"]
-
-
-class TestDefinitionSerializer(serializers.ModelSerializer):
-    created_at_display = serializers.SerializerMethodField()
-    updated_at_display = serializers.SerializerMethodField()
-
-    class Meta:
-        model = TestDefinition
-        fields = [
-            "id",
-            "project",
-            "directory",
-            "title",
-            "priority",
-            "system",
-            "case_type",
-            "business_type",
-            "module",
-            "precondition",
-            "source_case_id",
-            "source_task_id",
-            "sort_order",
-            "created_by",
-            "updated_by",
-            "created_at",
-            "updated_at",
-            "created_at_display",
-            "updated_at_display",
-        ]
-        read_only_fields = [
-            "id",
-            "created_by",
-            "updated_by",
-            "created_at",
-            "updated_at",
-            "created_at_display",
-            "updated_at_display",
-            "source_case_id",
-            "source_task_id",
-        ]
-        extra_kwargs = {
-            "priority": {"choices": PRIORITY_CHOICES},
-            "system": {"choices": SYSTEM_CHOICES},
-            "case_type": {"choices": CASE_TYPE_CHOICES},
-            "business_type": {"choices": BUSINESS_TYPE_CHOICES},
-        }
-
-    def get_created_at_display(self, obj):
-        from .api_definitions import format_display_time
-
-        return format_display_time(obj.created_at)
-
-    def get_updated_at_display(self, obj):
-        from .api_definitions import format_display_time
-
-        return format_display_time(obj.updated_at)
+        extra_kwargs = {"library_kind": {"choices": LIBRARY_KIND_CHOICES}}

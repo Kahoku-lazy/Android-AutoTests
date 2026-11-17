@@ -2,7 +2,7 @@
 python -m 调试路径: backend.apps.case_manager.api_import
 
 本模块的业务功能如下：
-1. import_case_rows: 把 Agent-02 已通过验收的用例行写入「AI 生成用例」项目。
+1. import_case_rows: 把验收通过的功能用例追加到「AI 生成用例」功能表。
 """
 
 from __future__ import annotations
@@ -11,32 +11,29 @@ import re
 
 from typing import Any
 
-from django.db import IntegrityError, transaction
+from django.db import transaction
 
 from utils.logs import backend_log
 
-from .api_definitions import create_definition
-from .models import CaseFile, CaseProject, TestDefinition
+from .api_projects import create_project, get_project
+from .api_rows import CASE_ROW_LIMIT, create_row
+from .models import LIBRARY_FUNCTIONAL, CaseProject, FunctionalCase
 
 PROJECT_NAME = "AI 生成用例"
 PROJECT_DESCRIPTION = "Agent-02 验收通过的用例自动写入"
-FILE_NAME_LIMIT = 200
 
 __all__ = ["PROJECT_NAME", "import_case_rows"]
 
 
 def _clip(value: object, limit: int) -> str:
-    """去掉首尾空白并按字符上限截断。"""
     return str(value or "").strip()[:limit]
 
 
 def _plain_text(value: object) -> str:
-    """把 Markdown 单元格里的 ``<br>`` 还原成换行，避免界面显示原始标签。"""
     return re.sub(r"<br\s*/?>", "\n", str(value or ""), flags=re.IGNORECASE).strip()
 
 
 def _priority(value: object) -> str:
-    """只接受 P0 / P1 / P2；无法识别时回退 P1。"""
     text = str(value or "").strip().upper()
     for key in ("P0", "P1", "P2"):
         if text.startswith(key):
@@ -44,26 +41,17 @@ def _priority(value: object) -> str:
     return "P1"
 
 
-def _file_name(task_title: str, task_id: int) -> str:
-    """生成与任务一一对应的用例文件名，并保证不超过模型上限。"""
-    suffix = f"（任务 {task_id}）"
-    base = _clip(task_title, FILE_NAME_LIMIT - len(suffix)) or f"任务 {task_id}"
-    return f"{base}{suffix}"[:FILE_NAME_LIMIT]
-
-
 def _normalize_rows(
     rows: list[dict[str, Any]],
 ) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
-    """过滤不可写入的行，返回（合法行, 跳过明细）。"""
     valid: list[dict[str, Any]] = []
     skipped: list[dict[str, str]] = []
     for row in rows or []:
-        source_id = _clip(row.get("source_case_id"), 200)
         title = _clip(row.get("title"), 500)
         steps = [
             {
-                "action": str(step.get("action") or "").strip(),
-                "assertion": str(step.get("assertion") or "").strip(),
+                "action": _plain_text(step.get("action")),
+                "assertion": _plain_text(step.get("assertion") or step.get("expect_state")),
             }
             for step in (row.get("steps") or [])
             if isinstance(step, dict)
@@ -75,83 +63,55 @@ def _normalize_rows(
             reason = "测试步骤为空"
         elif any(not step["action"] or not step["assertion"] for step in steps):
             reason = "存在空动作或空断言"
-        elif any(len(step["action"]) > 2000 or len(step["assertion"]) > 2000 for step in steps):
-            reason = "单段动作或断言超过 2000 字符"
         if reason:
-            skipped.append({"source_case_id": source_id, "reason": reason})
+            skipped.append({"title": title, "reason": reason})
             continue
         valid.append(
             {
-                "source_case_id": source_id,
                 "title": title,
                 "priority": _priority(row.get("priority")),
                 "module": _clip(row.get("module"), 200),
                 "precondition": _plain_text(row.get("precondition")),
                 "steps": steps,
+                "source_case_id": _clip(row.get("source_case_id"), 200),
             }
         )
     return valid, skipped
 
 
-def _get_or_create_project(user_id: str) -> CaseProject:
-    """按用户取「AI 生成用例」项目；并发创建冲突时重查一次。"""
-    try:
-        obj, _ = CaseProject.objects.get_or_create(
-            created_by=user_id,
-            name=PROJECT_NAME,
-            defaults={"description": PROJECT_DESCRIPTION},
-        )
-    except IntegrityError:
-        obj = CaseProject.objects.get(created_by=user_id, name=PROJECT_NAME)
-    return obj
-
-
-def _get_or_create_file(*, project: CaseProject, name: str, user_id: str) -> CaseFile:
-    """按项目取任务用例文件；同名冲突时重查一次。
-
-    Raises:
-        IntegrityError: 同名文件并发创建且重查仍失败时抛出。
-    """
-    try:
-        obj, _ = CaseFile.objects.get_or_create(
-            project=project,
-            directory=None,
-            name=name,
-            defaults={"created_by": user_id},
-        )
-    except IntegrityError:
-        obj = CaseFile.objects.filter(project=project, directory=None, name=name).first()
-        if obj is None:
-            raise
-    return obj
-
-
-def _path(project_id: int, file_id: int) -> str:
-    """用例文件页地址；前端用 router-link 直接跳转。"""
-    return f"/cases/projects/{project_id}/files/{file_id}"
-
-
-def _result(
-    *,
-    status: str,
-    project_id: int | None = None,
-    file_id: int | None = None,
-    case_count: int = 0,
-    skipped: list[dict[str, str]] | None = None,
-    message: str = "",
-) -> dict[str, Any]:
-    """统一导入结论结构。"""
-    skipped = skipped or []
-    return {
-        "status": status,
-        "project_id": project_id,
-        "file_id": file_id,
-        "path": _path(project_id, file_id) if project_id and file_id else "",
-        "case_count": case_count,
-        "skipped_count": len(skipped),
-        "skipped": skipped,
-        "message": message,
+def _result(**kwargs: Any) -> dict[str, Any]:
+    base = {
+        "status": "skipped",
+        "project_id": None,
+        "path": "",
+        "case_count": 0,
+        "skipped_count": 0,
+        "skipped": [],
+        "message": "",
     }
+    base.update(kwargs)
+    base["skipped_count"] = len(base["skipped"])
+    return base
+
+
+def _project_row_count(project: CaseProject) -> int:
+    """数功能表当前行数。测试可替换这个函数，不替换查询对象。"""
+    return FunctionalCase.objects.filter(project=project).count()
+
+
+def _functional_project(user_id: str) -> CaseProject:
+    project = CaseProject.objects.filter(created_by=user_id, name=PROJECT_NAME).first()
+    if project is None:
+        created = create_project(
+            name=PROJECT_NAME,
+            description=PROJECT_DESCRIPTION,
+            library_kind=LIBRARY_FUNCTIONAL,
+            user_id=user_id,
+        )
+        project = get_project(project_id=created["id"], user_id=user_id)
+    if project is None or project.library_kind != LIBRARY_FUNCTIONAL:
+        raise RuntimeError("AI 生成用例项目不是功能库")
+    return project
 
 
 def import_case_rows(
@@ -161,86 +121,65 @@ def import_case_rows(
     task_title: str,
     rows: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    """
-    把一次 Agent-02 任务的用例行写入用例库，并按来源任务保证幂等。
+    """把一次任务的用例追加到该用户的功能表。
 
-    Args:
-        user_id: 任务发起人编号，用例项目归属该用户。
-        task_id: 来源任务编号，用于幂等与追溯。
-        task_title: 任务标题，用于生成用例文件名。
-        rows: 中性用例行，含 title / priority / module / precondition / steps / source_case_id。
-
-    Returns:
-        `{status, project_id, file_id, path, case_count, skipped_count, skipped, message}`。
+    同一任务重复收口时不重复写入。超过 999 时一条都不写。
 
     Raises:
-        RuntimeError: 数据库写入失败且无法恢复时抛出，由调用方降级为任务结果。
-        ValueError: 入参缺少用户或任务编号时抛出。
+        ValueError: 缺少用户或任务编号。
     """
     owner = str(user_id or "").strip()
     if not owner:
         raise ValueError("缺少任务发起人，无法写入用例库")
     if not task_id:
         raise ValueError("缺少来源任务编号，无法写入用例库")
-
     valid, skipped = _normalize_rows(rows)
     if not valid:
         return _result(status="skipped", skipped=skipped, message="没有可写入的用例")
-
-    existing = (
-        TestDefinition.objects.filter(source_task_id=str(task_id))
-        .order_by("sort_order", "id")
-        .first()
-    )
-    if existing is not None:
-        count = TestDefinition.objects.filter(source_task_id=str(task_id)).count()
+    existing = FunctionalCase.objects.filter(source_task_id=str(task_id), project__created_by=owner)
+    if existing.exists():
+        first = existing.first()
         return _result(
             status="imported",
-            project_id=existing.project_id,
-            file_id=existing.file_id,
-            case_count=count,
+            project_id=first.project_id,
+            path=f"/cases/projects/{first.project_id}",
+            case_count=existing.count(),
             skipped=skipped,
         )
-
     try:
         with transaction.atomic():
-            project = _get_or_create_project(owner)
-            case_file = _get_or_create_file(
-                project=project,
-                name=_file_name(task_title, task_id),
-                user_id=owner,
-            )
-            created = 0
-            for index, row in enumerate(valid):
-                create_definition(
+            project = _functional_project(owner)
+            CaseProject.objects.select_for_update().get(pk=project.pk)
+            current = _project_row_count(project)
+            remaining = CASE_ROW_LIMIT - current
+            if len(valid) > remaining:
+                return _result(
+                    status="failed",
                     project_id=project.id,
-                    file_id=case_file.id,
+                    path=f"/cases/projects/{project.id}",
+                    skipped=skipped,
+                    message=f"还可追加 {max(remaining, 0)} 条",
+                )
+            for row in valid:
+                create_row(
+                    project_id=project.id,
                     user_id=owner,
                     title=row["title"],
                     priority=row["priority"],
-                    system="ANDROID",
-                    case_type="FUNC",
-                    business_type="appliance",
                     module=row["module"],
                     precondition=row["precondition"],
                     steps=row["steps"],
-                    sort_order=index,
                     source_case_id=row["source_case_id"],
                     source_task_id=str(task_id),
                 )
-                created += 1
-    except Exception as exc:  # noqa: BLE001 - 导入失败要转为可读结论，不能拖垮任务
+    except Exception as exc:  # noqa: BLE001 - 导入失败转为任务结果，不改任务状态
         backend_log.exception("import case rows failed task=%s user=%s", task_id, owner)
-        return _result(
-            status="failed",
-            skipped=skipped,
-            message=f"写入用例库失败：{exc}",
-        )
-
+        return _result(status="failed", skipped=skipped, message=f"写入用例库失败：{exc}")
     return _result(
         status="imported",
         project_id=project.id,
-        file_id=case_file.id,
-        case_count=created,
+        path=f"/cases/projects/{project.id}",
+        case_count=len(valid),
         skipped=skipped,
+        message=f"已追加 {len(valid)} 条",
     )

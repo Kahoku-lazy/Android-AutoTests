@@ -5,7 +5,7 @@
 ## 入口与布局
 
 - 路由 `/serial-log`（`routes.ts`），侧栏「数据」分组**末尾**（「设备管理」之后），标题「串口日志」。
-- 页面 = `WorkbenchHeader` + 一条 `AppTabs`，**恰两个 Tab**：`无线端口`（默认）/ `日志关键词`。
+- 页面 = `WorkbenchHeader` + 卡头一条**模块私有** `SerialLogTabs`（手稿 chip；不用共享 `AppTabs`，那是 EP 蓝色下划线），**恰两个 Tab**：`无线端口`（默认）/ `日志关键词`。
 - 两个 Tab 的内容分别在 `components/WifiPortPanel.vue`、`components/LogKeywordPanel.vue`，只在选中时挂载；切 Tab **不得**发出写请求。
 
 ## 数据与权限

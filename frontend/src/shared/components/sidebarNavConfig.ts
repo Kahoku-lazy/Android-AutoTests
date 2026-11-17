@@ -26,11 +26,9 @@ export const NAV_CATEGORIES: NavCategory[] = [
   },
   {
     key: "ai",
-    label: "AI 功能",
-    items: [
-      { path: "/ai-assistant", icon: "bot", label: "AI 助手" },
-      { path: "/agent-reports", icon: "clock", label: "执行报告" },
-    ],
+    // 本组不显示分组标题：入口直接跟在仪表盘之后，靠图标与组间距区分
+    label: "",
+    items: [{ path: "/ai-assistant", icon: "bot", label: "平台助手" }],
   },
   {
     key: "data",
@@ -46,7 +44,6 @@ export const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { path: "/tasks", icon: "clipboard-list", label: "任务清单" },
       { path: "/cases", icon: "layers", label: "用例管理" },
-      { path: "/reports", icon: "file-bar-chart", label: "测试报告" },
       { path: "/bugs", icon: "bug", label: "BUG单管理" },
     ],
   },
@@ -54,21 +51,27 @@ export const NAV_CATEGORIES: NavCategory[] = [
     key: "ops",
     label: "运营",
     requiresOperator: true,
-    items: [{ path: "/ops/users", icon: "users", label: "用户管理" }],
+    items: [
+      { path: "/ops/users", icon: "users-admin", label: "用户管理" },
+      { path: "/ops/agents", icon: "bot", label: "Agent配置" },
+      { path: "/ops/model-configs", icon: "model-chip", label: "模型配置" },
+    ],
   },
 ]
 
-// ── Doodle Craft 协调：path → 模块色（active 书签条），与主区模块色同源 ──
+// ── Doodle Craft 协调：path → 模块色（active 书签条 + 图标底色），与主区模块色同源 ──
+// 同一分组内的入口 MUST NOT 同色：数据组的设备/串口、AI任务组的任务/用例/BUG、运营组的三项各自区分。
 export const MOD_COLORS = {
   "/dashboard": "var(--c-dashboard)",
   "/devices": "var(--c-device)",
-  "/tasks": "var(--c-ai)",
+  "/tasks": "var(--c-task)",
   "/cases": "var(--c-case)",
   "/reports": "var(--c-report)",
   "/bugs": "var(--c-runner)",
   "/ai-assistant": "var(--c-ai)",
-  "/ai-assistant/agents": "var(--c-ai)",
-  "/serial-log": "var(--c-device)",
+  "/serial-log": "var(--c-workflow)",
   "/agent-reports": "var(--c-report)",
-  "/ops/users": "var(--c-ops)",
+  "/ops/users": "var(--c-account)",
+  "/ops/agents": "var(--c-element)",
+  "/ops/model-configs": "var(--c-ops)",
 }

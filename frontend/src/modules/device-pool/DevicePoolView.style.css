@@ -44,15 +44,6 @@
   gap: var(--app-space-sm);
   margin-left: auto;
 }
-.filter-count {
-  font-size: var(--app-size-xs);
-  color: var(--app-text-secondary);
-  font-weight: var(--app-font-weight-semibold);
-  white-space: nowrap;
-  padding: var(--app-space-xs) 10px;
-  background: var(--app-bg-subtle);
-  border-radius: var(--app-radius-pill);
-}
 .dev-mock-toggle {
   display: inline-flex;
   align-items: center;
@@ -63,23 +54,10 @@
   border: 1px solid var(--app-border-light);
 }
 .dev-mock-toggle__label {
-  font-size: var(--app-size-xs);
+  font-size: var(--app-size-sm);
   font-weight: var(--app-font-weight-bold);
   color: var(--app-text-secondary);
   white-space: nowrap;
-}
-
-/* 分段容器只做排布：统一皮肤后每个按键自带 2px 实边与偏移硬阴影，
-   容器再画描边会重复、overflow:hidden 会把阴影裁掉 */
-.view-toggle {
-  display: flex;
-  gap: 6px;
-}
-.view-btn {
-  padding: 5px 12px;
-  font-size: var(--app-size-xs);
-  cursor: pointer;
-  font-family: inherit;
 }
 
 .action-bar-btn {
@@ -94,24 +72,19 @@
   background: var(--c-device) !important;
 }
 
-/* ═══════════════════════════════════════════
-   统一按键皮肤
-
+/* ── 统一按键皮肤 ──
    几何基准 = 侧栏底部「退出」按钮（AppSidebar.style.css:439-455）：
    2px 墨色实边 + 2px 近直角 + 2px 偏移硬阴影；hover 左上位移 1px、阴影增至 3px。
-   底色按角色分配：切换类未选中天蓝 / 选中柠黄，「局域网」紫，「刷新」绿，
-   其余按键沿用各自既有语义底色。文字统一墨色（四组底色对比度均 ≥ 4.5:1）。
-   作用域限定本页 —— 共享件 FilterTabs / ErrorState 与 .wb-btn 的默认皮肤不变。
+   底色按角色分配：「局域网」紫、「刷新」绿。
+   作用域限定本页 —— 共享件 ErrorState 与 .wb-btn 的默认皮肤不变。
+   注意：控制条的筛选下拉与名称搜索是输入件，不在这套皮肤里，见下方「控制条输入件」。
    ═══════════════════════════════════════════ */
 .device-workbench :deep(.el-button),
-.device-workbench :deep(.filter-tab),
-.device-workbench :deep(.error-state__btn),
-.device-workbench :deep(.card-btn),
-.device-workbench .view-btn,
-.device-workbench .page-size-btn {
+.device-workbench :deep(.error-state__btn) {
   border: 2px solid var(--ink) !important;
   border-radius: 2px !important;
   color: var(--app-text-primary) !important;
+  font-size: var(--app-size-sm) !important;
   font-weight: var(--app-font-weight-bold) !important;
   box-shadow: 2px 2px 0 0 var(--ink) !important;
   transition:
@@ -119,12 +92,44 @@
     box-shadow var(--app-duration-fast) var(--app-ease),
     background var(--app-duration-fast) var(--app-ease) !important;
 }
+/* ── 控制条输入件：筛选下拉与名称搜索不套按键皮肤 ──
+   2px 墨边（与主题输入框同口径）+ 输入框圆角 + 135° 薄荷绿渐变填充（浓度 45% → 20%）；
+   撤掉按键的两处身份特征（硬偏移影、粗字），保留 min-height 与工具条对齐。
+   hover / focus 沿用主题输入框语言（style.css:188-196）；模块的 !important 会压掉全局
+   :hover / :focus-within，故在此同处补回，不另发明一套反馈。 */
+.device-workbench :deep(.el-select__wrapper),
+.device-workbench :deep(.el-input__wrapper) {
+  border: 2px solid var(--ink) !important;
+  border-radius: var(--app-radius-sm) !important;
+  background: var(--comp-device-field-fill) !important;
+  box-shadow: none !important;
+  color: var(--app-text-primary) !important;
+  font-size: var(--app-size-sm) !important;
+  font-weight: var(--app-font-weight-regular) !important;
+  min-height: 32px;
+  padding: 2px 10px;
+  transition: border-color var(--app-duration-fast) var(--app-ease) !important;
+}
+.device-workbench :deep(.el-select__wrapper:hover),
+.device-workbench :deep(.el-input__wrapper:hover),
+.device-workbench :deep(.el-select__wrapper:focus-within),
+.device-workbench :deep(.el-input__wrapper:focus-within) {
+  border-color: var(--c-dashboard) !important;
+}
+.device-workbench :deep(.el-select__wrapper:focus-within),
+.device-workbench :deep(.el-input__wrapper:focus-within) {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-dashboard) 20%, transparent) !important;
+}
+/* 渐变填充抬亮了底色：EP 出厂的 placeholder 灰与下拉箭头灰落到约 1.7:1，
+   两处一起提到次级墨色（--app-text-secondary），保住"这是输入件"的可读提示。 */
+.device-workbench :deep(.el-input__inner::placeholder) {
+  color: var(--app-text-secondary) !important;
+}
+.device-workbench :deep(.el-select__caret) {
+  color: var(--app-text-secondary) !important;
+}
 .device-workbench :deep(.el-button:not(:disabled):hover),
-.device-workbench :deep(.filter-tab:not(:disabled):hover),
-.device-workbench :deep(.error-state__btn:not(:disabled):hover),
-.device-workbench :deep(.card-btn:not(:disabled):hover),
-.device-workbench .view-btn:not(:disabled):hover,
-.device-workbench .page-size-btn:not(:disabled):hover {
+.device-workbench :deep(.error-state__btn:not(:disabled):hover) {
   transform: translate(-1px, -1px) !important;
   box-shadow: 3px 3px 0 0 var(--ink) !important;
 }
@@ -140,99 +145,15 @@
   cursor: not-allowed;
   box-shadow: none !important;
 }
-/* 切换类二态：未选中天蓝、选中柠黄（黄与 AppTabs / el-radio-button 选中态同口径） */
-.device-workbench .view-btn:not(.active),
-.device-workbench .page-size-btn:not(.active),
-.device-workbench :deep(.filter-tab:not(.active)) {
-  background: var(--c-workflow) !important;
-}
-.device-workbench .view-btn.active,
-.device-workbench .page-size-btn.active,
-.device-workbench :deep(.filter-tab.active) {
-  background: var(--c-dashboard) !important;
-}
 
-/* ── 卡片分组 ── */
-.card-grid-grouped {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: var(--app-space-md);
-  padding: var(--app-space-xs) 0;
-}
-.card-group-title {
-  font-family: var(--app-font-display);
-  font-size: var(--app-size-md);
-  font-weight: var(--app-font-weight-bold);
-  color: var(--app-text-primary);
+/* ── 控制条：左「第 X / Y 页 · 共 N 台」+ 筛选 + 搜索；右「上一页 / 下一页」（常驻） ── */
+.list-controls {
   display: flex;
   align-items: center;
   gap: var(--app-space-sm);
-  margin-bottom: 10px;
-}
-.card-group-title::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--app-border-light);
-}
-.card-group-count {
-  font-family: var(--app-font-mono);
-  font-size: var(--app-size-xs);
-  color: var(--app-text-secondary);
-  background: var(--app-bg-subtle);
-  padding: 2px 9px;
-  border-radius: var(--app-radius-pill);
-  border: 1px solid var(--app-border-light);
-}
-.card-group-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  justify-content: start;
-  gap: var(--app-space-md);
-}
-/* 微倾 / hover / reduced-motion 由共享 AppCard 的 .ac-card 承担（父级注入 sketchTiltAt），
-   此处不再重复实现一套 nth-child 轮转 —— 两套都会写 transform，必然互相压过。 */
-
-/* ── 表格工具栏 ── */
-.table-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
   flex-wrap: wrap;
   padding: 0 0 10px;
   flex-shrink: 0;
-}
-.page-size-control {
-  display: flex;
-  align-items: center;
-  gap: var(--app-space-sm);
-}
-.toolbar-label {
-  font-size: var(--app-size-xs);
-  font-weight: var(--app-font-weight-bold);
-  color: var(--app-text-secondary);
-  white-space: nowrap;
-}
-.page-size-btns {
-  display: flex;
-  gap: 6px;
-}
-.page-size-btn {
-  min-width: 36px;
-  padding: var(--app-space-xs) 10px;
-  font-size: var(--app-size-sm);
-  cursor: pointer;
-}
-.table-toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-left: auto;
-  flex-wrap: wrap;
 }
 .page-info {
   font-size: var(--app-size-sm);
@@ -240,9 +161,19 @@
   font-weight: var(--app-font-weight-semibold);
   white-space: nowrap;
 }
+.filter-select {
+  width: 168px;
+  flex-shrink: 0;
+}
+.device-search {
+  width: 248px;
+  flex-shrink: 0;
+}
+/* 右侧成对常驻：位置固定，不随页数出现/消失 */
 .page-nav {
   display: flex;
   gap: var(--app-space-sm);
+  margin-left: auto;
 }
 
 /* ── 表格卡片 ── */
@@ -329,13 +260,22 @@
   background: var(--app-bg-subtle);
 }
 
-/* ── 表纸外框线型：虚线 → 实线（本页登记的线型；宽度与颜色仍取共享令牌 --comp-sheet-border，
-      不改令牌本身，故 /reports、/elements 的表纸仍为虚线） ── */
+/* ── 表纸：实线 + 无影（设备页登记变体） ──
+   共享表纸皮肤 `.wb-shell .sketch-sheet` 带模块色位移硬影，本页需要实线边但不带影：
+   只在此作用域内去影 + 改线型，描边宽度/颜色/圆角仍取 `--comp-sheet-*` 令牌。
+   共享文件不动 —— 同一套皮肤还有 9 处消费方。 */
 .device-workbench :deep(.sketch-sheet) {
   border-style: solid;
+  box-shadow: none;
 }
 
-/* ── 表头：居中 + 浅底（排版单一来源：全局 .el-table th 的 --app-size-xs / 700 / uppercase） ── */
+/* ── 表头图标：与列名同源渲染，只做扫读加速，不参与列宽计算 ── */
+.device-workbench .th-ico {
+  margin-right: 4px;
+  font-weight: var(--app-font-weight-heavy);
+}
+
+/* ── 表头：居中 + 浅底（字号 16px / 单行 nowrap 由全局 `.el-table th` 唯一定义） ── */
 .device-table-wrapper :deep(.el-table th.el-table__cell) {
   background: linear-gradient(
     180deg,
@@ -366,41 +306,8 @@
   padding-bottom: var(--app-space-xs);
 }
 
-/* ── 设备身份列 ── */
-.dev-id {
-  min-width: 0;
-  padding-left: 6px;
-  text-align: left;
-}
-.dev-id.is-selected .dev-model::before {
-  content: "● ";
-  color: var(--c-device);
-}
-.dev-model {
-  margin: 0 0 5px;
-  font-weight: var(--app-font-weight-heavy);
-  font-size: var(--app-size-md);
-  line-height: var(--app-line-height-tight);
-  color: var(--app-text-primary);
-}
-.dev-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 10px;
-  font-size: var(--app-size-xs);
-  font-weight: var(--app-font-weight-semibold);
-  color: var(--app-text-secondary);
-}
-.dev-meta code {
-  font-family: var(--app-font-mono);
-  font-size: var(--app-size-xs);
-  font-weight: var(--app-font-weight-bold);
-  color: var(--app-nav-text);
-  background: var(--app-bg-subtle);
-  border: 1px solid var(--app-border-light);
-  border-radius: var(--app-radius-sm);
-  padding: 1px 6px;
-}
+/* ── 设备身份列：样式随结构下沉到 DeviceIdentityCell.vue（scoped）──
+   选中态改为行级 `is-selected` 由共享皮肤着色，首列不再画伪元素状态块。 */
 
 /* ── Chip：连接 / 可见性 ── */
 .conn-chip,
@@ -411,7 +318,7 @@
   padding: 3px 9px;
   border: 1.5px solid var(--ink);
   border-radius: var(--app-radius-sm);
-  font-size: var(--app-size-xs);
+  font-size: var(--app-size-sm);
   font-weight: var(--app-font-weight-heavy);
   line-height: var(--app-line-height-tight);
   white-space: nowrap;

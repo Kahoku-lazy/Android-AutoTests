@@ -13,12 +13,11 @@ import { resetAuthUser, useAuthUser } from "@/shared/composables/useAuthUser"
 import dbRoutes from "@/modules/dashboard/routes"
 import dpRoutes from "@/modules/device-pool/routes"
 import cmRoutes from "@/modules/case-manager/routes"
-import rgRoutes from "@/modules/report-generator/routes"
+
 import aiRoutes from "@/modules/ai-assistant/routes"
-import tlRoutes from "@/modules/task-list/routes"
 import slRoutes from "@/modules/serial-log/routes"
+import taskRoutes from "@/modules/task-list/routes"
 import bugRoutes from "@/modules/bug-manager/routes"
-import arRoutes from "@/modules/agent-reports/routes"
 import opsRoutes from "@/modules/ops-console/routes"
 
 const routes = [
@@ -26,12 +25,10 @@ const routes = [
   ...dbRoutes,
   ...dpRoutes,
   ...cmRoutes,
-  ...rgRoutes,
   ...aiRoutes,
-  ...tlRoutes,
+  ...taskRoutes,
   ...slRoutes,
   ...bugRoutes,
-  ...arRoutes,
   ...opsRoutes,
   { path: "/", redirect: "/dashboard" },
   {

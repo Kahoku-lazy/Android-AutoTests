@@ -1,4 +1,4 @@
-/* Serial Log 页面壳：只负责页头下的 Tab 容器，不承载面板内部样式 */
+/* Serial Log 页面壳：卡头放 Tab（模块私有手稿 chip），卡内放面板 */
 
 .serial-log-workbench {
   display: flex;
@@ -16,6 +16,9 @@
 }
 
 .serial-log-section {
+  /* 卡片是 .doc-body 的纵向 flex 子项：默认会被压缩，配合 overflow:hidden 直接裁掉超长表格。
+     flex-shrink:0 让卡片按内容长高，滚动交给 .doc-body。 */
+  flex-shrink: 0;
   background: var(--app-bg-card);
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-md);
@@ -23,18 +26,16 @@
   overflow: hidden;
 }
 
-/* Tab 条与页头同风格：贴边、无额外外边距 */
-.serial-log-section :deep(.el-tabs__header) {
-  margin: 0;
-  padding: 0 var(--app-space-lg);
-  border-bottom: 2px solid var(--ink);
+/* 卡头：只放 Tab，与面板头用同一条墨线分隔 */
+.serial-log-section__head {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-md);
+  padding: var(--app-space-md) var(--app-space-lg);
   background: var(--app-bg-subtle);
+  border-bottom: 2px solid var(--ink);
 }
 
-.serial-log-section :deep(.el-tabs__nav-wrap::after) {
-  display: none;
-}
-
-.serial-log-section :deep(.el-tabs__content) {
+.serial-log-section__body {
   padding: 0;
 }

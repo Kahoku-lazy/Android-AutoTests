@@ -1,66 +1,21 @@
-from django.contrib import admin
-from django.db.models import Count
+"""case-manager admin registrations."""
 
-from .models import CaseDirectory, CaseFile, CaseProject, CaseStep, TestDefinition
+from django.contrib import admin
+
+from .models import AutomationCase, CaseProject, FunctionalCase
 
 
 @admin.register(CaseProject)
 class CaseProjectAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "created_by", "case_count", "created_at")
-    search_fields = ("name", "created_by")
-    ordering = ("-created_at",)
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).annotate(_case_count=Count("cases", distinct=True))
-
-    @admin.display(description="用例数")
-    def case_count(self, obj):
-        return getattr(obj, "_case_count", 0) or 0
+    list_display = ("name", "library_kind", "created_by", "updated_at")
+    list_filter = ("library_kind",)
 
 
-@admin.register(CaseDirectory)
-class CaseDirectoryAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "project", "parent", "sort_order", "created_at")
-    list_filter = ("project",)
-    search_fields = ("name",)
-    ordering = ("project_id", "parent_id", "sort_order", "id")
+@admin.register(AutomationCase)
+class AutomationCaseAdmin(admin.ModelAdmin):
+    list_display = ("id", "title", "project", "priority")
 
 
-@admin.register(CaseFile)
-class CaseFileAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "project", "directory", "sort_order", "updated_at")
-    list_filter = ("project",)
-    search_fields = ("name",)
-
-
-class CaseStepInline(admin.TabularInline):
-    model = CaseStep
-    extra = 0
-    fields = ("sort_order", "action", "assertion")
-    ordering = ("sort_order",)
-
-
-@admin.register(TestDefinition)
-class TestDefinitionAdmin(admin.ModelAdmin):
-    list_display = (
-        "id",
-        "title",
-        "priority",
-        "system",
-        "case_type",
-        "business_type",
-        "project",
-        "file",
-        "directory",
-        "updated_at",
-    )
-    list_filter = ("priority", "system", "case_type", "business_type")
-    search_fields = ("id", "title")
-    inlines = (CaseStepInline,)
-
-
-@admin.register(CaseStep)
-class CaseStepAdmin(admin.ModelAdmin):
-    list_display = ("id", "case", "sort_order", "action", "assertion")
-    search_fields = ("case", "action", "assertion")
-    ordering = ("case_id", "sort_order")
+@admin.register(FunctionalCase)
+class FunctionalCaseAdmin(admin.ModelAdmin):
+    list_display = ("id", "title", "project", "priority")

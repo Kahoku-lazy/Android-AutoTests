@@ -25,19 +25,26 @@
 | `--app-stat-text` | `#5d5950` | `--color-ink-34` | 统计卡主文字 |
 | `--app-marker-red` | `#f56b6a` | `--color-red-69` | 马克笔红：**仅**危险 CTA（侧栏退出）|
 
-## 1.2 9 支彩笔令牌
+## 1.2 11 支彩笔令牌
 
 | 令牌 | CSS 变量 | 色值 | 现消费方 |
 |------|----------|------|----------|
 | 仪表盘 | `--c-dashboard` | `#F7C948` | dashboard |
-| 设备 | `--c-device` | `#6BCB77` | device-pool、serial-log 导航 |
-| 靛紫 | `--c-element` | `#A78BFA` | report-generator、device-pool、dashboard、ai-assistant |
+| 设备 | `--c-device` | `#6BCB77` | device-pool、侧栏「设备管理」 |
+| 靛紫 | `--c-element` | `#A78BFA` | report-generator、device-pool、dashboard、ai-assistant、侧栏「Agent 配置」 |
 | 用例 | `--c-case` | `#4ECDC4` | case-manager |
 | 桃粉 | `--c-runner` | `#FFB5A7` | report-generator、dashboard |
 | 报告 | `--c-report` | `#7C6F83` | report-generator |
-| AI | `--c-ai` | `#E879F9` | ai-assistant、任务清单 |
-| 流程 | `--c-workflow` | `#89CFF0` | workflow |
-| 运营 | `--c-ops` | `#B2710C` | ops-console（运营后台） |
+| AI | `--c-ai` | `#E879F9` | ai-assistant、侧栏「AI 助手」 |
+| 流程 | `--c-workflow` | `#89CFF0` | workflow、侧栏「串口日志」 |
+| 运营 | `--c-ops` | `#B2710C` | ops-console（运营后台）、侧栏「模型配置」 |
+| 账号 | `--c-account` | `#7A8FE2`（原子 `--color-blue-68-s64`）| **仅**侧栏「用户管理」 |
+| 任务 | `--c-task` | `#C050D0`（原子 `--color-purple-56`）| **仅**侧栏「任务清单」 |
+
+> `--c-account` / `--c-task` 是**入口级**模块色（2026-11-17，需求方要求侧栏各入口不同色）：只服务侧栏导航的图标底色与 active 书签条，不扩散到页面。两者都复用调色板已有原子——调色板按 `frontend-l0-design-tokens` 只降不增，**不得**为它们新增 `--color-*`。
+>
+> 侧栏同分组内的入口 **MUST NOT** 同色：数据组（设备 / 串口）、AI任务组（任务 / 用例 / BUG）、运营组（用户 / Agent / 模型）三组各自区分；`frontend/tests/shared/p0/sidebarNavConfig.spec.ts` 有断言锁住，新增入口时按最近未占用的令牌挑色。
+
 
 > `--c-element` / `--c-runner` 已无同名模块页面，但仍被共享表格、看板卡片与报告页引用，**不得**当死令牌删除。
 
@@ -107,7 +114,7 @@ Blockly 等 JS 画布渲染不解析 CSS 变量，字体用字面量——改全
 **登记例外**（可写字面量）：真实圆形 `50%` · 近直角纸角 2px（`--comp-note-radius` / `--comp-kpi-radius` / `--comp-sheet-radius` = `2px 6px 2px 4px`）· 图形量 1px / 3px / 5px · `0` 重置 · 登录页已登记的独立造型。
 **禁止**：对称大圆角 `999px` / `8px` / `12px` / `50px`；与令牌等价的四值展开（`4px 8px 4px 8px`、`6px 10px 6px 10px`、`3px 6px 3px 6px`）——门禁直接拦截。
 
-**描边线型登记**：线型由消费边界自持，**不设共享线型令牌**。**线型白名单见 [../SKILL.md](../SKILL.md) §线型规则**：虚线只由 `KpiCard` 与 `AgentRouteCard` 两个组件自行声明（复用到任何页面均成立，但抄样式到别处不算），其余卡片壳、图表卡、对话框、抽屉、表纸、缩略图、证据块、列表分隔一律实线（`1px solid color-mix(in srgb, var(--ink) 10%, transparent)`）。侧栏 `.sidebar` 声明 `--sidebar-line: solid`（`AppSidebar.style.css`）；登录页 `.login-page` 的 `--login-line` 也应收敛为 `solid`（当前代码仍是 `dashed`，属待迁移存量）。`--comp-sheet-border` / `--comp-dialog-border` 的默认值目前仍是 `2.5px dashed`，同属待迁移存量，改到时按白名单判定。
+**描边线型登记**：线型由消费边界自持，**不设共享线型令牌**。**线型白名单见 [../SKILL.md](../SKILL.md) §线型规则**：虚线只由 `AgentRouteCard` 组件、以及 `Sketched UI Kit` 的 `.sketch-kit` 作用域（`shared/styles/sketched-kit.css`，按钮描边态 + 输入框）两处声明（复用到任何页面均成立，但抄样式到别处不算），其余卡片壳、图表卡、对话框、抽屉、表纸、缩略图、证据块、列表分隔一律实线（`1px solid color-mix(in srgb, var(--ink) 10%, transparent)`）。侧栏 `.sidebar` 声明 `--sidebar-line: solid`（`AppSidebar.style.css`）；登录页 `.login-page` 的 `--login-line` 也应收敛为 `solid`（当前代码仍是 `dashed`，属待迁移存量）。`--comp-sheet-border` / `--comp-dialog-border` 的默认值目前仍是 `2.5px dashed`，同属待迁移存量，改到时按白名单判定。
 
 ## 1.7 阴影层级 — 扁平硬偏移，**模糊半径必须为 0**
 
@@ -252,3 +259,44 @@ easing：`--app-ease: cubic-bezier(0.25,0.1,0.25,1)`、`--app-spring: cubic-bezi
 | 开关 | `--el-switch-on-color`/`-off-color` → 成功色 / 离线灰 |
 
 **未映射**（仍走 EP 出厂值，改主题时注意）：`--el-text-color-placeholder`、`--el-border-color-lighter`/`-dark`/`-extra-light`、`--el-table-*`、`--el-disabled-*`、success / warning / info 的 light/dark 档。
+
+## 1.18 手稿控件皮肤（Sketched UI Kit）令牌
+
+颜色 / 几何原语声明在 T0（`tokens.css` 的 `--comp-*` 段），**虚线边框组合值声明在 `shared/styles/sketched-kit.css` 的 `.sketch-kit` 作用域内**（虚线必须由白名单文件声明）。规格见 [components/sketched-ui-kit.md](components/sketched-ui-kit.md)。
+
+| CSS 变量 | 值 | 声明处 | 用途 |
+|----------|-----|--------|------|
+| `--comp-kit-line` | `color-mix(in srgb, var(--color-indigo-13) 62%, transparent)` | T0 | 按钮描边态 / 输入框 hover·focus 的虚线色 |
+| `--comp-kit-line-soft` | `color-mix(in srgb, var(--color-indigo-13) 30%, transparent)` | T0 | 输入框默认虚线色（浅墨） |
+| `--comp-kit-line-faint` | `color-mix(in srgb, var(--color-indigo-13) 18%, transparent)` | T0 | 禁用态虚线色 |
+| `--comp-kit-danger-line` | `color-mix(in srgb, var(--color-red-46) 72%, transparent)` | T0 | 危险按钮虚线框 |
+| `--comp-kit-danger-ink` | `var(--color-red-46)` | T0 | 危险按钮文字（纸底对比度 ≥ 4.5:1；**不许**用 `--app-marker-red`） |
+| `--comp-kit-radius` | `3px` | T0 | 控件圆角（近直角，属 §1.6 已登记例外） |
+| `--comp-kit-save-from` | `color-mix(in srgb, var(--app-status-success) 85%, var(--app-status-success-text))` | T0 | 保存按钮渐变起点（深绿） |
+| `--comp-kit-save-to` | `color-mix(in srgb, var(--app-status-success) 45%, var(--color-white))` | T0 | 保存按钮渐变终点（淡绿） |
+| `--comp-kit-save-gradient` | `linear-gradient(180deg, var(--comp-kit-save-from), var(--comp-kit-save-to))` | T0 | 保存按钮填充（需求方指定；已登记为上游客色规则的偏离） |
+| `--comp-kit-border` | `1.5px dashed var(--comp-kit-line)` | kit 作用域 | 按钮描边态边框 |
+| `--comp-kit-border-soft` | `1.5px dashed var(--comp-kit-line-soft)` | kit 作用域 | 输入框默认边框 |
+| `--comp-kit-border-faint` | `1.5px dashed var(--comp-kit-line-faint)` | kit 作用域 | 禁用态边框 |
+| `--comp-kit-border-danger` | `1.5px dashed var(--comp-kit-danger-line)` | kit 作用域 | 危险按钮边框 |
+
+**新增虚线档不算新色**：所有虚线色都由颜色原子 `color-mix` 派生，不新增颜色原子。
+
+## 1.19 设备页控制条输入件（device-pool）
+
+控制条的筛选下拉与名称搜索是**输入件**，不套按键皮肤；填充是一条 135° 渐变令牌，两端都由模块色派生（G2b 已登记）。规格见 [components/form-controls.md](components/form-controls.md) §1。
+
+| CSS 变量 | 值 | 声明处 | 用途 |
+|----------|-----|--------|------|
+| `--comp-device-field-fill` | `linear-gradient(135deg, color-mix(in srgb, var(--c-device) 45%, transparent), color-mix(in srgb, var(--c-device) 20%, transparent))` | T0 | 筛选下拉 / 搜索框填充（2026-11-17 需求方指定；上游客色规则的已登记偏离，**仅限这两件**） |
+
+**终点混到 `transparent` 而不是纸面色**：混透即"浓度"，控制条直接坐在纸面上，将来换底色也不会留一块死色。
+
+## 1.20 BUG 单详情错误内容卡（bug-manager）
+
+错误正文块是一张浅红渐变卡（G2b 已登记），规格见 [components/cards.md](components/cards.md) §5。
+
+| CSS 变量 | 值 | 声明处 | 用途 |
+|----------|-----|--------|------|
+| `--comp-bug-error-fill` | `linear-gradient(135deg, color-mix(in srgb, var(--color-red-69) 18%, transparent), color-mix(in srgb, var(--color-red-69) 6%, transparent))` | T0 | 「错误内容」卡填充（2026-11-17 需求方指定；浓度低于输入件，正文压在上面不抢字） |
+

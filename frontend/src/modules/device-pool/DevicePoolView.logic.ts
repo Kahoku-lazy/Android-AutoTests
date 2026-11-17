@@ -7,7 +7,6 @@ import { usePagination } from "@/shared/composables/usePagination"
 import type {
   DeviceRecord,
   DeviceFilterKey,
-  DeviceViewMode,
   DeviceKpiStats,
   DisconnectDialogState,
   NetworkDialogState,
@@ -17,8 +16,8 @@ import {
   FILTER_TABS,
   COLUMNS,
   PAGE_SIZE_OPTIONS,
-  CARD_GROUPS,
   EMPTY_TEXT,
+  SEARCH_PLACEHOLDER,
   TABLE_HEADER_HEIGHT_PX,
   TABLE_ROW_HEIGHT_PX,
   TABLE_MIN_WIDTH_PX,
@@ -48,9 +47,12 @@ export interface DevicePoolViewState {
   /** 开发调试：切换模拟设备（60 条） */
   toggleDevMock: (enabled: boolean) => Promise<void>
   // UI state
-  viewMode: Ref<DeviceViewMode>
-  switchViewMode: (mode: DeviceViewMode) => void
+  /** 状态筛选（下拉控件绑定） */
   activeFilter: Ref<DeviceFilterKey>
+  /** 名称搜索关键字：与筛选取交集 */
+  searchKey: Ref<string>
+  /** 当前是否处于「被收窄」状态（筛选非全部或搜索非空），用于空态文案 */
+  hasNarrowing: ComputedRef<boolean>
   // KPIs
   kpiStats: ComputedRef<DeviceKpiStats>
   // filtered + paginated
@@ -59,14 +61,7 @@ export interface DevicePoolViewState {
   pageSize: Ref<number>
   currentPage: Ref<number>
   totalPages: ComputedRef<number>
-  PAGE_SIZE_OPTIONS: number[]
-  setPageSize: (n: number) => void
   goPage: (p: number) => void
-  // grouped for card view
-  groupedDevices: ComputedRef<{
-    online: DeviceRecord[]
-    busy: DeviceRecord[]
-  }>
   // dialogs + actions
   disconnectDialog: Ref<DisconnectDialogState>
   networkDialog: Ref<NetworkDialogState>
@@ -87,6 +82,8 @@ export interface DevicePoolViewState {
   cancelDisconnectDialog: () => void
   // helpers
   isRowSelected: (record: DeviceRecord) => boolean
+  /** el-table row-class-name：选中行产出共享皮肤认的 `is-selected` */
+  rowClassName: (scope: { row: DeviceRecord }) => string
   displayModel: typeof displayModel
   connectionLabel: typeof connectionLabel
   deviceAddress: typeof deviceAddress
@@ -98,8 +95,8 @@ export interface DevicePoolViewState {
   FILTER_TABS: typeof FILTER_TABS
   filterTabs: ComputedRef<Array<{ key: DeviceFilterKey; label: string; count: number }>>
   COLUMNS: typeof COLUMNS
-  CARD_GROUPS: typeof CARD_GROUPS
   EMPTY_TEXT: typeof EMPTY_TEXT
+  SEARCH_PLACEHOLDER: string
   /** 表格区域最小高度（跟随显示行数：5→5 行高，10→10 行高） */
   tableMinHeightPx: ComputedRef<number>
   tableMinWidthPx: number
@@ -120,8 +117,8 @@ export function useDevicePoolView(): DevicePoolViewState {
   const actions = useDeviceActions(pool)
 
   // 4. Local UI state
-  const viewMode = ref<DeviceViewMode>("table")
   const activeFilter = ref<DeviceFilterKey>("all")
+  const searchKey = ref("")
 
   // 5. KPI computed（供筛选 Tab 数量，不再单独展示 Overview）
   const kpiStats = computed<DeviceKpiStats>(() => {
@@ -145,11 +142,31 @@ export function useDevicePoolView(): DevicePoolViewState {
     })),
   )
 
-  // 6. Filter
+  // 6. Filter：状态筛选 + 名称搜索取交集
+  /**
+   * 名称搜索匹配：品牌+型号 / 序列号 / 连接地址，任一包含即命中（不区分大小写）。
+   * 三者都是界面上可见的设备标识，序列号与地址常用于粘贴定位。
+   */
+  function matchSearch(device: DeviceRecord, keyword: string): boolean {
+    const k = keyword.trim().toLowerCase()
+    if (!k) return true
+    const fields = [displayModel(device), device.serial, deviceAddress(device)]
+    return fields.some((value) => (value || "").toLowerCase().includes(k))
+  }
+
   const filteredDevices = computed<DeviceRecord[]>(() => {
-    if (activeFilter.value === "all") return pool.devices.value
-    return pool.devices.value.filter((d) => d.status === activeFilter.value.toUpperCase())
+    const byStatus =
+      activeFilter.value === "all"
+        ? pool.devices.value
+        : pool.devices.value.filter((d) => d.status === activeFilter.value.toUpperCase())
+    if (!searchKey.value.trim()) return byStatus
+    return byStatus.filter((d) => matchSearch(d, searchKey.value))
   })
+
+  /** 筛选非「全部」或搜索非空 → 空态要说「没有匹配的设备」而不是「还没有设备」 */
+  const hasNarrowing = computed(
+    () => activeFilter.value !== "all" || searchKey.value.trim().length > 0,
+  )
 
   // 7. Pagination (shared composable, still JS)
   const {
@@ -157,22 +174,21 @@ export function useDevicePoolView(): DevicePoolViewState {
     currentPage,
     totalPages,
     pagedItems: pagedDevices,
-    setPageSize,
     goPage,
   } = usePagination(filteredDevices, {
     pageSize: DEFAULT_PAGE_SIZE,
     options: PAGE_SIZE_OPTIONS,
   })
 
-  /** 有无设备都按当前「显示行数」撑开表格高度 */
+  /** 有无设备都按每页行数撑开表格高度 */
   const tableMinHeightPx = computed(
     () => TABLE_HEADER_HEIGHT_PX + pageSize.value * TABLE_ROW_HEIGHT_PX,
   )
 
   const { tableWrapRef, onTablePointerDown } = useTableDragScroll()
 
-  // 8. Watch filter changes → reset page
-  watch([activeFilter], () => {
+  // 8. 筛选或搜索变化 → 回到第 1 页
+  watch([activeFilter, searchKey], () => {
     currentPage.value = 1
   })
   watch(filteredDevices, () => {
@@ -181,20 +197,17 @@ export function useDevicePoolView(): DevicePoolViewState {
     }
   })
 
-  // 9. Grouped for card view
-  const groupedDevices = computed(() => ({
-    online: filteredDevices.value.filter((d) => d.status === "ONLINE"),
-    busy: filteredDevices.value.filter((d) => d.status === "BUSY"),
-  }))
-
-  // 10. View mode toggle
-  function switchViewMode(mode: DeviceViewMode) {
-    viewMode.value = mode
-  }
-
-  // 11. Row selection helper
+  // 9. Row selection helper
   function isRowSelected(record: DeviceRecord): boolean {
     return record && record.serial === pool.selectedSerial.value
+  }
+
+  /**
+   * 行类名：把选中态交给共享皮肤（唯一类名 `is-selected`），
+   * 行底色由 workbench-theme 的 `tr.is-selected > td` 规则承担。
+   */
+  function rowClassName(scope: { row: DeviceRecord }): string {
+    return isRowSelected(scope.row) ? "is-selected" : ""
   }
 
   // 12. Lifecycle
@@ -215,9 +228,9 @@ export function useDevicePoolView(): DevicePoolViewState {
     devMockEnabled: pool.devMockEnabled,
     toggleDevMock: pool.toggleDevMock,
     // UI state
-    viewMode,
-    switchViewMode,
     activeFilter,
+    searchKey,
+    hasNarrowing,
     // KPIs
     kpiStats,
     // pagination
@@ -226,15 +239,11 @@ export function useDevicePoolView(): DevicePoolViewState {
     pageSize,
     currentPage,
     totalPages,
-    PAGE_SIZE_OPTIONS,
-    setPageSize,
     goPage,
     tableMinHeightPx,
     tableMinWidthPx: TABLE_MIN_WIDTH_PX,
     tableWrapRef,
     onTablePointerDown,
-    // grouped
-    groupedDevices,
     // dialogs + actions
     disconnectDialog: actions.disconnectDialog,
     networkDialog: actions.networkDialog,
@@ -251,6 +260,7 @@ export function useDevicePoolView(): DevicePoolViewState {
     cancelDisconnectDialog: actions.cancelDisconnectDialog,
     // helpers
     isRowSelected,
+    rowClassName,
     displayModel,
     connectionLabel,
     deviceAddress,
@@ -262,7 +272,7 @@ export function useDevicePoolView(): DevicePoolViewState {
     FILTER_TABS,
     filterTabs,
     COLUMNS,
-    CARD_GROUPS,
     EMPTY_TEXT,
+    SEARCH_PLACEHOLDER,
   }
 }

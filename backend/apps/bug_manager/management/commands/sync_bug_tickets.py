@@ -18,9 +18,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         """Run the backfill and print counters."""
         result = {"scanned": 0, "created": 0, "updated": 0, "skipped": 0}
-        tasks = Task.objects.filter(
-            status__in=("failed", "interrupted", "completed")
-        ).select_related("agent")
+        tasks = Task.objects.filter(status__in=("failed", "interrupted", "completed"))
         for task in tasks:
             result["scanned"] += 1
             try:

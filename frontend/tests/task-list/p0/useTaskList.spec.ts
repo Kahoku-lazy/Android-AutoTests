@@ -2,14 +2,14 @@
  * [P0] 必测 — 任务列表加载、按状态分组、删除与清空
  * 目录：tests/ai-assistant/p0/
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { flushPromises } from '@vue/test-utils'
-import * as taskApi from '@/modules/task-list/api/tasks'
-import { useTaskList } from '@/modules/task-list/composables/useTaskList'
-import { mountComposable } from '../../helpers/mountComposable'
-import type { TaskRecord } from '@/shared/types/ai'
+import { beforeEach, describe, expect, it, vi } from "vitest"
+import { flushPromises } from "@vue/test-utils"
+import * as taskApi from "@/modules/task-list/api/tasks"
+import { useTaskList } from "@/modules/task-list/composables/useTaskList"
+import { mountComposable } from "../../helpers/mountComposable"
+import type { TaskRecord } from "@/shared/types/ai"
 
-vi.mock('@/modules/task-list/api/tasks', () => ({
+vi.mock("@/modules/task-list/api/tasks", () => ({
   listTasks: vi.fn(),
   submitTask: vi.fn(),
   listDevices: vi.fn(),
@@ -24,11 +24,11 @@ function makeTask(id: number): TaskRecord {
     id,
     title: `task-${id}`,
     goal: `goal-${id}`,
-    status: 'completed',
+    status: "completed",
   }
 }
 
-describe('[P0] useTaskList', () => {
+describe("[P0] useTaskList", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(taskApi.getTaskStats).mockResolvedValue({
@@ -47,7 +47,7 @@ describe('[P0] useTaskList', () => {
     })
   })
 
-  it('load 成功后默认「全部任务」', async () => {
+  it("load 成功后默认「全部任务」", async () => {
     vi.mocked(taskApi.listTasks).mockResolvedValue({
       status: true,
       data: { tasks: [makeTask(1), makeTask(2), makeTask(3)] },
@@ -57,13 +57,13 @@ describe('[P0] useTaskList', () => {
     await flushPromises()
 
     expect(result.tasks.value).toHaveLength(3)
-    expect(result.activeFilter.value).toBe('all')
+    expect(result.activeFilter.value).toBe("all")
     expect(result.filteredItems.value).toHaveLength(3)
 
     wrapper.unmount()
   })
 
-  it('列表为空时 emptyCopy 引导新建', async () => {
+  it("列表为空时 emptyCopy 引导新建", async () => {
     vi.mocked(taskApi.listTasks).mockResolvedValue({
       status: true,
       data: { tasks: [] },
@@ -73,21 +73,21 @@ describe('[P0] useTaskList', () => {
     await flushPromises()
 
     expect(result.filteredItems.value).toHaveLength(0)
-    expect(result.emptyCopy.value.text).toBe('还没有任务')
-    expect(result.emptyCopy.value.hint).toContain('新建任务')
+    expect(result.emptyCopy.value.text).toBe("还没有工作流任务")
+    expect(result.emptyCopy.value.hint).not.toContain("新建任务")
 
     wrapper.unmount()
   })
 
-  it('filteredItems 按状态分组合并 completed/success，空组不出现', async () => {
+  it("filteredItems 按状态分组合并 completed/success，空组不出现", async () => {
     vi.mocked(taskApi.listTasks).mockResolvedValue({
       status: true,
       data: {
         tasks: [
-          { ...makeTask(1), status: 'pending' },
-          { ...makeTask(2), status: 'completed' },
-          { ...makeTask(3), status: 'success' },
-          { ...makeTask(4), status: 'failed' },
+          { ...makeTask(1), status: "pending" },
+          { ...makeTask(2), status: "completed" },
+          { ...makeTask(3), status: "success" },
+          { ...makeTask(4), status: "failed" },
         ],
       },
     })
@@ -96,15 +96,36 @@ describe('[P0] useTaskList', () => {
     await flushPromises()
 
     expect(result.groupedByStatus.value.map((g: { key: string }) => g.key)).toEqual([
-      'pending', 'success', 'failed',
+      "pending",
+      "success",
+      "failed",
     ])
-    const successGroup = result.groupedByStatus.value.find((g: { key: string }) => g.key === 'success')
+    const successGroup = result.groupedByStatus.value.find(
+      (g: { key: string }) => g.key === "success",
+    )
     expect(successGroup?.items).toHaveLength(2)
 
     wrapper.unmount()
   })
 
-  it('remove 成功后从列表去掉该任务', async () => {
+  it("只剩已中断时不再按运行态轮询", async () => {
+    vi.useFakeTimers()
+    vi.mocked(taskApi.listTasks).mockResolvedValue({
+      status: true,
+      data: { tasks: [{ ...makeTask(1), status: "interrupted" }] },
+    })
+
+    const { wrapper } = await mountComposable(() => useTaskList())
+    await flushPromises()
+    const calls = vi.mocked(taskApi.listTasks).mock.calls.length
+    await vi.advanceTimersByTimeAsync(20_000)
+
+    expect(vi.mocked(taskApi.listTasks).mock.calls.length).toBe(calls)
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
+
+  it("remove 成功后从列表去掉该任务", async () => {
     vi.mocked(taskApi.listTasks).mockResolvedValue({
       status: true,
       data: { tasks: [makeTask(1), makeTask(2)] },
@@ -123,7 +144,7 @@ describe('[P0] useTaskList', () => {
     wrapper.unmount()
   })
 
-  it('clearAll 成功后列表为空', async () => {
+  it("clearAll 成功后列表为空", async () => {
     vi.mocked(taskApi.listTasks).mockResolvedValue({
       status: true,
       data: { tasks: [makeTask(1), makeTask(2)] },
@@ -142,16 +163,25 @@ describe('[P0] useTaskList', () => {
     wrapper.unmount()
   })
 
-  it('rerun 失败任务：调用 API 并刷新列表；非失败不调用', async () => {
-    const failed = { ...makeTask(1), status: 'failed', assistant_name: 'UI 视觉自动化' }
-    const ok = { ...makeTask(2), status: 'completed', assistant_name: 'UI 视觉自动化' }
+  it("rerun 失败任务：调用 API 并刷新列表；非失败不调用", async () => {
+    const failed = { ...makeTask(1), status: "failed", assistant_name: "UI 视觉自动化" }
+    const ok = { ...makeTask(2), status: "completed", assistant_name: "UI 视觉自动化" }
     vi.mocked(taskApi.listTasks)
       .mockResolvedValueOnce({ status: true, data: { tasks: [failed, ok] } })
       .mockResolvedValueOnce({
         status: true,
-        data: { tasks: [failed, ok, { ...makeTask(3), status: 'pending', assistant_name: 'UI 视觉自动化' }] },
+        data: {
+          tasks: [
+            failed,
+            ok,
+            { ...makeTask(3), status: "pending", assistant_name: "UI 视觉自动化" },
+          ],
+        },
       })
-    vi.mocked(taskApi.rerunTask).mockResolvedValue({ status: true, data: { id: 3, status: 'pending' } })
+    vi.mocked(taskApi.rerunTask).mockResolvedValue({
+      status: true,
+      data: { id: 3, status: "pending" },
+    })
 
     const { result, wrapper } = await mountComposable(() => useTaskList())
     await flushPromises()
@@ -164,16 +194,18 @@ describe('[P0] useTaskList', () => {
     await flushPromises()
     expect(taskApi.rerunTask).toHaveBeenCalledWith(1)
     expect(result.tasks.value).toHaveLength(3)
-    expect(result.tasks.value.every((t: TaskRecord) => t.assistant_name === 'UI 视觉自动化')).toBe(true)
+    expect(result.tasks.value.every((t: TaskRecord) => t.assistant_name === "UI 视觉自动化")).toBe(
+      true,
+    )
 
     wrapper.unmount()
   })
 
-  it('轮询：上一轮未返回时跳过本轮，间隔 10 秒', async () => {
+  it("轮询：上一轮未返回时跳过本轮，间隔 10 秒", async () => {
     vi.useFakeTimers()
     type ListResult = Awaited<ReturnType<typeof taskApi.listTasks>>
     let release: ((value: ListResult) => void) | null = null
-    const running = { ...makeTask(1), status: 'running' }
+    const running = { ...makeTask(1), status: "running" }
     const pending = new Promise<ListResult>((resolve) => {
       release = resolve
     })
@@ -183,7 +215,7 @@ describe('[P0] useTaskList', () => {
 
     const { result, wrapper } = await mountComposable(() => useTaskList())
     await flushPromises()
-    expect(result.tasks.value[0].status).toBe('running')
+    expect(result.tasks.value[0].status).toBe("running")
 
     vi.advanceTimersByTime(10000)
     await flushPromises()
@@ -203,9 +235,9 @@ describe('[P0] useTaskList', () => {
     vi.useRealTimers()
   })
 
-  it('离开清单（keep-alive 失活）后不再轮询，回到清单静默补拉一次', async () => {
+  it("离开清单（keep-alive 失活）后不再轮询，回到清单静默补拉一次", async () => {
     vi.useFakeTimers()
-    const running = { ...makeTask(1), status: 'running' }
+    const running = { ...makeTask(1), status: "running" }
     vi.mocked(taskApi.listTasks).mockResolvedValue({
       status: true,
       data: { tasks: [running] },

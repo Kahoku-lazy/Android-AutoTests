@@ -1,4 +1,8 @@
-"""可配置的模型价目表与费用计算。"""
+"""可配置的模型价目表与费用计算。
+
+公式只有一条：未命中、缓存、输出、字符分别乘单价，再乘倍率，再折成人民币。
+单价、倍率、门槛、汇率与模型映射都在 rates.py，更换它们不改本公式。
+"""
 
 from __future__ import annotations
 
@@ -10,7 +14,9 @@ from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Any
 
-from engines.agents.messaging.billing import DeepSeekBilling
+from engines.backend_bridge.model_billing.billing import DeepSeekBilling
+
+from .rates import lookup_rate
 
 _PRICING_PATH = Path(
     os.environ.get(
@@ -34,13 +40,20 @@ _PRICING = _load()
 
 
 def normalize_provider(provider: str, model: str = "") -> str:
-    """把厂商归一为 deepseek / dashscope。"""
+    """把厂商归一为 deepseek / dashscope / govee。厂商只用于归类，不用于选价。"""
     value = (provider or "").strip().lower()
-    if value in ("deepseek", "dashscope"):
+    if value in ("deepseek", "dashscope", "govee"):
         return value
     if value in ("omni", "qwen", "sambert"):
         return "dashscope"
-    return "dashscope" if "qwen" in model.lower() or "sambert" in model.lower() else "deepseek"
+    name = (model or "").lower()
+    if name.startswith("grok"):
+        return "govee"
+    if "qwen" in name or "sambert" in name:
+        return "dashscope"
+    if name.startswith("deepseek"):
+        return "deepseek"
+    return value or "other"
 
 
 def category_of(model: str, provider: str = "") -> str:
@@ -85,28 +98,20 @@ def price_usage(
         含 category/provider/cost_* /pricing_status/pricing_snapshot 的字典。
     """
     provider = normalize_provider(provider, model)
-    config = (_PRICING.get("models") or {}).get(model)
-    if provider == "deepseek":
-        billing = DeepSeekBilling()
-        input_cost, output_cost, cache_cost = billing.cost(
+    rate = lookup_rate(model)
+    if rate is not None:
+        return _price_from_rate(
+            provider,
             model,
-            input_tokens,
-            output_tokens,
-            cache_input_tokens,
-            occurred_at,
+            rate,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cache_input_tokens=cache_input_tokens,
+            characters=characters,
+            occurred_at=occurred_at,
         )
-        snapshot = billing.snapshot(model, occurred_at)
-        return {
-            "provider": provider,
-            "category": "LLM",
-            "cost_input": input_cost,
-            "cost_cache": cache_cost,
-            "cost_output": output_cost,
-            "cost_total": input_cost + cache_cost + output_cost,
-            "pricing_status": "priced",
-            "pricing_snapshot": snapshot,
-        }
 
+    config = (_PRICING.get("models") or {}).get(model)
     if not config:
         return {
             "provider": provider,
@@ -149,6 +154,65 @@ def price_usage(
             **config,
         },
     }
+
+
+def _price_from_rate(
+    provider: str,
+    model: str,
+    rate: dict,
+    *,
+    input_tokens: int,
+    output_tokens: int,
+    cache_input_tokens: int,
+    characters: int,
+    occurred_at: datetime | None,
+) -> dict[str, Any]:
+    """用一条公式把基数折成人民币。没有基数的调用不得进入本函数。"""
+    incoming = max(int(input_tokens or 0), 0)
+    outgoing = max(int(output_tokens or 0), 0)
+    hit = min(max(int(cache_input_tokens or 0), 0), incoming)
+    miss = incoming - hit
+    chars = max(int(characters or 0), 0)
+    threshold = int(rate.get("long_context_threshold") or 0)
+    long_context = threshold > 0 and incoming >= threshold
+    input_price = rate["long_input"] if long_context else rate["input"]
+    cache_price = rate["long_cache"] if long_context else rate["cache"]
+    output_price = rate["long_output"] if long_context else rate["output"]
+    peak = _is_peak(occurred_at) if Decimal(rate["peak_multiplier"]) != 1 else False
+    multiplier = Decimal(rate["peak_multiplier"]) if peak else Decimal(1)
+    fx = Decimal(rate["fx_to_cny"])
+    input_cost = Decimal(miss) * Decimal(input_price) / _MILLION * multiplier * fx
+    cache_cost = Decimal(hit) * Decimal(cache_price) / _MILLION * multiplier * fx
+    output_cost = Decimal(outgoing) * Decimal(output_price) / _MILLION * multiplier * fx
+    char_cost = Decimal(chars) * Decimal(rate["characters"]) / Decimal(10_000) * multiplier * fx
+    input_cost += char_cost
+    return {
+        "provider": provider,
+        "category": rate["category"],
+        "cost_input": _q(input_cost),
+        "cost_cache": _q(cache_cost),
+        "cost_output": _q(output_cost),
+        "cost_total": _q(input_cost + cache_cost + output_cost),
+        "pricing_status": "priced",
+        "pricing_snapshot": {
+            "model": str(model or "").strip().lower(),
+            "alias_of": rate.get("alias_of") or "",
+            "currency": rate["currency"],
+            "fx_to_cny": str(fx),
+            "multiplier": str(multiplier),
+            "peak": peak,
+            "long_context": long_context,
+            "input_price": str(input_price),
+            "cache_price": str(cache_price),
+            "output_price": str(output_price),
+            "basis": rate["basis"],
+        },
+    }
+
+
+def _is_peak(occurred_at: datetime | None) -> bool:
+    """复用 DeepSeek 的北京时间高峰规则。无时刻按空闲。"""
+    return DeepSeekBilling._is_peak_time(occurred_at)
 
 
 def _cost_amount(

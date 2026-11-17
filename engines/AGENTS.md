@@ -23,7 +23,7 @@
 - **禁止**恢复 `engines/agents/` 为包：平台角色一律经 `backend_bridge` 装配，原语一律来自 `ae_harness`。
 - **ae_harness 角色**：只经 `agents/creator.create_agent` 创建；**禁止**在别处直接构造 `Agent(...)`，禁止新增第二种创建入口。
 - **ae_harness 工具**：实现放 `tools/<域>/`，由该域门面函数分配（设备域 `build_adb_tools()`、只读 `build_adb_readonly_tools()`）；**禁止**业务代码直接 `import` 工具实现绑到角色。
-- **提示词**：正文只放 `ae_harness/agents/config/prompts/*.md` 并经 `agents/config.py` 读取；禁止旁路硬编码。
+- **提示词**：平台角色的系统提示词由调用方传入正文，来源是运营配置库，不读本地 md。`ae_harness` 不得再维护角色提示词文件，也不得把整段提示词硬编码进装配代码。
 - **禁止** `device/`、`vision/`、`uart_log/` 反向依赖 `backend_bridge` 或 `ae_harness`。
 - **禁止**在 engines 内随意新增自定义异常类（确有需要须先在对应子 AGENTS 立项）。
 - **禁止**无关业务塞进同一文件；避免强依赖扩散与循环导入（细则见规范原文 §3 / §4）。

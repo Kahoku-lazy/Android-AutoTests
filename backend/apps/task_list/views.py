@@ -1,5 +1,8 @@
 """task-list views — task submit/list/detail/rerun/cancel/delete/clear."""
 
+import json
+
+from django.db import transaction
 from django.http import HttpResponse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
@@ -8,19 +11,100 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from backend.apps.ai_assistant import api as agent_api
-from backend.apps.ai_assistant.models import AIAgent
 from backend.apps.task_list import api
 from backend.apps.task_list.models import Task
 from backend.apps.task_list.serializers import TaskSubmitInputSerializer
 from backend.models.constants import TaskKind, TaskStatus
 
 
+def _case_ids(request) -> list[str]:
+    """读取平台用例编号。格式不对或为空时拒绝，不创建任务。"""
+    raw_ids = request.data.get("case_ids") or "[]"
+    try:
+        case_ids = json.loads(raw_ids) if isinstance(raw_ids, str) else list(raw_ids)
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise ValidationError("用例编号必须是 JSON 数组") from exc
+    if not isinstance(case_ids, list) or not case_ids:
+        raise ValidationError("请至少选择 1 条自动化用例")
+    return [str(item) for item in case_ids]
+
+
+def _platform_milestone(case_ids: list[str], user_id: str):
+    """把所选自动化用例编译成里程碑附件，并带回提交当时的行身份。不写入用例表。"""
+    from backend.apps.case_manager.api import automation_case_identity, compile_automation_cases
+    from backend.apps.task_list.attachments import PreparedUpload, validate_milestone_yaml
+
+    try:
+        rows = automation_case_identity(case_ids=case_ids, user_id=str(user_id or ""))
+        text = compile_automation_cases(case_ids=case_ids, user_id=str(user_id or ""))
+    except (LookupError, ValueError) as exc:
+        raise ValidationError(str(exc)) from exc
+    validate_milestone_yaml(text)
+    content = text.encode("utf-8")
+    prepared = PreparedUpload(
+        kind="config", filename="platform-cases.yaml", body=text, content=content
+    )
+    return prepared, {"source": "platform", "rows": rows}
+
+
+def _submit_assistant_sop(
+    request, title: str, goal: str, device_serial: str, device_label: str, user_id
+):
+    """提交名片绑定的 SOP。设备必填；配置必须是里程碑格式。"""
+    from backend.apps.ai_assistant import api as assistant_api
+    from backend.apps.task_list.attachments import (
+        AttachmentError,
+        collect_milestone_file,
+        store_flat_upload,
+    )
+
+    raw_id = str(request.data.get("workflow_id") or "").strip()
+    try:
+        workflow_id = int(raw_id)
+        workflow = assistant_api.get_sop_workflow(workflow_id)
+    except (ValueError, assistant_api.AISopWorkflow.DoesNotExist) as exc:
+        raise ValidationError("工作流不存在") from exc
+    if not device_serial:
+        raise ValidationError("请选择设备")
+    source = str(request.data.get("case_source") or "yaml")
+    try:
+        if source == "platform":
+            prepared, identity = _platform_milestone(_case_ids(request), str(user_id or ""))
+        else:
+            prepared = collect_milestone_file(request.FILES.getlist("config"))
+            identity = {"source": "milestone", "rows": []}
+    except AttachmentError as exc:
+        raise ValidationError(str(exc)) from exc
+    with transaction.atomic():
+        task = api.create_task(
+            title=title,
+            goal=goal,
+            device_serial=device_serial,
+            device_label=device_label,
+            case_identity=identity,
+            task_kind=TaskKind.ASSISTANT_SOP,
+            created_by=str(user_id or ""),
+        )
+        task.result = api.dump_task_run_payload({"workflow_id": workflow.id})
+        task.save(update_fields=["result"])
+        api.add_task_attachment(
+            task,
+            kind=prepared.kind,
+            filename=prepared.filename,
+            body=prepared.body,
+            sort_order=0,
+            stored_path=store_flat_upload(prepared.filename, prepared.content),
+        )
+    api.dispatch_device(device_serial)
+    task.refresh_from_db()
+    return Response({"id": task.id, "status": task.status, "result": ""})
+
+
 def _visible_task(request, task_id: int) -> Task | None:
-    """按当前用户可见的智能体取任务；不可见或不存在返回 None。"""
-    user_id = getattr(request, "user_id", None)
-    agents = agent_api.filter_agents_for_user(AIAgent.objects.all(), user_id)
-    return Task.objects.select_related("agent").filter(id=task_id, agent__in=agents).first()
+    """登录用户按 id 取任务；未登录返回 None。"""
+    if not getattr(request, "user_id", None):
+        return None
+    return Task.objects.filter(id=task_id).first()
 
 
 class TaskSubmitAPIView(APIView):
@@ -33,82 +117,13 @@ class TaskSubmitAPIView(APIView):
         data = serializer.validated_data
 
         user_id = getattr(request, "user_id", None)
-        agent = agent_api.get_agent(data["agent_id"])
-        if agent is None:
-            raise ValidationError("智能体不存在或不可用")
-
         title = data["title"]
         goal = (data.get("goal") or "").strip()
         device_serial = (data.get("device_serial") or "").strip()
         device_label = (data.get("device_label") or "").strip()
-        case_title = (data.get("case_title") or "").strip()
-        task_kind = str(getattr(agent, "task_kind", "") or TaskKind.DEVICE_CONTROL)
-
-        from backend.apps.task_list.attachments import (
-            AttachmentError,
-            collect_document_files,
-            collect_task_files,
-            store_flat_upload,
-        )
-
-        if task_kind == TaskKind.CASE_AUTHORING:
-            try:
-                prepared = collect_document_files(request.FILES.getlist("documents"))
-            except AttachmentError as exc:
-                raise ValidationError(str(exc)) from exc
-            task = api.create_task(
-                agent,
-                title=title,
-                goal=goal,
-                task_kind=TaskKind.CASE_AUTHORING,
-                created_by=str(user_id or ""),
-            )
-            for index, item in enumerate(prepared):
-                api.add_task_attachment(
-                    task,
-                    kind=item.kind,
-                    filename=item.filename,
-                    body=item.body,
-                    sort_order=index,
-                    stored_path=store_flat_upload(item.filename, item.content),
-                )
-            api.dispatch_case_authoring(task)
-            task.refresh_from_db()
-            return Response({"id": task.id, "status": task.status, "result": ""})
-
-        if not device_serial:
-            raise ValidationError("请选择设备")
-        try:
-            prepared = collect_task_files(
-                request.FILES.getlist("config"),
-                request.FILES.getlist("documents"),
-            )
-        except AttachmentError as exc:
-            raise ValidationError(str(exc)) from exc
-
-        task = api.create_task(
-            agent,
-            title=title,
-            goal=goal,
-            device_serial=device_serial,
-            device_label=device_label,
-            case_title=case_title,
-            task_kind=TaskKind.DEVICE_CONTROL,
-            created_by=str(user_id or ""),
-        )
-        for index, item in enumerate(prepared):
-            stored_path = store_flat_upload(item.filename, item.content)
-            api.add_task_attachment(
-                task,
-                kind=item.kind,
-                filename=item.filename,
-                body=item.body,
-                sort_order=index,
-                stored_path=stored_path,
-            )
-        api.dispatch_device(device_serial)
-        task.refresh_from_db()
-        return Response({"id": task.id, "status": task.status, "result": ""})
+        if not str(request.data.get("workflow_id") or "").strip():
+            raise ValidationError("请从工作流提交任务")
+        return _submit_assistant_sop(request, title, goal, device_serial, device_label, user_id)
 
 
 class AgentTaskListAPIView(APIView):
@@ -116,24 +131,24 @@ class AgentTaskListAPIView(APIView):
 
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
-        user_id = getattr(request, "user_id", None)
-        agents = agent_api.filter_agents_for_user(AIAgent.objects.all(), user_id)
-        tasks = list(
-            Task.objects.filter(agent__in=agents)
-            .only(*api.TASK_LIST_FIELDS)
+        if not getattr(request, "user_id", None):
+            return Response({"tasks": [], "workflows": []})
+        workflow_id = str(request.query_params.get("workflow_id") or "").strip()
+        status_name = str(request.query_params.get("status") or "").strip()
+        tasks = Task.objects.filter(task_kind=TaskKind.ASSISTANT_SOP)
+        if workflow_id:
+            tasks = tasks.filter(result__contains=f'"workflow_id": {workflow_id}')
+        if status_name:
+            tasks = tasks.filter(status=status_name)
+        rows = list(
+            tasks.only(*api.TASK_LIST_FIELDS)
             .prefetch_related("file_attachments")
             .order_by("-id")[:100]
         )
-        assistant_names = api.assistant_names_by_agent(task.agent_id for task in tasks)
         return Response(
             {
-                "tasks": [
-                    api.serialize_agent_task_row(
-                        task,
-                        assistant_name=assistant_names.get(task.agent_id),
-                    )
-                    for task in tasks
-                ],
+                "tasks": [api.serialize_agent_task_row(task) for task in rows],
+                "workflows": api.workflow_filter_options(),
             },
         )
 
@@ -143,11 +158,10 @@ class AgentTaskStatsAPIView(APIView):
 
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
-        user_id = getattr(request, "user_id", None)
-        agents = list(agent_api.filter_agents_for_user(AIAgent.objects.all(), user_id))
-        tasks = Task.objects.filter(agent__in=agents)
-        data = api.task_stats(tasks)
-        data["agents"] = api.task_stats_by_agent(tasks, agents)
+        if not getattr(request, "user_id", None):
+            return Response({"total": 0, "agents": []})
+        data = api.task_stats(Task.objects.filter(task_kind=TaskKind.ASSISTANT_SOP))
+        data["agents"] = []
         return Response(data)
 
 
@@ -202,11 +216,9 @@ class AgentTaskClearAPIView(APIView):
 
     @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def post(self, request):
-        user_id = getattr(request, "user_id", None)
-        agents = agent_api.filter_agents_for_user(AIAgent.objects.all(), user_id)
-        deleted = 0
-        for agent in agents:
-            deleted += api.clear_agent_tasks(agent)
+        if not getattr(request, "user_id", None):
+            return Response({"deleted": 0})
+        deleted, _ = Task.objects.all().delete()
         return Response({"deleted": deleted})
 
 
@@ -263,7 +275,13 @@ class TaskDrainAPIView(APIView):
     def get(self, request):
         """只读：返回 running 数与当前排空标志。"""
         self._require_loopback(request)
-        return Response({"running": api.count_running_tasks(), "draining": api.is_draining()})
+        return Response(
+            {
+                "running": api.count_running_tasks(),
+                "running_ids": api.running_task_ids(),
+                "draining": api.is_draining(),
+            }
+        )
 
     @extend_schema(
         tags=["tasks"],
@@ -275,4 +293,10 @@ class TaskDrainAPIView(APIView):
         """置位排空标志；此后不再派发新任务。"""
         self._require_loopback(request)
         api.begin_drain()
-        return Response({"running": api.count_running_tasks(), "draining": api.is_draining()})
+        return Response(
+            {
+                "running": api.count_running_tasks(),
+                "running_ids": api.running_task_ids(),
+                "draining": api.is_draining(),
+            }
+        )

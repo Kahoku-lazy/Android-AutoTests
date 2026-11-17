@@ -37,7 +37,11 @@ __all__ = ["UiRunResult", "run_ui_task"]
 async def run_ui_task(
     task: str,
     *,
-    model_short: str | None = None,
+    system_prompt: str,
+    provider: str,
+    api_key_env: str,
+    model_name: str,
+    base_url: str = "",
     report_root: Path | None = None,
     controls: list | None = None,
 ) -> UiRunResult:
@@ -48,7 +52,11 @@ async def run_ui_task(
 
     Args:
         task: 自然语言任务描述。
-        model_short: 模型短名；不传则用平台角色的默认值。
+        system_prompt: 系统提示词正文，由平台运营配置传入。
+        provider: 厂商名，由平台运营配置传入。
+        api_key_env: 密钥环境变量名，由平台运营配置传入。
+        model_name: 正式模型名，由平台运营配置传入。
+        base_url: 基础地址；空串时用厂商默认。
         report_root: 报告根目录；不传则用配置里的平台报告根。
         controls: 额外的中间件（重试 / 预算 / 取消）；不传则只挂观测。
 
@@ -56,16 +64,31 @@ async def run_ui_task(
         本次运行的产物路径与用量汇总。
 
     Raises:
-        ValueError: 模型短名不存在或密钥没配。
-        FileNotFoundError: 提示词文件不存在。
+        ValueError: 厂商与密钥名不匹配，密钥没配，或系统提示词为空。
         OSError: 报告目录无法创建或写入。
     """
-    session = await open_session("", model_short=model_short, controls=controls)
+    session = await open_session(
+        "",
+        system_prompt=system_prompt,
+        provider=provider,
+        api_key_env=api_key_env,
+        model_name=model_name,
+        base_url=base_url,
+        controls=controls,
+    )
     return await session.run_turn(task, report_root=report_root)
 
 
 if __name__ == "__main__":
     import asyncio
 
-    result = asyncio.run(run_ui_task("只回复 OK 两个字母，不要调用任何工具。"))
+    result = asyncio.run(
+        run_ui_task(
+            "只回复 OK 两个字母，不要调用任何工具。",
+            system_prompt="你是 UI 执行者。",
+            provider="govee",
+            api_key_env="GOVEE_API_KEY",
+            model_name="deepseek-flash",
+        )
+    )
     print(result.report_path)  # noqa: T201 - 模块自测入口

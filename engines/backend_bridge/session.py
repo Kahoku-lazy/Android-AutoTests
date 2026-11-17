@@ -156,7 +156,11 @@ class UiExecutorSession:
 async def open_session(
     serial: str,
     *,
-    model_short: str | None = None,
+    system_prompt: str,
+    provider: str,
+    api_key_env: str,
+    model_name: str,
+    base_url: str = "",
     session_id: str = "",
     controls: list | None = None,
 ) -> UiExecutorSession:
@@ -165,7 +169,11 @@ async def open_session(
 
     Args:
         serial: 当前设备序列号；可为空，表示沿用工具默认设备。
-        model_short: 模型短名；不传则用平台角色默认值。
+        system_prompt: 系统提示词正文，由平台运营配置传入。
+        provider: 厂商名，由平台运营配置传入。
+        api_key_env: 密钥环境变量名，由平台运营配置传入。
+        model_name: 正式模型名，由平台运营配置传入。
+        base_url: 基础地址；空串时用厂商默认。
         session_id: 前端本次对话的连接键。
         controls: 额外的中间件（重试 / 预算 / 取消）；不传则只挂观测。
 
@@ -173,10 +181,16 @@ async def open_session(
         已装配好角色的会话。
 
     Raises:
-        ValueError: 模型短名不存在或密钥没配。
-        FileNotFoundError: 提示词文件不存在。
+        ValueError: 厂商与密钥名不匹配，密钥没配，或系统提示词为空。
     """
-    bundle, observer = await build_ui_executor(model_short=model_short, controls=controls)
+    bundle, observer = await build_ui_executor(
+        system_prompt=system_prompt,
+        provider=provider,
+        api_key_env=api_key_env,
+        model_name=model_name,
+        base_url=base_url,
+        controls=controls,
+    )
     return UiExecutorSession(serial.strip(), bundle, observer, session_id=session_id)
 
 
@@ -184,7 +198,11 @@ async def session_for(
     session_id: str,
     serial: str,
     *,
-    model_short: str | None = None,
+    system_prompt: str,
+    provider: str,
+    api_key_env: str,
+    model_name: str,
+    base_url: str = "",
     controls: list | None = None,
 ) -> UiExecutorSession:
     """
@@ -193,13 +211,17 @@ async def session_for(
     Args:
         session_id: 前端本次对话的连接键。
         serial: 当前设备序列号。
-        model_short: 模型短名；仅在新建时生效。
+        system_prompt: 系统提示词正文；仅在新建时生效。
+        provider: 厂商名；仅在新建时生效。
+        api_key_env: 密钥环境变量名；仅在新建时生效。
+        model_name: 正式模型名；仅在新建时生效。
+        base_url: 基础地址；仅在新建时生效。
 
     Returns:
         该连接上的同一个会话。
 
     Raises:
-        ValueError: 连接键为空。
+        ValueError: 连接键为空，或新建时系统提示词为空。
     """
     key = session_id.strip()
     if not key:
@@ -207,7 +229,14 @@ async def session_for(
     current = _SESSIONS.get(key)
     if current is None:
         current = await open_session(
-            serial, model_short=model_short, session_id=key, controls=controls
+            serial,
+            system_prompt=system_prompt,
+            provider=provider,
+            api_key_env=api_key_env,
+            model_name=model_name,
+            base_url=base_url,
+            session_id=key,
+            controls=controls,
         )
         _SESSIONS[key] = current
         return current

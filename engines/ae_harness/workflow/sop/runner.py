@@ -58,12 +58,14 @@ class StepOutcome:
         passed: 是否通过。
         attempts: 实际尝试次数。
         message: 最后一次验收的说明；通过时是依据，不通过时是缺什么。
+        expected: 这一步必须达成的结果；步骤定义没有时为空串。
     """
 
     subject: str
     passed: bool
     attempts: int
     message: str = ""
+    expected: str = ""
 
 
 @dataclass
@@ -172,6 +174,7 @@ async def run_sop(
     renderer: HtmlReportRenderer | None = None,
     api_key_env: str = "",
     role_api_keys: dict[str, str] | None = None,
+    role_models: dict[str, str] | None = None,
     observations: list | None = None,
 ) -> SopResult:
     """
@@ -188,6 +191,7 @@ async def run_sop(
         renderer: 报告渲染器；不传则用默认配置。
         api_key_env: 兜底密钥标签；角色没登记绑定时用它。
         role_api_keys: 角色名到密钥环境变量名的绑定；密钥绑在角色上，两个角色各用一把时传它。
+        role_models: 角色名到模型名的绑定；不传时逐次用量的模型名为空串。
         observations: 观测中间件的记录队列；记录器按到达顺序取出并落盘。
 
     Returns:
@@ -202,6 +206,7 @@ async def run_sop(
         role,
         api_key_env=api_key_env,
         role_api_keys=role_api_keys,
+        role_models=role_models,
         observations=observations,
     )
     recorder.begin(
@@ -231,6 +236,7 @@ async def run_sop(
                 passed=bool(last and last.passed),
                 attempts=len(verdicts),
                 message=(last.message if last else ""),
+                expected=step.description,
             )
         )
 

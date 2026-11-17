@@ -38,6 +38,7 @@ class TokenUsage:
 
     缓存命中 token 是输入 token 的子集，汇总时不得与输入相加；
     缓存写入 token 单独统计，不进入输入、输出或缓存命中任一项。
+    模型名是追加字段：旧记录没有时读出来是空串。
 
     Attributes:
         api_key_env: 本次使用的密钥所在的环境变量名；只有名字，没有值。
@@ -48,6 +49,7 @@ class TokenUsage:
         output_tokens: 输出 token。
         cache_input_tokens: 缓存命中 token，是输入 token 的子集。
         cache_creation_input_tokens: 缓存写入 token，不进入其它三项。
+        model: 本次调用所属角色的模型名；旧记录没有该字段时为空串。
     """
 
     api_key_env: str
@@ -58,6 +60,7 @@ class TokenUsage:
     output_tokens: int
     cache_input_tokens: int
     cache_creation_input_tokens: int
+    model: str = ""
 
     def as_dict(self) -> dict[str, object]:
         """
@@ -68,6 +71,7 @@ class TokenUsage:
         """
         return {
             "api_key_env": self.api_key_env,
+            "model": self.model,
             "round": self.round_index,
             "started_at": self.started_at,
             "ended_at": self.ended_at,

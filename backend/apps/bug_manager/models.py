@@ -34,7 +34,12 @@ class BugTicket(models.Model):
     # Stable idempotency key within a task/category: "task", "import", or "case:<hash>".
     source_ref = models.CharField(max_length=64, default="task")
     title = models.CharField(max_length=500)
+    # 登记时从任务抄来的用例文案与行。任务删除后仍可读；空表示登记时没有身份。
+    case_label = models.CharField(max_length=500, default="", blank=True)
+    case_rows = models.JSONField(default=list, blank=True)
     detail = models.TextField(default="", blank=True)
+    # 失败步骤快照：{"steps": [...]}。空表示登记时还没有四问。
+    failure = models.JSONField(null=True, blank=True)
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_OPEN)
     agent_id = models.PositiveIntegerField(default=0, db_index=True)
     created_by = models.CharField(max_length=64, default="", blank=True)

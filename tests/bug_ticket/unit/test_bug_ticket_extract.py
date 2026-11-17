@@ -74,13 +74,78 @@ def test_ui_failure_without_case_titles_falls_back_to_task_ticket():
 
 
 def test_interrupted_task_creates_task_ticket():
-    task = _task(status=TaskStatus.INTERRUPTED, result="执行中断：服务重启")
+    task = _task(
+        status=TaskStatus.INTERRUPTED,
+        result=_result({"status": "interrupted", "cause": "process_lost", "reason": "进程退出时任务仍在执行，结果未写回"}),
+    )
 
     drafts = build_bug_drafts(task)
 
     assert len(drafts) == 1
     assert drafts[0].title == "UI 自动化任务中断：H6810 全功能测试"
-    assert "执行中断" in drafts[0].detail
+    assert "进程退出" in drafts[0].detail
+    assert "服务重启" not in drafts[0].detail
+
+
+def test_workflow_failure_is_one_ticket_with_steps():
+    task = _task(
+        task_kind=TaskKind.ASSISTANT_SOP,
+        result=_result(
+            {
+                "failure_kind": "verdict",
+                "reason": "回到桌面：没看到 dock",
+                "failed": ["回到桌面", "打开设置"],
+                "failed_steps": [
+                    {
+                        "seq": 1,
+                        "name": "回到桌面",
+                        "expected": "能看见 dock",
+                        "actual": "没看到 dock",
+                        "attempts": 3,
+                        "kind": "verdict",
+                    },
+                    {
+                        "seq": 2,
+                        "name": "打开设置",
+                        "expected": "进入设置页",
+                        "actual": "仍在桌面",
+                        "attempts": 1,
+                        "kind": "verdict",
+                    },
+                ],
+            }
+        ),
+    )
+
+    drafts = build_bug_drafts(task)
+
+    assert len(drafts) == 1
+    assert drafts[0].source_ref == "task"
+    assert drafts[0].title == "步骤未通过：回到桌面"
+    assert drafts[0].failure["steps"][1]["name"] == "打开设置"
+    assert "期望结果：能看见 dock" in drafts[0].detail
+
+
+def test_workflow_without_steps_still_splits_old_cases():
+    task = _task(
+        task_kind=TaskKind.ASSISTANT_SOP,
+        result=_result({"failed": ["A", "B"], "reason": "两个都没过"}),
+    )
+
+    drafts = build_bug_drafts(task)
+
+    assert len(drafts) == 2
+    assert drafts[0].failure is None
+
+
+def test_provider_failure_uses_kind_source_ref():
+    task = _task(result=_result({"failure_kind": "provider", "reason": "模型拒绝（400）", "failed": []}))
+
+    drafts = build_bug_drafts(task)
+
+    assert len(drafts) == 1
+    assert drafts[0].source_ref == "task:provider"
+    assert "模型拒绝（400）" in drafts[0].detail
 
 
 def test_cancelled_task_creates_no_ticket():

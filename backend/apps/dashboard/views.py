@@ -1,5 +1,6 @@
 """Dashboard stats views — aggregated platform statistics for the frontend dashboard."""
 
+from django.contrib.auth import get_user_model
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Count, Q
 from django.utils import timezone
@@ -7,8 +8,9 @@ from drf_spectacular.utils import OpenApiTypes, extend_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from backend.apps.ai_assistant.models import AIAssistant, AIModelConfig, AIRole, AISopWorkflow
 from backend.apps.case_manager.api import list_projects
-from backend.apps.case_manager.models import CaseProject, TestDefinition
+from backend.apps.case_manager.models import AutomationCase, CaseProject, FunctionalCase
 from backend.apps.dashboard.ai_usage import (
     ai_daily_series,
     ai_recent_tasks,
@@ -16,18 +18,22 @@ from backend.apps.dashboard.ai_usage import (
     ai_task_execution_summary,
     ai_today_usage_slots,
     ai_usage_stats,
-    load_visible_agents,
     platform_activities,
+    workflow_task_counts,
 )
 from backend.apps.device_pool.models import Device
 from backend.apps.usage_ledger.api import usage_dashboard
+from backend.shared.users import is_operator
 from utils.logs import backend_log
 
 
 def _user_id(request):
-    """Extract authenticated user id from a DRF request."""
+    """用户 id：优先中间件注入的 request.user_id，回退 DRF request.user.id。"""
+    uid = getattr(request, "user_id", None)
+    if uid is not None and uid != "":
+        return uid
     user = getattr(request, "user", None)
-    return user.id if user else None
+    return user.id if user is not None and getattr(user, "id", None) else None
 
 
 def _safe_count(queryset_or_model, filter_kwargs=None, q_filter=None):
@@ -71,6 +77,17 @@ def _device_dashboard_stats():
     return int(row["online"] or 0), int(row["total"] or 0)
 
 
+def _platform_counts():
+    """助手名片、工作流与运营三项的只读计数。表未就绪时该项为 0。"""
+    return {
+        "assistants": _safe_count(AIAssistant),
+        "workflows": _safe_count(AISopWorkflow),
+        "users": _safe_count(get_user_model()),
+        "agents": _safe_count(AIRole),
+        "models": _safe_count(AIModelConfig),
+    }
+
+
 def _cases_breakdown(user_id=None):
     """Return per-project breakdown for document cases owned by the user."""
     if user_id is None:
@@ -98,49 +115,51 @@ class DashboardStatsAPIView(APIView):
         cases_breakdown = _cases_breakdown(user_id)
         case_total = sum(row["total"] for row in cases_breakdown)
         case_enabled = case_total  # 文档用例无独立 enabled，与 total 同值
-        run_total = 0
-        run_active = 0
-        # 一次装载：后续统计与活动流复用，避免每处都把含 6.5MB avatar 的整行再读一遍
-        agents = load_visible_agents(user_id)
-        agent_total = len(agents)
-        agent_active = sum(1 for agent in agents if agent.status == "active")
+        tasks = workflow_task_counts(user_id)
+        counts = _platform_counts()
 
         # ── AI 用量 + 每日 token/缓存/费用序列 ──
         daily_ai = ai_daily_series(user_id)
 
-        return Response(
-            {
-                "devices": {"online": device_online, "total": device_total},
-                "cases": {
-                    "total": case_total,
-                    "enabled": case_enabled,
-                    "breakdown": cases_breakdown,
+        payload = {
+            "devices": {"online": device_online, "total": device_total},
+            "cases": {
+                "total": case_total,
+                "enabled": case_enabled,
+                "breakdown": cases_breakdown,
+            },
+            "assistants": {"total": counts["assistants"]},
+            "workflows": {"total": counts["workflows"]},
+            "runs": {"active": tasks["running"], "pending": tasks["pending"]},
+            "ai_usage": ai_usage_stats(user_id),
+            "usage_ledger": usage_dashboard(),
+            "charts": {
+                "execution": ai_task_daily_execution(user_id),
+                "ai_tokens": {
+                    "labels": daily_ai["labels"],
+                    "total_tokens": daily_ai["total_tokens"],
+                    "cache_tokens": daily_ai["cache_tokens"],
+                    "by_model": daily_ai["by_model"],
+                    "voice_by_model": daily_ai["voice_by_model"],
                 },
-                "runs": {"total": run_total, "active": run_active},
-                "agents": {"total": agent_total, "active": agent_active},
-                "ai_usage": ai_usage_stats(user_id, agents),
-                "usage_ledger": usage_dashboard(),
-                "charts": {
-                    "execution": ai_task_daily_execution(user_id, agents=agents),
-                    "ai_tokens": {
-                        "labels": daily_ai["labels"],
-                        "total_tokens": daily_ai["total_tokens"],
-                        "cache_tokens": daily_ai["cache_tokens"],
-                    },
-                    "deepseek_cost": {
-                        "labels": daily_ai["labels"],
-                        "cost": daily_ai["deepseek_cost"],
-                    },
-                    "today_usage": ai_today_usage_slots(user_id),
+                "deepseek_cost": {
+                    "labels": daily_ai["labels"],
+                    "cost": daily_ai["deepseek_cost"],
                 },
-                "execution_summary": ai_task_execution_summary(user_id, agents),
-                "recent_tasks": ai_recent_tasks(user_id, agents=agents),
-                "last_updated": timezone.now().strftime("%Y-%m-%d %H:%M"),
-                "system_status": "normal"
-                if device_online > 0 or device_total == 0
-                else "no_devices",
+                "today_usage": ai_today_usage_slots(user_id),
+            },
+            "execution_summary": ai_task_execution_summary(user_id),
+            "recent_tasks": ai_recent_tasks(user_id),
+            "last_updated": timezone.now().strftime("%Y-%m-%d %H:%M"),
+            "system_status": "normal" if device_online > 0 or device_total == 0 else "no_devices",
+        }
+        if is_operator(user_id):
+            payload["ops"] = {
+                "users": counts["users"],
+                "agents": counts["agents"],
+                "models": counts["models"],
             }
-        )
+        return Response(payload)
 
 
 def _parse_activity_paging(request):
@@ -213,7 +232,7 @@ class CaseStatsAPIView(APIView):
     def get(self, request):
         user_id = _user_id(request)
         cq = _user_cases_q(user_id)
-        total = _safe_count(TestDefinition, q_filter=cq)
+        total = _safe_count(AutomationCase, q_filter=cq) + _safe_count(FunctionalCase, q_filter=cq)
         project_total = _safe_count(CaseProject, {"created_by": str(user_id) if user_id else ""})
         return Response(
             {

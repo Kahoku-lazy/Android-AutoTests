@@ -3,21 +3,21 @@
  * 数据获取已在 P0 覆盖；这里测编排独有行为（挂载自动加载、项目卡映射、元素分项）。
  * 目录：tests/dashboard/p1/
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { flushPromises } from '@vue/test-utils'
-import { fetchDashboardStats, fetchRecentActivities } from '@/modules/dashboard/api'
-import { useDashboardView, toMillions } from '@/modules/dashboard/DashboardView.logic'
-import { mountComposable } from '../../helpers/mountComposable'
-import type { DashboardRawData } from '@/shared/types/dashboard'
+import { beforeEach, describe, expect, it, vi } from "vitest"
+import { flushPromises } from "@vue/test-utils"
+import { fetchDashboardStats, fetchRecentActivities } from "@/modules/dashboard/api"
+import { useDashboardView, toMillions } from "@/modules/dashboard/DashboardView.logic"
+import { mountComposable } from "../../helpers/mountComposable"
+import type { DashboardRawData } from "@/shared/types/dashboard"
 
-vi.mock('@/modules/dashboard/api', () => ({
+vi.mock("@/modules/dashboard/api", () => ({
   fetchDashboardStats: vi.fn(),
   fetchRecentActivities: vi.fn(),
 }))
 
 /** AI 用量本文件不参与断言：零值补齐 DashboardRawData 的必填字段 */
 const ZERO_METRIC = { today: 0, total: 0 }
-const ZERO_AI_USAGE: DashboardRawData['ai_usage'] = {
+const ZERO_AI_USAGE: DashboardRawData["ai_usage"] = {
   task_count: ZERO_METRIC,
   input_tokens: ZERO_METRIC,
   output_tokens: ZERO_METRIC,
@@ -36,12 +36,13 @@ function makeRaw(): DashboardRawData {
       total: 12,
       enabled: 12,
       breakdown: [
-        { project_id: 10, name: '家电冒烟', total: 8 },
-        { project_id: 11, name: '空项目', total: 0 },
+        { project_id: 10, name: "家电冒烟", total: 8 },
+        { project_id: 11, name: "空项目", total: 0 },
       ],
     },
-    runs: { total: 100, active: 2 },
-    agents: { total: 4, active: 1 },
+    assistants: { total: 3 },
+    workflows: { total: 1 },
+    runs: { active: 2, pending: 1 },
     ai_usage: ZERO_AI_USAGE,
     charts: {
       execution: { labels: [], success: [], failed: [] },
@@ -55,8 +56,8 @@ function makeRaw(): DashboardRawData {
     },
     execution_summary: { passed: 0, failed: 0 },
     recent_tasks: [],
-    last_updated: '',
-    system_status: 'normal',
+    last_updated: "",
+    system_status: "normal",
   }
 }
 
@@ -73,12 +74,12 @@ async function mountView(raw: DashboardRawData = makeRaw()) {
   return result
 }
 
-describe('[P1] useDashboardView（编排）', () => {
+describe("[P1] useDashboardView（编排）", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('挂载时：自动 loadData，数据进入 stats', async () => {
+  it("挂载时：自动 loadData，数据进入 stats", async () => {
     const result = await mountView()
 
     expect(fetchDashboardStats).toHaveBeenCalledTimes(1)
@@ -86,29 +87,29 @@ describe('[P1] useDashboardView（编排）', () => {
     expect(result.loading.value).toBe(false)
   })
 
-  it('caseProjectCards：按项目映射名称、计数与工作台路径', async () => {
+  it("caseProjectCards：按项目映射名称、计数与工作台路径", async () => {
     const result = await mountView()
 
     expect(result.caseProjectCards.value).toEqual([
       {
         projectId: 10,
-        name: '家电冒烟',
+        name: "家电冒烟",
         total: 8,
-        color: 'deep',
-        path: '/cases/projects/10',
+        color: "deep",
+        path: "/cases/projects/10",
       },
       {
         projectId: 11,
-        name: '空项目',
+        name: "空项目",
         total: 0,
-        color: 'sage',
-        path: '/cases/projects/11',
+        color: "sage",
+        path: "/cases/projects/11",
       },
     ])
     expect(result.stats.value.cases.breakdown).toHaveLength(2)
   })
 
-  it('无项目时 caseProjectCards 为空', async () => {
+  it("无项目时 caseProjectCards 为空", async () => {
     const raw = makeRaw()
     raw.cases = { total: 0, enabled: 0, breakdown: [] }
     const result = await mountView(raw)
@@ -116,42 +117,42 @@ describe('[P1] useDashboardView（编排）', () => {
     expect(result.caseProjectCards.value).toEqual([])
   })
 
-  it('暴露展示配置：页头', async () => {
+  it("暴露展示配置：页头", async () => {
     const result = await mountView()
-    expect(result.PAGE_HEADER.title).toBe('仪表盘')
+    expect(result.PAGE_HEADER.title).toBe("仪表盘")
   })
 
-  it('toMillions：token 按百万换算并保留 2 位小数', () => {
+  it("toMillions：token 按百万换算并保留 2 位小数", () => {
     expect(toMillions(12_345_678)).toBe(12.35)
     expect(toMillions(0)).toBe(0)
   })
 
-  it('todayUsageSeries：token 走左轴、费用走右轴，逐小时点只到当前时刻', async () => {
+  it("todayUsageSeries：token 走左轴、费用走右轴，逐小时点只到当前时刻", async () => {
     const result = await mountView()
 
     expect(result.todayUsageChart.value.tokens).toHaveLength(24)
     expect(result.todayUsageSeries.value).toEqual([
       {
-        name: 'Token 消耗',
+        name: "Token 消耗",
         data: [
           [1, 5],
           [2, 10],
           [3.5, 30],
         ],
-        color: '#4ECDC4',
+        color: "#4ECDC4",
         axisIndex: 0,
-        unit: 'token',
+        unit: "token",
       },
       {
-        name: '费用',
+        name: "费用",
         data: [
           [1, 0.0001],
           [2, 0.0002],
           [3.5, 0.0003],
         ],
-        color: '#F7C948',
+        color: "#F7C948",
         axisIndex: 1,
-        unit: 'cost',
+        unit: "cost",
       },
     ])
   })

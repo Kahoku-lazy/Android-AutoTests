@@ -16,3 +16,8 @@
   overflow: auto;
   padding-bottom: 12px;
 }
+
+.task-workbench :deep(.sketch-sheet) {
+  border-style: solid;
+  box-shadow: none;
+}

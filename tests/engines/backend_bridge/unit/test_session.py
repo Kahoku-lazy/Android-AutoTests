@@ -85,10 +85,19 @@ class _Agent:
         yield TextBlockEndEvent()
 
 
-async def _fake_build(*, model_short=None, observer=None, controls=None):
-    del controls
+async def _fake_build(
+    *,
+    system_prompt="",
+    provider=None,
+    api_key_env=None,
+    model_name=None,
+    base_url=None,
+    observer=None,
+    controls=None,
+):
+    del system_prompt, controls
     """替身：装配角色。"""
-    del model_short
+    del provider, api_key_env, model_name, base_url
     watcher = observer if observer is not None else ObservationMiddleware()
     return AgentBundle(agent=_Agent(), api_key_env="GOVEE_API_KEY"), watcher
 
@@ -98,8 +107,22 @@ async def test_session_for_reuses_same_instance(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setattr(session_module, "build_ui_executor", _fake_build)
     drop_session("s-reuse")
 
-    first = await session_for("s-reuse", "AAA")
-    second = await session_for("s-reuse", "BBB")
+    first = await session_for(
+        "s-reuse",
+        "AAA",
+        system_prompt="你是执行者。",
+        provider="govee",
+        api_key_env="GOVEE_API_KEY",
+        model_name="deepseek-flash",
+    )
+    second = await session_for(
+        "s-reuse",
+        "BBB",
+        system_prompt="你是执行者。",
+        provider="govee",
+        api_key_env="GOVEE_API_KEY",
+        model_name="deepseek-flash",
+    )
 
     assert first is second
     assert second.serial == "BBB"
@@ -110,13 +133,26 @@ async def test_session_for_requires_session_id(monkeypatch: pytest.MonkeyPatch):
     """空连接键直接拒绝。"""
     monkeypatch.setattr(session_module, "build_ui_executor", _fake_build)
     with pytest.raises(ValueError):
-        await session_for("   ", "AAA")
+        await session_for(
+            "   ",
+            "AAA",
+            system_prompt="你是执行者。",
+            provider="govee",
+            api_key_env="GOVEE_API_KEY",
+            model_name="deepseek-flash",
+        )
 
 
 async def test_run_turn_prefixes_serial(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     """每轮把设备序列号带在消息前面。"""
     monkeypatch.setattr(session_module, "build_ui_executor", _fake_build)
-    session = await open_session(SERIAL)
+    session = await open_session(
+        SERIAL,
+        system_prompt="你是执行者。",
+        provider="govee",
+        api_key_env="GOVEE_API_KEY",
+        model_name="deepseek-flash",
+    )
     assert isinstance(session, UiExecutorSession)
 
     result = await session.run_turn("打开设置", report_root=tmp_path)
@@ -130,7 +166,13 @@ async def test_run_turn_prefixes_serial(tmp_path: Path, monkeypatch: pytest.Monk
 async def test_run_turn_writes_one_report_per_turn(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     """两轮各出一份报告，落在不同时间戳目录。"""
     monkeypatch.setattr(session_module, "build_ui_executor", _fake_build)
-    session = await open_session(SERIAL)
+    session = await open_session(
+        SERIAL,
+        system_prompt="你是执行者。",
+        provider="govee",
+        api_key_env="GOVEE_API_KEY",
+        model_name="deepseek-flash",
+    )
 
     first = await session.run_turn("第一轮", report_root=tmp_path)
     second = await session.run_turn("第二轮", report_root=tmp_path)

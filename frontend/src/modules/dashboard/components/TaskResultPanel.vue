@@ -25,6 +25,8 @@ const statusMeta: Record<string, StatusMetaItem> = {
   failed: { icon: "✗", label: "全部失败", cls: "is-failed" },
   partial: { icon: "△", label: "部分失败", cls: "is-partial" },
   running: { icon: "▶", label: "执行中", cls: "is-running" },
+  interrupted: { icon: "!", label: "已中断", cls: "is-partial" },
+  cancelled: { icon: "–", label: "已取消", cls: "is-idle" },
   idle: { icon: "○", label: "未执行", cls: "is-idle" },
 }
 
@@ -33,6 +35,8 @@ function panelStatus(raw?: string): string {
   if (key === "completed" || key === "success") return "success"
   if (key === "failed") return "failed"
   if (key === "running") return "running"
+  if (key === "interrupted") return "interrupted"
+  if (key === "cancelled") return "cancelled"
   if (key === "partial") return "partial"
   return statusMeta[key] ? key : "idle"
 }
@@ -46,9 +50,8 @@ function taskId(task: RecentTask): string | number | null {
 }
 
 function openTask(task: RecentTask) {
-  const id = taskId(task)
-  if (!id) return
-  router.push(`/tasks/${id}`)
+  if (!taskId(task)) return
+  router.push("/tasks")
 }
 </script>
 
@@ -88,6 +91,7 @@ function openTask(task: RecentTask) {
         </div>
         <div class="task-row__body">
           <div class="task-row__title">{{ task.title }}</div>
+          <div v-if="task.case_label" class="task-row__case">{{ task.case_label }}</div>
           <div class="task-row__cases">
             <span
               v-for="(c, i) in task.cases || []"
@@ -157,7 +161,7 @@ function openTask(task: RecentTask) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--app-size-xs);
+  font-size: var(--app-size-sm);
   font-weight: var(--app-font-weight-heavy);
   background: var(--app-bg-card);
 }
@@ -240,6 +244,12 @@ function openTask(task: RecentTask) {
   margin-bottom: 3px;
 }
 
+.task-row__case {
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+  margin-bottom: 3px;
+}
+
 .task-row__cases {
   display: flex;
   flex-wrap: wrap;
@@ -253,7 +263,7 @@ function openTask(task: RecentTask) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--app-size-xs);
+  font-size: var(--app-size-sm);
   font-weight: var(--app-font-weight-heavy);
 }
 .case-icon.is-success {
@@ -274,12 +284,12 @@ function openTask(task: RecentTask) {
 }
 
 .task-row__stats {
-  font-size: var(--app-size-xs);
+  font-size: var(--app-size-sm);
   color: var(--app-text-secondary);
   font-weight: var(--app-font-weight-semibold);
 }
 .task-row__time {
-  font-size: var(--app-size-xs);
+  font-size: var(--app-size-sm);
   color: var(--app-text-secondary);
   white-space: nowrap;
   flex-shrink: 0;

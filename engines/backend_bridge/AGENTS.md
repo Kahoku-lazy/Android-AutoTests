@@ -42,7 +42,9 @@ backend_bridge/
 
 平台侧的装配放在**本目录的 `workflow/`**：调用 `load_spec` / `run_sop`，只做三件事——装配两个角色、指定报告目录、把结果整理成返回值。**禁止**在本目录再写一套编排循环、另立步骤格式或新造验收逻辑。
 
-**SOP 不进 AI 助手对话页**：对话页的设计只有单角色（`platform_ui`），SOP 由平台侧入口（管理命令 / 后续任务链路）触发。
+**SOP 不进 AI 助手对话页**：对话页的设计只有单角色。助手测试对话由 `agents/card_agent.py` 装配、`agents/thread_run.py` 按栏复用；SOP 由平台侧入口触发，不读对话栏 snapshot。
+
+助手名片的运营提示词由调用方传入，原样作为系统提示词。工具按「预设 + 例外」经 `agents/tool_selection.py` 过滤，仍走 `build_adb_tools()` / 只读子集。取消按 `thread_id` 登记，不写入任务号字典。
 
 ## 3. 红线（AI 禁止事项）
 
@@ -69,7 +71,7 @@ backend_bridge/
 | --- | --- | --- |
 | 1 | 入账复用 `usage_ledger` 的 `ai_usage_records`，不新建表 | 本目录只产结构化用量，由后端写账 |
 | 2 | 本目录只产数据，后端写库 | 守住 `engines/` 零 `django.*` 红线 |
-| 3 | 复用 `ae_harness` 的 `UI_EXECUTOR_PROMPT` / `UI_VERIFIER_PROMPT` | 不复制提示词，避免两处改一处忘 |
+| 3 | 平台角色的系统提示词由调用方传入正文 | 不在引擎里再放一份本地提示词 |
 | 4 | 报告读取走「列表 + 单文件 + 路径白名单」 | `reports/` 不需要索引文件 |
 
 以上 1–4 已落地；后续若出现新的未定项，仍按「先问再写」处理。

@@ -13,6 +13,7 @@ Python 调试：➡️ python -m engines.ae_harness.event.render 🏁
 2. 视觉走 Doodle Craft：暖白纸面、2.5px 墨线、硬偏移阴影、卡片微倾。
 3. 令牌抄自 frontend/src/shared/styles/tokens.css，未声明的 var() 不得出现。
 4. step_extras: 按工具名注册额外展示片段；echarts_src: 时间轴脚本地址。
+5. 排版三档：时间/日期 12、正文 14、标题与小标题 16；品牌字体内联，侧栏默认三成宽可拖。
 🏁
 关联模块：➡️
 1. engines.ae_harness.event.record: 消费 RunRecord / StepRecord。
@@ -60,6 +61,28 @@ def _relpath(target: Path, start: Path) -> str:
         return str(target).replace("\\", "/")
 
 
+def _brand_font_src(fallback: str) -> str:
+    """
+    把平台品牌字体读成内联 data URI，供 `@font-face` 使用。
+
+    报告常以 `blob:`（前端三处 createObjectURL）或 `file://` 打开，这两种文档都解析不了
+    文件系统相对路径，相对路径会让字体静默 404、标题回落成系统黑体；内联后任何打开方式
+    拿到的都是同一支字体。与 `_brand_mark` 内联品牌图同一套做法。
+
+    Args:
+        fallback: 字体文件读不到时回落的相对路径。
+
+    Returns:
+        `src` 取值：优先 `data:font/ttf;base64,...`，读文件失败时返回 fallback。
+    """
+    try:
+        data = _BRAND_FONT.read_bytes()
+    except OSError:
+        return fallback
+    encoded = base64.b64encode(data).decode("ascii")
+    return f"data:font/ttf;base64,{encoded}"
+
+
 # 事件类型到「样式类 + 中文标签」的映射，用于日志视图着色。
 _EVENT_KIND = {
     "reply_start": ("log-start", "开始"),
@@ -81,6 +104,77 @@ _EVENT_KIND = {
 # 卡片微倾角度轮转，按序号取，避免整页都是 0deg。
 _TILTS = ("-.6deg", ".8deg", "-1.1deg", "1.2deg", "-.4deg", "1deg")
 
+# 折叠标题行左侧的箭头；展开态由脚本换成 ▾，这里只放收起态。
+_CARET = '<span class="caret" aria-hidden="true">▸</span>'
+
+# 子目标序号：SVG 手绘笔画（参考需求方给的手绘 AE 图），01 起，上限 99。
+_ORDINAL_MAX = 99
+
+# 0-9 的单笔画路径，坐标系 0..20 × 0..30；线宽、粗糙边缘与红→橙渐变在样式里给。
+_ORDINAL_GLYPHS: dict[str, str] = {
+    "0": "M13.5 4 C7 4 4 9.5 4 15.5 C4 22 7.5 27 13 27 C18.5 27 21.5 21.5 21.5 15.5 C21.5 9 18.5 4 13.5 4 Z",
+    "1": "M9 10 L13.5 4.5 L13.5 27.5 M8 27.5 L19 27.5",
+    "2": "M4.5 9.5 C4.5 5 8.5 3.5 12.5 3.5 C17 3.5 20 6.5 20 10.5 C20 13.5 17 16.5 12 20 L4.5 27.5 L21 27.5",
+    "3": "M4.5 4.5 L20.5 4.5 L12.5 13 C17.5 13 21 16 21 20.5 C21 25.5 16.5 28.5 11 28.5 C7.5 28.5 4.5 26.5 4 23.5",
+    "4": "M16.5 27.5 L16.5 4 L4 19 L21 19",
+    "5": "M20 4.5 L6.5 4.5 L6 14.5 C9 12.5 15.5 12 19 15 C22 18 21.5 23.5 18 26.5 C15 29 9.5 29 5.5 26",
+    "6": "M18.5 4 C11 4.5 5.5 10 5.5 18.5 C5.5 25 9.5 28.5 13.5 28.5 C18 28.5 20.5 25 20.5 21 C20.5 17.5 18 14.5 14 14.5 C10 14.5 7 16.5 5.5 19.5",
+    "7": "M4.5 4.5 L21 4.5 L10.5 28",
+    "8": (
+        "M13 14.5 C8.5 14.5 5.5 11.5 5.5 8.5 C5.5 5 9 3.5 13 3.5 C17 3.5 20.5 5.5 20.5 9 "
+        "C20.5 12 17 14.5 13 14.5 C8 14.5 4.5 17 4.5 21 C4.5 25.5 8.5 28.5 13 28.5 "
+        "C17.5 28.5 21.5 25.5 21.5 21 C21.5 17 18 14.5 13 14.5"
+    ),
+    "9": "M7 27.5 C14 27 18.5 21.5 18.5 13.5 C18.5 7.5 15.5 3.5 11.5 3.5 C7.5 3.5 4.5 6.5 4.5 10.5 C4.5 14 7 17 11 17 C15.5 17 18.5 14 18.5 10",
+}
+
+# 序号共用一份 defs：左数字红、右数字蓝，各自浓度 45% → 30%，再叠湍流位移滤镜（蜡笔毛边）。
+# 只发一次，避免每个序号重复定义。
+_ORDINAL_DEFS = """<svg class="ord-defs" width="0" height="0" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="ord-grad-red" gradientUnits="userSpaceOnUse" x1="4" y1="0" x2="24" y2="0">
+      <stop offset="0" style="stop-color:var(--color-red-40);stop-opacity:.45"></stop>
+      <stop offset="1" style="stop-color:var(--color-red-40);stop-opacity:.3"></stop>
+    </linearGradient>
+    <linearGradient id="ord-grad-blue" gradientUnits="userSpaceOnUse" x1="28" y1="0" x2="48" y2="0">
+      <stop offset="0" style="stop-color:var(--color-blue-47);stop-opacity:.45"></stop>
+      <stop offset="1" style="stop-color:var(--color-blue-47);stop-opacity:.3"></stop>
+    </linearGradient>
+    <filter id="ord-crayon" x="-14%" y="-14%" width="128%" height="128%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="3" seed="7" result="grain"></feTurbulence>
+      <feDisplacementMap in="SourceGraphic" in2="grain" scale="2.6" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+    </filter>
+  </defs>
+</svg>"""
+
+
+def _ordinal_svg(value: int) -> str:
+    """
+    把一个序号画成手绘风格的双位数字（描边路径 + 蜡笔滤镜）。
+
+    Args:
+        value: 子目标序号，从 1 开始。
+
+    Returns:
+        内联 SVG；超过 99 时封顶在 99。
+    """
+    number = min(max(value, 1), _ORDINAL_MAX)
+    shapes: list[str] = []
+    for slot, digit in enumerate(f"{number:02d}"):
+        path = _ORDINAL_GLYPHS[digit]
+        shift = 3 + slot * 24
+        # 两位数字各歪一点、歪的方向相反：手写体不会笔直对齐，参考图里的 A 与 E 也是这样。
+        tilt = -2.6 if slot == 0 else 1.8
+        placement = f"translate({shift} 3) rotate({tilt} 10 15)"
+        # 左位红、右位蓝，各自从 45% 淡到 30%；一个序号就是一支「红蓝混色」。
+        hue = "ord-red" if slot == 0 else "ord-blue"
+        # 先画一层更粗更淡的蜡迹，再压一遍主笔画：边缘参差靠滤镜，层次靠这层淡墨。
+        shapes.append(f'<path class="ord-soft {hue}" d="{path}" transform="{placement}"></path>')
+        shapes.append(f'<path class="ord-ink {hue}" d="{path}" transform="{placement}"></path>')
+    drawn = "".join(shapes)
+    return f'<svg class="ord" viewBox="0 0 50 36" role="img" aria-label="第 {number} 个子目标">{drawn}</svg>'
+
+
 _CSS = """
 :root {
   --color-white:#f7f3e8;
@@ -91,6 +185,7 @@ _CSS = """
   --color-teal-49:#4ecdc4;   --color-cyan-74:#89cff0;   --color-red-83:#ffb5a7;
   --color-blue-27:#1a426f;   --color-teal-38:#16aea1;   --color-green-49:#4caf50;
   --color-red-69:#f56b6a;    --color-red-95:#ffe9e8;    --color-red-46:#b23838;
+  --color-red-40:#b8354a;    --color-blue-47:#3a6fb0;
   --color-purple-73:#e879f9; --color-ink-47:#7c6f83;    --color-ink-57:#96918c;
   --color-ink-79:#c9cacc;    --color-ink-34:#5d5950;
 
@@ -119,7 +214,9 @@ _CSS = """
   --app-shadow-md:2px 3px 0 rgba(0,0,0,.05);
   --app-duration-fast:.12s; --app-duration:.15s; --app-duration-slow:.25s;
   --app-ease:cubic-bezier(.25,.1,.25,1);
-  --app-topbar-h:88px; --side-w:260px;
+  --app-topbar-h:88px;
+  /* 侧栏默认占三成宽；上下限与「右侧仍要留多少」由脚本按容器实时夹取。 */
+  --side-w:30%; --side-min:220px; --side-max:760px;
 }
 * { box-sizing: border-box; }
 body {
@@ -128,10 +225,23 @@ body {
 }
 .shell { display: flex; min-height: 100vh; }
 .sidebar {
-  width: var(--side-w); flex-shrink: 0; height: 100vh; position: sticky; top: 0;
-  background: var(--paper); border-right: 2.5px solid var(--ink);
-  padding: 20px 16px; overflow: auto;
+  width: var(--side-w); min-width: var(--side-min); max-width: var(--side-max);
+  flex-shrink: 0; height: 100vh; position: sticky; top: 0;
+  background: var(--paper); padding: 20px 16px; overflow: auto;
 }
+/* 分栏手柄：契约照平台 shared/components/SplitHandle.vue——8px 命中区 + 居中 2px 线，
+   常态暖灰，hover / 拖拽转墨色，键盘聚焦另给一圈描边，窄屏（两栏并排失效）不渲染。 */
+.splitter {
+  position: relative; flex: 0 0 8px; cursor: col-resize;
+  background: transparent; touch-action: none;
+}
+.splitter::before {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px;
+  background: var(--color-orange-76);
+  transition: background var(--app-duration-fast) var(--app-ease);
+}
+.splitter:hover::before, .splitter.is-dragging::before { background: var(--ink); }
+.splitter:focus-visible { outline: 2px solid var(--c-dashboard); outline-offset: -2px; }
 .main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; position: relative; }
 .main__doodles { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
 .main__body { position: relative; z-index: 1; flex: 1 1 0; min-height: 0; overflow-y: auto; }
@@ -183,7 +293,7 @@ body {
   padding: 10px 12px; transform: rotate(-.6deg);
 }
 .task .k { font-size: var(--app-size-xs); letter-spacing: .06em; text-transform: uppercase; color: var(--app-text-secondary); }
-.task .v { font-size: var(--app-size-xs); margin-top: 4px; }
+.task .v { font-size: var(--app-size-sm); margin-top: 4px; }
 .check-card {
   background: var(--app-bg-card); border: 2.5px solid var(--ink);
   border-radius: 2px; box-shadow: 3px 3px 0 0 var(--c-device);
@@ -194,7 +304,7 @@ body {
   text-transform: uppercase; color: var(--app-text-secondary);
 }
 .check-card ol { margin: 6px 0 0; padding-left: 18px; }
-.check-card li { font-size: var(--app-size-xs); margin-bottom: 6px; }
+.check-card li { font-size: var(--app-size-sm); margin-bottom: 6px; }
 .check-card li:last-child { margin-bottom: 0; }
 .check-card li b { display: block; }
 .check-card li span { color: var(--app-text-secondary); }
@@ -217,15 +327,15 @@ body {
   transform: rotate(.5deg); margin-bottom: 16px;
 }
 .token-card .k { font-size: var(--app-size-xs); letter-spacing: .06em; text-transform: uppercase; color: var(--app-text-secondary); margin-bottom: 6px; }
-.token-card .row { display: flex; justify-content: space-between; align-items: baseline; font-size: var(--app-size-xs); padding: 3px 0; }
+.token-card .row { display: flex; justify-content: space-between; align-items: baseline; font-size: var(--app-size-sm); padding: 3px 0; }
 .token-card .row b { font-family: var(--app-font-mono); font-size: var(--app-size-sm); font-weight: 800; }
 .token-card .row.total { border-top: 2px solid var(--ink); margin-top: 4px; padding-top: 6px; }
 .token-card .row.total b { font-size: var(--app-size-md); }
-.side-list { list-style: none; margin: 0 0 16px; padding: 0; font-size: var(--app-size-xs); }
+.side-list { list-style: none; margin: 0 0 16px; padding: 0; font-size: var(--app-size-sm); }
 .side-list li { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); }
 .side-list li:last-child { border-bottom: 0; }
 .side-list b { font-family: var(--app-font-mono); font-weight: 700; }
-.task-box p { margin: 0; font-size: var(--app-size-xs); color: var(--app-text-secondary); word-break: break-word; }
+.task-box p { margin: 0; font-size: var(--app-size-sm); color: var(--app-text-secondary); word-break: break-word; }
 
 .wb-title {
   font-family: "Ziku FeiYang", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -250,20 +360,48 @@ body {
 
 .view { display: none; }
 .view.active { display: block; }
+
+/* 折叠：标题行是真 <button>（自带键盘与 aria 语义），它所在的盒子带 .fold-box；
+   盒子同时带 .is-open 时，直接子级 .fold-b 才显示。
+   子目标 / 角色块 / 工具卡 / 轨迹行四层共用这一套规则，靠「直接子级」限定，嵌套时不会互相串开。 */
+.fold-box.is-open > .fold-b { display: block; }
+.fold-h {
+  display: flex; align-items: center; gap: 10px; width: 100%; margin: 0; padding: 0;
+  border: 0; background: none; color: inherit; font: inherit; text-align: left;
+  cursor: pointer; border-radius: var(--app-radius-sm);
+}
+.fold-h:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+.caret {
+  flex: 0 0 auto; width: 12px; text-align: center;
+  font-size: var(--app-size-xs); color: var(--app-text-secondary);
+}
+.fold-b { display: none; }
+
+/* 子目标序号：SVG 描边数字，左位红、右位蓝，各自浓度 45% → 30%，再叠湍流毛边，
+   模拟蜡笔手写（参考需求方给的手绘 AE 图）。淡墨层比主笔画粗，只做蜡迹扩散。 */
+.ord-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+.ord { flex: 0 0 auto; height: 24px; width: auto; display: block; }
+.ord path { fill: none; stroke-linecap: round; stroke-linejoin: round; filter: url(#ord-crayon); }
+.ord .ord-soft { stroke-width: 8.4; opacity: .55; }
+.ord .ord-ink { stroke-width: 5.2; }
+.ord .ord-red { stroke: url(#ord-grad-red); }
+.ord .ord-blue { stroke: url(#ord-grad-blue); }
+
 .phase { margin-bottom: var(--app-space-lg); }
 .phase-h { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.phase-h h3 { font-size: var(--app-size-md); margin: 0; font-weight: 800; }
-.phase-h em { font-style: normal; font-size: var(--app-size-xs); color: var(--app-text-secondary); margin-left: auto; font-family: var(--app-font-mono); }
+.phase-h h3 { flex: 1 1 auto; min-width: 0; font-size: var(--app-size-md); margin: 0; font-weight: 800; }
+.phase-h em { font-style: normal; font-size: var(--app-size-xs); color: var(--app-text-secondary); font-family: var(--app-font-mono); }
 .role-block {
   border-left: 3px solid var(--role-accent, var(--c-dashboard));
   padding-left: 12px; margin-bottom: 14px;
 }
+.role-h { margin-bottom: 8px; }
 .role-label {
   display: inline-block; font-size: var(--app-size-xs); font-weight: 800;
   letter-spacing: .06em; text-transform: uppercase;
   background: var(--role-accent, var(--c-dashboard));
   border: 2px solid var(--ink); border-radius: var(--app-radius-pill);
-  padding: 1px 10px; margin-bottom: 8px;
+  padding: 1px 10px;
 }
 
 .card {
@@ -274,27 +412,27 @@ body {
   transition: transform var(--app-duration) var(--app-ease), box-shadow var(--app-duration) var(--app-ease);
 }
 .card:hover { transform: rotate(0) translate(-1px, -1px); box-shadow: 5px 5px 0 0 var(--ac-accent, var(--c-dashboard)); }
-.card-h { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.card-h { display: flex; align-items: center; gap: 10px; }
 .no {
   width: 26px; height: 26px; flex: 0 0 26px; border: 2.5px solid var(--ink); border-radius: 2px;
   background: var(--app-highlight); font-size: var(--app-size-xs); font-weight: 800;
   display: inline-flex; align-items: center; justify-content: center;
 }
-.tool { font-family: var(--app-font-mono); font-size: var(--app-size-sm); font-weight: 700; }
+.tool { font-family: var(--app-font-mono); font-size: var(--app-size-md); font-weight: 700; }
 .t { font-family: var(--app-font-mono); font-size: var(--app-size-xs); color: var(--app-text-secondary); }
 .t.ml { margin-left: auto; }
 .note { background: var(--app-bg-subtle); border-left: 4px solid var(--c-element); border-radius: 2px; padding: 8px 10px; margin: 10px 0; font-size: var(--app-size-sm); }
 .code {
   background: #fff; border: 2px solid var(--ink); border-radius: var(--app-radius-sm);
   padding: 8px 10px; margin: 6px 0; font-family: var(--app-font-mono);
-  font-size: var(--app-size-xs); white-space: pre-wrap; word-break: break-all;
+  font-size: var(--app-size-sm); white-space: pre-wrap; word-break: break-all;
 }
 .code b { font-family: var(--app-font); font-weight: 800; margin-right: 6px; }
 .thumb { display: inline-block; margin-top: 8px; cursor: zoom-in; }
 .thumb img { display: block; border: 2px solid var(--ink); border-radius: 2px; box-shadow: 2px 2px 0 0 var(--ink); max-width: 160px; }
-table.marks { border-collapse: collapse; font-family: var(--app-font-mono); font-size: var(--app-size-xs); margin: 8px 0; }
+table.marks { border-collapse: collapse; font-family: var(--app-font-mono); font-size: var(--app-size-sm); margin: 8px 0; }
 table.marks th, table.marks td { border: 2px solid var(--ink); padding: 3px 12px; text-align: center; }
-table.marks th { background: var(--app-bg-subtle); font-weight: 800; }
+table.marks th { background: var(--app-bg-subtle); font-size: var(--app-size-md); font-weight: 800; }
 .final {
   background: var(--app-bg-card); border: 2.5px solid var(--ink); border-radius: 2px;
   box-shadow: 4px 4px 0 0 var(--c-case); padding: 14px 16px; white-space: pre-wrap;
@@ -306,7 +444,7 @@ table.marks th { background: var(--app-bg-subtle); font-weight: 800; }
   padding: 14px 16px; margin-bottom: 14px;
   box-shadow: 4px 4px 0 0 var(--c-workflow); transform: rotate(.4deg);
 }
-.chart-card h4 { margin: 0 0 10px; font-size: var(--app-size-sm); font-weight: 800; display: flex; gap: 8px; align-items: center; }
+.chart-card h4 { margin: 0 0 10px; font-size: var(--app-size-md); font-weight: 800; display: flex; gap: 8px; align-items: center; }
 .legend { display: flex; gap: 14px; font-size: var(--app-size-xs); color: var(--app-text-secondary); margin-left: auto; }
 .legend i { display: inline-block; width: 14px; height: 10px; border: 2px solid var(--ink); margin-right: 4px; vertical-align: -1px; }
 .timeline { margin-top: 4px; }
@@ -334,8 +472,7 @@ table.marks th { background: var(--app-bg-subtle); font-weight: 800; }
 .badge.t { background: var(--c-device); }
 .call-n { font-family: var(--app-font-mono); font-size: var(--app-size-sm); }
 .call-m { margin-left: auto; font-family: var(--app-font-mono); font-size: var(--app-size-xs); color: var(--app-text-secondary); }
-.call-b { padding: 0 14px 12px; display: none; }
-.call.open .call-b { display: block; }
+.trace-body { padding: 0 14px 12px; }
 .ctabs { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
 .ctabs button {
   border: 2px solid var(--ink); background: #fff; color: var(--ink);
@@ -348,19 +485,38 @@ table.marks th { background: var(--app-bg-subtle); font-weight: 800; }
 .cpanel pre {
   margin: 0; padding: 9px 11px; background: var(--paper); border: 2px solid var(--ink);
   border-radius: var(--app-radius-sm); font-family: var(--app-font-mono);
-  font-size: var(--app-size-xs); white-space: pre-wrap; word-break: break-all;
+  font-size: var(--app-size-sm); white-space: pre-wrap; word-break: break-all;
 }
 
-.log { background: var(--app-bg-card); border: 2.5px solid var(--ink); border-radius: 2px; padding: 4px 0; box-shadow: 4px 4px 0 0 var(--c-report); }
-.log-row { display: grid; grid-template-columns: 92px 78px 1fr; gap: 10px; padding: 7px 14px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); font-size: var(--app-size-xs); align-items: start; }
+/* 事件流的「时间 / 类型 / 字段」三列由 .log 统一分配，行内用 subgrid 继承同一套列轨道：
+   类型列按最长标签取宽（max-content），标签再长也不许压到右边的字段文本上。 */
+.log {
+  background: var(--app-bg-card); border: 2.5px solid var(--ink); border-radius: 2px;
+  padding: 4px 14px; box-shadow: 4px 4px 0 0 var(--c-report);
+  display: grid; grid-template-columns: 92px max-content minmax(0, 1fr); column-gap: 10px;
+}
+.log-row {
+  grid-column: 1 / -1; display: grid;
+  grid-template-columns: 92px 78px minmax(0, 1fr); /* 不支持 subgrid 时的退路 */
+  grid-template-columns: subgrid;
+  column-gap: 10px; padding: 7px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  font-size: var(--app-size-sm); align-items: start;
+}
 .log-row:last-child { border-bottom: 0; }
-.log-t { color: var(--app-text-secondary); font-family: var(--app-font-mono); text-align: right; }
-.log-badge { display: inline-block; padding: 1px 8px; border: 2px solid var(--ink); border-radius: var(--app-radius-pill); font-size: var(--app-size-xs); font-weight: 700; text-align: center; }
+/* 时间列是「时间/日期 = 12」那一档，字段正文才是 14。 */
+.log-t { font-size: var(--app-size-xs); color: var(--app-text-secondary); font-family: var(--app-font-mono); text-align: right; }
+.log-badge {
+  justify-self: start; max-width: 168px;
+  padding: 1px 8px; border: 2px solid var(--ink); border-radius: var(--app-radius-pill);
+  font-size: var(--app-size-xs); font-weight: 700; text-align: center;
+  white-space: normal; overflow-wrap: anywhere;
+}
 .log-body { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--app-text-secondary); word-break: break-all; }
 .kv i { font-style: normal; color: var(--app-text-secondary); margin-right: 4px; }
 details.kv { width: 100%; }
 details.kv summary { cursor: pointer; color: var(--app-text-secondary); }
-details.kv pre { margin: 4px 0 0; padding: 8px; background: var(--paper); border: 2px solid var(--ink); border-radius: var(--app-radius-sm); white-space: pre-wrap; word-break: break-all; font-size: var(--app-size-xs); }
+details.kv pre { margin: 4px 0 0; padding: 8px; background: var(--paper); border: 2px solid var(--ink); border-radius: var(--app-radius-sm); white-space: pre-wrap; word-break: break-all; font-size: var(--app-size-sm); }
 .log-model .log-badge { background: var(--c-element); }
 .log-tool .log-badge { background: var(--c-device); }
 .log-result .log-badge { background: var(--c-workflow); }
@@ -369,7 +525,7 @@ details.kv pre { margin: 4px 0 0; padding: 8px; background: var(--paper); border
 .log-start .log-badge, .log-end .log-badge { background: var(--c-dashboard); }
 .log-misc .log-badge { background: var(--color-ink-79); }
 .raw-box summary { cursor: pointer; color: var(--app-text-secondary); font-size: var(--app-size-xs); margin-bottom: 10px; }
-.tip { font-size: var(--app-size-xs); color: var(--app-text-secondary); margin: 0 0 14px; }
+.tip { font-size: var(--app-size-sm); color: var(--app-text-secondary); margin: 0 0 14px; }
 
 .drawer {
   position: fixed; top: 0; right: 0; width: 440px; max-width: 100vw; height: 100vh;
@@ -392,11 +548,17 @@ details.kv pre { margin: 4px 0 0; padding: 8px; background: var(--paper); border
 :focus-visible { outline: 3px solid var(--c-element); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .btn, .card, .kpi, .drawer, .call-h { transition: none; transform: none; }
+  .splitter::before { transition: none; }
   .card:hover, .kpi:hover, .btn:hover { transform: none; }
 }
 @media (max-width: 900px) {
   .shell { flex-direction: column; }
-  .sidebar { width: 100%; height: auto; position: static; border-right: 0; border-bottom: 2.5px solid var(--ink); }
+  .sidebar {
+    width: 100%; min-width: 0; max-width: none; height: auto; position: static;
+    border-bottom: 2.5px solid var(--ink);
+  }
+  /* 两栏退化成单栏后没有可拖的分界，手柄不渲染。 */
+  .splitter { display: none; }
   .main__body { overflow: visible; }
   .doc-body { padding: 16px; }
   .drawer { width: 100vw; }
@@ -408,9 +570,16 @@ function zoomShot(src) {
   document.getElementById("big").src = src;
   document.getElementById("overlay").style.display = "flex";
 }
-function toggleTrace(head) {
-  const body = head.nextElementSibling;
-  if (body) { body.hidden = !body.hidden; }
+/* 折叠只认一个状态源：折叠盒上的 is-open 类。aria-expanded 与箭头字形跟着它走，
+   报告区三层与轨迹区调用行共用这一个函数，避免样式与状态两套写法打架。
+   标题行是真 <button>，Enter / Space 由浏览器原生转成 click，不再自己处理按键。 */
+function toggleFold(head) {
+  const box = head.closest(".fold-box");
+  if (!box) { return; }
+  const open = box.classList.toggle("is-open");
+  head.setAttribute("aria-expanded", open ? "true" : "false");
+  const caret = head.querySelector(".caret");
+  if (caret) { caret.textContent = open ? "\u25be" : "\u25b8"; }
 }
 function switchTab(btn) {
   const box = btn.closest(".trace-body") || btn.closest(".db");
@@ -445,6 +614,88 @@ function openDrawer(index) {
 function closeDrawer() {
   document.getElementById("drawer").classList.remove("open");
 }
+/* 侧栏宽度：默认三成，拖手柄改宽。契约照平台 shared/components/SplitHandle.vue——
+   下限 220px，上限取 min(760px, 容器宽 - 480px)，右侧正文永不被压没；
+   拖拽期间 body 走 col-resize 且不可选；←/→ 16px（按住 Shift 48px）、Home/End 到两端、
+   双击回三成。宽度落 localStorage，取不到（file:// 等）就退回默认三成。 */
+function initSplitter() {
+  const splitter = document.getElementById("splitter");
+  const shell = document.querySelector(".shell");
+  const sidebar = document.querySelector(".sidebar");
+  if (!splitter || !shell || !sidebar) { return; }
+  const MIN = 220;
+  const MAX = 760;
+  const RIGHT_MIN = 480;
+  const DEFAULT_RATIO = .3;
+  const STORE_KEY = "agent-report-side-w";
+  let dragging = false;
+  function bounds() {
+    const room = shell.getBoundingClientRect().width - RIGHT_MIN;
+    return { min: MIN, max: Math.max(MIN, Math.min(MAX, room)) };
+  }
+  function clamp(value) {
+    const limit = bounds();
+    return Math.round(Math.min(limit.max, Math.max(limit.min, value)));
+  }
+  function remember(value) {
+    try { window.localStorage.setItem(STORE_KEY, String(value)); } catch (error) { return; }
+  }
+  function recall() {
+    try {
+      const saved = Number(window.localStorage.getItem(STORE_KEY));
+      return saved > MIN ? saved : 0;
+    } catch (error) { return 0; }
+  }
+  function apply(value, commit) {
+    const next = clamp(value);
+    const limit = bounds();
+    document.documentElement.style.setProperty("--side-w", next + "px");
+    splitter.setAttribute("aria-valuenow", String(next));
+    splitter.setAttribute("aria-valuemin", String(limit.min));
+    splitter.setAttribute("aria-valuemax", String(limit.max));
+    if (commit) { remember(next); }
+  }
+  splitter.addEventListener("mousedown", function (event) {
+    if (event.button !== 0) { return; }
+    event.preventDefault();
+    dragging = true;
+    splitter.classList.add("is-dragging");
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  });
+  window.addEventListener("mousemove", function (event) {
+    if (!dragging) { return; }
+    apply(event.clientX - shell.getBoundingClientRect().left, false);
+  });
+  window.addEventListener("mouseup", function () {
+    if (!dragging) { return; }
+    dragging = false;
+    splitter.classList.remove("is-dragging");
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+    apply(sidebar.getBoundingClientRect().width, true);
+  });
+  splitter.addEventListener("keydown", function (event) {
+    const step = event.shiftKey ? 48 : 16;
+    const current = sidebar.getBoundingClientRect().width;
+    let next = null;
+    if (event.key === "ArrowLeft") { next = current - step; }
+    else if (event.key === "ArrowRight") { next = current + step; }
+    else if (event.key === "Home") { next = bounds().min; }
+    else if (event.key === "End") { next = bounds().max; }
+    if (next === null) { return; }
+    event.preventDefault();
+    apply(next, true);
+  });
+  splitter.addEventListener("dblclick", function () {
+    apply(shell.getBoundingClientRect().width * DEFAULT_RATIO, true);
+  });
+  window.addEventListener("resize", function () {
+    if (window.innerWidth <= 900) { return; }
+    apply(sidebar.getBoundingClientRect().width, false);
+  });
+  apply(recall() || shell.getBoundingClientRect().width * DEFAULT_RATIO, false);
+}
 document.querySelectorAll(".tabs .btn").forEach(function (link) {
   link.addEventListener("click", function (event) {
     event.preventDefault();
@@ -464,6 +715,7 @@ function openListView(name) {
   document.querySelectorAll(".view").forEach(function (view) { view.classList.remove("active"); });
   document.getElementById("view-" + name).classList.add("active");
 }
+initSplitter();
 """
 
 
@@ -609,7 +861,8 @@ class HtmlReportRenderer:
         """
         渲染报告区：按 SOP 步骤分组，没有步骤时退回阶段分组。
 
-        组内再按执行者 / 验收者分成两个视觉块。
+        组内再按执行者 / 验收者分成两个视觉块。三层（子目标 / 角色块 / 工具卡）默认全部收起：
+        长报告先给结构，细节逐层点开。子目标标题前带手绘序号（01 起、封顶 99）。
 
         Args:
             record: 本轮记录。
@@ -624,13 +877,17 @@ class HtmlReportRenderer:
                 groups.append((key, []))
             groups[-1][1].append(step)
 
-        body: list[str] = []
-        for name, steps in groups:
-            body.append('<div class="phase">')
+        body: list[str] = [_ORDINAL_DEFS]
+        for ordinal, (name, steps) in enumerate(groups, start=1):
+            body.append('<div class="phase fold-box">')
             body.append(
-                f'<div class="phase-h"><h3>{html.escape(name)}</h3>'
+                '<div class="phase-h"><h3>'
+                '<button type="button" class="fold-h" aria-expanded="false" '
+                'onclick="toggleFold(this)">'
+                f"{_CARET}{_ordinal_svg(ordinal)}{html.escape(name)}</button></h3>"
                 f"<em>{len(steps)} 次调用</em></div>"
             )
+            body.append('<div class="phase-b fold-b">')
             # 组内按角色切块：同一角色的连续步骤合成一块。
             blocks: list[tuple[str, list[StepRecord]]] = []
             for step in steps:
@@ -644,15 +901,19 @@ class HtmlReportRenderer:
                     label = "执行者" if role == "executor" else "验收者"
                     accent = "--c-case" if role == "executor" else "--c-device"
                     body.append(
-                        f'<div class="role-block" style="--role-accent:var({accent})">'
-                        f'<span class="role-label">{label}</span>'
+                        f'<div class="role-block fold-box" style="--role-accent:var({accent})">'
+                        '<button type="button" class="role-h fold-h" aria-expanded="false" '
+                        'onclick="toggleFold(this)">'
+                        f'{_CARET}<span class="role-label">{label}</span></button>'
+                        '<div class="role-b fold-b">'
                     )
                     for step in items:
                         body.append(self._step(step))
-                    body.append("</div>")
+                    body.append("</div></div>")
                 else:
                     for step in items:
                         body.append(self._step(step))
+            body.append("</div>")
             body.append("</div>")
         if record.final_text:
             body.append(f'<div class="final">{html.escape(record.final_text)}</div>')
@@ -661,6 +922,8 @@ class HtmlReportRenderer:
     def _step(self, step: StepRecord) -> str:
         """
         渲染单个步骤卡片，按序号轮转微倾角度。
+
+        标题行常显（序号 + 工具名 + 耗时），正文（意图 / 入参 / 结果 / 截图）默认收起。
 
         Args:
             step: 步骤记录。
@@ -671,13 +934,16 @@ class HtmlReportRenderer:
         note = " ".join(step.note.split())
         tilt = _TILTS[(step.index - 1) % len(_TILTS)]
         parts: list[str] = [
-            f'<article class="card" style="--tilt:{tilt};--ac-accent:var(--c-{"element" if step.index % 2 else "device"})">'
+            f'<article class="card fold-box" style="--tilt:{tilt};--ac-accent:var(--c-{"element" if step.index % 2 else "device"})">'
         ]
         parts.append(
-            f'<div class="card-h"><span class="no">{step.index}</span>'
+            '<button type="button" class="card-h fold-h" aria-expanded="false" '
+            'onclick="toggleFold(this)">'
+            f'{_CARET}<span class="no">{step.index}</span>'
             f'<span class="tool">{html.escape(step.tool)}</span>'
-            f'<span class="t ml">{step.span_ms or step.t_ms} ms</span></div>'
+            f'<span class="t ml">{step.span_ms or step.t_ms} ms</span></button>'
         )
+        parts.append('<div class="card-b fold-b">')
         if note:
             parts.append(f'<p class="note">{html.escape(note[:400])}</p>')
         if step.input and step.input != "{}":
@@ -697,6 +963,7 @@ class HtmlReportRenderer:
                 f"onkeydown=\"if(event.key==='Enter'||event.key===' '){{event.preventDefault();this.click();}}\">"
                 f'<img src="data:image/jpeg;base64,{thumb}" alt="第 {step.index} 步截图"></span>'
             )
+        parts.append("</div>")
         parts.append("</article>")
         return "\n".join(parts)
 
@@ -725,7 +992,7 @@ class HtmlReportRenderer:
             if schema
             else "（该工具没有登记 schema）"
         )
-        return f"""<div class="trace-body">
+        return f"""<div class="trace-body fold-b">
       <div class="ctabs">
         <button class="active" data-tab="overview" onclick="switchTab(this)">概述</button>
         <button data-tab="input" onclick="switchTab(this)">参数</button>
@@ -813,14 +1080,13 @@ class HtmlReportRenderer:
                 meta += f" · 第 {span.get('step')} 步"
             meta += f" · {duration} ms"
 
-            parts.append(f'<div class="call" id="span-{index}">')
+            parts.append(f'<div class="call fold-box" id="span-{index}">')
             parts.append(
-                f'<div class="call-h" role="button" tabindex="0" aria-expanded="false" '
-                f'onclick="toggleTrace(this)" '
-                f"onkeydown=\"if(event.key==='Enter'||event.key===' '){{event.preventDefault();this.click();}}\">"
+                f'<button type="button" class="call-h fold-h" aria-expanded="false" '
+                f'onclick="toggleFold(this)">'
                 f'<span class="badge {badge}">{label}</span>'
                 f'<span class="call-n">{html.escape(str(span.get("name")))}</span>'
-                f'<span class="call-m">{html.escape(meta)}</span></div>'
+                f'<span class="call-m">{html.escape(meta)}</span></button>'
             )
             if is_tool:
                 step = steps.get(span.get("step"))
@@ -883,7 +1149,7 @@ class HtmlReportRenderer:
         verdict = "通过" if ok else f"失败 {record.summary.get('failed', 0)} 次"
         pill_bg = "var(--app-status-success-bg)" if ok else "var(--app-status-danger-bg)"
         pill_fg = "var(--app-status-success-text)" if ok else "var(--app-status-danger-text)"
-        font_src = _relpath(_BRAND_FONT, record.html_path.parent)
+        font_src = _brand_font_src(_relpath(_BRAND_FONT, record.html_path.parent))
         css = _CSS.replace("__FONT_SRC__", font_src)
         return f"""<!doctype html>
 <html lang="zh-CN">
@@ -896,6 +1162,9 @@ class HtmlReportRenderer:
 <body>
 <div class="shell">
   {self._sidebar(record)}
+  <div class="splitter" id="splitter" role="separator" aria-orientation="vertical"
+       aria-label="拖动调整左侧栏宽度，双击恢复默认三成"
+       aria-valuemin="220" aria-valuemax="760" tabindex="0"></div>
   <div class="main">
     <div class="main__doodles" aria-hidden="true">
       <svg width="100%" height="100%" viewBox="0 0 900 1200" preserveAspectRatio="none" fill="none">
@@ -921,11 +1190,11 @@ class HtmlReportRenderer:
       </header>
       <div class="doc-body">
         <section class="view active" id="view-report">
-          <p class="tip">按子目标分组；点卡片标题可收起，截图可点击放大。</p>
+          <p class="tip">按子目标分组；点标题逐层展开（子目标 → 角色 → 工具卡），截图可点击放大。</p>
           {self._report(record)}
         </section>
         <section class="view" id="view-trace">
-          <p class="tip">上为时间轴（按轮次分层，点条形看详情）；下为调用列表。</p>
+          <p class="tip">上为时间轴（按轮次分层，点条形看详情）；下为调用列表，点行展开该次调用的详情。</p>
           <div class="chart-card">
             <h4>时间轴
               <span class="legend">

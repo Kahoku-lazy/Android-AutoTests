@@ -9,7 +9,8 @@ import {
   BUG_TABLE_COLUMNS,
   bugCategoryClass,
   bugStatusClass,
-  bugTaskRoute,
+  bugKindLabel,
+  bugTaskLabel,
   bugTaskStatusLabel,
   formatBugTime,
 } from "@/modules/bug-manager/constants"
@@ -36,9 +37,10 @@ describe("[P0] BUG 单分类与状态", () => {
 })
 
 describe("[P0] BUG 单任务关联", () => {
-  it("任务编号跳转到任务详情", () => {
-    expect(bugTaskRoute(173)).toBe("/tasks/173")
-    expect(bugTaskRoute("173")).toBe("/tasks/173")
+  it("任务编号只显示文本，不链到已下线的详情", () => {
+    expect(bugTaskLabel(173)).toBe("#173")
+    expect(bugTaskLabel("173")).toBe("#173")
+    expect(bugKindLabel("verdict")).toBe("步骤未通过")
     expect(bugTaskStatusLabel("interrupted")).toBe("已中断")
   })
 

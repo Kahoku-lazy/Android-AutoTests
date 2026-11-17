@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest"
 import {
   BUG_CATEGORY_BARS,
+  BUG_DISTRIBUTION_HEIGHT,
   BUG_STATUS_SLICES,
   buildDistributionOption,
   categorySeriesData,
@@ -54,6 +55,16 @@ describe("buildDistributionOption", () => {
   it("中心总数与 summary.total 一致", () => {
     const option = buildDistributionOption(SUMMARY)
     expect(option.graphic[0].style.text).toBe("12")
+    expect(option.graphic[1].style.text).toBe("BUG 总数")
+  })
+
+  it("圆心文字以像素锚在圆心，不随容器高度漂", () => {
+    const option = buildDistributionOption(SUMMARY)
+    expect(typeof option.graphic[0].top).toBe("number")
+    // 数字字形盒顶部 = 圆心 - 半字高（9px），使字形正中对上圆心
+    expect(option.graphic[0].top).toBe(BUG_DISTRIBUTION_HEIGHT / 2 - 9)
+    expect(option.graphic[0].left).toBe(option.series[0].center[0])
+    expect(option.graphic[0].style.textVerticalAlign).toBe("middle")
   })
 
   it("两个 series 与图例数据同源", () => {

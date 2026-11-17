@@ -8,16 +8,16 @@
 
 | 组成 | 来源 |
 | --- | --- |
-| 模型 | `models.py` 按短名造出实例 |
-| 系统提示词 | `config.py` 按文件名读成正文 |
+| 模型 | `models.py` 按调用方传入的厂商、密钥名、地址、模型名造出实例 |
+| 系统提示词 | 调用方传入的正文 |
 | 角色名称 | 调用方传入 |
 
 ```text
 agents/
-  config.py      load_models / load_prompt / load_log_keywords / load_secret
-  models.py      ChatModel 校验 + create_model（顺带交出密钥环境变量名）
+  config.py      load_log_keywords
+  models.py      校验连接参数 + 自己读 .env + create_model（交出密钥环境变量名）
   creator.py     create_agent → AgentBundle
-  config/        models.yaml + prompts/*.md + log_keywords/<SKU>.md
+  config/        log_keywords/<SKU>.md
 ```
 
 `create_agent` 是唯一出口，返回 `AgentBundle`：`.agent` 是可运行智能体，`.api_key_env` 是本次使用的密钥环境变量名（只有名字，没有值）。
@@ -25,7 +25,14 @@ agents/
 ```python
 from engines.ae_harness.agents.creator import create_agent
 
-bundle = create_agent("ui_executor", "UI_EXECUTOR_PROMPT", "govee_chat_flash")
+bundle = create_agent(
+    "ui_executor",
+    "你是 UI 执行者。",
+    provider="govee",
+    api_key_env="GOVEE_API_KEY",
+    model_name="deepseek-flash",
+    base_url="https://test-llm.lanjingerp.com/v1",
+)
 agent = bundle.agent  # 挂工具、跑任务都从这里拿
 print(bundle.api_key_env)  # GOVEE_API_KEY；用量记账按这个名字归组
 ```
@@ -48,11 +55,11 @@ print(bundle.api_key_env)  # GOVEE_API_KEY；用量记账按这个名字归组
 | 运行控制 | 按上限或外部信号**提前中止** | 只会更早结束，不会多做一件事 |
 
 三类都经创建时的显式入参传入（`observers=[...]`），默认一个都不挂。**能力型中间件（改变行为、扩展能力）一律禁止**，不论包装成什么名字。
-3. **禁止在 `agents/` 以外直接读 `agents/config/models.yaml` 与 `agents/config/prompts/`** —— 这两样只能经 `config.py` 读取，不得自己 `import yaml`、`open()` 或 `read_text()`。**其它子包自带的配置（例如 `knowledge/config/`）不属本条**，由该子包自己读、自己校验。
+3. **禁止在本目录读取或保存角色提示词文件** —— `create_agent` 只收调用方传入的正文。聊天模型没有 `models.yaml`，连接参数由调用方传入。**其它子包自带的配置（例如 `knowledge/config/`）不属本条**，由该子包自己读、自己校验。
 4. **禁止 `creator.py` 自己构造模型客户端** —— 必须经 `models.create_model`，不得直接实例化 `DeepSeekChatModel` 之类的类。
 5. **禁止在 `create_agent` 里调用 `reply` / `reply_stream`** —— 只创建，不运行；何时开始对话由调用方决定。
 6. **禁止引入语音、TTS** —— 本目录只服务 chat 角色；遇到这类需求先上报，不要自行扩展。**知识库检索**由调用方把根级 `knowledge/` 的工具挂到角色上（工具不算角色第四要素），本目录**不感知、不 import**。
-7. **禁止改变三个参数的含义** —— `name` 只收角色名称、`prompt` 只收提示词文件名、`model_short` 只收模型短名；不得让它兼容正文或实例。
+7. **禁止把连接参数收成短名或配置文件** —— `name` 只收角色名称、`system_prompt` 只收提示词正文；模型必须由调用方显式传入 `provider`、`api_key_env`、`model_name`、`base_url`。不得恢复模型短名，不得让这四个参数兼容模型实例，不得再按文件名读提示词。
 8. **禁止在本目录新增第二套配置来源** —— 不得再加一个 `settings.py`、第二个 yaml 或另一个提示词目录。
 
 ## 观测中间件准入清单

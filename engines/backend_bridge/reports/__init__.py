@@ -23,6 +23,6 @@ Python 调试：➡️ python -m engines.backend_bridge.reports 🏁
 
 from __future__ import annotations
 
-from .paths import REPORT_ROOT
+from .paths import ASSISTANT_LOG_ROOT, REPORT_ROOT
 
-__all__ = ["REPORT_ROOT"]
+__all__ = ["ASSISTANT_LOG_ROOT", "REPORT_ROOT"]

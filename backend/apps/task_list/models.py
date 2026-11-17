@@ -2,13 +2,10 @@
 
 from django.db import models
 
-from backend.apps.ai_assistant.models import AIAgent
-
 
 class Task(models.Model):
     """Task → task_tasks."""
 
-    agent = models.ForeignKey(AIAgent, on_delete=models.CASCADE, related_name="tasks")
     title = models.CharField(max_length=500)
     # 任务类型快照：device_control=设备执行；case_authoring=家电测试用例编写。
     task_kind = models.CharField(max_length=32, default="device_control")
@@ -20,10 +17,13 @@ class Task(models.Model):
     device_serial = models.CharField(max_length=100, default="", blank=True)
     device_label = models.CharField(max_length=200, default="", blank=True)
     case_title = models.CharField(max_length=255, default="", blank=True)
+    # 提交时冻结的用例身份。空对象表示旧任务，不回读用例库。
+    case_identity = models.JSONField(default=dict, blank=True)
     status = models.CharField(max_length=20, default="pending")
     result = models.TextField(default="", blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
+    heartbeat_at = models.DateTimeField(null=True, blank=True)
     input_tokens = models.IntegerField(default=0)
     output_tokens = models.IntegerField(default=0)
     cache_input_tokens = models.IntegerField(default=0)

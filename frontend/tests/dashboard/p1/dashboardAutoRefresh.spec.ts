@@ -46,7 +46,8 @@ function mountAutoKeepAlive(refresh: () => Promise<void>) {
   const Host = defineComponent({
     setup: () => () =>
       h(KeepAlive, null, {
-        default: () => (visible.value ? h(Comp, { key: "dashboard" }) : h(Placeholder, { key: "other" })),
+        default: () =>
+          visible.value ? h(Comp, { key: "dashboard" }) : h(Placeholder, { key: "other" }),
       }),
   })
   const wrapper = mount(Host)

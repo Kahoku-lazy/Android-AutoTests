@@ -9,11 +9,8 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.db.models import Case, F, JSONField, Max, Q, Value, When
-from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Coalesce
 
-from backend.apps.ai_assistant.api import filter_agents_for_user, resolve_assistant_name
-from backend.apps.ai_assistant.models import AIAgent
 from backend.apps.task_list.api import list_task_attachments, parse_task_result
 from backend.apps.task_list.models import Task, TaskAttachment, TaskEvent
 from backend.models.constants import TaskKind
@@ -37,20 +34,9 @@ _REPORT_LIST_LIMIT = 500
 
 
 def _assistant_names_map(agent_ids: list[int]) -> dict[int, str]:
-    """按 agent id 批量取线路显示名（不读 avatar / route_configs 大字段）。"""
-    if not agent_ids:
-        return {}
-    rows = (
-        AIAgent.objects.filter(id__in=agent_ids)
-        .annotate(
-            route_name=KeyTextTransform(
-                "name",
-                KeyTextTransform("device_control", "route_configs"),
-            ),
-        )
-        .values_list("id", "name", "route_name")
-    )
-    return {int(agent_id): str(route_name or name or "") for agent_id, name, route_name in rows}
+    """旧智能体已下线，报告不再按智能体取名。"""
+    del agent_ids
+    return {}
 
 
 @dataclass(slots=True)
@@ -249,14 +235,11 @@ def build_report_list(
     except (ValueError, TypeError):
         return empty
 
-    agents = filter_agents_for_user(AIAgent.objects.all(), user_id)
-    agent_ids = list(agents.values_list("id", flat=True))
-    assistant_names = _assistant_names_map(agent_ids)
+    assistant_names = {}
     qs = (
-        Task.objects.filter(agent_id__in=agent_ids)
+        Task.objects.all()
         .only(
             "id",
-            "agent_id",
             "title",
             "task_kind",
             "status",
@@ -290,7 +273,7 @@ def build_report_list(
     n_pass = 0
     n_fail = 0
     for task in qs:
-        assistant = assistant_names.get(task.agent_id, "")
+        assistant = ""
         if creator_q and creator_q not in assistant.lower():
             continue
         status_key = (task.status or "").lower()
@@ -416,8 +399,7 @@ def _visible_task(user_id: str | None, task_id: str):
         pk = int(task_id)
     except (TypeError, ValueError):
         return None
-    agents = filter_agents_for_user(AIAgent.objects.all(), user_id)
-    return Task.objects.filter(pk=pk, agent__in=agents).select_related("agent").first()
+    return Task.objects.filter(pk=pk).first()
 
 
 def _args(payload: dict) -> dict:
@@ -1130,7 +1112,7 @@ def _case_authoring_flow(task: Task) -> dict:
             "case_title": task.case_title or "",
             "status": task.status or "",
             "device": "",
-            "assistant": resolve_assistant_name(getattr(task, "agent", None)),
+            "assistant": "",
             "started_at": _iso(task.started_at or task.created_at),
             "finished_at": _iso(task.finished_at),
             "cost_total": _money(task.cost_total),
@@ -1171,7 +1153,7 @@ def build_task_flow(user_id: str | None, task_id: str) -> dict | None:
             "case_title": task.case_title or "",
             "status": task.status or "",
             "device": _device_display(task),
-            "assistant": resolve_assistant_name(getattr(task, "agent", None)),
+            "assistant": "",
             "started_at": _iso(task.started_at or task.created_at),
             "finished_at": _iso(task.finished_at),
             "cost_total": _money(task.cost_total),

@@ -5,23 +5,20 @@
 ## 链路
 
 ```text
-config/
-  │  models.yaml + prompts/*.md
-  ▼
-config.py        读模型表、读提示词、按环境变量名取密钥
+调用方传入提示词正文与连接参数
   │
   ▼
-models.py        校验一条 chat 配置，造聊天模型
+models.py        校验连接参数，造聊天模型
   │
   ▼
-creator.py     模型 + 提示词 + 工具 → Agent
+creator.py       模型 + 提示词正文 → Agent
 ```
 
 | 文件 | 只做一件事 |
 | --- | --- |
-| `config.py` | `load_models` 读模型表；`load_prompt` 读提示词正文；`load_secret` 取密钥，先查 `.env` 再查进程环境 |
-| `models.py` | `ChatModel` 字段声明即校验；`create_model` 按短名造模型，不传表则自己读，并顺带交出用的是哪把密钥 |
-| `creator.py` | `create_agent` 把提示词正文、模型包装成 Agent，连同密钥环境变量名一起返回；只创建不回复 |
+| `config.py` | `load_log_keywords` 按型号读日志关键词 |
+| `models.py` | `ChatModel` 字段声明即校验；`create_model` 按调用方传入的连接参数造模型，并顺带交出用的是哪把密钥 |
+| `creator.py` | `create_agent` 把调用方传入的提示词正文和模型包装成 Agent，连同密钥环境变量名一起返回；只创建不回复 |
 | `../tools/adb/` | adb 设备工具：设备查询、点击、滑动、长按、输入、按键、装卸载、息屏、解锁、截图、UI dump |
 
 ## 如何创建 Agent
@@ -31,8 +28,11 @@ from engines.ae_harness.agents.creator import create_agent
 
 bundle = create_agent(
     name="ui_executor",  # 智能体名字，出现在消息里
-    prompt="UI_EXECUTOR_PROMPT",  # config/prompts 下的文件名，不带 .md
-    model_short="deepseek_chat_flash",  # models.yaml 的顶层键
+    system_prompt="你是 UI 执行者。",  # 平台运营配置传入的正文
+    provider="govee",
+    api_key_env="GOVEE_API_KEY",
+    model_name="deepseek-flash",
+    base_url="https://test-llm.lanjingerp.com/v1",
 )
 
 agent = bundle.agent  # 挂工具、跑任务都从这里拿
@@ -55,16 +55,18 @@ print(bundle.api_key_env)  # GOVEE_API_KEY，供用量记账归组
 | 参数 | 必填 | 说明 |
 | --- | --- | --- |
 | `name` | 是 | 智能体名字 |
-| `prompt` | 是 | `config/prompts/` 下的文件名，不带 `.md` |
-| `model_short` | 是 | `models.yaml` 的顶层键 |
-| `catalog` | 否 | 模型表；不传则 `create_model` 现读。一次建多个可复用同一份 |
+| `system_prompt` | 是 | 系统提示词正文，由调用方传入 |
+| `provider` | 是 | 厂商名：`deepseek` / `dashscope` / `govee` |
+| `api_key_env` | 是 | 密钥环境变量名，必须与厂商成对 |
+| `model_name` | 是 | 厂商正式模型名 |
+| `base_url` | 否 | 基础地址；空串时用厂商默认 |
 | `stream` | 否 | 默认 `True` |
 
 工具不在参数里，创建后挂载，见下文「工具」。
 
-### 现有提示词
+### 提示词来源
 
-`UI_EXECUTOR_PROMPT`、`UI_VERIFIER_PROMPT`、`CASE_WRITER_PROMPT`、`CASE_VERIFIER_PROMPT`。
+系统提示词不在本目录维护。平台新建 Agent 时从运营配置读取正文，再传给 `create_agent`。
 
 ### 现有模型短名
 
@@ -126,7 +128,14 @@ deepseek_pro:
 from engines.ae_harness.agents.creator import create_agent
 from engines.ae_harness.tools import build_adb_tools
 
-bundle = create_agent("ui_executor", "UI_EXECUTOR_PROMPT", "govee_chat_flash")
+bundle = create_agent(
+    "ui_executor",
+    "你是 UI 执行者。",
+    provider="govee",
+    api_key_env="GOVEE_API_KEY",
+    model_name="deepseek-flash",
+    base_url="https://test-llm.lanjingerp.com/v1",
+)
 
 for tool in build_adb_tools():
     await bundle.agent.toolkit.add_tool(tool)

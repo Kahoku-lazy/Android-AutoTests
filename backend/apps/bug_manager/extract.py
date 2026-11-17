@@ -34,6 +34,7 @@ class BugDraft:
     source_ref: str
     title: str
     detail: str
+    failure: dict | None = None
 
 
 def build_bug_drafts(task: Any) -> list[BugDraft]:
@@ -58,7 +59,59 @@ def build_bug_drafts(task: Any) -> list[BugDraft]:
         return []
     if kind == TaskKind.CASE_AUTHORING:
         return _case_drafts(task, status, payload)
+    if kind == TaskKind.ASSISTANT_SOP and _failed_steps(payload):
+        return [_workflow_draft(task, status, payload)]
     return _ui_drafts(task, status, payload)
+
+
+_KIND_LABEL = {
+    "verdict": "步骤未通过",
+    "provider": "模型拒绝",
+    "device": "设备命令失败",
+    "platform": "平台错误",
+    "interrupted": "已中断",
+}
+
+
+def _workflow_draft(task: Any, status: str, payload: dict) -> BugDraft:
+    """当前工作流只出一张：标题用第一个失败步骤，四问进 failure。"""
+    steps = _failed_steps(payload)
+    first = steps[0]
+    name = str(first.get("name") or "未记录")
+    kind = str(first.get("kind") or "")
+    if kind == "verdict":
+        title = f"步骤未通过：{name}"
+    elif status == TaskStatus.INTERRUPTED or kind == "interrupted":
+        title = f"任务中断：{_task_title(task)}"
+    else:
+        title = f"{_KIND_LABEL.get(kind, _UI_TASK_FAILURE)}：{_task_title(task)}"
+    lines = [
+        *_common_lines(task),
+        f"出错步骤：第 {first.get('seq') or 1} 步 {name}",
+        f"原因类别：{_KIND_LABEL.get(kind, kind or '未记录')}",
+        f"期望结果：{first.get('expected') or '未记录'}",
+        f"实际结果：{first.get('actual') or '未记录'}",
+    ]
+    if len(steps) > 1:
+        lines.append(
+            "其他失败步骤：" + "；".join(str(item.get("name") or "未记录") for item in steps[1:])
+        )
+    return _draft(
+        task,
+        BugCategory.UI_AUTOMATION,
+        "task",
+        title,
+        "\n".join(lines),
+        {"steps": steps},
+    )
+
+
+def _failed_steps(payload: dict) -> list[dict]:
+    """读结果里的失败步骤。缺字段或不是列表时当没有。"""
+    raw = payload.get("failed_steps")
+    if not isinstance(raw, list):
+        return []
+    return [item for item in raw if isinstance(item, dict)]
 
 
 def _ui_drafts(task: Any, status: str, payload: dict) -> list[BugDraft]:
@@ -85,6 +138,18 @@ def _ui_drafts(task: Any, status: str, payload: dict) -> list[BugDraft]:
                 ),
             )
         )
+    kind = str(payload.get("failure_kind") or "")
+    if status == TaskStatus.FAILED and kind in {"provider", "device", "platform"}:
+        drafts.append(
+            _draft(
+                task,
+                BugCategory.UI_AUTOMATION,
+                f"task:{kind}",
+                f"{_UI_TASK_FAILURE}：{_task_title(task)}",
+                _ui_task_detail(task, payload, []),
+            )
+        )
+        return drafts
     failed_cases = _failed_case_titles(payload)
     if status == TaskStatus.FAILED and failed_cases:
         drafts.extend(
@@ -174,7 +239,15 @@ def _case_verification_detail(task: Any, payload: dict, *, interrupted: bool = F
     """Case-authoring verification body: summary, verdicts and failed modules."""
     lines = _common_lines(task)
     if interrupted:
-        _append(lines, "中断原因：" + (_text(payload.get("summary")) or "服务重启导致任务线程终止"))
+        _append(
+            lines,
+            "中断原因："
+            + (
+                _text(payload.get("reason"))
+                or _text(payload.get("summary"))
+                or "进程退出时任务仍在执行"
+            ),
+        )
     _append(lines, "验收结论：" + _text(payload.get("summary")))
     _append(lines, "未通过原因：" + _text(payload.get("reason")))
     for index, verdict in enumerate(_verdicts(payload), start=1):
@@ -247,6 +320,7 @@ def _draft(
     source_ref: str,
     title: str,
     detail: str,
+    failure: dict | None = None,
 ) -> BugDraft:
     """Build a draft and clamp the title to the model limit."""
     return BugDraft(
@@ -254,6 +328,7 @@ def _draft(
         source_ref=source_ref,
         title=_title(title),
         detail=detail,
+        failure=failure,
     )
 
 

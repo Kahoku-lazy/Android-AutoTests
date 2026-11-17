@@ -6,8 +6,8 @@ import pytest
 
 from django.contrib.auth import get_user_model
 
-from backend.apps.ai_assistant.models import AIAgent
 from backend.apps.task_list.models import Task
+from backend.models.constants import TaskKind
 from backend.shared.auth.jwt_auth import create_access_token
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db]
@@ -21,26 +21,19 @@ def _auth_headers(user) -> dict:
 
 
 @pytest.fixture
-def visible_agent(db):
-    user = User.objects.create_user(
+def visible_user(db):
+    return User.objects.create_user(
         username="dash-act-admin",
         password="x",
         is_superuser=True,
     )
-    agent = AIAgent.objects.create(
-        name="dash-act-agent",
-        owner=user,
-        model_provider="deepseek",
-        model_name="deepseek-v4",
-    )
-    return user, agent
 
 
 @pytest.mark.unit
-def test_default_returns_at_most_ten(client, visible_agent):
-    user, agent = visible_agent
+def test_default_returns_at_most_ten(client, visible_user):
+    user = visible_user
     for i in range(12):
-        Task.objects.create(agent=agent, title=f"t-{i}", status="success")
+        Task.objects.create(title=f"t-{i}", status="success", task_kind=TaskKind.ASSISTANT_SOP)
 
     resp = client.get(ACTIVITIES_URL, **_auth_headers(user))
     assert resp.status_code == 200
@@ -51,10 +44,12 @@ def test_default_returns_at_most_ten(client, visible_agent):
 
 
 @pytest.mark.unit
-def test_offset_skips_board_page(client, visible_agent):
-    user, agent = visible_agent
+def test_offset_skips_board_page(client, visible_user):
+    user = visible_user
     for i in range(15):
-        Task.objects.create(agent=agent, title=f"page-{i}", status="completed")
+        Task.objects.create(
+            title=f"page-{i}", status="completed", task_kind=TaskKind.ASSISTANT_SOP
+        )
 
     first = client.get(ACTIVITIES_URL, **_auth_headers(user)).json()["data"]
     second = client.get(ACTIVITIES_URL, {"offset": 10, "limit": 50}, **_auth_headers(user)).json()[
@@ -69,8 +64,8 @@ def test_offset_skips_board_page(client, visible_agent):
 
 
 @pytest.mark.unit
-def test_invalid_limit_rejected(client, visible_agent):
-    user, _agent = visible_agent
+def test_invalid_limit_rejected(client, visible_user):
+    user = visible_user
     headers = _auth_headers(user)
 
     for bad in ("0", "51", "abc"):
@@ -83,17 +78,13 @@ def test_invalid_limit_rejected(client, visible_agent):
 
 
 @pytest.mark.unit
-def test_task_maps_to_run_and_agent_maps_to_agent(client, visible_agent):
-    user, agent = visible_agent
-    Task.objects.create(agent=agent, title="校准色温", status="success")
+def test_task_maps_to_run(client, visible_user):
+    user = visible_user
+    Task.objects.create(title="校准色温", status="success", task_kind=TaskKind.ASSISTANT_SOP)
+    Task.objects.create(title="退役任务", status="success", task_kind=TaskKind.DEVICE_CONTROL)
 
     rows = client.get(ACTIVITIES_URL, **_auth_headers(user)).json()["data"]
-    types = {r["type"] for r in rows}
-    assert "run" in types
-    assert "agent" in types
-
     run_row = next(r for r in rows if r["type"] == "run")
     assert "校准色温" in run_row["action"]
-
-    agent_row = next(r for r in rows if r["type"] == "agent")
-    assert "dash-act-agent" in agent_row["action"]
+    assert not any(r["type"] == "agent" for r in rows)
+    assert not any("退役任务" in r["action"] for r in rows)

@@ -65,7 +65,7 @@ steps:
 3. **禁止把步骤写死在 Python 里** —— 步骤是数据，只放 `steps/*.yaml`；代码里只保留默认路径。
 4. **禁止在 `workflow/` 拼 HTML** —— 报告一律走 `event/` 的 `HtmlReportRenderer`。
 5. **禁止给验收者传带写操作的工具集** —— 验收侧必须是 `build_adb_readonly_tools()`。
-6. **禁止在 `workflow/` 读模型配置或提示词** —— 那些只能经 `agents/config.py`；步骤 YAML 属于流程数据，允许在本目录读。
+6. **禁止在 `workflow/` 读提示词** —— 提示词只能经 `agents/config.py`。聊天模型没有配置文件，连接参数由调用方传给 `create_agent`；步骤 YAML 属于流程数据，允许在本目录读。
 
 ## 已知限制
 

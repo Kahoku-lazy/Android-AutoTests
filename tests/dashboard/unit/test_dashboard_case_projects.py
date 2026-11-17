@@ -31,27 +31,12 @@ def test_breakdown_is_per_project_for_current_user(client, two_users):
     owner, other = two_users
     uid = str(owner.id)
 
-    p_with = case_api.create_project(name="有用例项目", user_id=uid)
-    p_empty = case_api.create_project(name="空项目", user_id=uid)
-    f = case_api.create_file(project_id=p_with["id"], name="表", user_id=uid)
-    case_api.create_definition(
-        project_id=p_with["id"],
-        file_id=f["id"],
-        user_id=uid,
-        title="用例1",
-        steps="步骤",
-        expected_result="预期",
-    )
-    case_api.create_definition(
-        project_id=p_with["id"],
-        file_id=f["id"],
-        user_id=uid,
-        title="用例2",
-        steps="步骤",
-        expected_result="预期",
-    )
-    # 他用户项目不得出现在当前用户 breakdown
-    case_api.create_project(name="别人的项目", user_id=str(other.id))
+    p_with = case_api.create_project(name="有用例项目", library_kind="functional", user_id=uid)
+    p_empty = case_api.create_project(name="空项目", library_kind="automation", user_id=uid)
+    step = [{"action": "点一下", "assertion": "有反应"}]
+    case_api.create_row(project_id=p_with["id"], user_id=uid, title="用例1", steps=step)
+    case_api.create_row(project_id=p_with["id"], user_id=uid, title="用例2", steps=step)
+    case_api.create_project(name="别人的项目", library_kind="functional", user_id=str(other.id))
 
     resp = client.get(STATS_URL, **_auth_headers(owner))
     assert resp.status_code == 200

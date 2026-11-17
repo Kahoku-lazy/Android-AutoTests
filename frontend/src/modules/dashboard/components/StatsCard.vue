@@ -190,7 +190,7 @@ function navigate() {
 }
 
 .stats-card__stat small {
-  font-size: var(--app-size-xs, 11px);
+  font-size: var(--app-size-sm, 14px);
   font-weight: var(--app-font-weight-bold);
   color: var(--app-status-success-text, var(--stats-card-trend-text));
 }

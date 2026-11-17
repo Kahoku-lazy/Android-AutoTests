@@ -9,13 +9,12 @@ import pytest
 
 from django.contrib.auth import get_user_model
 
-from backend.apps.ai_assistant.models import AIAgent
 from backend.apps.dashboard.ai_usage import (
     ai_daily_series,
     ai_task_daily_execution,
     ai_today_usage_slots,
 )
-from backend.apps.task_list.models import TaskUsageHourly
+from backend.apps.usage_ledger.models import ModelUsage
 
 DAY = datetime(2026, 10, 21, 11, 5, 0)
 
@@ -27,20 +26,23 @@ def visible_agent(db):
         password="x",
         is_superuser=True,
     )
-    agent = AIAgent.objects.create(name="today-usage-agent", owner=user)
-    return user, agent
+    return user, type("Agent", (), {"id": 1})()
 
 
 def _usage(agent, hour, inp, out, cost):
-    TaskUsageHourly.objects.create(
-        stat_date=DAY.date(),
-        stat_hour=hour,
-        agent_id=agent.id,
-        model="deepseek-chat",
-        role_name="执行者",
+    ModelUsage.objects.create(
+        event_id=f"today:{agent.id}:{hour}:{inp}",
+        occurred_at=DAY.replace(hour=hour),
+        provider="deepseek",
+        category="LLM",
+        model="deepseek-flash",
+        source="task",
+        execution_id=str(agent.id),
         input_tokens=inp,
         output_tokens=out,
+        total_tokens=inp + out,
         cost_total=Decimal(str(cost)),
+        pricing_status="priced",
     )
 
 

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from engines.ae_harness.agents.config import load_secret
+from engines.ae_harness.agents.models import load_secret
 from engines.ae_harness.agents.creator import AgentBundle
 from engines.ae_harness.middleware import ObservationMiddleware
 from engines.backend_bridge.workflow import SopRoles, build_sop_roles

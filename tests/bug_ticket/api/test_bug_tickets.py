@@ -9,7 +9,6 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from backend.apps.ai_assistant.models import AIAgent
 from backend.apps.bug_manager import api as bug_api
 from backend.apps.bug_manager.models import BugTicket
 from backend.apps.bug_manager.views import (
@@ -32,9 +31,7 @@ def user(db):
 
 @pytest.fixture
 def task(user):
-    agent = AIAgent.objects.create(owner=user, name="Agent-01", task_kind=TaskKind.DEVICE_CONTROL)
     return Task.objects.create(
-        agent=agent,
         title="H6810 全功能测试",
         task_kind=TaskKind.DEVICE_CONTROL,
         status=TaskStatus.FAILED,
@@ -108,6 +105,8 @@ def test_detail_and_status_update(user, task):
     detail = _call(BugDetailAPIView, "get", user, bug_id=ticket.id)
     assert detail.status_code == 200
     assert "图片页" in detail.data["detail"]
+    assert detail.data["failure_steps"] == []
+    assert detail.data["report_run"] == ""
 
     patched = _call(
         BugDetailAPIView,
@@ -138,21 +137,47 @@ def test_invalid_status_is_rejected(user, task):
     assert ticket.status == BugTicket.STATUS_OPEN
 
 
-def test_invisible_ticket_returns_404():
-    owner = get_user_model().objects.create_user(username="bug-owner-x", password="x")
-    other = get_user_model().objects.create_user(username="bug-other-x", password="x")
-    agent = AIAgent.objects.create(owner=owner, name="Agent-X", task_kind=TaskKind.DEVICE_CONTROL)
+def test_detail_returns_steps_and_report_only_while_task_exists(user):
     task = Task.objects.create(
-        agent=agent,
-        title="X",
-        task_kind=TaskKind.DEVICE_CONTROL,
+        title="工作流",
+        task_kind=TaskKind.ASSISTANT_SOP,
         status=TaskStatus.FAILED,
-        result=json.dumps({"status": "fail", "failed": []}, ensure_ascii=False),
+        result=json.dumps(
+            {
+                "failed_steps": [
+                    {
+                        "seq": 1,
+                        "name": "回到桌面",
+                        "expected": "能看见 dock",
+                        "actual": "没看到 dock",
+                        "attempts": 3,
+                        "kind": "verdict",
+                    }
+                ],
+                "report_run": "20261117_120000",
+                "report_name": "report.html",
+            },
+            ensure_ascii=False,
+        ),
     )
     bug_api.record_task_bugs(task)
     ticket = BugTicket.objects.get(task_id=task.id)
 
-    response = _call(BugDetailAPIView, "get", other, bug_id=ticket.id)
+    detail = _call(BugDetailAPIView, "get", user, bug_id=ticket.id)
+
+    assert detail.status_code == 200
+    assert detail.data["failure_steps"][0]["expected"] == "能看见 dock"
+    assert detail.data["report_run"] == "20261117_120000"
+    assert detail.data["report_name"] == "report.html"
+
+    task.delete()
+    after = _call(BugDetailAPIView, "get", user, bug_id=ticket.id)
+    assert after.data["report_run"] == ""
+    assert after.data["failure_steps"][0]["name"] == "回到桌面"
+
+
+def test_missing_ticket_returns_404(user):
+    response = _call(BugDetailAPIView, "get", user, bug_id=999999)
 
     assert response.status_code == 404
 

@@ -30,11 +30,11 @@
 ```text
 ae_harness/
   agents/              角色定义：config → models → creator
-    config/prompts/    各角色的系统提示词
     config/log_keywords/ 按机型的日志关键词目录（供验收者核对日志证据）
   assistant/           角色调试入口：建角色、挂工具、跑一轮、出报告
     _bootstrap.py      入口运行时引导：编码 / 日志级别 / 汇总 / 异常包装
   tools/adb/           adb 工具（16 个）+ 只读子集
+  tools/catalog.py     只读工具目录，不含实现
   knowledge/           独立知识库模块：向量模型配置、索引、只读检索工具（整目录可删）
   event/               事件记录与报告渲染（含用量记录、全量模式）
   middleware/          三类中间件：只读观测、模型调用重试、运行控制（预算/取消）
@@ -66,7 +66,7 @@ ae_harness/
 ### 二、职责
 
 5. **禁止绕过 `create_agent` 造 Agent** —— 不得在别处直接 `Agent(...)`，不得新增第二种创建入口。
-6. **禁止在 `agents/` 以外读角色配置** —— `agents/config/models.yaml`、`agents/config/prompts/` 与 `.env` 只经 `agents/config.py` 读取。**豁免**：其它子包自带的配置（例如 `knowledge/config/`）由其自读自校验；`.env` 全仓只有仓库根一份，允许子包自带取值函数，但**不得新增第二份 `.env`**。
+6. **禁止在 `agents/` 读角色提示词文件** —— 系统提示词由调用方传入正文，本目录不维护 `prompts/`。聊天模型不再有 `models.yaml`：连接参数由调用方传给 `create_model`，密钥由 `models.py` 自己读仓库根 `.env`。**豁免**：其它子包自带的配置（例如 `knowledge/config/`）由其自读自校验；`.env` 全仓只有仓库根一份，允许子包自带取值函数，但**不得新增第二份 `.env`**。
 7. **禁止在 `assistant/` 造模型或读提示词** —— 入口只调 `create_agent`，不自建客户端、不 `open()` 提示词文件。
 8. **禁止 `event/` 引用具体工具名** —— 工具特有展示由调用方通过 `step_extras` 注册。
 9. **禁止 `tools/` 反向依赖 `agents/`** —— 工具不知道 Agent 存在，两者只在入口汇合。
@@ -90,7 +90,7 @@ ae_harness/
 
 ## 新增一个角色的标准路径
 
-1. 提示词写到 `agents/config/prompts/<NAME>_PROMPT.md`。
+1. 系统提示词由调用方传入正文，不在本目录新增提示词文件。
 2. 在 `assistant/` 建 `agent_<role>.py`，照抄现有两个入口的骨架（`build_agent` / 主循环 / `_run`）。
 3. 角色定义只调 `create_agent`；工具用 `build_adb_tools()` 或 `build_adb_readonly_tools()` 逐个 `add_tool`。
 4. 运行骨架统一用 `assistant/_bootstrap.py`：`configure_runtime()` + `print_summary()` + `run_main()`。
@@ -100,10 +100,5 @@ ae_harness/
 
 ```bash
 # 单角色调试
-python -m engines.ae_harness.assistant.agent_executor "打开设置，进入关于手机"
-python -m engines.ae_harness.assistant.agent_verifier "屏幕上能看到「关于手机」标题"
-
-# 多智能体编排（SOP）
-python -m engines.ae_harness.workflow.sop_runner
-python -m engines.ae_harness.workflow.sop_runner --spec 其他.yaml "自定义任务"
+# 控制台单智能体与 SOP 调试入口已删除，不再作为使用入口。
 ```

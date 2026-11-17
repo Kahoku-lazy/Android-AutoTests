@@ -40,6 +40,20 @@ export function categorySeriesData(summary: BugSummary) {
   }))
 }
 
+/** 环形圆心的百分比位置（与 series.pie.center 同源） */
+export const BUG_RING_CENTER = { x: "26%", y: "50%" } as const
+
+/**
+ * 圆心文字的竖直锚点：按图表固定高度算出圆心像素，再据此摆放两段文字。
+ * graphic.text 的 `top` 实际落的是字形盒顶部（textVerticalAlign 对 graphic 不生效），
+ * 所以要减去各自字高的一半才能让字形正中对上圆心：
+ *   数字 24px → 半高约 9px；标签 11px → 半高约 4px，再下移 12px 做行距。
+ */
+export const BUG_RING_TEXT_TOP = {
+  number: BUG_DISTRIBUTION_HEIGHT / 2 - 9,
+  label: BUG_DISTRIBUTION_HEIGHT / 2 + 12,
+} as const
+
 export function buildDistributionOption(summary: BugSummary) {
   const statusData = statusSeriesData(summary)
   const categoryData = categorySeriesData(summary)
@@ -48,7 +62,7 @@ export function buildDistributionOption(summary: BugSummary) {
     animationDuration: 500,
     tooltip: {
       trigger: "item",
-      textStyle: { fontSize: 12 },
+      textStyle: {},
     },
     legend: {
       bottom: 0,
@@ -57,13 +71,13 @@ export function buildDistributionOption(summary: BugSummary) {
       itemWidth: 10,
       itemHeight: 10,
       itemGap: 14,
-      textStyle: { fontSize: 12, color: "#1e1e24", fontWeight: 600 },
+      textStyle: { color: "#1e1e24", fontWeight: 600 },
     },
     grid: { left: "54%", right: 20, top: 18, bottom: 30, containLabel: true },
     xAxis: {
       type: "value",
       minInterval: 1,
-      axisLabel: { fontSize: 10, color: "#6b6b74" },
+      axisLabel: { color: "#6b6b74" },
       splitLine: { lineStyle: { color: "rgba(30,30,36,0.08)" } },
     },
     yAxis: {
@@ -72,13 +86,15 @@ export function buildDistributionOption(summary: BugSummary) {
       data: BUG_CATEGORY_BARS.map((bar) => bar.label),
       axisLine: { lineStyle: { color: "rgba(30,30,36,0.15)" } },
       axisTick: { show: false },
-      axisLabel: { fontSize: 12, color: "#1e1e24", fontWeight: 600 },
+      axisLabel: { color: "#1e1e24", fontWeight: 600 },
     },
+    // 环形中心文字：数字用「圆心像素 + textVerticalAlign: middle」精确居中，
+    // 标签紧随其下；不再用 44%/54% 这类百分比（会随容器高度漂，导致字偏上）。
     graphic: [
       {
         type: "text",
-        left: "26%",
-        top: "44%",
+        left: BUG_RING_CENTER.x,
+        top: BUG_RING_TEXT_TOP.number,
         style: {
           text: String(summary.total),
           fill: "#1e1e24",
@@ -90,12 +106,11 @@ export function buildDistributionOption(summary: BugSummary) {
       },
       {
         type: "text",
-        left: "26%",
-        top: "54%",
+        left: BUG_RING_CENTER.x,
+        top: BUG_RING_TEXT_TOP.label,
         style: {
           text: "BUG 总数",
           fill: "#6b6b74",
-          fontSize: 11,
           textAlign: "center",
           textVerticalAlign: "middle",
         },

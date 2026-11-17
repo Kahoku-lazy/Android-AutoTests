@@ -1,18 +1,21 @@
 <script setup lang="ts">
-/** BUG 单详情抽屉 — 只渲染详情与状态操作，数据加载由列表页负责。 */
+/** BUG 单详情抽屉 — 有失败步骤时按四问展示，没有时沿用错误原文。 */
+import { computed } from "vue"
+import { ElMessage } from "element-plus"
 import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
+import { fetchTaskReport } from "@/modules/task-list/api/tasks"
 import {
   bugCategoryClass,
+  bugKindLabel,
   bugStatusClass,
-  bugTaskRoute,
   bugTaskStatusLabel,
   formatBugTime,
 } from "../constants"
-import type { BugStatus, BugTicket } from "../types"
+import type { BugFailureStep, BugStatus, BugTicket } from "../types"
 
-defineProps<{
+const props = defineProps<{
   modelValue: boolean
   bug: BugTicket | null
   loading: boolean
@@ -23,6 +26,31 @@ const emit = defineEmits<{
   "update:modelValue": [value: boolean]
   "status-change": [status: BugStatus]
 }>()
+
+const steps = computed(() => props.bug?.failure_steps ?? [])
+const hasReport = computed(() => Boolean(props.bug?.report_run && props.bug?.report_name))
+
+function attemptText(step: BugFailureStep): string {
+  if (!step.attempts) return ""
+  return `第 ${step.attempts} 次尝试仍未通过`
+}
+
+async function openReport() {
+  const bug = props.bug
+  if (!bug?.report_run || !bug.report_name) return
+  try {
+    const content = await fetchTaskReport(bug.report_run, bug.report_name)
+    if (!content) {
+      ElMessage.error("报告不存在")
+      return
+    }
+    const url = URL.createObjectURL(new Blob([content], { type: "text/html" }))
+    window.open(url, "_blank", "noopener")
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  } catch {
+    ElMessage.error("报告打开失败")
+  }
+}
 </script>
 
 <template>
@@ -52,13 +80,20 @@ const emit = defineEmits<{
 
       <dl class="bug-meta">
         <dt>关联任务</dt>
-        <dd>
-          <router-link :to="bugTaskRoute(bug.task_id)" class="bug-task-link">
-            #{{ bug.task_id }} {{ bug.task_title || "任务已删除" }}
-          </router-link>
-        </dd>
+        <dd>#{{ bug.task_id }} {{ bug.task_title || "任务已删除" }}</dd>
         <dt>任务状态</dt>
         <dd>{{ bugTaskStatusLabel(bug.task_status) }}</dd>
+        <template v-if="bug.case_label">
+          <dt>用例</dt>
+          <dd>
+            {{ bug.case_label }}
+            <ul v-if="(bug.case_rows || []).length > 1" class="bug-cases">
+              <li v-for="row in bug.case_rows" :key="row.id">
+                {{ row.project || "未命名项目" }} / {{ row.title }}
+              </li>
+            </ul>
+          </dd>
+        </template>
         <dt>创建时间</dt>
         <dd>{{ formatBugTime(bug.created_at) }}</dd>
         <dt>解决时间</dt>
@@ -66,6 +101,7 @@ const emit = defineEmits<{
       </dl>
 
       <div class="bug-detail__actions">
+        <DoodleBtn v-if="hasReport" tone="teal" @click="openReport">查看报告</DoodleBtn>
         <DoodleBtn
           v-if="bug.status !== 'resolved'"
           tone="teal"
@@ -92,7 +128,27 @@ const emit = defineEmits<{
         </DoodleBtn>
       </div>
 
-      <section class="bug-detail__section">
+      <section v-if="steps.length" class="bug-detail__section">
+        <h3 class="bug-detail__subtitle">失败步骤</h3>
+        <article v-for="(step, index) in steps" :key="step.seq" class="bug-step">
+          <details :open="index === 0">
+            <summary class="bug-step__summary">第 {{ step.seq }} 步 · {{ step.name }}</summary>
+            <dl class="bug-step__facts">
+              <dt>出错步骤</dt>
+              <dd>第 {{ step.seq }} 步 · {{ step.name }}</dd>
+              <dt>原因类别</dt>
+              <dd>{{ bugKindLabel(step.kind) }}</dd>
+              <dt>期望结果</dt>
+              <dd>{{ step.expected || "未记录" }}</dd>
+              <dt>实际结果</dt>
+              <dd>{{ step.actual || "未记录" }}</dd>
+            </dl>
+            <p v-if="attemptText(step)" class="bug-step__attempt">{{ attemptText(step) }}</p>
+          </details>
+        </article>
+      </section>
+
+      <section v-else class="bug-detail__section">
         <h3 class="bug-detail__subtitle">错误内容</h3>
         <pre class="bug-detail__body">{{ bug.detail || bug.detail_preview || "—" }}</pre>
       </section>

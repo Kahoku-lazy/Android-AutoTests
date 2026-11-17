@@ -6,11 +6,9 @@ import re
 
 from django.db import transaction
 from django.db.models import Count
-from django.db.models.fields.json import KeyTextTransform
 from django.utils import timezone
 
-from backend.apps.ai_assistant.api import filter_agents_for_user, resolve_assistant_name
-from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.task_list.case_identity import case_identity_label, case_identity_rows
 from backend.apps.task_list.models import Task, TaskAttachment
 from backend.apps.task_list.task_cost import task_cost
 from backend.models.constants import TaskKind, TaskStatus
@@ -24,13 +22,16 @@ __all__ = [
     "set_config_load_message",
     "rerun_task",
     "start_task",
+    "touch_heartbeat",
     "finalize_task",
+    "claim_terminal",
     "cancel_running_task",
     "delete_task",
     "clear_agent_tasks",
     "task_stats",
     "task_stats_by_agent",
     "recover_orphaned_tasks",
+    "sweep_stale_tasks",
     "begin_drain",
     "is_draining",
     "count_running_tasks",
@@ -63,6 +64,11 @@ def begin_drain() -> None:
 def is_draining() -> bool:
     """当前进程是否处于停机排空状态。"""
     return _DRAINING
+
+
+def running_task_ids() -> list[int]:
+    """当前仍为 running 的任务编号，供停机超时名单使用。"""
+    return list(Task.objects.filter(status=TaskStatus.RUNNING).values_list("id", flat=True))
 
 
 def count_running_tasks() -> int:
@@ -153,39 +159,64 @@ def task_stats_by_agent(tasks, agents) -> list[dict]:
     return result
 
 
-def recover_orphaned_tasks() -> int:
-    """启动恢复：遗留 running → interrupted，回写费用后按设备拉起 pending。
+SWEEP_STALE_SECONDS = 45
 
-    仅服务进程启动时调用（见 apps.TaskListConfig._run_startup_recovery）；管理命令不触发。
-    写库归口本模块（D3 契约：写操作只经 api.py）。
+
+def sweep_stale_tasks(stop_timeout_ids: set[int] | None = None) -> int:
+    """把心跳超时的 running 收成中断。心跳还在的不收。
+
+    Args:
+        stop_timeout_ids: 停机等满后记下的任务编号。命中则 cause 为 stop_timeout。
+
+    Returns:
+        本次收成中断的条数。
     """
-    running = list(Task.objects.filter(status=TaskStatus.RUNNING))
-    finished_at = timezone.now()
-    for task in running:
+    from datetime import timedelta
+
+    cutoff = timezone.now() - timedelta(seconds=SWEEP_STALE_SECONDS)
+    marked = set(stop_timeout_ids or ())
+    stale = list(Task.objects.filter(status=TaskStatus.RUNNING).filter(models_q_heartbeat(cutoff)))
+    recovered = 0
+    for task in stale:
         rollup_task_cost(task.id)
-        task.status = TaskStatus.INTERRUPTED
-        task.result = "执行中断：服务重启导致任务线程终止"
-        task.finished_at = finished_at
-        task.save(update_fields=["status", "result", "finished_at"])
-        _record_bug_safely(task)
-    serials = (
-        Task.objects.filter(status=TaskStatus.PENDING)
-        .exclude(device_serial="")
-        .values_list("device_serial", flat=True)
-        .distinct()
-    )
-    for serial in serials:
-        dispatch_device(serial)
-    # 用例编写任务没有设备，重启后单独把 pending 的重新拉起。
-    for case_task in Task.objects.filter(
-        status=TaskStatus.PENDING, task_kind=TaskKind.CASE_AUTHORING
-    ):
-        dispatch_case_authoring(case_task)
-    return len(running)
+        cause = "stop_timeout" if task.id in marked else "process_lost"
+        reason = (
+            "停机等待超时，任务线程被终止"
+            if cause == "stop_timeout"
+            else "进程退出时任务仍在执行，结果未写回"
+        )
+        claimed = claim_terminal(
+            task.id,
+            status=TaskStatus.INTERRUPTED,
+            result=dump_task_run_payload(
+                {
+                    "status": "interrupted",
+                    "cause": cause,
+                    "reason": reason,
+                    "summary": reason,
+                    "failed_steps": [category_step("interrupted", reason)],
+                }
+            ),
+            release_device=True,
+        )
+        if claimed is not None:
+            recovered += 1
+    return recovered
+
+
+def models_q_heartbeat(cutoff):
+    """心跳为空或早于阈值。空心跳视为没有活线程。"""
+    from django.db.models import Q
+
+    return Q(heartbeat_at__isnull=True) | Q(heartbeat_at__lt=cutoff)
+
+
+def recover_orphaned_tasks() -> int:
+    """兼容旧入口：只清扫心跳已停的 running。拉起 pending 由 claim_terminal 负责。"""
+    return sweep_stale_tasks()
 
 
 def create_task(
-    agent: AIAgent,
     *,
     title: str,
     goal: str,
@@ -194,12 +225,12 @@ def create_task(
     device_serial: str = "",
     device_label: str = "",
     case_title: str = "",
+    case_identity: dict | None = None,
     task_kind: str = TaskKind.DEVICE_CONTROL,
     created_by: str = "",
 ) -> Task:
     """创建任务（任务发布）；device_serial 须已在提交时固化。"""
     return Task.objects.create(
-        agent=agent,
         title=title,
         task_kind=task_kind,
         created_by=str(created_by or ""),
@@ -209,6 +240,7 @@ def create_task(
         device_serial=device_serial,
         device_label=device_label,
         case_title=case_title,
+        case_identity=case_identity or {},
         status=TaskStatus.PENDING,
     )
 
@@ -331,7 +363,6 @@ def rerun_task(task: Task) -> Task:
     调用方负责校验 status==failed，并在返回后 dispatch_device。
     """
     created = create_task(
-        task.agent,
         title=task.title or "",
         goal=task.goal or "",
         attachment=task.attachment or "",
@@ -339,11 +370,17 @@ def rerun_task(task: Task) -> Task:
         device_serial=task.device_serial or "",
         device_label=task.device_label or "",
         case_title=task.case_title or "",
+        case_identity=task.case_identity or {},
         task_kind=task.task_kind,
         created_by=task.created_by,
     )
     copy_task_attachments(task, created)
     return created
+
+
+def touch_heartbeat(task_id: int) -> None:
+    """只刷新仍在运行的任务心跳。终态行不动。"""
+    Task.objects.filter(pk=task_id, status=TaskStatus.RUNNING).update(heartbeat_at=timezone.now())
 
 
 def start_task(task: Task) -> Task:
@@ -370,7 +407,16 @@ def build_planner_user_input(task) -> str:
 def dispatch_device(serial: str) -> Task | None:
     """按设备抢槽：同 serial 至多一条 running；否则 start 最早 pending 并起线程。"""
     serial = (serial or "").strip()
-    if not serial or _DRAINING:
+    if not serial:
+        return None
+    if _DRAINING:
+        waiting = (
+            Task.objects.filter(device_serial=serial, status=TaskStatus.PENDING)
+            .order_by("id")
+            .first()
+        )
+        if waiting is not None:
+            backend_log.warning("停机排空拒绝派发 task_id=%s device_serial=%s", waiting.id, serial)
         return None
 
     with transaction.atomic():
@@ -389,12 +435,11 @@ def dispatch_device(serial: str) -> Task | None:
             return None
         claimed = start_task(next_task)
         task_id = claimed.id
-        agent_id = claimed.agent_id
 
         def _spawn() -> None:
             from backend.apps.task_list.task_runner import spawn_task_thread
 
-            spawn_task_thread(task_id, agent_id)
+            spawn_task_thread(task_id, 0)
 
         transaction.on_commit(_spawn)
         return claimed
@@ -417,44 +462,64 @@ def dispatch_case_authoring(task: Task) -> Task | None:
             return None
         claimed = start_task(locked)
         task_id = claimed.id
-        agent_id = claimed.agent_id
 
         def _spawn() -> None:
             from backend.apps.task_list.task_runner import spawn_task_thread
 
-            spawn_task_thread(task_id, agent_id)
+            spawn_task_thread(task_id, 0)
 
         transaction.on_commit(_spawn)
         return claimed
 
 
-def finalize_task(
-    task: Task,
+def claim_terminal(
+    task_id: int,
     *,
     status: str,
     result: str = "",
     usage: dict | None = None,
     costs: dict | None = None,
     release_device: bool = True,
-) -> Task:
-    """完成任务：状态/结果/完成时间 + 累计 token 用量与费用（任务发布完成时调用）。
+) -> Task | None:
+    """仅当任务仍为 running 时写入终态。抢不到则不改状态和结果。
 
     Args:
-        task: 要收口的任务。
-        status: 终态。
-        result: 写入 `Task.result` 的结果载荷。
-        usage: 工作流返回的任务级 token 累加器（含按模型拆分），空则只落状态/结果。
-        costs: 本次运行按价目表算出的费用（input / cache / output / total），空则不写。
-        release_device: 是否在收口后放行该设备槽。取消路径传 False，
-            放行交给工作线程退出时统一执行，避免旧线程还在操作设备就拉起下一条任务。
+        task_id: 要收口的任务编号。
+        status: 目标终态。
+        result: 合并进现有结果的载荷。空串表示不改结果正文。
+        usage: token 累加器。抢不到终态时仍可补写。
+        costs: 费用。抢不到终态时仍可补写。
+        release_device: 终态生效后是否放行设备槽。
 
     Returns:
-        已保存终态的任务。
+        终态生效后的任务。任务不存在，或状态已不是 running，返回 None。
     """
-    task.status = status
-    task.result = result
-    task.finished_at = timezone.now()
-    fields = ["status", "result", "finished_at"]
+    with transaction.atomic():
+        locked = Task.objects.select_for_update().filter(pk=task_id).first()
+        if locked is None:
+            return None
+        if locked.status != TaskStatus.RUNNING:
+            _apply_usage(locked, usage, costs)
+            return None
+        locked.status = status
+        if result:
+            locked.result = merge_task_result(locked.result, result)
+        locked.finished_at = timezone.now()
+        fields = ["status", "result", "finished_at"]
+        fields.extend(_apply_usage(locked, usage, costs))
+        locked.save(update_fields=fields)
+        serial = (locked.device_serial or "").strip()
+        claimed_id = locked.id
+    task = Task.objects.get(pk=claimed_id)
+    _record_bug_safely(task)
+    if release_device and serial:
+        dispatch_device(serial)
+    return task
+
+
+def _apply_usage(task: Task, usage: dict | None, costs: dict | None) -> list[str]:
+    """把用量和费用写到内存对象上，返回需要 update 的字段名。"""
+    fields: list[str] = []
     if usage:
         task.input_tokens = int(usage.get("input_tokens") or 0)
         task.output_tokens = int(usage.get("output_tokens") or 0)
@@ -470,6 +535,53 @@ def finalize_task(
         task.cost_output = Decimal(str(costs.get("cost_output") or 0))
         task.cost_total = Decimal(str(costs.get("cost_total") or 0))
         fields += ["cost_input", "cost_cache", "cost_output", "cost_total"]
+    if fields and task.status != TaskStatus.RUNNING:
+        task.save(update_fields=fields)
+    return fields
+
+
+def finalize_task(
+    task: Task,
+    *,
+    status: str,
+    result: str = "",
+    usage: dict | None = None,
+    costs: dict | None = None,
+    release_device: bool = True,
+) -> Task:
+    """完成任务。running 走条件收口；调用方已确认的终态补写仍直接保存。
+
+    Args:
+        task: 要收口的任务。
+        status: 终态。
+        result: 写入 `Task.result` 的结果载荷。
+        usage: 工作流返回的任务级 token 累加器（含按模型拆分），空则只落状态/结果。
+        costs: 本次运行按价目表算出的费用（input / cache / output / total），空则不写。
+        release_device: 是否在收口后放行该设备槽。取消路径传 False，
+            放行交给工作线程退出时统一执行，避免旧线程还在操作设备就拉起下一条任务。
+
+    Returns:
+        已保存终态的任务。条件收口抢不到时返回库里的当前行，不改其状态。
+    """
+    if task.status == TaskStatus.RUNNING:
+        claimed = claim_terminal(
+            task.id,
+            status=status,
+            result=result,
+            usage=usage,
+            costs=costs,
+            release_device=release_device,
+        )
+        if claimed is not None:
+            return claimed
+        task.refresh_from_db()
+        return task
+    task.status = status
+    if result:
+        task.result = merge_task_result(task.result, result)
+    task.finished_at = timezone.now()
+    fields = ["status", "result", "finished_at"]
+    fields.extend(_apply_usage(task, usage, costs))
     task.save(update_fields=fields)
     _record_bug_safely(task)
     serial = (task.device_serial or "").strip()
@@ -516,29 +628,48 @@ def cancel_running_task(task: Task) -> Task:
     )
     from backend.apps.task_list.task_runner import schedule_cancel_release
 
-    schedule_cancel_release(finalized.id, finalized.device_serial or "", finalized.agent_id)
+    schedule_cancel_release(finalized.id, finalized.device_serial or "", 0)
     return finalized
 
 
 def delete_task(task: Task) -> None:
-    """删除任务发布记录及其截图文件。"""
+    """删除任务发布记录及其截图文件，并补派发同设备下一条。"""
     from backend.apps.task_list.media_storage import get_media_storage
 
     task_id = task.id
+    serial = (task.device_serial or "").strip()
+    queued = task.status in {TaskStatus.PENDING, TaskStatus.RUNNING}
     task.delete()
     get_media_storage().delete_task(task_id)
+    if queued and serial:
+        dispatch_device(serial)
 
 
-def clear_agent_tasks(agent: AIAgent) -> int:
-    """调试：清空该智能体下全部任务发布记录及其截图文件，返回删除条数。"""
+def clear_agent_tasks(agent=None) -> int:
+    """调试：清空全部任务发布记录及其截图文件，返回删除条数。"""
     from backend.apps.task_list.media_storage import get_media_storage
 
-    task_ids = list(Task.objects.filter(agent=agent).values_list("id", flat=True))
-    deleted, _ = Task.objects.filter(agent=agent).delete()
+    del agent
+    task_ids = list(Task.objects.values_list("id", flat=True))
+    deleted, _ = Task.objects.all().delete()
     storage = get_media_storage()
     for task_id in task_ids:
         storage.delete_task(task_id)
     return deleted
+
+
+def merge_task_result(current: str, incoming: str) -> str:
+    """把新结果并进已有 JSON，保留 workflow_id。纯文本不再整段覆盖。"""
+    base = parse_task_result(current)
+    extra = parse_task_result(incoming)
+    if not extra and (incoming or "").strip() and not base:
+        return incoming
+    merged = {**base, **{key: value for key, value in extra.items() if value not in ("", None)}}
+    if base.get("workflow_id") and not merged.get("workflow_id"):
+        merged["workflow_id"] = base["workflow_id"]
+    if not merged:
+        return incoming
+    return dump_task_run_payload(merged)
 
 
 def parse_task_result(raw: str) -> dict:
@@ -558,7 +689,7 @@ def parse_task_result(raw: str) -> dict:
 def task_result_preview(raw: str, limit: int = 120) -> str:
     """列表卡片用的短摘要，避免把整份过程 JSON 下发。"""
     obj = parse_task_result(raw)
-    summary = obj.get("summary") or obj.get("message") or obj.get("reason") or ""
+    summary = obj.get("reason") or obj.get("summary") or obj.get("message") or ""
     if not summary and isinstance(obj.get("completed"), list) and obj["completed"]:
         summary = f"已完成 {len(obj['completed'])} 项"
     if not summary:
@@ -580,7 +711,6 @@ def _attachment_names(task: Task) -> list[str]:
 # 任务列表只取这些列；不要 select_related("agent")——agent 行可能带 MB 级头像与线路配置。
 TASK_LIST_FIELDS = (
     "id",
-    "agent_id",
     "title",
     "task_kind",
     "goal",
@@ -598,28 +728,9 @@ TASK_LIST_FIELDS = (
 
 
 def assistant_names_by_agent(agent_ids) -> dict[int, str]:
-    """按 agent id 批量取线路显示名：只在 SQL 侧抽 route name，不读整个 route_configs。
-
-    Args:
-        agent_ids: 需要取名的智能体 id 集合（可含 0/None，自动忽略）。
-
-    Returns:
-        {agent_id: 线路名或智能体名}。
-    """
-    ids = {int(agent_id) for agent_id in agent_ids if agent_id}
-    if not ids:
-        return {}
-    rows = (
-        AIAgent.objects.filter(id__in=ids)
-        .annotate(
-            route_name=KeyTextTransform(
-                "name",
-                KeyTextTransform("device_control", "route_configs"),
-            ),
-        )
-        .values_list("id", "name", "route_name")
-    )
-    return {int(agent_id): str(route_name or name or "") for agent_id, name, route_name in rows}
+    """旧智能体已下线，任务列表不再按智能体取名。"""
+    del agent_ids
+    return {}
 
 
 def _report_locator(task: Task) -> dict:
@@ -643,6 +754,35 @@ def _report_locator(task: Task) -> dict:
     }
 
 
+def _workflow_name(payload: dict) -> str:
+    """现存工作流用当前名称；已删除时回退本次运行名。"""
+    from backend.apps.ai_assistant import api as assistant_api
+
+    raw_id = payload.get("workflow_id")
+    try:
+        workflow_id = int(raw_id)
+    except (TypeError, ValueError):
+        workflow_id = 0
+    if workflow_id:
+        try:
+            return assistant_api.get_sop_workflow(workflow_id).name
+        except assistant_api.AISopWorkflow.DoesNotExist:
+            pass
+    executor = str(payload.get("executor_run_name") or "")
+    verifier = str(payload.get("verifier_run_name") or "")
+    return " / ".join(part for part in (executor, verifier) if part)
+
+
+def workflow_filter_options() -> list[dict]:
+    """现存工作流的筛选项。已删除的工作流不出现。"""
+    from backend.apps.ai_assistant import api as assistant_api
+
+    return [
+        {"id": workflow.id, "name": workflow.name}
+        for workflow in assistant_api.list_sop_workflows()
+    ]
+
+
 def serialize_agent_task_row(task: Task, *, assistant_name: str | None = None) -> dict:
     """任务发布列表行。正文不下发。
 
@@ -651,8 +791,10 @@ def serialize_agent_task_row(task: Task, *, assistant_name: str | None = None) -
         assistant_name: 批量取好的线路名；None 时回退到单条解析。
     """
     names = _attachment_names(task)
+    payload = parse_task_result(task.result)
+    workflow_name = _workflow_name(payload)
     if assistant_name is None:
-        assistant_name = resolve_assistant_name(getattr(task, "agent", None))
+        assistant_name = workflow_name
     return {
         "id": task.id,
         "title": task.title,
@@ -663,14 +805,29 @@ def serialize_agent_task_row(task: Task, *, assistant_name: str | None = None) -
         "device_serial": task.device_serial,
         "device_label": task.device_label or "",
         "case_title": task.case_title or "",
+        "case_label": case_identity_label(task.case_identity),
+        "case_rows": case_identity_rows(task.case_identity),
         "attachment_filename": names[0] if names else "",
         "attachment_names": names,
         "assistant_name": assistant_name,
+        "workflow_id": payload.get("workflow_id") or None,
+        "workflow_name": workflow_name,
         "created_at": str(task.created_at) if task.created_at else "",
         "started_at": str(task.started_at) if task.started_at else "",
         "finished_at": str(task.finished_at) if task.finished_at else "",
         "deepseek_cost": task_cost(task),
         **_report_locator(task),
+    }
+
+
+def _sop_binding(task: Task) -> dict:
+    """从运行结果取出本次实际使用的两个名片编号与运行名。"""
+    payload = parse_task_result(task.result)
+    return {
+        "executor_assistant_id": str(payload.get("executor_assistant_id") or ""),
+        "verifier_assistant_id": str(payload.get("verifier_assistant_id") or ""),
+        "executor_run_name": str(payload.get("executor_run_name") or ""),
+        "verifier_run_name": str(payload.get("verifier_run_name") or ""),
     }
 
 
@@ -705,7 +862,7 @@ def serialize_agent_task_detail(task: Task) -> dict:
         "device_serial": task.device_serial,
         "device_label": task.device_label or "",
         "case_title": task.case_title or "",
-        "assistant_name": resolve_assistant_name(getattr(task, "agent", None)),
+        "assistant_name": "",
         "attachment_filename": attachment_filename,
         "attachment": attachment,
         "attachment_names": _attachment_names(task),
@@ -722,6 +879,72 @@ def serialize_agent_task_detail(task: Task) -> dict:
         "model_usage": task.model_usage or {},
         "deepseek_cost": task_cost(task),
         "run": parse_task_result(task.result),
+        **_sop_binding(task),
+    }
+
+
+_MISSING_STEP_TEXT = "未记录"
+
+
+def step_text(value: object) -> str:
+    """步骤展示文本。空白写成「未记录」，避免四问留空。"""
+    text = " ".join(str(value or "").split())
+    return text or _MISSING_STEP_TEXT
+
+
+def failed_step_rows(steps: list, kind: str) -> list[dict]:
+    """把没通过的步骤收成可落库的四问快照。
+
+    Args:
+        steps: 带 subject / passed / attempts / message / expected 的步骤结论。
+        kind: verdict / provider / device / platform / interrupted。
+
+    Returns:
+        按原顺序的失败步骤。空文本写成「未记录」。
+    """
+    rows = []
+    for index, item in enumerate(steps, start=1):
+        if getattr(item, "passed", False):
+            continue
+        rows.append(
+            {
+                "seq": index,
+                "name": step_text(getattr(item, "subject", "")),
+                "expected": step_text(getattr(item, "expected", "")),
+                "actual": step_text(getattr(item, "message", "")),
+                "attempts": int(getattr(item, "attempts", 0) or 0),
+                "kind": kind,
+            }
+        )
+    return rows
+
+
+def category_step(kind: str, actual: str) -> dict:
+    """没有步骤结论时的唯一步骤：用失败类别当步骤名。
+
+    Args:
+        kind: provider / device / platform / interrupted。
+        actual: 给人读的短原因。
+
+    Returns:
+        一条失败步骤。期望结果按类别给出，不假装知道具体步骤。
+    """
+    names = {
+        "provider": "模型拒绝",
+        "device": "设备命令失败",
+        "platform": "平台错误",
+        "interrupted": "任务中断",
+    }
+    expected = "该步应完成" if kind in {"provider", "device"} else "每步都有验收结论"
+    if kind == "interrupted":
+        expected = "流程应跑完"
+    return {
+        "seq": 1,
+        "name": names.get(kind, "平台错误"),
+        "expected": expected,
+        "actual": step_text(actual),
+        "attempts": 0,
+        "kind": kind,
     }
 
 
@@ -783,8 +1006,7 @@ def _visible_media(user_id: str | None, task_id: int, media_id: int):
 
     if not user_id:
         return None
-    agents = filter_agents_for_user(AIAgent.objects.all(), user_id)
-    return TaskMedia.objects.filter(task_id=task_id, id=media_id, task__agent__in=agents).first()
+    return TaskMedia.objects.filter(task_id=task_id, id=media_id).first()
 
 
 def media_payload(media) -> dict | None:
@@ -898,6 +1120,23 @@ def add_usage_hourly(slot: dict, delta: dict) -> None:
         row.cost_total += Decimal(delta["cost_total"])
         row.is_peak = bool(slot["is_peak"])
         row.save()
+
+
+def summarize_ledger_cost(task_id: int) -> tuple[dict, list[str]]:
+    """任务费用只读账本。账本不可用时返回 0，不阻断收口。"""
+    from decimal import Decimal
+
+    from backend.apps.usage_ledger.api import summarize_execution_cost
+
+    try:
+        return summarize_execution_cost(str(task_id), "task")
+    except Exception:
+        return {
+            "cost_input": Decimal("0"),
+            "cost_cache": Decimal("0"),
+            "cost_output": Decimal("0"),
+            "cost_total": Decimal("0"),
+        }, ["账本暂时不可用，费用未汇总"]
 
 
 def rollup_task_cost(task_id: int) -> None:

@@ -1,467 +1,323 @@
 <script setup lang="ts">
+/**
+ * 工作流任务表。
+ *
+ * 分类按现存工作流，执行状态单独下拉。表格沿用设备管理表纸：实线、无阴影、表头图标。
+ */
 import { computed, ref } from "vue"
-import type { FormInstance, UploadFile } from "element-plus"
 import { ElMessage } from "element-plus"
+import AppTable from "@/shared/components/AppTable.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
-import FilterTabs from "@/shared/components/FilterTabs.vue"
 import ConfirmButton from "@/shared/components/patterns/ConfirmButton.vue"
-import DoodleNote from "@/shared/components/DoodleNote.vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
+import { usePagination } from "@/shared/composables/usePagination"
 import {
-  CASE_SOURCE_OPTIONS,
-  CASE_SOURCE_PLATFORM,
+  TASK_DEFAULT_PAGE_SIZE,
+  TASK_PAGE_SIZE_OPTIONS,
   TASK_STATUS_LABELS,
+  taskStatusLabel,
   taskStatusTone,
-  type TaskStatusTone,
 } from "../constants"
+import { caseHover } from "../helpers/case-identity"
 import { formatTaskCost, formatTaskDuration } from "../helpers/task-detail"
-import {
-  isSelectableTaskDevice,
-  taskDeviceAddress,
-  taskDeviceLabel,
-} from "../helpers/task-device-address"
-import { useTaskPublish } from "../composables/useTaskPublish"
+import { fetchTaskReport } from "../api/tasks"
 import { useTaskList } from "../composables/useTaskList"
-import PlatformCasePicker from "./PlatformCasePicker.vue"
 import TaskStatsStrip from "./TaskStatsStrip.vue"
-import TaskOutcomeDonut from "./TaskOutcomeDonut.vue"
-import TaskShareCharts from "./TaskShareCharts.vue"
 import type { TaskRecord } from "@/shared/types/ai"
 
-/** 任务态 → sticky 底色：成功 Do / 失败 Dont / 执行中 / 等待 */
-function stickyStatus(tone: TaskStatusTone): "ok" | "run" | "fail" | "wait" {
-  if (tone === "success") return "ok"
-  if (tone === "failed") return "fail"
-  if (tone === "running") return "run"
-  return "wait"
-}
+const STATUS_OPTIONS = ["pending", "running", "success", "failed", "interrupted", "cancelled"]
+const COLUMNS = [
+  { dataIndex: "id", title: "编号", icon: "#", minWidth: 80, align: "center" },
+  { dataIndex: "workflow_name", title: "工作流", icon: "☰", minWidth: 180, align: "left" },
+  { dataIndex: "case_label", title: "用例", icon: "☰", minWidth: 180, align: "left" },
+  { dataIndex: "status", title: "执行状态", icon: "●", minWidth: 120, align: "center" },
+  { dataIndex: "device", title: "设备", icon: "▣", minWidth: 150, align: "center" },
+  { dataIndex: "attachment", title: "附件", icon: "▤", minWidth: 160, align: "left" },
+  { dataIndex: "created_at", title: "创建", icon: "◷", minWidth: 160, align: "center" },
+  { dataIndex: "duration", title: "耗时", icon: "⏱", minWidth: 100, align: "center" },
+  { dataIndex: "cost", title: "平台费用", icon: "¥", minWidth: 100, align: "right" },
+  { dataIndex: "actions", title: "操作", icon: "✎", minWidth: 180, align: "center" },
+]
 
-function deviceDisplay(t: TaskRecord): string {
-  return (t.device_label || t.device_serial || "—").trim() || "—"
-}
-
-function statusLabel(status: string): string {
-  return TASK_STATUS_LABELS[status] || TASK_STATUS_LABELS[taskStatusTone(status)] || status || "—"
-}
-
-const {
-  form,
-  submitting,
-  devices,
-  agentOptions,
-  isCaseAuthoring,
-  caseTitles,
-  caseError,
-  dialogVisible,
-  platform,
-  CONFIG_ACCEPT,
-  DOCUMENT_ACCEPT,
-  openDialog,
-  closeDialog,
-  submit,
-  canSubmit,
-  onConfigChange,
-  clearConfig,
-  onPlatformProjectChange,
-  onPlatformFileChange,
-  onPlatformCasesChange,
-  onDocumentChange,
-  onDocumentRemove,
-} = useTaskPublish()
-
-/** 平台用例选择器的数据源（解构出来以便模板直接取用） */
-const {
-  projects: platformProjects,
-  files: platformFiles,
-  cases: platformCases,
-  projectId: platformProjectId,
-  fileId: platformFileId,
-  loading: platformLoading,
-  error: platformError,
-} = platform
-
-const selectableDevices = computed(() => devices.value.filter(isSelectableTaskDevice))
-
-const taskFormRef = ref<FormInstance>()
-const taskRules = computed(() => ({
-  title: [{ required: true, message: "请填写任务标题", trigger: "blur" }],
-  agent_id: [{ required: true, message: "请选择智能体", trigger: "change" }],
-  ...(isCaseAuthoring.value
-    ? {}
-    : { device_serial: [{ required: true, message: "请选择设备", trigger: "change" }] }),
-}))
+const workflowId = ref("all")
+const statusFilter = ref("")
 const {
   tasks,
+  workflows,
   stats,
   loading,
   error,
   load,
-  activeFilter,
-  filterTabs,
+  rerunningId,
+  cancellingId,
   filteredItems,
-  groupedByStatus,
-  expandedGroups,
   emptyCopy,
   clearAll,
   rerun,
-  rerunningId,
   cancel,
-  cancellingId,
 } = useTaskList()
 
-function openReport(task: TaskRecord) {
-  const run = task.report_run
-  const name = task.report_name
-  if (!run || !name) return
-  const url = `/api/ai/agent-reports/${encodeURIComponent(run)}/${encodeURIComponent(name)}/`
-  window.open(url, "_blank", "noopener")
+const workflowTabs = computed(() => [
+  { key: "all", label: "全部" },
+  ...workflows.value.map((workflow) => ({ key: String(workflow.id), label: workflow.name })),
+])
+
+const visibleTasks = computed(() =>
+  filteredItems.value.filter((task) => {
+    const workflowOk =
+      workflowId.value === "all" || String(task.workflow_id || "") === workflowId.value
+    const statusOk = !statusFilter.value || taskStatusTone(task.status) === statusFilter.value
+    return workflowOk && statusOk
+  }),
+)
+// 每页行数由 constants 提供（固定 10，不渲染选择器）
+const { currentPage, totalPages, pagedItems, goPage } = usePagination(visibleTasks, {
+  pageSize: TASK_DEFAULT_PAGE_SIZE,
+  options: TASK_PAGE_SIZE_OPTIONS,
+})
+
+function deviceDisplay(task: TaskRecord): string {
+  return (task.device_label || task.device_serial || "—").trim() || "—"
 }
 
-function isFailed(t: TaskRecord): boolean {
-  const tone = taskStatusTone(t.status)
+function isFailed(task: TaskRecord): boolean {
+  const tone = taskStatusTone(task.status)
   return tone === "failed" || tone === "interrupted"
 }
 
-function attachmentNames(t: TaskRecord): string {
-  const names = t.attachment_names?.filter(Boolean) || []
-  if (names.length) return names.join("、")
-  return t.attachment_filename || "—"
-}
-
-function isRunning(t: TaskRecord): boolean {
-  return taskStatusTone(t.status) === "running"
-}
-
-function pickedFile(file: UploadFile): File | null {
-  return file.raw ?? null
-}
-
-function onConfigPicked(file: UploadFile) {
-  const raw = pickedFile(file)
-  if (!raw) return
-  if (!/\.(yaml|yml)$/i.test(raw.name || "")) {
-    ElMessage.error("配置只收 YAML（.yaml / .yml）")
-    clearConfig()
-    return
-  }
-  if (raw.size > 20 * 1024 * 1024) {
-    ElMessage.error("文件过大（上限 20MB）")
-    clearConfig()
-    return
-  }
-  onConfigChange(raw)
-}
-
-async function onSubmit() {
+async function openReport(task: TaskRecord) {
+  if (!task.report_run || !task.report_name) return
   try {
-    await taskFormRef.value?.validate()
+    const content = await fetchTaskReport(task.report_run, task.report_name)
+    if (!content) {
+      ElMessage.error("报告不存在")
+      return
+    }
+    const url = URL.createObjectURL(new Blob([content], { type: "text/html" }))
+    window.open(url, "_blank", "noopener")
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
   } catch {
-    return
+    ElMessage.error("报告打开失败")
   }
-  await submit(() => {
-    closeDialog()
-    load()
-  })
 }
 </script>
 
 <template>
-  <section class="doc-section step-panel">
-    <div class="doc-section__header">
-      <h3 class="doc-section__title">任务概览<span class="doc-tag">Stats</span></h3>
-    </div>
+  <section class="task-share">
     <TaskStatsStrip :stats="stats" :loading="loading" />
   </section>
 
-  <section class="doc-section step-panel">
-    <div class="doc-section__header">
-      <h3 class="doc-section__title">任务结果占比<span class="doc-tag">Share</span></h3>
-    </div>
-    <div class="task-share">
-      <div class="task-share__donut">
-        <TaskOutcomeDonut :stats="stats" />
-      </div>
-      <div class="task-share__charts">
-        <TaskShareCharts :stats="stats" />
-      </div>
-    </div>
-  </section>
-
-  <section class="doc-section step-panel">
-    <div class="doc-section__header">
-      <h3 class="doc-section__title">任务卡片<span class="doc-tag">Task</span></h3>
-      <div class="task-board__actions">
-        <FilterTabs :tabs="filterTabs" v-model="activeFilter" />
-        <ConfirmButton
-          type="warning"
-          danger
-          plain
-          message="将删除全部任务卡片，且不可恢复。确认清空？"
-          title="调试 · 清空任务"
-          confirm-text="清空"
-          :disabled="!tasks.length"
-          @confirm="clearAll"
-          >调试 · 清空</ConfirmButton
-        >
-        <el-button type="primary" @click="openDialog">新建任务</el-button>
-      </div>
-    </div>
-
-    <!-- 新建任务弹窗 -->
-    <el-dialog
-      v-model="dialogVisible"
-      title="新建任务"
-      width="900px"
-      class="task-create-dialog"
-      :close-on-click-modal="false"
-    >
-      <el-form
-        ref="taskFormRef"
-        :model="form"
-        :rules="taskRules"
-        label-position="top"
-        class="task-create-form"
-        @submit.prevent
+  <section class="doc-section task-table-section">
+    <div class="task-toolbar">
+      <el-select v-model="workflowId" placeholder="工作流" class="task-workflow-filter">
+        <el-option v-for="tab in workflowTabs" :key="tab.key" :label="tab.label" :value="tab.key" />
+      </el-select>
+      <el-select v-model="statusFilter" clearable placeholder="执行状态" class="task-status-filter">
+        <el-option
+          v-for="key in STATUS_OPTIONS"
+          :key="key"
+          :label="TASK_STATUS_LABELS[key]"
+          :value="key"
+        />
+      </el-select>
+      <ConfirmButton
+        type="warning"
+        danger
+        plain
+        message="将删除全部任务记录，且不可恢复。确认清空？"
+        title="调试 · 清空任务"
+        confirm-text="清空"
+        :disabled="!tasks.length"
+        @confirm="clearAll"
+        >调试 · 清空</ConfirmButton
       >
-        <div class="task-create-grid">
-          <div class="task-create-col">
-            <p class="task-create-col__title">基本信息</p>
-            <el-form-item label="任务标题" prop="title">
-              <el-input
-                v-model="form.title"
-                placeholder="例如：校准 H705F 色温"
-                maxlength="200"
-                show-word-limit
-              />
-            </el-form-item>
-            <el-form-item label="智能体" prop="agent_id">
-              <el-select
-                v-model="form.agent_id"
-                style="width: 100%"
-                filterable
-                placeholder="请选择智能体"
-              >
-                <el-option
-                  v-for="item in agentOptions"
-                  :key="item.id"
-                  :label="item.label"
-                  :value="item.id"
-                />
-              </el-select>
-            </el-form-item>
-            <template v-if="isCaseAuthoring">
-              <el-form-item label="需求文档">
-                <el-upload
-                  :accept="DOCUMENT_ACCEPT"
-                  :limit="5"
-                  multiple
-                  :auto-upload="false"
-                  :show-file-list="true"
-                  :on-change="onDocumentChange"
-                  :on-remove="onDocumentRemove"
-                >
-                  <el-button size="small">选择 PRD / Word</el-button>
-                </el-upload>
-                <p class="task-attach-name">
-                  支持 .docx / .pdf / .md；上传后由 Agent-02 解析需求并生成测试用例
-                </p>
-              </el-form-item>
-            </template>
-            <template v-else>
-              <el-form-item label="用例来源">
-                <el-radio-group v-model="form.case_source">
-                  <el-radio v-for="opt in CASE_SOURCE_OPTIONS" :key="opt.value" :value="opt.value">
-                    {{ opt.label }}
-                  </el-radio>
-                </el-radio-group>
-              </el-form-item>
-              <template v-if="form.case_source !== CASE_SOURCE_PLATFORM">
-                <el-form-item label="配置">
-                  <el-upload
-                    :accept="CONFIG_ACCEPT"
-                    :limit="1"
-                    :auto-upload="false"
-                    :show-file-list="true"
-                    :on-change="onConfigPicked"
-                    :on-remove="clearConfig"
-                  >
-                    <el-button size="small">选择 YAML</el-button>
-                  </el-upload>
-                  <p class="task-attach-name">配置只收 YAML：.yaml / .yml，单份，上限 20MB</p>
-                  <p v-if="form.configFile" class="task-attach-name">
-                    已选：{{ form.configFile.name }}
-                  </p>
-                  <p v-if="caseError" class="task-case-error">{{ caseError }}</p>
-                </el-form-item>
-                <el-form-item label="测试指定用例">
-                  <el-select
-                    v-model="form.case_title"
-                    style="width: 100%"
-                    clearable
-                    placeholder="全部用例"
-                    @clear="form.case_title = ''"
-                  >
-                    <el-option label="全部用例" value="" />
-                    <el-option
-                      v-for="title in caseTitles"
-                      :key="title"
-                      :label="title"
-                      :value="title"
-                    />
-                  </el-select>
-                </el-form-item>
-              </template>
-            </template>
-            <el-form-item label="设备" prop="device_serial">
-              <el-select
-                v-model="form.device_serial"
-                style="width: 100%"
-                clearable
-                filterable
-                placeholder="请选择设备"
-              >
-                <el-option
-                  v-for="d in selectableDevices"
-                  :key="d.serial"
-                  :label="taskDeviceLabel(d)"
-                  :value="taskDeviceAddress(d)"
-                />
-              </el-select>
-            </el-form-item>
-          </div>
+    </div>
 
-          <div class="task-create-col task-create-col--side">
-            <p class="task-create-col__title">
-              {{
-                !isCaseAuthoring && form.case_source === CASE_SOURCE_PLATFORM
-                  ? "平台用例"
-                  : "执行方式"
-              }}
-            </p>
-            <PlatformCasePicker
-              v-if="!isCaseAuthoring && form.case_source === CASE_SOURCE_PLATFORM"
-              :projects="platformProjects"
-              :files="platformFiles"
-              :cases="platformCases"
-              :project-id="platformProjectId"
-              :file-id="platformFileId"
-              :case-ids="form.caseIds"
-              :loading="platformLoading"
-              :error="platformError"
-              @update:project-id="onPlatformProjectChange"
-              @update:file-id="onPlatformFileChange"
-              @update:case-ids="onPlatformCasesChange"
-            />
-            <div v-else class="task-create-hint">
-              <template v-if="isCaseAuthoring">
-                <strong>需求文档模式</strong>
-                <p>上传需求文档后由 Agent-02 解析并生成测试用例，无需再选平台用例。</p>
-              </template>
-              <template v-else>
-                <strong>本地 YAML 模式</strong>
-                <p>提交后按左侧选择的配置文件执行，可指定其中一条用例。</p>
-              </template>
-            </div>
-          </div>
-        </div>
-      </el-form>
-      <template #footer>
-        <el-button @click="closeDialog">取消</el-button>
-        <el-button type="primary" :loading="submitting" :disabled="!canSubmit()" @click="onSubmit"
-          >提交</el-button
+    <ErrorState v-if="error && !loading" :message="error" @retry="load" />
+
+    <div class="table-toolbar">
+      <span class="page-info"
+        >第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ visibleTasks.length }} 条</span
+      >
+      <div class="page-nav">
+        <button
+          type="button"
+          class="page-nav-btn"
+          :disabled="currentPage <= 1"
+          @click="goPage(currentPage - 1)"
+        >
+          上一页
+        </button>
+        <button
+          type="button"
+          class="page-nav-btn"
+          :disabled="currentPage >= totalPages"
+          @click="goPage(currentPage + 1)"
+        >
+          下一页
+        </button>
+      </div>
+    </div>
+
+    <AppTable
+      class="task-table"
+      :columns="COLUMNS"
+      :data-source="pagedItems"
+      row-key="id"
+      :striped="true"
+      :loading="loading"
+      table-layout="fixed"
+      accent="var(--c-ai)"
+      empty-text="暂无数据"
+    >
+      <template v-for="col in COLUMNS" :key="col.dataIndex" v-slot:[`header-${col.dataIndex}`]>
+        <span class="th-ico" aria-hidden="true">{{ col.icon }}</span
+        >{{ col.title }}
+      </template>
+      <template #cell-case_label="{ record }">
+        <span class="case-label" :title="caseHover(record.case_rows)">{{
+          record.case_label || "—"
+        }}</span>
+      </template>
+      <template #cell-status="{ record }">
+        <span class="status-pill" :class="`is-${taskStatusTone(record.status)}`">{{
+          taskStatusLabel(record.status)
+        }}</span>
+      </template>
+      <template #cell-device="{ record }">{{ deviceDisplay(record) }}</template>
+      <template #cell-attachment="{ record }">{{ record.attachment_filename || "—" }}</template>
+      <template #cell-duration="{ record }">{{
+        formatTaskDuration(record.started_at, record.finished_at)
+      }}</template>
+      <template #cell-cost="{ record }">{{ formatTaskCost(record.deepseek_cost) }}</template>
+      <template #cell-actions="{ record }">
+        <DoodleBtn
+          v-if="taskStatusTone(record.status) === 'running'"
+          tone="danger"
+          :disabled="cancellingId === record.id"
+          @click="cancel(record)"
+          >关闭</DoodleBtn
+        >
+        <DoodleBtn
+          v-if="isFailed(record)"
+          tone="yellow"
+          :disabled="rerunningId === record.id"
+          @click="rerun(record)"
+          >重新执行</DoodleBtn
+        >
+        <DoodleBtn
+          v-if="record.report_run && record.report_name"
+          tone="teal"
+          @click="openReport(record)"
+          >报告</DoodleBtn
         >
       </template>
-    </el-dialog>
-
-    <!-- 任务卡片列表 -->
-    <ErrorState v-if="error" :message="error" @retry="load" />
-    <template v-else>
-      <div v-loading="loading" class="task-board__body">
-        <el-collapse
-          v-if="groupedByStatus.length"
-          v-model="expandedGroups"
-          class="task-status-collapse"
-        >
-          <el-collapse-item
-            v-for="group in groupedByStatus"
-            :key="group.key"
-            :name="group.key"
-            :class="`is-${group.key}`"
-          >
-            <template #title>
-              <div class="task-status-head">
-                <span class="task-status-head__label" :class="`is-${group.key}`">{{
-                  group.label
-                }}</span>
-                <span class="task-status-head__count">{{ group.items.length }}</span>
-              </div>
-            </template>
-            <div class="task-card-grid">
-              <DoodleNote
-                v-for="t in group.items"
-                :key="t.id"
-                class="task-card"
-                variant="sticky"
-                :status="stickyStatus(taskStatusTone(t.status))"
-                :tilt="taskStatusTone(t.status) === 'failed' ? 1.2 : -1.1"
-              >
-                <template #header>
-                  <h4 class="task-card__title">{{ t.title || "未命名任务" }}</h4>
-                </template>
-                <ul class="task-card__meta">
-                  <li><span class="task-card__meta-k">状态</span>{{ statusLabel(t.status) }}</li>
-                  <li>
-                    <span class="task-card__meta-k">类型</span
-                    >{{ t.task_kind === "case_authoring" ? "用例编写" : "设备执行" }}
-                  </li>
-                  <li><span class="task-card__meta-k">创建</span>{{ t.created_at || "—" }}</li>
-                  <li><span class="task-card__meta-k">设备</span>{{ deviceDisplay(t) }}</li>
-                  <li><span class="task-card__meta-k">助手</span>{{ t.assistant_name || "—" }}</li>
-                  <li>
-                    <span class="task-card__meta-k">费用</span>{{ formatTaskCost(t.deepseek_cost) }}
-                  </li>
-                  <li>
-                    <span class="task-card__meta-k">耗时</span
-                    >{{ formatTaskDuration(t.started_at, t.finished_at) }}
-                  </li>
-                  <li class="task-card__meta-row">
-                    <span class="task-card__meta-k">附件</span>
-                    <span class="task-card__meta-v">{{ attachmentNames(t) }}</span>
-                  </li>
-                </ul>
-                <template #actions>
-                  <DoodleBtn
-                    v-if="isRunning(t)"
-                    tone="danger"
-                    :disabled="cancellingId === t.id"
-                    @click="cancel(t)"
-                  >
-                    {{ cancellingId === t.id ? "关闭中…" : "关闭" }}
-                  </DoodleBtn>
-                  <DoodleBtn
-                    v-if="isFailed(t)"
-                    tone="yellow"
-                    :disabled="rerunningId === t.id"
-                    @click="rerun(t)"
-                  >
-                    {{ rerunningId === t.id ? "重新执行中…" : "重新执行" }}
-                  </DoodleBtn>
-                  <DoodleBtn tone="teal" @click="openReport(t)">报告</DoodleBtn>
-                </template>
-              </DoodleNote>
-            </div>
-          </el-collapse-item>
-        </el-collapse>
-      </div>
-      <EmptyState
-        v-if="!filteredItems.length && !loading"
-        icon="📋"
-        :text="emptyCopy.text"
-        :hint="emptyCopy.hint"
-      />
-    </template>
+      <template #empty>
+        <EmptyState icon="☰" :text="emptyCopy.text" :hint="emptyCopy.hint" />
+      </template>
+    </AppTable>
   </section>
 </template>
 
-<style src="./TaskBoard.style.css" scoped></style>
+<style scoped>
+.case-label {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-toolbar,
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  flex-wrap: wrap;
+}
+/* 两行工具栏与表格之间都留出明显间距 */
+.task-toolbar {
+  margin-bottom: var(--app-space-md);
+}
+.table-toolbar {
+  margin-top: var(--app-space-sm);
+  margin-bottom: var(--app-space-md);
+}
+.task-workflow-filter {
+  width: 200px;
+}
+.task-status-filter {
+  width: 160px;
+}
+.page-nav {
+  display: flex;
+  gap: var(--app-space-sm);
+  margin-left: auto;
+}
+.page-nav-btn {
+  min-width: 36px;
+  padding: var(--app-space-xs) 10px;
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  background: var(--c-workflow);
+  color: var(--app-text-primary);
+  font-weight: var(--app-font-weight-bold);
+  box-shadow: 2px 2px 0 0 var(--ink);
+}
+/* 不可点：灰底灰边 + 撤影，与可点态一眼可分 */
+.page-nav-btn:disabled {
+  background: var(--app-bg-subtle);
+  border-color: var(--app-border-strong);
+  color: var(--app-text-secondary);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.page-info {
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-sm);
+}
+.th-ico {
+  margin-right: 4px;
+}
+.status-pill {
+  /* 每个 tone 只声明 --sp-color，基类统一产出：状态色描边 + 20%→5% 纵向渐变 + 深色文字 */
+  --sp-color: var(--app-border-strong);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border: 1.5px solid color-mix(in srgb, var(--sp-color) 75%, transparent);
+  border-radius: var(--app-radius-pill);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--sp-color) 20%, var(--app-bg-card)),
+    color-mix(in srgb, var(--sp-color) 5%, var(--app-bg-card))
+  );
+  color: var(--ink);
+  font-size: var(--app-size-xs);
+  font-weight: var(--app-font-weight-bold);
+  white-space: nowrap;
+}
+/* 七态色相：全部取已登记令牌，不新增颜色原子 */
+.status-pill.is-pending {
+  --sp-color: var(--c-dashboard);
+}
+.status-pill.is-running {
+  --sp-color: var(--c-workflow);
+}
+.status-pill.is-paused {
+  --sp-color: var(--app-status-purple);
+}
+.status-pill.is-success {
+  --sp-color: var(--app-status-success);
+}
+.status-pill.is-failed {
+  --sp-color: var(--app-status-danger);
+}
+.status-pill.is-interrupted {
+  --sp-color: var(--c-ops);
+}
+.status-pill.is-cancelled {
+  --sp-color: var(--c-report);
+}
+</style>

@@ -169,6 +169,7 @@ class AgentEventRecorder:
         phase_pattern: str = _DEFAULT_PHASE_PATTERN,
         api_key_env: str = "",
         role_api_keys: dict[str, str] | None = None,
+        role_models: dict[str, str] | None = None,
         observations: list | None = None,
         full: bool = True,
     ) -> None:
@@ -182,6 +183,7 @@ class AgentEventRecorder:
             api_key_env: 兜底标签；某个角色没登记绑定时用它，不传则为空串。
             role_api_keys: 角色名（agent 名）到密钥环境变量名的绑定。密钥绑在角色上，
                 每次调用按 `reply_id` 反查发起它的角色再取标签。
+            role_models: 角色名到模型名的绑定。不传时逐次记录的模型名为空串。
             observations: 观测中间件的记录队列；记录器按到达顺序取出并落盘。
                 传进来的是同一个列表对象，取出即从队列移除，避免重复写。
             full: 全量模式，默认开启。开启时补齐框架提供的公共字段
@@ -193,6 +195,7 @@ class AgentEventRecorder:
         self.phase_re = re.compile(phase_pattern)
         self._api_key_env = str(api_key_env or "")
         self._role_api_keys = dict(role_api_keys or {})
+        self._role_models = dict(role_models or {})
         self._observations = observations if observations is not None else []
         self._observed: list[dict] = []
         self._full = bool(full)
@@ -228,6 +231,7 @@ class AgentEventRecorder:
         self._usages: list[TokenUsage] = []
         self._wall_start: datetime | None = None
         self._reply_label: dict[str, str] = {}
+        self._reply_model: dict[str, str] = {}
 
     def _make_paths(self) -> None:
         """按当前时间建本轮目录，同名时追加序号。"""
@@ -282,7 +286,7 @@ class AgentEventRecorder:
         moment = self._wall_start + timedelta(milliseconds=offset_ms)
         return moment.strftime("%Y-%m-%d_%H-%M-%S.%f")[:-3]
 
-    def _usage_row(self, event: object, end_ms: float, label: str) -> TokenUsage:
+    def _usage_row(self, event: object, end_ms: float, label: str, model: str = "") -> TokenUsage:
         """
         把一条模型调用结束事件收成用量记录。
 
@@ -290,6 +294,7 @@ class AgentEventRecorder:
             event: 模型调用结束事件。
             end_ms: 本次调用的结束偏移（毫秒），由调用方算好避免重复取时间。
             label: 本次调用的密钥环境变量名，由发起它的角色决定。
+            model: 本次调用所属角色的模型名；角色没登记时为空串。
 
         Returns:
             一条用量记录；角色未登记绑定时标签为兜底值。
@@ -303,6 +308,7 @@ class AgentEventRecorder:
             output_tokens=int(getattr(event, "output_tokens", 0) or 0),
             cache_input_tokens=int(getattr(event, "cache_input_tokens", 0) or 0),
             cache_creation_input_tokens=int(getattr(event, "cache_creation_input_tokens", 0) or 0),
+            model=model,
         )
 
     def _new_row(self, kind: str, event: object) -> dict:
@@ -507,17 +513,19 @@ class AgentEventRecorder:
             row["cache_creation_input_tokens"] = getattr(event, "cache_creation_input_tokens", 0)
             row["finished_reason"] = event.finished_reason
             # 密钥绑角色：按 reply_id 找出这次调用的角色绑了哪把密钥，并落进事件行
-            label = self._reply_label.get(
-                str(getattr(event, "reply_id", "") or ""), self._api_key_env
-            )
+            reply_id = str(getattr(event, "reply_id", "") or "")
+            label = self._reply_label.get(reply_id, self._api_key_env)
             row["api_key_env"] = label
+            row["model"] = self._reply_model.get(reply_id, "")
             self._tokens["input"] += event.input_tokens or 0
             self._tokens["output"] += event.output_tokens or 0
             self._tokens["cache_hit"] += getattr(event, "cache_input_tokens", 0) or 0
             self._tokens["cache_creation"] += getattr(event, "cache_creation_input_tokens", 0) or 0
             end_ms = self._now()
             # 一次调用一条：同一轮的多次调用各自成条，不合并
-            self._usages.append(self._usage_row(event, end_ms, label))
+            self._usages.append(
+                self._usage_row(event, end_ms, label, self._reply_model.get(reply_id, ""))
+            )
             self._spans.append(
                 {
                     "name": self._model_name,
@@ -599,6 +607,7 @@ class AgentEventRecorder:
             reply_id = str(getattr(event, "reply_id", "") or "")
             agent_name = str(getattr(event, "name", "") or "")
             self._reply_label[reply_id] = self._role_api_keys.get(agent_name, self._api_key_env)
+            self._reply_model[reply_id] = self._role_models.get(agent_name, "")
 
             # 只在 SOP 步骤内推断执行者 / 验收者：每步第一次 reply 是执行者，第二次是验收者。
             if not self._sop_step:

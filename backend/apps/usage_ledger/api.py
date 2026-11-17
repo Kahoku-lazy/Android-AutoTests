@@ -25,6 +25,16 @@ def _as_decimal(value: Any) -> Decimal:
 # 平台运行产物的时间戳格式：与事件记录器落盘时一致（下划线分隔，毫秒三位）。
 _USAGE_STAMP = "%Y-%m-%d_%H-%M-%S.%f"
 
+# 重算时回写的费用列；与 models.ModelUsage 的 8 位小数列一致。
+_COST_FIELDS = (
+    "cost_input",
+    "cost_cache",
+    "cost_output",
+    "cost_total",
+    "pricing_status",
+    "pricing_snapshot",
+)
+
 
 def _usage_moment(text: object) -> datetime:
     """
@@ -292,6 +302,118 @@ def record_voice_event(
             "user_id": user_id,
         },
     )
+
+
+def recalculate_usage_costs(
+    *,
+    provider: str = "",
+    source: str = "",
+    batch_size: int = 500,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """
+    从 ai_usage_records 读 token 用量，按当前价目重算费用并回写。
+
+    计费口径与写入账本时一致：DeepSeek 走 engines.backend_bridge.model_billing，
+    其它厂商走本 App 的价目表；价目未收录的行按 unpriced 记 0。
+
+    用于官方调价后的历史回填与按库核对。按 usage_id 分批读取，每批只回写有变化的行，
+    因此重复执行幂等；`dry_run` 只计算不写库。
+
+    Args:
+        provider: 只重算该厂商（deepseek / dashscope）；空串表示全部。
+        source: 只重算该来源（task / voice / chat 等）；空串表示全部。
+        batch_size: 每批处理的行数，最小 1。
+        dry_run: 为 True 时只计算、不写库。
+
+    Returns:
+        含 scanned / changed / cost_before / cost_after / dry_run 的字典；
+        金额单位为元、保留 8 位小数。`changed` 在 dry_run 下表示「将会变更」的行数。
+    """
+    result: dict[str, Any] = {
+        "scanned": 0,
+        "changed": 0,
+        "cost_before": Decimal("0.00000000"),
+        "cost_after": Decimal("0.00000000"),
+        "dry_run": dry_run,
+    }
+    rows = ModelUsage.objects.all()
+    if provider:
+        rows = rows.filter(provider=normalize_provider(provider))
+    if source:
+        rows = rows.filter(source=source)
+    size = max(int(batch_size or 1), 1)
+    last_id = None
+    while True:
+        page = rows.order_by("usage_id")
+        if last_id is not None:
+            page = page.filter(usage_id__gt=last_id)
+        chunk = list(page[:size])
+        if not chunk:
+            break
+        changed: list[ModelUsage] = []
+        for row in chunk:
+            before = _as_decimal(row.cost_total)
+            priced = price_usage(
+                row.provider,
+                row.model,
+                input_tokens=row.input_tokens,
+                output_tokens=row.output_tokens,
+                cache_input_tokens=row.cache_input_tokens,
+                cache_creation_tokens=row.cache_creation_tokens,
+                characters=row.characters,
+                occurred_at=row.occurred_at,
+            )
+            after = _as_decimal(priced["cost_total"])
+            snapshot = _json_safe(priced["pricing_snapshot"])
+            result["scanned"] += 1
+            result["cost_before"] += before
+            result["cost_after"] += after
+            if (
+                _as_decimal(row.cost_input) == _as_decimal(priced["cost_input"])
+                and _as_decimal(row.cost_cache) == _as_decimal(priced["cost_cache"])
+                and _as_decimal(row.cost_output) == _as_decimal(priced["cost_output"])
+                and before == after
+                and row.pricing_status == priced["pricing_status"]
+                and (row.pricing_snapshot or {}) == snapshot
+            ):
+                continue
+            row.cost_input = _as_decimal(priced["cost_input"])
+            row.cost_cache = _as_decimal(priced["cost_cache"])
+            row.cost_output = _as_decimal(priced["cost_output"])
+            row.cost_total = after
+            row.pricing_status = priced["pricing_status"]
+            row.pricing_snapshot = snapshot
+            changed.append(row)
+        if changed:
+            result["changed"] += len(changed)
+            if not dry_run:
+                ModelUsage.objects.bulk_update(changed, _COST_FIELDS)
+        last_id = chunk[-1].usage_id
+    return result
+
+
+def summarize_execution_cost(execution_id: str, source: str = "task") -> tuple[dict, list[str]]:
+    """按执行 ID 汇总已入账费用。未计价行不进合计，但要在说明里可见。"""
+    from decimal import Decimal
+
+    rows = ModelUsage.objects.filter(execution_id=str(execution_id), source=source)
+    totals = {
+        "cost_input": Decimal("0"),
+        "cost_cache": Decimal("0"),
+        "cost_output": Decimal("0"),
+        "cost_total": Decimal("0"),
+    }
+    notes: list[str] = []
+    for row in rows:
+        if row.pricing_status == "unpriced":
+            notes.append(f"第 {row.event_id} 次调用未计价")
+            continue
+        totals["cost_input"] += row.cost_input
+        totals["cost_cache"] += row.cost_cache
+        totals["cost_output"] += row.cost_output
+        totals["cost_total"] += row.cost_total
+    return totals, notes
 
 
 def _period_start(period: str) -> datetime | None:

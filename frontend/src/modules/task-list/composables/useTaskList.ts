@@ -17,15 +17,23 @@ import {
   taskStatusTone,
   type TaskStatusTone,
 } from "../constants"
-import type { TaskRecord, TaskStats } from "@/shared/types/ai"
+import type { TaskRecord, TaskStats, WorkflowFilterOption } from "@/shared/types/ai"
 
 /** 运行态轮询间隔：任务执行中每 10s 刷新，全部终态后自动停止 */
 const POLL_INTERVAL_MS = 10000
 
-const TERMINAL_STATUSES = new Set(["completed", "success", "failed", "cancelled", "paused"])
+const TERMINAL_STATUSES = new Set([
+  "completed",
+  "success",
+  "failed",
+  "interrupted",
+  "cancelled",
+  "paused",
+])
 
 export function useTaskList() {
   const tasks = ref<TaskRecord[]>([])
+  const workflows = ref<WorkflowFilterOption[]>([])
   const stats = ref<TaskStats | null>(null)
   const loading = ref(false)
   const error = ref("")
@@ -56,9 +64,9 @@ export function useTaskList() {
 
   const emptyCopy = computed(() => {
     if (!tasks.value.length) {
-      return { text: "还没有任务", hint: "点击「新建任务」创建" }
+      return { text: "还没有工作流任务", hint: "从 AI 助手的工作流卡片提交" }
     }
-    return { text: "该分类下还没有任务", hint: "切换分类或新建对应线路的任务" }
+    return { text: "该筛选下还没有任务", hint: "切换工作流或执行状态" }
   })
 
   function stopPoll() {
@@ -99,6 +107,7 @@ export function useTaskList() {
       const data = await listTasks()
       if (data.status && data.data) {
         tasks.value = data.data.tasks
+        workflows.value = data.data.workflows || []
         schedulePoll()
         await loadStats()
       } else {
@@ -205,6 +214,7 @@ export function useTaskList() {
 
   return {
     tasks,
+    workflows,
     stats,
     loading,
     error,

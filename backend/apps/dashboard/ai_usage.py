@@ -2,7 +2,7 @@
 
 token、缓存命中和费用按平台全部小时用量合计：不限查看者的智能体可见范围，
 `agent_id = 0` 的自建运行也计入，平台费用才不会被少算。
-任务数、任务结果与活动流仍按可见任务计；按智能体拆分只列可见智能体。
+任务数、任务结果与活动流只计工作流任务（assistant_sop）。
 纯只读聚合，无任何写操作。
 """
 
@@ -10,41 +10,81 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.db import OperationalError, ProgrammingError
-from django.db.models import Sum
+from django.db.models import Count, Sum
+from django.db.models.functions import TruncDate, TruncHour
 from django.utils import timezone
 
-from backend.apps.ai_assistant.api import filter_agents_for_user, resolve_assistant_name
-from backend.apps.ai_assistant.models import AIAgent
+from backend.apps.task_list.case_identity import case_identity_label
 from backend.apps.task_list.models import Task, TaskUsageHourly
-
-# 仪表盘只需要的智能体列：avatar 是 base64 大字段（线上有一条 6.5MB），
-# tags / description 同样不该进内存；漏列会在单测的 SQL 预算里暴露。
-_AGENT_FIELDS = (
-    "id",
-    "name",
-    "owner_id",
-    "status",
-    "route_configs",
-    "updated_at",
-    "model_provider",
-    "model_name",
-)
-
-
-def load_visible_agents(user_id):
-    """装载当前用户可见的智能体，只取仪表盘需要的列（不读 avatar）。"""
-    return list(filter_agents_for_user(AIAgent.objects.only(*_AGENT_FIELDS), user_id))
+from backend.apps.usage_ledger.models import ModelUsage
+from backend.apps.usage_ledger.rates import DISPLAY_FX_DATE, DISPLAY_FX_USD_CNY
+from backend.models.constants import TaskKind
 
 
 def _task_qs(user_id, agents=None):
-    """当前用户可见智能体产生的任务。任务数仍按任务表计。"""
-    visible = agents if agents is not None else load_visible_agents(user_id)
-    return Task.objects.filter(agent__in=visible)
+    """已登录用户可见的工作流任务。已退役的设备执行与用例编写不计入。"""
+    del agents
+    if not user_id:
+        return Task.objects.none()
+    return Task.objects.filter(task_kind=TaskKind.ASSISTANT_SOP)
 
 
-def _hourly_qs():
-    """平台全部小时用量；不按智能体可见性过滤，`agent_id = 0` 也计入。"""
-    return TaskUsageHourly.objects.all()
+def workflow_task_counts(user_id) -> dict:
+    """工作流任务的累计、今日、执行中与排队数。
+
+    Args:
+        user_id: 当前用户 id；空值时四项都是 0。
+
+    Returns:
+        `{total, today, running, pending}`。
+    """
+    empty = {"total": 0, "today": 0, "running": 0, "pending": 0}
+    if not user_id:
+        return empty
+    today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    try:
+        rows = _task_qs(user_id).values("status").annotate(count=Count("id"))
+        today = _task_qs(user_id).filter(created_at__gte=today_start).count()
+    except (OperationalError, ProgrammingError):
+        return empty
+    counts = {str(row["status"] or ""): int(row["count"]) for row in rows}
+    return {
+        "total": sum(counts.values()),
+        "today": today,
+        "running": counts.get("running", 0),
+        "pending": counts.get("pending", 0),
+    }
+
+
+def _ledger_qs():
+    """平台全部逐次账。账单只读这里，不读小时表。"""
+    return ModelUsage.objects.all()
+
+
+def _priced(qs):
+    """费用合计只取已计价行。"""
+    return qs.exclude(pricing_status="unpriced")
+
+
+def _unpriced_tokens(qs) -> int:
+    """未计价行的输入加输出。这些 token 不进费用。"""
+    try:
+        row = qs.filter(pricing_status="unpriced").aggregate(
+            inp=Sum("input_tokens"),
+            out=Sum("output_tokens"),
+        )
+    except (OperationalError, ProgrammingError):
+        return 0
+    return int(row["inp"] or 0) + int(row["out"] or 0)
+
+
+def _archived_hourly_cost() -> float:
+    """切换点之前的小时表合计。只作归档，不并入平台费用。"""
+    try:
+        row = TaskUsageHourly.objects.aggregate(cost=Sum("cost_total"))
+    except (OperationalError, ProgrammingError):
+        return 0.0
+    return _money(row["cost"])
 
 
 def _money(value) -> float:
@@ -55,7 +95,7 @@ def _money(value) -> float:
 def _sum_usage(qs):
     """小时用量合计：输入、输出、缓存命中、总费用。"""
     try:
-        row = qs.aggregate(
+        row = _priced(qs).aggregate(
             inp=Sum("input_tokens"),
             out=Sum("output_tokens"),
             hit=Sum("cache_input_tokens"),
@@ -72,64 +112,15 @@ def _sum_usage(qs):
 
 
 def _agg_by_role(qs):
-    """按角色种类合计 token。执行者与验收者并进同一个智能体之前，角色芯片仍分开。"""
-    result = {}
-    try:
-        rows = qs.values("role_kind").annotate(
-            inp=Sum("input_tokens"),
-            out=Sum("output_tokens"),
-            hit=Sum("cache_input_tokens"),
-        )
-    except (OperationalError, ProgrammingError):
-        return result
-    for row in rows:
-        role = row["role_kind"] or ""
-        if role not in {"planner", "executor", "verifier"}:
-            continue
-        result[role] = {
-            "input_tokens": int(row["inp"] or 0),
-            "output_tokens": int(row["out"] or 0),
-            "cache_input_tokens": int(row["hit"] or 0),
-        }
-    return result
+    """逐次账没有角色列。角色拆分已退出账单，这里固定返回空。"""
+    del qs
+    return {}
 
 
 def _agent_usage(agents):
-    """每个可见智能体一份合计，不按角色或模型拆开。
-
-    平台合计走全表，这里只做可见智能体的拆分；不可见智能体的用量只进合计，
-    因此各卡片之和可以不等于平台总量。
-    """
-    agent_ids = [agent.id for agent in agents]
-    try:
-        grouped = (
-            _hourly_qs()
-            .filter(agent_id__in=agent_ids)
-            .values("agent_id")
-            .annotate(
-                inp=Sum("input_tokens"),
-                out=Sum("output_tokens"),
-                hit=Sum("cache_input_tokens"),
-                cost=Sum("cost_total"),
-            )
-        )
-    except (OperationalError, ProgrammingError):
-        grouped = []
-    rows = {row["agent_id"]: row for row in grouped}
-    usage = []
-    for agent in agents:
-        row = rows.get(agent.id) or {}
-        usage.append(
-            {
-                "id": agent.id,
-                "name": resolve_assistant_name(agent) or agent.name,
-                "input_tokens": int(row.get("inp") or 0),
-                "output_tokens": int(row.get("out") or 0),
-                "cache_hit_tokens": int(row.get("hit") or 0),
-                "cost_total": f"{Decimal(row.get('cost') or 0):.8f}",
-            }
-        )
-    return usage
+    """智能体已下线，不再按智能体拆账单。"""
+    del agents
+    return []
 
 
 def ai_usage_stats(user_id, agents=None):
@@ -144,19 +135,14 @@ def ai_usage_stats(user_id, agents=None):
         agents: 已装载的可见智能体；None 时自行装载（避免重复读取大字段）。
     """
     today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    agents = agents if agents is not None else load_visible_agents(user_id)
-    task_qs = Task.objects.filter(agent__in=agents)
-    hourly = _hourly_qs()
-    today_hourly = hourly.filter(stat_date=today_start.date())
+    del agents
+    tasks = workflow_task_counts(user_id)
+    ledger = _ledger_qs()
+    today_hourly = ledger.filter(occurred_at__gte=today_start)
+    hourly = ledger
 
-    def safe_count(qs):
-        try:
-            return qs.count()
-        except (OperationalError, ProgrammingError):
-            return 0
-
-    task_total = safe_count(task_qs)
-    task_today = safe_count(task_qs.filter(created_at__gte=today_start))
+    task_total = tasks["total"]
+    task_today = tasks["today"]
 
     in_t, out_t, hit_t, cost_t = _sum_usage(hourly)
     in_d, out_d, hit_d, cost_d = _sum_usage(today_hourly)
@@ -183,9 +169,67 @@ def ai_usage_stats(user_id, agents=None):
             "total": avg(in_t, out_t, task_total),
         },
         "deepseek_cost": {"today": cost_d, "total": cost_t},
+        "unpriced_tokens": {
+            "today": _unpriced_tokens(today_hourly),
+            "total": _unpriced_tokens(hourly),
+        },
+        "display_fx": {"date": DISPLAY_FX_DATE, "usd_cny": str(DISPLAY_FX_USD_CNY)},
+        "archived_hourly_cost": _archived_hourly_cost(),
         "by_role": {"today": by_role_today, "total": by_role_total},
-        "agents": _agent_usage(agents),
+        "agents": _agent_usage([]),
     }
+
+
+_SERIES_LIMIT = 5
+
+
+def _bucket_series(rows, days, start_date, key_name):
+    """把按日分组的行收成对齐的序列。超过 5 条的尾部并入「其他」。"""
+    buckets = {}
+    for row in rows:
+        stat_date = row["stat_date"]
+        if hasattr(stat_date, "date"):
+            stat_date = stat_date.date()
+        idx = (stat_date - start_date).days
+        if not 0 <= idx < days:
+            continue
+        name = str(row.get(key_name) or "未命名")
+        bucket = buckets.setdefault(name, {"tokens": [0] * days, "cost": [0.0] * days})
+        bucket["tokens"][idx] += int(row["inp"] or 0) + int(row["out"] or 0)
+        bucket["cost"][idx] = _money(Decimal(bucket["cost"][idx]) + Decimal(row["spent"] or 0))
+    ranked = sorted(buckets.items(), key=lambda item: sum(item[1]["tokens"]), reverse=True)
+    visible = ranked[:_SERIES_LIMIT]
+    rest = ranked[_SERIES_LIMIT:]
+    if rest:
+        other = {"tokens": [0] * days, "cost": [0.0] * days}
+        for _name, bucket in rest:
+            for index in range(days):
+                other["tokens"][index] += bucket["tokens"][index]
+                other["cost"][index] = _money(
+                    Decimal(other["cost"][index]) + Decimal(bucket["cost"][index])
+                )
+        visible.append(("其他", other))
+    return [
+        {"name": name, "tokens": bucket["tokens"], "cost": bucket["cost"]}
+        for name, bucket in visible
+    ]
+
+
+def _daily_rows(start_date, source=""):
+    """按模型与日期分组。source 为空时含全部来源。"""
+    qs = _priced(_ledger_qs()).filter(occurred_at__date__gte=start_date)
+    if source:
+        qs = qs.filter(source=source)
+    return (
+        qs.annotate(stat_date=TruncDate("occurred_at"))
+        .values("model", "stat_date")
+        .annotate(
+            inp=Sum("input_tokens"),
+            out=Sum("output_tokens"),
+            hit=Sum("cache_input_tokens"),
+            spent=Sum("cost_total"),
+        )
+    )
 
 
 def ai_daily_series(user_id, days=7):
@@ -207,8 +251,9 @@ def ai_daily_series(user_id, days=7):
     start_date = first_day.date()
     try:
         rows = (
-            _hourly_qs()
-            .filter(stat_date__gte=start_date)
+            _priced(_ledger_qs())
+            .filter(occurred_at__date__gte=start_date)
+            .annotate(stat_date=TruncDate("occurred_at"))
             .values("stat_date")
             .annotate(
                 inp=Sum("input_tokens"),
@@ -218,21 +263,29 @@ def ai_daily_series(user_id, days=7):
             )
         )
         for row in rows:
-            idx = (row["stat_date"] - start_date).days
+            stat_date = row["stat_date"]
+            if hasattr(stat_date, "date"):
+                stat_date = stat_date.date()
+            idx = (stat_date - start_date).days
             if not 0 <= idx < days:
                 continue
             total_tokens[idx] = int(row["inp"] or 0) + int(row["out"] or 0)
             cache_tokens[idx] = int(row["hit"] or 0)
             cost[idx] = _money(row["spent"])
+        by_model = _bucket_series(_daily_rows(start_date), days, start_date, "model")
+        voice_by_model = _bucket_series(_daily_rows(start_date, "voice"), days, start_date, "model")
     except (OperationalError, ProgrammingError):
         # 统计表缺失或迁移未完成时返回空数据，不阻断仪表盘
-        pass
+        by_model = []
+        voice_by_model = []
 
     return {
         "labels": labels,
         "total_tokens": total_tokens,
         "cache_tokens": cache_tokens,
         "deepseek_cost": cost,
+        "by_model": by_model,
+        "voice_by_model": voice_by_model,
     }
 
 
@@ -256,8 +309,9 @@ def ai_today_usage_slots(user_id, now=None):
     hourly_cost = [Decimal(0)] * _HOURS_PER_DAY
     try:
         rows = (
-            _hourly_qs()
-            .filter(stat_date=today)
+            _priced(_ledger_qs())
+            .filter(occurred_at__date=today)
+            .annotate(stat_hour=TruncHour("occurred_at"))
             .values("stat_hour")
             .annotate(
                 inp=Sum("input_tokens"),
@@ -266,7 +320,8 @@ def ai_today_usage_slots(user_id, now=None):
             )
         )
         for row in rows:
-            hour = int(row["stat_hour"] or 0)
+            moment = row["stat_hour"]
+            hour = moment.hour if hasattr(moment, "hour") else int(moment or 0)
             if not 0 <= hour < _HOURS_PER_DAY:
                 # stat_hour 脏数据（<0 或 >23）丢弃，不让分桶越界
                 continue
@@ -306,14 +361,14 @@ _TASK_FAILED = ("failed",)
 
 
 def _panel_status(raw: str) -> str:
-    """列表 status → 仪表盘结果面板图标档。"""
+    """列表 status → 仪表盘结果面板图标档。中断与取消不收成未执行。"""
     key = (raw or "").lower()
     if key in _TASK_SUCCESS:
         return "success"
     if key in _TASK_FAILED:
         return "failed"
-    if key == "running":
-        return "running"
+    if key in ("running", "interrupted", "cancelled"):
+        return key
     return "idle"
 
 
@@ -392,7 +447,7 @@ def ai_recent_tasks(user_id, limit=8, agents=None):
         rows = list(
             _task_qs(user_id, agents)
             .order_by("-created_at")
-            .only("id", "title", "goal", "status", "created_at")[:limit]
+            .only("id", "title", "goal", "status", "created_at", "case_identity")[:limit]
         )
     except (OperationalError, ProgrammingError):
         return []
@@ -404,6 +459,7 @@ def ai_recent_tasks(user_id, limit=8, agents=None):
             {
                 "id": t.id,
                 "title": t.title or t.goal or "未命名任务",
+                "case_label": case_identity_label(t.case_identity),
                 "status": _panel_status(t.status),
                 "time": created,
             }
@@ -416,22 +472,23 @@ _ACTIVITY_WINDOW = 100
 
 
 def platform_activities(user_id, *, limit=10, offset=0, agents=None):
-    """平台活动时间线：助手任务卡（run）+ 智能体更新（agent），按 time 倒序。
+    """平台活动时间线：只列工作流任务，按 time 倒序。
 
-    各源最多取 _ACTIVITY_WINDOW 条，合并后截断为 _ACTIVITY_WINDOW，再按
-    offset/limit 切片。不查询已删除的 TestRunRecord。
+    最多取 _ACTIVITY_WINDOW 条，再按 offset/limit 切片。不查询已删除的
+    TestRunRecord，也不再返回已下线智能体的更新。
 
     Args:
         user_id: 当前用户 id。
         limit: 返回条数。
         offset: 分页偏移。
-        agents: 已装载的可见智能体；None 时自行装载。
+        agents: 兼容旧调用；工作流任务不再按智能体过滤。
     """
+    del agents
     items = []
 
     try:
         tasks = list(
-            _task_qs(user_id, agents)
+            _task_qs(user_id)
             .order_by("-created_at")
             .only("title", "goal", "status", "created_at")[:_ACTIVITY_WINDOW]
         )
@@ -449,25 +506,4 @@ def platform_activities(user_id, *, limit=10, offset=0, agents=None):
             }
         )
 
-    try:
-        visible = agents if agents is not None else load_visible_agents(user_id)
-        agents = sorted(
-            [agent for agent in visible if agent.updated_at],
-            key=lambda agent: agent.updated_at,
-            reverse=True,
-        )[:_ACTIVITY_WINDOW]
-    except (OperationalError, ProgrammingError):
-        agents = []
-    for agent in agents:
-        items.append(
-            {
-                "type": "agent",
-                "action": f"智能体更新: {agent.name}",
-                "detail": f"模型: {agent.model_provider}/{agent.model_name}",
-                "time": agent.updated_at.strftime("%Y-%m-%d %H:%M") if agent.updated_at else "",
-            }
-        )
-
-    items.sort(key=lambda x: x.get("time", ""), reverse=True)
-    window = items[:_ACTIVITY_WINDOW]
-    return window[offset : offset + limit]
+    return items[offset : offset + limit]

@@ -280,7 +280,7 @@ defineExpose({ openHistory, loadMoreHistory, historyItems, historyHasMore })
 }
 
 .timeline-item__time {
-  font-size: var(--app-size-xs);
+  font-size: var(--app-size-sm);
   color: var(--app-text-secondary);
   flex-shrink: 0;
 }
@@ -299,7 +299,7 @@ defineExpose({ openHistory, loadMoreHistory, historyItems, historyHasMore })
 }
 
 .timeline-item__tag {
-  font-size: var(--app-size-xs);
+  font-size: var(--app-size-sm);
   padding: 2px var(--app-space-sm);
   border-radius: var(--app-radius-pill);
   background: var(--app-bg-subtle);
@@ -334,7 +334,7 @@ defineExpose({ openHistory, loadMoreHistory, historyItems, historyHasMore })
 }
 
 .timeline-history__time {
-  font-size: var(--app-size-xs);
+  font-size: var(--app-size-sm);
   color: var(--app-text-secondary);
 }
 

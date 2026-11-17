@@ -10,6 +10,7 @@ import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import BugDetailDrawer from "./components/BugDetailDrawer.vue"
 import BugDistributionChart from "./components/BugDistributionChart.vue"
+import BugIdentityCell from "./components/BugIdentityCell.vue"
 import { getBug, updateBugStatus } from "./api"
 import { useBugList } from "./composables/useBugList"
 import {
@@ -22,8 +23,7 @@ import {
   BUG_TABLE_COLUMNS,
   bugCategoryClass,
   bugStatusClass,
-  bugTaskRoute,
-  formatBugTime,
+  bugTaskLabel,
 } from "./constants"
 import type { BugStatus, BugTicket } from "./types"
 
@@ -152,39 +152,37 @@ function errorMessage(error: unknown, fallback: string): string {
       </section>
 
       <section class="doc-section bug-table-section">
-        <div class="doc-section__header bug-table-section__header">
+        <!-- 控制区一行：分类 chip 在最左，其后是手稿皮肤搜索 / 状态，最后是同步键 -->
+        <div class="filter-bar sketch-kit">
           <FilterTabs class="bug-category-tabs" :tabs="categoryTabs" v-model="category" />
-        </div>
-
-        <div class="filter-bar">
-          <el-input
-            v-model="keyword"
-            :placeholder="BUG_KEYWORD_PLACEHOLDER"
-            clearable
-            class="bug-filter-input"
-          />
-          <el-select
-            v-model="status"
-            :placeholder="BUG_STATUS_PLACEHOLDER"
-            clearable
-            class="bug-filter-status"
-          >
-            <el-option
-              v-for="option in BUG_STATUS_OPTIONS"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value"
+          <div class="sketch-field bug-field">
+            <el-input
+              v-model="keyword"
+              :placeholder="BUG_KEYWORD_PLACEHOLDER"
+              clearable
+              class="bug-filter-input"
             />
-          </el-select>
-          <DoodleBtn tone="yellow" :disabled="syncing" @click="sync">
-            {{ syncing ? BUG_SYNC.running : "同步历史错误" }}
-          </DoodleBtn>
-          <span class="filter-hint">共 {{ total }} 张 BUG 单</span>
+          </div>
+          <div class="sketch-field bug-field bug-field--status">
+            <el-select
+              v-model="status"
+              :placeholder="BUG_STATUS_PLACEHOLDER"
+              clearable
+              class="bug-filter-status"
+            >
+              <el-option
+                v-for="option in BUG_STATUS_OPTIONS"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </el-select>
+          </div>
         </div>
 
         <ErrorState v-if="error && !loading" :message="error" @retry="load" />
 
-        <div class="table-toolbar">
+        <div class="table-toolbar sketch-kit">
           <span class="toolbar-label">显示行数</span>
           <div class="page-size-btns">
             <button
@@ -198,42 +196,49 @@ function errorMessage(error: unknown, fallback: string): string {
               {{ size }}
             </button>
           </div>
-          <span v-if="pagedItems.length" class="page-info">
+          <span class="page-info">
             第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ total }} 条
           </span>
-          <div v-if="totalPages > 1" class="page-nav">
-            <button
-              type="button"
-              class="page-nav-btn"
-              :disabled="currentPage <= 1"
-              @click="goPage(currentPage - 1)"
-            >
+          <div class="page-nav bug-page-nav">
+            <DoodleBtn tone="paper" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">
               上一页
-            </button>
-            <button
-              type="button"
-              class="page-nav-btn"
+            </DoodleBtn>
+            <DoodleBtn
+              tone="paper"
               :disabled="currentPage >= totalPages"
               @click="goPage(currentPage + 1)"
             >
               下一页
-            </button>
+            </DoodleBtn>
           </div>
+          <DoodleBtn class="bug-sync-btn" tone="paper" :disabled="syncing" @click="sync">
+            {{ syncing ? BUG_SYNC.running : "同步历史错误" }}
+          </DoodleBtn>
         </div>
 
         <AppTable
           :columns="columns"
           :data-source="pagedItems"
           row-key="id"
-          :border="true"
           :loading="loading"
+          table-layout="fixed"
           :empty-text="BUG_EMPTY_TEXT.noData"
           accent="var(--c-runner)"
           class="bug-table"
           @row-click="openDetail"
         >
+          <!-- 表头图标与列名同源（列配置的 icon / title），纯文字列名不受影响 -->
+          <template
+            v-for="col in columns"
+            :key="`head-${col.dataIndex}`"
+            v-slot:[`header-${col.dataIndex}`]
+          >
+            <span class="th-ico" aria-hidden="true">{{ col.icon }}</span
+            >{{ col.title }}
+          </template>
+
           <template #cell-bug_no="{ record }">
-            <code class="bug-no">{{ record.bug_no }}</code>
+            <BugIdentityCell :bug="record" />
           </template>
 
           <template #cell-category="{ record }">
@@ -247,19 +252,13 @@ function errorMessage(error: unknown, fallback: string): string {
           </template>
 
           <template #cell-task_id="{ record }">
-            <router-link :to="bugTaskRoute(record.task_id)" class="bug-task-link" @click.stop>
-              #{{ record.task_id }}
-            </router-link>
+            <span class="bug-task-id">{{ bugTaskLabel(record.task_id) }}</span>
           </template>
 
           <template #cell-status="{ record }">
             <span class="bug-status" :class="bugStatusClass(record.status)">
               {{ record.status_label }}
             </span>
-          </template>
-
-          <template #cell-created_at="{ value }">
-            <span class="bug-time">{{ formatBugTime(value) }}</span>
           </template>
 
           <template #cell-actions="{ record }">

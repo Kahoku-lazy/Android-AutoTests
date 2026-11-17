@@ -1,8 +1,8 @@
 """任务费用口径：只读 `task.cost_total`，不自带价目表重算。
 
-唯一计算口径在引擎侧 `engines/agents/messaging/billing.py`（见
-`tests/engines/agents/test_billing_eight_decimals.py`）。本文件守的是另一侧：
-业务模块不得再引入第二份价目表，否则任务列表/详情会与仪表盘、任务报告对不上。
+价目实现有两份且逐项对拍：`engines/agents/messaging/billing.py`（任务链路的
+事件折叠）与 `engines/backend_bridge/model_billing/`（平台账本）。本文件守的是
+另一侧：业务模块不得再引入第二份价目表，否则任务列表/详情会与仪表盘、任务报告对不上。
 """
 
 from pathlib import Path

@@ -5,19 +5,22 @@
  * useDashboardStats：loading/refreshing/error 状态 + 双接口编排。
  * mapStatsResponse：纯映射函数，覆盖完整数据与缺字段回退。
  */
-import { describe, expect, it, beforeEach, vi } from 'vitest'
-import { fetchDashboardStats, fetchRecentActivities } from '@/modules/dashboard/api'
-import { mapStatsResponse, useDashboardStats } from '@/modules/dashboard/composables/useDashboardStats'
-import type { DashboardRawData } from '@/shared/types/dashboard'
+import { describe, expect, it, beforeEach, vi } from "vitest"
+import { fetchDashboardStats, fetchRecentActivities } from "@/modules/dashboard/api"
+import {
+  mapStatsResponse,
+  useDashboardStats,
+} from "@/modules/dashboard/composables/useDashboardStats"
+import type { DashboardRawData } from "@/shared/types/dashboard"
 
-vi.mock('@/modules/dashboard/api', () => ({
+vi.mock("@/modules/dashboard/api", () => ({
   fetchDashboardStats: vi.fn(),
   fetchRecentActivities: vi.fn(),
 }))
 
 /** AI 用量本文件不参与断言：零值补齐 DashboardRawData 的必填字段 */
 const ZERO_METRIC = { today: 0, total: 0 }
-const ZERO_AI_USAGE: DashboardRawData['ai_usage'] = {
+const ZERO_AI_USAGE: DashboardRawData["ai_usage"] = {
   task_count: ZERO_METRIC,
   input_tokens: ZERO_METRIC,
   output_tokens: ZERO_METRIC,
@@ -35,20 +38,22 @@ function makeRaw(): DashboardRawData {
     cases: {
       total: 20,
       enabled: 18,
-      breakdown: [{ project_id: 1, name: '冒烟项目', total: 8 }],
+      breakdown: [{ project_id: 1, name: "冒烟项目", total: 8 }],
     },
-    runs: { total: 100, active: 2 },
-    agents: { total: 4, active: 1 },
+    assistants: { total: 3 },
+    workflows: { total: 2 },
+    runs: { active: 2, pending: 1 },
+    ops: { users: 4, agents: 2, models: 3 },
     ai_usage: ZERO_AI_USAGE,
     charts: {
-      execution: { labels: ['W1'], success: [10], failed: [2] },
+      execution: { labels: ["W1"], success: [10], failed: [2] },
       ai_tokens: { labels: [], total_tokens: [], cache_tokens: [] },
       deepseek_cost: { labels: [], cost: [] },
     },
     execution_summary: { passed: 50, failed: 3 },
-    recent_tasks: [{ id: 'r1', status: 'success', title: '冒烟' }],
-    last_updated: '2026-08-13 10:00',
-    system_status: 'no_device',
+    recent_tasks: [{ id: "r1", status: "success", title: "冒烟" }],
+    last_updated: "2026-08-13 10:00",
+    system_status: "no_device",
   }
 }
 
@@ -56,19 +61,19 @@ function makeStatsRes(status: boolean, data: DashboardRawData) {
   return { data: { status, data } }
 }
 
-describe('[P0] useDashboardStats', () => {
+describe("[P0] useDashboardStats", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(fetchDashboardStats).mockResolvedValue(makeStatsRes(true, makeRaw()) as never)
     vi.mocked(fetchRecentActivities).mockResolvedValue({
       data: {
         status: true,
-        data: [{ type: 'success', action: '执行完成', time: '10:00' }],
+        data: [{ type: "success", action: "执行完成", time: "10:00" }],
       },
     } as never)
   })
 
-  it('loadData 成功：映射全部字段，loading 结束，无 error', async () => {
+  it("loadData 成功：映射全部字段，loading 结束，无 error", async () => {
     const s = useDashboardStats()
     expect(s.loading.value).toBe(true)
 
@@ -78,62 +83,64 @@ describe('[P0] useDashboardStats', () => {
     expect(s.error.value).toBeNull()
     expect(s.stats.value.devices).toEqual({ online: 3, total: 5 })
     expect(s.stats.value.cases.breakdown).toHaveLength(1)
-    expect(s.stats.value.runs.active).toBe(2)
-    expect(s.stats.value.agents.total).toBe(4)
-    expect(s.executionChart.value.labels).toEqual(['W1'])
+    expect(s.stats.value.assistants.total).toBe(3)
+    expect(s.stats.value.workflows.total).toBe(2)
+    expect(s.stats.value.runs).toEqual({ active: 2, pending: 1 })
+    expect(s.stats.value.ops).toEqual({ users: 4, agents: 2, models: 3 })
+    expect(s.executionChart.value.labels).toEqual(["W1"])
     expect(s.executionSummary.value).toEqual({ passed: 50, failed: 3 })
     expect(s.recentTasks.value).toHaveLength(1)
-    expect(s.lastUpdated.value).toBe('2026-08-13 10:00')
-    expect(s.systemStatus.value).toBe('no_device')
+    expect(s.lastUpdated.value).toBe("2026-08-13 10:00")
+    expect(s.systemStatus.value).toBe("no_device")
     expect(s.activities.value).toHaveLength(1)
   })
 
-  it('stats 接口业务失败：写入后端 message', async () => {
+  it("stats 接口业务失败：写入后端 message", async () => {
     vi.mocked(fetchDashboardStats).mockResolvedValue({
-      data: { status: false, message: '服务端统计暂不可用' },
+      data: { status: false, message: "服务端统计暂不可用" },
     } as never)
 
     const s = useDashboardStats()
     await s.loadData()
 
-    expect(s.error.value).toBe('服务端统计暂不可用')
+    expect(s.error.value).toBe("服务端统计暂不可用")
     expect(s.stats.value.devices.total).toBe(0)
   })
 
-  it('stats 请求抛错：写入网络错误文案', async () => {
-    vi.mocked(fetchDashboardStats).mockRejectedValue(new Error('boom'))
+  it("stats 请求抛错：写入网络错误文案", async () => {
+    vi.mocked(fetchDashboardStats).mockRejectedValue(new Error("boom"))
 
     const s = useDashboardStats()
     await s.loadData()
 
-    expect(s.error.value).toBe('统计数据加载失败，请检查网络连接')
+    expect(s.error.value).toBe("统计数据加载失败，请检查网络连接")
   })
 
-  it('stats 成功 + activities 抛错：error 为活动加载失败', async () => {
-    vi.mocked(fetchRecentActivities).mockRejectedValue(new Error('boom'))
+  it("stats 成功 + activities 抛错：error 为活动加载失败", async () => {
+    vi.mocked(fetchRecentActivities).mockRejectedValue(new Error("boom"))
 
     const s = useDashboardStats()
     await s.loadData()
 
-    expect(s.error.value).toBe('活动记录加载失败，请检查网络连接')
+    expect(s.error.value).toBe("活动记录加载失败，请检查网络连接")
     expect(s.activities.value).toEqual([])
   })
 
-  it('stats 失败 + activities 抛错：error 保持 stats 的错误，不被覆盖', async () => {
+  it("stats 失败 + activities 抛错：error 保持 stats 的错误，不被覆盖", async () => {
     vi.mocked(fetchDashboardStats).mockResolvedValue({
-      data: { status: false, message: '服务端统计暂不可用' },
+      data: { status: false, message: "服务端统计暂不可用" },
     } as never)
-    vi.mocked(fetchRecentActivities).mockRejectedValue(new Error('boom'))
+    vi.mocked(fetchRecentActivities).mockRejectedValue(new Error("boom"))
 
     const s = useDashboardStats()
     await s.loadData()
 
-    expect(s.error.value).toBe('服务端统计暂不可用')
+    expect(s.error.value).toBe("服务端统计暂不可用")
   })
 
-  it('activities 业务失败：activities 保持空数组', async () => {
+  it("activities 业务失败：activities 保持空数组", async () => {
     vi.mocked(fetchRecentActivities).mockResolvedValue({
-      data: { status: false, message: '无活动' },
+      data: { status: false, message: "无活动" },
     } as never)
 
     const s = useDashboardStats()
@@ -143,19 +150,21 @@ describe('[P0] useDashboardStats', () => {
     expect(s.activities.value).toEqual([])
   })
 
-  it('响应形状异常（无 data）：整体兜底错误', async () => {
+  it("响应形状异常（无 data）：整体兜底错误", async () => {
     vi.mocked(fetchDashboardStats).mockResolvedValue(undefined as never)
 
     const s = useDashboardStats()
     await s.loadData()
 
-    expect(s.error.value).toBe('仪表盘数据加载失败，请稍后重试')
+    expect(s.error.value).toBe("仪表盘数据加载失败，请稍后重试")
   })
 
-  it('refreshData：置 refreshing，结束后复位并更新数据', async () => {
+  it("refreshData：置 refreshing，结束后复位并更新数据", async () => {
     let resolveStats!: (v: unknown) => void
     vi.mocked(fetchDashboardStats).mockReturnValue(
-      new Promise((r) => { resolveStats = r }) as never,
+      new Promise((r) => {
+        resolveStats = r
+      }) as never,
     )
     vi.mocked(fetchRecentActivities).mockResolvedValue({
       data: { status: true, data: [] },
@@ -172,14 +181,16 @@ describe('[P0] useDashboardStats', () => {
     expect(s.stats.value.devices.online).toBe(3)
   })
 
-  it('refreshSilently：不点亮 loading / refreshing，成功后写数据', async () => {
+  it("refreshSilently：不点亮 loading / refreshing，成功后写数据", async () => {
     const s = useDashboardStats()
     await s.loadData()
     expect(s.loading.value).toBe(false)
 
     let resolveStats!: (v: unknown) => void
     vi.mocked(fetchDashboardStats).mockReturnValue(
-      new Promise((r) => { resolveStats = r }) as never,
+      new Promise((r) => {
+        resolveStats = r
+      }) as never,
     )
 
     const p = s.refreshSilently()
@@ -194,13 +205,13 @@ describe('[P0] useDashboardStats', () => {
     expect(s.stats.value.devices.online).toBe(3)
   })
 
-  it('refreshSilently：失败时保留上次成功数据且不写错误态', async () => {
+  it("refreshSilently：失败时保留上次成功数据且不写错误态", async () => {
     const s = useDashboardStats()
     await s.loadData()
     expect(s.stats.value.devices.online).toBe(3)
 
-    vi.mocked(fetchDashboardStats).mockRejectedValue(new Error('boom'))
-    vi.mocked(fetchRecentActivities).mockRejectedValue(new Error('boom'))
+    vi.mocked(fetchDashboardStats).mockRejectedValue(new Error("boom"))
+    vi.mocked(fetchRecentActivities).mockRejectedValue(new Error("boom"))
 
     await s.refreshSilently()
 
@@ -209,24 +220,24 @@ describe('[P0] useDashboardStats', () => {
   })
 })
 
-describe('[P0] mapStatsResponse（纯映射）', () => {
-  it('完整数据逐字段映射', () => {
+describe("[P0] mapStatsResponse（纯映射）", () => {
+  it("完整数据逐字段映射", () => {
     const mapped = mapStatsResponse(makeRaw())
 
     expect(mapped.stats.devices).toEqual({ online: 3, total: 5 })
     expect(mapped.stats.cases).toEqual({
       total: 20,
       enabled: 18,
-      breakdown: [{ project_id: 1, name: '冒烟项目', total: 8 }],
+      breakdown: [{ project_id: 1, name: "冒烟项目", total: 8 }],
     })
     expect(mapped.executionChart.success).toEqual([10])
     expect(mapped.executionSummary.passed).toBe(50)
     expect(mapped.recentTasks).toHaveLength(1)
-    expect(mapped.lastUpdated).toBe('2026-08-13 10:00')
-    expect(mapped.systemStatus).toBe('no_device')
+    expect(mapped.lastUpdated).toBe("2026-08-13 10:00")
+    expect(mapped.systemStatus).toBe("no_device")
   })
 
-  it('空对象：全部回退默认值', () => {
+  it("空对象：全部回退默认值", () => {
     const mapped = mapStatsResponse({} as DashboardRawData)
 
     expect(mapped.stats.devices).toEqual({ online: 0, total: 0 })
@@ -234,50 +245,72 @@ describe('[P0] mapStatsResponse（纯映射）', () => {
     expect(mapped.executionChart).toEqual({ labels: [], success: [], failed: [] })
     expect(mapped.executionSummary).toEqual({ passed: 0, failed: 0 })
     expect(mapped.recentTasks).toEqual([])
-    expect(mapped.lastUpdated).toBe('')
-    expect(mapped.systemStatus).toBe('normal')
+    expect(mapped.lastUpdated).toBe("")
+    expect(mapped.systemStatus).toBe("normal")
   })
 
-  it('ai_tokens / deepseek_cost：snake_case 映射为 camelCase', () => {
+  it("ai_tokens / deepseek_cost：snake_case 映射为 camelCase", () => {
     const mapped = mapStatsResponse({
       charts: {
         ai_tokens: {
-          labels: ['08/16', '08/17'],
+          labels: ["08/16", "08/17"],
           total_tokens: [1000, 2000],
           cache_tokens: [100, 200],
         },
         deepseek_cost: {
-          labels: ['08/16', '08/17'],
+          labels: ["08/16", "08/17"],
           cost: [0.01, 0.02],
         },
       },
     } as DashboardRawData)
 
     expect(mapped.aiTokenChart).toEqual({
-      labels: ['08/16', '08/17'],
+      labels: ["08/16", "08/17"],
       totalTokens: [1000, 2000],
       cacheTokens: [100, 200],
+      byModel: [],
+      voiceByModel: [],
     })
     expect(mapped.deepseekCostChart).toEqual({
-      labels: ['08/16', '08/17'],
+      labels: ["08/16", "08/17"],
       cost: [0.01, 0.02],
     })
   })
 
-  it('部分字段缺失：缺失项回退，存在项保留', () => {
+  it("币种切换只换算显示，不改库存字段", () => {
+    const mapped = mapStatsResponse({
+      ai_usage: {
+        deepseek_cost: { today: 6.7132, total: 6.7132 },
+        display_fx: { date: "2026-11-17", usd_cny: "6.7132" },
+        archived_hourly_cost: 109,
+      },
+    } as DashboardRawData)
+    const stored = mapped.stats.aiUsage.deepseekCost.total
+    const usd = stored / Number(mapped.stats.aiUsage.displayFx.usdCny)
+
+    expect(stored).toBe(6.7132)
+    expect(usd).toBeCloseTo(1)
+    expect(mapped.stats.aiUsage.deepseekCost.total).toBe(stored)
+    expect(mapped.stats.aiUsage.archivedHourlyCost).toBe(109)
+  })
+
+  it("部分字段缺失：缺失项回退，存在项保留", () => {
     // 故意只给两个分区：验证缺失分区回退默认值、已给分区原样保留
     const mapped = mapStatsResponse({
       devices: { online: 2, total: 4 },
-      runs: { total: 10, active: 1 },
+      runs: { active: 1 },
     } as unknown as DashboardRawData)
 
     expect(mapped.stats.devices.online).toBe(2)
     expect(mapped.stats.devices.total).toBe(4)
-    expect(mapped.stats.runs.active).toBe(1)
+    expect(mapped.stats.runs).toEqual({ active: 1, pending: 0 })
+    expect(mapped.stats.ops).toBeNull()
     expect(mapped.stats.cases).toEqual({
-      total: 0, enabled: 0, breakdown: [],
+      total: 0,
+      enabled: 0,
+      breakdown: [],
     })
     expect(mapped.executionChart.labels).toEqual([])
-    expect(mapped.systemStatus).toBe('normal')
+    expect(mapped.systemStatus).toBe("normal")
   })
 })

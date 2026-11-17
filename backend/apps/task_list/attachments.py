@@ -220,6 +220,78 @@ def store_flat_upload(filename: str, content: bytes) -> str:
     return target.name
 
 
+def validate_milestone_yaml(text: str) -> None:
+    """确认正文是里程碑 YAML，不是用例格式。
+
+    角色、模型、工具字段不读取。缺字段或用例格式在交给流程加载前拒绝。
+
+    Args:
+        text: 上传的 YAML 正文。
+
+    Raises:
+        AttachmentError: 不是合法 YAML、缺必填字段，或用了用例格式。
+    """
+    import yaml
+
+    try:
+        raw = yaml.safe_load(text)
+    except yaml.YAMLError as exc:
+        raise AttachmentError(f"不是合法 YAML：{exc}") from exc
+    if isinstance(raw, list):
+        raise AttachmentError("需要里程碑格式：顶层是 name 与 steps，不接受用例列表")
+    if not isinstance(raw, dict):
+        raise AttachmentError("需要里程碑格式：顶层必须是映射")
+    if (
+        not str(raw.get("name") or "").strip()
+        or not isinstance(raw.get("steps"), list)
+        or not raw["steps"]
+    ):
+        raise AttachmentError("需要里程碑格式：顶层要有非空 name 与非空 steps")
+    for index, item in enumerate(raw["steps"], 1):
+        if not isinstance(item, dict):
+            raise AttachmentError(f"第 {index} 步必须是映射")
+        if "action" in item or "assert" in item:
+            raise AttachmentError(
+                "需要里程碑格式：步骤使用 subject 与 description，不接受 action / assert"
+            )
+        if (
+            not str(item.get("subject") or "").strip()
+            or not str(item.get("description") or "").strip()
+        ):
+            raise AttachmentError(f"第 {index} 步缺少 subject 或 description")
+        attempts = item.get("max_attempts", 3)
+        if not isinstance(attempts, int) or isinstance(attempts, bool) or attempts < 1:
+            raise AttachmentError(f"第 {index} 步的 max_attempts 必须是正整数")
+
+
+def collect_milestone_file(configs: list) -> PreparedUpload:
+    """检查名片绑定 SOP 的一份里程碑 YAML。不写库、不落盘。
+
+    Args:
+        configs: 上传文件列表，必须正好一份。
+
+    Returns:
+        解析后的配置附件。
+
+    Raises:
+        AttachmentError: 份数、扩展名、编码或里程碑字段不合法。
+    """
+    if not configs:
+        raise AttachmentError("需要一份 YAML 配置")
+    if len(configs) != 1:
+        raise AttachmentError("只能有一份配置")
+    filename, content = _upload_pair(configs[0])
+    _check_size(content)
+    if _suffix(filename) not in CONFIG_EXTENSIONS:
+        raise AttachmentError("配置只支持 YAML（.yaml / .yml）")
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise AttachmentError("YAML 必须是 UTF-8") from exc
+    validate_milestone_yaml(text)
+    return PreparedUpload(kind="config", filename=filename, body=text, content=content)
+
+
 def collect_document_files(documents: list) -> list[PreparedUpload]:
     """检查用例编写任务上传的 PRD/Word 文档。失败抛 AttachmentError，不写库、不落盘。
 

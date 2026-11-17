@@ -62,12 +62,14 @@ class SopStepResult:
         passed: 验收是否通过。
         attempts: 实际尝试次数。
         message: 最后一次验收的说明；通过时是依据，不通过时是缺什么。
+        expected: 这一步必须达成的结果；步骤定义没有时为空串。
     """
 
     subject: str
     passed: bool
     attempts: int
     message: str = ""
+    expected: str = ""
 
 
 @dataclass(frozen=True)
@@ -165,6 +167,7 @@ async def run_sop_once(
                 passed=item.passed,
                 attempts=item.attempts,
                 message=item.message,
+                expected=item.expected,
             )
             for item in result.steps
         ],

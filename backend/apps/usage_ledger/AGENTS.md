@@ -9,8 +9,9 @@
 | 文件 | 职责 |
 | --- | --- |
 | `models.py` | `ModelUsage` → `ai_usage_records`；UUID 主键、event_id 唯一 |
-| `pricing.py` / `pricing.json` | 可配置官方价目表与费用计算 |
-| `api.py` | 幂等写入、语音事件入账、分类/厂商汇总、最近明细 |
+| `pricing.py` / `pricing.json` | 费用计算：DeepSeek 走 `engines/backend_bridge/model_billing`，其它厂商读 `pricing.json` |
+| `api.py` | 幂等写入、语音事件入账、读库重算费用、分类/厂商汇总、最近明细 |
+| `management/commands/recalc_usage_costs.py` | 按当前价目重算历史账本费用（支持 `--dry-run` 与按厂商/来源过滤） |
 
 ## 红线
 

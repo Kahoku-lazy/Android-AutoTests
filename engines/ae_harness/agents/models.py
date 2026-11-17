@@ -5,27 +5,33 @@
 Python 调试：➡️ python -m engines.ae_harness.agents.models 🏁
 时间：➡️ 2026-11-13 🏁
 作者：➡️ kahoku 🏁
-版本：➡️ 1.0.0 🏁
-修改时间: ➡️ 2026-11-13 🏁
+版本：➡️ 1.1.0 🏁
+修改时间: ➡️ 2026-11-16 🏁
 类型: ➡️ 模型配置模块 🏁
 简介说明：➡️
 1. ChatModel: 一条聊天模型配置的形状；字段声明即校验。
 2. CreatedModel: 造模型的结果——模型实例 + 本次使用的密钥环境变量名（不含明文）。
-3. create_model: 按短名取一条配置，校验后创建聊天模型，并交出用的是哪把密钥；不传表则自己读。
-4. 密钥环境变量只有三个：DEEPSEEK_API_KEY、DASHSCOPE_API_KEY、GOVEE_API_KEY。
-5. govee 走 OpenAI Chat Completions 协议，base_url 固定。
+3. create_model: 按调用方传入的厂商、密钥名、地址、模型名创建聊天模型。
+4. 密钥由本模块自己解析：先查仓库根 .env，再查进程环境；不经 config。
+5. 密钥环境变量只有三个：DEEPSEEK_API_KEY、DASHSCOPE_API_KEY、GOVEE_API_KEY。
+6. GoveeChatFormatter: govee 通道去掉 system 与 assistant 消息的 name 键。
+7. GoveeThinkingChatModel: 思考模式拒绝强制选工具时，按请求类型只重发一次。
 🏁
 关联模块：➡️
-1. engines.ae_harness.agents.config: 提供模型表与密钥取值。
+1. 无本地依赖：只用标准库、dotenv 与 agentscope。
 🏁
 测试：➡️
-1. 见 engines.ae_harness.assistant.agent_executor。
+1. tests/engines/ae_harness/unit/test_govee_message_name.py: govee 消息名过滤
+2. tests/engines/ae_harness/unit/test_govee_tool_choice.py: 思考模式拒绝强制选工具时的重发
 🏁
 """
 
 from __future__ import annotations
 
+import os
+
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal
 
 from agentscope.credential import (
@@ -36,23 +42,36 @@ from agentscope.credential import (
 from agentscope.formatter import (
     DashScopeMultiAgentFormatter,
     DeepSeekMultiAgentFormatter,
+    OpenAIChatFormatter,
 )
+from agentscope.message import Msg
 from agentscope.model import (
     ChatModelBase,
     DashScopeChatModel,
     DeepSeekChatModel,
     OpenAIChatModel,
 )
+from agentscope.tool import ToolChoice
+from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from .config import load_models, load_secret
+__all__ = [
+    "ChatModel",
+    "CreatedModel",
+    "GoveeChatFormatter",
+    "create_model",
+    "load_secret",
+]
 
-__all__ = ["ChatModel", "CreatedModel", "create_model"]
+# 仓库根：engines/ae_harness/agents/models.py 往上三级。只读这一份 .env。
+_ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
+_ENV = dotenv_values(_ENV_PATH) if _ENV_PATH.exists() else {}
 
-# DeepSeek 条目没写 base_url 时用厂商默认地址。
-_DEEPSEEK_BASE_URL = "https://api.deepseek.com"
-# govee 走 OpenAI 兼容协议，地址固定。
-_GOVEE_BASE_URL = "https://test-llm.lanjingerp.com/v1"
+# 调用方没传地址时用厂商默认。govee 不再钉死，传入值优先。
+_DEFAULT_BASE_URL = {
+    "deepseek": "https://api.deepseek.com",
+    "govee": "https://test-llm.lanjingerp.com/v1",
+}
 
 # provider → 唯一允许的密钥环境变量名。
 _API_KEY_ENV = {
@@ -116,44 +135,187 @@ class CreatedModel:
     api_key_env: str
 
 
+class GoveeChatFormatter(OpenAIChatFormatter):
+    """
+    govee 网关用的 OpenAI 兼容格式化器。
+
+    先按 OpenAI 形状写出消息，再删除 system 与 assistant 上的 name 键。
+    user 与 tool 的 name 保留。不按模型名分支。
+    """
+
+    async def format(self, msgs: list[Msg]) -> list[dict]:
+        """
+        格式化消息，并去掉非 user、非 tool 消息的 name。
+
+        Args:
+            msgs: 待格式化的 AgentScope 消息。
+
+        Returns:
+            已删除受限 name 键的消息列表。
+        """
+        formatted = await super().format(msgs)
+        for item in formatted:
+            if item.get("role") not in {"user", "tool"}:
+                item.pop("name", None)
+        return formatted
+
+
+_THINKING_TOOL_CHOICE = "Thinking mode does not support this tool_choice"
+_STRUCTURED_TOOL = "GenerateStructuredOutput"
+
+
+def _thinking_rejected(exc: Exception) -> bool:
+    """只认网关这句拒绝。其它 400 不重发。"""
+    return _THINKING_TOOL_CHOICE in str(exc)
+
+
+def _can_retry(tool_choice: ToolChoice | None) -> bool:
+    """没强制、也不是禁止调用时，不重发。"""
+    if tool_choice is None or tool_choice.mode == "auto":
+        return False
+    return True
+
+
+def _forced_name(tool_choice: ToolChoice | None) -> str | None:
+    """强制工具名。auto / none / 未指定时返回 None。"""
+    if tool_choice is None:
+        return None
+    mode = tool_choice.mode
+    if mode in {"auto", "none", "required"}:
+        return None
+    return str(mode)
+
+
+def _disable_thinking(kwargs: dict) -> dict:
+    """只在这次重发里关思考，不改模型默认。"""
+    extra = dict(kwargs.get("extra_body") or {})
+    thinking = dict(extra.get("thinking") or {})
+    thinking["type"] = "disabled"
+    extra["thinking"] = thinking
+    return {**kwargs, "extra_body": extra}
+
+
+def _only_structured(tools: list[dict] | None) -> list[dict]:
+    """交结论的最后一次只留结构化工具，避免改去点设备。"""
+    for tool in tools or []:
+        function = tool.get("function") or {}
+        if function.get("name") == _STRUCTURED_TOOL or tool.get("name") == _STRUCTURED_TOOL:
+            return [tool]
+    return [
+        {
+            "type": "function",
+            "function": {"name": _STRUCTURED_TOOL, "parameters": {"type": "object"}},
+        }
+    ]
+
+
+class GoveeThinkingChatModel(OpenAIChatModel):
+    """
+    govee 通道的聊天模型。
+
+    思考模式拒绝强制选工具时，按请求类型重发。普通请求、已开始的流、其它错误都不重发。
+    """
+
+    async def _call_api(
+        self,
+        model_name: str,
+        messages: list[Msg],
+        tools: list[dict] | None = None,
+        tool_choice: ToolChoice | None = None,
+        **generate_kwargs,
+    ):
+        """
+        调用网关。仅在请求还没开始返回时，按四段规则重发。
+
+        Args:
+            model_name: 厂商模型名。
+            messages: 已格式化前的消息。
+            tools: 本次可用工具。
+            tool_choice: 本次工具选择。
+            generate_kwargs: 其余请求参数。
+
+        Returns:
+            父类的响应或流。
+
+        Raises:
+            Exception: 不是这句拒绝，或重发后仍被拒绝。
+        """
+        try:
+            return await super()._call_api(
+                model_name, messages, tools, tool_choice, **generate_kwargs
+            )
+        except Exception as exc:
+            if not _thinking_rejected(exc) or not _can_retry(tool_choice):
+                raise
+            quiet = _disable_thinking(generate_kwargs)
+            try:
+                return await super()._call_api(model_name, messages, tools, tool_choice, **quiet)
+            except Exception as second:
+                if not _thinking_rejected(second) or _forced_name(tool_choice) != _STRUCTURED_TOOL:
+                    raise
+                return await super()._call_api(
+                    model_name,
+                    messages,
+                    _only_structured(tools),
+                    ToolChoice(mode="auto"),
+                    **quiet,
+                )
+
+
+def load_secret(name: str) -> str:
+    """
+    按环境变量名取密钥值。先查仓库根 .env，再查进程环境。
+
+    Args:
+        name: 环境变量名，如 DEEPSEEK_API_KEY。
+
+    Returns:
+        密钥值；两处都没配时返回空串。
+    """
+    return str(_ENV.get(name) or os.environ.get(name, ""))
+
+
 def create_model(
-    short_name: str,
+    provider: str,
+    api_key_env: str,
+    model_name: str,
+    base_url: str = "",
     *,
-    catalog: dict | None = None,
     stream: bool = True,
 ) -> CreatedModel:
     """
-    按短名取一条配置，校验后创建聊天模型，并交出用的是哪把密钥。
+    按调用方传入的连接参数创建聊天模型，并交出用的是哪把密钥。
 
     Args:
-        short_name: 模型短名，如 deepseek_chat_flash。
-        catalog: 模型表；不传则现读一次 models.yaml。
+        provider: 厂商名，只能是 deepseek、dashscope、govee。
+        api_key_env: 密钥所在的环境变量名，必须与厂商成对。
+        model_name: 厂商正式模型名。
+        base_url: 基础地址；空串时用该厂商默认地址。
         stream: 是否流式输出。
 
     Returns:
         模型实例与本次使用的密钥环境变量名（不含明文）。
 
     Raises:
-        ValueError: 短名不存在、密钥没配、base_url 不合法，或 provider 不受支持。
-        ValidationError: 条目校验不通过。
+        ValueError: 厂商与密钥名不匹配、密钥没配，或地址为空且没有默认值。
+        ValidationError: 连接参数校验不通过。
     """
-    table = catalog if catalog is not None else load_models()
-    raw = table.get(short_name)
-    if not isinstance(raw, dict):
-        choices = ", ".join(sorted(str(key) for key in table)) or "无"
-        raise ValueError(f"未知模型 {short_name!r}；可选：{choices}")
-
-    entry = ChatModel.model_validate(raw)
+    entry = ChatModel.model_validate(
+        {
+            "provider": provider,
+            "api_key": api_key_env,
+            "model_name": model_name,
+            "base_url": base_url,
+        }
+    )
     api_key = load_secret(entry.api_key)
     if not api_key:
-        raise ValueError(f"{short_name}: 没有配置密钥 {entry.api_key}")
+        raise ValueError(f"没有配置密钥 {entry.api_key}")
+    resolved = entry.base_url or _DEFAULT_BASE_URL.get(entry.provider, "")
     if entry.provider == "deepseek":
         return CreatedModel(
             model=DeepSeekChatModel(
-                credential=DeepSeekCredential(
-                    api_key=api_key,
-                    base_url=entry.base_url or _DEEPSEEK_BASE_URL,
-                ),
+                credential=DeepSeekCredential(api_key=api_key, base_url=resolved),
                 model=entry.model_name,
                 stream=stream,
                 formatter=DeepSeekMultiAgentFormatter(),
@@ -161,9 +323,14 @@ def create_model(
             api_key_env=entry.api_key,
         )
     if entry.provider == "dashscope":
+        credential = (
+            DashScopeCredential(api_key=api_key, base_url=resolved)
+            if resolved
+            else DashScopeCredential(api_key=api_key)
+        )
         return CreatedModel(
             model=DashScopeChatModel(
-                credential=DashScopeCredential(api_key=api_key),
+                credential=credential,
                 model=entry.model_name,
                 stream=stream,
                 formatter=DashScopeMultiAgentFormatter(),
@@ -171,17 +338,15 @@ def create_model(
             api_key_env=entry.api_key,
         )
     if entry.provider == "govee":
-        base_url = entry.base_url or _GOVEE_BASE_URL
-        if base_url != _GOVEE_BASE_URL:
-            raise ValueError(
-                f"{short_name}: govee 的 base_url 固定为 {_GOVEE_BASE_URL}，收到 {base_url!r}"
-            )
+        if not resolved:
+            raise ValueError("govee 的 base_url 不能为空")
         return CreatedModel(
-            model=OpenAIChatModel(
-                credential=OpenAICredential(api_key=api_key, base_url=base_url),
+            model=GoveeThinkingChatModel(
+                credential=OpenAICredential(api_key=api_key, base_url=resolved),
                 model=entry.model_name,
                 stream=stream,
+                formatter=GoveeChatFormatter(),
             ),
             api_key_env=entry.api_key,
         )
-    raise ValueError(f"{short_name}: 不支持的 provider {entry.provider!r}")
+    raise ValueError(f"不支持的 provider {entry.provider!r}")

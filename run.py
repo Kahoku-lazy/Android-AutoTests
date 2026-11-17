@@ -408,6 +408,39 @@ def _drain_backend(port: int) -> None:
             print(f"  Still {running} running task(s), {left}s left...")
             last_report = time.time()
     print("  Drain timeout reached — forcing stop.")
+    _write_stop_timeout_mark(_running_ids_from_drain(base))
+
+
+def _running_ids_from_drain(base: str) -> list[int]:
+    """再问一次仍在跑的编号。后端不可达时返回空列表，不阻止停机。"""
+    try:
+        with urllib.request.urlopen(base, timeout=3) as resp:
+            data = json.loads(resp.read().decode("utf-8")).get("data") or {}
+    except Exception:
+        return []
+    raw = data.get("running_ids") or []
+    found = []
+    for item in raw:
+        try:
+            found.append(int(item))
+        except (TypeError, ValueError):
+            continue
+    return found
+
+
+def _write_stop_timeout_mark(ids: list[int]) -> None:
+    """停机等满后留下编号。写失败只打印，不阻止杀进程。"""
+    if not ids:
+        return
+    path = ROOT / "temps" / "stop-timeout-tasks.json"
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps({"ids": ids, "written_at": time.strftime("%Y-%m-%dT%H:%M:%S")}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        print(f"  Could not write stop-timeout mark: {exc}")
 
 
 def stop_frontend() -> None:

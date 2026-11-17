@@ -1,6 +1,5 @@
 /** Task publishing API — TypeScript */
 import djangoClient from "@/shared/api-client"
-import type { DeviceListResponse } from "@/shared/types/device"
 import type {
   TaskDeleteResponse,
   TaskDetailResponse,
@@ -9,17 +8,20 @@ import type {
   TaskSubmitResponse,
 } from "@/shared/types/ai"
 
-/** 提交任务（multipart：title/goal/可选 attachment 文件/device_*） */
-export async function submitTask(payload: FormData): Promise<TaskSubmitResponse> {
-  const { data } = await djangoClient.post<TaskSubmitResponse>("/tasks/submit/", payload, {
-    headers: { "Content-Type": "multipart/form-data" },
-  })
-  return data
+/** 取一份平台报告的 HTML 正文。新窗口不能带登录头，所以先在这里取。 */
+export async function fetchTaskReport(run: string, name: string): Promise<string> {
+  const { data } = await djangoClient.get<{ status: boolean; data?: { content?: string } }>(
+    `/ai/agent-reports/${encodeURIComponent(run)}/${encodeURIComponent(name)}/`,
+  )
+  return data.data?.content || ""
 }
 
 /** 任务列表 */
-export async function listTasks(): Promise<TaskListResponse> {
-  const { data } = await djangoClient.get<TaskListResponse>("/tasks/")
+export async function listTasks(params?: {
+  workflow_id?: number
+  status?: string
+}): Promise<TaskListResponse> {
+  const { data } = await djangoClient.get<TaskListResponse>("/tasks/", { params })
   return data
 }
 
@@ -58,23 +60,6 @@ export async function clearTasks(): Promise<TaskDeleteResponse & { data?: { dele
 /** 任务详情（过程日志） */
 export async function getTask(taskId: number): Promise<TaskDetailResponse> {
   const { data } = await djangoClient.get<TaskDetailResponse>(`/tasks/${taskId}/`)
-  return data
-}
-
-/** 设备列表（供任务卡片选设备） */
-export async function listDevices(): Promise<DeviceListResponse> {
-  const { data } = await djangoClient.get<DeviceListResponse>("/devices/")
-  return data
-}
-/** 任务附件/图片上传（multipart） */
-export async function uploadTaskFile(
-  formData: FormData,
-): Promise<{ status: boolean; data?: unknown }> {
-  const { data } = await djangoClient.post<{ status: boolean; data?: unknown }>(
-    "/tasks/upload-file/",
-    formData,
-    { headers: { "Content-Type": "multipart/form-data" } },
-  )
   return data
 }
 

@@ -9,7 +9,6 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from backend.apps.ai_assistant.models import AIAgent
 from backend.apps.dashboard.views import DashboardStatsAPIView
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db]
@@ -17,8 +16,9 @@ pytestmark = [pytest.mark.unit, pytest.mark.django_db]
 TOP_LEVEL_KEYS = (
     "devices",
     "cases",
+    "assistants",
+    "workflows",
     "runs",
-    "agents",
     "ai_usage",
     "usage_ledger",
     "charts",
@@ -30,10 +30,8 @@ TOP_LEVEL_KEYS = (
 
 
 def _make_user():
-    """先建好用户与智能体，避免建库语句混进被测量的查询窗口。"""
-    user = get_user_model().objects.create_user(username="dash-budget", password="x")
-    AIAgent.objects.create(name="预算智能体", owner=user, avatar="x" * 1024)
-    return user
+    """先建好用户，避免建库语句混进被测量的查询窗口。"""
+    return get_user_model().objects.create_user(username="dash-budget", password="x")
 
 
 def _stats_response(user):
@@ -42,29 +40,27 @@ def _stats_response(user):
     return DashboardStatsAPIView.as_view()(request)
 
 
-def test_stats_reads_agents_once_without_avatar():
-    """统计请求只查一次 ai_agents，且不读取 avatar 大字段。"""
+def test_stats_does_not_read_retired_agent_table():
+    """智能体表已下线，统计请求不再查询 ai_agents。"""
     user = _make_user()
     with CaptureQueriesContext(connection) as ctx:
         response = _stats_response(user)
 
     assert response.status_code == 200
-    agent_queries = [
-        query["sql"]
-        for query in ctx.captured_queries
-        if "ai_agents" in query["sql"] and query["sql"].lstrip().startswith("SELECT")
-    ]
-    assert len(agent_queries) == 1, agent_queries
-    assert "avatar" not in agent_queries[0]
+    agent_queries = [query["sql"] for query in ctx.captured_queries if "ai_agents" in query["sql"]]
+    assert agent_queries == []
 
 
 def test_stats_stays_within_query_budget():
-    """单次统计请求 SQL 不超过 25 条。"""
+    """单次统计请求 SQL 不超过 32 条。
+
+    平台概览新增助手、工作流、任务状态与运营三项的只读计数。
+    """
     user = _make_user()
     with CaptureQueriesContext(connection) as ctx:
         _stats_response(user)
 
-    assert len(ctx.captured_queries) <= 25
+    assert len(ctx.captured_queries) <= 32
 
 
 def test_stats_response_shape_unchanged():

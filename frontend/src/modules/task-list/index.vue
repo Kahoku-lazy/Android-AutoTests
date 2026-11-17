@@ -4,9 +4,9 @@ import TaskBoard from "./components/TaskBoard.vue"
 
 const PAGE_HEADER = {
   title: "任务清单",
-  subtitle: "AI 任务卡片：新建、筛选、重跑与查看详情",
+  subtitle: "工作流任务记录：筛选、关闭、重跑与查看报告",
   icon: "clipboard-list",
-  iconGradient: "linear-gradient(135deg, var(--ai-teal), var(--ai-teal-hover))",
+  iconGradient: "linear-gradient(135deg, var(--c-ai), var(--c-element))",
 }
 </script>
 

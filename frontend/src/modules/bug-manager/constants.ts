@@ -40,14 +40,15 @@ export const BUG_CATEGORY_TABS = [
   { key: "case_authoring", label: "测试用例编写" },
 ] as const
 
+// 表头图标只进表头（配合 #header-<prop> 插槽），title 保持纯文字；
+// 「创建时间」不再是独立列——时间已并入首列身份单元的副行，避免同一信息两处出现。
 export const BUG_TABLE_COLUMNS = [
-  { title: "BUG 编号", dataIndex: "bug_no", width: 118 },
-  { title: "分类", dataIndex: "category", width: 120, align: "center" },
-  { title: "标题", dataIndex: "title", minWidth: 260 },
-  { title: "关联任务", dataIndex: "task_id", width: 104, align: "center" },
-  { title: "状态", dataIndex: "status", width: 96, align: "center" },
-  { title: "创建时间", dataIndex: "created_at", width: 150 },
-  { title: "操作", dataIndex: "actions", width: 78, align: "center" },
+  { title: "BUG 编号", dataIndex: "bug_no", icon: "🐞", width: 200 },
+  { title: "分类", dataIndex: "category", icon: "🏷", width: 124, align: "center" },
+  { title: "标题", dataIndex: "title", icon: "📝", minWidth: 260 },
+  { title: "关联任务", dataIndex: "task_id", icon: "🔗", width: 156, align: "center" },
+  { title: "状态", dataIndex: "status", icon: "🚦", width: 124, align: "center" },
+  { title: "操作", dataIndex: "actions", icon: "💬", width: 132, align: "center" },
 ]
 
 export const BUG_PAGE_SIZE_OPTIONS = [10, 20, 50]
@@ -74,8 +75,20 @@ export function bugCategoryClass(category: string): string {
   return category === "case_authoring" ? "is-case" : "is-ui"
 }
 
-export function bugTaskRoute(taskId: number | string): string {
-  return `/tasks/${taskId}`
+export const BUG_KIND_LABELS: Record<string, string> = {
+  verdict: "步骤未通过",
+  provider: "模型拒绝",
+  device: "设备命令失败",
+  platform: "平台错误",
+  interrupted: "已中断",
+}
+
+export function bugKindLabel(kind: string): string {
+  return BUG_KIND_LABELS[kind] || kind || "未记录"
+}
+
+export function bugTaskLabel(taskId: number | string): string {
+  return `#${taskId}`
 }
 
 export function bugTaskStatusLabel(status: string): string {

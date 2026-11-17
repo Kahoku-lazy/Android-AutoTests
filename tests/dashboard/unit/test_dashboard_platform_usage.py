@@ -10,38 +10,38 @@ import pytest
 
 from django.contrib.auth import get_user_model
 
-from backend.apps.ai_assistant.models import AIAgent
 from backend.apps.dashboard.ai_usage import (
     ai_daily_series,
     ai_today_usage_slots,
     ai_usage_stats,
 )
-from backend.apps.task_list.models import TaskUsageHourly
+from backend.apps.usage_ledger.models import ModelUsage
 
 DAY = datetime(2026, 10, 21, 11, 5, 0)
 
 
 @pytest.fixture
 def platform_users(db):
-    """两个普通用户：A 只能看到自己的智能体，B 的智能体对 A 不可见。"""
+    """查看者。账本不按智能体过滤，造数只用编号区分来源。"""
     user_model = get_user_model()
     viewer = user_model.objects.create_user(username="dash-platform-a", password="x")
-    other = user_model.objects.create_user(username="dash-platform-b", password="x")
-    visible = AIAgent.objects.create(name="A-agent", owner=viewer)
-    hidden = AIAgent.objects.create(name="B-agent", owner=other)
-    return viewer, visible, hidden
+    return viewer, type("Agent", (), {"id": 1})(), type("Agent", (), {"id": 2})()
 
 
 def _usage(agent_id: int, hour: int, input_tokens: int, output_tokens: int, cost: str) -> None:
-    TaskUsageHourly.objects.create(
-        stat_date=DAY.date(),
-        stat_hour=hour,
-        agent_id=agent_id,
+    ModelUsage.objects.create(
+        event_id=f"dash:{agent_id}:{hour}:{input_tokens}",
+        occurred_at=DAY.replace(hour=hour),
+        provider="deepseek",
+        category="LLM",
         model="deepseek-flash",
-        role_name="case_writer_role",
+        source="task",
+        execution_id=str(agent_id),
         input_tokens=input_tokens,
         output_tokens=output_tokens,
+        total_tokens=input_tokens + output_tokens,
         cost_total=Decimal(cost),
+        pricing_status="priced",
     )
 
 
@@ -58,8 +58,7 @@ def test_usage_totals_include_hidden_agents_and_unowned_rows(platform_users):
 
     assert stats["total_tokens"]["today"] == 660
     assert stats["deepseek_cost"]["today"] == pytest.approx(0.006)
-    # 拆分仍只列查看者可见的智能体；不可见用量只进平台合计
-    assert [row["id"] for row in stats["agents"]] == [visible.id]
+    assert stats["agents"] == []
 
 
 @pytest.mark.unit

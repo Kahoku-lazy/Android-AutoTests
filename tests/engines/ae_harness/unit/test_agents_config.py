@@ -1,7 +1,4 @@
-"""配置读取口：提示词与按型号的日志关键词目录。
-
-覆盖 `openspec/specs/agent-harness` 的「提示词唯一配置入口」与本变更的日志关键词迁移。
-"""
+"""配置读取口：按型号的日志关键词目录。"""
 
 from __future__ import annotations
 
@@ -10,14 +7,6 @@ import pytest
 from engines.ae_harness.agents import config
 
 pytestmark = [pytest.mark.unit]
-
-
-def test_load_prompt_reads_verifier_prompt():
-    """验收者提示词已合并为旧 agents 版的较厚版本。"""
-    text = config.load_prompt("UI_VERIFIER_PROMPT")
-
-    assert "验收" in text
-    assert len(text) > 2000
 
 
 def test_load_log_keywords_hits_known_sku():

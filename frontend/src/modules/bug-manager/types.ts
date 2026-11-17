@@ -12,6 +12,15 @@ export interface BugSummary {
   ignored: number
 }
 
+export interface BugFailureStep {
+  seq: number
+  name: string
+  expected: string
+  actual: string
+  attempts: number
+  kind: string
+}
+
 export interface BugTicket {
   id: number
   bug_no: string
@@ -22,6 +31,8 @@ export interface BugTicket {
   status_label: string
   task_id: number
   task_title: string
+  case_label?: string
+  case_rows?: { project: string; id: string; title: string }[]
   task_kind: string
   task_status: string
   agent_id: number
@@ -31,6 +42,9 @@ export interface BugTicket {
   resolved_at: string
   detail?: string
   detail_preview?: string
+  failure_steps?: BugFailureStep[]
+  report_run?: string
+  report_name?: string
 }
 
 export interface BugListData {

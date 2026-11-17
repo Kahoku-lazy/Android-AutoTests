@@ -17,8 +17,9 @@ class TaskSubmitInputSerializer(serializers.Serializer):
     """
 
     title = serializers.CharField(required=True, allow_blank=False)
+    workflow_id = serializers.IntegerField(required=False, min_value=1)
     agent_id = serializers.IntegerField(
-        required=True,
+        required=False,
         min_value=1,
         error_messages={
             "required": "请选择智能体",
@@ -43,6 +44,11 @@ class TaskSubmitInputSerializer(serializers.Serializer):
     assistant_route = serializers.CharField(required=False, allow_blank=True, default="")
     device_label = serializers.CharField(required=False, allow_blank=True, default="")
     attachment = serializers.FileField(required=False, allow_null=True)
+
+    def validate(self, attrs):
+        if not attrs.get("workflow_id") and not attrs.get("agent_id"):
+            raise serializers.ValidationError({"agent_id": "请选择智能体"})
+        return attrs
 
     def validate_title(self, value):
         title = (value or "").strip()

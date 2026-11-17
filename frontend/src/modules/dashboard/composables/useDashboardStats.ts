@@ -53,6 +53,9 @@ const DEFAULT_AI_USAGE: AiUsage = {
   cacheHitRate: zeroMetric(),
   avgTokensPerTask: zeroMetric(),
   deepseekCost: zeroMetric(),
+  unpricedTokens: zeroMetric(),
+  displayFx: { date: "2026-11-17", usdCny: "6.7132" },
+  archivedHourlyCost: 0,
   byRole: { today: {}, total: {} },
   agents: [],
 }
@@ -75,15 +78,23 @@ const DEFAULT_USAGE_LEDGER: UsageLedger = {
 const DEFAULT_STATS: DashboardStats = {
   devices: { online: 0, total: 0 },
   cases: { total: 0, enabled: 0, breakdown: [] },
-  runs: { total: 0, active: 0 },
-  agents: { total: 0, active: 0 },
+  assistants: { total: 0 },
+  workflows: { total: 0 },
+  runs: { active: 0, pending: 0 },
+  ops: null,
   aiUsage: DEFAULT_AI_USAGE,
   usageLedger: DEFAULT_USAGE_LEDGER,
 }
 
 const DEFAULT_CHART: ExecutionChart = { labels: [], success: [], failed: [] }
 const DEFAULT_SUMMARY: ExecutionSummary = { passed: 0, failed: 0 }
-const DEFAULT_AI_TOKEN_CHART: AiTokenChart = { labels: [], totalTokens: [], cacheTokens: [] }
+const DEFAULT_AI_TOKEN_CHART: AiTokenChart = {
+  labels: [],
+  totalTokens: [],
+  cacheTokens: [],
+  byModel: [],
+  voiceByModel: [],
+}
 const DEFAULT_DEEPSEEK_COST_CHART: DeepSeekCostChart = { labels: [], cost: [] }
 const DEFAULT_TODAY_USAGE_CHART: TodayUsageChart = {
   tokens: [],
@@ -118,14 +129,19 @@ export function mapStatsResponse(raw: DashboardRawData): MappedData {
         enabled: raw.cases?.enabled ?? 0,
         breakdown: raw.cases?.breakdown ?? [],
       },
+      assistants: { total: raw.assistants?.total ?? 0 },
+      workflows: { total: raw.workflows?.total ?? 0 },
       runs: {
-        total: raw.runs?.total ?? 0,
         active: raw.runs?.active ?? 0,
+        pending: raw.runs?.pending ?? 0,
       },
-      agents: {
-        total: raw.agents?.total ?? 0,
-        active: raw.agents?.active ?? 0,
-      },
+      ops: raw.ops
+        ? {
+            users: raw.ops.users ?? 0,
+            agents: raw.ops.agents ?? 0,
+            models: raw.ops.models ?? 0,
+          }
+        : null,
       aiUsage: {
         taskCount: toMetric(raw.ai_usage?.task_count),
         inputTokens: toMetric(raw.ai_usage?.input_tokens),
@@ -135,6 +151,12 @@ export function mapStatsResponse(raw: DashboardRawData): MappedData {
         cacheHitRate: toMetric(raw.ai_usage?.cache_hit_rate),
         avgTokensPerTask: toMetric(raw.ai_usage?.avg_tokens_per_task),
         deepseekCost: toMetric(raw.ai_usage?.deepseek_cost),
+        unpricedTokens: toMetric(raw.ai_usage?.unpriced_tokens),
+        displayFx: {
+          date: raw.ai_usage?.display_fx?.date ?? "2026-11-17",
+          usdCny: raw.ai_usage?.display_fx?.usd_cny ?? "6.7132",
+        },
+        archivedHourlyCost: raw.ai_usage?.archived_hourly_cost ?? 0,
         byRole: raw.ai_usage?.by_role ?? { today: {}, total: {} },
         agents: raw.ai_usage?.agents ?? [],
       },
@@ -157,6 +179,8 @@ export function mapStatsResponse(raw: DashboardRawData): MappedData {
       labels: raw.charts?.ai_tokens?.labels ?? [],
       totalTokens: raw.charts?.ai_tokens?.total_tokens ?? [],
       cacheTokens: raw.charts?.ai_tokens?.cache_tokens ?? [],
+      byModel: raw.charts?.ai_tokens?.by_model ?? [],
+      voiceByModel: raw.charts?.ai_tokens?.voice_by_model ?? [],
     },
     deepseekCostChart: {
       labels: raw.charts?.deepseek_cost?.labels ?? [],

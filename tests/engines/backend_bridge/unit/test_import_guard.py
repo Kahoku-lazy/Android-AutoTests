@@ -29,13 +29,16 @@ ALLOWED_ROOTS = {
     "__future__",
     "agentscope",
     "asyncio",
+    "chinese_calendar",  # 模型费用按法定节假日判高峰（model_billing）
     "dataclasses",
     "datetime",
+    "decimal",  # 费用用 Decimal 保 8 位小数（model_billing）
     "engines",
     "pathlib",
     "time",
     "typing",
     "utils",
+    "zoneinfo",  # 北京时间换算（model_billing）
 }
 MIN_FILES = 5
 

@@ -6,21 +6,15 @@ from datetime import datetime
 
 import pytest
 
-from django.contrib.auth import get_user_model
-
-from backend.apps.ai_assistant.models import AIAgent
 from backend.apps.bug_manager.extract import build_bug_drafts
 from backend.apps.task_list.models import Task, TaskEvent
-from engines.agents.tools.tool_serial import LOG_EMPTY
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 
 
-def _task(owner) -> Task:
+def _task() -> Task:
     """建一条失败任务。"""
-    agent = AIAgent.objects.create(name="台账助手", owner=owner)
     return Task.objects.create(
-        agent=agent,
         title="定时功能测试-04",
         case_title="H6810 定时功能测试",
         status="failed",
@@ -29,7 +23,7 @@ def _task(owner) -> Task:
     )
 
 
-def _interrupt(task, reason: str = LOG_EMPTY, step: int = 2) -> None:
+def _interrupt(task, reason: str = "", step: int = 2) -> None:
     """写一条打断事件。"""
     TaskEvent.objects.create(
         task=task,
@@ -50,9 +44,8 @@ def _interrupt(task, reason: str = LOG_EMPTY, step: int = 2) -> None:
 
 def test_interrupt_creates_extra_log_ticket():
     """打断事件存在时，除按用例失败的单子外，再开一张设备日志中断单。"""
-    owner = get_user_model().objects.create_user(username="bug-int-owner", password="pass")
-    task = _task(owner)
-    _interrupt(task)
+    task = _task()
+    _interrupt(task, "日志为空")
 
     drafts = build_bug_drafts(task)
     refs = {draft.source_ref: draft for draft in drafts}
@@ -66,8 +59,7 @@ def test_interrupt_creates_extra_log_ticket():
 
 def test_task_without_interrupt_has_no_log_ticket():
     """没有打断事件时不开这张单。"""
-    owner = get_user_model().objects.create_user(username="bug-int-owner-2", password="pass")
-    task = _task(owner)
+    task = _task()
 
     refs = {draft.source_ref for draft in build_bug_drafts(task)}
 

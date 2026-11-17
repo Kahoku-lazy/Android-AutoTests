@@ -24,13 +24,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-__all__ = ["REPORT_ROOT"]
+__all__ = ["ASSISTANT_LOG_ROOT", "REPORT_ROOT"]
 
 # engines/backend_bridge/reports/paths.py 往上三级是仓库根。
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
 # 平台报告根：与 ae_harness 自己的 logs/ 分开，避免两条链路的产物混在一起。
 REPORT_ROOT = _REPO_ROOT / "logs" / "agents" / "backend_bridge"
+
+# 助手测试对话的日志根。与 SOP 报告分开，避免两条链路混在一个目录。
+ASSISTANT_LOG_ROOT = _REPO_ROOT / "logs" / "agents" / "assistants"
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from "vue"
+import { computed, ref } from "vue"
 import { useDashboardView, toMillions } from "./DashboardView.logic"
+import { useAuthUser } from "@/shared/composables/useAuthUser"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
@@ -9,7 +10,7 @@ import AppCard from "@/shared/components/AppCard.vue"
 import { sketchToneAt, sketchTiltAt } from "@/shared/helpers/sketchCard"
 import { formatSignificant } from "@/shared/animations"
 import TrendBarChart from "./components/TrendBarChart.vue"
-import SeriesBarChart from "./components/SeriesBarChart.vue"
+import ModelLineChart from "./components/ModelLineChart.vue"
 import TodayUsageChart from "./components/TodayUsageChart.vue"
 import { useMidnightRefresh } from "./composables/useMidnightRefresh"
 import TaskResultPanel from "./components/TaskResultPanel.vue"
@@ -43,44 +44,32 @@ const {
   loadData,
   refreshData,
   caseProjectCards,
-  tokenSeries,
-  costSeries,
   todayUsageSeries,
 } = useDashboardView()
 
+const { isOperator } = useAuthUser()
+const currency = ref<"CNY" | "USD">("CNY")
+const trendScope = ref<"all" | "voice">("all")
+const fx = computed(() => Number(stats.value.aiUsage.displayFx.usdCny) || 6.7132)
+
+function money(cny: number): string {
+  if (currency.value === "USD") return formatSignificant(cny / fx.value, 3)
+  return formatSignificant(cny, 3)
+}
+
+function moneyUnit(): string {
+  return currency.value === "USD" ? "美元" : "元"
+}
+
+const modelSeries = computed(() => {
+  const rows =
+    trendScope.value === "voice" ? aiTokenChart.value.voiceByModel : aiTokenChart.value.byModel
+  if (currency.value === "CNY") return rows
+  return rows.map((row) => ({ ...row, cost: row.cost.map((value) => value / fx.value) }))
+})
+
 // 跨零点自动换天：刷新后「今日」系列与三张按日图都切到新的一天
 useMidnightRefresh(refreshData)
-
-const VOICE_CATEGORY_ORDER = ["LLM", "TTS", "Realtime", "Embedding", "ASR"] as const
-
-const voiceUsageLabels = computed(() => {
-  const present = new Set([
-    ...stats.value.usageLedger.voiceToday.categories.map((item) => item.category),
-    ...stats.value.usageLedger.voiceTotal.categories.map((item) => item.category),
-  ])
-  return VOICE_CATEGORY_ORDER.filter((category) => present.has(category))
-})
-
-const voiceUsageSeries = computed(() => {
-  const today = new Map(
-    stats.value.usageLedger.voiceToday.categories.map((item) => [item.category, item.tokens]),
-  )
-  const total = new Map(
-    stats.value.usageLedger.voiceTotal.categories.map((item) => [item.category, item.tokens]),
-  )
-  return [
-    {
-      name: "当天总用量",
-      data: voiceUsageLabels.value.map((category) => today.get(category) ?? 0),
-      color: "#4ECDC4",
-    },
-    {
-      name: "累计用量",
-      data: voiceUsageLabels.value.map((category) => total.get(category) ?? 0),
-      color: "#F7C948",
-    },
-  ]
-})
 
 /** Agent 用量卡顶点色条：按序号轮转模块色，与「卡片即零件」的编号卡一致 */
 const AGENT_CARD_ACCENTS = ["var(--c-ai)", "var(--c-case)", "var(--c-runner)", "var(--c-workflow)"]
@@ -96,12 +85,6 @@ function tokenValue(tokens: number): string {
 
 function tokenUnit(tokens: number): string {
   return tokens >= 1_000_000 ? "M" : "K"
-}
-
-function formatUsageToken(tokens: number): string {
-  return tokens >= 1_000_000
-    ? `${(tokens / 1_000_000).toFixed(2)}M`
-    : `${(tokens / 1_000).toFixed(2)}K`
 }
 </script>
 
@@ -143,8 +126,8 @@ function formatUsageToken(tokens: number): string {
             <template #icon><IconDevice :size="15" /></template>
           </StatsAppCard>
           <StatsAppCard
-            label="活跃智能体"
-            :value="stats.agents.active"
+            label="平台助手"
+            :value="stats.assistants.total"
             color="gray"
             path="/ai-assistant"
             :loading="loading"
@@ -152,12 +135,22 @@ function formatUsageToken(tokens: number): string {
             <template #icon><IconBrain :size="15" /></template>
           </StatsAppCard>
           <StatsAppCard
+            label="工作流"
+            :value="stats.workflows.total"
+            color="gray"
+            path="/ai-assistant"
+            :loading="loading"
+          >
+            <template #icon><IconLayers :size="15" /></template>
+          </StatsAppCard>
+          <StatsAppCard
             label="运行中任务"
             :value="stats.runs.active"
             color="rose"
-            path="/reports"
+            path="/tasks"
             :loading="loading"
             :live="stats.runs.active > 0"
+            :desc="`排队 ${stats.runs.pending.toLocaleString()}`"
           >
             <template #icon><IconPlay :size="15" /></template>
           </StatsAppCard>
@@ -171,6 +164,39 @@ function formatUsageToken(tokens: number): string {
           >
             <template #icon><IconBrain :size="15" /></template>
           </StatsAppCard>
+        </div>
+
+        <div v-if="isOperator && stats.ops" class="overview-assets">
+          <div class="subhead">运营配置 <span class="subhead__tag">Ops</span></div>
+          <div class="dashboard__stats-grid">
+            <StatsAppCard
+              label="用户管理"
+              :value="stats.ops.users"
+              color="gray"
+              path="/ops/users"
+              :loading="loading"
+            >
+              <template #icon><IconMonitor :size="15" /></template>
+            </StatsAppCard>
+            <StatsAppCard
+              label="Agent配置"
+              :value="stats.ops.agents"
+              color="gray"
+              path="/ops/agents"
+              :loading="loading"
+            >
+              <template #icon><IconBrain :size="15" /></template>
+            </StatsAppCard>
+            <StatsAppCard
+              label="模型配置"
+              :value="stats.ops.models"
+              color="gray"
+              path="/ops/model-configs"
+              :loading="loading"
+            >
+              <template #icon><IconLayers :size="15" /></template>
+            </StatsAppCard>
+          </div>
         </div>
 
         <div class="overview-assets">
@@ -215,8 +241,14 @@ function formatUsageToken(tokens: number): string {
           >
             <div class="part-card__head">
               <PartNumber value="00" />
-              <h4 class="part-card__title">DeepSeek 账单</h4>
-              <span class="part-card__stamp">DeepSeek</span>
+              <h4 class="part-card__title">平台账单</h4>
+              <button
+                type="button"
+                class="part-card__stamp"
+                @click="currency = currency === 'CNY' ? 'USD' : 'CNY'"
+              >
+                {{ currency === "CNY" ? "人民币" : "美元" }}
+              </button>
             </div>
             <SkeletonCard v-if="loading" />
             <template v-else>
@@ -233,7 +265,9 @@ function formatUsageToken(tokens: number): string {
                 </div>
                 <div class="part-card__cell">
                   <span>当天费用</span>
-                  <b>{{ formatSignificant(stats.aiUsage.deepseekCost.today, 3) }}<em>元</em></b>
+                  <b
+                    >{{ money(stats.aiUsage.deepseekCost.today) }}<em>{{ moneyUnit() }}</em></b
+                  >
                 </div>
               </div>
               <div class="part-card__row">
@@ -243,7 +277,9 @@ function formatUsageToken(tokens: number): string {
                 </div>
                 <div class="part-card__cell">
                   <span>总费用</span>
-                  <b>{{ formatSignificant(stats.aiUsage.deepseekCost.total, 3) }}<em>元</em></b>
+                  <b
+                    >{{ money(stats.aiUsage.deepseekCost.total) }}<em>{{ moneyUnit() }}</em></b
+                  >
                 </div>
               </div>
             </template>
@@ -295,41 +331,36 @@ function formatUsageToken(tokens: number): string {
 
         <div class="ai-usage-trends">
           <div class="subhead">用量趋势 <span class="subhead__tag">Usage</span></div>
-          <div class="dashboard__trends dashboard__trends--ai">
+          <div class="dashboard__trends dashboard__trends--pair">
             <AppCard class="trends-chart-card" :tone="sketchToneAt(2)" :tilt="sketchTiltAt(2)">
-              <div class="trends-tasks-card__title">每日 Token 用量</div>
-              <SeriesBarChart :labels="aiTokenChart.labels" :series="tokenSeries" />
+              <div class="trends-tasks-card__title">近 7 日 Token 与费用</div>
+              <div class="trend-scope">
+                <button
+                  type="button"
+                  :class="{ active: trendScope === 'all' }"
+                  @click="trendScope = 'all'"
+                >
+                  全部
+                </button>
+                <button
+                  type="button"
+                  :class="{ active: trendScope === 'voice' }"
+                  @click="trendScope = 'voice'"
+                >
+                  Voice
+                </button>
+              </div>
+              <ModelLineChart
+                v-if="modelSeries.length"
+                :labels="aiTokenChart.labels"
+                :series="modelSeries"
+                :unit="moneyUnit()"
+              />
+              <p v-else class="usage-empty">暂无用量</p>
             </AppCard>
             <AppCard class="trends-chart-card" :tone="sketchToneAt(3)" :tilt="sketchTiltAt(3)">
-              <div class="trends-tasks-card__title">每日 DeepSeek 费用（元）</div>
-              <SeriesBarChart :labels="deepseekCostChart.labels" :series="costSeries" />
-            </AppCard>
-          </div>
-          <div class="dashboard__trends dashboard__trends--single">
-            <AppCard class="trends-chart-card" :tone="sketchToneAt(4)" :tilt="sketchTiltAt(4)">
-              <div class="trends-tasks-card__title">今日 Token 与费用（逐小时）</div>
+              <div class="trends-tasks-card__title">今日 Token 与费用</div>
               <TodayUsageChart :series="todayUsageSeries" />
-            </AppCard>
-          </div>
-          <div class="dashboard__trends dashboard__trends--single">
-            <AppCard class="trends-chart-card" :tone="sketchToneAt(5)" :tilt="sketchTiltAt(5)">
-              <div class="trends-tasks-card__title">Voice 来源 Token 消耗</div>
-              <div class="voice-usage-summary">
-                <span
-                  >当天总用量
-                  <b>{{ formatUsageToken(stats.usageLedger.voiceToday.total.tokens) }}</b></span
-                >
-                <span
-                  >累计用量
-                  <b>{{ formatUsageToken(stats.usageLedger.voiceTotal.total.tokens) }}</b></span
-                >
-              </div>
-              <SeriesBarChart
-                v-if="voiceUsageLabels.length"
-                :labels="voiceUsageLabels"
-                :series="voiceUsageSeries"
-              />
-              <p v-else class="usage-empty">暂无 Voice 用量</p>
             </AppCard>
           </div>
         </div>

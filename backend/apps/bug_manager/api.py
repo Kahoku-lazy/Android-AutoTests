@@ -6,16 +6,16 @@ registration must never change a task's status or verdict.
 
 from __future__ import annotations
 
+import json
 import re
 
 from django.db import IntegrityError, transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from backend.apps.ai_assistant.api import filter_agents_for_user
-from backend.apps.ai_assistant.models import AIAgent
 from backend.apps.bug_manager.extract import BugDraft, build_bug_drafts
 from backend.apps.bug_manager.models import BugTicket
+from backend.apps.task_list.case_identity import case_identity_label, case_identity_rows
 from backend.apps.task_list.models import Task
 from utils.logs import backend_log
 
@@ -65,12 +65,7 @@ def sync_visible_tasks(user_id: str | None) -> dict:
     except (TypeError, ValueError):
         return result
 
-    agents = filter_agents_for_user(AIAgent.objects.all(), user_id)
-    tasks = (
-        Task.objects.filter(agent__in=agents, status__in=_TASK_STATUSES)
-        .select_related("agent")
-        .order_by("id")
-    )
+    tasks = Task.objects.filter(status__in=_TASK_STATUSES).order_by("id")
     for task in tasks:
         result["scanned"] += 1
         if not build_bug_drafts(task):
@@ -201,6 +196,8 @@ def serialize_bug(row: BugTicket, *, detail: bool = False) -> dict:
         "status_label": status_labels.get(row.status, row.status),
         "task_id": row.task_id,
         "task_title": row.task_title,
+        "case_label": row.case_label or "",
+        "case_rows": row.case_rows if isinstance(row.case_rows, list) else [],
         "task_kind": row.task_kind,
         "task_status": row.task_status,
         "agent_id": row.agent_id,
@@ -208,9 +205,11 @@ def serialize_bug(row: BugTicket, *, detail: bool = False) -> dict:
         "created_at": _iso(row.created_at),
         "updated_at": _iso(row.updated_at),
         "resolved_at": _iso(row.resolved_at),
+        "failure_steps": _failure_steps(row),
     }
     if detail:
         payload["detail"] = row.detail
+        payload.update(_report_locator(row.task_id))
     else:
         payload["detail_preview"] = _preview(row.detail)
     return payload
@@ -221,7 +220,9 @@ def _upsert_draft(task, draft: BugDraft) -> tuple[bool, bool]:
     defaults = {
         "title": draft.title,
         "detail": draft.detail,
+        "failure": draft.failure,
         "task_title": _task_title(task),
+        **_case_snapshot(task),
         "task_kind": str(getattr(task, "task_kind", "") or ""),
         "task_status": str(getattr(task, "status", "") or ""),
         "agent_id": int(getattr(task, "agent_id", 0) or 0),
@@ -245,6 +246,8 @@ def _upsert_draft(task, draft: BugDraft) -> tuple[bool, bool]:
         return True, False
     update_fields: list[str] = []
     for field, value in defaults.items():
+        if field in {"case_label", "case_rows"} and not value:
+            continue
         if getattr(row, field) != value:
             setattr(row, field, value)
             update_fields.append(field)
@@ -261,8 +264,7 @@ def _visible_bugs(user_id: str | None):
         int(user_id)
     except (TypeError, ValueError):
         return BugTicket.objects.none()
-    agents = filter_agents_for_user(AIAgent.objects.all(), user_id)
-    return BugTicket.objects.filter(agent_id__in=agents.values("id"))
+    return BugTicket.objects.all()
 
 
 def _summary(qs) -> dict:
@@ -289,6 +291,7 @@ def _keyword_q(keyword: str) -> Q:
         Q(title__icontains=keyword)
         | Q(detail__icontains=keyword)
         | Q(task_title__icontains=keyword)
+        | Q(case_label__icontains=keyword)
     )
     if keyword.isdigit():
         q |= Q(task_id=int(keyword)) | Q(id=int(keyword))
@@ -296,6 +299,13 @@ def _keyword_q(keyword: str) -> Q:
     if bug_match:
         q |= Q(id=int(bug_match.group(1)))
     return q
+
+
+def _case_snapshot(task) -> dict:
+    """从任务冻结身份抄文案和行。读不到时两处都空，不编造。"""
+    identity = getattr(task, "case_identity", None)
+    rows = case_identity_rows(identity)
+    return {"case_label": case_identity_label(identity), "case_rows": rows}
 
 
 def _task_title(task) -> str:
@@ -311,6 +321,34 @@ def _created_by(task) -> str:
         return created_by
     agent = getattr(task, "agent", None)
     return str(getattr(agent, "owner_id", "") or "").strip()
+
+
+def _report_locator(task_id: int) -> dict:
+    """任务还在且结果里有报告定位时才返回。任务删除后两个字段都是空串。"""
+    empty = {"report_run": "", "report_name": ""}
+    task = Task.objects.filter(pk=task_id).only("result").first()
+    if task is None:
+        return empty
+    try:
+        payload = json.loads(task.result or "{}")
+    except (TypeError, ValueError):
+        return empty
+    if not isinstance(payload, dict):
+        return empty
+    run = str(payload.get("report_run") or "")
+    name = str(payload.get("report_name") or "")
+    if not run or not name:
+        return empty
+    return {"report_run": run, "report_name": name}
+
+
+def _failure_steps(row: BugTicket) -> list[dict]:
+    """详情与列表共用的失败步骤。旧单没有快照时为空列表。"""
+    raw = row.failure if isinstance(row.failure, dict) else {}
+    steps = raw.get("steps")
+    if not isinstance(steps, list):
+        return []
+    return [item for item in steps if isinstance(item, dict)]
 
 
 def _preview(detail: str) -> str:

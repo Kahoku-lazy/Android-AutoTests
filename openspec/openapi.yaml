@@ -291,6 +291,9 @@ paths:
       description: |-
         返回当前会话最近的事件行。
 
+        引擎侧单智能体已下线（变更 retire-engines-agents），平台会话的过程日志改由
+        `engines/backend_bridge.event_log` 写、按报告接口读取，这里恒返回空列表。
+
         Args:
             request: DRF 请求，查询参数 session 为本次对话键。
 
@@ -849,36 +852,6 @@ paths:
       responses:
         '204':
           description: No response body
-  /api/cases/import-yaml/:
-    post:
-      operationId: cases_import_yaml_create
-      description: 把上传的 YAML 用例导入当前用户的用例项目。
-      tags:
-      - cases
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: {}
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              additionalProperties: {}
-          multipart/form-data:
-            schema:
-              type: object
-              additionalProperties: {}
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
   /api/cases/move/:
     post:
       operationId: cases_move_create
@@ -1416,12 +1389,122 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
-  /api/knowledge-assistant/status/:
+  /api/ops/users/:
     get:
-      operationId: knowledge_assistant_status_retrieve
-      description: 返回知识库助手是否启用、是否就绪、不可用原因、模型/音色与日志路径。
+      operationId: ops_users_retrieve
+      description: GET /api/ops/users/ — 分页账号列表（运营可读）。
       tags:
-      - knowledge-assistant
+      - ops
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/ops/users/{user_id}/disable/:
+    post:
+      operationId: ops_users_disable_create
+      description: POST /api/ops/users/<int:user_id>/disable/ — 停用普通账号（运营）。
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ops
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/ops/users/{user_id}/enable/:
+    post:
+      operationId: ops_users_enable_create
+      description: POST /api/ops/users/<int:user_id>/enable/ — 启用普通账号（运营）。
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ops
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/ops/users/{user_id}/grant-operator/:
+    post:
+      operationId: ops_users_grant_operator_create
+      description: POST /api/ops/users/<int:user_id>/grant-operator/ — 设为运营（仅超管）。
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ops
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/ops/users/{user_id}/reset-password/:
+    post:
+      operationId: ops_users_reset_password_create
+      description: POST /api/ops/users/<int:user_id>/reset-password/ — 重置普通账号密码（运营）。
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ops
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/ops/users/{user_id}/revoke-operator/:
+    post:
+      operationId: ops_users_revoke_operator_create
+      description: POST /api/ops/users/<int:user_id>/revoke-operator/ — 取消运营（仅超管）。
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ops
       security:
       - jwtAuth: []
       responses:
@@ -1951,33 +2034,6 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
-  /api/tasks/{task_id}/report/:
-    get:
-      operationId: task_flow_report
-      description: |-
-        GET /api/tasks/{task_id}/report — 任务事件流程（标准 {status, data} 信封）。
-
-        终态任务的报告按「任务编号 + 最大事件序号」缓存，并给出 ETag；运行中任务每次重建。
-      parameters:
-      - in: path
-        name: task_id
-        schema:
-          type: integer
-        required: true
-      tags:
-      - tasks
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-        '304':
-          description: No response body
   /api/tasks/{task_id}/rerun/:
     post:
       operationId: tasks_rerun_create
@@ -2210,6 +2266,18 @@ components:
       properties:
         status:
           $ref: '#/components/schemas/StatusEnum'
+    PatchedRoleInput:
+      type: object
+      description: 角色入参 — 名称与模型名称必填，系统提示词可空。
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        model_name:
+          type: string
+          maxLength: 200
+        system_prompt:
+          type: string
     Refresh:
       type: object
       properties:
@@ -2231,6 +2299,43 @@ components:
         email:
           type: string
           default: ''
+    RoleInput:
+      type: object
+      description: 角色入参 — 名称与模型名称必填，系统提示词可空。
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        model_name:
+          type: string
+          maxLength: 200
+        system_prompt:
+          type: string
+    RoleOutput:
+      type: object
+      description: 角色下发 — 六个字段，时间 ISO 8601，不含自增主键。
+      properties:
+        role_id:
+          type: string
+        name:
+          type: string
+        model_name:
+          type: string
+        system_prompt:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - created_at
+      - model_name
+      - name
+      - role_id
+      - system_prompt
+      - updated_at
     StatusEnum:
       enum:
       - open
@@ -2308,7 +2413,7 @@ tags:
   description: 测试报告：任务报告列表、用例分解、报告文件下载与查看
 - name: serial-log
   description: 串口日志：端口监听开关、当前日志查看与关键词对照表
-- name: knowledge-assistant
-  description: 知识库助手：实时语音会话的就绪状态
+- name: ops
+  description: 运营后台：账号列表 / 停用启用 / 重置密码
 - name: schema
   description: OpenAPI schema 端点（drf-spectacular 自带）

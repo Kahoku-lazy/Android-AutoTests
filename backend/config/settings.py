@@ -86,7 +86,7 @@ INSTALLED_APPS = [
     "backend.apps.serial_log",
     "backend.apps.dashboard",
     "backend.apps.usage_ledger",
-    "backend.apps.knowledge_assistant",
+    "backend.apps.ops_console",
 ]
 
 MIDDLEWARE = [
@@ -186,7 +186,7 @@ DB_ENGINE = os.environ.get("DB_ENGINE", "mysql")
 # 注：设备交互无中间层（原 L2 会话层已于 2026-09-03 扁平化删除）。
 DEVICE_ENGINE = os.environ.get("DEVICE_ENGINE", "u2")
 
-# 控制设备任务由 engines.agents 的 SOP 执行，不再按引擎名加载实现。
+# 控制设备任务由 engines.backend_bridge 的 SOP 执行，不再按引擎名加载实现。
 
 
 if DB_ENGINE == "mysql":
@@ -321,10 +321,7 @@ SPECTACULAR_SETTINGS = {
             "name": "serial-log",
             "description": "串口日志：端口监听开关、当前日志查看与关键词对照表",
         },
-        {
-            "name": "knowledge-assistant",
-            "description": "知识库助手：实时语音会话的就绪状态",
-        },
+        {"name": "ops", "description": "运营后台：账号列表 / 停用启用 / 重置密码"},
         {"name": "schema", "description": "OpenAPI schema 端点（drf-spectacular 自带）"},
     ],
 }

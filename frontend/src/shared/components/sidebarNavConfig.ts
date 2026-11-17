@@ -14,6 +14,8 @@ export interface NavCategory {
   key: string
   label: string
   items: NavItem[]
+  /** 仅运营/超管可见的分组：为真时按当前用户身份过滤 */
+  requiresOperator?: boolean
 }
 
 export const NAV_CATEGORIES: NavCategory[] = [
@@ -27,7 +29,6 @@ export const NAV_CATEGORIES: NavCategory[] = [
     label: "AI 功能",
     items: [
       { path: "/ai-assistant", icon: "bot", label: "AI 助手" },
-      { path: "/knowledge-assistant", icon: "book-open", label: "知识库助手", isDev: true },
       { path: "/agent-reports", icon: "clock", label: "执行报告" },
     ],
   },
@@ -49,6 +50,12 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { path: "/bugs", icon: "bug", label: "BUG单管理" },
     ],
   },
+  {
+    key: "ops",
+    label: "运营",
+    requiresOperator: true,
+    items: [{ path: "/ops/users", icon: "users", label: "用户管理" }],
+  },
 ]
 
 // ── Doodle Craft 协调：path → 模块色（active 书签条），与主区模块色同源 ──
@@ -61,7 +68,7 @@ export const MOD_COLORS = {
   "/bugs": "var(--c-runner)",
   "/ai-assistant": "var(--c-ai)",
   "/ai-assistant/agents": "var(--c-ai)",
-  "/knowledge-assistant": "var(--c-element)",
   "/serial-log": "var(--c-device)",
   "/agent-reports": "var(--c-report)",
+  "/ops/users": "var(--c-ops)",
 }

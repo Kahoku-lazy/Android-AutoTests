@@ -1,19 +1,20 @@
-"""运营后台（JWT）：账号列表 / 停用 / 启用 / 重置密码。
+"""运营后台（JWT）：账号列表 / 停用 / 启用 / 重置密码 / 批量停用 / 批量注销。
 
 GET  /api/ops/users/                              运营可读：分页账号列表
 POST /api/ops/users/<int:user_id>/disable/        运营：停用普通账号
 POST /api/ops/users/<int:user_id>/enable/         运营：启用普通账号
 POST /api/ops/users/<int:user_id>/reset-password/ 运营：重置普通账号密码
+POST /api/ops/users/disable/                       运营：本页批量停用
+POST /api/ops/users/purge/                         仅超管：批量注销（只删账号）
 
-四个端点都要求运营身份（超级管理员天然算运营），普通用户一律 403。
-本模块不提供删除账号的端点：删除请求自然落到 404。
+端点都要求运营身份（超级管理员天然算运营），普通用户一律 403。
+按 id 的删除路径不注册，自然落到 404。
 """
 
 from __future__ import annotations
 
-from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema
-from rest_framework.exceptions import NotFound, PermissionDenied
+from drf_spectacular.utils import OpenApiTypes, extend_schema
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -102,6 +103,40 @@ class OpsUserListView(APIView):
         return Response(payload)
 
 
+class OpsUserBatchDisableView(APIView):
+    """POST /api/ops/users/disable/ — 本页批量停用（运营）。"""
+
+    @extend_schema(
+        operation_id="ops_users_batch_disable",
+        request=OpenApiTypes.OBJECT,
+        responses=OpenApiTypes.OBJECT,
+    )
+    def post(self, request):
+        _require_operator(request)
+        user_ids = _parse_user_ids(request.data.get("user_ids"))
+        return Response(api.disable_users(_actor_id(request), user_ids))
+
+
+class OpsUserPurgeView(APIView):
+    """POST /api/ops/users/purge/ — 批量注销（仅超管，只删账号）。"""
+
+    @extend_schema(
+        operation_id="ops_users_purge",
+        request=OpenApiTypes.OBJECT,
+        responses=OpenApiTypes.OBJECT,
+    )
+    def post(self, request):
+        _require_operator(request)
+        user_ids = _parse_user_ids(request.data.get("user_ids"))
+        try:
+            payload = api.purge_users(_actor_id(request), user_ids)
+        except PermissionError as exc:
+            raise PermissionDenied(str(exc)) from exc
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response(payload)
+
+
 class OpsUserDisableView(APIView):
     """POST /api/ops/users/<int:user_id>/disable/ — 停用普通账号（运营）。"""
 
@@ -151,6 +186,29 @@ class OpsUserResetPasswordView(APIView):
         except PermissionError as exc:
             raise PermissionDenied(str(exc)) from exc
         return Response(payload)
+
+
+def _parse_user_ids(raw) -> list[int]:
+    """把批量请求体解析成去重后的主键列表。
+
+    Args:
+        raw: `user_ids` 原文，须为列表。
+
+    Returns:
+        去重且保持原顺序的正整数主键。
+
+    Raises:
+        ValidationError: 不是列表、为空、超过 100，或含非正整数。
+    """
+    if not isinstance(raw, list) or not raw or len(raw) > api.MAX_PAGE_SIZE:
+        raise ValidationError("请提交 1 到 100 个账号")
+    seen: list[int] = []
+    for item in raw:
+        if isinstance(item, bool) or not isinstance(item, int) or item < 1:
+            raise ValidationError("账号主键必须是正整数")
+        if item not in seen:
+            seen.append(item)
+    return seen
 
 
 def _grant(request, user_id: int, *, enabled: bool) -> dict:

@@ -3,10 +3,12 @@
 from django.urls import path
 
 from .views import (
+    OpsUserBatchDisableView,
     OpsUserDisableView,
     OpsUserEnableView,
     OpsUserGrantOperatorView,
     OpsUserListView,
+    OpsUserPurgeView,
     OpsUserResetPasswordView,
     OpsUserRevokeOperatorView,
 )
@@ -15,6 +17,8 @@ app_name = "ops"
 
 urlpatterns = [
     path("users/", OpsUserListView.as_view(), name="ops_user_list"),
+    path("users/disable/", OpsUserBatchDisableView.as_view(), name="ops_user_batch_disable"),
+    path("users/purge/", OpsUserPurgeView.as_view(), name="ops_user_purge"),
     path(
         "users/<int:user_id>/disable/",
         OpsUserDisableView.as_view(),

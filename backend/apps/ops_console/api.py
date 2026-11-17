@@ -3,11 +3,13 @@
 业务：
 1. list_users: 分页列出账号，带身份标签与启用状态。
 2. set_active: 停用或启用一个普通账号，写库经 `accounts.api`。
+2b. disable_users: 本页批量停用，不可管理的行逐行拒绝，不拖垮整批。
+2c. purge_users: 仅超管批量注销，只删账号，任一行不可注销则整批不删。
 3. reset_password: 为普通账号生成一次性临时密码并落库，写库经 `accounts.api`。
 4. check_manageable: 判定操作者能否管理目标账号，不能则抛 PermissionError。
 
-边界（openspec/changes/add-ops-user-console）：不能操作自己、不能操作超级管理员、
-非超管不能操作其他运营、不提供删除账号。
+边界：不能操作自己、不能操作超级管理员、非超管不能操作其他运营。
+注销仅超管，且只删账号行，不删业务表。
 """
 
 from __future__ import annotations
@@ -17,7 +19,14 @@ import secrets
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 
-from backend.apps.accounts.api import set_operator, set_user_active, set_user_password
+from backend.apps.accounts.api import (
+    purge_users as purge_account_users,
+)
+from backend.apps.accounts.api import (
+    set_operator,
+    set_user_active,
+    set_user_password,
+)
 from backend.shared.users import OPERATOR_GROUP, is_superuser
 from utils.logs import backend_log
 
@@ -27,8 +36,10 @@ __all__ = [
     "DEFAULT_PAGE_SIZE",
     "MAX_PAGE_SIZE",
     "check_manageable",
+    "disable_users",
     "grant_operator",
     "list_users",
+    "purge_users",
     "reset_password",
     "revoke_operator",
     "set_active",
@@ -110,6 +121,78 @@ def set_active(actor_id: int, target_id: int, active: bool) -> dict:
         target.id,
     )
     return {"user": OpsUserRowSerializer(user, context=_row_context()).data}
+
+
+def disable_users(actor_id: int, user_ids: list[int]) -> dict:
+    """批量停用。可停用的落库，不可管理的逐行拒绝，已停用的跳过。
+
+    Args:
+        actor_id: 发起操作的账号主键。
+        user_ids: 已去重的目标主键。
+
+    Returns:
+        含逐行结果与计数的字典。
+
+    Raises:
+        无。不存在的主键记为 rejected，不中断整批。
+    """
+    rows = []
+    counts = {"disabled": 0, "skipped": 0, "rejected": 0}
+    for target_id in user_ids:
+        target = get_user_model().objects.filter(pk=target_id).first()
+        if target is None:
+            rows.append({"user_id": target_id, "outcome": "rejected", "reason": "账号不存在"})
+            counts["rejected"] += 1
+            continue
+        try:
+            check_manageable(actor_id, target)
+        except PermissionError as exc:
+            rows.append({"user_id": target.id, "outcome": "rejected", "reason": str(exc)})
+            counts["rejected"] += 1
+            continue
+        if not target.is_active:
+            rows.append({"user_id": target.id, "outcome": "skipped", "reason": "已停用"})
+            counts["skipped"] += 1
+            continue
+        set_user_active(target.id, False)
+        rows.append({"user_id": target.id, "outcome": "disabled", "reason": ""})
+        counts["disabled"] += 1
+        backend_log.info("ops actor=%s action=disable target=%s result=ok", actor_id, target.id)
+    return {"results": rows, "counts": counts}
+
+
+def purge_users(actor_id: int, user_ids: list[int]) -> dict:
+    """批量注销。仅超管；任一目标不可注销则整批不删。
+
+    Args:
+        actor_id: 发起操作的账号主键。
+        user_ids: 已去重的目标主键。
+
+    Returns:
+        含已删除主键的字典。
+
+    Raises:
+        PermissionError: 操作者不是超管，或名单含自己、超管、运营、不存在的账号。
+    """
+    if not is_superuser(actor_id):
+        raise PermissionError("仅超级管理员可注销账号")
+    user_model = get_user_model()
+    targets = list(user_model.objects.filter(pk__in=user_ids))
+    found = {item.id for item in targets}
+    if found != set(user_ids):
+        raise PermissionError("名单含不存在的账号，已整批取消")
+    actor = _safe_int(actor_id)
+    for target in targets:
+        if int(target.id) == actor:
+            raise PermissionError("不能注销自己的账号")
+        if target.is_superuser:
+            raise PermissionError("不能注销超级管理员")
+        if _is_operator_user(target):
+            raise PermissionError("不能注销运营账号")
+    deleted = purge_account_users(user_ids)
+    for target_id in deleted:
+        backend_log.info("ops actor=%s action=purge target=%s result=ok", actor_id, target_id)
+    return {"deleted": deleted}
 
 
 def reset_password(actor_id: int, target_id: int) -> dict:
@@ -221,9 +304,10 @@ def _check_grantable(actor_id: int, target) -> None:
 
 
 def check_manageable(actor_id: int, target) -> None:
-    """判定操作者能否管理目标账号。
+    """判定操作者能否停用或重置目标账号。
 
-    规则：谁都不能动自己；超级管理员可管理运营与普通用户；运营只能管理普通用户。
+    规则：超级管理员与运营都不能被停用或重置，谁来操作都一样。
+    普通用户可以被运营或超管管理，但不能管理自己。
 
     Args:
         actor_id: 发起操作的账号主键。
@@ -233,16 +317,14 @@ def check_manageable(actor_id: int, target) -> None:
         None：通过校验。
 
     Raises:
-        PermissionError: 目标是自己、是超级管理员，或非超管要动其他运营。
+        PermissionError: 目标是自己、是超级管理员，或是运营。
     """
     if int(target.id) == _safe_int(actor_id):
         raise PermissionError("不能操作自己的账号")
-    if is_superuser(actor_id):
-        return
     if target.is_superuser:
-        raise PermissionError("不能操作超级管理员")
+        raise PermissionError("不能停用超级管理员")
     if _is_operator_user(target):
-        raise PermissionError("不能操作其他运营账号")
+        raise PermissionError("不能停用运营账号")
 
 
 def _is_operator_user(user) -> bool:

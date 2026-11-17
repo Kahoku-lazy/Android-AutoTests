@@ -75,15 +75,15 @@ def test_disable_unknown_target_returns_404(operator_user):
     assert response.status_code == 404
 
 
-def test_superuser_can_disable_operator(admin_user, operator_group):
-    """超管可以管理运营账号（运营不行的那条约束不约束超管）。"""
+def test_superuser_cannot_disable_operator(admin_user, operator_group):
+    """超管也不能停用运营：运营与超管一样不可停用。"""
     peer = get_user_model().objects.create_user(username="peer2", password="pass-123456")
     peer.groups.add(operator_group)
 
     response = call(OpsUserDisableView, method="post", user=admin_user, user_id=peer.id)
-    assert response.status_code == 200
+    assert response.status_code == 403
     peer.refresh_from_db()
-    assert peer.is_active is False
+    assert peer.is_active is True
 
 
 def test_disabled_user_cannot_login(operator_user, other_user):
@@ -95,6 +95,35 @@ def test_disabled_user_cannot_login(operator_user, other_user):
     call(OpsUserDisableView, method="post", user=operator_user, user_id=other_user.id)
 
     assert authenticate(username="other", password="pass-123456") is None
+
+
+def test_disable_writes_user_revocation_and_enable_keeps_it(operator_user, other_user):
+    """停用写入账号档；启用不删该档，旧令牌仍按签发时间作废。"""
+    from backend.apps.accounts.models import TokenRevocation
+
+    call(OpsUserDisableView, method="post", user=operator_user, user_id=other_user.id)
+    assert TokenRevocation.objects.filter(
+        kind=TokenRevocation.KIND_USER, ref=str(other_user.id)
+    ).exists()
+
+    call(OpsUserEnableView, method="post", user=operator_user, user_id=other_user.id)
+    assert TokenRevocation.objects.filter(
+        kind=TokenRevocation.KIND_USER, ref=str(other_user.id)
+    ).exists()
+
+
+def test_repeated_disable_keeps_one_revocation_row(operator_user, other_user):
+    """重复停用覆盖同一行，不堆记录。"""
+    from backend.apps.accounts.models import TokenRevocation
+
+    call(OpsUserDisableView, method="post", user=operator_user, user_id=other_user.id)
+    call(OpsUserDisableView, method="post", user=operator_user, user_id=other_user.id)
+    assert (
+        TokenRevocation.objects.filter(
+            kind=TokenRevocation.KIND_USER, ref=str(other_user.id)
+        ).count()
+        == 1
+    )
 
 
 def test_enabled_again_can_login(operator_user, other_user):

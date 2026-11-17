@@ -1,12 +1,10 @@
-"""运营后台：不提供删除账号能力。"""
+"""运营后台：除批量注销端点外，不注册按 id 删除的路径。"""
 
 from __future__ import annotations
 
 import pytest
 
 from django.urls import Resolver404, resolve
-
-from backend.apps.ops_console import api
 
 pytestmark = [pytest.mark.api]
 
@@ -33,6 +31,8 @@ def test_delete_requests_have_no_route(path: str):
         resolve(path)
 
 
-def test_api_module_exposes_no_delete():
-    """api 层没有删除账号的写口。"""
-    assert not [name for name in dir(api) if name.startswith("delete")]
+def test_purge_is_the_only_delete_route():
+    """批量注销走 `/api/ops/users/purge/`；按 id 的删除路径仍然不存在。"""
+    assert resolve("/api/ops/users/purge/") is not None
+    with pytest.raises(Resolver404):
+        resolve("/api/ops/users/1/purge/")

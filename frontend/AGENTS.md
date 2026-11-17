@@ -6,7 +6,7 @@
 1. 编程语言： TypeScript 5.4 
 2. 前端框架： Vue 3.4 + Vite 5 + Element Plus
 3. 状态管理： Pinia
-4. 其它技术： Vue Router、ECharts、Mermaid、@vue-flow、axios 
+4. 其它技术： Vue Router、ECharts、Mermaid、axios 
 
 ## 前端项目结构
 
@@ -27,7 +27,7 @@ src/modules/{name}/
 ├── components/      # 私有业务组件（不跨模块复用）
 ├── composables/     # 状态与流程
 ├── helpers/         # 纯函数（无状态无副作用）
-└── stores/          # Pinia（仅 workflow / device-inspector）
+└── stores/          # Pinia（按需；页面流退役后当前无模块使用）
 ```
 
 ### 布局区域与归属

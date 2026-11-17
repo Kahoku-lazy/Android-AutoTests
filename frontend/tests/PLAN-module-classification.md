@@ -694,7 +694,7 @@ Run:
 grep -n "path:" src/router.js
 ```
 
-Expected: 得到平台全部路由模块清单（dashboard、login、devices、inspector、elements、cases、runner、reports、ai-assistant、workflow 等）。以下注册表若与实际路由有出入，以 router.js 为准增删行，说明列注明"待开测"。
+Expected: 得到平台全部路由模块清单（dashboard、login、devices、inspector、elements、cases、runner、reports、ai-assistant 等）。以下注册表若与实际路由有出入，以 router.js 为准增删行，说明列注明"待开测"。
 
 - [ ] **Step 2: 重写 tests/README.md**
 
@@ -729,7 +729,6 @@ tests/<module>/
 | runner | — | ⬜ 未开始 | 0 | 0 | 待开测 |
 | reports | — | ⬜ 未开始 | 0 | 0 | 待开测 |
 | ai-assistant | — | ⬜ 未开始 | 0 | 0 | 待开测 |
-| workflow | — | ⬜ 未开始 | 0 | 0 | 待开测 |
 
 > 新模块开测流程：按 `PRIORITY_TEMPLATE.md` 的 Checklist 建目录与用例 → 更新本表状态列。
 

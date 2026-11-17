@@ -1,7 +1,7 @@
 # frontend-l3-container Specification
 
 ## Purpose
-定义 L3 内容容器的可见行为与边界：全站纸面不得再由模块自绘点阵，`.doc-body` 的水平内边距必须与页头同值，容器级样式覆写必须经模块 modifier 限定，并明确画布类页面主体是唯一登记例外。
+定义 L3 内容容器的可见行为与边界：全站纸面不得再由模块自绘点阵，`.doc-body` 的水平内边距必须与页头同值，容器级样式覆写必须经模块 modifier 限定。
 
 ## Requirements
 ### Requirement: Paper surfaces carry no module-drawn dot texture

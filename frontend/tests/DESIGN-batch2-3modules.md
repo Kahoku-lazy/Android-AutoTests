@@ -65,7 +65,7 @@ P1：doRemoveTask 先停后删、删除失败不剔除本地；createAndStart �
 
 - useElementTree / useWebGroupTree / useApiGroupTree 三棵复制粘贴式同构树**不重构源码**，只共享测试夹具。
 - index.vue 整页 mount、真实 WebSocket 连接 → P2 / E2E。
-- case-manager、ai-assistant（源码在动）、workflow、report-generator、device-inspector、digital-human → 后续批次。
+- case-manager、ai-assistant（源码在动）、report-generator、device-inspector、digital-human → 后续批次。
 - 不引入新 npm 依赖；不改 src/ 业务代码。
 
 ## 5. 成功标准（验收清单）

@@ -15,7 +15,7 @@ export interface StatsCardProps {
   prefix?: string
   suffix?: string
   desc?: string
-  /** sage | gray | rose | pale | deep | cream | dust */
+  /** sage | gray | rose | deep | cream | dust */
   color?: string
   path?: string
   loading?: boolean
@@ -54,7 +54,6 @@ const COLOR_ACCENTS: Record<string, string> = {
   sage: "var(--c-device)",
   gray: "var(--c-ai)",
   rose: "var(--c-runner)",
-  pale: "var(--c-workflow)",
   deep: "var(--c-case)",
   cream: "var(--c-element)",
   dust: "var(--c-report)",

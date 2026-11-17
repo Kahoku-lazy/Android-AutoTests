@@ -25,7 +25,6 @@ BASELINE = ROOT / "openspec" / "openapi.yaml"
 EXCLUDED = {
     "/api/ai/",
     "/api/cases/",
-    "/api/workflow/",
     "/api/schema/",
     "/api/swagger/",
 }

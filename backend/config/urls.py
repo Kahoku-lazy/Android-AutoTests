@@ -26,7 +26,6 @@ urlpatterns = [
     # ── Module routes (1 include() per app) ──
     path("api/devices/", include("backend.apps.device_pool.urls")),
     path("api/cases/", include("backend.apps.case_manager.urls")),
-    path("api/workflow/", include("backend.apps.workflow.urls")),
     path("api/reports/", include("backend.apps.report_generator.urls")),
     path("api/auth/", include("backend.apps.accounts.urls")),
     path("api/ai/", include("backend.apps.ai_assistant.urls")),

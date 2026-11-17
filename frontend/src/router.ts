@@ -16,7 +16,6 @@ import cmRoutes from "@/modules/case-manager/routes"
 import rgRoutes from "@/modules/report-generator/routes"
 import aiRoutes from "@/modules/ai-assistant/routes"
 import tlRoutes from "@/modules/task-list/routes"
-import wfRoutes from "@/modules/workflow/routes"
 import slRoutes from "@/modules/serial-log/routes"
 import bugRoutes from "@/modules/bug-manager/routes"
 import arRoutes from "@/modules/agent-reports/routes"
@@ -30,7 +29,6 @@ const routes = [
   ...rgRoutes,
   ...aiRoutes,
   ...tlRoutes,
-  ...wfRoutes,
   ...slRoutes,
   ...bugRoutes,
   ...arRoutes,

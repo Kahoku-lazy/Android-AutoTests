@@ -25,7 +25,7 @@ Android 自动化测试与智能体平台：**前端只展示，后端只做通�
 
 ### 1.4 约定
 
-1. 表前缀：`dp_` `cm_` `ai_` `task_` `rg_` `wf_` `sl_` 等（以各 App Model 为准）  
+1. 表前缀：`dp_` `cm_` `ai_` `task_` `rg_` `sl_` 等（以各 App Model 为准）  
 2. 响应信封：`{status,data}`  
 3. `APPEND_SLASH = False`：缺尾斜杠确定 404，避免 301 丢 `Authorization`
 
@@ -193,7 +193,6 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 | `knowledge_assistant` | `/api/knowledge-assistant/` + WS | 知识库助手接入（通道）；引擎在 `engines` |
 | `report_generator` | `/api/reports/` | 报告列表/详情/下载 |
 | `serial_log` | `/api/serial-log/` | 串口端口开关与日志相关 API |
-| `workflow` | `/api/workflow/` | 页面流原型/目录/文档 |
 | `bug_manager` | （按 urls） | BUG 单管理 |
 | `usage_ledger` | （按 urls） | 用量记账相关 |
 
@@ -206,7 +205,6 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 | `ai_` | 智能体与线路；`route_configs` 内密钥 Fernet 加密 |
 | `task_` | 事件 `UNIQUE(task,seq)`；缩略图去重；小时用量表 |
 | `rg_` | 报告文件落盘 + 元信息 |
-| `wf_` | 画布 JSON；目录树与用例管理同构 |
 | `sl_` | 端口开关；端口/SKU/波特率以配置为真相源 |
 
 模型配置：`ai_agents.route_configs` 存模型名/provider/base_url 与加密 `api_key`；读取脱敏，`reveal-key` 一次性揭示。
@@ -225,7 +223,6 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 |------|--------------|------|
 | dashboard | `/dashboard` | dashboard API |
 | device-pool | `/devices` | `/api/devices/*` |
-| workflow | `/workflow`… | `/api/workflow/*` |
 | serial-log | `/serial-log` | `/api/serial-log/*` |
 | ai-assistant | `/ai-assistant`… | `/api/ai/*` |
 | task-list | `/tasks`… | `/api/tasks/*` |
@@ -235,7 +232,7 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 
 - 侧栏：主区 / AI 功能 / 数据 / AI 任务  
 - 请求：模块 `api.ts` → `shared/api-client.ts`；401 单飞刷新  
-- 状态：Pinia 主要在 workflow；token 在 localStorage  
+- 状态：Pinia 按需（页面流退役后当前无模块 store）；token 在 localStorage  
 - 设计令牌：`shared/styles/tokens.css`  
 - 实时性：任务轮询；唯一 WS 为知识库语音  
 

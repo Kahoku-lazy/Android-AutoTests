@@ -75,10 +75,9 @@ INSTALLED_APPS = [
     # Framework
     "backend.gateway",
     "backend.shared",
-    # Django Apps（9 个；test_runner、evaluator 已退役，卸载迁移随 app 一并删除）
+    # Django Apps（11 个；test_runner、evaluator、workflow 已退役，卸载迁移随 app 一并删除）
     "backend.apps.device_pool",
     "backend.apps.case_manager",
-    "backend.apps.workflow",
     "backend.apps.report_generator",
     "backend.apps.accounts",
     "backend.apps.ai_assistant",
@@ -313,7 +312,6 @@ SPECTACULAR_SETTINGS = {
         {"name": "dashboard", "description": "仪表盘：全平台只读聚合统计"},
         {"name": "devices", "description": "设备管理：扫描 / 连接 / 断开 / 激活 / 心跳 / 占用释放"},
         {"name": "cases", "description": "用例管理：项目 → 目录 → 文件 → 用例行"},
-        {"name": "workflow", "description": "页面流：原型目录、画布文档 CRUD 与导入导出"},
         {"name": "auth", "description": "登录鉴权：登录 / 注册 / 刷新 / 登出 / 当前用户"},
         {"name": "ai", "description": "AI 助手：智能体配置、任务发布 / 重跑 / 取消、任务清单"},
         {"name": "tasks", "description": "任务清单：任务提交、重跑、取消、事件流程报告"},

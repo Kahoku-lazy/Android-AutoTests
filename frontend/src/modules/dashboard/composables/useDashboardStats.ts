@@ -77,7 +77,6 @@ const DEFAULT_STATS: DashboardStats = {
   cases: { total: 0, enabled: 0, breakdown: [] },
   runs: { total: 0, active: 0 },
   agents: { total: 0, active: 0 },
-  workflow: { total: 0 },
   aiUsage: DEFAULT_AI_USAGE,
   usageLedger: DEFAULT_USAGE_LEDGER,
 }
@@ -127,7 +126,6 @@ export function mapStatsResponse(raw: DashboardRawData): MappedData {
         total: raw.agents?.total ?? 0,
         active: raw.agents?.active ?? 0,
       },
-      workflow: { total: raw.workflow?.total ?? 0 },
       aiUsage: {
         taskCount: toMetric(raw.ai_usage?.task_count),
         inputTokens: toMetric(raw.ai_usage?.input_tokens),

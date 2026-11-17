@@ -17,7 +17,6 @@ pytestmark = [pytest.mark.unit, pytest.mark.django_db]
 TOP_LEVEL_KEYS = (
     "devices",
     "cases",
-    "workflow",
     "runs",
     "agents",
     "ai_usage",

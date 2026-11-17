@@ -42,7 +42,6 @@ function makeRaw(): DashboardRawData {
     },
     runs: { total: 100, active: 2 },
     agents: { total: 4, active: 1 },
-    workflow: { total: 7 },
     ai_usage: ZERO_AI_USAGE,
     charts: {
       execution: { labels: [], success: [], failed: [] },

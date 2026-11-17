@@ -44,30 +44,6 @@
       "added": "2026-07-15"
     },
     {
-      "file": "frontend/src/modules/workflow/components/vueflow/PageFlowVueFlow.vue",
-      "lines": 723,
-      "plan": "待拆分",
-      "added": "2026-07-15"
-    },
-    {
-      "file": "frontend/src/modules/workflow/components/blockly/TestCaseBlockly.vue",
-      "lines": 697,
-      "plan": "待拆分",
-      "added": "2026-07-15"
-    },
-    {
-      "file": "frontend/src/modules/workflow/components/WorkflowDirTree.vue",
-      "lines": 659,
-      "plan": "待拆分",
-      "added": "2026-07-15"
-    },
-    {
-      "file": "frontend/src/modules/workflow/index.vue",
-      "lines": 653,
-      "plan": "待拆分",
-      "added": "2026-07-15"
-    },
-    {
       "file": "frontend/src/shared/components/AppSidebar.vue",
       "lines": 593,
       "plan": "待拆分",
@@ -82,12 +58,6 @@
     {
       "file": "frontend/src/modules/case-manager/CaseEditor.vue",
       "lines": 561,
-      "plan": "待拆分",
-      "added": "2026-07-15"
-    },
-    {
-      "file": "frontend/src/modules/workflow/components/WorkflowFileBrowser.vue",
-      "lines": 518,
       "plan": "待拆分",
       "added": "2026-07-15"
     },

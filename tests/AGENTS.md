@@ -32,7 +32,7 @@ tests/
 
 ### 迁移状态
 
-大模块（平台功能）：`dashboard` / `ai_assistant` / `knowledge` / `device` / `page_flow` / `serial_log` / `task` / `case` / `report` / `bug_ticket`；
+大模块（平台功能）：`dashboard` / `ai_assistant` / `knowledge` / `device` / `serial_log` / `task` / `case` / `report` / `bug_ticket`；
 引擎统一在 `engines/`（按子模块再分层）；跨模块契约在 `arch/`。
 
 | 目录 | 内容 | 状态 |
@@ -43,7 +43,6 @@ tests/
 | `ai_assistant/unit` | AI 助手（含 planner / verifier 提示词与任务） | ✅ |
 | `knowledge/{unit,integration}` | 知识库助理（文字 + 语音） | ✅ |
 | `device/{unit,integration}` | 设备管理 | ✅ |
-| `page_flow/unit` | 页面流 | ✅ |
 | `serial_log/unit` | 串口日志 | ✅ |
 | `task/unit` | 任务清单 | ✅ |
 | `case/{unit,integration}` | 用例管理 | ✅ |
@@ -59,6 +58,7 @@ tests/
 | `e2e/` | 只留共享设施：`conftest.py` / `selectors.py` / `step_report.py` | 保留：端到端夹具 |
 
 已删除：`graybox/`（迁移后清空）、`ai_planner/`（无测试代码、`planner_eval` 命令已不存在）、`device_pool/`（迁入 `device/`）、
+`page_flow/`（页面流退役；`test_xpath_text_matches.py` 被测方法已随 engines 历史重构删除，失效用例经确认一并删除）、
 `test_element_locator_views_split.py`（`backend/apps/element_locator` 已下线）、`test_example_integration.py`（模板示例）。
 
 

@@ -46,7 +46,6 @@ class TestHttpChannel:
             "/api/cases",
             "/api/runner",
             "/api/reports",
-            "/api/workflow",
             "/api/evaluator",
             "/api/inspector",
             "/api/elements",

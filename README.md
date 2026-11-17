@@ -70,14 +70,14 @@ Vue SPA :5173 ──HTTP(/api,/media)──▶ Vite 代理 ──▶ Daphne :876
 | **后端** | Django 6.0.x（锁定 `Django==6.0.6`）+ DRF + Daphne | 12 个 App、21 张业务表；契约基线 `openspec/openapi.yaml`（当前 71 条 path、93 个 operation） |
 | **AI 引擎** | AgentScope 2.0（经 `engines/`，同进程） | **Model + Harness → 角色**；当前主场景 SOP：`executor` + `verifier`（及用例编写 planner/writer）；工具经 `tools_config` 装配；密钥 `DEEPSEEK_API_KEY` |
 | **设备控制** | ADB 为主 | `AndroidControl` 继承纯 adb 控制；uiautomator2 只在 xpath 查找和非 ASCII 输入时按需连接。上层不得直接 import `uiautomator2` |
-| **数据** | MySQL（默认）/ SQLite | 自有表前缀 `acc_ ai_ bug_ cm_ dp_ rg_ sl_ task_ wf_`。JWT 吊销记录落库（`acc_token_revocations`）；平台无外部 KV 依赖（Redis 已退役，channel layer 用内存实现） |
+| **数据** | MySQL（默认）/ SQLite | 自有表前缀 `acc_ ai_ bug_ cm_ dp_ rg_ sl_ task_`。JWT 吊销记录落库（`acc_token_revocations`）；平台无外部 KV 依赖（Redis 已退役，channel layer 用内存实现） |
 | **实时性** | 任务走 HTTP 轮询 | 唯一 WebSocket 生产点是知识库助手 `/ws/knowledge-assistant/`（单连接，不走 channel layer）。任务进度不得复用这条通道 |
 
 Django 版本锁在 6.0.x：6.1 的模型字段检查会在没有数据库时连 MySQL，CI 的 `manage.py check` 会因此失败。
 
 ### 模块地图
 
-侧栏 10 个页面与 12 个 Django App 对应关系如下。`accounts` 复用 Django `auth_user`；`dashboard` 与 `knowledge_assistant` 无业务表。
+侧栏各页面与 11 个 Django App 对应关系如下。`accounts` 复用 Django `auth_user`；`dashboard` 与 `knowledge_assistant` 无业务表。
 
 | 模块 | 表前缀 | 数据表 | 核心能力 |
 |------|--------|--------|---------|
@@ -89,7 +89,6 @@ Django 版本锁在 6.0.x：6.1 的模型字段检查会在没有数据库时连
 | **用量账本** `usage_ledger` | `ai_` | 1（`ai_usage_records`） | 每次模型调用一条明细；无独立页面，仪表盘读取 |
 | **任务清单** `task_list` | `task_` | 5 | 提交 / 重跑 / 取消 · 事件与用量 · 任务流程报告 · 截图缩略图 |
 | **测试报告** `report_generator` | `rg_` | 2 | 报告列表 · 任务报告 · 用例细分 · 下载与在线预览 |
-| **页面流** `workflow` | `wf_` | 3 | 原型 · 目录 · JSON 文档；VueFlow 画布编排与导入导出 |
 | **串口日志** `serial_log` | `sl_` | 1 | 端口监听开关 · 当前日志只读 · 关键词对照表 |
 | **BUG 单** `bug_manager` | `bug_` | 1 | 任务失败的分类台账；删任务不删单 |
 | **知识库助手** `knowledge_assistant` | — | — | 实时语音。HTTP 只提供就绪状态，音频走 WebSocket |
@@ -234,7 +233,7 @@ python run.py check      # 本地质量门禁（与 CI 同一批检查，不跑�
 
 1. `/api/` 路径一律以 `/` 结尾（`APPEND_SLASH = False`，缺斜杠是确定的 404）。
 2. 响应信封 `{status, data}`；错误 `{status, message}` + 对应 HTTP 状态码；JSON 字段 snake_case。
-3. 新表前缀先登记到 `utils/gen_arch_stats.py` 的 `TABLE_PREFIX`。当前自有前缀：`ai_ bug_ cm_ dp_ rg_ sl_ task_ wf_`。
+3. 新表前缀先登记到 `utils/gen_arch_stats.py` 的 `TABLE_PREFIX`。当前自有前缀：`ai_ bug_ cm_ dp_ rg_ sl_ task_`。
 4. 前端只有一个 HTTP 出口（`frontend/src/shared/api-client.ts`），业务模块不得另起 axios 实例或裸 `fetch`。
 5. 上层不得直接 import `uiautomator2`，设备操作一律经 `engines.device`。
 6. 前端 UI 默认遵循 Doodle Craft：设计令牌只在 `frontend/src/shared/styles/tokens.css` 登记，不写颜色 / 字号字面量。

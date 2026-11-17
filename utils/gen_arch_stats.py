@@ -55,7 +55,6 @@ TABLE_PREFIX = {
     "bug_manager": "bug_",
     "ai_assistant": "ai_",
     "report_generator": "rg_",
-    "workflow": "wf_",
     "serial_log": "sl_",
     "accounts": "auth_",
     "dashboard": "—",

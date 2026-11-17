@@ -25,7 +25,6 @@ tests/<module>/
 | case-manager | — | ⬜ 未开始 | 0 | 0 | 待开测（src: case-manager） |
 | report-generator | — | ⬜ 未开始 | 0 | 0 | 待开测（src: report-generator） |
 | ai-assistant | — | ⬜ 未开始 | 0 | 0 | 待开测 |
-| workflow | — | ⬜ 未开始 | 0 | 0 | 待开测 |
 | digital-human | — | ⬜ 未开始 | 0 | 0 | 待开测 |
 
 > 新模块开测流程：按 `PRIORITY_TEMPLATE.md` 的 Checklist 建目录与用例 → 更新本表状态列。

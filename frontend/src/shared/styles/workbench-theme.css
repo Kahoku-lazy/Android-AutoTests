@@ -1,21 +1,17 @@
 /**
  * 工作台共享设计令牌 — Doodle Craft
- * 挂在 .wb-shell / .workflow-workbench 上
+ * 挂在 .wb-shell 上
  */
-.wb-shell,
-.workflow-workbench {
-  /* 取共享/主 token：本规则在 20 个 .wb-shell 页根上生效，
-     原先消费 --ac-font / --ac-ink（只在 .workflow-workbench 内声明）会在这些页根上静默失效 */
+.wb-shell {
+  /* 取共享/主 token：本规则在各 .wb-shell 页根上生效，
+     消费只在单个模块页根内声明的令牌会在这些页根上静默失效 */
   font-family: var(--app-font);
   color: var(--app-text-primary);
 }
 
 .wb-shell *,
 .wb-shell *::before,
-.wb-shell *::after,
-.workflow-workbench *,
-.workflow-workbench *::before,
-.workflow-workbench *::after {
+.wb-shell *::after {
   box-sizing: border-box;
 }
 
@@ -61,8 +57,7 @@
 }
 
 /* AppCard — 钉板壳（对齐 #page-typography .panel） */
-.wb-shell .ac-card,
-.workflow-workbench .ac-card {
+.wb-shell .ac-card {
   position: relative;
   overflow: visible !important;
   background: var(--app-bg-card) !important;
@@ -75,15 +70,12 @@
     box-shadow var(--app-duration, 0.2s) var(--app-ease, ease);
 }
 .wb-shell .ac-card:hover,
-.workflow-workbench .ac-card:hover,
-.wb-shell .ac-card:focus-within,
-.workflow-workbench .ac-card:focus-within {
+.wb-shell .ac-card:focus-within {
   border-color: var(--ink) !important;
   box-shadow: none !important;
   transform: none !important;
 }
-.wb-shell .ac-card .ac-card__pin,
-.workflow-workbench .ac-card .ac-card__pin {
+.wb-shell .ac-card .ac-card__pin {
   position: absolute;
   top: -7px;
   left: 50%;
@@ -97,18 +89,15 @@
   box-shadow: 1px 2px 0 0 var(--comp-ac-card-pin-shadow);
   pointer-events: none;
 }
-.wb-shell .ac-card .el-card__body,
-.workflow-workbench .ac-card .el-card__body {
+.wb-shell .ac-card .el-card__body {
   padding: var(--app-space-md);
 }
 @media (prefers-reduced-motion: reduce) {
-  .wb-shell .ac-card,
-  .workflow-workbench .ac-card {
+  .wb-shell .ac-card {
     transform: none;
     transition: none;
   }
-  .wb-shell .ac-card:hover,
-  .workflow-workbench .ac-card:hover {
+  .wb-shell .ac-card:hover {
     transform: none;
   }
 }
@@ -152,25 +141,24 @@
 /* AppTable：表纸风格
    - 表头无底色、细 1px 分隔线（需 !important 压过全局 .el-table th 的底色与 2px 墨线）
    - 行分隔 1px 浅线、单元格纵向留白加大，读起来是一条条“笔迹行”而不是网格 */
-.wb-shell .ac-table th.el-table__cell,
-.workflow-workbench .ac-table th.el-table__cell {
+.wb-shell .ac-table th.el-table__cell {
   background: transparent !important;
   color: var(--app-text-secondary) !important;
   font-weight: var(--app-font-weight-semibold) !important;
-  font-size: var(--app-size-xs);
+  /* 表头字号 16px（平台表格字号三档 16 / 14 / 12，见 doodle-craft data-display §1.1）；
+     模块不得再覆写 */
+  font-size: var(--app-size-md);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: var(--app-space-sm) 0;
   border-bottom: 1px solid color-mix(in srgb, var(--ink) 14%, transparent) !important;
 }
-.wb-shell .ac-table td.el-table__cell,
-.workflow-workbench .ac-table td.el-table__cell {
+.wb-shell .ac-table td.el-table__cell {
   color: var(--app-text-primary);
   padding: var(--app-space-md) 0;
   border-bottom: 1px solid color-mix(in srgb, var(--ink) 8%, transparent) !important;
 }
-.wb-shell .ac-table .el-table__body tr:hover > td.el-table__cell,
-.workflow-workbench .ac-table .el-table__body tr:hover > td.el-table__cell {
+.wb-shell .ac-table .el-table__body tr:hover > td.el-table__cell {
   background: color-mix(in srgb, var(--ink) 3%, transparent) !important;
 }
 
@@ -182,11 +170,6 @@
   .ac-table.el-table--striped
   .el-table__body
   tr.el-table__row--striped:not(.is-selected):not(.current-row)
-  > td.el-table__cell,
-.workflow-workbench
-  .ac-table.el-table--striped
-  .el-table__body
-  tr.el-table__row--striped:not(.is-selected):not(.current-row)
   > td.el-table__cell {
   background: var(--comp-table-row-striped-bg) !important;
 }
@@ -194,9 +177,7 @@
 /* 行选中态：全局 .el-table td 底色带 !important，画在 tr 上会被吞掉，必须画在单元格上
    （frontend-l4-data-surface「Table row state stays visible」） */
 .wb-shell .ac-table .el-table__body tr.is-selected > td.el-table__cell,
-.wb-shell .ac-table .el-table__body tr.current-row > td.el-table__cell,
-.workflow-workbench .ac-table .el-table__body tr.is-selected > td.el-table__cell,
-.workflow-workbench .ac-table .el-table__body tr.current-row > td.el-table__cell {
+.wb-shell .ac-table .el-table__body tr.current-row > td.el-table__cell {
   background: var(--comp-table-row-selected-bg) !important;
 }
 

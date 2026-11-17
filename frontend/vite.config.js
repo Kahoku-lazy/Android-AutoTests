@@ -76,12 +76,6 @@ export default defineConfig({
         manualChunks: {
           'element-plus': ['element-plus'],
           'vendor': ['vue', 'vue-router', 'pinia', 'axios', 'animejs'],
-          'vue-flow': [
-            '@vue-flow/core',
-            '@vue-flow/background',
-            '@vue-flow/controls',
-            '@vue-flow/minimap',
-          ],
         },
       },
     },

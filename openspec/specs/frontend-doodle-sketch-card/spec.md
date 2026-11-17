@@ -2,7 +2,7 @@
 
 ## Purpose
 
-定义前端共享撕纸入口卡（资源网格：项目 / 原型）在 Hand-Drawn Doodle 主题下的可见行为、cycle 配色与无障碍要求，保证用例、元素定位、页面流三处列表使用同一组件。
+定义前端共享撕纸入口卡（资源网格：项目）在 Hand-Drawn Doodle 主题下的可见行为、cycle 配色与无障碍要求，保证用例项目列表使用同一组件。
 
 ## Requirements
 ### Requirement: Shared sketch card uses torn-paper doodle shell

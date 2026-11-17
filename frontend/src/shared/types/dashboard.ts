@@ -100,7 +100,6 @@ export interface DashboardStats {
   cases: { total: number; enabled: number; breakdown: CaseBreakdownItem[] }
   runs: { total: number; active: number }
   agents: { total: number; active: number }
-  workflow: { total: number }
   aiUsage: AiUsage
   usageLedger: UsageLedger
 }
@@ -197,7 +196,6 @@ export interface DashboardRawData {
   cases: { total: number; enabled: number; breakdown: CaseBreakdownItem[] }
   runs: { total: number; active: number }
   agents: { total: number; active: number }
-  workflow: { total: number }
   ai_usage: {
     task_count: AiUsageMetric
     input_tokens: AiUsageMetric

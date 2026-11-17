@@ -21,7 +21,6 @@ from backend.apps.dashboard.ai_usage import (
 )
 from backend.apps.device_pool.models import Device
 from backend.apps.usage_ledger.api import usage_dashboard
-from backend.apps.workflow.models import WorkflowDocument
 from utils.logs import backend_log
 
 
@@ -87,11 +86,6 @@ def _cases_breakdown(user_id=None):
     ]
 
 
-def _workflow_stats():
-    """Return workflow document count."""
-    return {"total": _safe_count(WorkflowDocument)}
-
-
 @extend_schema(responses=OpenApiTypes.OBJECT)
 class DashboardStatsAPIView(APIView):
     """GET /api/dashboard/stats/ — platform-level statistics."""
@@ -122,7 +116,6 @@ class DashboardStatsAPIView(APIView):
                     "enabled": case_enabled,
                     "breakdown": cases_breakdown,
                 },
-                "workflow": _workflow_stats(),
                 "runs": {"total": run_total, "active": run_active},
                 "agents": {"total": agent_total, "active": agent_active},
                 "ai_usage": ai_usage_stats(user_id, agents),

@@ -31,7 +31,7 @@
 详情视图上，得到 405「方法 "POST" 不被允许。」（变更 fix-workflow-create-route-shadowing
 的起因）。因此扫描同时记录 HTTP 方法，命中 router 视图时断言方法在其动作白名单内。
 
-规格：`openspec/specs/api-path-convention`、`openspec/specs/workflow-http-envelope`。
+规格：`openspec/specs/api-path-convention`。
 """
 
 from __future__ import annotations
@@ -85,22 +85,12 @@ EXCEPTIONS = (
         "/api/auth/login",
         "该用例断言的就是“缺失尾斜杠返回 404”，必须是违规写法",
     ),
-    (
-        "tests/engines/agents/unit/test_workflow_single_path.py",
-        "/api/workflow/prototypes/create/",
-        "该用例断言的就是“旧平铺写地址已下线（必须 404）”，是负向用例",
-    ),
-    (
-        "tests/engines/agents/unit/test_workflow_single_path.py",
-        "/api/workflow/directories/create/",
-        "同上：断言旧写地址不再被任何实现应答",
-    ),
 )
 
 # 各面的规模下限（后方为实测值，下限取 ~95%）。
 # 识别规则退化时计数骤降，测试随即失败，而不是给出虚假的“全部一致”。
 MIN_PER_SURFACE = {
-    "frontend": 58,  # 实测 61（2026-11-15 重登记：元素定位 Web/API 与 ai-assistant 多个 api 模块下线后实测降至 61；已用独立计数 58 复核，扫描器未退化，是调用点真实减少）
+    "frontend": 54,  # 实测 57（2026-11-17 重登记：页面流模块 api.ts 17 个调用点随退役删除；并行改动新增设备/运营等调用点，独立计数复核扫描器未退化）
     "tests": 32,  # 实测 34（本变更改写两个 element_locator 测试删去 2 个字面量调用点；其余下降来自并发会话对 tests/ 的改动）
     "yaml": 42,  # 实测 45
 }
@@ -316,8 +306,12 @@ def test_scanner_records_http_methods():
     for caller in CALLERS:
         if caller.method:
             by_method[caller.method] = by_method.get(caller.method, 0) + 1
+    # put 调用点随页面流模块退役消失（2026-11-17，remove-page-flow-module）；
+    # 剩余动词仍须各扫到至少一处，捕获组退化即失败。
     missing = [
-        verb for verb in ("get", "post", "put", "patch", "delete") if not by_method.get(verb)
+        verb
+        for verb in ("get", "post", "patch", "delete")
+        if not by_method.get(verb)
     ]
     assert missing == [], (
         "以下动词一个调用点都没扫到，说明 _CALL_RX 的动词捕获组退化了：" + ", ".join(missing)

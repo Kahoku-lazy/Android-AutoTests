@@ -171,15 +171,6 @@ function formatUsageToken(tokens: number): string {
           >
             <template #icon><IconBrain :size="15" /></template>
           </StatsAppCard>
-          <StatsAppCard
-            label="工作流"
-            :value="stats.workflow.total"
-            color="pale"
-            path="/workflow"
-            :loading="loading"
-          >
-            <template #icon><IconLayers :size="15" /></template>
-          </StatsAppCard>
         </div>
 
         <div class="overview-assets">

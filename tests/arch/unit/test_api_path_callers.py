@@ -306,11 +306,12 @@ def test_scanner_records_http_methods():
     for caller in CALLERS:
         if caller.method:
             by_method[caller.method] = by_method.get(caller.method, 0) + 1
-    # put 调用点随页面流模块退役消失（2026-11-17，remove-page-flow-module）；
-    # 剩余动词仍须各扫到至少一处，捕获组退化即失败。
+    # put / delete 调用点随页面流模块退役消失（2026-11-17，remove-page-flow-module，
+    # 提交树实测 get 51 / post 30 / patch 1）；剩余动词仍须各扫到至少一处，
+    # 捕获组退化即失败。并行新增的 put / delete 调用点入库后可再扩清单。
     missing = [
         verb
-        for verb in ("get", "post", "patch", "delete")
+        for verb in ("get", "post", "patch")
         if not by_method.get(verb)
     ]
     assert missing == [], (

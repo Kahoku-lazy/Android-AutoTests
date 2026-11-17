@@ -1538,6 +1538,10 @@ body {
   font-size: 12px;
   font-weight: 700;
   fill: var(--ink);
+  paint-order: stroke;
+  stroke: var(--app-bg-card);
+  stroke-width: 3px;
+  stroke-linejoin: round;
 }
 
 .dep-diagram__caption {
@@ -3619,4 +3623,11 @@ body {
   font-size: var(--app-size-xs);
   font-weight: 400;
   color: var(--app-text-secondary);
+}
+
+/* 侧栏二级入口（前端页的 11 个模块）：缩进 + 小一号字 */
+.sidebar__nav-item--sub {
+  padding-left: calc(var(--app-space-md) + var(--app-space-sm));
+  font-size: var(--app-size-xs);
+  font-weight: 400;
 }

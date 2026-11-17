@@ -17,6 +17,7 @@ python -m http.server 8811 --directory dev_docs/project-viz
 
 - [index.html](index.html) —— **总览**：仓库一级目录（backend / engines / frontend / tests / utils）
 - [frontend.html](frontend.html) —— **前端**：`frontend/src/modules/` 下 11 个业务目录
+- **23 个模块页** —— 前端 11 个（如 [frontend-workflow.html](frontend-workflow.html)）+ 后端 12 个（如 [backend-task_list.html](backend-task_list.html)），每个业务模块一页，三节与主页面同构：单元引用关系图 / 单元依赖（图+表）+ 代码量饼图 / 单元三次对比
 - [backend.html](backend.html) —— **后端**：`backend/apps/` 下 12 个 Django app
 - [agents.html](agents.html) —— **引擎**：`engines/` 下 7 个顶层目录
 - [ae-harness.html](ae-harness.html) —— **原型链路**：`engines/ae_harness/` 下 6 个文件夹
@@ -37,6 +38,7 @@ python -m http.server 8811 --directory dev_docs/project-viz
 | --- | --- |
 | `index.html` · `overview.js` | 总览页（数据键 `projectModules`） |
 | `frontend.html` · `frontend.js` | 前端页（`frontendModules`） |
+| `frontend-<key>.html`（11）+ `backend-<key>.html`（12）· `module.js` | 模块页（每个业务模块一页） |
 | `backend.html` · `backend.js` | 后端页（`backendModules`） |
 | `agents.html` · `agents.js` | 引擎页（`engineModules`） |
 | `ae-harness.html` · `ae-harness.js` | 原型链路页（`ae_harness`） |

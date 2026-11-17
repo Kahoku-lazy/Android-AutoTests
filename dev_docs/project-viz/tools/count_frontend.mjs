@@ -182,6 +182,32 @@ const recordEdges = (fromKey, files) => {
   }
 }
 
+/** 模块内文件 → 单元名：第一段目录（带 /），根级文件用文件名 */
+function unitOf(absPath, moduleDir) {
+  const rel = path.relative(moduleDir, absPath).split(path.sep).join("/")
+  const parts = rel.split("/")
+  return parts.length > 1 ? `${parts[0]}/` : parts[0]
+}
+
+const unitEdges = new Map()
+
+/** 记录模块内部「单元 → 单元」的 import 次数（跨模块 / 指向共享层的不算） */
+const recordUnitEdges = (moduleKey, moduleDir, files) => {
+  const bucket = unitEdges.get(moduleKey) || new Map()
+  unitEdges.set(moduleKey, bucket)
+  for (const file of files) {
+    const parsed = parse(file)
+    const fromUnit = unitOf(file, moduleDir)
+    for (const target of collectLocalImports(file, parsed.sourceFile)) {
+      if (!target.startsWith(moduleDir + path.sep)) continue
+      const toUnit = unitOf(target, moduleDir)
+      if (toUnit === fromUnit) continue
+      const key = `${fromUnit}->${toUnit}`
+      bucket.set(key, (bucket.get(key) || 0) + 1)
+    }
+  }
+}
+
 for (const entry of fs.readdirSync(MODULES_DIR, { withFileTypes: true })) {
   if (!entry.isDirectory()) continue
   const dir = path.join(MODULES_DIR, entry.name)
@@ -193,6 +219,7 @@ for (const entry of fs.readdirSync(MODULES_DIR, { withFileTypes: true })) {
   routesByModule[entry.name] = routes
   modules.push(row)
   recordEdges(entry.name, files)
+  recordUnitEdges(entry.name, dir, files)
 }
 modules.sort((a, b) => b.loc - a.loc)
 
@@ -216,7 +243,16 @@ process.stdout.write(
       edges: [...edges.entries()].map(([key, count]) => {
         const [from, to] = key.split("->")
         return { from, to, count }
-      })
+      }),
+      unitEdges: Object.fromEntries(
+        [...unitEdges.entries()].map(([moduleKey, bucket]) => [
+          moduleKey,
+          [...bucket.entries()].map(([key, count]) => {
+            const [from, to] = key.split("->")
+            return { from, to, count }
+          })
+        ])
+      )
     },
     null,
     2

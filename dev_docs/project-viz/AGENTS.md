@@ -21,14 +21,15 @@
 | [`agents.html`](agents.html) | **引擎模块页**（三节）：模块关系图 / 依赖关系 + 子单元代码量 / 各模块子单元条形图 | 改 engines 口径时 |
 | [`styles.css`](styles.css) | 两页共用：令牌子集 + 骨架样式 + 组件配方（图表卡 / 表纸 / 空态） | 只在需要新版式零件时改，且先回登记 doodle-craft |
 | [`agents.js`](agents.js) | 引擎页应用：读 `__BOARD__.engineModules`，渲染模块关系 / 依赖 / 子单元代码量 | 改引擎页时 |
-| [`frontend.html`](frontend.html) · [`frontend.js`](frontend.js) | **前端页**（三节）：模块关系图 / 依赖 + 模块代码量 / 各模块单元代码量；数据来自 `frontendModules` | 改前端页时 |
+| [`frontend.html`](frontend.html) · [`frontend.js`](frontend.js) | **前端页**（三节）：模块关系图 / 依赖 + 模块代码量 / 各模块单元代码量 | 改前端页时 |
+| `frontend-<key>.html`（11）+ `backend-<key>.html`（12） · [`module.js`](module.js) | **模块页**（共 23 个）：每个业务模块一个独立页面，三节与主页面同构 = 单元引用关系图 / 单元依赖（图·表 tab）+ 代码量饼图 / 单元三次对比；靠 `window.__MODULE_KEY__` + `window.__MODULE_SCOPE__`（frontend / backend）指定 | 改模块页时 |
 | [`backend.html`](backend.html) · [`backend.js`](backend.js) | **后端页**（三节）：模块关系图 / 依赖 + 模块代码量 / 各模块单元代码量；数据来自 `backendModules` | 改后端页时 |
 | [`ae-harness.html`](ae-harness.html) · [`ae-harness.js`](ae-harness.js) | **ae_harness 页**（三节）：架构关系图 / 左依赖图+右代码量卡片 / 每模块逐文件逐文件三次代码量 | 改 ae_harness 视图时 |
 | `data/board.json` | 看板 + 智能体快照（机器可读） | **只由生成器写**，不手改 |
 | `data/board.js` | 同一份快照的 `window.__BOARD__ = …` 形式（页面用） | **只由生成器写**，不手改 |
 | `data/history.json` · `data/history.js` | 智能体模块量的历史快照（生成器追加，数值没变不追加，保留 60 次） | **只由生成器写**，不手改 |
 | `tools/gen_board_data.py` | 生成器：扫仓库 → 写上面两个数据文件 | 改口径时改这里 |
-| `tools/count_frontend.mjs` | 前端计数（本地 TypeScript 语法树，无网络） | 只在前端计数口径变化时改 |
+| `tools/count_frontend.mjs` | 前端计数 + 模块间 `edges` + **单元间 `unitEdges`**（本地 TypeScript 语法树，无网络） | 只在前端计数口径变化时改 |
 | `charts/` | **统一图表底层**：[`chart-framework.js`](charts/chart-framework.js)（生命周期 + 令牌 + `<viz-chart>`）、[`board-options.js`](charts/board-options.js)（纯函数 option）；契约见 [`charts/AGENTS.md`](charts/AGENTS.md) | 加图表时按契约改 |
 | `vendor/vue.global.prod.js` | Vue 3.5.44 全局构建（本地化，离线可开） | 只有升级 Vue 时替换 |
 | `vendor/echarts.min.js` | ECharts 5.6.0 **完整构建**（与 `frontend` 同源，本地化；依赖图 `graph` 只有完整构建才有） | 只有升级 ECharts 时替换 |
@@ -87,6 +88,14 @@
 - **引擎视图的数据也在 `board.json`**：`agents` 键下（目录分组 + 每模块类型/功能/条目/类/方法/行数/测试 + `imports` 依赖边），由同一个 `gen_board_data.py` 生成；历史快照在 `data/history.json`，别把两者混成一份。
 - **依赖图是静态的**：`agents.imports` 来自 AST 的 `import`，只证明"模块引用了谁"，**不证明运行期谁调谁**；页面已写明这句话，别在文案里把它说成调用链。
 - **frontend 页（`frontend.html`）的「模块」= `frontend/src/modules/` 下 11 个业务目录**：共享层（`shared/`+`views/`+`router.ts`）不是业务模块，统计里不算，但**架构图上要画一个灰色虚框节点**——11 个模块都依赖它，不画就会变成 11 个孤立点。指向共享层的边在图上用虚线，表里也列出（标记 `shared`）。
+- **模块页的三节必须与主页面同构**：① 单元引用关系图（自绘 SVG，椭圆布局，点节点高亮）② 单元依赖（图/表 tab）+ 代码量饼图 ③ 单元三次对比。**不要**做成"饼图+明细表+柱"那套——结构不同用户会怀疑是不是同一个 skill 做的（踩过，返工一次）。
+- **模块页同时服务前端与后端**：同一份模板 + `module.js`，靠 `window.__MODULE_SCOPE__` 切数据键（`frontendModules` / `backendModules`）；路径前缀也随之变（`frontend/src/modules/` / `backend/apps/`）。新增 scope 要同时改 `module.js` 的 `SECTION`/`ROOT_LABEL` 与 `tools/gen_module_pages.py` 的 `GROUPS`。
+- **后端单元边支持两种 import 写法**：相对导入（`from .models import`）与绝对导入（`from backend.apps.<app>.<rest> import`），解析在生成器 `_unit_import_edges()`；**只认本 app 前缀**，`backend.apps.ai_assistant.*` 这种跨 app 引用不算单元边。12 个 app 合计 117 条（case_manager 35 / task_list 22 / device_pool 13）。
+- **节点数多时节点宽与字号要缩**：单元 > 16 个时节点宽 92px、字号 9px（`task_list` 21 个单元），否则 150px 宽会在椭圆上叠起来。**字号必须用 inline style**——SVG 的 `font-size` 呈现属性会被 CSS 的 `.dep-node__title { font-size }` 覆盖（踩过，改了属性没生效）。
+- **单元间引用来自 `count_frontend.mjs` 的 `unitEdges`**：TS AST 解析 import，把目标路径映射到"单元"（模块内相对路径第一段）；**只算模块内部**，跨模块与 `shared` 不计入。11 个模块合计 142 条边（workflow 22 / knowledge-assistant 20 / case-manager 17…）。
+- **单元关系图用椭圆布局 + 曲线**：单元数 5~11、边 3~22，手工坐标不可维护，所以按椭圆均匀分布；边用二次贝塞尔（控制点沿法线交替偏移），否则 22 条线全穿圆心堆成一团；**标签只在选中节点时显示**且按 `index % 4` 错开位置，否则同一节点的多条边数字会叠在一起。
+- **前端每个业务模块是一个独立页面**：`frontend-<key>.html`（11 个），共用 `module.js`，靠页面里一行 `window.__MODULE_KEY__ = "<key>"` 区分；**不要再改回 hash 切面**（试过，用户明确要独立页）。模板与生成脚本在 `tools/module-page.template.html` + `tools/gen_module_pages.py`，模块增减时跑一次脚本重新生成。
+- **5 个主页面的侧栏都列 11 个模块项**：`.sidebar__nav-item--sub`（缩进 + 小字号），指向 `frontend-<key>.html`；新增/删除模块要同步 6 处侧栏（5 主页 + 模板）。
 - **前端模块名就是目录名，没有中文名**：生成器里 `label` 留空，否则卡片会显示「workflow workflow」。
 - **依赖图边宽要限幅**：`width: min(4, 0.8 + count * 0.12)`——共享层那条 40 次的边会把图糊成一把扇子。
 - **backend 页（`backend.html`）的「模块」= `backend/apps/` 下 12 个 Django app**：写在生成器 `BACKEND_MODULES`；单元口径与 engines 页一致（app 下的直接子目录整体算一个、直接 .py 各算一个，排除 `__init__.py`/`migrations/`）；`config`/`gateway`/`shared` 属基础设施，不计入跨模块关系。

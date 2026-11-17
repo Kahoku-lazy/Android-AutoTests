@@ -2,7 +2,7 @@
 
 ## Purpose
 
-约定仪表盘按今日与累计展示平台全部模型调用的 token 与费用用量（不按智能体可见性过滤）：累计用量、当天用量、缓存命中率、总费用、当天费用，以及每个可见智能体一份缓存命中、输入、输出和总费用；同一章节的「用量趋势」区承载每日 Token 用量、每日 DeepSeek 费用、今日逐小时与 Voice 来源四张用量图表。任务数量在平台概览章节展示。
+约定仪表盘按今日与累计展示平台全部已入账模型的 token 与费用：累计用量、当天用量、缓存命中率、总费用、当天费用。用量趋势按账本日期与小时分桶。任务数量在平台概览章节展示。
 
 ## Requirements
 
@@ -31,12 +31,13 @@
 
 ### Requirement: 仪表盘提供 AI 用量统计接口
 
-系统 SHALL 在仪表盘统计接口的 `ai_usage` 中提供任务数量、输入 token、输出 token、合计 token、缓存命中 token、缓存命中率、平均每任务 token 与 DeepSeek 费用，且均分「今日 / 累计」。输入、输出、缓存命中与费用 MUST 来自平台全部小时用量（`task_usage_hourly` 全表，含 `agent_id = 0` 的行），MUST NOT 按当前用户可见智能体过滤。今日 MUST 指统计日等于当前日期。任务数量 MUST 按可见任务计数，MUST NOT 改用小时记录的调用次数。DeepSeek 费用 MUST 为这些小时费用之和，精度到小数点后 8 位。MUST NOT 用任务上的 token 列，或按小数点后 4 位重算的费用，作为这组数字。`ai_usage.agents` MUST 为每个可见智能体给出一份整份用量。近 7 日的 Token 曲线与费用曲线 MUST 按同一小时用量、以统计日分桶。
+系统 SHALL 在仪表盘统计接口的 `ai_usage` 中提供任务数量、输入 token、输出 token、合计 token、缓存命中 token、缓存命中率、平均每任务 token 与平台费用，且均分「今日 / 累计」。输入、输出、缓存命中与费用 MUST 来自 `ai_usage_records` 全表，MUST NOT 读取 `task_usage_hourly`，MUST NOT 按当前用户可见智能体过滤。今日 MUST 指 `occurred_at` 落在当前日期。任务数量 MUST 按可见任务计数，MUST NOT 改用账本调用次数。平台费用 MUST 为已计价行的人民币费用之和，精度到小数点后 8 位；未计价行 MUST 另以 token 合计返回，MUST NOT 计入费用。MUST NOT 用任务上的 token 列或任务费用列作为这组数字。近 7 日的 Token 曲线与费用曲线 MUST 按同一账本、以 `occurred_at` 的日期分桶。
 
 #### Scenario: 统计接口返回 AI 用量
 
 - **WHEN** 用户请求仪表盘统计接口
-- **THEN** 响应含 `ai_usage`，其 `task_count`、`input_tokens`、`output_tokens`、`total_tokens`、`cache_hit_tokens`、`cache_hit_rate`、`avg_tokens_per_task`、`deepseek_cost` 各含 `today` 与 `total`，并含 `agents` 数组
+- **THEN** 响应含 `ai_usage`，其 token、缓存命中、缓存命中率、平均每任务 token 与平台费用各含 `today` 与 `total`
+- **AND** 平台费用来自账本已计价行，不来自小时表
 
 #### Scenario: 缓存命中率除零
 
@@ -45,38 +46,49 @@
 
 #### Scenario: 两个角色的费用并进同一份
 
-- **WHEN** 同一智能体在同一统计日有执行者与验收者两条小时用量
-- **THEN** 该日输入、输出、缓存命中与费用等于两条记录之和，且只对应这一份智能体用量
+- **WHEN** 同一任务的执行角色与验收角色各产生一笔已计价账本行
+- **THEN** 平台费用等于这两笔之和，不按角色拆成两份账单
 
 #### Scenario: 不可见智能体的用量仍进平台合计
 
-- **WHEN** 平台上存在一条 `agent_id = 0` 或属于查看者不可见智能体的小时用量
-- **THEN** `ai_usage` 的 token 与 DeepSeek 费用合计包含该行
-- **AND** `ai_usage.agents` 不因此新增该智能体的卡片
+- **WHEN** 账本中存在不属于当前查看者可见范围的已计价行
+- **THEN** 该行的 token 与费用仍进入平台合计
+
+#### Scenario: 未计价消耗单独可见
+
+- **WHEN** 今日有 token 大于 0 且计价状态为未计价的账本行
+- **THEN** 这些 token 出现在未计价合计中
+- **AND** 平台费用不包含这些行
 
 ### Requirement: 仪表盘展示 AI 用量区块
 
-系统 SHALL 在仪表盘「AI 用量」区块展示累计用量、当天用量、缓存命中率、总费用、当天费用五张卡片，并 MUST 采用左侧两行 KPI、右侧智能体用量的布局。左侧第一行 MUST 依次为累计用量、当天用量、缓存命中率，左侧第二行 MUST 依次为总费用、当天费用。这五张 KPI 卡的副标题 MUST 全部为「DeepSeek」，MUST NOT 出现空副标题或其它文案。累计用量与当天用量 MUST 以 token 合计量为主数值，按百万（M）单位、保留 2 位小数显示，MUST NOT 除以任务数，MUST NOT 使用千（K）单位。缓存命中率 MUST 以百分比、1 位小数显示。总费用与当天费用 MUST 分别取累计与当天的 DeepSeek 费用，按三位有效数字显示，MUST NOT 使用科学计数法，单位 MUST 为元；接口里的费用精度仍为小数点后 8 位。任务数量卡 MUST NOT 再出现在「AI 用量」区块。该区块内的五张 KPI 卡 MUST 为纯展示卡：MUST NOT 渲染独立「进入」按钮，MUST NOT 绑定跳转路径，MUST NOT 具备可点击交互形态（不可点、无 `role="button"`、无 hover 抬升）。每个可见智能体 MUST 在右侧列展示一张卡，标题为助手显示名，内容为缓存命中、输入、输出、总费用四项，MUST NOT 排在 KPI 卡下方。
+系统 SHALL 在仪表盘「AI 用量」区块展示累计用量、当天用量、缓存命中率、总费用、当天费用五张卡片。左侧第一行 MUST 依次为累计用量、当天用量、缓存命中率，左侧第二行 MUST 依次为总费用、当天费用。这五张 KPI 卡的副标题 MUST 为「平台」，MUST NOT 写「DeepSeek」。累计用量与当天用量 MUST 以 token 合计量为主数值，按百万（M）单位、保留 2 位小数显示，MUST NOT 除以任务数。缓存命中率 MUST 以百分比、1 位小数显示。总费用与当天费用 MUST 取账本已计价费用，按三位有效数字显示，MUST NOT 使用科学计数法。默认单位为人民币；用户切换到美元后单位 MUST 为美元，数值 MUST 由库存人民币按所显示的汇率换算。该区块内的五张 KPI 卡 MUST 为纯展示卡：MUST NOT 渲染独立「进入」按钮，MUST NOT 绑定跳转路径，MUST NOT 具备可点击交互形态。未计价 token 大于 0 时，区块 MUST 可见地标出该数量，MUST NOT 把对应费用显示成 0 元。
 
 #### Scenario: 区块卡片展示
 
 - **WHEN** 用户打开仪表盘且 AI 用量数据加载完成
-- **THEN** 左侧第一行依次为「累计用量」「当天用量」「缓存命中率」三张副标题为「DeepSeek」的卡片，左侧第二行依次为「总费用」「当天费用」两张副标题为「DeepSeek」的卡片，智能体卡位于右侧列
+- **THEN** 左侧第一行依次为「累计用量」「当天用量」「缓存命中率」，左侧第二行依次为「总费用」「当天费用」
+- **AND** 五张卡副标题均为「平台」，费用来自账本
 
 #### Scenario: 五张 KPI 卡副标题一致
 
 - **WHEN** 用户查看「AI 用量」区块内已加载的五张 KPI 卡
-- **THEN** 每张卡都渲染一条副标题，且文案均为「DeepSeek」，不存在缺省文案「核心指标实时更新」
+- **THEN** 每张卡都渲染一条副标题，且文案均为「平台」
 
 #### Scenario: 当天 Token 用量不取平均
 
 - **WHEN** 当天 token 合计为 12,345,678 且当天任务数为 4
-- **THEN** 「当天用量」卡显示 `12.35M`，MUST NOT 显示按任务数平均后的数值，MUST NOT 使用 `K` 单位，且副标题为「DeepSeek」
+- **THEN** 「当天用量」卡显示 `12.35M`，MUST NOT 显示按任务数平均后的数值
 
 #### Scenario: 费用按累计与当天拆分
 
-- **WHEN** 累计 DeepSeek 费用为 5.64520228 元、当天费用为 2.66 元
-- **THEN** 「总费用」显示 `5.65 元` 且副标题为「DeepSeek」，「当天费用」显示 `2.66 元` 且副标题为「DeepSeek」
+- **WHEN** 累计已计价费用为 5.64520228 元、当天费用为 2.66 元
+- **THEN** 「总费用」显示 `5.65 元`，「当天费用」显示 `2.66 元`，副标题均为「平台」
+
+#### Scenario: 切换美元只改显示
+
+- **WHEN** 总费用库存为 6.71320000 元，展示汇率为 6.7132，用户切换到美元
+- **THEN** 总费用显示为 1 美元量级的换算值，库存仍为 6.71320000 元
 
 #### Scenario: AI KPI cards have no enter button
 
@@ -84,38 +96,19 @@
 - **THEN** 卡片内不存在「进入」按钮（`.kpi-card__enter`）
 - **AND** 卡片不带 `role="button"`，不进入可聚焦态，点击不改变路由
 
-### Requirement: 智能体用量按整份合计
-
-当前用户每个可见智能体 MUST 只有一份用量。同一智能体在不同角色、不同模型上的缓存命中 token、输入 token、输出 token 与总费用 MUST 分别加总。MUST NOT 按角色或模型拆成多张卡。标题 MUST 使用该智能体的助手显示名。总费用 MUST 为小数点后 8 位的十进制字符串，MUST NOT 使用科学计数法。没有小时用量的可见智能体 MUST 仍列出，缓存命中、输入、输出为 0，总费用为 `0.00000000`。
-
-#### Scenario: 执行者与验收者合成一张卡
-
-- **WHEN** 同一智能体既有执行者小时用量又有验收者小时用量
-- **THEN** 该智能体只出现一张卡，缓存命中、输入、输出与总费用分别为两组之和
-
-#### Scenario: 助手显示名作为标题
-
-- **WHEN** 智能体配置了助手显示名
-- **THEN** 卡片标题为该显示名
-
-#### Scenario: 零用量智能体仍出现
-
-- **WHEN** 可见智能体没有任何小时用量
-- **THEN** 卡片仍出现，缓存命中、输入、输出为 0，总费用为 0.00000000
-
 ### Requirement: 今日用量按小时返回且不提前出数
 
-系统 SHALL 在统计接口的 `charts.today_usage` 返回当天逐小时的用量，字段为 `tokens`、`cost`（等长 24 项，下标即小时 0–23）与 `current`。`tokens[h]` MUST 为第 h 小时（`[h:00, h+1:00)`）内「输入 token + 输出 token」之和，`cost[h]` MUST 为该小时内 DeepSeek 费用之和（元，8 位小数）；该小时尚未走完或尚未开始时，对应项 MUST 为 `null`，MUST NOT 提前给出该小时的数据，MUST NOT 返回当天累计值。`current` MUST 描述正在进行中的那一小时：`hour` 为当前时刻（0–24，最多 2 位小数）、`tokens` 与 `cost` 为该小时从起点到当前时刻的消耗；当前时刻正好落在整点时 `current` MUST 为 `null`。所有数值 MUST 来自平台全部小时用量表（含 `agent_id = 0` 的行），MUST NOT 按当前用户可见智能体过滤，MUST NOT 取任务表上的 token 列或按任务回写的费用。当天没有用量或小时用量表不可用时，已走完的小时 MUST 为 `0`、未走完与未开始的小时 MUST 为 `null`，且 MUST 不报错。该字段 MUST NOT 包含缓存命中序列。
+系统 SHALL 在统计接口的 `charts.today_usage` 返回当天逐小时的用量，字段为 `tokens`、`cost`（等长 24 项，下标即小时 0–23）与 `current`。`tokens[h]` MUST 为第 h 小时（`[h:00, h+1:00)`）内账本「输入 token + 输出 token」之和，`cost[h]` MUST 为该小时内已计价费用之和（人民币，8 位小数）；该小时尚未走完或尚未开始时，对应项 MUST 为 `null`，MUST NOT 提前给出该小时的数据，MUST NOT 返回当天累计值。`current` MUST 描述正在进行中的那一小时：`hour` 为当前时刻（0–24，最多 2 位小数）、`tokens` 与 `cost` 为该小时从起点到当前时刻的消耗；当前时刻正好落在整点时 `current` MUST 为 `null`。所有数值 MUST 来自 `ai_usage_records`，MUST NOT 读取小时表或任务费用列。当天没有用量时，已走完的小时 MUST 为 `0`、未走完与未开始的小时 MUST 为 `null`，且 MUST 不报错。该字段 MUST NOT 包含缓存命中序列。
 
 #### Scenario: 未到达的小时不出数
 
-- **WHEN** 当天 `11:05` 时读取统计接口，且 `[09:00,10:00)` 已消耗 1,239,521 token
+- **WHEN** 当天 `11:05` 时读取统计接口，且 `[09:00,10:00)` 的账本已消耗 1,239,521 token
 - **THEN** `tokens[9]` 为 `1,239,521`，`tokens[11]` 及之后的小时均为 `null`
-- **AND** `current.hour` 约为 `11.08`，`current.tokens` 为 `[11:00,11:05)` 的消耗
+- **AND** `current.hour` 约为 `11.08`，`current.tokens` 为 `[11:00,11:05)` 的账本消耗
 
 #### Scenario: 整点后归入已完成小时
 
-- **WHEN** 当天已过 `12:00`，`[11:00,12:00)` 共消耗 40 token
+- **WHEN** 当天已过 `12:00`，`[11:00,12:00)` 的账本共消耗 40 token
 - **THEN** `tokens[11]` 为 `40`，`current` 指向 `12` 点这一小时
 
 #### Scenario: 整点边界无进行中数据
@@ -125,7 +118,7 @@
 
 #### Scenario: 当天无用量
 
-- **WHEN** 平台当天没有任何小时用量
+- **WHEN** 平台当天没有任何账本行
 - **THEN** 已走完的小时为 `0`，未走完与未开始的小时为 `null`，`current` 的 `tokens` 与 `cost` 为 0，接口仍返回成功
 
 ### Requirement: AI 用量区块承载用量趋势图
@@ -143,3 +136,21 @@
 - **WHEN** 用户查看「趋势与动态」章节
 - **THEN** 该章节只有助手任务卡、任务执行结果与最近动态
 - **AND** 页面不存在重复的「每日 Token 用量」「每日 DeepSeek 费用」「今日 Token 与费用」「Voice 来源 Token 消耗」卡片
+
+### Requirement: AI 用量区块的数值配色
+
+AI 用量区块里的「平台账单」卡，其主指标（缓存命中率）与四个明细数值（当天用量 / 当天费用 / 总用量 / 总费用）MUST 使用与共享 `KpiCard` 相同的**深彩渐变**：accent（`--part-accent`）与墨色按 48% → 30% 混合，MUST NOT 混入纸色，MUST NOT 使用三段式渐变（末段淡化会让数字读不动）。数值与卡底（`--ink` 4% 混纸色）的计算对比度 MUST 不低于 4.5:1。
+
+单位（`M` / `元` / `%`）MUST 保持墨色并覆盖掉渐变，MUST NOT 跟随数值吃同一套渐变。字段名（缓存命中率 / 当天用量 …）MUST 保持次要色，MUST NOT 用 accent 上色。
+
+#### Scenario: 账单卡数值可读
+
+- **WHEN** 打开仪表盘并查看 AI 用量的「平台账单」卡
+- **THEN** `71.7%`、`0.60M`、`0.178 元` 等数值为 accent 与墨色 48%→30% 的渐变
+- **AND** 数值对卡底的对比度不低于 4.5:1
+- **AND** 单位与字段名仍是墨色 / 次要色，不吃渐变
+
+#### Scenario: 与统计卡同一套配方
+
+- **WHEN** 比较平台概览的统计卡数值与平台账单卡数值
+- **THEN** 两者的渐变区间一致（48% → 30%），只是 accent 取各自模块色

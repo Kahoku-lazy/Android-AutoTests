@@ -76,3 +76,32 @@ DeepSeek 费用 MUST 只接受 `deepseek-flash` 与 `deepseek-v4-pro`。其它�
 #### Scenario: 非 DeepSeek 角色不计费
 - **WHEN** 角色的提供商不是 DeepSeek，且该轮用量不为零
 - **THEN** 输入、输出、缓存命中费用均为 0
+
+### Requirement: 名片绑定的 SOP 按每次调用的模型计价
+
+名片绑定的 SOP 一次运行 MAY 使用两个不同模型。系统 MUST 按每次模型调用所属角色当时的模型名计价，再把各项费用相加写入该任务。系统 MUST NOT 用执行角色的模型名为验收角色的调用计价。既有控制设备任务与其它单模型任务 MUST 继续按其现有的单模型计价，本要求 MUST NOT 改变它们。任一次调用的模型名缺失时，该次费用 MUST 为 0，并且任务详情 MUST 能看出该次未计价。单价、取位与高峰规则仍遵循本规格既有要求。
+
+#### Scenario: 两个模型分别计价
+
+- **WHEN** 一次名片绑定的 SOP 中，执行角色使用 `deepseek-flash`，验收角色使用 `deepseek-v4-pro`，两侧都产生了非零用量，且调用时刻处于空闲时段
+- **THEN** 执行侧按 `deepseek-flash` 价目计费，验收侧按 `deepseek-v4-pro` 价目计费，任务总费用是两侧之和
+
+#### Scenario: 既有控制设备任务不被拆成两侧计价
+
+- **WHEN** 一条既有控制设备任务完成，且执行与验收使用同一个模型
+- **THEN** 该任务仍按该模型整单计价，不因本要求改变金额
+
+### Requirement: 实验展示与平台入账分开
+
+实验角色日志中的 4 位 DeepSeek 费用展示 MUST 继续只覆盖 `deepseek-flash` 与 `deepseek-v4-pro`，其它模型在该日志中的三项展示费用 MUST 为 0。该展示 MUST NOT 作为平台账本、仪表盘或任务费用的计算来源。平台入账 MUST 按模型名基数计价，MUST NOT 因提供商不是 DeepSeek 就把费用记为 0。
+
+#### Scenario: 非 DeepSeek 模型仍可入账
+
+- **WHEN** 一次平台调用的模型为 `grok-4.7`，且基数表有该模型
+- **THEN** 账本按该模型基数写出人民币费用
+- **AND** 实验角色日志若展示该模型，仍可显示三项 0，且不影响账本
+
+#### Scenario: 平台费用不读取实验日志
+
+- **WHEN** 实验日志中的 4 位费用与账本 8 位费用不一致
+- **THEN** 仪表盘与任务费用采用账本金额

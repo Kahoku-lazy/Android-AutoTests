@@ -70,18 +70,22 @@
 - **WHEN** 已登录用户请求 `GET /api/dashboard/activities/?limit=0` 或 `limit=51` 或非整数 `limit`
 - **THEN** HTTP 400 且响应含明确 `message`
 
-### Requirement: Activity feed merges assistant tasks and agent updates
+### Requirement: Activity feed lists workflow tasks
 
-活动条目 MUST 由当前用户可见的助手任务卡（`type` 为 `run`）与智能体更新（`type` 为 `agent`）合并、按 `time` 倒序构成。系统 MUST NOT 再查询已删除的测试执行表。合并窗口上限 MUST 为 100 条（先各源截取再合并截断），分页在该窗口内切片。每条 MUST 含 `type`、`action`、`time`（`YYYY-MM-DD HH:MM`）；`detail` MAY 省略。
+活动条目 MUST 只由工作流任务（`assistant_sop`）构成，`type` MUST 为 `run`，并按 `time` 倒序排列。系统 MUST NOT 再返回已下线智能体的更新条目，MUST NOT 再查询已删除的测试执行表，MUST NOT 把已退役的设备执行或用例编写任务写入活动流。窗口上限 MUST 为 100 条，分页在该窗口内切片。每条 MUST 含 `type`、`action`、`time`（`YYYY-MM-DD HH:MM`）；`detail` MAY 省略。
 
 #### Scenario: Task card appears as a run activity
 
-- **WHEN** 当前用户可见智能体下存在助手任务卡
+- **WHEN** 存在一条工作流任务
 - **THEN** 活动数组中出现 `type` 为 `run` 的条目
 - **AND** `action` 含该任务标题（无标题则用目标或「未命名任务」）
 
 #### Scenario: Agent update remains an agent activity
 
-- **WHEN** 当前用户可见智能体发生更新
-- **THEN** 活动数组中出现 `type` 为 `agent` 的条目
-- **AND** `action` 含该智能体名称
+- **WHEN** 历史数据中仍有已下线智能体的更新记录
+- **THEN** 活动数组中不出现 `type` 为 `agent` 的条目
+
+#### Scenario: Retired task kinds do not appear
+
+- **WHEN** 同时存在工作流任务与已退役的设备执行或用例编写任务
+- **THEN** 活动数组只含工作流任务

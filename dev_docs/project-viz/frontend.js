@@ -311,6 +311,10 @@
     },
     methods: {
       fmt: fmt,
+      share: function (value, total) {
+        if (!total) return "—";
+        return ((Number(value || 0) / Number(total)) * 100).toFixed(1) + "%";
+      },
       isNodeActive: function (node) {
         return this.activeModule === node.key;
       },

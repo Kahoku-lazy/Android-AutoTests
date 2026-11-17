@@ -75,18 +75,49 @@
 - **THEN** 各入口卡视觉与共享 doodle `entry` 卡一致
 - **AND** 不再出现与 doodle 壳冲突的默认大圆角模糊阴影统计卡样式
 
-### Requirement: Entry card primary value matches accent shadow
+### Requirement: 仪表盘信息层级字号
 
-`entry` 变体的主数值色 MUST 与该卡硬偏移阴影所用 accent 色一致（同一 CSS 自定义属性来源）。系统 SHALL NOT 把 `entry` 主数值固定为墨色。默认 `kpi` 变体的主数值 MUST 仍为墨色。标题、描述、趋势文案与图标描边 MUST NOT 改用 accent。薄包装组件 SHALL NOT 用更高优先级规则把 `entry` 主数值重新锁成墨色。
+仪表盘页面 MUST 使用三档字号表达层级：大标题（平台概览 / AI 用量等章节标题）20px；卡片与区块标题 16px；其余文本（描述、字段名、时间、标签）14px。
 
-#### Scenario: Dashboard entry value uses the same color as the hard shadow
+大标题与数值（如 KPI 的 28px 数字）MUST NOT 因本口径改动。
+
+图表内部绘制文字（ECharts 轴标签与图例）不在本要求范围内。
+
+#### Scenario: 卡片标题与正文分档
+
+- **WHEN** 用户打开仪表盘
+- **THEN** 「在线设备」「DEEPSEEK 账单」「用量趋势」等标题为 16px
+- **AND** 「核心指标实时更新」「当天用量」等文本为 14px
+
+#### Scenario: 大标题与数值不变
+
+- **WHEN** 用户打开仪表盘
+- **THEN** 「平台概览」「AI 用量」仍为 20px
+- **AND** KPI 数值仍为 28px
+
+### Requirement: KPI 主数值取深彩渐变
+
+共享统计卡（`kpi` 与 `entry` 两个变体）的主数值 MUST 使用传入 accent 与墨色 `--ink` 混合的同色相渐变：起点 MUST 为 accent 与墨色按 **48%** 混合，终点 MUST 为 accent 与墨色按 **30%** 混合。该渐变 MUST NOT 混入纸色，MUST NOT 出现低于 30% 或高于 48% 的 accent 浓度。
+
+主数值与卡底（`--color-white`）的计算对比度 MUST 不低于 **4.5:1**（大字号门槛 3:1 之上再留余量）。不支持 `background-clip: text` 时，数值 MUST 回落到终点色（`accent 30% + ink`），MUST NOT 回落到透明度或纯墨色。
+
+标题、描述、时间与字段名 MUST NOT 改用 accent 上色；卡片描边与三层硬影 MUST 继续取同一 accent。
+
+#### Scenario: 入口卡数值取深彩渐变
 
 - **WHEN** 仪表盘以 `entry` 变体渲染统计入口卡
-- **THEN** 居中主数值的颜色与该卡硬偏移阴影色一致
-- **AND** 标题、描述与趋势小字仍为墨色或既有次要/成功色，不随 accent 改变
+- **THEN** 主数值的渐变两端分别为 accent 与墨色 48% / 30% 的混合色
+- **AND** 终点色对卡白的对比度不低于 4.5:1
+- **AND** 卡片硬偏移阴影仍取同一 accent
 
-#### Scenario: Compact kpi variant value stays ink
+#### Scenario: 紧凑卡数值取同一区间
 
 - **WHEN** 页面以默认 `kpi` 变体渲染共享统计卡
-- **THEN** 主数值仍为墨色
-- **AND** 硬偏移阴影仍使用传入的模块 accent
+- **THEN** 主数值使用与 `entry` 变体相同的 48%→30% 区间
+- **AND** 标题与描述保持墨色 / 次要色，不随 accent 改变
+
+#### Scenario: 六支模块色都达标
+
+- **WHEN** 分别用 device / ai / runner / element / case / report 六支彩笔渲染统计卡
+- **THEN** 每个数值的终点色对卡白的对比度都在 7:1 以上
+- **AND** 同一排卡片仍能靠色相区分，不糊成同一种深灰

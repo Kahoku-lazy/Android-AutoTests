@@ -111,7 +111,7 @@ L4 分页 MUST 由共享 `usePagination` composable 提供（`currentPage` / `to
 
 ### Requirement: Tables draw no visible grid lines
 
-表格纸面 MUST NOT 呈现可见的行网格线与列网格线：模块色 SHALL NOT 用于行分隔线或列分隔线；系统 SHALL NOT 出现「以白色或近白色令牌（如 `--app-border-light`、`--color-white`）作为可见边框色」的声明。确需保留 1px 占位时 MUST 写作 `transparent` 并注明意图。表头排版 MUST 由全局与共享皮肤唯一定义（`--app-size-xs` / 700 / `uppercase`）；模块 SHALL NOT 覆写表头字号或字重。
+表格纸面 MUST NOT 呈现可见的行网格线与列网格线：模块色 SHALL NOT 用于行分隔线或列分隔线；系统 SHALL NOT 出现「以白色或近白色令牌（如 `--app-border-light`、`--color-white`）作为可见边框色」的声明。确需保留 1px 占位时 MUST 写作 `transparent` 并注明意图。表头排版 MUST 由全局与共享皮肤唯一定义：字号 **16px**（`--app-size-md`）、单行不折（`nowrap` 落在 `th .cell`）；字重与大小写变换沿用共享皮肤既有定义。模块 SHALL NOT 覆写表头字号。
 
 #### Scenario: No module-specific separators
 
@@ -121,9 +121,10 @@ L4 分页 MUST 由共享 `usePagination` composable 提供（`currentPage` / `to
 
 #### Scenario: Header typography is single-sourced
 
-- **WHEN** 比较 `/devices`、`/reports` 与 `/cases` 的表格表头计算样式
-- **THEN** 字号、字重与大小写变换一致（12px / 700 / uppercase）
-- **AND** 不存在模块私有的表头字号或字重覆盖
+- **WHEN** 比较 `/devices`、`/bugs`、`/reports` 与 `/cases` 的表格表头计算样式
+- **THEN** 字号一致为 16px，字重与大小写变换一致
+- **AND** 每个表头单行显示，不因字号变化折行
+- **AND** 不存在模块私有的表头字号覆盖（设备页与 BUG 页的旧覆写已删除）
 
 #### Scenario: White is never a visible border color
 

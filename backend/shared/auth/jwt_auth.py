@@ -58,22 +58,27 @@ def _revocation_store():
     return accounts_api
 
 
-def _is_revoked(jti: str = "", sid: str = "") -> bool:
-    """Check whether this token's *jti*, or its session *sid*, has been revoked.
+def _is_revoked(jti: str = "", sid: str = "", user_id: str = "", issued_at: int = 0) -> bool:
+    """Check whether this token's *jti*, session *sid*, or owning account is revoked.
 
-    Both identifiers are resolved in a single query, so session-level revocation
-    costs nothing extra on the hot path (``verify_token`` runs on every
-    authenticated request).
+    Session and token identifiers share one query. Account disable is a second
+    lookup: a token issued before the latest disable stays revoked even after
+    the account is enabled again.
 
     When the revocation store is unreachable we log an error and return ``False``
     (allow the token).  This is the safer default: rejecting every
     token when the revocation store hiccups would lock all users out.
     """
-    if not jti and not sid:
+    if not jti and not sid and not user_id:
         return False
     try:
-        return _revocation_store().is_revoked(sid=sid, jti=jti)
-    except DatabaseError as exc:
+        store = _revocation_store()
+        if (jti or sid) and store.is_revoked(sid=sid, jti=jti):
+            return True
+        if user_id and store.user_revoked_before(int(user_id), int(issued_at or 0)):
+            return True
+        return False
+    except (DatabaseError, TypeError, ValueError) as exc:
         logger.error("JWT 吊销：查询吊销记录失败，放行 token: %s", exc)
         return False
 
@@ -181,7 +186,7 @@ def verify_token(token: str, expected_type: Optional[str] = None) -> dict:
     )
     jti = unverified.get("jti", "")
     sid = unverified.get("sid", "")
-    if _is_revoked(jti, sid):
+    if _is_revoked(jti, sid, unverified.get("sub", ""), unverified.get("iat", 0)):
         raise jwt.InvalidTokenError("Token has been revoked")
     if expected_type and unverified.get("type") != expected_type:
         raise jwt.InvalidTokenError(f"Invalid token type: expected {expected_type}")

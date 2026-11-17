@@ -4,7 +4,7 @@
 业务：
 1. 登录：账号密码正确则发本次会话；账号或密码不对则拒绝进入。
 2. 注册：校验通过则创建用户并直接登录；用户名已有则拒绝。
-3. 续期：用续期凭证换新的访问凭证，仍属同一次登录。
+3. 续期：用续期凭证换新的访问凭证，仍属同一次登录；账号已停用或令牌早于停用则拒绝。
 4. 登出：作废这次登录的访问凭证和续期凭证；服务暂不可用时拒绝登出，请稍后重试。
 5. 当前用户：返回账号，以及是否管理员。
 """
@@ -18,6 +18,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from backend.apps.accounts.api import user_revoked_before
 from backend.shared.auth.jwt_auth import (
     BlacklistUnavailableError,
     blacklist_token,
@@ -128,6 +129,12 @@ class RefreshView(APIView):
                     {"detail": "令牌类型错误，需要刷新令牌"},
                     status=status.HTTP_401_UNAUTHORIZED,
                 )
+            # 停用与注销都不能换新令牌续命；停用前签发的 refresh 在启用后仍然无效。
+            if _refresh_blocked(payload):
+                return Response(
+                    {"detail": "刷新令牌无效或已过期"},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
             # 透传 sid：续期后的 access 仍属同一会话，登出时一并失效
             new_access = create_access_token(payload["sub"], sid=payload.get("sid"))
             return Response({"access_token": new_access, "token_type": "bearer"})
@@ -200,6 +207,25 @@ class MeView(APIView):
                 }
             }
         )
+
+
+def _refresh_blocked(payload: dict) -> bool:
+    """续期是否必须拒绝：账号不存在、已停用，或令牌早于最近一次停用。
+
+    Args:
+        payload: 已验签的 refresh 载荷。
+
+    Returns:
+        必须拒绝时为 True。
+    """
+    try:
+        user_id = int(str(payload.get("sub") or ""))
+    except (TypeError, ValueError):
+        return True
+    user = User.objects.filter(pk=user_id).only("is_active").first()
+    if user is None or not user.is_active:
+        return True
+    return user_revoked_before(user_id, int(payload.get("iat") or 0))
 
 
 def _first_error(errors) -> str:

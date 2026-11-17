@@ -9,6 +9,7 @@
  */
 import type { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "axios"
 import type { AuthResponse } from "@/shared/types/auth"
+import { isAccountDisabled, startAccountDisabledCountdown } from "@/shared/auth/account-disabled"
 
 export interface AuthInterceptorDeps {
   getToken: () => string
@@ -60,6 +61,10 @@ export function createAuthInterceptors(deps: AuthInterceptorDeps): AuthIntercept
   }
 
   async function authErrorInterceptor(err: AxiosError): Promise<unknown> {
+    if (isAccountDisabled(err.response?.data)) {
+      startAccountDisabledCountdown(deps.clearToken, deps.redirectToLogin)
+      return Promise.reject(err)
+    }
     const originalRequest = err.config as RetryableRequest | undefined
     if (
       err.response?.status === 401 &&

@@ -4,7 +4,8 @@
 
 登录鉴权模块。用户仍直接使用 Django 内置 `auth_user`；本模块自有表只有一张
 `acc_token_revocations`（`models.TokenRevocation`，登出吊销记录）。
-写操作全部收敛在 `api.py`（`create_user` / `revoke_session` / `revoke_token` / `purge_expired`）。
+写操作全部收敛在 `api.py`（`create_user` / `revoke_session` / `revoke_token` /
+`revoke_user` / `purge_users` / `purge_expired`）。
 规格真相源：`openspec/specs/auth-session/spec.md`。
 
 ## 契约：会话与登出
@@ -17,6 +18,8 @@
   否则续期后的令牌会脱离会话管辖（登出撤不掉它）。
 - **吊销记录 TTL = `JWT_REFRESH_TTL`**：登出请求只携带 access（1h），但同会话的 refresh 还有至多 7d 寿命；
   TTL 取短了会让 refresh 在记录过期后恢复可用。
+- **停用 = 账号档吊销**：`kind=user`，`ref` 为账号主键。判定时令牌 `iat` 早于该行
+  `created_at`（含同一秒）才算作废。启用不删该行：新登录的 `iat` 更晚所以放行，停用前的旧令牌仍然无效。
 - **吊销记录落库**：判定只看未过期行（`expires_at > now()`），写入时顺手清理一批过期行；
   服务重启不清空吊销状态，也不再依赖 Redis。
 - **fail-closed**：吊销写入失败（吊销存储不可用，如数据库异常）时登出返回 `503` + `retry`，不得假装成功。
@@ -45,6 +48,6 @@
 |---|---|---|
 | login | 200 / 400 / 401 | 成功 / 用户名或密码缺失 / 凭证错误 |
 | register | 200 / 400 / 409 | 成功 / 长度·一致性·邮箱校验 / 用户名已存在 |
-| refresh | 200 / 401 | 换新 access / refresh 无效、已吊销或类型错 |
+| refresh | 200 / 401 | 换新 access / refresh 无效、已吊销、账号已停用或类型错 |
 | logout | 200 / 503 | 已吊销 / 吊销存储不可用（拒绝登出） |
-| me | 200 / 401 / 404 | 身份 / 无令牌或已吊销 / 用户已删除 |
+| me | 200 / 401 / 403 / 404 | 身份 / 无令牌或已吊销 / 账号已停用（`account_disabled`）/ 用户已删除 |

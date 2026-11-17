@@ -2,7 +2,8 @@
 
 import logging
 
-from django.db import close_old_connections
+from django.contrib.auth import get_user_model
+from django.db import DatabaseError, close_old_connections
 from django.http import JsonResponse
 
 from backend.shared.auth.jwt_auth import verify_token
@@ -37,6 +38,10 @@ PUBLIC_PREFIXES = [
 DRAIN_PATH = "/api/system/drain/"
 _LOOPBACK_ADDRS = {"127.0.0.1", "::1"}
 
+# 停用或已注销账号的专用拒绝。前端靠 code 与普通 401 区分，不走续期。
+ACCOUNT_DISABLED_CODE = "account_disabled"
+ACCOUNT_DISABLED_MESSAGE = "你的账号已被超管停用，10 秒后将退出登录"
+
 
 def _is_public(path: str) -> bool:
     """Check if a request path is publicly accessible without JWT."""
@@ -44,6 +49,17 @@ def _is_public(path: str) -> bool:
         if path.startswith(prefix):
             return True
     return False
+
+
+def _is_log_ticket(request) -> bool:
+    """助手报告只在带一次性 ticket 时免登录头。列表仍要登录。"""
+    path = request.path
+    return (
+        request.method == "GET"
+        and path.startswith("/api/ai/assistants/threads/")
+        and "/logs/" in path
+        and bool(request.GET.get("ticket"))
+    )
 
 
 def _is_loopback(addr: str) -> bool:
@@ -68,7 +84,7 @@ class JWTAuthenticationMiddleware:
 
         path = request.path
 
-        if path in RETIRED_AUTH_PATHS or _is_public(path):
+        if path in RETIRED_AUTH_PATHS or _is_public(path) or _is_log_ticket(request):
             return self.get_response(request)
 
         if path == DRAIN_PATH and _is_loopback(request.META.get("REMOTE_ADDR", "")):
@@ -95,8 +111,42 @@ class JWTAuthenticationMiddleware:
                 status=401,
             )
 
+        disabled = _disabled_account_response(request.user_id)
+        if disabled is not None:
+            return disabled
+
         # 有效 JWT 的请求豁免 CSRF：浏览器无法跨站携带自定义 Authorization 头，
         # 因而不存在 CSRF 场景；CsrfViewMiddleware（排在本中间件之后）读取此标记。
         request._dont_enforce_csrf_checks = True
 
         return self.get_response(request)
+
+
+def _disabled_account_response(user_id) -> JsonResponse | None:
+    """停用或已注销的账号返回专用 403；查库失败时放行，避免抖动踢全员。
+
+    Args:
+        user_id: 令牌里的账号主键。
+
+    Returns:
+        专用拒绝；账号仍启用时返回 None。
+    """
+    try:
+        pk = int(str(user_id))
+    except (TypeError, ValueError):
+        return None
+    try:
+        active = get_user_model().objects.filter(pk=pk).values_list("is_active", flat=True).first()
+    except DatabaseError as exc:
+        logger.error("停用判定失败，放行请求: %s", exc)
+        return None
+    if active is True:
+        return None
+    return JsonResponse(
+        {
+            "status": False,
+            "message": ACCOUNT_DISABLED_MESSAGE,
+            "code": ACCOUNT_DISABLED_CODE,
+        },
+        status=403,
+    )

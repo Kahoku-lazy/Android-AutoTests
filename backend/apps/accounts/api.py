@@ -5,13 +5,16 @@
 1. 创建平台用户，并返回账号编号、用户名和邮箱。
 2. 用户名已存在时拒绝创建。
 3. 记录吊销（会话级 sid / 单令牌级 jti），供登出后立即失效。
-4. 判定某个会话或令牌是否已被吊销，并清理过期记录。
+4. 判定某个会话、令牌或停用账号是否已被吊销，并清理过期记录。
+5. 停用时按账号主键作废旧令牌；启用不撤该档，新令牌靠更晚的签发时间放行。
+6. 批量注销只删除账号行及其组、权限关系，不碰其它业务表。
 """
 
 import logging
 
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import DatabaseError, IntegrityError, transaction
 from django.db.models import Q
@@ -26,8 +29,11 @@ __all__ = [
     "create_user",
     "is_revoked",
     "purge_expired",
+    "purge_users",
     "revoke_session",
     "revoke_token",
+    "revoke_user",
+    "user_revoked_before",
     "set_user_active",
     "set_user_password",
     "set_operator",
@@ -105,6 +111,62 @@ def _purge_expired_quietly(limit: int) -> None:
         logger.warning("清理过期吊销记录失败（不影响登出）: %s", exc)
 
 
+def revoke_user(user_id: int, ttl_seconds: int | None = None) -> None:
+    """按账号主键作废停用前签发的全部令牌。
+
+    同一账号只留一行：重复停用覆盖 `created_at`，以最后一次停用为准。
+    有效期默认覆盖 refresh 的最长寿命，避免记录先过期、旧令牌复活。
+
+    Args:
+        user_id: 目标账号主键。
+        ttl_seconds: 记录有效期（秒）；缺省取 `JWT_REFRESH_TTL`。
+    """
+    ref = str(int(user_id))
+    ttl = getattr(settings, "JWT_REFRESH_TTL", 604800) if ttl_seconds is None else ttl_seconds
+    now = timezone.now()
+    # 分界取停用时刻的下一秒：同一秒内先签发再停用的旧令牌作废，
+    # 启用后新登录的 iat 至少晚这一秒，不会被自己刚写入的记录误伤。
+    issued_cutoff = now + timedelta(seconds=1)
+    expires_at = now + timedelta(seconds=max(int(ttl), 1))
+    # update_or_create 不刷新 auto_now_add 的 created_at；重复停用必须以最后一次为准。
+    with transaction.atomic():
+        TokenRevocation.objects.update_or_create(
+            kind=TokenRevocation.KIND_USER,
+            ref=ref,
+            defaults={"expires_at": expires_at},
+        )
+        TokenRevocation.objects.filter(kind=TokenRevocation.KIND_USER, ref=ref).update(
+            created_at=issued_cutoff
+        )
+
+
+def user_revoked_before(user_id: int, issued_at: int) -> bool:
+    """判定该账号的这张令牌是否早于最近一次停用。
+
+    Args:
+        user_id: 令牌 `sub`。
+        issued_at: 令牌 `iat`（Unix 秒）。无 `iat` 时只要停用档还在就视为作废。
+
+    Returns:
+        存在未过期的账号档，且令牌签发不晚于该档 `created_at` 时为 True。
+        分界比停用时刻晚 1 秒，同一秒内先签发再停用的令牌也算作废。
+    """
+    row = (
+        TokenRevocation.objects.filter(
+            kind=TokenRevocation.KIND_USER,
+            ref=str(int(user_id)),
+            expires_at__gt=timezone.now(),
+        )
+        .only("created_at")
+        .first()
+    )
+    if row is None:
+        return False
+    if not issued_at:
+        return True
+    return int(issued_at) <= int(row.created_at.timestamp())
+
+
 def is_revoked(sid: str = "", jti: str = "") -> bool:
     """判定该会话或令牌是否处于吊销状态（只看未过期记录）。
 
@@ -165,6 +227,9 @@ def set_user_active(user_id: int, active: bool) -> User:
     if user.is_active != target:
         user.is_active = target
         user.save(update_fields=["is_active"])
+    if not target:
+        # 重复停用也重写账号档：以最后一次停用时刻作废此前签发的令牌。
+        revoke_user(user.id)
     return user
 
 
@@ -220,6 +285,34 @@ def set_operator(user_id: int, enabled: bool) -> User:
     elif not enabled and already:
         user.groups.remove(group)
     return user
+
+
+def purge_users(user_ids: list[int]) -> list[int]:
+    """删除一批账号本身，不碰其它 App 的业务表。
+
+    Django 删除用户时会连带删除组关系与权限关系。项目、任务、缺陷、设备锁
+    用字符串记创建者，不挂用户外键，因此不受影响。调用方负责权限校验；
+    本函数不判断谁能删谁。任一删除失败则整批回滚。
+
+    Args:
+        user_ids: 待注销的账号主键，须已去重且全部存在。
+
+    Returns:
+        已删除的主键列表，顺序与入参一致。
+
+    Raises:
+        ValueError: 名单为空，或其中有主键对不上账号。
+    """
+    ids = [int(item) for item in user_ids]
+    if not ids:
+        raise ValueError("没有可注销的账号")
+    found = set(User.objects.filter(pk__in=ids).values_list("pk", flat=True))
+    missing = [item for item in ids if item not in found]
+    if missing:
+        raise ValueError("账号不存在")
+    with transaction.atomic():
+        User.objects.filter(pk__in=ids).delete()
+    return ids
 
 
 def _get_user_or_raise(user_id: int) -> User:

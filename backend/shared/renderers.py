@@ -29,6 +29,8 @@ class EnvelopeJSONRenderer(JSONRenderer):
             wrapped = {"status": False, "message": _extract_message(data)}
             if isinstance(data, dict) and "retry" in data:
                 wrapped["retry"] = bool(data["retry"])
+            if isinstance(data, dict) and data.get("code"):
+                wrapped["code"] = data["code"]
         else:
             wrapped = {"status": True, "data": data}
 

@@ -5,41 +5,6 @@
 
 ## Requirements
 
-### Requirement: planner 装配页面流工具子集
-
-设备执行链路的 planner MUST 装配页面流工具 `list_page_flows` 与 `get_page_flow`，使其在规划阶段能列出页面流文档并读取单篇语义摘要。该子集 MUST 只引用已注册的平台工具——工具装配按名取子集、对缺失名静默跳过，含未注册名的子集会导致静默漏装配而不报错。executor 与 verifier 的工具子集 MUST NOT 因本要求发生变化。
-
-#### Scenario: planner 可见页面流工具
-
-- **WHEN** 设备执行链路装配 planner
-- **THEN** planner 的工具子集含 `list_page_flows` 与 `get_page_flow`
-
-#### Scenario: 子集不引用未注册工具
-
-- **WHEN** 检查 planner / executor / verifier 三个工具子集
-- **THEN** 其中每个工具名都存在于平台工具注册表
-- **AND** 仓库内工具手册所述的角色子集与代码一致
-
-#### Scenario: 其它角色子集不受影响
-
-- **WHEN** 检查 executor 与 verifier 的工具子集
-- **THEN** executor 仍为原设备控制工具集（含通用日志查询）；verifier 仍为「截图工具」加它按另有要求装配的只读日志检查工具（见 `device-log-read-tool`），本要求 MUST NOT 改变其中任何一项
-
-### Requirement: planner 默认提示词含页面流阅读指引
-
-设备执行链路 planner 的默认系统提示词 MUST 指引模型先列出页面流文档、再按需读取某篇的语义摘要，且 MUST 只使用已注册的工具名与参数。该提示词是引擎常量（`engines/ai/agents/config.py` 的 `PLANNER_PROMPT`），MUST NOT 依赖数据库字段或迁移下发。
-
-#### Scenario: planner 提示词含指引
-
-- **WHEN** 读取引擎的 planner 提示词常量
-- **THEN** 其中含「先 `list_page_flows` 列出页面流、需要细节用 `get_page_flow`」的指引
-- **AND** 只出现已注册的工具名
-
-#### Scenario: 运行时装配取该常量
-
-- **WHEN** 设备执行链路装配 planner
-- **THEN** 其 `system_prompt` 等于引擎 planner 提示词常量
-
 ### Requirement: 规划模型标注需日志核对的步骤
 
 设备执行链路的规划模型 SHALL 为每个步骤产出一个「是否需日志核对」标记（`log_check`，布尔）：当该步的断言需要靠设备日志才能核对时标为真（例如点击开关并断言开关事件日志、断言设备上报或应答日志），当断言只看页面（页面出现某文案、进入某页面、元素状态变化）时标为假。该字段 MUST 有缺省值（假），缺失时系统 MUST 按「不需日志核对」处理且 MUST NOT 报错。规划模型 MUST NOT 把所有步骤一律标为真，MUST NOT 把与日志无关的页面断言标为真。
@@ -72,24 +37,3 @@
 
 - **WHEN** 读取引擎的 planner 提示词常量
 - **THEN** 提示词含日志核对标记的判定口径与输出字段说明
-
-### Requirement: 规划读取的页面流摘要只含页面与节点关系
-
-规划模型经 `get_page_flow` 读取的页面流摘要 SHALL 只包含**页面与节点关系**：节点（页面身份 / 起点 / 弹窗等）、连线（含可用于命名点击目标的触发口名称）、路径，以及节点的出入关系。该摘要 MUST NOT 输出页面元素清单（`elements`）与逐页跳转入口清单（`navigation_entries`）。
-
-理由：规划需要的是「从哪一页、点哪个入口、到哪一页」，该信息由连线与路径承载；元素清单既非规划所需，其定位字段也可能为空。元素的真相源是元素定位域，不是本摘要。
-
-#### Scenario: 摘要不含元素清单
-
-- **WHEN** 读取一篇含多个页面节点的页面流文档摘要
-- **THEN** 各节点条目只含节点身份与出入关系，**不含** `elements` 与 `navigation_entries`
-
-#### Scenario: 摘要仍可支撑命名点击目标
-
-- **WHEN** 页面流中从「APP主页」经「设备主页入口」跳转到「设备主页页面」
-- **THEN** 摘要的连线条目仍带有触发口名称（如 `设备主页入口`），规划据此写出「点击『设备主页入口』」这类明确步骤
-
-#### Scenario: 诊断能力不退化
-
-- **WHEN** 文档中存在端口槽位不可解析的连线
-- **THEN** 摘要的 `parse_warnings` 仍记录该问题（告警改由连线遍历产生，不因不再收集元素而丢失）

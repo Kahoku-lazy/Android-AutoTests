@@ -28,7 +28,9 @@
 
 #### Scenario: Dashboard workflow card as entry variant
 
-- **WHEN** 仪表盘以 `entry` 变体渲染「工作流」类统计入口，并提供导航目标
+<!-- 场景名沿自变更前：工作流卡已随页面流模块退役删除，本场景改为以「在线设备」卡守住 entry 变体的整卡激活契约 -->
+
+- **WHEN** 仪表盘以 `entry` 变体渲染「在线设备」统计入口，并提供导航目标 `/devices`
 - **THEN** 卡片展示标题、主数值与描述，且不出现「进入」按钮
 - **AND** 激活整卡 SHALL 导航到对应模块路径
 

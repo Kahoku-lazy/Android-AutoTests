@@ -16,9 +16,11 @@
 
 #### Scenario: Name input dialog in workflow shell
 
-- **WHEN** 用户在 workflow 工作台新建目录或页面流
-- **THEN** 名称输入以 Element Plus 对话框呈现
-- **AND** 打开后输入框自动聚焦并全选、按 Enter 提交、名称为空时不提交
+<!-- 场景名沿自变更前：workflow 工作台名称弹层已随页面流模块删除，本场景改为以用例管理「新建项目」弹层守住名称输入对话框契约 -->
+
+- **WHEN** 用户在用例管理新建项目
+- **THEN** 名称输入以 Element Plus 对话框呈现，按 Enter 提交、名称为空时不提交
+- **AND** 全仓不存在自建 backdrop 的名称输入弹层（原 workflow 工作台弹层已随模块删除）
 
 #### Scenario: Thumbnail enlargement preview
 
@@ -32,21 +34,24 @@
 
 #### Scenario: Delete file or directory
 
-- **WHEN** 用户删除工作流文件或目录
+- **WHEN** 用户在用例管理目录树删除文件或目录
 - **THEN** 出现 Element Plus 确认框而非浏览器原生对话框
 - **AND** 取消时数据不变，确定时执行删除并保持原提示文案
 
 #### Scenario: Canvas destructive actions
 
-- **WHEN** 用户在画布双击连线、按 Delete 删除选中节点、或清空画布
-- **THEN** 三处均出现 Element Plus 确认框
-- **AND** 取消时画布数据不变，确定后操作与状态提示与原实现一致
+<!-- 场景名沿自变更前：画布危险操作确认已随页面流模块删除，本场景改为守住「零残留实现」 -->
+
+- **WHEN** 检索画布双击连线、Delete 删除选中节点、清空画布的确认实现
+- **THEN** 命中数为 `0`（已随页面流模块删除）
+- **AND** 平台其余危险操作确认仍经 Element Plus 确认框或共享 `ConfirmButton`
 
 #### Scenario: Empty-canvas overwrite guard
 
-- **WHEN** 保存时画布为空、服务器已有节点，且调用方要求确认覆盖
-- **THEN** 覆盖确认由 Element Plus 确认框发起
-- **AND** 取消时不覆盖服务器数据并保持拒绝保存的语义
+<!-- 场景名沿自变更前：空画布覆盖确认已随页面流模块删除，本场景改为守住「零残留实现」 -->
+
+- **WHEN** 检索「保存时画布为空、服务器已有节点」的覆盖确认实现
+- **THEN** 命中数为 `0`（已随页面流模块删除）
 
 ### Requirement: Single implementation per overlay scenario
 
@@ -70,7 +75,7 @@
 
 #### Scenario: Context menu preserved
 
-- **WHEN** 用户在目录树、画布节点或连线上右键
+- **WHEN** 用户在目录树等元素上右键
 - **THEN** 菜单仍为光标锚定的上下文菜单
 - **AND** 不被替换为对话框
 

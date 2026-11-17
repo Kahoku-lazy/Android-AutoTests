@@ -40,20 +40,13 @@
 - **THEN** 悬停 MUST NOT 播放旋转或位移动效
 - **AND** 虚线边与硬阴影仍可见
 
-### Requirement: Two resource lists consume SketchCard
+### Requirement: Case project list consumes SketchCard
 
-用例项目列表与页面流原型列表 MUST 使用共享 `SketchCard`。SHALL NOT 继续维护私有 `project-card__accent` / `proto-card__accent` 顶条实现。
+用例项目列表 MUST 使用共享 `SketchCard`。SHALL NOT 继续维护私有 `project-card__accent` 顶条实现。
 
 #### Scenario: Case project list uses SketchCard
 
 - **WHEN** 用户打开用例管理且存在至少一个项目
 - **THEN** 每张卡为 `SketchCard` 撕纸壳
 - **AND** 点击卡片进入该项目工作台
-- **AND** 删除控件不冒泡为进入
-
-#### Scenario: Workflow prototype list uses SketchCard
-
-- **WHEN** 用户打开页面流且存在至少一个原型
-- **THEN** 每张卡为 `SketchCard` 撕纸壳
-- **AND** 点击卡片进入该原型工作台
 - **AND** 删除控件不冒泡为进入

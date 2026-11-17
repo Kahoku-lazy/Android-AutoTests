@@ -6,7 +6,7 @@
 ## Requirements
 ### Requirement: L2 plus pages expose visible back navigation
 
-深度大于单页的工作台页面（Hub 以下工作台 / 叶子、报告详情链、AI 深链）MUST 在 L2 页面 `.doc-body` 顶部提供可见回退：返回芯片、波浪面包屑，或二者并存。系统 SHALL NOT 把浏览器原生 history 当作唯一回退手段。系统 SHALL NOT 把该回退导航渲染在 `.wb-header` 内。单页模块（仪表盘、设备管理、页面流）SHALL NOT 为凑齐导航而伪造祖先链。
+深度大于单页的工作台页面（Hub 以下工作台 / 叶子、报告详情链、AI 深链）MUST 在 L2 页面 `.doc-body` 顶部提供可见回退：返回芯片、波浪面包屑，或二者并存。系统 SHALL NOT 把浏览器原生 history 当作唯一回退手段。系统 SHALL NOT 把该回退导航渲染在 `.wb-header` 内。单页模块（仪表盘、设备管理）SHALL NOT 为凑齐导航而伪造祖先链。
 
 #### Scenario: Report detail shows list ancestor
 
@@ -48,7 +48,7 @@
 
 系统 MUST 用且只用下列两种模版表达子页导航，不得在页内再叠与侧栏重复的顶栏 Tab：
 
-1. 面包屑条：Hub → 工作台 → 叶子（用例管理；本轮不改页面流画布页头结构以外的画布）
+1. 面包屑条：Hub → 工作台 → 叶子（用例管理）
 2. 列表行进入：报告 run/task/cases 与同类列表进详情，详情正文顶部提供回列表
 
 AI 助手只有一个侧栏入口，不再占用「侧栏子项」模版。

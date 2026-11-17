@@ -705,13 +705,6 @@
                 <td>列表用 SketchTable；详情用章节纸</td>
               </tr>
               <tr>
-                <td><strong>页面流</strong></td>
-                <td><span class="depth depth-2">L2</span></td>
-                <td><code>/workflow</code> → <code>.../prototypes/:id</code></td>
-                <td>Hub 卡 → 画布台</td>
-                <td>列表撕纸卡；画布外框虚线，节点勿旋转</td>
-              </tr>
-              <tr>
                 <td><strong>AI 助手</strong></td>
                 <td><span class="depth depth-2">侧栏子项 + 深链</span></td>
                 <td>agents → agent/task</td>
@@ -734,11 +727,11 @@
           </article>
           <article class="mini">
             <h3>C · 分栏台</h3>
-            <p>左树/面板 + 右内容。用例工作台、页面流画布台。</p>
+            <p>左树/面板 + 右内容。用例工作台。</p>
           </article>
           <article class="mini">
             <h3>H · Hub 入口</h3>
-            <p>项目/原型撕纸卡网格，点进下一层。用例、页面流共用。</p>
+            <p>项目/原型撕纸卡网格，点进下一层。用例。</p>
           </article>
         </div>
 
@@ -774,7 +767,7 @@
             <span class="prio prio-p0">P0</span>设备管理（已有原型）→ 报告列表接同一张表纸<br />
             <span class="prio prio-p1">P1</span>用例管理「Hub→台→叶」落地（同一导航模版）<br />
             <span class="prio prio-p1">P1</span>AI 侧栏子项壳 + 任务/智能体详情回退<br />
-            <span class="prio prio-p2">P2</span>页面流列表 + 画布外框；串口日志表纸；仪表盘钉板收尾
+            <span class="prio prio-p2">P2</span>串口日志表纸；仪表盘钉板收尾
           </p>
         </div>
       </section>
@@ -790,7 +783,7 @@
         <div class="grid-3" style="margin-bottom:18px">
           <article class="mini">
             <h3>① 面包屑条</h3>
-            <p>Hub → 工作台 → 叶子。元素/用例/页面流用。</p>
+            <p>Hub → 工作台 → 叶子。用例用。</p>
             <ul>
               <li>页头下方一条</li>
               <li>祖先可点，当前项黄马克笔</li>
@@ -1095,7 +1088,7 @@
       <!-- MATRIX -->
       <section class="page" id="page-matrix">
         <p class="page-lead">
-          其余模块的改法一览 + 迷你原型。报告走「表纸→详情」；页面流走「Hub→画布」；用例走「Hub→树台→用例纸」。
+          其余模块的改法一览 + 迷你原型。报告走「表纸→详情」；用例走「Hub→树台→用例纸」。
         </p>
 
         <h2>测试报告 · 列表 → 详情</h2>
@@ -1169,60 +1162,6 @@
           </div>
         </div>
 
-        <h2>页面流 · Hub → 画布</h2>
-        <div class="wb" data-accent="workflow" style="margin-bottom:22px">
-          <div class="wb-head">
-            <div id="wf-head-list">
-              <div class="meta">WORKFLOW · HUB</div>
-              <h3>页面流</h3>
-            </div>
-            <div class="hidden" id="wf-head-canvas">
-              <button class="back-chip" type="button" id="wf-back">← 原型列表</button>
-              <div>
-                <div class="crumbs">
-                  <button type="button" id="wf-crumb">页面流</button>
-                  <span class="sep">/</span>
-                  <span class="here">Govee App 主路径</span>
-                </div>
-                <h3 style="margin-top:4px">原型工作台</h3>
-              </div>
-            </div>
-            <div style="margin-left:auto" class="btn-row" id="wf-actions">
-              <button class="btn btn-yellow" type="button" id="wf-enter">打开示例原型</button>
-            </div>
-          </div>
-          <div class="wb-body">
-            <div id="wf-list">
-              <div class="proj-grid">
-                <button class="proj-card" type="button" id="wf-card" style="box-shadow:3px 3px 0 0 var(--c-workflow)">
-                  <span class="tape"></span>
-                  <strong>Govee App 主路径</strong>
-                  <span>12 个页面流 · 点进画布</span>
-                </button>
-              </div>
-            </div>
-            <div class="hidden" id="wf-canvas">
-              <div class="wb-split">
-                <div class="tree-pane">
-                  <h4>Directories</h4>
-                  <button class="tree-item active" type="button">📄 首页→商城</button>
-                  <button class="tree-item" type="button">📄 下单接口流</button>
-                </div>
-                <div class="content-pane" style="padding:0">
-                  <div class="canvas-mock">
-                    <div class="node start">Start</div>
-                    <div class="node-line"></div>
-                    <div class="node page">Home</div>
-                    <div class="node-line2"></div>
-                    <div class="node end">Mall</div>
-                  </div>
-                  <p class="sub" style="padding:10px 14px;margin:0">画布外框虚线；节点近直角硬阴影；图内部状态仍走 VueFlow 适配层，不改编排逻辑。</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <h2 style="margin-top:22px">与已有方案的关系</h2>
         <div class="panel flat">
           <div class="pin yellow"></div>
@@ -1245,7 +1184,7 @@
       nav: ["NAV RULES", "子页导航三种模版"],
       hub: ["PROTOTYPE", "列表 → 工作台 → 叶子"],
       ai: ["PROTOTYPE", "AI 侧栏子项 + 深链"],
-      matrix: ["PROTOTYPE", "报告 / 页面流 / 用例"],
+      matrix: ["PROTOTYPE", "报告 / 用例"],
     };
 
     document.querySelectorAll(".nav-item").forEach((btn) => {
@@ -1370,26 +1309,6 @@
     document.getElementById("rep-back").addEventListener("click", backRep);
     document.getElementById("rep-crumb").addEventListener("click", backRep);
 
-    /* Workflow */
-    function enterWf() {
-      document.getElementById("wf-list").classList.add("hidden");
-      document.getElementById("wf-canvas").classList.remove("hidden");
-      document.getElementById("wf-head-list").classList.add("hidden");
-      document.getElementById("wf-head-canvas").classList.remove("hidden");
-      document.getElementById("wf-actions").classList.add("hidden");
-      toast("进入原型画布");
-    }
-    function backWf() {
-      document.getElementById("wf-list").classList.remove("hidden");
-      document.getElementById("wf-canvas").classList.add("hidden");
-      document.getElementById("wf-head-list").classList.remove("hidden");
-      document.getElementById("wf-head-canvas").classList.add("hidden");
-      document.getElementById("wf-actions").classList.remove("hidden");
-    }
-    document.getElementById("wf-enter").addEventListener("click", enterWf);
-    document.getElementById("wf-card").addEventListener("click", enterWf);
-    document.getElementById("wf-back").addEventListener("click", backWf);
-    document.getElementById("wf-crumb").addEventListener("click", backWf);
   </script>
 </body>
 </html>

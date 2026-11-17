@@ -36,7 +36,7 @@
 - **图标块** 34×34、2.5px 墨框、底 = accent；**删除键** 26×22、1.5px 虚线墨框、hover 变马克笔红底白字（`stopPropagation`，不进入）
 - **排版**：标题 `--app-size-md` / 800；正文 `--app-size-sm` / 2 行截断；无描述显示「暂无描述」；右下 meta `--app-size-xs` / 700
 - **a11y**：`role="button"` + `tabindex="0"` + Enter/Space
-- **用途**：用例 / 元素 / 页面流资源网格入口
+- **用途**：用例资源网格入口
 
 ## 3. KpiCard 指标卡
 

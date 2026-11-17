@@ -108,7 +108,7 @@ Doodle Craft 是本平台前端的**默认设计方案**：极简几何 · 粗�
 | --- | --- | --- |
 | 页面级分区（带标题的一大段） | `.doc-section` | AppCard |
 | 可复用数据块（图表卡 / 表格卡 / 指标组） | `AppCard` | 裸 `el-card` |
-| 资源入口卡（用例 / 元素 / 页面流） | `SketchCard` | 顶条彩色卡 |
+| 资源入口卡（用例） | `SketchCard` | 顶条彩色卡 |
 | 单个指标 | `KpiCard` | 自造清新风统计卡 |
 | 列表条目 / 线路卡 | `DoodleNote` | AppCard |
 | 多行多列列表 | `AppTable` | 原生 `el-table`、`el-card` 外套 |

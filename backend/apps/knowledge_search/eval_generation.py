@@ -30,6 +30,8 @@ def extract_text(response) -> str:
     """
     从聊天响应里拼出纯文本（只取 text 块）。
 
+    块可能是 pydantic TextBlock 对象，也可能是 dict 形状，两种都兼容。
+
     Args:
         response: agentscope ChatResponse。
 
@@ -38,8 +40,14 @@ def extract_text(response) -> str:
     """
     parts = []
     for block in response.content or []:
-        if isinstance(block, dict) and block.get("type") == "text":
-            parts.append(str(block.get("text") or ""))
+        if isinstance(block, dict):
+            block_type = block.get("type")
+            text = block.get("text")
+        else:
+            block_type = getattr(block, "type", "")
+            text = getattr(block, "text", "")
+        if block_type == "text":
+            parts.append(str(text or ""))
     return "".join(parts)
 
 
@@ -82,10 +90,14 @@ def _usage_event(response, *, api_key_env: str, model_name: str, round_index: in
 
 
 async def _call(model, prompt: str):
-    """发一轮用户消息并返回响应。"""
-    from agentscope.message import Msg
+    """发一轮用户消息并返回响应。
 
-    return await model([Msg(name="evaluator", content=prompt, role="user")])
+    content 必须经 UserMsg 归一成块列表：裸 Msg 的 content 字段
+    是 pydantic list[ContentBlock]，直接传 str 会校验失败。
+    """
+    from agentscope.message import UserMsg
+
+    return await model([UserMsg(name="evaluator", content=prompt)])
 
 
 async def generate_positive_questions(

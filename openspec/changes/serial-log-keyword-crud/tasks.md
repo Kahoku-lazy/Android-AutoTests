@@ -1,7 +1,7 @@
 ## 1. 实施前协调与批准
 
 - [x] 1.1 核对 `add-serial-log-custom-ports` 落地状态（views/urls/前端是否已提交），确定共享文件（views.py / urls.py / api.ts / constants.ts / LogKeywordPanel.vue）的分区追加方式。验证：实施记录写明对方状态与本单改动分区。
-- [ ] 1.2 将 design.md「红线变更申请」提交需求方确认（前端「关键词表只读」条款、后端接口表与职责段）。验证：获得明确同意后才允许任务 5.1 动这两份 AGENTS；未获批则停下上报。
+- [x] 1.2 将 design.md「红线变更申请」提交需求方确认（前端「关键词表只读」条款、后端接口表与职责段）。验证：获得明确同意后才允许任务 5.1 动这两份 AGENTS；未获批则停下上报。
 
 ## 2. 后端
 
@@ -22,10 +22,18 @@
 
 ## 5. 文档与关单
 
-- [ ] 5.1 凭 1.2 批准修改两份 AGENTS 条款（仅申请范围内文本替换，不动双轨制等其它条款）。验证：diff 仅含申请条款。
-- [ ] 5.2 OpenAPI 基线随接口改动更新：`python manage.py spectacular --file openspec/openapi.yaml --validate --fail-on-warn`。验证：基线 diff 的 serial-log 段恰为本单三端点；**若工作区仍有其它会话未提交的接口改动混入基线，停下上报协调归属，不得把对方改动带进本单提交**。
-- [ ] 5.3 本地门禁 `python run.py check` 通过（openapi 项随 5.2 对齐）；逐文件 `git add`（禁 `-A`）、Conventional Commits（如 `feat(serial_log): 关键词页面维护（超管新建/编辑/删除）`）、推 Kahoku。验证：ci-phase1.yml 6 个 job 全绿。
+- [x] 5.1 凭 1.2 批准修改两份 AGENTS 条款（仅申请范围内文本替换，不动双轨制等其它条款）。验证：diff 仅含申请条款。
+- [x] 5.2 OpenAPI 基线随接口改动更新：`python manage.py spectacular --file openspec/openapi.yaml --validate --fail-on-warn`。验证：基线 diff 的 serial-log 段恰为本单三端点；**若工作区仍有其它会话未提交的接口改动混入基线，停下上报协调归属，不得把对方改动带进本单提交**。
+- [x] 5.3 本地门禁 `python run.py check` 通过（openapi 项随 5.2 对齐）；逐文件 `git add`（禁 `-A`）、Conventional Commits（如 `feat(serial_log): 关键词页面维护（超管新建/编辑/删除）`）、推 Kahoku。验证：ci-phase1.yml 6 个 job 全绿。
 
 ## 6. 验收
 
-- [ ] 6.1 浏览器验收：超管账号走新建（含 SKU 专用）→ 编辑 → 删除全流程，核对目录刷新与计数；普通账号核对四数据列、零写控件、403；临时数据经 api 清理。验证：验收记录与截图存 `temps/`，随关单说明提交。
+- [x] 6.1 浏览器验收：超管账号走新建（含 SKU 专用）→ 编辑 → 删除全流程，核对目录刷新与计数；普通账号核对四数据列、零写控件、403；临时数据经 api 清理。验证：验收记录与截图存 `temps/`，随关单说明提交。
+
+## 实施记录
+
+- **1.2 批准（2026-11-18）**：需求方在会话中明确批准 design.md 红线变更申请；5.1 已按批准范围执行（仅前端红线条款 + 后端接口表/职责段）。
+- **测试**：后端 serial_log 93 项、前端 serial-log 84 项全绿；vue-tsc / eslint / lint:styles / vite build / 架构边界零违规。
+- **5.2 基线插曲**：首次重生成的基线混入并行会话未提交 WIP 口径，致 CI run 44258854675 的 openapi-schema 失败；用 HEAD 干净 worktree 重生成并核验差异仅属对方已提交区域（serial-log 段零变化），修正提交 13d2683f。
+- **5.3 CI**：本单提交 27f498a9 + 修正 13d2683f；自有 run 44259635775 被并行推送的 concurrency 取消（非失败）；含本单的最新 run 44259992823（head 06aa1bf8）六 job 全绿。本地门禁剩余失败项（ruff-format / prettier-ts）经核验属并行会话未提交 WIP（task_list / ops-console），本单文件全干净。
+- **6.1 验收（2026-11-18）**：temps/acceptance_keyword_crud.py 真实浏览器 13 项断言全 PASS：超管新建（通用 + allow-create 新 SKU H9999）/ 编辑回填与生效 / 删除二次确认；普通用户无新建按钮、恰四数据列、无行内操作；探针词与临时超管 kw_crud_probe 经 api/ORM 清理，DB 回落 70 行。记录 temps/acceptance_crud_record.md，截图 temps/acceptance_crud_{superuser,dialog,normal}.png。

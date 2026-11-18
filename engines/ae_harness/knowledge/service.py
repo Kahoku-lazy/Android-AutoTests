@@ -6,17 +6,19 @@ Python 调试：➡️ python -m engines.ae_harness.knowledge.service 🏁
 时间：➡️ 2026-11-15 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
-修改时间: ➡️ 2026-11-15 🏁
+修改时间: ➡️ 2026-11-18 🏁
 类型: ➡️ Harness 配置模块 🏁
 简介说明：➡️
 1. KnowledgeHit: 一条未经改写的检索命中。
 2. Retrieval: 一次检索的结果，区分「有命中」「无命中」「检索不可用」。
 3. KnowledgeRetriever: 首次使用时才造嵌入模型、开库、建索引；不跨事件循环复用。
+4. usage_events(): 取出并清空嵌入用量事件（阶段与库名已打标），供调用方入账。
 🏁
 关联模块：➡️
 1. engines.ae_harness.knowledge.config: 库目录与检索参数。
 2. engines.ae_harness.knowledge.indexer: 按库增量索引。
 3. engines.ae_harness.knowledge.store: 本地 SQLite 向量库。
+4. engines.ae_harness.knowledge.usage: 嵌入用量记录代理与事件打标。
 🏁
 测试：➡️
 1. tests/engines/ae_harness/unit/test_knowledge_retrieve.py: 命中字段、无命中与不可用
@@ -38,6 +40,7 @@ from .config import INDEX_DIR, KnowledgeBaseSpec, KnowledgeConfig, load_config
 from .indexer import KnowledgeIndexer
 from .models import CreatedEmbedding, create_embedding_model
 from .store import SQLiteVectorStore
+from .usage import UsageEvent, UsageRecordingEmbedding, tag_events
 
 __all__ = ["KnowledgeHit", "KnowledgeRetriever", "Retrieval"]
 
@@ -104,7 +107,7 @@ class KnowledgeRetriever:
     一个进程内的知识库检索器。
 
     惰性初始化：构造时不读配置以外的任何东西、不连库、不建索引。每次入口新建一个，
-    **不要跨事件循环复用**（内部有 asyncio.Lock）。
+    **不要跨事件循环复用**（内部有 asyncio.Lock）。嵌入用量经 usage_events() 取出。
 
     Attributes:
         config: 知识库配置。
@@ -121,6 +124,8 @@ class KnowledgeRetriever:
         self.config = config
         self._index_dir = index_dir or INDEX_DIR
         self._embedding: CreatedEmbedding | None = None
+        self._usage_proxy: UsageRecordingEmbedding | None = None
+        self._usage: list[UsageEvent] = []
         self._lock = asyncio.Lock()
         self._ready: set[str] = set()
         self._errors: dict[str, str] = {}
@@ -198,6 +203,8 @@ class KnowledgeRetriever:
                 self._errors[base] = str(exc)
                 _LOG.exception("知识库 %s 索引失败: %s", base, exc)
                 return 0
+            finally:
+                self._collect_usage(phase="index", base=base)
             self._counts[base] = count
             self._ready.add(base)
             return count
@@ -274,6 +281,8 @@ class KnowledgeRetriever:
             self._errors[base] = str(exc)
             _LOG.exception("知识库 %s 检索失败: %s", base, exc)
             return []
+        finally:
+            self._collect_usage(phase="retrieve", base=base)
         return [
             KnowledgeHit(
                 base=base,
@@ -287,11 +296,35 @@ class KnowledgeRetriever:
             if getattr(result.chunk.content, "text", "")
         ]
 
+    def usage_events(self) -> list[UsageEvent]:
+        """
+        取出并清空累计的嵌入用量事件。
+
+        Returns:
+            已打阶段与库名标签的用量事件，按发生顺序；取走后内部清空。
+        """
+        self._collect_usage(phase="", base="")
+        events = self._usage
+        self._usage = []
+        return events
+
+    def _collect_usage(self, *, phase: str, base: str) -> None:
+        """把代理里的事件打标后收进累计列表；代理未创建时什么都不做。"""
+        if self._usage_proxy is not None:
+            self._usage.extend(tag_events(self._usage_proxy.drain_events(), phase=phase, base=base))
+
     def _embedding_model(self) -> CreatedEmbedding:
         """懒造嵌入模型；同一实例内只造一次。"""
         if self._embedding is None:
             self._embedding = create_embedding_model(self.config.embedding)
         return self._embedding
+
+    def _proxy(self) -> UsageRecordingEmbedding:
+        """懒造用量记录代理；包住真实模型，同一实例内只造一次。"""
+        if self._usage_proxy is None:
+            created = self._embedding_model()
+            self._usage_proxy = UsageRecordingEmbedding(created.model, created.api_key_env)
+        return self._usage_proxy
 
     def _store(self) -> SQLiteVectorStore:
         """打开本地向量库。"""
@@ -302,7 +335,7 @@ class KnowledgeRetriever:
         return KnowledgeBase(
             name=spec.name,
             description=spec.description,
-            embedding_model=self._embedding_model().model,
+            embedding_model=self._proxy(),
             vector_store=store,
             collection=spec.name,
         )

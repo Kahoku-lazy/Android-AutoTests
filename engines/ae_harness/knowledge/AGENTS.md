@@ -12,7 +12,8 @@ Harness 内的**独立知识库模块**：自带向量模型配置与库目录�
 | `models.py` | 按配置创建 DashScope 嵌入模型，交出密钥环境变量名 |
 | `store.py` | `SQLiteVectorStore`：`VectorStoreBase` 的本地实现，余弦相似度 |
 | `indexer.py` | 只扫 `.md/.txt`，按修改时间/大小/切块版本增量重建 |
-| `service.py` | `KnowledgeRetriever.retrieve()`：懒初始化，失败降级为「检索不可用」 |
+| `service.py` | `KnowledgeRetriever.retrieve()`：懒初始化，失败降级为「检索不可用」；`usage_events()` 交出嵌入用量 |
+| `usage.py` | `UsageRecordingEmbedding`：透传嵌入调用并记录 token 用量事件；零 token 不产事件 |
 | `tool.py` | `build_knowledge_tools()`：产出只读 `search_knowledge` 工具 |
 | `probe.py` / `__main__.py` | 命令行探针 `index` / `retrieve`，不创建智能体、不调聊天模型 |
 | `config/models.yaml` | **只允许**向量模型条目 |
@@ -21,7 +22,7 @@ Harness 内的**独立知识库模块**：自带向量模型配置与库目录�
 
 ## 红线（禁止）
 
-1. **禁止被 Harness 其它模块 import** —— 本期引用数为零，由 `tests/engines/ae_harness/unit/test_knowledge_independence.py` 守护。评测达标要接回时，只允许在目标入口加一处局部可选导入，并同一提交里更新该测试的期望引用清单。
+1. **禁止被 ae_harness 内其它子包 import** —— 挂载到 Agent 的效果评测完成前，Harness 内部引用数为零，由 `tests/engines/ae_harness/unit/test_knowledge_independence.py` 守护。评测达标要接回角色时，只允许在目标入口加一处局部可选导入，并同一提交里更新该测试的期望引用清单。**平台 backend 例外**（2026-11-18 变更申请获批，见 `openspec/specs/knowledge-search-entry` 与 `harness-knowledge`）：backend 可经局部可选导入使用只读检索与用量出口，不计入 Harness 内部引用，不得使本模块反向依赖平台。
 2. **禁止 import Harness 其它子包** —— 不 import `agents/`、`assistant/`、`event/`、`middleware/`、`workflow/`、`tools/`。本模块要能整目录删除而不牵连任何一处。
 3. **禁止把知识库放进 `tools/`** —— `tools/` 只收 Python 内置函数工具、Skill、MCP；带配置与状态的模块一律留在根级子包。
 4. **`config/models.yaml` 只允许向量模型** —— 出现 chat / realtime / tts 字段即视为配置非法；不得改成「共用 agents 的模型表」。
@@ -35,9 +36,11 @@ Harness 内的**独立知识库模块**：自带向量模型配置与库目录�
 
 `.env` 全仓只有仓库根一份，本模块只读不写，也不得新增第二份 `.env`。
 
-## 当前状态：未挂载
+## 当前状态：未挂角色，平台只读检索桥已放行
 
-本期**不接到任何角色**。原因：只验证了能跑通（索引成功、命中字段齐全、三种返回文案正确），**准确率与召回率没测**。评测（Recall@k / MRR / 误命中率）达标前，知识库只能经探针使用。
+**不接到任何角色**：只验证了能跑通（索引成功、命中字段齐全、三种返回文案正确），**准确率与召回率没测**。挂载到 Agent 前必须先过评测（Recall@k / MRR / 误命中率，评测能力见 `openspec/changes/add-knowledge-auto-eval`）。
+
+**平台 backend 只读检索桥已放行**（2026-11-18 变更申请获批）：`backend/apps/knowledge_search` 经局部可选导入直调 `KnowledgeRetriever`，返回检索原文并取 `usage_events()` 入账；不造 Agent、不生成答案。整目录删除后平台降级为「检索不可用」，不炸入口。
 
 ## 如何接回 Agent（评测通过后再做）
 

@@ -36,6 +36,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { path: "/devices", icon: "smartphone", label: "设备管理" },
       { path: "/serial-log", icon: "terminal", label: "串口日志" },
+      { path: "/knowledge-search", icon: "book-open", label: "知识库" },
     ],
   },
   {
@@ -70,6 +71,7 @@ export const MOD_COLORS = {
   "/bugs": "var(--c-runner)",
   "/ai-assistant": "var(--c-ai)",
   "/serial-log": "var(--c-workflow)",
+  "/knowledge-search": "var(--c-case)",
   "/agent-reports": "var(--c-report)",
   "/ops/users": "var(--c-account)",
   "/ops/agents": "var(--c-element)",

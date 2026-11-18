@@ -16,6 +16,7 @@ import cmRoutes from "@/modules/case-manager/routes"
 
 import aiRoutes from "@/modules/ai-assistant/routes"
 import slRoutes from "@/modules/serial-log/routes"
+import ksRoutes from "@/modules/knowledge-search/routes"
 import taskRoutes from "@/modules/task-list/routes"
 import bugRoutes from "@/modules/bug-manager/routes"
 import opsRoutes from "@/modules/ops-console/routes"
@@ -28,6 +29,7 @@ const routes = [
   ...aiRoutes,
   ...taskRoutes,
   ...slRoutes,
+  ...ksRoutes,
   ...bugRoutes,
   ...opsRoutes,
   { path: "/", redirect: "/dashboard" },

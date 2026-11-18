@@ -1,0 +1,14 @@
+/* 知识库检索页布局：分栏台（左模块 / 右提问），滚动只留 .doc-body。 */
+
+.knowledge-search-workbench .ks-split {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: var(--app-space-lg);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .knowledge-search-workbench .ks-split {
+    grid-template-columns: 1fr;
+  }
+}

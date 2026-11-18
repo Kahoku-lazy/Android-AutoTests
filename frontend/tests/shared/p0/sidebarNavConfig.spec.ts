@@ -35,6 +35,19 @@ describe("[P0] 侧栏入口配色互不重复", () => {
     expect(MOD_COLORS["/devices"]).not.toBe(MOD_COLORS["/serial-log"])
   })
 
+  it("数据组末尾有知识库入口，且与同组两项不同色", () => {
+    const group = NAV_CATEGORIES.find((category) => category.key === "data")
+    expect(group?.items.map((item) => item.path)).toEqual([
+      "/devices",
+      "/serial-log",
+      "/knowledge-search",
+    ])
+    const dataColors = ["/devices", "/serial-log", "/knowledge-search"].map(
+      (path) => MOD_COLORS[path],
+    )
+    expect(new Set(dataColors).size).toBe(3)
+  })
+
   it("运营组三项互相不同色", () => {
     const ops = ["/ops/users", "/ops/agents", "/ops/model-configs"].map((path) => MOD_COLORS[path])
     expect(new Set(ops).size).toBe(3)

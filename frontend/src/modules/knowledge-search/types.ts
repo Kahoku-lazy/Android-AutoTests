@@ -72,6 +72,7 @@ export interface EvalRun {
   pos_count: number
   neg_count: number
   status: "pending" | "running" | "done" | "failed"
+  phase: string
   progress_done: number
   progress_total: number
   metrics: Partial<EvalMetrics>

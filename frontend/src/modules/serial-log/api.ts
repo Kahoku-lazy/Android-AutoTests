@@ -9,6 +9,10 @@ export interface LogPortRow {
   sku: string
   /** 无线串口盒串口侧波特率（仅展示，不参与采集） */
   baud: number
+  /** 登记来源：config=平台配置（只读基线）/ custom=页面自定义（可增删改） */
+  origin: "config" | "custom" | string
+  /** 完整监听地址（本机 IP:端口）；IP 未探测到时为空串 */
+  address: string
   /** 监听开关：平台是否持续监听该端口 */
   enabled: boolean
   /** 运行时状态：端口此刻是否真的在监听 */
@@ -37,10 +41,39 @@ export interface LogPortLinesPayload {
 
 export async function fetchLogPorts(): Promise<{
   status: boolean
-  data?: { ports?: LogPortRow[] }
+  data?: { ports?: LogPortRow[]; listen_ip?: string }
   message?: string
 }> {
   const { data } = await djangoClient.get("/serial-log/ports/")
+  return data
+}
+
+/** 新增自定义端口（仅超管）：保存即增量开启监听，返回真实监听结果 */
+export async function createLogPort(payload: {
+  port: number
+  sku: string
+  baud: number
+}): Promise<{ status: boolean; data?: LogPortRow; message?: string }> {
+  const { data } = await djangoClient.post("/serial-log/ports/", payload)
+  return data
+}
+
+/** 编辑自定义端口（仅超管）：SKU / 波特率，端口号不可改 */
+export async function updateLogPort(
+  port: number,
+  payload: { sku?: string; baud?: number },
+): Promise<{ status: boolean; data?: LogPortRow; message?: string }> {
+  const { data } = await djangoClient.patch(`/serial-log/ports/${port}/`, payload)
+  return data
+}
+
+/** 删除自定义端口（仅超管）：停监听、删登记，历史日志文件保留 */
+export async function deleteLogPort(port: number): Promise<{
+  status: boolean
+  data?: { port: number; deleted: boolean; note: string }
+  message?: string
+}> {
+  const { data } = await djangoClient.delete(`/serial-log/ports/${port}/`)
   return data
 }
 

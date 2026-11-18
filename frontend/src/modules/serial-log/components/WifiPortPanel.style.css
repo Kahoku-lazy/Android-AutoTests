@@ -323,6 +323,9 @@
 .lp-st.is-idle {
   --sp-color: var(--c-workflow);
 }
+.lp-st.is-fail {
+  --sp-color: var(--app-status-danger);
+}
 .lp-st.is-off {
   --sp-color: var(--c-report);
 }
@@ -361,4 +364,74 @@
   .lp-st {
     transition: none;
   }
+}
+
+/* ══════ 2026-11 自定义端口：本机 IP 条 / 来源徽标 / 行内操作组 ══════ */
+
+/* 本机监听地址条：实线浅底（卡片 / 条状容器一律实线） */
+.lp-ipbar {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  flex-wrap: wrap;
+  margin-bottom: var(--app-space-md);
+  padding: var(--app-space-sm) var(--app-space-md);
+  border: 1.5px solid color-mix(in srgb, var(--ink) 22%, transparent);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-subtle);
+}
+.lp-ip-ico {
+  font-size: var(--app-size-md);
+}
+.lp-ip-label {
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-text-secondary);
+}
+.lp-ip-value {
+  font-family: var(--app-font-mono);
+  font-size: var(--app-size-md);
+  font-weight: var(--app-font-weight-heavy);
+  color: var(--app-text-primary);
+  background: linear-gradient(
+    transparent 55%,
+    color-mix(in srgb, var(--c-workflow) 55%, transparent) 55%
+  );
+  padding: 0 var(--app-space-xs);
+}
+.lp-ip-empty {
+  font-size: var(--app-size-sm);
+  color: var(--app-text-muted);
+}
+.lp-ip-hint {
+  flex-basis: 100%;
+  font-size: var(--app-size-xs);
+  line-height: var(--app-line-height-normal);
+  color: var(--app-text-secondary);
+}
+
+/* 来源徽标：配置 = 天蓝浅底 / 自定义 = 薄荷绿浅底（模块色只做浅底装饰） */
+.lp-origin {
+  display: inline-block;
+  margin-left: var(--app-space-xs);
+  padding: 0 var(--app-space-xs);
+  border: 1.5px solid color-mix(in srgb, var(--ink) 55%, transparent);
+  border-radius: var(--el-border-radius-small);
+  font-size: var(--app-size-xs);
+  font-weight: var(--app-font-weight-bold);
+  vertical-align: 2px;
+}
+.lp-origin.is-config {
+  background: color-mix(in srgb, var(--c-workflow) 30%, var(--app-bg-card));
+}
+.lp-origin.is-custom {
+  background: color-mix(in srgb, var(--c-device) 30%, var(--app-bg-card));
+}
+
+/* 行内操作组：日志查看 / 重试 / 编辑 / 删除 */
+.lp-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+  flex-wrap: wrap;
 }

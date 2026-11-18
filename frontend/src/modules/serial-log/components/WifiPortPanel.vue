@@ -3,10 +3,13 @@
     <div>
       <h3 class="sl-cat-title">{{ PORTS_PANEL_TITLE }}</h3>
       <p class="sl-cat-sub">
-        {{ PORTS_PANEL_DESC }} · 端口 / SKU名称 / 波特率来自平台配置登记（只读）
+        {{ PORTS_PANEL_DESC }} · 配置端口来自平台登记（只读）；自定义端口可新增 / 编辑 / 删除
       </p>
     </div>
     <div class="sl-cat-actions">
+      <DoodleBtn v-if="props.canManage" tone="yellow" @click="openAdd">
+        {{ PORTS_ADD_LABEL }}
+      </DoodleBtn>
       <button type="button" class="sl-btn" :disabled="loading" @click="loadPorts">
         {{ loading ? "刷新中…" : "刷新" }}
       </button>
@@ -14,6 +17,14 @@
   </div>
 
   <div class="sl-cat-body sketch-kit">
+    <div class="lp-ipbar">
+      <span class="lp-ip-ico" aria-hidden="true">📡</span>
+      <span class="lp-ip-label">{{ PORTS_IP_LABEL }}</span>
+      <strong v-if="listenIp" class="lp-ip-value">{{ listenIp }}</strong>
+      <span v-else class="lp-ip-empty">{{ PORTS_IP_EMPTY }}</span>
+      <DoodleBtn v-if="listenIp" tone="paper" @click="copyIp">{{ PORTS_IP_COPY_LABEL }}</DoodleBtn>
+      <span class="lp-ip-hint">{{ PORTS_IP_HINT }}</span>
+    </div>
     <ErrorState v-if="loadError" :message="loadError" @retry="loadPorts" />
     <SkeletonCard v-else-if="loading && !ports.length" variant="list" :lines="3" />
     <EmptyState
@@ -52,8 +63,18 @@
           <div class="lp-id">
             <span class="lp-badge">🔌</span>
             <div>
-              <strong class="lp-port-no">{{ record.port }}</strong>
-              <span class="lp-port-sub">{{ record.sku }}</span>
+              <strong class="lp-port-no">
+                {{ record.port }}
+                <span
+                  class="lp-origin"
+                  :class="record.origin === 'custom' ? 'is-custom' : 'is-config'"
+                >
+                  {{ PORTS_ORIGIN_LABELS[record.origin] || record.origin }}
+                </span>
+              </strong>
+              <span class="lp-port-sub">
+                {{ record.sku }} · {{ record.address || PORTS_ADDRESS_FALLBACK }}
+              </span>
             </div>
           </div>
         </template>
@@ -74,7 +95,21 @@
           </span>
         </template>
         <template #cell-actions="{ record }">
-          <DoodleBtn tone="paper" @click="openLog(record)">日志查看</DoodleBtn>
+          <div class="lp-actions">
+            <DoodleBtn tone="paper" @click="openLog(record)">日志查看</DoodleBtn>
+            <DoodleBtn
+              v-if="record.enabled && !record.listening"
+              tone="teal"
+              :disabled="togglingPort === record.port"
+              @click="setEnabled(record, true)"
+            >
+              {{ PORTS_RETRY_LABEL }}
+            </DoodleBtn>
+            <template v-if="props.canManage && record.origin === 'custom'">
+              <DoodleBtn tone="paper" @click="openEdit(record)">{{ PORTS_EDIT_LABEL }}</DoodleBtn>
+              <DoodleBtn tone="danger" @click="remove(record)">{{ PORTS_DELETE_LABEL }}</DoodleBtn>
+            </template>
+          </div>
         </template>
       </AppTable>
 
@@ -96,7 +131,7 @@
         <span aria-hidden="true">ℹ️</span>
         <span>
           {{ LOG_DISABLE_WARNING }}；波特率是无线串口盒串口侧的参数，只作展示，不参与采集（日志走
-          TCP 监听）。
+          TCP 监听）。删除自定义端口会保留历史日志文件。
           <b v-if="!props.canManage">{{ SERIAL_LOG_READONLY_HINT }}</b>
         </span>
       </div>
@@ -143,10 +178,21 @@
       </div>
     </div>
   </el-drawer>
+
+  <PortFormDialog
+    :visible="dialogVisible"
+    :edit-row="editRow"
+    :existing-ports="ports.map((row) => row.port)"
+    :saving="saving"
+    :error="formError"
+    @close="closeDialog"
+    @submit="submit"
+  />
 </template>
 
 <script setup lang="ts">
-/** WifiPortPanel — 串口日志页「无线端口」Tab：五列表格 + 只说监听中筛选 + 分页 + 原始日志抽屉 */
+/** WifiPortPanel — 串口日志页「无线端口」Tab：本机 IP 条 + 五列表格 + 自定义端口增删改
+ *  + 只看监听中筛选 + 分页 + 原始日志抽屉；监听失败红色胶囊与重试。 */
 import { computed, onMounted, ref } from "vue"
 import AppTable from "@/shared/components/AppTable.vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
@@ -155,12 +201,25 @@ import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
 import { usePagination } from "@/shared/composables/usePagination"
 import { useLogPorts } from "../composables/useLogPorts"
+import { useCustomPorts } from "../composables/useCustomPorts"
+import PortFormDialog from "./PortFormDialog.vue"
 import {
+  PORTS_ADD_LABEL,
+  PORTS_ADDRESS_FALLBACK,
+  PORTS_DELETE_LABEL,
+  PORTS_EDIT_LABEL,
+  PORTS_IP_COPY_LABEL,
+  PORTS_IP_EMPTY,
+  PORTS_IP_HINT,
+  PORTS_IP_LABEL,
+  PORTS_LISTEN_FAIL_LABEL,
   PORTS_ONLY_LISTENING_LABEL,
+  PORTS_ORIGIN_LABELS,
   PORTS_PAGE_SIZE,
   PORTS_PAGE_SIZE_OPTIONS,
   PORTS_PANEL_DESC,
   PORTS_PANEL_TITLE,
+  PORTS_RETRY_LABEL,
   SERIAL_LOG_READONLY_HINT,
 } from "../constants"
 import {
@@ -185,11 +244,13 @@ const COLUMNS = [
 
 const {
   ports,
+  listenIp,
   loading,
   loadError,
   togglingPort,
   loadPorts,
   setEnabled,
+  copyIp,
   drawerVisible,
   activePort,
   lines,
@@ -205,6 +266,19 @@ const {
   refreshLines,
   onAutoRefreshChange,
 } = useLogPorts()
+
+/** 自定义端口增删改：弹窗开合 / 校验兜底 / CRUD 编排都在 composable */
+const {
+  dialogVisible,
+  editRow,
+  saving,
+  formError,
+  openAdd,
+  openEdit,
+  closeDialog,
+  submit,
+  remove,
+} = useCustomPorts(ports, loadPorts)
 
 /** 只看监听中：本地筛选，不发请求 */
 const onlyListening = ref(false)
@@ -242,15 +316,15 @@ const emptyText = computed(
   () => logConclusionText(conclusion.value, activePort.value?.port || 0) || "当前日志文件暂无内容",
 )
 
-/** 状态胶囊色相：监听中绿 / 未监听天蓝 / 已停止灰 */
+/** 状态胶囊色相：监听中绿 / 监听失败红 / 已停止灰 */
 function statusTone(row: LogPortRow): string {
   if (!row.enabled) return "is-off"
-  return row.listening ? "is-on" : "is-idle"
+  return row.listening ? "is-on" : "is-fail"
 }
 
 function listeningText(row: LogPortRow): string {
   if (!row.enabled) return "已停止监听"
-  return row.listening ? "监听中" : "未监听"
+  return row.listening ? "监听中" : PORTS_LISTEN_FAIL_LABEL
 }
 
 function onTailChange(value: unknown): void {

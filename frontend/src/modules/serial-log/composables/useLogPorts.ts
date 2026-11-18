@@ -12,10 +12,12 @@ import {
   LOG_DISABLE_WARNING,
   LOG_TAIL_DEFAULT,
 } from "../helpers/log-port-lines"
+import { PORTS_IP_COPIED, PORTS_IP_COPY_FAILED } from "../constants"
 import { formatApiError } from "@/shared/api-client"
 
 export function useLogPorts() {
   const ports = ref<LogPortRow[]>([])
+  const listenIp = ref("")
   const loading = ref(false)
   const loadError = ref("")
   const togglingPort = ref<number | null>(null)
@@ -40,6 +42,7 @@ export function useLogPorts() {
       const data = await fetchLogPorts()
       if (data.status) {
         ports.value = (data.data?.ports || []) as LogPortRow[]
+        listenIp.value = data.data?.listen_ip || ""
       } else {
         loadError.value = data.message || "端口列表加载失败"
       }
@@ -71,13 +74,17 @@ export function useLogPorts() {
         const updated = data.data
         row.enabled = updated.enabled
         row.listening = updated.listening
-        ElMessage.success(
-          updated.enabled
-            ? updated.listening
+        row.note = updated.note
+        if (updated.enabled && !updated.listening) {
+          // 开启但未监听 = 监听失败：必须错误提示，不得显示为成功
+          ElMessage.error(updated.note || `端口 ${row.port} 监听失败`)
+        } else {
+          ElMessage.success(
+            updated.enabled
               ? `端口 ${row.port} 已开始监听`
-              : `端口 ${row.port} 已开启，但端口未监听（可能被占用）`
-            : `端口 ${row.port} 已停止监听并释放端口`,
-        )
+              : `端口 ${row.port} 已停止监听并释放端口`,
+          )
+        }
       } else {
         ElMessage.error(data.message || "操作失败")
       }
@@ -85,6 +92,17 @@ export function useLogPorts() {
       ElMessage.error(formatApiError(e, "操作失败"))
     } finally {
       togglingPort.value = null
+    }
+  }
+
+  /** 复制本机监听 IP（串口盒侧配置用）；剪贴板不可用时给可读错误。 */
+  async function copyIp(): Promise<void> {
+    if (!listenIp.value) return
+    try {
+      await navigator.clipboard.writeText(listenIp.value)
+      ElMessage.success(PORTS_IP_COPIED)
+    } catch {
+      ElMessage.error(PORTS_IP_COPY_FAILED)
     }
   }
 
@@ -151,11 +169,13 @@ export function useLogPorts() {
 
   return {
     ports,
+    listenIp,
     loading,
     loadError,
     togglingPort,
     loadPorts,
     setEnabled,
+    copyIp,
     drawerVisible,
     activePort,
     lines,

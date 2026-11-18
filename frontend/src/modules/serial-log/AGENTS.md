@@ -11,8 +11,8 @@
 ## 数据与权限
 
 - HTTP 唯一出口是本模块 `api.ts`（走 `shared/api-client`），端点全部在 `/api/serial-log/`：
-  - `GET /serial-log/ports/`、`POST /serial-log/ports/toggle/`、`GET /serial-log/ports/{port}/lines/`、`GET /serial-log/keywords/`。
-- 监听开关**仅超级管理员**可操作：页面用 `useAuthUser().isSuperuser` 传 `can-manage`；非超管只读并显示「仅超级管理员可以开关监听」。
+  - `GET /serial-log/ports/`、`POST /serial-log/ports/`、`POST /serial-log/ports/toggle/`、`PATCH /serial-log/ports/{port}/`、`DELETE /serial-log/ports/{port}/`、`GET /serial-log/ports/{port}/lines/`、`GET /serial-log/keywords/`。
+- 监听开关与自定义端口的新增 / 编辑 / 删除**仅超级管理员**可操作：页面用 `useAuthUser().isSuperuser` 传 `can-manage`；非超管只读并显示「仅超级管理员可以开关监听」。配置端口三列只读；自定义端口可编辑 SKU / 波特率（端口号不可改）与删除（删除保留日志文件）。
 - 日志窗口只提供刷新 / 调整读取行数；**禁止**新增删除、编辑、下载备份等写入口。
 
 ## 样式

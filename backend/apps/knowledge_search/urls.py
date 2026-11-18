@@ -3,6 +3,8 @@
 from django.urls import path
 
 from .views import (
+    EvalRunDetailAPIView,
+    EvalRunListAPIView,
     KnowledgeModuleDetailAPIView,
     KnowledgeModuleIndexAPIView,
     KnowledgeModuleListAPIView,
@@ -16,4 +18,6 @@ urlpatterns = [
     path("modules/<int:pk>/", KnowledgeModuleDetailAPIView.as_view(), name="module_detail"),
     path("modules/<int:pk>/index/", KnowledgeModuleIndexAPIView.as_view(), name="module_index"),
     path("query/", KnowledgeQueryAPIView.as_view(), name="query"),
+    path("evaluations/", EvalRunListAPIView.as_view(), name="evaluations"),
+    path("evaluations/<int:pk>/", EvalRunDetailAPIView.as_view(), name="evaluation_detail"),
 ]

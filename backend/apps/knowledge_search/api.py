@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 
 from . import registry
-from .models import KnowledgeModule
+from .models import KnowledgeModule, KsEvalQuery, KsEvalRun
 
 _NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
@@ -203,3 +203,136 @@ def _check_isolation(
         other_dir = Path(other.data_dir)
         if data_dir == other_dir or data_dir in other_dir.parents or other_dir in data_dir.parents:
             raise ValueError(f"启用库资料目录冲突：{name} 与 {other.name}")
+
+
+# ── 评测运行：唯一写点（运行器经此落库，不直接 ORM 写）──
+
+
+def create_eval_run(
+    *,
+    module_name: str,
+    module_snapshot: dict,
+    model_config_id: int | None,
+    model_snapshot: dict,
+    pos_count: int,
+    neg_count: int,
+    seed: int,
+    cost_estimate: dict,
+) -> KsEvalRun:
+    """
+    创建一次评测运行（pending），快照在触发时冻结。
+
+    Args:
+        module_name: 模块库名。
+        module_snapshot: 模块登记快照。
+        model_config_id: 运营模型配置主键（仅追溯用）。
+        model_snapshot: 模型连接参数快照。
+        pos_count: 正题数。
+        neg_count: 负样本数。
+        seed: 采样随机种子。
+        cost_estimate: 预估 token 成本。
+
+    Returns:
+        新建的运行。
+    """
+    return KsEvalRun.objects.create(
+        module_name=module_name,
+        module_snapshot=module_snapshot,
+        model_config_id=model_config_id,
+        model_snapshot=model_snapshot,
+        pos_count=pos_count,
+        neg_count=neg_count,
+        seed=seed,
+        cost_estimate=cost_estimate,
+        progress_total=pos_count + neg_count,
+    )
+
+
+def get_eval_run(pk: int) -> KsEvalRun | None:
+    """
+    按主键取一次评测运行。
+
+    Args:
+        pk: 运行主键。
+
+    Returns:
+        运行；不存在时 None。
+    """
+    return KsEvalRun.objects.filter(pk=pk).first()
+
+
+def list_eval_runs(module_name: str = "") -> list[KsEvalRun]:
+    """
+    列出评测运行（可按模块过滤）。
+
+    Args:
+        module_name: 库名；空串列全部。
+
+    Returns:
+        按创建时间倒序的运行列表。
+    """
+    queryset = KsEvalRun.objects.order_by("-created_at")
+    if module_name:
+        queryset = queryset.filter(module_name=module_name)
+    return list(queryset)
+
+
+def running_eval_run(module_name: str) -> KsEvalRun | None:
+    """
+    取某模块进行中的运行（pending/running）。
+
+    Args:
+        module_name: 库名。
+
+    Returns:
+        进行中的运行；没有时 None。
+    """
+    return (
+        KsEvalRun.objects.filter(
+            module_name=module_name,
+            status__in=[KsEvalRun.STATUS_PENDING, KsEvalRun.STATUS_RUNNING],
+        )
+        .order_by("-created_at")
+        .first()
+    )
+
+
+def mark_eval_running(pk: int) -> None:
+    """把运行置为 running。"""
+    KsEvalRun.objects.filter(pk=pk).update(status=KsEvalRun.STATUS_RUNNING)
+
+
+def set_eval_progress(pk: int, done: int, total: int) -> None:
+    """更新运行进度（已完成 / 总题数）。"""
+    KsEvalRun.objects.filter(pk=pk).update(progress_done=done, progress_total=total)
+
+
+def add_eval_query(pk: int, **fields: object) -> KsEvalQuery:
+    """
+    落库一道评测题及其检索结果。
+
+    Args:
+        pk: 运行主键。
+        **fields: KsEvalQuery 字段。
+
+    Returns:
+        新建的题目。
+    """
+    return KsEvalQuery.objects.create(run_id=pk, **fields)
+
+
+def finish_eval_run(pk: int, *, status: str, metrics: dict | None = None, error: str = "") -> None:
+    """
+    收口运行：done 带指标，failed 带可读原因。
+
+    Args:
+        pk: 运行主键。
+        status: 终态（done / failed）。
+        metrics: 指标字典；失败时可为 None。
+        error: 失败原因。
+    """
+    KsEvalRun.objects.filter(pk=pk).update(
+        status=status,
+        metrics=metrics or {},
+        error=error,
+    )

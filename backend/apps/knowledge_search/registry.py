@@ -82,3 +82,13 @@ def _defaults() -> dict:
         return {}
     defaults = raw.get("defaults")
     return dict(defaults) if isinstance(defaults, dict) else {}
+
+
+def defaults() -> dict:
+    """
+    公开读取引擎调优参数（评测快照目录用）。
+
+    Returns:
+        defaults 字典。
+    """
+    return _defaults()

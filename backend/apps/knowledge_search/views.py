@@ -13,16 +13,21 @@ POST   /api/knowledge-search/query/                登录可用：勾选模块�
 
 from __future__ import annotations
 
+import random
+
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
-from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from backend.shared.users import is_superuser
 
-from . import api, retrieval
+from . import api, eval_runner, retrieval
 from .serializers import (
+    EvalQuerySerializer,
+    EvalRunSerializer,
+    EvalTriggerSerializer,
     KnowledgeModuleSerializer,
     ModulePatchSerializer,
     ModuleWriteSerializer,
@@ -125,3 +130,85 @@ class KnowledgeQueryAPIView(APIView):
             top_k=data.get("top_k"),
         )
         return Response(result)
+
+
+class EvalRunningConflict(APIException):
+    """同模块已有进行中的评测：409。"""
+
+    status_code = 409
+    default_detail = "该模块已有进行中的评测"
+    default_code = "eval_running"
+
+
+class EvalRunListAPIView(APIView):
+    """GET 评测运行列表（登录可读）；POST 触发自动评测（仅超管）。"""
+
+    @extend_schema(operation_id="knowledge_search_evaluations_list", responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        runs = api.list_eval_runs(request.query_params.get("module", ""))
+        return Response({"runs": EvalRunSerializer(runs, many=True).data})
+
+    @extend_schema(
+        operation_id="knowledge_search_evaluations_create",
+        request=EvalTriggerSerializer,
+        responses=OpenApiTypes.OBJECT,
+    )
+    def post(self, request):
+        _require_superuser(request)
+        serializer = EvalTriggerSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        module = api.get_module(data["module_id"])
+        if module is None:
+            raise NotFound("模块不存在")
+        if not module.enabled:
+            raise ValidationError("模块已禁用，不能评测")
+        if data["pos_count"] + data["neg_count"] > 100:
+            raise ValidationError("题量超过上限 100")
+        if api.running_eval_run(module.name) is not None:
+            raise EvalRunningConflict()
+        # 跨 App 只读 Model：运营模型配置（规则允许的读路径）。
+        from backend.apps.ai_assistant.models import AIModelConfig
+
+        model_config = AIModelConfig.objects.filter(
+            pk=data["model_config_id"], model_kind="chat"
+        ).first()
+        if model_config is None:
+            raise ValidationError("模型配置不存在或不是 chat 类")
+        run = api.create_eval_run(
+            module_name=module.name,
+            module_snapshot={
+                "name": module.name,
+                "description": module.description,
+                "data_dir": module.data_dir,
+                "enabled": module.enabled,
+            },
+            model_config_id=model_config.pk,
+            model_snapshot={
+                "provider": model_config.provider,
+                "api_key_env": model_config.api_key_env,
+                "model_name": model_config.model_name,
+                "base_url": model_config.base_url,
+            },
+            pos_count=data["pos_count"],
+            neg_count=data["neg_count"],
+            seed=random.randrange(1, 2**31),
+            cost_estimate=eval_runner.estimate_cost(data["pos_count"], data["neg_count"]),
+        )
+        eval_runner.start_eval_run(run.pk)
+        return Response(EvalRunSerializer(run).data, status=201)
+
+
+class EvalRunDetailAPIView(APIView):
+    """GET 评测运行详情（登录可读）：进度 / 指标 / 逐题明细。"""
+
+    @extend_schema(
+        operation_id="knowledge_search_evaluations_detail", responses=OpenApiTypes.OBJECT
+    )
+    def get(self, request, pk: int):
+        run = api.get_eval_run(int(pk))
+        if run is None:
+            raise NotFound("评测运行不存在")
+        payload = EvalRunSerializer(run).data
+        payload["queries"] = EvalQuerySerializer(run.queries.all(), many=True).data
+        return Response(payload)

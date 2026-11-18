@@ -21,3 +21,26 @@ export const KS_INDEX_FAILED = "索引失败"
 
 /** 提问返回条数：v1 用后端配置默认，不在 UI 调节。 */
 export const KS_TOP_K_DEFAULT = 4
+
+// ── 自动评测 ──
+
+export const KS_RIGHT_TABS = [
+  { key: "query", label: "提问" },
+  { key: "eval", label: "自动评测" },
+]
+export const KS_EVAL_TITLE = "自动评测"
+export const KS_EVAL_SYNTHETIC_LABEL = "合成评测集，结果偏乐观"
+export const KS_EVAL_TRIGGER = "发起评测"
+export const KS_EVAL_EMPTY = "暂无评测记录"
+export const KS_EVAL_EMPTY_HINT = "超管可发起一次合成评测，产出 Recall@k / MRR / 误命中率"
+export const KS_EVAL_RUNNING = "评测进行中"
+export const KS_EVAL_FAILED = "评测失败"
+export const KS_EVAL_DONE = "已完成"
+export const KS_EVAL_PENDING = "排队中"
+export const KS_EVAL_POS_DEFAULT = 30
+export const KS_EVAL_NEG_DEFAULT = 10
+export const KS_EVAL_TOTAL_MAX = 100
+export const KS_EVAL_ESTIMATE_NOTE = "启发式预估，不含首次建索引；实际以账本为准"
+export const KS_EVAL_POLL_MS = 2000
+export const KS_EVAL_DIALOG_TITLE = "发起自动评测"
+export const KS_EVAL_NO_CHAT_MODEL = "没有可用的 chat 类模型配置，请先在运营后台登记"

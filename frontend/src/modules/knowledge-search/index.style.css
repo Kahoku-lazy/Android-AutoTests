@@ -7,6 +7,13 @@
   align-items: start;
 }
 
+.knowledge-search-workbench .ks-right {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-md);
+  min-width: 0;
+}
+
 @media (max-width: 900px) {
   .knowledge-search-workbench .ks-split {
     grid-template-columns: 1fr;

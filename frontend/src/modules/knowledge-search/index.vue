@@ -5,12 +5,21 @@ import { ElMessage } from "element-plus"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import { useAuthUser } from "@/shared/composables/useAuthUser"
 import ModulePanel from "./components/ModulePanel.vue"
+import EvalPanel from "./components/EvalPanel.vue"
+import KsPanelTabs from "./components/KsPanelTabs.vue"
 import QueryPanel from "./components/QueryPanel.vue"
 import { useKnowledgeModules } from "./composables/useKnowledgeModules"
-import { KS_INDEX_DONE, KS_INDEX_FAILED, KS_PAGE_ICON, KS_PAGE_TITLE } from "./constants"
+import {
+  KS_INDEX_DONE,
+  KS_INDEX_FAILED,
+  KS_PAGE_ICON,
+  KS_PAGE_TITLE,
+  KS_RIGHT_TABS,
+} from "./constants"
 import type { KnowledgeModuleRow, ModulePayload } from "./types"
 
 const { isSuperuser } = useAuthUser()
+const rightTab = ref("query")
 const {
   modules,
   loading,
@@ -83,7 +92,11 @@ async function onIndex(id: number) {
           @toggle-enabled="onToggleEnabled"
           @index="onIndex"
         />
-        <QueryPanel :selected-names="selected" />
+        <div class="ks-right">
+          <KsPanelTabs v-model="rightTab" :items="KS_RIGHT_TABS" />
+          <QueryPanel v-if="rightTab === 'query'" :selected-names="selected" />
+          <EvalPanel v-else :modules="modules" :can-manage="isSuperuser" />
+        </div>
       </div>
     </div>
   </div>

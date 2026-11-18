@@ -2,123 +2,170 @@
 
 ## Purpose
 
-把测试报告工作台的列表、KPI 与趋势接到当前用户可见的 AI 助手任务卡。点击一行进入该任务的事件流程；任务编号不链到已失效的 Run 详情。
+把测试报告工作台接到「已生成的报告」：SOP 报告来自带定位的终态任务，智能体报告来自正常完成的助手对话轮次。台账统计报告数量，行按来源携带用例名称与任务 ID 或助手编号与名称；点击一行打开该份 HTML 报告。
 
 ## Requirements
 
-### Requirement: Report list is sourced from assistant tasks
+### Requirement: Report list is sourced from generated reports
 
-`GET /api/reports` MUST return a flat envelope `{status, summary, trend, runs}` whose `runs` are the current user's visible `Task` rows from `task_list` (one row per task). Visibility MUST match the task list module (same agent scope). The endpoint MUST remain read-only and MUST NOT write `task_tasks` or other business tables.
+`GET /api/reports` MUST 返回标准信封 `{status, data}`，`data` 含 `summary`、`total`、`items`。`items` 的每一行 MUST 对应一份**已生成的 HTML 报告**，按报告生成时间倒序。列表 MUST 只读，MUST NOT 写任何业务表，MUST NOT 扫描磁盘目录来发现报告。可见性 MUST 与任务清单模块一致。扫描与返回上限 MUST 遵守 `platform-load-budget` 的既有约束。
 
-#### Scenario: List includes a published task
+#### Scenario: 列表一行对应一份报告
 
-- **WHEN** the user has at least one visible task
-- **THEN** `runs` contains a corresponding row and `summary.total_runs` equals the filtered task count
+- **WHEN** 登录用户请求 `GET /api/reports/`
+- **THEN** `items` 的每行携带来源标记与查看定位，一行对应一份已生成的报告
 
-#### Scenario: Empty when no tasks
+#### Scenario: 空结果
 
-- **WHEN** the user has no visible tasks
-- **THEN** `runs` is an empty list, summary counts are zero, and trend series are zeros for the requested chart range
+- **WHEN** 当前用户没有任何已生成报告
+- **THEN** `items` 为空列表，`total` 为 0
 
-### Requirement: Task-card success metrics
-Summary and daily trend MUST count a task as pass when status is `completed` or `success`, and as fail when status is `failed`. Pass rate MUST be pass / (pass + fail), or `0` when there are no terminal pass/fail tasks. Pending and running tasks MUST appear in `runs` and `total_runs` but MUST NOT increment pass or fail totals.
+### Requirement: Only completed runs produce report rows
 
-#### Scenario: Mixed statuses
-- **WHEN** visible tasks include pending, completed, and failed
-- **THEN** `summary.total_pass` counts completed (and success), `summary.total_fail` counts failed, and pending is excluded from both
+报告行 MUST 来自两条且仅两条来源：
 
-### Requirement: Report row fields without case columns
-Each `runs[]` item MUST include: task id, device display (`device_label` if non-empty else `device_serial`), task title, assistant name, status, duration text, and start time. The list payload MUST NOT include case-centric fields `case_count`, `passed`, `failed`, or `rate`.
+1. **SOP 报告**（`source` 为 `sop`）：终态任务（`completed`/`success`/`failed`）且结果里带报告定位（`report_run` 与 `report_name` 均非空），对应 `logs/agents/backend_bridge/` 下的一份 HTML。
+2. **智能体报告**（`source` 为 `agent`）：正常完成的助手对话轮次（助手消息带非空 `report_id`），对应 `logs/agents/assistants/` 下的一份 HTML。
 
-#### Scenario: Device label fallback
-- **WHEN** a task has empty `device_label` and a non-empty `device_serial`
-- **THEN** the row device field shows the serial
+未执行（`pending`）、执行中（`running`）、取消（`cancelled`）与中断（`interrupted`）的任务/轮次 MUST NOT 出现在 `items`。
 
-### Requirement: Report workbench opens the task flow
+#### Scenario: 完成的 SOP 任务进入列表
 
-测试报告列表 MUST 把任务编号显示为纯文本，MUST NOT 链到 `/reports/:id`。KPI 的通过与失败卡片 MUST NOT 进入用例分解。点击列表中的一行 MUST 进入任务清单的任务详情页 `/tasks/:taskId`。
+- **WHEN** 一条任务正常跑完（完成或失败），结果里带报告定位
+- **THEN** `items` 含一行 `source` 为 `sop` 的报告，携带该定位
 
-#### Scenario: Clicking a row opens the task flow
+#### Scenario: 完成的助手轮次进入列表
 
-- **WHEN** 用户点击测试报告列表中的一行
-- **THEN** 浏览器进入 `/tasks/` 加上该行的任务编号
+- **WHEN** 平台助手某对话栏的一轮正常完成，消息上登记了 `report_id`
+- **THEN** `items` 含一行 `source` 为 `agent` 的报告
 
-#### Scenario: Task id is not a run detail link
+#### Scenario: 未执行与执行中不进入列表
 
-- **WHEN** 用户查看列表中的任务编号
-- **THEN** 该编号不是指向 `/reports/:id` 的链接
+- **WHEN** 存在 `pending` 或 `running` 的任务，或某对话栏仍有一轮在运行
+- **THEN** `items` 不含这些任务/轮次的任何行，`summary` 也不计入它们
 
-### Requirement: Empty copy points to AI assistant
+#### Scenario: 取消与中断不进入列表
 
-When `runs` is empty, the workbench MUST tell the user to create a task in the task list. Copy MUST NOT tell the user to run tests in the execution engine.
+- **WHEN** 一条任务被用户关闭（`cancelled`）或因重启/预算中断（`interrupted`）
+- **THEN** `items` 不含该任务的行
 
-#### Scenario: Empty table hint
+### Requirement: Report summary counts reports
 
-- **WHEN** the report table has no rows
-- **THEN** the empty hint mentions the task list and does not mention the execution engine
+`summary` MUST 统计**报告数量**：`total_reports`（报告总数）、`sop_reports`（SOP 报告数）、`agent_reports`（智能体报告数），且 `total_reports` MUST 等于 `sop_reports` 与 `agent_reports` 之和。系统 MUST NOT 再返回任务通过率、通过/失败计数或每日趋势负载。
 
-### Requirement: 报告接口返回标准信封
+#### Scenario: 混合来源计数
 
-`/api/reports/`、`/api/reports/{filename}/content/` MUST 返回标准信封 `{status, data}`，业务负载放在 `data` 中且 MUST NOT 自带 `status` 字段。`/api/reports/{filename}/` MUST 继续以附件形式返回文件（`FileResponse`），不套 JSON 信封。系统 MUST NOT 提供 `/api/reports/cases/` 与 `/api/reports/run/{run_id}/`。
+- **WHEN** 当前查询命中 3 份 SOP 报告与 2 份智能体报告
+- **THEN** `summary` 为 `total_reports` 5、`sop_reports` 3、`agent_reports` 2
+
+#### Scenario: 空结果计数为零
+
+- **WHEN** 当前用户没有任何已生成报告
+- **THEN** `summary` 三项均为 0
+
+### Requirement: SOP report rows carry case identity and task id
+
+`source` 为 `sop` 的行 MUST 携带：`report_run`、`report_name`（查看定位）、`task_id`（关联任务 ID）、`task_title`、`case_label`（用例名称）、设备展示名、任务终态、起止时间与耗时文案。`case_label` MUST 只由任务冻结的用例身份算出，口径与任务清单、BUG 单一致：一条用例显示标题；多条显示「第一条标题 · 共 N 条」；里程碑来源显示「里程碑」；没有用例身份显示空串。系统 MUST NOT 回读用例库，也 MUST NOT 从步骤名或附件正文反推用例名。
+
+#### Scenario: 单用例报告行
+
+- **WHEN** 报告对应任务的冻结身份只含一条用例
+- **THEN** 该行 `case_label` 为该用例标题，`task_id` 为任务编号
+
+#### Scenario: 多用例与里程碑
+
+- **WHEN** 冻结身份含多条用例，或来源为里程碑
+- **THEN** `case_label` 分别为「第一条标题 · 共 N 条」或「里程碑」
+
+#### Scenario: 无用例身份
+
+- **WHEN** 任务没有冻结用例身份（旧任务或里程碑外无行）
+- **THEN** `case_label` 为空串，页面显示「—」，不编造用例名
+
+### Requirement: Agent report rows carry assistant identity
+
+`source` 为 `agent` 的行 MUST 携带：`assistant_id`（助手编号）、`assistant_name`（助手显示名）、`thread_id`、`report_id`（查看定位）、`summary`（该轮一句话结果）与 `created_at`。助手名片已删除时，`assistant_id` MUST 仍显示，`assistant_name` MUST 回落为空串，MUST NOT 因此隐藏该行或报错。
+
+#### Scenario: 智能体报告行带编号与名称
+
+- **WHEN** 某轮报告对应助手名片存在
+- **THEN** 该行同时显示助手编号与显示名
+
+#### Scenario: 名片删除后报告仍可查
+
+- **WHEN** 报告对应助手名片已被删除
+- **THEN** 该行仍出现在列表，编号照常显示，名称为空
+
+### Requirement: Report workbench filters by source
+
+测试报告工作台 SHALL 提供来源筛选条「全部 / SOP / 智能体」，每项显示当前查询条件下的报告条数，MUST 使用共享 `FilterTabs`。筛选条 SHALL 辅以关键字（匹配用例名称、任务 ID、助手名称或助手编号）与日期区间过滤。切换筛选 MUST 只改变同一张报告表的行，MUST NOT 为每个来源各渲染一张表，MUST NOT 产生页签内层纵向滚动。
+
+#### Scenario: 计数跟随当前查询
+
+- **WHEN** 当前查询命中 5 份报告（3 SOP、2 智能体）
+- **THEN** 筛选条依次显示「全部 5」「SOP 3」「智能体 2」
+
+#### Scenario: 切换来源复用同一张表
+
+- **WHEN** 用户从「全部」切到「智能体」
+- **THEN** 页面只有一张报告表，表内只剩智能体报告行
+
+#### Scenario: 关键字命中任务 ID
+
+- **WHEN** 用户在关键字框输入某 SOP 报告的任务编号
+- **THEN** 列表只剩该任务对应的报告行
+
+### Requirement: Report row opens the generated report
+
+点击报告行（或其「查看报告」操作）MUST 打开该份已生成的 HTML 报告，且 MUST 复用既有读取通道：SOP 报告走 `GET /api/ai/agent-reports/{run}/{name}/`；智能体报告走对话栏日志的一次性 ticket 通道。系统 MUST NOT 为报告台账新增读取端点，MUST NOT 把磁盘绝对路径返回前端，MUST NOT 链到 `/tasks/:id` 或 `/reports/:id`。报告文件已不存在时 MUST 给出可读错误提示，MUST NOT 让页面进入错误态或崩溃。
+
+#### Scenario: 打开 SOP 报告
+
+- **WHEN** 用户点击一行 SOP 报告
+- **THEN** 浏览器展示该份 HTML 报告，请求走既有平台报告读取通道
+
+#### Scenario: 打开智能体报告
+
+- **WHEN** 用户点击一行智能体报告
+- **THEN** 先换取一次性 ticket，再在浏览器展示该轮 HTML 报告
+
+#### Scenario: 文件缺失可读提示
+
+- **WHEN** 报告行对应的磁盘文件已被删除
+- **THEN** 页面提示「报告不存在」，列表与其它行不受影响
+
+### Requirement: Empty copy points to task execution
+
+`items` 为空时，工作台 MUST 提示「报告在执行完成后生成」，并引导用户去任务清单或平台助手发起执行。文案 MUST NOT 引导用户去「执行引擎」跑测试。
+
+#### Scenario: 空表提示
+
+- **WHEN** 报告表没有任何行
+- **THEN** 空态说明报告在执行完成后生成，并提到任务清单或平台助手，不提执行引擎
+
+### Requirement: 报告台账接口返回标准信封
+
+`/api/reports/` MUST 返回标准信封 `{status, data}`，业务负载放在 `data` 中且 MUST NOT 自带 `status` 字段，`data` 含 `summary`、`total`、`items`。系统 MUST NOT 提供 `/api/reports/cases/`、`/api/reports/run/{run_id}/`、`/api/reports/{filename}/` 与 `/api/reports/{filename}/content/`；直接访问这些路径 MUST 返回 404。
 
 #### Scenario: 报告列表使用信封
 
 - **WHEN** 登录用户请求 `GET /api/reports/`
 - **THEN** 响应为 200 且顶层只有 `status` 与 `data`
-- **AND** `data` 含 `summary`、`trend`、`runs`
+- **AND** `data` 含 `summary`、`total`、`items`
 
-#### Scenario: 用例分解缺参数返回错误信封
+#### Scenario: 用例分解与 Run 详情端点不存在
 
-- **WHEN** 请求 `GET /api/reports/cases/`（带或不带 `result`）
-- **THEN** 响应为 404，MUST NOT 再返回 400、200 或空组负载
-
-#### Scenario: 文件内容查看使用信封
-
-- **WHEN** 请求 `GET /api/reports/{filename}/content/` 且文件存在
-- **THEN** 响应为 200，`data` 含 `name`、`type`、`size`、`content`、`rows`、`headers`
-
-#### Scenario: 文件不存在返回错误信封
-
-- **WHEN** 请求 `GET /api/reports/{filename}/content/` 且目标不存在
-- **THEN** 响应为 404，响应体为 `{status: false, message}`
-
-#### Scenario: Run 详情端点不再存在
-
-- **WHEN** 请求 `GET /api/reports/run/{run_id}/`
+- **WHEN** 请求 `GET /api/reports/cases/` 或 `GET /api/reports/run/{run_id}/`
 - **THEN** 响应为 404，MUST NOT 返回信封或任何报告负载
 
-### Requirement: Report workbench filters rows by status
+#### Scenario: 旧文件端点已退役
 
-测试报告工作台 SHALL 在「测试报告」分区头提供状态筛选条，包含「全部 / 已完成 / 失败 / 已停止」四项，并在每项上显示当前查询条件下的条数。筛选条 MUST 使用共享 `FilterTabs`，MUST NOT 用内容页签（`AppTabs`）承载状态筛选。
+- **WHEN** 请求 `GET /api/reports/{filename}/` 或 `GET /api/reports/{filename}/content/`
+- **THEN** 响应为 404，MUST NOT 返回文件内容或附件
 
-「全部」的计数 SHALL 等于当前查询返回的任务卡总数；「已完成」SHALL 统计 `completed` 与 `success`；「失败」SHALL 只统计 `failed`；「已停止」SHALL 只统计 `stopped`。其它状态（`running` / `pending` / `interrupted` / `error` 等）MUST 只计入「全部」，MUST NOT 新增第五个筛选项。
+### Requirement: 报告工作台单路由约束
 
-切换筛选项 SHALL 只改变同一张报告表呈现的行，MUST NOT 为每个状态各渲染一张表格，MUST NOT 产生页签内层纵向滚动。
-
-#### Scenario: Counts follow the current query
-
-- **WHEN** 当前查询返回 12 张任务卡，其中 1 张为 `completed`、11 张为 `failed`
-- **THEN** 筛选条依次显示「全部 12」「已完成 1」「失败 11」「已停止 0」
-
-#### Scenario: Switching filters reuses one table
-
-- **WHEN** 用户从「全部」切到「失败」
-- **THEN** 页面上只有一张报告表，表内只剩 `failed` 行
-- **AND** 纵向滚动仍由页面主体承担，表格容器内没有独立纵向滚动条
-
-#### Scenario: Non-terminal statuses stay in All only
-
-- **WHEN** 当前结果里存在 `running` 或 `pending` 的任务卡
-- **THEN** 它们只出现在「全部」的计数与行里，不计入「已完成 / 失败 / 已停止」
-
-#### Scenario: Empty result keeps a stable filter row
-
-- **WHEN** 当前查询没有任何任务卡
-- **THEN** 四个筛选项仍然渲染，计数均为 0，报告表显示空态
-
-### Requirement: 报告工作台不提供报告详情与用例分解路由
-
-测试报告工作台 MUST 只注册列表页 `/reports` 一个路由。系统 MUST NOT 注册 `/reports/:runId`、`/reports/cases/:resultType` 或等价路径；列表行、任务编号与 KPI 卡 MUST NOT 链到这两个路径。任务级详情 MUST 由任务清单的 `/tasks/:taskId` 提供。
+测试报告工作台 MUST 只注册列表页 `/reports` 一个路由。系统 MUST NOT 注册 `/reports/:runId`、`/reports/cases/:resultType` 或等价路径；列表行、任务编号与 KPI 卡 MUST NOT 链到这些路径。报告正文 MUST 按「Report row opens the generated report」以既有读取通道打开，MUST NOT 在前端新建报告详情路由。
 
 #### Scenario: 直接访问已删的报告详情路由
 
@@ -130,7 +177,7 @@ When `runs` is empty, the workbench MUST tell the user to create a task in the t
 - **WHEN** 用户直接打开 `/reports/cases/pass`
 - **THEN** 前端落到 404 页，MUST NOT 渲染用例分解页
 
-#### Scenario: 列表行仍进入任务详情
+#### Scenario: 列表行打开报告文件而非详情路由
 
 - **WHEN** 用户点击测试报告列表中的一行
-- **THEN** 浏览器进入 `/tasks/` 加上该行的任务编号
+- **THEN** 浏览器打开该行对应的 HTML 报告，路由停留在 `/reports`

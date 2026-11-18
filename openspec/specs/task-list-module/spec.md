@@ -35,20 +35,6 @@
 - **WHEN** 客户端访问 `/api/ai/tasks/submit/` 或 `/api/ai/agent-tasks/`
 - **THEN** 返回 404，不发生任务创建或列表读取
 
-### Requirement: Task detail report moves to the task list
-
-任务详情报告 MUST 由 `GET /api/tasks/{id}/report/` 提供，前端页面 MUST 为 `/tasks/:id`。`/api/reports/task/{id}` 与前端 `/reports/task/:id` MUST 不再提供任务详情。测试报告列表 MUST 继续只读展示任务行，但行点击 MUST 进入 `/tasks/:id`。
-
-#### Scenario: Task card detail opens /tasks/:id
-
-- **WHEN** 用户在任务清单点击任务卡「详情」
-- **THEN** 路由进入 `/tasks/:id`，页面展示该任务的事件流程报告
-
-#### Scenario: Report list row opens the task list detail
-
-- **WHEN** 用户在测试报告列表点击一行任务
-- **THEN** 路由进入 `/tasks/:id`，不进入 `/reports/task/:id`
-
 ### Requirement: AI assistant keeps only assistant and route configuration
 
 `apps.ai_assistant` MUST 只保留 `AIAgent`、线路/身份配置页、`/api/ai/agents/*`、内置固定头像与配对引擎配置。它 MUST NOT 再提供任务列表、任务详情、任务创建、调度、重跑、关闭、删除、清空、任务费用或任务用量接口/页面，也 MUST NOT 再提供头像上传接口。

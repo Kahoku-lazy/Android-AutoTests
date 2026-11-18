@@ -1,7 +1,7 @@
 # task-execution-lifecycle Specification
 
 ## Purpose
-定义服务停机与重启时任务的生命周期口径：停机先排空正在跑的任务，非正常退出留下的 running 任务以“已中断”留痕，不冒充实测失败，并在任务清单与测试报告中以一致的状态呈现。
+定义服务停机与重启时任务的生命周期口径：停机先排空正在跑的任务，非正常退出留下的 running 任务以“已中断”留痕，不冒充实测失败，并在任务清单中一致呈现；中断不产生报告，不进报告台账。
 
 ## Requirements
 
@@ -41,23 +41,19 @@
 - **WHEN** 某设备存在一条遗留 `running` 与一条 `pending`
 - **THEN** 遗留任务变为 `interrupted` 后，该 `pending` 任务仍可被调度为 `running`
 
-### Requirement: 中断不计入通过与失败
+### Requirement: 中断状态在任务清单可见
 
-测试报告的汇总与每日趋势 MUST 只把 `completed`/`success` 计为通过、`failed` 计为失败。`interrupted` MUST 计入总执行次数，MUST NOT 计入通过或失败，也 MUST NOT 进入通过率分母。
+任务清单 MUST 把 `interrupted` 显示为“已中断”，并使用与失败不同的标签样式。测试报告列表 MUST NOT 展示中断任务：中断不产生报告，报告台账只收录已生成的报告。
 
-#### Scenario: 混合状态下的通过率
+#### Scenario: 任务清单显示已中断记录
 
-- **WHEN** 可见任务包含 1 条 `completed`、1 条 `failed`、1 条 `interrupted`
-- **THEN** 汇总的通过为 1、失败为 1、总执行次数为 3、通过率为 50%
+- **WHEN** 用户打开任务清单且存在 `interrupted` 任务
+- **THEN** 该任务状态显示“已中断”，标签样式与失败可区分
 
-### Requirement: 中断状态在界面上可见
-
-任务清单、任务详情与测试报告列表 MUST 把 `interrupted` 显示为“已中断”，并使用与失败不同的标签样式；测试报告的状态筛选 MUST 提供“已中断”分组。
-
-#### Scenario: 报告页显示已中断记录
+#### Scenario: 报告台账不显示中断任务
 
 - **WHEN** 用户打开 `/reports` 且存在 `interrupted` 任务
-- **THEN** 该行状态显示“已中断”，且“已中断”筛选分组可筛出该行
+- **THEN** 报告列表不含该任务的行，也不存在“已中断”筛选分组
 
 ### Requirement: 取消终态不被工作线程覆盖
 

@@ -1,4 +1,4 @@
-﻿# Tasks: rework-test-report-inventory
+# Tasks: rework-test-report-inventory
 
 ## 1. 后端：报告台账聚合与接口重建
 
@@ -35,5 +35,6 @@
 ## 6. 全链路验收与提交
 
 - [ ] 6.1 本地门禁 `python run.py check` 通过；前端 `npm run typecheck` + `npm run lint:styles` + 相关 vitest 全绿；后端 `python -m pytest -c tests/pytest.ini -m "unit or integration"` 涉及 report/task/bug/ai_assistant 路径全绿
+  - 备注（归档时）：本变更相关门禁项全绿，推送提交 7ce23ec5 的 CI 6 job 全绿；本地残余失败均属工作区其它在途变更（serial-log 自定义端口前端、ai_assistant role-kind）与既有 stale 测试，另立修复变更处理。
 - [x] 6.2 人工验收：侧栏四项顺序正确；跑一条 SOP 任务与一轮助手对话完成后报告入列、执行中不入列；两类报告可打开；KPI 计数与列表一致；`/reports/143` 落 404
-- [ ] 6.3 逐文件暂存（禁 git add -A），Conventional Commits 提交并推送 Kahoku，确认 ci-phase1.yml 6 个 job 全绿
+- [x] 6.3 逐文件暂存（禁 git add -A），Conventional Commits 提交并推送 Kahoku，确认 ci-phase1.yml 6 个 job 全绿

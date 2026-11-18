@@ -1689,6 +1689,71 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/knowledge-search/evaluations/:
+    get:
+      operationId: knowledge_search_evaluations_list
+      description: GET 评测运行列表（登录可读）；POST 触发自动评测（仅超管）。
+      tags:
+      - knowledge-search
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    post:
+      operationId: knowledge_search_evaluations_create
+      description: GET 评测运行列表（登录可读）；POST 触发自动评测（仅超管）。
+      tags:
+      - knowledge-search
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvalTrigger'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EvalTrigger'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EvalTrigger'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/knowledge-search/evaluations/{id}/:
+    get:
+      operationId: knowledge_search_evaluations_detail
+      description: GET 评测运行详情（登录可读）：进度 / 指标 / 逐题明细。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - knowledge-search
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/knowledge-search/modules/:
     get:
       operationId: knowledge_search_modules_retrieve
@@ -2800,6 +2865,27 @@ components:
       description: |-
         * `yaml` - yaml
         * `platform` - platform
+    EvalTrigger:
+      type: object
+      description: 触发自动评测入参：模块 + chat 模型配置 + 题量（默认 30 正 + 10 负）。
+      properties:
+        module_id:
+          type: integer
+        model_config_id:
+          type: integer
+        pos_count:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 30
+        neg_count:
+          type: integer
+          maximum: 100
+          minimum: 0
+          default: 10
+      required:
+      - model_config_id
+      - module_id
     Login:
       type: object
       properties:

@@ -32,6 +32,7 @@ urlpatterns = [
     path("api/tasks/", include("backend.apps.task_list.urls")),
     path("api/bugs/", include("backend.apps.bug_manager.urls")),
     path("api/serial-log/", include("backend.apps.serial_log.urls")),
+    path("api/knowledge-search/", include("backend.apps.knowledge_search.urls")),
     # 运营后台（用户管理）：仅运营/超管可访问，见 apps/ops_console
     path("api/ops/", include("backend.apps.ops_console.urls")),
     # ── 停机排空（仅本机回环可调用，见 gateway/middleware.py）──

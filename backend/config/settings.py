@@ -75,7 +75,7 @@ INSTALLED_APPS = [
     # Framework
     "backend.gateway",
     "backend.shared",
-    # Django Apps（11 个；test_runner、evaluator、workflow 已退役，卸载迁移随 app 一并删除）
+    # Django Apps（12 个；test_runner、evaluator、workflow 已退役，卸载迁移随 app 一并删除）
     "backend.apps.device_pool",
     "backend.apps.case_manager",
     "backend.apps.report_generator",
@@ -87,6 +87,7 @@ INSTALLED_APPS = [
     "backend.apps.dashboard",
     "backend.apps.usage_ledger",
     "backend.apps.ops_console",
+    "backend.apps.knowledge_search",
 ]
 
 MIDDLEWARE = [
@@ -356,6 +357,12 @@ SCREENSHOT_DIR = DATA_DIR / "screenshots"
 TASK_MEDIA_DIR = Path(os.environ.get("TASK_MEDIA_DIR", "").strip() or DATA_DIR / "task_media")
 EXPORT_DIR = REPO_ROOT / "exports"
 LOG_DIR = REPO_ROOT / "logs"
+
+# 知识库检索：平台库目录 yaml（由 ks_modules 派生，gitignore 覆盖 logs/）。
+KNOWLEDGE_SEARCH_BASES_FILE = Path(
+    os.environ.get("KNOWLEDGE_SEARCH_BASES_FILE", "").strip()
+    or LOG_DIR / "knowledge_search" / "knowledge_bases.yaml"
+)
 
 # Internationalization
 LANGUAGE_CODE = "zh-hans"

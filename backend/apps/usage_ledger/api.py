@@ -13,6 +13,8 @@ from django.db import OperationalError, ProgrammingError
 from django.db.models import Count, Sum
 from django.utils import timezone
 
+from utils.logs import backend_log
+
 from .models import ModelUsage
 from .pricing import category_of, normalize_provider, price_usage
 
@@ -131,6 +133,84 @@ def _json_safe(value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return [_json_safe(item) for item in value]
     return value
+
+
+def _iso_moment(text: object) -> datetime:
+    """
+    把 ISO 格式时间戳解析成时刻。
+
+    Args:
+        text: ISO 格式字符串（如知识库用量事件的 occurred_at）。
+
+    Returns:
+        本地时区的时刻；解析失败时退回当前时间，绝不抛错。
+    """
+    try:
+        moment = datetime.fromisoformat(str(text or ""))
+    except (TypeError, ValueError):
+        return timezone.now()
+    if moment.tzinfo is not None:
+        return moment
+    if settings.USE_TZ:
+        return timezone.make_aware(moment, timezone.get_current_timezone())
+    return moment
+
+
+def record_embedding_usages(
+    events: list[dict],
+    *,
+    execution_id: str,
+    source: str = "knowledge",
+) -> int:
+    """
+    把知识库嵌入用量事件逐调用写进账本。
+
+    幂等键取「来源:执行 ID:轮次」，同一事件重复提交会更新而非新增。
+    零 token 事件跳过；单条失败只记日志，不向上抛错——入账不得阻断检索。
+
+    Args:
+        events: 用量事件字典列表，键与 knowledge.usage.UsageEvent.as_dict() 一致。
+        execution_id: 本次检索或索引批的执行 ID。
+        source: 来源标签，默认 knowledge；评测传 knowledge_eval。
+
+    Returns:
+        成功写入的条数。
+    """
+    written = 0
+    for index, item in enumerate(events or [], 1):
+        if not isinstance(item, dict):
+            continue
+        tokens = int(item.get("tokens") or 0)
+        if tokens <= 0:
+            continue
+        round_key = str(item.get("usage_id") or index)
+        try:
+            result = record_usage(
+                event_id=f"{source}:{execution_id}:{round_key}",
+                provider=_provider_of(item.get("api_key_env")),
+                model=str(item.get("model") or ""),
+                occurred_at=_iso_moment(item.get("occurred_at")),
+                input_tokens=tokens,
+                output_tokens=0,
+                category="Embedding",
+                source=source,
+                execution_id=execution_id,
+                metadata={
+                    "api_key_env": str(item.get("api_key_env") or ""),
+                    "phase": str(item.get("phase") or ""),
+                    "base": str(item.get("base") or ""),
+                },
+            )
+        except Exception:
+            backend_log.exception(
+                "embedding usage ledger write failed source=%s execution=%s",
+                source,
+                execution_id,
+            )
+            continue
+        if result is not None:
+            written += 1
+    return written
 
 
 def record_usage(

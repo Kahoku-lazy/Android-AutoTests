@@ -65,6 +65,8 @@ chat：每次模型调用读 ChatResponse.usage → `usage_ledger.api.record_usa
 
 照 SerialLogTabs 先例（模块私有手稿 chip，不用共享 AppTabs）：评测 tab 内含触发弹窗（超管，模型下拉复用 `GET /ai/model-configs/` 过滤 model_kind=chat、题量输入、预估成本）+ 运行列表 + 报告（KpiCard 指标卡 + AppTable 逐题明细 + 合成集标注）。`useEvalRun` composable 轮询（2s，终态停，卸载清理）。三态共享件；非超管只见报告。
 
+**过程可视化（2026-11-18 追加）**：运行表增 `phase` 字段（indexing/generating/retrieving，运行器经 api 打标），前端据此显示等待文案与进度条；逐题明细在运行中即实时渲染（轮询详情已带 queries）；点击行展开该题的来源片段与检索命中原文（复用 HitCard）；报告区内置「评测原理与判断依据」说明（合成集生成 / gold 定义 / rank 与三指标口径 / 合成偏差读法）。
+
 ### D8 端点与边界
 
 `POST /api/knowledge-search/evaluations/`（超管）、`GET /api/knowledge-search/evaluations/`（登录，按模块过滤）、`GET /api/knowledge-search/evaluations/{id}/`（登录，进度 + 报告）。表 `ks_eval_runs` / `ks_eval_queries`。不注册 `/api/evaluator/*`、不建 `ev_*` 表、不加 AI 助手侧栏入口（evaluator-retirement delta 守护）。

@@ -1,26 +1,37 @@
-"""串口日志写库口 —— 端口登记与监听开关的唯一写点。
+"""串口日志写库口 —— 端口登记、监听开关与关键词对照表的唯一写点。
 
-跨模块需要读开关状态时走本文件；禁止其它 App 直接读写 `LogPort`。
+跨模块需要读开关状态或按型号取关键词时走本文件；禁止其它 App 直接读写
+`LogPort` / `LogKeyword`。
 双轨制：config 行三列由配置同步（`ensure_log_ports`），custom 行三列由本文件
 的增删改函数维护；配置同步不创建、不改写、不删除自定义行。
+关键词表 `sl_log_keywords`：一行 = 关键词 × 功能点 × 范围；范围并集口径见
+`keyword_mapping_for_sku`。
 """
 
 from __future__ import annotations
 
+import re
+
+from django.db.models import Max
+
 from engines.device.logbus import LogSourceSpec
 from utils.logs import backend_log
 
-from .models import LogPort
+from .models import LogKeyword, LogPort
 
 __all__ = [
     "create_custom_port",
     "delete_custom_port",
+    "delete_keyword",
     "ensure_log_ports",
     "get_log_port_enabled_map",
     "is_log_port_enabled",
+    "keyword_mapping_for_sku",
     "list_custom_port_specs",
+    "list_keyword_rows",
     "set_log_port_enabled",
     "update_custom_port",
+    "upsert_keyword",
 ]
 
 
@@ -111,3 +122,109 @@ def is_log_port_enabled(port: int) -> bool:
 def set_log_port_enabled(port: int, enabled: bool) -> None:
     """写单个端口的监听开关（upsert；三列由 `ensure_log_ports` / 自定义增改负责）。"""
     LogPort.objects.update_or_create(port=int(port), defaults={"enabled": bool(enabled)})
+
+
+# ── 关键词对照表（sl_log_keywords）──────────────────────────────────────────
+
+# SKU 名白名单：与 ae_harness 的型号白名单同形，避免把任意字符串当范围存进库。
+_SCOPE_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def list_keyword_rows() -> list[LogKeyword]:
+    """全量关键词对照行（按 sort_order、id 排序）；供目录组装与维护核对。
+
+    Returns:
+        按登记行序排列的 `LogKeyword` 列表；表为空时返回空列表。
+    """
+    return list(LogKeyword.objects.order_by("sort_order", "id"))
+
+
+def keyword_mapping_for_sku(sku: str) -> dict[str, list[dict]]:
+    """某型号可用关键词 = 通用 ∪ 该型号专用（并集；专用不覆盖通用）。
+
+    Args:
+        sku: 型号名（如 H6601）；空串或 "*" 时只取通用条目。
+
+    Returns:
+        可注入 `KeywordIndex(mapping)` 的映射：keyword → [{id, module, feature}]，
+        条目按表内登记行序（sort_order）排列。
+    """
+    name = str(sku or "").strip()
+    scopes = [LogKeyword.SCOPE_GENERAL]
+    if name and name != LogKeyword.SCOPE_GENERAL:
+        scopes.append(name)
+    mapping: dict[str, list[dict]] = {}
+    for row in LogKeyword.objects.filter(scope__in=scopes).order_by("sort_order", "id"):
+        mapping.setdefault(row.keyword, []).append(
+            {"id": row.feature_id, "module": row.module, "feature": row.feature}
+        )
+    return mapping
+
+
+def _validate_scope(scope: str) -> str:
+    """范围取值校验："*"（通用）或 SKU 名白名单；空值按通用。
+
+    Raises:
+        ValueError: 范围既不是 "*" 也不满足 SKU 名白名单。
+    """
+    value = str(scope or "").strip() or LogKeyword.SCOPE_GENERAL
+    if value != LogKeyword.SCOPE_GENERAL and not _SCOPE_PATTERN.match(value):
+        raise ValueError(f"范围 {scope!r} 非法：须为 '*'（通用）或 SKU 名（字母/数字/_/-）")
+    return value
+
+
+def upsert_keyword(
+    keyword: str,
+    *,
+    module: str,
+    feature: str,
+    feature_id: int | None = None,
+    scope: str = LogKeyword.SCOPE_GENERAL,
+    sort_order: int | None = None,
+) -> LogKeyword:
+    """登记 / 更新单条关键词条目（按唯一键 keyword+feature_id+scope upsert）。
+
+    Args:
+        keyword: 关键词原文（去空白后不可为空）。
+        module: 功能模块名。
+        feature: 功能点名。
+        feature_id: 功能点业务编号；缺省按全表 max+1 续编。
+        scope: 范围，"*"=通用或 SKU 名；缺省通用。
+        sort_order: 行序；缺省按全表 max+10 追加。
+
+    Returns:
+        写入后的 `LogKeyword` 行。
+
+    Raises:
+        ValueError: 关键词为空或范围非法。
+    """
+    text = str(keyword or "").strip()
+    if not text:
+        raise ValueError("关键词不能为空")
+    scope_value = _validate_scope(scope)
+    if feature_id is None:
+        highest = LogKeyword.objects.aggregate(value=Max("feature_id"))["value"]
+        feature_id = (highest if highest is not None else -1) + 1
+    if sort_order is None:
+        highest_order = LogKeyword.objects.aggregate(value=Max("sort_order"))["value"]
+        sort_order = (highest_order or 0) + 10
+    row, _ = LogKeyword.objects.update_or_create(
+        keyword=text,
+        feature_id=int(feature_id),
+        scope=scope_value,
+        defaults={"module": str(module), "feature": str(feature), "sort_order": int(sort_order)},
+    )
+    return row
+
+
+def delete_keyword(row_id: int) -> bool:
+    """按主键删除单条关键词条目。
+
+    Args:
+        row_id: 条目主键。
+
+    Returns:
+        是否删除了条目（不存在时 False）。
+    """
+    deleted, _ = LogKeyword.objects.filter(pk=int(row_id)).delete()
+    return bool(deleted)

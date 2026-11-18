@@ -1,5 +1,5 @@
 {
-  "description": "串口日志关键词 → 功能模块 / 功能点 对照表；源表已下线，本文件为手工维护的唯一副本，修改请直接编辑",
+  "description": "串口日志关键词 → 功能模块 / 功能点 对照表；2026-11-18 已迁库（sl_log_keywords，迁移 0005_keyword_snapshot 冻结快照），本文件退役为种子档案，勿再手改；真相源为数据库，改表经 backend/apps/serial_log/api.py",
   "feature_count": 56,
   "keyword_count": 67,
   "keywords": {

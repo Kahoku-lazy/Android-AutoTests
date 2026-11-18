@@ -96,18 +96,20 @@ export const LOG_KEYWORD_SEARCH_PLACEHOLDER = "搜索关键词 / 功能模块 / 
 export const LOG_KEYWORD_COL_KEYWORD = "关键词"
 export const LOG_KEYWORD_COL_MODULE = "功能模块"
 export const LOG_KEYWORD_COL_FEATURE = "功能点"
+export const LOG_KEYWORD_COL_SCOPE = "范围"
+
+/** 范围筛选的「全部」选项文案 */
+export const LOG_KEYWORD_SCOPE_ALL = "全部范围"
 
 /** 取值来源的中文口径（后端 origin 字段） */
 export const LOG_KEYWORD_ORIGIN_LABELS: Record<string, string> = {
-  runtime: "运行中的采集索引",
-  file: "关键词表文件",
+  db: "数据库关键词表",
   none: "未取到",
 }
 
-/** 改表生效时机：判定用的是平台启动时加载的那份表 */
-export const LOG_KEYWORD_RESTART_HINT = "改关键词表后需重启平台才用于判定"
+/** 生效时机：条目取自数据库，刷新即取最新 */
+export const LOG_KEYWORD_REFRESH_HINT = "刷新即取最新条目"
 
 export const LOG_KEYWORD_EMPTY_TEXT = "暂无可用的日志关键词"
-export const LOG_KEYWORD_EMPTY_HINT =
-  "关键词表文件缺失或尚未生成：检查 DEVICE_LOG_KEYWORD_FILE 指向的文件"
+export const LOG_KEYWORD_EMPTY_HINT = "关键词表暂无条目：请经维护入口登记（sl_log_keywords）"
 export const LOG_KEYWORD_NO_MATCH_TEXT = "没有匹配的关键词"

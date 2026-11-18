@@ -146,14 +146,45 @@ def test_lines_unknown_port_returns_readable_conclusion(normal_user):
 
 
 def test_keyword_catalog_readable(normal_user):
+    """关键词目录契约：来源 db、功能点带 scope、无 keyword_file、计数与更新时间。"""
+    from backend.apps.serial_log import api as serial_api
+
+    serial_api.upsert_keyword(
+        "switch_on", module="设备开关", feature="打开设备成功", feature_id=0, scope="*"
+    )
+    serial_api.upsert_keyword(
+        "h6601_boot", module="设备开关", feature="H6601开机完成", feature_id=56, scope="H6601"
+    )
     response = _call(
         LogKeywordCatalogAPIView,
         path="/api/serial-log/keywords/",
         user=normal_user,
     )
     assert response.status_code == 200
-    assert "keywords" in response.data
-    assert "keyword_count" in response.data
+    data = response.data
+    assert data["origin"] == "db"
+    assert "keyword_file" not in data
+    assert data["keyword_count"] == 2
+    assert data["feature_count"] == 2
+    assert data["updated_at"]
+    entries = {item["keyword"]: item["features"] for item in data["keywords"]}
+    assert entries["switch_on"] == [
+        {"id": 0, "module": "设备开关", "feature": "打开设备成功", "scope": "*"}
+    ]
+    assert entries["h6601_boot"][0]["scope"] == "H6601"
+
+
+def test_keyword_catalog_empty_table_readable(normal_user):
+    """空表给可读空态：origin none + note，不抛错。"""
+    response = _call(
+        LogKeywordCatalogAPIView,
+        path="/api/serial-log/keywords/",
+        user=normal_user,
+    )
+    assert response.status_code == 200
+    assert response.data["origin"] == "none"
+    assert response.data["keywords"] == []
+    assert response.data["note"]
 
 
 @pytest.mark.parametrize("path", ["/api/ai/log-ports/", "/api/ai/log-keywords/"])

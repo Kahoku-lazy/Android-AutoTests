@@ -29,6 +29,20 @@
           clearable
           data-testid="log-keyword-search"
         />
+        <el-select
+          v-model="scope"
+          class="lk-scope"
+          data-testid="log-keyword-scope"
+          :teleported="false"
+        >
+          <el-option :value="SCOPE_FILTER_ALL" :label="LOG_KEYWORD_SCOPE_ALL" />
+          <el-option
+            v-for="option in scopeFilterOptions"
+            :key="option.value"
+            :value="option.value"
+            :label="option.label"
+          />
+        </el-select>
         <span class="lk-count" data-testid="log-keyword-count">
           {{ counts.keywords }} 个关键词 · {{ counts.features }} 个功能点 · {{ rows.length }} 行
         </span>
@@ -74,6 +88,13 @@
           >
           <span class="lk-feature-name">{{ record.featureName }}</span>
         </template>
+        <template #cell-scope="{ record }">
+          <span
+            class="lk-scope-tag"
+            :class="{ 'lk-scope-general': record.scope === SCOPE_GENERAL }"
+            >{{ scopeLabel(record.scope) }}</span
+          >
+        </template>
       </AppTable>
 
       <div class="lk-hintbar" data-testid="log-keyword-origin">
@@ -81,9 +102,9 @@
         <span>
           取值来源：{{ originText }}
           <span v-if="catalog?.updated_at" class="lk-origin-dim"
-            >· 表文件更新于 {{ catalog.updated_at }}</span
+            >· 最近写入于 {{ catalog.updated_at }}</span
           >
-          <span class="lk-origin-dim">· {{ LOG_KEYWORD_RESTART_HINT }}</span>
+          <span class="lk-origin-dim">· {{ LOG_KEYWORD_REFRESH_HINT }}</span>
         </span>
       </div>
     </template>
@@ -91,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-/** LogKeywordPanel — 串口日志页「日志关键词」Tab：只读表格 + 手稿搜索框 */
+/** LogKeywordPanel — 串口日志页「日志关键词」Tab：只读表格 + 手稿搜索框 + 范围筛选 */
 import { computed, onMounted } from "vue"
 import AppTable from "@/shared/components/AppTable.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
@@ -99,25 +120,29 @@ import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
 import { useLogKeywords } from "../composables/useLogKeywords"
 import { buildModuleColorMap, moduleColorOf } from "../helpers/log-keyword-colors"
+import { SCOPE_FILTER_ALL, SCOPE_GENERAL, scopeLabel } from "../helpers/log-keyword-rows"
 import {
   KEYWORDS_PANEL_DESC,
   KEYWORDS_PANEL_TITLE,
   LOG_KEYWORD_COL_FEATURE,
   LOG_KEYWORD_COL_KEYWORD,
   LOG_KEYWORD_COL_MODULE,
+  LOG_KEYWORD_COL_SCOPE,
   LOG_KEYWORD_EMPTY_HINT,
   LOG_KEYWORD_EMPTY_TEXT,
   LOG_KEYWORD_NO_MATCH_TEXT,
   LOG_KEYWORD_ORIGIN_LABELS,
-  LOG_KEYWORD_RESTART_HINT,
+  LOG_KEYWORD_REFRESH_HINT,
+  LOG_KEYWORD_SCOPE_ALL,
   LOG_KEYWORD_SEARCH_PLACEHOLDER,
 } from "../constants"
 
-/** 三列：一行一个「关键词 × 功能点」（一个关键词对应多个功能点就是多行）；功能点在左、关键词在右 */
+/** 四列：一行一个「关键词 × 功能点 × 范围」；功能点在左、关键词居中、范围在右 */
 const COLUMNS = [
   { dataIndex: "feature", title: LOG_KEYWORD_COL_FEATURE, icon: "◈", minWidth: 240 },
   { dataIndex: "module", title: LOG_KEYWORD_COL_MODULE, icon: "▣", width: 180 },
   { dataIndex: "keyword", title: LOG_KEYWORD_COL_KEYWORD, icon: "🔑", minWidth: 300 },
+  { dataIndex: "scope", title: LOG_KEYWORD_COL_SCOPE, icon: "◎", width: 140 },
 ]
 
 const {
@@ -125,8 +150,10 @@ const {
   loading,
   loadError,
   query,
+  scope,
   rows,
   filteredRows,
+  scopeFilterOptions,
   counts,
   emptyNote,
   load,

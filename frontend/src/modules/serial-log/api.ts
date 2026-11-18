@@ -93,13 +93,15 @@ export async function fetchLogPortLines(
   return data
 }
 
-// ── 日志关键词目录（只读）──
+// ── 日志关键词目录（只读，真相源 sl_log_keywords）──
 
-/** 关键词命中的功能点（编号 + 模块 + 名称） */
+/** 关键词命中的功能点（编号 + 模块 + 名称 + 范围） */
 export interface LogKeywordFeature {
   id?: number
   module?: string
   feature?: string
+  /** 范围："*"=通用；否则 SKU 名（如 H6601）。后端恒给出；缺省按通用兜底 */
+  scope?: string
 }
 
 export interface LogKeywordEntry {
@@ -112,9 +114,9 @@ export interface LogKeywordCatalog {
   keywords: LogKeywordEntry[]
   keyword_count: number
   feature_count: number
-  /** 取值来源：运行中的采集索引 / 配置文件 / 都取不到 */
-  origin: "runtime" | "file" | "none" | string
-  keyword_file: string
+  /** 取值来源：数据库关键词表 / 空表或不可用 */
+  origin: "db" | "none"
+  /** 表内最近一次写入时间（北京时间，秒精度）；空表为空串 */
   updated_at: string
   note: string
 }

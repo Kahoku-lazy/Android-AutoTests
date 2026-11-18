@@ -179,6 +179,11 @@
 .lk-search {
   width: 360px;
 }
+/* 范围筛选：与搜索框同档皮肤（.sketch-kit），定宽不压缩搜索框 */
+.lk-scope {
+  width: 180px;
+  flex-shrink: 0;
+}
 .lk-count {
   font-size: var(--app-size-sm);
   font-weight: var(--app-font-weight-semibold);
@@ -186,7 +191,17 @@
   white-space: nowrap;
 }
 
-/* 说明条：取值来源 + 更新时间 + 重启提示合并为一条 */
+/* 范围单元格：通用弱化、SKU 专用用设备强调色压深（令牌混色，浅底可读） */
+.lk-scope-tag {
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-bold);
+  color: color-mix(in srgb, var(--c-device) 58%, var(--ink));
+}
+.lk-scope-general {
+  color: var(--app-text-secondary);
+}
+
+/* 说明条：取值来源 + 最近写入时间 + 刷新提示合并为一条 */
 .lk-hintbar {
   display: flex;
   gap: 8px;

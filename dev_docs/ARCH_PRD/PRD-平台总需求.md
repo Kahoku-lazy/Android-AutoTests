@@ -40,6 +40,7 @@
 6. 验收证据：设备截图 + 串口日志关键词命中（动作后 5 秒窗口，动作前 30 秒基线）。
 7. 观测：四组运行日志、任务事件时间线、测试报告、仪表盘趋势与模型费用。
 8. 知识库助手：与 AI 助手并列的问答入口，**支持语音（Omni 实时）与文字（DeepSeek Flash）两种方式**，对话实时显示并写入本地日志；**本期产品面**以问答与平台说明为主，**不对用户开放**完整 RAG 文档库运营（上传/解析/引用范围配置）；引擎侧 engines/agents/rag 可按目标态演进，与产品开关分离。
+9. 知识库只读检索入口（2026-11-18 需求方确认）：侧栏「数据」组新增「知识库」；模块 = 服务器本地资料目录，超管可登记维护（多模块多路径、可改路径、可启停）；提问前勾选一个或多个模块，返回**未经改写的检索原文**与相似度，不做生成式答案；只索引 `.md/.txt`；嵌入调用 token 逐调用入平台账本（Embedding / source=knowledge）。规格见 `openspec/specs/knowledge-search-entry`。
 
 **❌ 非本期**
 
@@ -48,7 +49,7 @@
 3. OAuth / SSO 等第三方身份源。
 4. AI 自主修复失败用例、自主生成完整用例集。
 5. 分布式执行集群、跨机调度。
-6. **本期**不对用户提供 RAG 知识库运营能力（文档上传 / 解析 / 向量检索 / 引用范围配置）；不阻碍 engines 内 Harness 检索能力按目标态建设（须遵守 engines AGENTS）。
+6. **本期**不对用户提供 RAG 知识库**运营**能力（文档上传 / 解析 / 引用范围配置）；「数据」组知识库只读检索预览（本期范围第 9 条）不受此限；不阻碍 engines 内 Harness 检索能力按目标态建设（须遵守 engines AGENTS）。
 
 ---
 
@@ -86,6 +87,7 @@ flowchart TD
 
     DATA --> DP["📱 设备管理"]
     DATA --> SL["🖥 串口日志"]
+    DATA --> KS["📚 知识库"]
 
     TASK --> TL["🗒 任务清单"]
     TASK --> CM["📋 用例管理"]
@@ -148,7 +150,7 @@ flowchart LR
 | 实时性 | 无 WebSocket / SSE；任务进度与列表靠 HTTP 轮询。唯一例外：知识库助手走 `/ws/knowledge-assistant/?mode=voice|text`，该通道只承载语音音频、转写、打断、播放进度与文字提问，不承载平台写操作 |
 | 安全 | 全部 `/api/` 走 JWT；公开面仅登录/注册/刷新、Admin、静态资源、API 文档；AI 智能体写操作仅超管 |
 | 契约 | 响应信封 `{status, data}`；错误 `{status, message}` + HTTP 状态码；JSON snake_case；`/api/` 尾斜杠 |
-| 数据 | 表前缀 `acc_ ai_ cm_ dp_ rg_ sl_ task_`；SQLite（开发）/ MySQL（生产）；JWT 吊销记录落库（`acc_token_revocations`），平台无外部 KV 依赖 |
+| 数据 | 表前缀 `acc_ ai_ cm_ dp_ rg_ sl_ task_ ks_`；SQLite（开发）/ MySQL（生产）；JWT 吊销记录落库（`acc_token_revocations`），平台无外部 KV 依赖 |
 | 可观测 | 后端 / 智能体 / 设备 / 串口四组日志；任务事件与费用可回看 |
 | 质量 | 本地 `python run.py check` 与 CI 同一批门禁（23 项）；后端测试以 pytest 分层维护；接口契约基线由 drf-spectacular 生成并纳入门禁 |
 
@@ -165,3 +167,4 @@ flowchart LR
 | 证据窗口 | 动作后 5 秒内截取串口日志命中；动作前 30 秒作基线 |
 | 任务事件 | 模型调用、工具调用、内容块、判决等结构化记录，落 `task_events` |
 | 知识库助手 | 与 AI 助手并列的语音/文字问答入口；对话落 `logs/knowledge_assistant/YYYY-MM-DD.jsonl`；本期不对用户开放 RAG 运营能力 |
+| 知识库检索 | 「数据」组只读检索入口：勾选模块提问，返回检索原文；模块登记落 `ks_modules`，检索能力在 `engines/ae_harness/knowledge` |

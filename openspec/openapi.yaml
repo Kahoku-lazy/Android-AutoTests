@@ -1689,6 +1689,162 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/knowledge-search/modules/:
+    get:
+      operationId: knowledge_search_modules_retrieve
+      description: GET 模块列表（登录可读）；POST 新增模块（仅超管）。
+      tags:
+      - knowledge-search
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    post:
+      operationId: knowledge_search_modules_create
+      description: GET 模块列表（登录可读）；POST 新增模块（仅超管）。
+      tags:
+      - knowledge-search
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModuleWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ModuleWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ModuleWrite'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/knowledge-search/modules/{id}/:
+    patch:
+      operationId: knowledge_search_modules_partial_update
+      description: PATCH 编辑 / DELETE 删除模块登记（仅超管）。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - knowledge-search
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedModulePatch'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedModulePatch'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedModulePatch'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    delete:
+      operationId: knowledge_search_modules_destroy
+      description: PATCH 编辑 / DELETE 删除模块登记（仅超管）。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - knowledge-search
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/knowledge-search/modules/{id}/index/:
+    post:
+      operationId: knowledge_search_modules_index_create
+      description: POST 预建索引（仅超管）：同步增量重建，返回重建文件数。
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - knowledge-search
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/knowledge-search/query/:
+    post:
+      operationId: knowledge_search_query_create
+      description: POST 多选提问（登录可用）：返回检索原文与三态结果。
+      tags:
+      - knowledge-search
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Query'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Query'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Query'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/ops/users/:
     get:
       operationId: ops_users_retrieve
@@ -2768,6 +2924,26 @@ components:
         * `chat` - chat
         * `tts` - tts
         * `realtime` - realtime
+    ModuleWrite:
+      type: object
+      description: 新增模块入参。
+      properties:
+        name:
+          type: string
+          maxLength: 64
+        description:
+          type: string
+          maxLength: 200
+        data_dir:
+          type: string
+          maxLength: 500
+        enabled:
+          type: boolean
+          default: true
+      required:
+      - data_dir
+      - description
+      - name
     PatchedAssistantInput:
       type: object
       description: 助手名片入参。头像字节由视图解码后传入写库层。
@@ -2815,6 +2991,21 @@ components:
         model_name:
           type: string
           maxLength: 100
+    PatchedModulePatch:
+      type: object
+      description: 编辑模块入参（至少一个字段）。
+      properties:
+        name:
+          type: string
+          maxLength: 64
+        description:
+          type: string
+          maxLength: 200
+        data_dir:
+          type: string
+          maxLength: 500
+        enabled:
+          type: boolean
     PatchedRoleInput:
       type: object
       description: Agent 配置入参。不查模型配置是否存在。
@@ -2850,6 +3041,22 @@ components:
         * `deepseek` - deepseek
         * `dashscope` - dashscope
         * `govee` - govee
+    Query:
+      type: object
+      description: 多选提问入参：问题与勾选库名均非空。
+      properties:
+        question:
+          type: string
+        bases:
+          type: array
+          items:
+            type: string
+        top_k:
+          type: integer
+          minimum: 1
+      required:
+      - bases
+      - question
     Refresh:
       type: object
       properties:

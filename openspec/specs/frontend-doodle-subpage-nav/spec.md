@@ -60,7 +60,7 @@ AI 助手只有一个侧栏入口，不再占用「侧栏子项」模版。
 - **WHEN** 用户进入 AI 助手
 - **THEN** 侧栏只有一个「AI 助手」入口，页内没有第二套顶栏 Tab
 - **AND** 页头标题固定为平台小助手
-- **AND** 侧栏与路由既不出现评测中心，也不出现知识库、AI 工具箱
+- **AND** AI 助手分组与路由既不出现评测中心，也不出现旧 RAG 知识库页、AI 工具箱；「数据」分组的「知识库」只读检索入口（`knowledge-search-entry`）不受本场景约束
 
 #### Scenario: AI deep link returns to the single entry
 

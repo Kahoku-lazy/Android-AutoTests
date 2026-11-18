@@ -51,6 +51,7 @@ class KsEvalRun(models.Model):
     neg_count = models.PositiveIntegerField(default=10)
     seed = models.BigIntegerField(default=0)
     status = models.CharField(max_length=16, default=STATUS_PENDING)
+    phase = models.CharField(max_length=16, default="", blank=True)
     progress_done = models.PositiveIntegerField(default=0)
     progress_total = models.PositiveIntegerField(default=0)
     metrics = models.JSONField(default=dict, blank=True)

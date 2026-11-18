@@ -62,6 +62,7 @@ class EvalRunSerializer(serializers.ModelSerializer):
             "pos_count",
             "neg_count",
             "status",
+            "phase",
             "progress_done",
             "progress_total",
             "metrics",

@@ -307,6 +307,11 @@ def set_eval_progress(pk: int, done: int, total: int) -> None:
     KsEvalRun.objects.filter(pk=pk).update(progress_done=done, progress_total=total)
 
 
+def set_eval_phase(pk: int, phase: str) -> None:
+    """更新运行阶段（indexing / generating / retrieving），供前端等待文案。"""
+    KsEvalRun.objects.filter(pk=pk).update(phase=phase)
+
+
 def add_eval_query(pk: int, **fields: object) -> KsEvalQuery:
     """
     落库一道评测题及其检索结果。

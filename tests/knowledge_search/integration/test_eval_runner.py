@@ -147,6 +147,7 @@ def test_run_completes_with_metrics_and_ledger(run_row, patched_engine):
     eval_runner._run(run_row.pk)
     run = api.get_eval_run(run_row.pk)
     assert run.status == "done"
+    assert run.phase == "retrieving"
     assert run.progress_done == 7
     assert run.metrics["n_pos"] == 5
     assert run.metrics["n_neg"] == 2

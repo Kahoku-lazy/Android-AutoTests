@@ -116,6 +116,7 @@ async def _run_async(run, collector: dict) -> dict:
     name = snapshot["name"]
     config = load_config(bases_path=_snapshot_bases_file(run))
     retriever = KnowledgeRetriever(config)
+    await sync_to_async(api.set_eval_phase)(run.pk, "indexing")
     await retriever.ensure_index(name)
     collector["embedding"].extend(event.as_dict() for event in retriever.usage_events())
 
@@ -132,6 +133,7 @@ async def _run_async(run, collector: dict) -> dict:
         raise RuntimeError("没有已索引的资料可供出题，请先预建索引")
 
     model_snapshot = run.model_snapshot
+    await sync_to_async(api.set_eval_phase)(run.pk, "generating")
     created = create_model(
         model_snapshot["provider"],
         model_snapshot["api_key_env"],
@@ -161,6 +163,7 @@ async def _run_async(run, collector: dict) -> dict:
     queries: list[dict] = []
     total = len(positives) + len(negatives)
     done = 0
+    await sync_to_async(api.set_eval_phase)(run.pk, "retrieving")
     await sync_to_async(api.set_eval_progress)(run.pk, done, total)
 
     for item in positives:

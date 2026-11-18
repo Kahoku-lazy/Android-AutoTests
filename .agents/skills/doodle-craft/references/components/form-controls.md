@@ -13,7 +13,7 @@
 | placeholder | **未覆盖**（EP 默认）|
 | label 宽度 / 对齐 | **无全局定义**（模块自定，常见 80 / 100 / 120px 三档）|
 | 校验错误文字 | `--app-status-danger-text`（对比度 ≥ 4.5:1）|
-| textarea | **未覆盖** |
+| textarea | 与单行框同源：框 `2px solid var(--ink)`、圆角 `--app-radius-sm`、底 `--app-bg-input`、内边距 `var(--app-space-sm) var(--app-space-md)`；hover / focus 同样走柠黄语言 |
 
 **约束**：需要校验的表单必须 `:model` + `:rules` + `el-form-item prop` + `validate()`；**只有 `required` 没有 `:rules` 属误导性 UI**；实际非必填的字段不许标必填星号；弹窗内单列、宽度 ≤ 520px。
 
@@ -31,7 +31,19 @@
 
 ## 4. 分段控件 el-radio-button
 
-圆角 `--app-radius-sm`（**必须 `!important`**：`--el-border-radius-base` 是双值，EP 组合后会生成 6 值非法声明、在 computed-value 阶段回落 0）；选中态 字 `--ink` + 底 `--c-dashboard` + 框 `--ink`；hover 只变字色。与 `AppTabs` 同口径（见 [layout.md](layout.md)）。
+**EP 的边框画在 `outline` 上**（`outline: var(--el-border)`，`border` 恒为 0），所以「换墨边」必须同时写 `border` 与 `outline: none`；相邻段靠 outline 贴合，必须自己补 `gap` 才能成为两枚独立印章。
+
+| 维度 | 实际规格 |
+|------|----------|
+| 组 | `display: inline-flex` + `gap: var(--app-space-xs)`（4px）|
+| 未选中 | 框 `2px solid var(--ink)`、圆角 `--app-radius-sm`、底 `--app-bg-card`、字 `--app-text-primary` 14px / 700 |
+| 选中 | 字 `--ink` + 底 `--c-dashboard` + 框 `--ink`，**无影**；与 `AppTabs` 同口径（见 [layout.md](layout.md)）|
+| hover | 只变字色，不动底色、不加影 |
+| 内边距 | `var(--app-space-sm) var(--app-space-md)`（与 EP 出厂 8px 15px 同高，仅横向 +1px）|
+
+**必须 `!important`**：`--el-border-radius-base` 是双值，EP 把它与额外值组合会生成 6 值非法声明、在 computed-value 阶段回落 0。
+
+> **选中态声明必须与基础声明同带 `!important`**：基础底色写了 `!important` 之后，弱一档的选中底色会被压掉——2026-11-18 在用例管理「新建项目」上实测到两个段都退成纸色。
 
 ## 5. el-switch 开关
 

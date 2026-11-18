@@ -40,7 +40,7 @@ min-height 32px   padding 0 14px   字 --app-size-sm(14px) / 800
 - **tone**：`paper`（默认，底 `--paper`）/ `teal`（`--c-case`）/ `yellow`（`--c-dashboard`）/ `danger`（`--app-marker-red` + 白字）
 - hover `translate(-1,-1)` + 影 4px；active `translate(2,2)` + 影 1px；focus-visible 2px outline
 - **disabled**：底 `--comp-dbtn-disabled-bg`、字 `--comp-dbtn-disabled-ink`、影 `3px 3px 0 0 #bbb`（字面量）+ `:disabled` 属性 + JS 拦截
-- **用途**：内容卡操作区。页头 `wb-btn` 与 EP 表单主按钮**不换**成这个
+- **用途**：内容卡操作区、浮层动作区（`el-dialog` / `el-drawer` 的 `#footer`：取消用 `paper`、主行动用 `yellow`）。页头 `wb-btn` 与**页面内**的 EP 表单主按钮**不换**成这个
 - **手稿控件皮肤变体**：在 `.sketch-kit` 作用域内，`paper` / `danger` 变成**虚线描边 + 无影**，`yellow` / `teal` 保持实线 + 硬影，禁用态转浅灰虚线；规格见 [sketched-ui-kit.md](sketched-ui-kit.md) §1。变体由 `shared/styles/sketched-kit.css` 提供，**不要**改本组件或就地复写
 
 ## 3. ConfirmButton 确认按钮

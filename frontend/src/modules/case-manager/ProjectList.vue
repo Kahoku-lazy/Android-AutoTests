@@ -5,6 +5,7 @@ import { ElMessageBox, type FormInstance } from "element-plus"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import SketchCard from "@/shared/components/SketchCard.vue"
 import SectionDivider from "@/shared/components/SectionDivider.vue"
+import DoodleBtn from "@/shared/components/DoodleBtn.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
@@ -155,8 +156,12 @@ async function onDeleteProject(id: number, name: string) {
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="createDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="creating" @click="confirmCreate">创建</el-button>
+        <div class="create-dialog__actions">
+          <DoodleBtn tone="paper" @click="createDialogVisible = false">取消</DoodleBtn>
+          <DoodleBtn tone="yellow" :disabled="creating" @click="confirmCreate">
+            {{ creating ? "创建中…" : "创建" }}
+          </DoodleBtn>
+        </div>
       </template>
     </el-dialog>
   </div>
@@ -174,6 +179,13 @@ async function onDeleteProject(id: number, name: string) {
   display: flex;
   justify-content: flex-end;
   margin-bottom: var(--app-space-sm);
+}
+
+/* 弹窗动作区：右对齐、8px 间距（按钮几何由 DoodleBtn 自持，本页不另写皮肤） */
+.create-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--app-space-sm);
 }
 
 /* 分区虚线：与上方操作带留 8px、与下方卡片留 16px（间距由使用方给，组件自身不带外边距） */

@@ -152,23 +152,52 @@ body {
   color: var(--app-status-danger-text);
 }
 
-/* ── 分段控件（el-radio-button）：显式不对称圆角 + 黄底墨字选中态
+/* ── 分段控件（el-radio-button）：与 .ac-tabs 同口径的「印章」二态
+       EP 的边框画在 outline 上（border 恒为 0）、相邻段贴合无间隙，在纸面主题里读起来仍是
+       EP 出厂胶囊；这里改成真实 2px 墨边 + 段间 4px 间隙，字号字重与输入框同档，
+       选中态黄底墨字、无影，与 AppTabs / DoodleBtn 一套语言。
        --el-border-radius-base 是两个值（4px 8px），EP 把它与额外值组合会生成 6 值非法声明，
        在 computed-value 阶段失效并回落 initial(0)；该声明已在层叠中胜出，
-       低特异性规则无法接管，故必须 !important。选中态与 .ac-tabs 口径一致 ── */
+       低特异性规则无法接管，故必须 !important ── */
+.el-radio-group {
+  display: inline-flex;
+  gap: var(--app-space-xs);
+}
 .el-radio-button__inner {
+  border: 2px solid var(--ink) !important;
+  outline: none !important;
   border-radius: var(--app-radius-sm) !important;
+  background: var(--app-bg-card) !important;
+  /* 未选中用次级墨色，hover 提到正文墨色——与 .ac-tabs 的未选中 / hover 同口径，
+     否则 hover 与默认同色，等于没有反馈 */
+  color: var(--app-text-secondary) !important;
+  font-family: var(--app-font) !important;
+  font-size: var(--app-size-sm) !important;
+  font-weight: var(--app-font-weight-bold) !important;
+  padding: var(--app-space-sm) var(--app-space-md) !important;
+  box-shadow: none !important;
+  transition:
+    background-color var(--app-duration-fast) var(--app-ease),
+    color var(--app-duration-fast) var(--app-ease) !important;
 }
 .el-radio-button__original-radio:not(:disabled) + .el-radio-button__inner:hover {
-  color: var(--app-text-primary);
+  color: var(--app-text-primary) !important;
+}
+/* 键盘焦点：EP 原本靠给 inner 加 1px outline 冒充边框，已被上面的 outline:none 撤掉，
+   这里补一个与 DoodleBtn / 输入框同一套的 2px 柠黄环，焦点可见性不许丢 */
+.el-radio-button__original-radio:focus-visible + .el-radio-button__inner {
+  outline: 2px solid var(--c-dashboard) !important;
+  outline-offset: 2px;
 }
 .el-radio-button.is-active
   .el-radio-button__original-radio:not(:disabled)
   + .el-radio-button__inner {
-  color: var(--app-text-primary);
-  background-color: var(--c-dashboard);
-  border-color: var(--ink);
-  box-shadow: none;
+  /* 选中态必须同用 !important：上面那组基础声明带 !important，
+     否则黄底会被基础底色压掉（实测：两块都退成纸色） */
+  color: var(--app-text-primary) !important;
+  background-color: var(--c-dashboard) !important;
+  border-color: var(--ink) !important;
+  box-shadow: none !important;
 }
 
 /* ── 开关：轨道圆角与墨色描边落到主题 ── */
@@ -177,20 +206,29 @@ body {
   border: 2px solid var(--ink);
 }
 
+/* ── 输入件：单行 / 多行 / 下拉输入区同一套墨边几何
+       多行框（.el-textarea__inner）此前只在 EP 出厂值上跑（1px 内阴影描边），
+       与单行框的 2px 墨边并排时粗细不一致，故并入同一组声明 ── */
 .el-input__wrapper,
-.el-select .el-input__wrapper {
+.el-select .el-input__wrapper,
+.el-textarea__inner {
   background: var(--app-bg-input) !important;
   border-radius: var(--app-radius-sm) !important;
   border: 2px solid var(--ink) !important;
   box-shadow: none !important;
   transition: border-color var(--app-duration-fast);
 }
+.el-textarea__inner {
+  padding: var(--app-space-sm) var(--app-space-md) !important;
+}
 .el-input__wrapper:hover,
-.el-select .el-input__wrapper:hover {
+.el-select .el-input__wrapper:hover,
+.el-textarea__inner:hover {
   border-color: var(--c-dashboard) !important;
 }
 .el-input__wrapper:focus-within,
-.el-select .el-input__wrapper:focus-within {
+.el-select .el-input__wrapper:focus-within,
+.el-textarea__inner:focus {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-dashboard) 20%, transparent) !important;
   border-color: var(--c-dashboard) !important;
 }

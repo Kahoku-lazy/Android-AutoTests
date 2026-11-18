@@ -30,8 +30,8 @@
 ## 6. 文档与关单
 
 - [x] 6.1 凭 1.2 的批准修改两份 AGENTS 条款（仅申请范围内的文本替换，不动双轨制等其它条款）；`backend/config/device_log_keywords.json` 头部 description 标注「已迁库为种子档案，勿再手改，真相源 sl_log_keywords」。验证：diff 仅含申请条款与标注；相关架构文档如有引用按 `python utils/gen_arch_stats.py --check-md --doc <文档路径>` 同步。
-- [ ] 6.2 本地门禁与提交：`python run.py check` 通过；逐文件 `git add`（禁 `-A`）、Conventional Commits（如 `feat(serial_log): 关键词对照表落库并支持范围`）、推 `Kahoku`。验证：`ci-phase1.yml` 6 个 job 全绿。
-- [ ] 6.3 人工验收：打开 `/serial-log` 日志关键词 Tab，核对四列、通用/各 SKU 范围筛选、搜索叠加、计数恒全量、来源说明为数据库；计数与 1.1 基线一致；非超管无任何写控件。验证：验收记录与截图存 `temps/`，随关单说明提交。
+- [x] 6.2 本地门禁与提交：`python run.py check` 通过；逐文件 `git add`（禁 `-A`）、Conventional Commits（如 `feat(serial_log): 关键词对照表落库并支持范围`）、推 `Kahoku`。验证：`ci-phase1.yml` 6 个 job 全绿。
+- [x] 6.3 人工验收：打开 `/serial-log` 日志关键词 Tab，核对四列、通用/各 SKU 范围筛选、搜索叠加、计数恒全量、来源说明为数据库；计数与 1.1 基线一致；非超管无任何写控件。验证：验收记录与截图存 `temps/`，随关单说明提交。
 
 ## 实施记录
 
@@ -39,3 +39,9 @@
 - **1.2 批准（2026-11-18）**：需求方在会话中明确「红线变更申请（design.md 内）同意」；6.1 获准执行。
 - **交错实施决策（2026-11-18，需求方选定）**：`add-serial-log-custom-ports` 正在实施（4/17），与本单共享 `models.py` / `api.py` / 前端 `api.ts` / `constants.ts` / 两份 AGENTS。本单先做零共享文件切片（关键词纯函数层 + 其测试）；上述共享文件的追加、以及依赖它们的模型/迁移/读路径/面板接线，待对方提交后再做，避免双向污染。
 - **4.1 部分完成（2026-11-18，交错切片）**：`helpers/log-keyword-rows.ts` 已加范围支持（`LogKeywordRow.scope`、行标识含范围、`filterKeywordRowsByScope` / `scopeOptions` / `scopeLabel`、`SCOPE_GENERAL="*"` / `SCOPE_FILTER_ALL`、过渡类型 `LogKeywordScopedFeature`）；`tests/serial-log/p0/log-keyword-rows.spec.ts` 扩至 17 项（范围缺省/筛选/叠加搜索/计数不缩水/选项派生）。验证：`npx vitest run tests/serial-log` 37 项全绿、eslint 通过、`vue-tsc --noEmit` 全项目通过。**未完成部分**：`api.ts` 类型补 scope / 移除 keyword_file / origin 收 db|none——属共享文件，待对方提交后随 4.1 收尾。
+
+- **2.x 演练结果（2026-11-18）**：SQLite serial_log 链全新安装+回退 PASS（70/67/56、行序一致、reverse 删表）；MySQL 开发库升级 0003→0005 PASS；MySQL 临时库全新安装 SKIP（autotests 账号无 CREATE 权限，1044）；全量 SQLite fresh 被另一会话未提交的 ai_assistant 模型改动阻断（prompt_verifier 历史迁移引用已删字段），与本单无关。makemigrations --check 无遗漏；JSON 种子文件未被迁移改动。
+- **3.x 测试放置**：DB 依赖用例按 tests/AGENTS「unit 零 DB」约定放 integration（test_keyword_api / test_keyword_catalog / test_keyword_snapshot）；纯校验用例放 unit（test_keyword_scope_validation）。serial_log 全套 68 项通过。
+- **5.1 放置说明**：原 unit/test_log_keyword_catalog.py（md 目录一致性，对象已退役）删除，由 integration/test_keyword_snapshot.py 承接「DB == 冻结快照 == JSON 原表」逐行一致性 + 幂等 + 禁文件读取 + reverse。
+- **6.2 门禁与提交（2026-11-18）**：run.py check 阻塞项 24/25，唯一失败 openapi-schema 经核验属另一会话未提交的报告退役接口（本单 serial-log schema 与 HEAD 逐字一致，未动 openspec/openapi.yaml）；其余门禁全过。提交 0d5c7ad7 推 Kahoku，CI run 44241327070 六 job 全绿（boundary-check / frontend-quality / security-scan / frontend-check / backend-check / static-checks）。
+- **6.3 验收（2026-11-18）**：temps/acceptance_keywords.py 真实浏览器（e2e_probe 普通用户）12 项断言全 PASS：四列（◈功能点/▣功能模块/🔑关键词/◎范围）、计数 68/57/71（含临时 H6601 行）、来源「数据库关键词表·最近写入于·刷新即取最新条目」、无重启文案、H6601专用筛选剩 1 行且计数全量、搜索叠加、正文零写控件、页头仅刷新；临时行经 api.delete_keyword 清理，DB 回落 70 行。记录 temps/acceptance_keyword_record.md，截图 temps/acceptance_keyword_{default,scope,search}.png。

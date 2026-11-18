@@ -1,9 +1,12 @@
-"""串口日志管理面（JWT）：端口列表 / 监听开关 / 当前日志文件尾部行 / 关键词对照表。
+"""串口日志管理面（JWT）：端口列表 / 新增端口 / 监听开关 / 编辑删除 / 日志尾部行 / 关键词对照表。
 
-GET  /api/serial-log/ports/                   登录可读：端口列表（三列 + 开关 + 运行时监听状态）
-POST /api/serial-log/ports/toggle/            仅超管：开/关某个端口的持续监听
-GET  /api/serial-log/ports/<int:port>/lines/  登录可读：当前日志文件尾部若干行（只读）
-GET  /api/serial-log/keywords/                登录可读：关键词 → 功能模块 / 功能点（只读）
+GET    /api/serial-log/ports/                   登录可读：端口列表（含本机监听 IP、来源与运行时状态）
+POST   /api/serial-log/ports/                   仅超管：新增自定义端口（保存即增量开启监听）
+POST   /api/serial-log/ports/toggle/            仅超管：开/关某个端口的持续监听
+PATCH  /api/serial-log/ports/<int:port>/        仅超管：编辑自定义端口（SKU / 波特率）
+DELETE /api/serial-log/ports/<int:port>/        仅超管：删除自定义端口（保留日志文件）
+GET    /api/serial-log/ports/<int:port>/lines/  登录可读：当前日志文件尾部若干行（只读）
+GET    /api/serial-log/keywords/                登录可读：关键词 → 功能模块 / 功能点（只读）
 
 不经内部令牌网关；日志正文不入库，只从本地当前日志文件读取。
 """
@@ -52,12 +55,58 @@ def _reconcile_throttled() -> None:
 
 
 class LogPortListAPIView(APIView):
-    """GET /api/serial-log/ports/ — 端口列表（顺带按开关状态校正监听，10 秒节流）。"""
+    """GET /api/serial-log/ports/ — 端口列表（顺带按开关状态校正监听，10 秒节流）。
+
+    POST /api/serial-log/ports/ — 新增自定义端口（仅超级管理员），保存即增量开启监听。
+    body: `{"port": 7008, "sku": "H717D", "baud": 115200}`
+    """
 
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         _reconcile_throttled()
-        return Response({"ports": port_service.list_ports()})
+        return Response({"ports": port_service.list_ports(), "listen_ip": port_service.listen_ip()})
+
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    def post(self, request):
+        if not is_superuser(_user_id(request)):
+            raise PermissionDenied("Forbidden")
+        try:
+            payload = port_service.create_port(
+                request.data.get("port"), request.data.get("sku"), request.data.get("baud")
+            )
+        except (port_service.LogPortInvalid, port_service.LogPortCapReached) as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response(payload, status=201)
+
+
+class LogPortDetailAPIView(APIView):
+    """PATCH / DELETE /api/serial-log/ports/<port>/ — 编辑 / 删除自定义端口（仅超级管理员）。
+
+    PATCH body: `{"sku": "H717D-V2", "baud": 460800}`（至少一个字段；端口号不可改）。
+    编辑只重启被编辑的端口；删除停监听并移除登记，历史日志文件保留。
+    """
+
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    def patch(self, request, port: int):
+        if not is_superuser(_user_id(request)):
+            raise PermissionDenied("Forbidden")
+        try:
+            payload = port_service.update_port(
+                int(port), sku=request.data.get("sku"), baud=request.data.get("baud")
+            )
+        except (port_service.LogPortUnknown, port_service.LogPortInvalid) as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response(payload)
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def delete(self, request, port: int):
+        if not is_superuser(_user_id(request)):
+            raise PermissionDenied("Forbidden")
+        try:
+            payload = port_service.delete_port(int(port))
+        except (port_service.LogPortUnknown, port_service.LogPortInvalid) as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response(payload)
 
 
 class LogPortToggleAPIView(APIView):

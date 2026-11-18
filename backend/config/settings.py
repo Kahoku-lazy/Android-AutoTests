@@ -242,6 +242,9 @@ MEDIA_LINK_TTL_SECONDS = int(os.environ.get("MEDIA_LINK_TTL_SECONDS", "900"))
 # 采集常驻，不随动作开关；时间戳一律北京时间毫秒（固定 UTC+8，不依赖 tzdata）。
 DEVICE_LOG_ENABLED = os.environ.get("DEVICE_LOG_ENABLED", "1") not in ("0", "false", "False", "")
 DEVICE_LOG_TCP_HOST = os.environ.get("DEVICE_LOG_TCP_HOST", "0.0.0.0")
+# 端口管理页展示的对外 IP：留空自动探测出站局域网 IP（utils.netinfo）；多网卡 / 容器
+# 部署时人工指定设备侧可达的 IP。只影响展示，不改监听绑定地址（仍 DEVICE_LOG_TCP_HOST）。
+DEVICE_LOG_ADVERTISE_HOST = os.environ.get("DEVICE_LOG_ADVERTISE_HOST", "").strip()
 DEVICE_LOG_TCP_PORT = int(os.environ.get("DEVICE_LOG_TCP_PORT", "7005"))  # 0 = 不监听网络来源
 # 该日志来源对应的被测设备 SKU（APP 里显示的型号，如 H6810）：日志按此名分通道，
 # 验收证据里也会标出来源，便于判断「这条日志是不是当前在测的设备打的」。

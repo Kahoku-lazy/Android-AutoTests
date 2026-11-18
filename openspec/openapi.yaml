@@ -2153,7 +2153,11 @@ paths:
   /api/serial-log/ports/:
     get:
       operationId: serial_log_ports_retrieve
-      description: GET /api/serial-log/ports/ — 端口列表（顺带按开关状态校正监听，10 秒节流）。
+      description: |-
+        GET /api/serial-log/ports/ — 端口列表（顺带按开关状态校正监听，10 秒节流）。
+
+        POST /api/serial-log/ports/ — 新增自定义端口（仅超级管理员），保存即增量开启监听。
+        body: `{"port": 7008, "sku": "H717D", "baud": 115200}`
       tags:
       - serial-log
       security:
@@ -2166,6 +2170,99 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+    post:
+      operationId: serial_log_ports_create
+      description: |-
+        GET /api/serial-log/ports/ — 端口列表（顺带按开关状态校正监听，10 秒节流）。
+
+        POST /api/serial-log/ports/ — 新增自定义端口（仅超级管理员），保存即增量开启监听。
+        body: `{"port": 7008, "sku": "H717D", "baud": 115200}`
+      tags:
+      - serial-log
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/serial-log/ports/{port}/:
+    patch:
+      operationId: serial_log_ports_partial_update
+      description: |-
+        PATCH / DELETE /api/serial-log/ports/<port>/ — 编辑 / 删除自定义端口（仅超级管理员）。
+
+        PATCH body: `{"sku": "H717D-V2", "baud": 460800}`（至少一个字段；端口号不可改）。
+        编辑只重启被编辑的端口；删除停监听并移除登记，历史日志文件保留。
+      parameters:
+      - in: path
+        name: port
+        schema:
+          type: integer
+        required: true
+      tags:
+      - serial-log
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    delete:
+      operationId: serial_log_ports_destroy
+      description: |-
+        PATCH / DELETE /api/serial-log/ports/<port>/ — 编辑 / 删除自定义端口（仅超级管理员）。
+
+        PATCH body: `{"sku": "H717D-V2", "baud": 460800}`（至少一个字段；端口号不可改）。
+        编辑只重启被编辑的端口；删除停监听并移除登记，历史日志文件保留。
+      parameters:
+      - in: path
+        name: port
+        schema:
+          type: integer
+        required: true
+      tags:
+      - serial-log
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/serial-log/ports/{port}/lines/:
     get:
       operationId: serial_log_ports_lines_retrieve

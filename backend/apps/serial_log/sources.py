@@ -1,6 +1,6 @@
-"""端口来源登记 —— 把 `DEVICE_LOG_SOURCES` 配置解析成日志来源列表。
+"""端口来源登记 —— 配置解析 + 自定义行双轨合并成日志来源列表。
 
-只做配置解析，不碰监听、不碰文件、不写库。
+配置解析不碰监听、不碰文件；自定义行经 `api.py` 只读取得，不写库。
 """
 
 from __future__ import annotations
@@ -12,7 +12,9 @@ from django.conf import settings
 from engines.device.logbus import DEFAULT_CHANNEL, LogSourceSpec
 from utils.logs import backend_log
 
-__all__ = ["source_specs"]
+from . import api
+
+__all__ = ["config_specs", "source_specs"]
 
 
 def _default_baud() -> int:
@@ -44,8 +46,8 @@ def _specs_from_mapping(data: dict) -> list[LogSourceSpec]:
     return sorted(specs, key=lambda item: item.port)
 
 
-def source_specs() -> list[LogSourceSpec]:
-    """「端口 → 来源登记」：优先 `settings.DEVICE_LOG_SOURCES`（JSON），否则按单端口合成。
+def config_specs() -> list[LogSourceSpec]:
+    """「端口 → 来源登记」的配置轨：优先 `settings.DEVICE_LOG_SOURCES`（JSON），否则按单端口合成。
 
     支持两种 JSON 形态：
 
@@ -65,3 +67,15 @@ def source_specs() -> list[LogSourceSpec]:
     sku = str(getattr(settings, "DEVICE_LOG_SOURCE_SKU", "") or "").strip() or DEFAULT_CHANNEL
     port = int(settings.DEVICE_LOG_TCP_PORT)
     return [LogSourceSpec(port=port, sku=sku, baud=_default_baud())] if port else []
+
+
+def source_specs() -> list[LogSourceSpec]:
+    """双轨合并：配置登记 + 自定义行（经 api 读库），按端口排序。
+
+    同号时自定义行优先——配置同步会跳过被自定义占用的端口（见 api.ensure_log_ports），
+    该端口按自定义登记管理。
+    """
+    merged = {int(spec.port): spec for spec in config_specs()}
+    for spec in api.list_custom_port_specs():
+        merged[int(spec.port)] = spec
+    return sorted(merged.values(), key=lambda item: item.port)

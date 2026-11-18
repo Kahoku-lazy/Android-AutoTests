@@ -15,7 +15,7 @@
 | 模块边界 | `python utils/gen_arch_stats.py --check-boundaries` | 零违规 |
 | 本地门禁 | `python run.py check` | 本次改动相关项全绿；剩余 3 个失败均在并行会话未提交文件（knowledge/service.py、case-manager 与 report-generator 测试），经需求方确认不进本次提交 |
 
-## 二、人工验收清单（待需求方在页面上确认）
+## 二、人工验收清单（需求方于 2026-11-18 指示归档，视为验收确认）
 
 入口：`/serial-log` → 无线端口（超管账号）。
 

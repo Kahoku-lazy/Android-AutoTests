@@ -1,4 +1,9 @@
-"""关键词目录一致性：按型号目录里的关键词必须都在全量目录里登记。"""
+"""关键词目录一致性：按型号目录里的关键词必须都在全量目录里登记。
+
+2026-11-18：`engines/agents` 整包退役（commit c5b2dc23）后型号目录不复存在，
+原 `test_catalog_files_exist` 断言永久失效，经需求方确认退役；其余用例在目录
+缺失时为空集合通过，保留以兼容未来恢复目录的情形。
+"""
 
 from __future__ import annotations
 
@@ -29,12 +34,6 @@ def _md_keywords() -> dict[str, set[str]]:
                 keywords.add(match.group(1))
         found[path.stem] = keywords
     return found
-
-
-def test_catalog_files_exist():
-    """至少维护了一个型号的目录。"""
-    assert KEYWORDS_DIR.is_dir()
-    assert _md_keywords(), "log_keywords 目录下没有任何型号文件"
 
 
 def test_every_keyword_is_registered_in_full_catalog():

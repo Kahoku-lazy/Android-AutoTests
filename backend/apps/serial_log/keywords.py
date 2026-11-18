@@ -20,7 +20,7 @@ from utils.logs import backend_log
 
 from . import api
 
-__all__ = ["collect_keywords"]
+__all__ = ["collect_keywords", "row_payload"]
 
 _ORIGIN_DB = "db"
 _ORIGIN_NONE = "none"
@@ -29,12 +29,31 @@ _ORIGIN_NONE = "none"
 _BEIJING = timezone(timedelta(hours=8))
 
 
+def row_payload(row) -> dict:
+    """单条关键词行 → 接口载荷（row_id 供编辑 / 删除定位）。"""
+    return {
+        "row_id": row.pk,
+        "keyword": row.keyword,
+        "feature_id": row.feature_id,
+        "module": row.module,
+        "feature": row.feature,
+        "scope": row.scope,
+        "sort_order": row.sort_order,
+    }
+
+
 def _rows(objects: list) -> list[dict]:
-    """DB 行 → 逐关键词条目（保持登记行序，功能点带编号 / 模块 / 名称 / 范围）。"""
+    """DB 行 → 逐关键词条目（保持登记行序，功能点带主键 / 编号 / 模块 / 名称 / 范围）。"""
     grouped: dict[str, list[dict]] = {}
     for row in objects:
         grouped.setdefault(row.keyword, []).append(
-            {"id": row.feature_id, "module": row.module, "feature": row.feature, "scope": row.scope}
+            {
+                "row_id": row.pk,
+                "id": row.feature_id,
+                "module": row.module,
+                "feature": row.feature,
+                "scope": row.scope,
+            }
         )
     return [{"keyword": keyword, "features": features} for keyword, features in grouped.items()]
 

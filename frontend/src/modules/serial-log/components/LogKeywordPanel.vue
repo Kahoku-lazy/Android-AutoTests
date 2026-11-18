@@ -5,6 +5,15 @@
       <p class="sl-cat-sub">{{ KEYWORDS_PANEL_DESC }} · 判定与只读日志查询共用这张表</p>
     </div>
     <div class="sl-cat-actions">
+      <button
+        v-if="canManage"
+        type="button"
+        class="sl-btn"
+        data-testid="log-keyword-add"
+        @click="crud.openAdd()"
+      >
+        {{ KEYWORD_ADD_LABEL }}
+      </button>
       <button type="button" class="sl-btn" :disabled="loading" @click="load">
         {{ loading ? "刷新中…" : "刷新" }}
       </button>
@@ -95,6 +104,26 @@
             >{{ scopeLabel(record.scope) }}</span
           >
         </template>
+        <template v-if="canManage" #cell-actions="{ record }">
+          <div class="lk-actions">
+            <button
+              type="button"
+              class="lk-action"
+              :data-testid="`log-keyword-edit-${record.rowId}`"
+              @click="crud.openEdit(record)"
+            >
+              {{ KEYWORD_EDIT_LABEL }}
+            </button>
+            <button
+              type="button"
+              class="lk-action lk-action-danger"
+              :data-testid="`log-keyword-delete-${record.rowId}`"
+              @click="crud.remove(record)"
+            >
+              {{ KEYWORD_DELETE_LABEL }}
+            </button>
+          </div>
+        </template>
       </AppTable>
 
       <div class="lk-hintbar" data-testid="log-keyword-origin">
@@ -109,21 +138,38 @@
       </div>
     </template>
   </div>
+
+  <KeywordFormDialog
+    v-if="canManage"
+    :visible="crud.dialogVisible.value"
+    :edit-row="crud.editRow.value"
+    :scope-options="scopeFilterOptions"
+    :saving="crud.saving.value"
+    :error="crud.formError.value"
+    @close="crud.closeDialog()"
+    @submit="crud.submit($event)"
+  />
 </template>
 
 <script setup lang="ts">
-/** LogKeywordPanel — 串口日志页「日志关键词」Tab：只读表格 + 手稿搜索框 + 范围筛选 */
+/** LogKeywordPanel — 串口日志页「日志关键词」Tab：表格 + 搜索 / 范围筛选；超管可新建 / 编辑 / 删除 */
 import { computed, onMounted } from "vue"
 import AppTable from "@/shared/components/AppTable.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
+import KeywordFormDialog from "./KeywordFormDialog.vue"
 import { useLogKeywords } from "../composables/useLogKeywords"
+import { useKeywordCrud } from "../composables/useKeywordCrud"
 import { buildModuleColorMap, moduleColorOf } from "../helpers/log-keyword-colors"
 import { SCOPE_FILTER_ALL, SCOPE_GENERAL, scopeLabel } from "../helpers/log-keyword-rows"
 import {
   KEYWORDS_PANEL_DESC,
   KEYWORDS_PANEL_TITLE,
+  KEYWORD_ADD_LABEL,
+  KEYWORD_DELETE_LABEL,
+  KEYWORD_EDIT_LABEL,
+  LOG_KEYWORD_COL_ACTIONS,
   LOG_KEYWORD_COL_FEATURE,
   LOG_KEYWORD_COL_KEYWORD,
   LOG_KEYWORD_COL_MODULE,
@@ -137,13 +183,20 @@ import {
   LOG_KEYWORD_SEARCH_PLACEHOLDER,
 } from "../constants"
 
-/** 四列：一行一个「关键词 × 功能点 × 范围」；功能点在左、关键词居中、范围在右 */
-const COLUMNS = [
-  { dataIndex: "feature", title: LOG_KEYWORD_COL_FEATURE, icon: "◈", minWidth: 240 },
-  { dataIndex: "module", title: LOG_KEYWORD_COL_MODULE, icon: "▣", width: 180 },
-  { dataIndex: "keyword", title: LOG_KEYWORD_COL_KEYWORD, icon: "🔑", minWidth: 300 },
-  { dataIndex: "scope", title: LOG_KEYWORD_COL_SCOPE, icon: "◎", width: 140 },
-]
+const props = withDefaults(defineProps<{ canManage?: boolean }>(), { canManage: false })
+
+/** 四个数据列；超管另加操作列（编辑 / 删除），非超管恰四列 */
+const COLUMNS = computed(() => {
+  const base = [
+    { dataIndex: "feature", title: LOG_KEYWORD_COL_FEATURE, icon: "◈", minWidth: 240 },
+    { dataIndex: "module", title: LOG_KEYWORD_COL_MODULE, icon: "▣", width: 180 },
+    { dataIndex: "keyword", title: LOG_KEYWORD_COL_KEYWORD, icon: "🔑", minWidth: 300 },
+    { dataIndex: "scope", title: LOG_KEYWORD_COL_SCOPE, icon: "◎", width: 140 },
+  ]
+  return props.canManage
+    ? [...base, { dataIndex: "actions", title: LOG_KEYWORD_COL_ACTIONS, icon: "✎", width: 150 }]
+    : base
+})
 
 const {
   catalog,
@@ -159,6 +212,8 @@ const {
   load,
   ensureLoaded,
 } = useLogKeywords()
+
+const crud = useKeywordCrud(load)
 
 /** 模块配色按「全量行」的首次出现顺序分配：搜索过滤时已有配色不漂移 */
 const moduleColors = computed(() => buildModuleColorMap(rows.value.map((row) => row.module)))

@@ -19,6 +19,8 @@ export type LogKeywordScopedFeature = LogKeywordFeature & { scope?: string }
 export interface LogKeywordRow {
   /** 行标识（关键词 + 模块 + 编号 + 名称 + 范围），供表格 row-key 使用 */
   key: string
+  /** 条目主键（编辑 / 删除定位用；旧响应缺省时为空） */
+  rowId?: number
   keyword: string
   module: string
   featureId?: number
@@ -54,6 +56,7 @@ export function buildKeywordRows(entries: LogKeywordEntry[]): LogKeywordRow[] {
       const scope = (feature.scope || "").trim() || SCOPE_GENERAL
       rows.push({
         key: `${keyword}|${module}|${feature.id ?? ""}|${featureName}|${scope}`,
+        rowId: feature.row_id,
         keyword,
         module,
         featureId: feature.id,

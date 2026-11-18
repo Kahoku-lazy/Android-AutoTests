@@ -4,7 +4,7 @@
 
 ## 职责
 
-- 无线串口日志的**管理面**：端口来源登记（`sources.py`，配置 + 自定义双轨合并）、监听开关持久化（`models.LogPort → sl_log_ports`）、自定义端口增删改（仅超管）、启停编排（`port_service.py`，单端口增量生效）、当前日志文件只读、关键词对照表持久化与只读组装（`models.LogKeyword → sl_log_keywords`，`keywords.py`）、启动恢复（`apps.py`）。
+- 无线串口日志的**管理面**：端口来源登记（`sources.py`，配置 + 自定义双轨合并）、监听开关持久化（`models.LogPort → sl_log_ports`）、自定义端口增删改（仅超管）、启停编排（`port_service.py`，单端口增量生效）、当前日志文件只读、关键词对照表持久化、组装与超管维护（`models.LogKeyword → sl_log_keywords`，`keywords.py`）、启动恢复（`apps.py`）。
 - 采集与写文件仍在引擎层：`engines/uart_log`、`engines/device/logbus`、`engines/device/logfiles`、`utils/logs`；本 App **不**碰 socket 与文件句柄。
 
 ## 接口
@@ -18,6 +18,9 @@
 | DELETE | `/api/serial-log/ports/<int:port>/` | 仅超级管理员（仅自定义端口） |
 | GET | `/api/serial-log/ports/<int:port>/lines/` | 登录可读 |
 | GET | `/api/serial-log/keywords/` | 登录可读 |
+| POST | `/api/serial-log/keywords/` | 仅超级管理员（新建关键词） |
+| PATCH | `/api/serial-log/keywords/<int:row_id>/` | 仅超级管理员（部分更新） |
+| DELETE | `/api/serial-log/keywords/<int:row_id>/` | 仅超级管理员（删除条目） |
 
 - 路径必须带尾斜杠；响应遵循 `{status, data}` 与 snake_case；超管判定用 `shared.users.is_superuser`。
 - 旧路径 `/api/ai/log-ports/…`、`/api/ai/log-keywords/` **不再提供**，也不保留重定向别名。

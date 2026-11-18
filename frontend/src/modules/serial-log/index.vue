@@ -40,7 +40,7 @@ const activeTab = ref<string>(SERIAL_LOG_DEFAULT_TAB)
         </div>
         <div class="serial-log-section__body">
           <WifiPortPanel v-if="activeTab === 'ports'" :can-manage="isSuperuser" />
-          <LogKeywordPanel v-else />
+          <LogKeywordPanel v-else :can-manage="isSuperuser" />
         </div>
       </section>
     </div>

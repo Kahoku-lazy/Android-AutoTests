@@ -2284,7 +2284,12 @@ paths:
   /api/serial-log/keywords/:
     get:
       operationId: serial_log_keywords_retrieve
-      description: GET /api/serial-log/keywords/ — 关键词对照表（只读，登录可读）。
+      description: |-
+        GET /api/serial-log/keywords/ — 关键词对照表（登录可读，功能点带 row_id）。
+
+        POST /api/serial-log/keywords/ — 新建关键词条目（仅超级管理员）。
+        body: `{"keyword": "h6601_boot", "module": "设备开关", "feature": "H6601开机完成", "scope": "H6601"}`
+        （scope 缺省通用；feature_id 缺省续编）。
       tags:
       - serial-log
       security:
@@ -2297,6 +2302,100 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+    post:
+      operationId: serial_log_keywords_create
+      description: |-
+        GET /api/serial-log/keywords/ — 关键词对照表（登录可读，功能点带 row_id）。
+
+        POST /api/serial-log/keywords/ — 新建关键词条目（仅超级管理员）。
+        body: `{"keyword": "h6601_boot", "module": "设备开关", "feature": "H6601开机完成", "scope": "H6601"}`
+        （scope 缺省通用；feature_id 缺省续编）。
+      tags:
+      - serial-log
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/serial-log/keywords/{row_id}/:
+    patch:
+      operationId: serial_log_keywords_partial_update
+      description: |-
+        PATCH / DELETE /api/serial-log/keywords/<row_id>/ — 编辑 / 删除关键词条目（仅超级管理员）。
+
+        PATCH body: 部分字段 `{"keyword"?, "module"?, "feature"?, "scope"?, "feature_id"?, "sort_order"?}`。
+        删除只移除登记条目，不影响日志文件与采集。
+      parameters:
+      - in: path
+        name: row_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - serial-log
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    delete:
+      operationId: serial_log_keywords_destroy
+      description: |-
+        PATCH / DELETE /api/serial-log/keywords/<row_id>/ — 编辑 / 删除关键词条目（仅超级管理员）。
+
+        PATCH body: 部分字段 `{"keyword"?, "module"?, "feature"?, "scope"?, "feature_id"?, "sort_order"?}`。
+        删除只移除登记条目，不影响日志文件与采集。
+      parameters:
+      - in: path
+        name: row_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - serial-log
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/serial-log/ports/:
     get:
       operationId: serial_log_ports_retrieve
@@ -2641,7 +2740,7 @@ paths:
   /api/tasks/{task_id}/rerun/:
     post:
       operationId: tasks_rerun_create
-      description: POST /api/tasks/{task_id}/rerun — 失败/中断任务克隆新建并调度。
+      description: POST /api/tasks/{task_id}/rerun — 已结束任务克隆新建并调度。
       parameters:
       - in: path
         name: task_id
@@ -2886,6 +2985,16 @@ components:
       required:
       - model_config_id
       - module_id
+    KindsEnum:
+      enum:
+      - executor
+      - verifier
+      - planner
+      type: string
+      description: |-
+        * `executor` - executor
+        * `verifier` - verifier
+        * `planner` - planner
     Login:
       type: object
       properties:
@@ -3020,7 +3129,11 @@ components:
           type: boolean
     PatchedRoleInput:
       type: object
-      description: Agent 配置入参。不查模型配置是否存在。
+      description: |-
+        Agent 配置入参。不查模型配置是否存在。
+
+        `kinds`：新建 MUST 恰好 1 项（在视图里校验，因为 PATCH 缺省表示不改动）；
+        更新时显式提交 [] 表示置为未分类。一份配置 MUST NOT 同时有多个类型。
       properties:
         name:
           type: string
@@ -3030,6 +3143,10 @@ components:
           minimum: 1
         system_prompt:
           type: string
+        kinds:
+          type: array
+          items:
+            $ref: '#/components/schemas/KindsEnum'
     PatchedSopWorkflowInput:
       type: object
       description: 新建 SOP 工作流入参。只收名称与两个名片编号。
@@ -3092,7 +3209,11 @@ components:
           default: ''
     RoleInput:
       type: object
-      description: Agent 配置入参。不查模型配置是否存在。
+      description: |-
+        Agent 配置入参。不查模型配置是否存在。
+
+        `kinds`：新建 MUST 恰好 1 项（在视图里校验，因为 PATCH 缺省表示不改动）；
+        更新时显式提交 [] 表示置为未分类。一份配置 MUST NOT 同时有多个类型。
       properties:
         name:
           type: string
@@ -3102,6 +3223,10 @@ components:
           minimum: 1
         system_prompt:
           type: string
+        kinds:
+          type: array
+          items:
+            $ref: '#/components/schemas/KindsEnum'
     RoleOutput:
       type: object
       description: Agent 配置出参。关联字段由写库层 select_related 后交给这里。
@@ -3130,6 +3255,12 @@ components:
           default: ''
         system_prompt:
           type: string
+        kinds:
+          type: array
+          items:
+            type: string
+          description: 类型标签数组；未分类时为空数组。prefetch_related 生效时不额外查库。
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -3138,6 +3269,7 @@ components:
           format: date-time
       required:
       - created_at
+      - kinds
       - model_config_id
       - name
       - role_id

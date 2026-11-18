@@ -201,6 +201,34 @@
   color: var(--app-text-secondary);
 }
 
+/* 操作列（仅超管）：描边态小按钮，皮肤来自 .sketch-kit，不自写虚线 */
+.lk-actions {
+  display: flex;
+  gap: var(--app-space-xs);
+}
+.lk-action {
+  padding: 4px 10px;
+  border: 2px solid var(--ink);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-bg-card);
+  color: var(--app-text-primary);
+  font-size: var(--app-size-xs);
+  font-weight: var(--app-font-weight-bold);
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+  transition:
+    transform var(--app-duration-fast),
+    background var(--app-duration-fast);
+}
+.lk-action:hover {
+  background: var(--app-highlight);
+  transform: translateY(-1px);
+}
+.lk-action-danger {
+  color: var(--app-status-danger-text);
+}
+
 /* 说明条：取值来源 + 最近写入时间 + 刷新提示合并为一条 */
 .lk-hintbar {
   display: flex;

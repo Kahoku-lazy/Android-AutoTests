@@ -9,38 +9,47 @@
  * 断的是本面板的列定义与数据口径，不是 el-table 自身行为。
  */
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { mount } from "@vue/test-utils"
+import { flushPromises, mount } from "@vue/test-utils"
 import { nextTick } from "vue"
-import ElementPlus from "element-plus"
+import ElementPlus, { ElMessageBox } from "element-plus"
 
 const fetchKeywords = vi.fn()
+const createKeyword = vi.fn()
+const updateKeyword = vi.fn()
+const deleteKeyword = vi.fn()
 
 vi.mock("@/modules/serial-log/api", () => ({
   fetchLogKeywords: (...args: unknown[]) => fetchKeywords(...args),
+  createLogKeyword: (...args: unknown[]) => createKeyword(...args),
+  updateLogKeyword: (...args: unknown[]) => updateKeyword(...args),
+  deleteLogKeyword: (...args: unknown[]) => deleteKeyword(...args),
 }))
 
 import LogKeywordPanel from "@/modules/serial-log/components/LogKeywordPanel.vue"
+import KeywordFormDialog from "@/modules/serial-log/components/KeywordFormDialog.vue"
 
 const CATALOG = {
   keywords: [
     {
       keyword: "switch_on",
-      features: [{ id: 0, module: "设备开关", feature: "打开设备成功", scope: "*" }],
+      features: [{ row_id: 1, id: 0, module: "设备开关", feature: "打开设备成功", scope: "*" }],
     },
     {
       keyword: "switch_off",
-      features: [{ id: 1, module: "设备开关", feature: "关闭设备成功", scope: "*" }],
+      features: [{ row_id: 2, id: 1, module: "设备开关", feature: "关闭设备成功", scope: "*" }],
     },
     {
       keyword: "color_configs_set_success",
       features: [
-        { id: 2, module: "音效律动", feature: "灯光颜色设置成功", scope: "*" },
-        { id: 17, module: "彩色模式", feature: "手动-颜色设置成功", scope: "*" },
+        { row_id: 3, id: 2, module: "音效律动", feature: "灯光颜色设置成功", scope: "*" },
+        { row_id: 4, id: 17, module: "彩色模式", feature: "手动-颜色设置成功", scope: "*" },
       ],
     },
     {
       keyword: "h6601_boot",
-      features: [{ id: 56, module: "设备开关", feature: "H6601开机完成", scope: "H6601" }],
+      features: [
+        { row_id: 5, id: 56, module: "设备开关", feature: "H6601开机完成", scope: "H6601" },
+      ],
     },
   ],
   keyword_count: 4,
@@ -63,14 +72,18 @@ const stubs = {
       '<div class="stub-table" :data-rows="dataSource.length" data-testid="log-keyword-table">' +
       '<span class="stub-cols">{{ columns.map((c) => c.title || c.label).join("/") }}</span>' +
       '<span v-for="row in dataSource" :key="row.key" class="stub-row">' +
-      "{{ row.keyword }}|{{ row.module }}|#{{ row.featureId }}|{{ row.featureName }}</span>" +
+      "{{ row.keyword }}|{{ row.module }}|#{{ row.featureId }}|{{ row.featureName }}" +
+      '<slot name="cell-actions" :record="row" /></span>' +
       "</div>",
   },
 }
 
-async function mountPanel() {
+async function mountPanel(canManage = false) {
   // 搜索框已是 Element Plus 的 el-input：这里按需注册 EP，而不是给 el-input 造桩
-  const wrapper = mount(LogKeywordPanel, { global: { stubs, plugins: [ElementPlus] } })
+  const wrapper = mount(LogKeywordPanel, {
+    props: { canManage },
+    global: { stubs, plugins: [ElementPlus] },
+  })
   await nextTick()
   await nextTick()
   return wrapper
@@ -171,5 +184,78 @@ describe("[P0] LogKeywordPanel", () => {
     expect(body.text()).not.toContain("删除")
     // 唯一的操作是页头「刷新」（重新拉取只读数据）
     expect(wrapper.findAll(".sl-cat-actions button").map((b) => b.text())).toEqual(["刷新"])
+  })
+})
+
+describe("[P0] LogKeywordPanel 超管维护", () => {
+  beforeEach(() => {
+    createKeyword.mockReset().mockResolvedValue({ status: true, data: { row: { row_id: 9 } } })
+    updateKeyword.mockReset().mockResolvedValue({ status: true, data: { row: { row_id: 1 } } })
+    deleteKeyword
+      .mockReset()
+      .mockResolvedValue({ status: true, data: { deleted: true, note: "已删除" } })
+  })
+
+  it("超管：新建按钮 + 操作列 + 行内编辑/删除", async () => {
+    const wrapper = await mountPanel(true)
+    expect(wrapper.find('[data-testid="log-keyword-add"]').exists()).toBe(true)
+    expect(wrapper.find(".stub-cols").text()).toBe("功能点/功能模块/关键词/范围/操作")
+    expect(wrapper.find('[data-testid="log-keyword-edit-1"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="log-keyword-delete-1"]').exists()).toBe(true)
+  })
+
+  it("新建：开弹窗 → 提交调 create 并刷新目录", async () => {
+    const wrapper = await mountPanel(true)
+    await wrapper.find('[data-testid="log-keyword-add"]').trigger("click")
+    const dialog = wrapper.findComponent(KeywordFormDialog)
+    expect(dialog.props("visible")).toBe(true)
+    const callsBefore = fetchKeywords.mock.calls.length
+    dialog.vm.$emit("submit", { keyword: "new_kw", module: "m", feature: "f", scope: "*" })
+    await flushPromises()
+    expect(createKeyword).toHaveBeenCalledWith({
+      keyword: "new_kw",
+      module: "m",
+      feature: "f",
+      scope: "*",
+    })
+    expect(fetchKeywords.mock.calls.length).toBeGreaterThan(callsBefore)
+    expect(dialog.props("visible")).toBe(false)
+  })
+
+  it("编辑：行内编辑开弹窗回填 → 提交调 update(rowId)", async () => {
+    const wrapper = await mountPanel(true)
+    await wrapper.find('[data-testid="log-keyword-edit-1"]').trigger("click")
+    const dialog = wrapper.findComponent(KeywordFormDialog)
+    expect(dialog.props("visible")).toBe(true)
+    expect((dialog.props("editRow") as { rowId: number }).rowId).toBe(1)
+    dialog.vm.$emit("submit", {
+      keyword: "switch_on",
+      module: "设备开关",
+      feature: "打开设备成功（改）",
+      scope: "*",
+    })
+    await flushPromises()
+    expect(updateKeyword).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ feature: "打开设备成功（改）" }),
+    )
+  })
+
+  it("删除：二次确认后调 delete(rowId) 并刷新", async () => {
+    const confirm = vi.spyOn(ElMessageBox, "confirm").mockResolvedValue("confirm" as never)
+    const wrapper = await mountPanel(true)
+    const callsBefore = fetchKeywords.mock.calls.length
+    await wrapper.find('[data-testid="log-keyword-delete-1"]').trigger("click")
+    await flushPromises()
+    expect(deleteKeyword).toHaveBeenCalledWith(1)
+    expect(fetchKeywords.mock.calls.length).toBeGreaterThan(callsBefore)
+    confirm.mockRestore()
+  })
+
+  it("非超管：无新建按钮、无操作列", async () => {
+    const wrapper = await mountPanel(false)
+    expect(wrapper.find('[data-testid="log-keyword-add"]').exists()).toBe(false)
+    expect(wrapper.find(".stub-cols").text()).toBe("功能点/功能模块/关键词/范围")
+    expect(wrapper.find('[data-testid="log-keyword-edit-1"]').exists()).toBe(false)
   })
 })

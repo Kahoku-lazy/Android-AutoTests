@@ -95,8 +95,10 @@ export async function fetchLogPortLines(
 
 // ── 日志关键词目录（只读，真相源 sl_log_keywords）──
 
-/** 关键词命中的功能点（编号 + 模块 + 名称 + 范围） */
+/** 关键词命中的功能点（主键 + 编号 + 模块 + 名称 + 范围） */
 export interface LogKeywordFeature {
+  /** 条目主键（编辑 / 删除定位用） */
+  row_id?: number
   id?: number
   module?: string
   feature?: string
@@ -127,5 +129,53 @@ export async function fetchLogKeywords(): Promise<{
   message?: string
 }> {
   const { data } = await djangoClient.get("/serial-log/keywords/")
+  return data
+}
+
+// ── 日志关键词维护（仅超管）──
+
+/** 新建 / 编辑共用的表单载荷（编辑可部分提交） */
+export interface LogKeywordPayload {
+  keyword: string
+  module: string
+  feature: string
+  scope: string
+  feature_id?: number
+}
+
+/** 维护接口返回的单行载荷 */
+export interface LogKeywordRowPayload {
+  row_id: number
+  keyword: string
+  feature_id: number
+  module: string
+  feature: string
+  scope: string
+  sort_order: number
+}
+
+export async function createLogKeyword(payload: LogKeywordPayload): Promise<{
+  status: boolean
+  data?: { row: LogKeywordRowPayload }
+  message?: string
+}> {
+  const { data } = await djangoClient.post("/serial-log/keywords/", payload)
+  return data
+}
+
+export async function updateLogKeyword(
+  rowId: number,
+  payload: Partial<LogKeywordPayload> & { sort_order?: number },
+): Promise<{ status: boolean; data?: { row: LogKeywordRowPayload }; message?: string }> {
+  const { data } = await djangoClient.patch(`/serial-log/keywords/${rowId}/`, payload)
+  return data
+}
+
+export async function deleteLogKeyword(rowId: number): Promise<{
+  status: boolean
+  data?: { deleted: boolean; note: string }
+  message?: string
+}> {
+  const { data } = await djangoClient.delete(`/serial-log/keywords/${rowId}/`)
   return data
 }

@@ -1,0 +1,26 @@
+/* KeywordFormDialog — 新建 / 编辑日志关键词弹窗（Doodle Craft 令牌；kf-* 为本组件私有）
+ *
+ * 弹窗外框走 el-dialog 全局皮肤；表单骨架与控件皮肤来自 shared/styles/sketched-kit.css。
+ * 弹窗 teleport 到 body：本文件只装饰组件自有的 kf-* 元素，不依赖页面级样式。
+ */
+
+.kf-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-md);
+}
+
+.kf-sub {
+  margin: 0;
+  font-size: var(--app-size-sm);
+  line-height: var(--app-line-height-normal);
+  color: var(--app-text-secondary);
+}
+
+.kf-err {
+  margin: 0;
+  min-height: var(--app-size-sm);
+  font-size: var(--app-size-sm);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-status-danger-text);
+}

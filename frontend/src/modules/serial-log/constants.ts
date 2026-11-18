@@ -113,3 +113,43 @@ export const LOG_KEYWORD_REFRESH_HINT = "刷新即取最新条目"
 export const LOG_KEYWORD_EMPTY_TEXT = "暂无可用的日志关键词"
 export const LOG_KEYWORD_EMPTY_HINT = "关键词表暂无条目：请经维护入口登记（sl_log_keywords）"
 export const LOG_KEYWORD_NO_MATCH_TEXT = "没有匹配的关键词"
+
+/** 关键词维护（仅超管）：页头按钮与行内操作 */
+export const KEYWORD_ADD_LABEL = "新建关键词"
+export const KEYWORD_EDIT_LABEL = "编辑"
+export const KEYWORD_DELETE_LABEL = "删除"
+export const LOG_KEYWORD_COL_ACTIONS = "操作"
+
+/** 新建 / 编辑关键词弹窗 */
+export const KEYWORD_FORM_TITLE_ADD = "新建日志关键词"
+export const KEYWORD_FORM_TITLE_EDIT = "编辑日志关键词"
+export const KEYWORD_FORM_SUB_ADD = "保存后立即进入对照表；范围缺省通用，功能点编号缺省自动续编。"
+export const KEYWORD_FORM_SUB_EDIT = "改动「关键词 + 编号 + 范围」组合时不得与其它条目撞车。"
+export const KEYWORD_FORM_KEYWORD_LABEL = "关键词（日志原文）"
+export const KEYWORD_FORM_MODULE_LABEL = "功能模块"
+export const KEYWORD_FORM_FEATURE_LABEL = "功能点名称"
+export const KEYWORD_FORM_SCOPE_LABEL = "范围（通用或 SKU 专用，可输入新型号）"
+export const KEYWORD_FORM_FEATURE_ID_LABEL = "功能点编号（可选）"
+export const KEYWORD_FORM_KEYWORD_PLACEHOLDER = "如 h6601_boot"
+export const KEYWORD_FORM_MODULE_PLACEHOLDER = "如 设备开关"
+export const KEYWORD_FORM_FEATURE_PLACEHOLDER = "如 H6601开机完成"
+export const KEYWORD_FORM_FEATURE_ID_PLACEHOLDER = "留空自动续编 / 保持原编号"
+export const KEYWORD_FORM_SAVE = "保存"
+export const KEYWORD_FORM_SAVING = "保存中…"
+export const KEYWORD_FORM_CANCEL = "取消"
+
+/** 表单校验文案 */
+export const KEYWORD_ERR_KEYWORD_REQUIRED = "关键词必填"
+export const KEYWORD_ERR_KEYWORD_TOO_LONG = "关键词不能超过 200 个字符"
+export const KEYWORD_ERR_MODULE_REQUIRED = "功能模块必填"
+export const KEYWORD_ERR_MODULE_TOO_LONG = "功能模块不能超过 100 个字符"
+export const KEYWORD_ERR_FEATURE_REQUIRED = "功能点名称必填"
+export const KEYWORD_ERR_FEATURE_TOO_LONG = "功能点名称不能超过 200 个字符"
+export const KEYWORD_ERR_SCOPE_INVALID = "范围须为通用或 SKU 名（字母/数字/_/-）"
+export const KEYWORD_ERR_FEATURE_ID_INVALID = "功能点编号须为非负整数"
+
+/** 删除确认 */
+export const KEYWORD_DELETE_TITLE = "删除日志关键词"
+export const KEYWORD_DELETE_WARNING =
+  "删除后该关键词不再参与对照表与按型号取词；历史日志文件不受影响。"
+export const KEYWORD_DELETE_CONFIRM = "删除关键词"

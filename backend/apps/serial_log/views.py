@@ -1,4 +1,4 @@
-"""串口日志管理面（JWT）：端口列表 / 新增端口 / 监听开关 / 编辑删除 / 日志尾部行 / 关键词对照表。
+"""串口日志管理面（JWT）：端口列表 / 新增端口 / 监听开关 / 编辑删除 / 日志尾部行 / 关键词目录与维护。
 
 GET    /api/serial-log/ports/                   登录可读：端口列表（含本机监听 IP、来源与运行时状态）
 POST   /api/serial-log/ports/                   仅超管：新增自定义端口（保存即增量开启监听）
@@ -6,7 +6,10 @@ POST   /api/serial-log/ports/toggle/            仅超管：开/关某个端口�
 PATCH  /api/serial-log/ports/<int:port>/        仅超管：编辑自定义端口（SKU / 波特率）
 DELETE /api/serial-log/ports/<int:port>/        仅超管：删除自定义端口（保留日志文件）
 GET    /api/serial-log/ports/<int:port>/lines/  登录可读：当前日志文件尾部若干行（只读）
-GET    /api/serial-log/keywords/                登录可读：关键词 → 功能模块 / 功能点（只读）
+GET    /api/serial-log/keywords/                登录可读：关键词 → 功能模块 / 功能点（带 row_id）
+POST   /api/serial-log/keywords/                仅超管：新建关键词条目
+PATCH  /api/serial-log/keywords/<int:row_id>/   仅超管：部分更新关键词条目
+DELETE /api/serial-log/keywords/<int:row_id>/   仅超管：删除关键词条目（不影响日志文件）
 
 不经内部令牌网关；日志正文不入库，只从本地当前日志文件读取。
 """
@@ -25,7 +28,8 @@ from rest_framework.views import APIView
 from backend.shared.users import is_superuser
 from utils.logs import backend_log
 
-from . import keywords, port_service
+from . import api, keywords, port_service
+from .models import LogKeyword
 
 
 def _user_id(request) -> str:
@@ -148,8 +152,66 @@ class LogPortLinesAPIView(APIView):
 
 
 class LogKeywordCatalogAPIView(APIView):
-    """GET /api/serial-log/keywords/ — 关键词对照表（只读，登录可读）。"""
+    """GET /api/serial-log/keywords/ — 关键词对照表（登录可读，功能点带 row_id）。
+
+    POST /api/serial-log/keywords/ — 新建关键词条目（仅超级管理员）。
+    body: `{"keyword": "h6601_boot", "module": "设备开关", "feature": "H6601开机完成", "scope": "H6601"}`
+    （scope 缺省通用；feature_id 缺省续编）。
+    """
 
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         return Response(keywords.collect_keywords())
+
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    def post(self, request):
+        if not is_superuser(_user_id(request)):
+            raise PermissionDenied("Forbidden")
+        try:
+            row = api.create_keyword(
+                request.data.get("keyword"),
+                module=request.data.get("module"),
+                feature=request.data.get("feature"),
+                scope=request.data.get("scope") or LogKeyword.SCOPE_GENERAL,
+                feature_id=request.data.get("feature_id"),
+            )
+        except (ValueError, TypeError) as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response({"row": keywords.row_payload(row)}, status=201)
+
+
+class LogKeywordDetailAPIView(APIView):
+    """PATCH / DELETE /api/serial-log/keywords/<row_id>/ — 编辑 / 删除关键词条目（仅超级管理员）。
+
+    PATCH body: 部分字段 `{"keyword"?, "module"?, "feature"?, "scope"?, "feature_id"?, "sort_order"?}`。
+    删除只移除登记条目，不影响日志文件与采集。
+    """
+
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    def patch(self, request, row_id: int):
+        if not is_superuser(_user_id(request)):
+            raise PermissionDenied("Forbidden")
+        data = request.data
+        try:
+            row = api.update_keyword(
+                int(row_id),
+                keyword=data.get("keyword"),
+                module=data.get("module"),
+                feature=data.get("feature"),
+                scope=data.get("scope"),
+                feature_id=data.get("feature_id"),
+                sort_order=data.get("sort_order"),
+            )
+        except (ValueError, TypeError) as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response({"row": keywords.row_payload(row)})
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def delete(self, request, row_id: int):
+        if not is_superuser(_user_id(request)):
+            raise PermissionDenied("Forbidden")
+        if not api.delete_keyword(int(row_id)):
+            raise ValidationError(f"关键词条目 {int(row_id)} 不存在")
+        return Response(
+            {"deleted": True, "note": f"关键词条目 {int(row_id)} 已删除，日志文件不受影响"}
+        )

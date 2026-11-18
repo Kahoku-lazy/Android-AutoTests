@@ -19,7 +19,7 @@
 
 ## 依赖方向
 
-- `bug_manager` → `task_list`：只读 `Task` Model；不 import `task_list` 的 views/runner/task_reports。
+- `bug_manager` → `task_list`：只读 `Task` Model 与 `case_identity` 纯函数；不 import `task_list` 的 views/runner。
 - `task_list` → `bug_manager`：只在终态后调用 `bug_manager.api.record_task_bugs`。
 - `bug_manager` 不依赖前端或引擎。
 

@@ -320,7 +320,10 @@ SPECTACULAR_SETTINGS = {
         {"name": "ai", "description": "AI 助手：智能体配置、任务发布 / 重跑 / 取消、任务清单"},
         {"name": "tasks", "description": "任务清单：任务提交、重跑、取消、事件流程报告"},
         {"name": "bugs", "description": "BUG 单管理：任务错误分类登记、检索与处理状态"},
-        {"name": "reports", "description": "测试报告：任务报告列表、用例分解、报告文件下载与查看"},
+        {
+            "name": "reports",
+            "description": "测试报告：已生成报告台账（SOP + 智能体）、报告数量统计",
+        },
         {
             "name": "serial-log",
             "description": "串口日志：端口监听开关、当前日志查看与关键词对照表",

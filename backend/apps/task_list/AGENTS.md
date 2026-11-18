@@ -21,7 +21,7 @@
 
 - `task_list` → `ai_assistant`：只读 `AIAgent`、`filter_agents_for_user`、`resolve_assistant_name`。
 - `ai_assistant` → `task_list`：禁止。
-- `dashboard` / `report_generator` → `task_list`：只读 Model 或 `task_list.task_reports`，禁止 import views/service。
+- `dashboard` / `report_generator` → `task_list`：只读 Model 或 `task_list.case_identity` 纯函数，禁止 import views/service。（`task_reports.py` 已随 rework-test-report-inventory 退役。）
 
 ## 关单附加项
 

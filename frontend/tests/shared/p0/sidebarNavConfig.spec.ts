@@ -14,11 +14,16 @@ function toIconKey(name: string): string {
 }
 
 describe("[P0] 侧栏 AI任务 导航", () => {
-  it("顺序为 任务清单 / 用例管理 / BUG单管理", () => {
+  it("顺序为 任务清单 / 用例管理 / BUG单管理 / 测试报告", () => {
     const group = NAV_CATEGORIES.find((category) => category.key === "ai-tasks")
 
-    expect(group?.items.map((item) => item.label)).toEqual(["任务清单", "用例管理", "BUG单管理"])
-    expect(group?.items.map((item) => item.path)).toEqual(["/tasks", "/cases", "/bugs"])
+    expect(group?.items.map((item) => item.label)).toEqual([
+      "任务清单",
+      "用例管理",
+      "BUG单管理",
+      "测试报告",
+    ])
+    expect(group?.items.map((item) => item.path)).toEqual(["/tasks", "/cases", "/bugs", "/reports"])
   })
 
   it("任务清单有独立模块色，避免与 AI 助手共用高亮", () => {
@@ -27,6 +32,12 @@ describe("[P0] 侧栏 AI任务 导航", () => {
 
   it("BUG单管理有独立模块色", () => {
     expect(MOD_COLORS["/bugs"]).toBe("var(--c-runner)")
+  })
+
+  it("测试报告排在 BUG单管理之后，且与同组三项不同色", () => {
+    expect(MOD_COLORS["/reports"]).toBe("var(--c-report)")
+    const groupColors = ["/tasks", "/cases", "/bugs", "/reports"].map((path) => MOD_COLORS[path])
+    expect(new Set(groupColors).size).toBe(4)
   })
 })
 
@@ -92,7 +103,9 @@ describe("[P0] 侧栏 AI 功能分组", () => {
     expect(MOD_COLORS["/knowledge-assistant"]).toBeUndefined()
   })
 
-  it("执行报告用报告模块色，不与 AI 助手共用高亮", () => {
-    expect(MOD_COLORS["/agent-reports"]).toBe("var(--c-report)")
+  it("测试报告用报告模块色，不与 AI 助手共用高亮", () => {
+    expect(MOD_COLORS["/reports"]).toBe("var(--c-report)")
+    expect(MOD_COLORS["/reports"]).not.toBe(MOD_COLORS["/ai-assistant"])
+    expect(MOD_COLORS["/agent-reports"]).toBeUndefined()
   })
 })

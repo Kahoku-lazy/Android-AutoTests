@@ -19,6 +19,7 @@ import slRoutes from "@/modules/serial-log/routes"
 import ksRoutes from "@/modules/knowledge-search/routes"
 import taskRoutes from "@/modules/task-list/routes"
 import bugRoutes from "@/modules/bug-manager/routes"
+import reportRoutes from "@/modules/report-generator/routes"
 import opsRoutes from "@/modules/ops-console/routes"
 
 const routes = [
@@ -31,6 +32,7 @@ const routes = [
   ...slRoutes,
   ...ksRoutes,
   ...bugRoutes,
+  ...reportRoutes,
   ...opsRoutes,
   { path: "/", redirect: "/dashboard" },
   {

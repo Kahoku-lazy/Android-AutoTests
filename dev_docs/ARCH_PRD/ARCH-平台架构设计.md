@@ -191,7 +191,7 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 | `task_list` | `/api/tasks/` | 任务提交/控制/事件/报告入口 |
 | `ai_assistant` | `/api/ai/` | 智能体配置、模型线路、密钥 |
 | `knowledge_assistant` | `/api/knowledge-assistant/` + WS | 知识库助手接入（通道）；引擎在 `engines` |
-| `report_generator` | `/api/reports/` | 报告列表/详情/下载 |
+| `report_generator` | `/api/reports/` | 已生成报告台账（SOP + 智能体）与报告数量统计；正文读取复用 ai_assistant 通道 |
 | `serial_log` | `/api/serial-log/` | 串口端口开关与日志相关 API |
 | `bug_manager` | （按 urls） | BUG 单管理 |
 | `usage_ledger` | （按 urls） | 用量记账相关 |
@@ -204,7 +204,7 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 | `cm_` | 项目/目录/文件唯一约束；用例步骤 `sort_order` |
 | `ai_` | 智能体与线路；`route_configs` 内密钥 Fernet 加密 |
 | `task_` | 事件 `UNIQUE(task,seq)`；缩略图去重；小时用量表 |
-| `rg_` | 报告文件落盘 + 元信息 |
+| `rg_` | 已退役（rework-test-report-inventory）：报告落盘 `logs/agents/`，台账只读聚合 DB 登记，不落库 |
 | `sl_` | 端口开关；端口/SKU/波特率以配置为真相源 |
 
 模型配置：`ai_agents.route_configs` 存模型名/provider/base_url 与加密 `api_key`；读取脱敏，`reveal-key` 一次性揭示。
@@ -227,7 +227,7 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 | ai-assistant | `/ai-assistant`… | `/api/ai/*` |
 | task-list | `/tasks`… | `/api/tasks/*` |
 | case-manager | `/cases`… | `/api/cases/*` |
-| report-generator | `/reports` | `/api/reports/*` |
+| report-generator | `/reports` | `/api/reports/`（台账）；正文走 `/api/ai/agent-reports/*` 与对话栏日志 ticket |
 | knowledge-assistant | `/knowledge-assistant` | HTTP + `/ws/knowledge-assistant/` |
 
 - 侧栏：主区 / AI 功能 / 数据 / AI 任务  

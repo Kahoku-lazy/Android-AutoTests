@@ -1,29 +1,48 @@
 /**
- * [P0] 报告工作台列与空态文案（任务卡数据源，不跳转详情）
+ * [P0] 报告台账列、来源筛选与空态文案（报告数据源，不是任务卡）
  */
 import { describe, expect, it } from "vitest"
-import { EMPTY_TEXT, PAGE_HEADER, TABLE_COLUMNS } from "@/modules/report-generator/constants"
+import {
+  EMPTY_TEXT,
+  PAGE_HEADER,
+  SOURCE_TABS,
+  TABLE_COLUMNS,
+  sopStatusClass,
+  sopStatusLabel,
+  sourceLabel,
+} from "@/modules/report-generator/constants"
 
 describe("[P0] report-generator workbench copy", () => {
-  it("table columns are task-card fields without case metrics", () => {
+  it("table columns are report-inventory fields", () => {
     expect(TABLE_COLUMNS.map((c) => c.dataIndex)).toEqual([
-      "run_id",
-      "task_kind",
-      "device_serial",
-      "task_name",
-      "creator",
-      "status",
-      "duration",
-      "started_at",
+      "source",
+      "identity",
+      "relation",
+      "outcome",
+      "moment",
+      "actions",
     ])
-    expect(
-      TABLE_COLUMNS.some((c) => ["case_count", "passed", "failed", "rate"].includes(c.dataIndex)),
-    ).toBe(false)
   })
 
-  it("empty copy points to AI assistant and not the execution engine", () => {
-    expect(PAGE_HEADER.subtitle).toContain("AI 助手")
-    expect(EMPTY_TEXT.hint).toContain("AI 助手")
+  it("source tabs are all / sop / agent", () => {
+    expect(SOURCE_TABS.map((tab) => tab.key)).toEqual(["all", "sop", "agent"])
+    expect(sourceLabel("sop")).toBe("SOP")
+    expect(sourceLabel("agent")).toBe("智能体")
+  })
+
+  it("sop terminal statuses map to pass / fail only", () => {
+    expect(sopStatusLabel("completed")).toBe("通过")
+    expect(sopStatusLabel("success")).toBe("通过")
+    expect(sopStatusLabel("failed")).toBe("失败")
+    expect(sopStatusClass("completed")).toBe("is-pass")
+    expect(sopStatusClass("failed")).toBe("is-fail")
+  })
+
+  it("empty copy explains reports appear after completion", () => {
+    expect(PAGE_HEADER.subtitle).toContain("执行完成")
+    expect(EMPTY_TEXT.hint).toContain("执行完成后生成")
+    expect(EMPTY_TEXT.hint).toContain("任务清单")
+    expect(EMPTY_TEXT.hint).toContain("平台助手")
     expect(EMPTY_TEXT.hint).not.toContain("执行引擎")
     expect(EMPTY_TEXT.noData).not.toContain("执行引擎")
   })

@@ -1,208 +1,58 @@
-<script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue"
-import { useRouter } from "vue-router"
-import { animate, stagger } from "animejs"
-import AppCard from "@/shared/components/AppCard.vue"
-import AppTable from "@/shared/components/AppTable.vue"
-import FilterTabs from "@/shared/components/FilterTabs.vue"
-import { usePagination } from "@/shared/composables/usePagination"
+<script setup lang="ts">
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
+import FilterTabs from "@/shared/components/FilterTabs.vue"
 import KpiCard from "@/shared/components/KpiCard.vue"
+import AppTable from "@/shared/components/AppTable.vue"
+import DoodleBtn from "@/shared/components/DoodleBtn.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
-import { listRuns, statusLabel, statusBadgeClass, formatTime } from "./api"
-import PassRateTrendChart from "./components/PassRateTrendChart.vue"
-import DailyPassFailChart from "./components/DailyPassFailChart.vue"
+import { useReportInventory } from "./composables/useReportInventory"
+import { useOpenReport } from "./composables/useOpenReport"
 import {
-  CHART_RANGE_OPTIONS,
-  CHART_VISIBLE_DAYS,
   EMPTY_TEXT,
+  KEYWORD_PLACEHOLDER,
   PAGE_HEADER,
-  PAGE_SIZE_OPTIONS,
-  STATUS_KEYS,
-  STATUS_TAB_LABELS,
   TABLE_COLUMNS,
-  taskKindLabel,
+  sopStatusClass,
+  sopStatusLabel,
+  sourceClass,
+  sourceLabel,
 } from "./constants"
-
-const router = useRouter()
-const runs = ref([])
-const summary = ref(null)
-const loading = ref(false)
-const error = ref(null)
-const lastUpdated = computed(() => {
-  if (!runs.value.length) return ""
-  const latest = runs.value.reduce((a, b) =>
-    new Date(a.started_at) > new Date(b.started_at) ? a : b,
-  )
-  return formatTime(latest.started_at)
-})
-const activeFilter = ref("all")
-const dateRange = ref([])
-const filterRunId = ref("")
-const filterTaskName = ref("")
-const filterDevice = ref("")
-const filterCreator = ref("")
-
-let filterDebounceTimer = null
-
-const trend = ref(null)
-
-const chartRange = ref(30)
-
-onMounted(() => {
-  fetchReports()
-})
-watch(
-  dateRange,
-  () => {
-    currentPage.value = 1
-    fetchReports()
-  },
-  { deep: true },
-)
-watch([filterRunId, filterTaskName, filterDevice, filterCreator], () => {
-  currentPage.value = 1
-  clearTimeout(filterDebounceTimer)
-  filterDebounceTimer = setTimeout(fetchReports, 350)
-})
-watch(activeFilter, () => {
-  currentPage.value = 1
-})
-watch(chartRange, () => {
-  fetchReports()
-})
-
-onUnmounted(() => {
-  clearTimeout(filterDebounceTimer)
-})
-
-function setChartRange(days) {
-  chartRange.value = days
-}
-
-async function fetchReports() {
-  loading.value = true
-  error.value = null
-  try {
-    const params = {}
-    if (dateRange.value && dateRange.value.length === 2) {
-      params.start_date = dateRange.value[0]
-      params.end_date = dateRange.value[1]
-    }
-    const runId = filterRunId.value.trim()
-    const taskName = filterTaskName.value.trim()
-    const device = filterDevice.value.trim()
-    const creator = filterCreator.value.trim()
-    if (runId) params.run_id = runId
-    if (taskName) params.task_name = taskName
-    if (device) params.device_serial = device
-    if (creator) params.creator = creator
-    params.chart_range = String(chartRange.value)
-    const { data } = await listRuns(params)
-    if (data.status) {
-      const payload = data.data || {}
-      runs.value = payload.runs || []
-      summary.value = payload.summary || null
-      trend.value = payload.trend || null
-    }
-  } catch (e) {
-    error.value = "加载报告失败，请检查服务状态"
-    console.error(e)
-  }
-  loading.value = false
-  await nextTick()
-  animate(".report-table tbody tr", {
-    opacity: [0, 1],
-    translateY: [16, 0],
-    delay: stagger(40),
-    duration: 380,
-    ease: "outCubic",
-  })
-}
-
-/** 与 KPI 口径一致：completed 与历史 success 都算已完成。 */
-function isCompletedRun(run) {
-  return run.status === STATUS_KEYS.COMPLETED || run.status === "success"
-}
-
-const statusCounts = computed(() => {
-  const counts = {
-    [STATUS_KEYS.ALL]: runs.value.length,
-    [STATUS_KEYS.COMPLETED]: 0,
-    [STATUS_KEYS.FAILED]: 0,
-    [STATUS_KEYS.INTERRUPTED]: 0,
-    [STATUS_KEYS.STOPPED]: 0,
-  }
-  for (const run of runs.value) {
-    if (isCompletedRun(run)) {
-      counts[STATUS_KEYS.COMPLETED] += 1
-    } else if (run.status === STATUS_KEYS.FAILED) {
-      counts[STATUS_KEYS.FAILED] += 1
-    } else if (run.status === STATUS_KEYS.INTERRUPTED) {
-      counts[STATUS_KEYS.INTERRUPTED] += 1
-    } else if (run.status === STATUS_KEYS.STOPPED) {
-      counts[STATUS_KEYS.STOPPED] += 1
-    }
-  }
-  return counts
-})
-
-const statusFilterTabs = computed(() =>
-  [
-    STATUS_KEYS.ALL,
-    STATUS_KEYS.COMPLETED,
-    STATUS_KEYS.FAILED,
-    STATUS_KEYS.INTERRUPTED,
-    STATUS_KEYS.STOPPED,
-  ].map((key) => ({
-    key,
-    label: STATUS_TAB_LABELS[key],
-    count: statusCounts.value[key],
-  })),
-)
-
-const filteredRuns = computed(() => {
-  if (activeFilter.value === STATUS_KEYS.ALL) return runs.value
-  if (activeFilter.value === STATUS_KEYS.COMPLETED) {
-    return runs.value.filter(isCompletedRun)
-  }
-  return runs.value.filter((r) => r.status === activeFilter.value)
-})
+import {
+  formatReportTime,
+  identitySub,
+  identityTitle,
+  outcomeText,
+  relationLabel,
+  reportMoment,
+  reportRowKey,
+} from "./helpers/report-row"
+import type { ReportRow } from "./types"
 
 const {
+  total,
+  summary,
+  loading,
+  error,
+  source,
+  keyword,
+  dateRange,
+  sourceTabs,
+  PAGE_SIZE_OPTIONS,
   pageSize,
   currentPage,
   totalPages,
-  pagedItems: pagedRuns,
+  pagedItems,
   setPageSize,
   goPage,
-} = usePagination(filteredRuns, { options: PAGE_SIZE_OPTIONS })
+  load,
+} = useReportInventory()
 
+const { openReport } = useOpenReport()
 const columns = TABLE_COLUMNS
 
-const hasActiveFilters = computed(
-  () =>
-    (dateRange.value && dateRange.value.length === 2) ||
-    filterRunId.value.trim() ||
-    filterTaskName.value.trim() ||
-    filterDevice.value.trim() ||
-    filterCreator.value.trim(),
-)
-
-function clearFilters() {
-  dateRange.value = []
-  filterRunId.value = ""
-  filterTaskName.value = ""
-  filterDevice.value = ""
-  filterCreator.value = ""
-  currentPage.value = 1
-  fetchReports()
-}
-
-function openTaskReport(row) {
-  if (!row?.run_id) return
-  router.push(`/tasks/${row.run_id}`)
+function onRowClick(row: ReportRow) {
+  openReport(row)
 }
 </script>
 
@@ -216,560 +66,162 @@ function openTaskReport(row) {
     />
 
     <div class="doc-body">
-      <!-- 统计概览 -->
       <section class="doc-section report-stats">
         <div class="doc-section__header">
-          <h3 class="doc-section__title">统计概览 <span class="doc-tag">Overview</span></h3>
-          <span class="doc-section__label">测试执行统计与趋势总览</span>
+          <h3 class="doc-section__title">报告概览 <span class="doc-tag">Overview</span></h3>
+          <span class="doc-section__label">统计已生成的报告数量，执行完成后自动入列</span>
         </div>
-        <div class="filter-bar">
-          <el-date-picker
-            v-model="dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            value-format="YYYY-MM-DD"
-            :clearable="true"
-            :unlink-panels="true"
-            class="filter-date"
-          />
-          <el-input v-model="filterRunId" placeholder="任务 ID" clearable class="filter-input" />
-          <el-input
-            v-model="filterTaskName"
-            placeholder="任务名称"
-            clearable
-            class="filter-input"
-          />
-          <el-input v-model="filterDevice" placeholder="设备" clearable class="filter-input" />
-          <el-input v-model="filterCreator" placeholder="创建人" clearable class="filter-input" />
-          <el-button class="btn-sm" v-if="hasActiveFilters" size="small" @click="clearFilters"
-            >清空条件</el-button
-          >
-          <span v-if="summary" class="filter-summary">共 {{ summary.total_runs }} 次执行</span>
-        </div>
-
-        <!-- KPI -->
-        <div v-if="summary" class="kpi-row">
+        <div class="kpi-row">
           <KpiCard
-            :value="summary.total_runs"
-            label="总执行次数"
-            color="var(--c-workflow)"
+            :value="summary.total_reports"
+            label="报告总数"
+            color="var(--c-report)"
             shape="diamond"
+            :clickable="false"
           />
           <KpiCard
-            :value="summary.total_pass"
-            label="通过"
-            color="var(--c-device)"
-            shape="triangle"
-          />
-          <KpiCard
-            :value="summary.total_fail"
-            label="失败"
-            color="var(--c-runner)"
+            :value="summary.sop_reports"
+            label="SOP 报告"
+            color="var(--c-ai)"
             shape="square"
+            :clickable="false"
           />
           <KpiCard
-            :value="`${summary.pass_rate}%`"
-            label="通过率"
-            color="var(--c-dashboard)"
-            shape="circle"
+            :value="summary.agent_reports"
+            label="智能体报告"
+            color="var(--c-case)"
+            shape="triangle"
+            :clickable="false"
           />
         </div>
-        <div style="font-size: var(--app-size-xs); opacity: 0.3; text-align: right">
-          最近更新: {{ lastUpdated || "暂无数据" }}
-        </div>
       </section>
 
-      <!-- 数据图表 -->
-      <section v-if="trend && trend.labels?.length" class="doc-section report-charts">
-        <div class="doc-section__header">
-          <h3 class="doc-section__title">数据图表 <span class="doc-tag">Trends</span></h3>
-          <span class="doc-section__label"
-            >近 {{ CHART_VISIBLE_DAYS }} 天执行通过率与成功/失败分布</span
-          >
-        </div>
-        <div class="chart-section">
-          <div class="chart-toolbar">
-            <span class="toolbar-label">图表范围</span>
-            <div class="page-size-btns">
-              <button
-                v-for="opt in CHART_RANGE_OPTIONS"
-                :key="opt.key"
-                type="button"
-                class="page-size-btn"
-                :class="{ active: chartRange === opt.key }"
-                @click="setChartRange(opt.key)"
-              >
-                {{ opt.label }}
-              </button>
-            </div>
-            <span class="chart-hint"
-              >默认展示最近 {{ CHART_VISIBLE_DAYS }} 天 · 拖动滑块或图内滑动查看更早（共
-              {{ trend.labels.length }} 天）</span
-            >
-          </div>
-          <div class="chart-row">
-            <AppCard class="chart-card">
-              <h4 class="chart-title">通过率趋势</h4>
-              <PassRateTrendChart
-                :labels="trend.labels"
-                :rate="trend.rate"
-                :visible-days="CHART_VISIBLE_DAYS"
-              />
-            </AppCard>
-            <AppCard class="chart-card">
-              <h4 class="chart-title">每日通过/失败</h4>
-              <DailyPassFailChart
-                :labels="trend.labels"
-                :pass="trend.pass"
-                :fail="trend.fail"
-                :visible-days="CHART_VISIBLE_DAYS"
-              />
-            </AppCard>
-          </div>
-        </div>
-      </section>
-
-      <!-- 测试报告 -->
       <section class="doc-section report-table-section">
-        <div class="doc-section__header report-table-section__header">
-          <FilterTabs class="report-status-tabs" :tabs="statusFilterTabs" v-model="activeFilter" />
-        </div>
-        <ErrorState v-if="error && !loading" :message="error" @retry="fetchReports" />
-        <AppCard class="table-card">
-          <div class="table-toolbar">
-            <span class="toolbar-label">显示行数</span>
-            <div class="page-size-btns">
-              <button
-                v-for="n in PAGE_SIZE_OPTIONS"
-                :key="n"
-                type="button"
-                class="page-size-btn"
-                :class="{ active: pageSize === n }"
-                @click="setPageSize(n)"
-              >
-                {{ n }}
-              </button>
-            </div>
-            <span v-if="filteredRuns.length > 0" class="page-info"
-              >第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ filteredRuns.length }} 条</span
-            >
-            <div v-if="totalPages > 1" class="page-nav">
-              <button
-                class="page-nav-btn"
-                :disabled="currentPage <= 1"
-                @click="goPage(currentPage - 1)"
-              >
-                上一页
-              </button>
-              <button
-                class="page-nav-btn"
-                :disabled="currentPage >= totalPages"
-                @click="goPage(currentPage + 1)"
-              >
-                下一页
-              </button>
-            </div>
-          </div>
-          <AppTable
-            :columns="columns"
-            :data-source="pagedRuns"
-            row-key="run_id"
-            :striped="false"
-            :border="true"
-            :loading="loading"
-            :empty-text="EMPTY_TEXT.noData"
-            accent="var(--c-report)"
-            class="report-table report-table--flow"
-            @row-click="openTaskReport"
+        <div class="doc-section__header">
+          <h3 class="doc-section__title">测试报告 <span class="doc-tag">Reports</span></h3>
+          <span class="doc-section__label"
+            >SOP 报告带用例与任务编号；智能体报告带助手编号与名称</span
           >
-            <template #cell-run_id="{ record }">
-              <code class="cell-run-id">{{ record.run_id }}</code>
-            </template>
+        </div>
 
-            <template #cell-task_kind="{ record }">
-              <span class="cell-kind">{{ taskKindLabel(record.task_kind) }}</span>
-            </template>
+        <div class="filter-bar sketch-kit">
+          <FilterTabs class="report-source-tabs" :tabs="sourceTabs" v-model="source" />
+          <div class="sketch-field report-field">
+            <el-input
+              v-model="keyword"
+              :placeholder="KEYWORD_PLACEHOLDER"
+              clearable
+              class="report-filter-input"
+            />
+          </div>
+          <div class="sketch-field report-field report-field--date">
+            <el-date-picker
+              v-model="dateRange"
+              type="daterange"
+              value-format="YYYY-MM-DD"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              class="report-filter-date"
+            />
+          </div>
+        </div>
 
-            <template #cell-device_serial="{ value }">
-              <span class="cell-device">{{ value || "—" }}</span>
-            </template>
+        <ErrorState v-if="error && !loading" :message="error" @retry="load" />
 
-            <template #cell-task_name="{ record }">
-              <span class="cell-task-name">{{ record.task_name || "—" }}</span>
-            </template>
+        <div class="table-toolbar sketch-kit">
+          <span class="toolbar-label">显示行数</span>
+          <div class="page-size-btns">
+            <button
+              v-for="size in PAGE_SIZE_OPTIONS"
+              :key="size"
+              type="button"
+              class="page-size-btn"
+              :class="{ active: pageSize === size }"
+              @click="setPageSize(size)"
+            >
+              {{ size }}
+            </button>
+          </div>
+          <span class="page-info">
+            第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ total }} 条
+          </span>
+          <div class="page-nav report-page-nav">
+            <DoodleBtn tone="paper" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">
+              上一页
+            </DoodleBtn>
+            <DoodleBtn
+              tone="paper"
+              :disabled="currentPage >= totalPages"
+              @click="goPage(currentPage + 1)"
+            >
+              下一页
+            </DoodleBtn>
+          </div>
+        </div>
 
-            <template #cell-creator="{ record }">
-              <span class="cell-creator">{{ record.creator || "—" }}</span>
-            </template>
+        <AppTable
+          :columns="columns"
+          :data-source="pagedItems"
+          :row-key="reportRowKey"
+          :loading="loading"
+          table-layout="fixed"
+          :empty-text="EMPTY_TEXT.noData"
+          accent="var(--c-report)"
+          class="report-table"
+          @row-click="onRowClick"
+        >
+          <template
+            v-for="col in columns"
+            :key="`head-${col.dataIndex}`"
+            v-slot:[`header-${col.dataIndex}`]
+          >
+            <span class="th-ico" aria-hidden="true">{{ col.icon }}</span
+            >{{ col.title }}
+          </template>
 
-            <!-- Status badge -->
-            <template #cell-status="{ record }">
-              <span class="badge" :class="statusBadgeClass(record.status)">{{
-                statusLabel(record.status)
-              }}</span>
-            </template>
+          <template #cell-source="{ record }">
+            <span class="report-source" :class="sourceClass(record.source)">
+              {{ sourceLabel(record.source) }}
+            </span>
+          </template>
 
-            <!-- Time -->
-            <template #cell-duration="{ value }">
-              <span class="cell-duration">{{ value }}</span>
-            </template>
-            <template #cell-started_at="{ record }">
-              <span class="cell-time">{{ formatTime(record.started_at) }}</span>
-            </template>
+          <template #cell-identity="{ record }">
+            <span class="report-identity">
+              <span class="report-identity__title">{{ identityTitle(record) }}</span>
+              <span class="report-identity__sub">{{ identitySub(record) }}</span>
+            </span>
+          </template>
 
-            <!-- Empty state -->
-            <template #empty>
-              <EmptyState icon="📋" :text="EMPTY_TEXT.noRecords" :hint="EMPTY_TEXT.hint" />
-            </template>
-          </AppTable>
-        </AppCard>
+          <template #cell-relation="{ record }">
+            <span class="report-relation">{{ relationLabel(record) }}</span>
+          </template>
+
+          <template #cell-outcome="{ record }">
+            <span
+              v-if="record.source === 'sop'"
+              class="report-status"
+              :class="sopStatusClass(record.status)"
+            >
+              {{ sopStatusLabel(record.status) }}
+            </span>
+            <span class="report-outcome">{{ outcomeText(record) }}</span>
+          </template>
+
+          <template #cell-moment="{ record }">
+            <span class="report-moment">{{ formatReportTime(reportMoment(record)) }}</span>
+          </template>
+
+          <template #cell-actions="{ record }">
+            <DoodleBtn tone="paper" @click.stop="openReport(record)">查看报告</DoodleBtn>
+          </template>
+
+          <template #empty>
+            <EmptyState icon="📈" :text="EMPTY_TEXT.noData" :hint="EMPTY_TEXT.hint" />
+          </template>
+        </AppTable>
       </section>
     </div>
   </div>
 </template>
 
-<style scoped>
-/* Doodle Craft — 测试报告 */
-.doc-page {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden !important;
-} /* height 由外壳 :deep(.doc-page) 承担；overflow:hidden 带 !important 且实际生效，保留 */
-.report-workbench .doc-body {
-  flex: 1 1 0;
-  min-height: 0;
-  overflow-y: auto !important;
-  padding: var(--app-space-md) var(--app-space-lg) var(--app-space-xl);
-  display: flex;
-  flex-direction: column;
-  gap: var(--app-space-md);
-}
-/* 模块私有色值登记（tokens.css 未登记该值）：表格行 hover 底色
-   （原 --rg-shadow-soft 随分区卡皮肤收敛到全局 .doc-section 而成为零消费方，已删除） */
-.report-workbench {
-  --rg-hover-bg: var(--color-white) /* -> --color-white */;
-}
-
-/* 分区卡片：皮肤全取全局 .doc-section（背景/描边/圆角/阴影/内边距/标题字号字重，见 style.css:207-271）
-   本页只保留真实差异 —— 标题的手绘波浪下划线装饰；覆写一律限定在 .report-workbench 作用域内
-   （frontend-l3-container「共享骨架块不得无作用域重定义」） */
-.report-workbench .doc-section__title {
-  display: inline-block;
-  position: relative;
-}
-.report-workbench .doc-section__title::after {
-  content: "";
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  right: 0;
-  height: 2.5px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0,1.5 Q20,0 40,2 Q60,3 80,1.5' stroke='%231e1e24' stroke-width='2' fill='none'/%3E%3C/svg%3E")
-    repeat-x;
-  background-size: 40px 3px;
-}
-
-/* 测试报告分区：表格贴边，内边距由本页类表达（不再用行内 style 覆写骨架块） */
-.report-workbench .report-table-section {
-  padding: 0;
-}
-.report-workbench .report-table-section .doc-section__header {
-  padding: var(--app-space-md);
-  margin-bottom: 0;
-  align-items: center;
-  gap: var(--app-space-md);
-}
-.report-status-tabs {
-  flex: 0 1 auto;
-}
-
-/* KPI 网格 — 渲染由 shared/KpiCard.vue 接管 */
-.kpi-row {
-  display: grid;
-  grid-template-columns: var(--layout-kpi-cols);
-  gap: 12px;
-  margin-bottom: var(--app-space-sm);
-}
-@media (max-width: 800px) {
-  .kpi-row {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* 筛选栏 */
-.filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-.filter-date {
-  width: 220px;
-}
-.filter-input {
-  width: 140px;
-}
-.filter-summary {
-  font-size: var(--app-size-xs);
-  color: var(--app-text-secondary);
-  font-weight: var(--app-font-weight-semibold);
-  white-space: nowrap;
-  margin-left: auto;
-}
-.btn-sm {
-  padding: var(--app-space-xs) 10px;
-  font-size: var(--app-size-xs);
-  font-weight: var(--app-font-weight-bold);
-  border: 2px solid var(--ink);
-  border-radius: var(--app-radius-sm);
-  background: var(--app-bg-card);
-  color: var(--app-text-primary);
-  cursor: pointer;
-  font-family: inherit;
-  transition: all var(--app-duration-fast);
-}
-.btn-sm:hover {
-  background: var(--c-report);
-}
-
-/* 图表 */
-.chart-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.chart-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.toolbar-label {
-  font-size: var(--app-size-xs);
-  font-weight: var(--app-font-weight-bold);
-  color: var(--app-text-secondary);
-}
-.page-size-btns {
-  display: flex;
-  gap: var(--app-space-xs);
-}
-.page-size-btn {
-  padding: var(--app-space-xs) 10px;
-  font-size: var(--app-size-xs);
-  font-weight: var(--app-font-weight-bold);
-  color: var(--app-text-secondary);
-  background: var(--app-bg-card);
-  border: 2px solid var(--app-border-light);
-  border-radius: var(--app-radius-sm);
-  cursor: pointer;
-  font-family: inherit;
-  transition: all var(--app-duration-fast);
-}
-.page-size-btn:hover {
-  border-color: var(--ink);
-  color: var(--app-text-primary);
-}
-.page-size-btn.active {
-  background: var(--app-bg-subtle);
-  border-color: var(--ink);
-  color: var(--app-text-primary);
-}
-.chart-row {
-  display: grid;
-  grid-template-columns: var(--layout-ratio-chart);
-  gap: var(--app-space-md);
-}
-@media (max-width: 900px) {
-  .chart-row {
-    grid-template-columns: 1fr;
-  }
-}
-.chart-card {
-  padding: 0;
-}
-.chart-title {
-  font-size: var(--app-size-sm);
-  font-weight: var(--app-font-weight-bold);
-  margin-bottom: var(--app-space-sm);
-}
-
-/* 表格工具栏（单行） */
-.table-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  /* 上下等距 4px：工具条整体上移，左右仍是 16px */
-  padding: var(--app-space-xs) var(--app-space-md);
-}
-.page-info {
-  font-size: var(--app-size-xs);
-  color: var(--app-text-secondary);
-  font-weight: var(--app-font-weight-semibold);
-  white-space: nowrap;
-  margin-left: auto;
-}
-.page-nav {
-  display: flex;
-  gap: 6px;
-  margin-left: var(--app-space-sm);
-}
-.page-nav-btn {
-  padding: var(--app-space-xs) 10px;
-  font-size: var(--app-size-xs);
-  font-weight: var(--app-font-weight-bold);
-  color: var(--app-text-primary);
-  background: var(--app-bg-card);
-  border: 2px solid var(--ink);
-  border-radius: var(--app-radius-sm);
-  cursor: pointer;
-  font-family: inherit;
-  transition: all var(--app-duration-fast);
-}
-.page-nav-btn:hover {
-  background: var(--c-report);
-}
-.page-nav-btn:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-
-/* 报告表格 */
-.table-card {
-  /* 表格底：薄荷绿淡底，不再用纯白 */
-  background: color-mix(in srgb, var(--c-dashboard) 12%, var(--app-bg-card));
-  border: 2.5px solid var(--c-report);
-  border-radius: var(--app-radius-md);
-  overflow: hidden;
-  margin: 0 var(--app-space-md) 14px;
-}
-
-.report-table {
-  width: 100%;
-}
-.report-table--flow :deep(.el-table__body tr) {
-  cursor: pointer;
-}
-/* 表头：薄荷绿淡底 + 字号 14px；用 .report-workbench 提高优先级，压过全局 .el-table th */
-.report-workbench :deep(.el-table__header th.el-table__cell) {
-  background: color-mix(in srgb, var(--c-dashboard) 22%, var(--app-bg-card)) !important;
-  color: var(--app-text-primary) !important;
-  font-weight: var(--app-font-weight-bold) !important;
-  font-size: var(--app-size-sm) !important;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  border-bottom: 2.5px solid var(--ink) !important;
-}
-/* 表格底：薄荷绿淡底，连 .el-table__cell 一起覆盖，避免被全局 td 背景盖回白色 */
-.report-workbench :deep(.el-table),
-.report-workbench :deep(.el-table tr),
-.report-workbench :deep(.el-table__body td.el-table__cell) {
-  background: color-mix(in srgb, var(--c-dashboard) 12%, var(--app-bg-card)) !important;
-}
-.report-workbench :deep(.el-table__body td) {
-  border-bottom: 1px solid var(--el-border-color-light) !important;
-  color: var(--app-text-primary);
-}
-.report-workbench :deep(.el-table__body tr:hover > td.el-table__cell) {
-  background: color-mix(in srgb, var(--c-dashboard) 20%, var(--app-bg-card)) !important;
-}
-
-.cell-run-id {
-  font-family: var(--app-font-mono);
-  font-size: var(--app-size-xs);
-  font-weight: var(--app-font-weight-semibold);
-}
-.badge {
-  font-size: var(--app-size-xs);
-  font-weight: var(--app-font-weight-bold);
-  padding: 2px 7px;
-  border-radius: var(--el-border-radius-small);
-  border: 1.5px solid var(--ink);
-  display: inline-block;
-}
-.badge-pass {
-  background: var(--app-status-success-bg);
-  color: var(--app-status-success-text);
-}
-.badge-fail {
-  background: var(--app-status-danger-bg);
-  color: var(--app-status-danger-text);
-}
-.badge-interrupted {
-  background: var(--app-status-warning-bg);
-  color: var(--app-warning-text);
-}
-.badge-running {
-  background: var(--app-pending);
-  color: var(--app-pending-text);
-}
-.badge-stopped {
-  background: var(--app-offline);
-  color: var(--app-text-secondary);
-}
-
-/* ── 2026-11-09 报告页视觉收敛：过滤标签 / 状态标签 / 表格字色 ── */
-.report-status-tabs :deep(.filter-tab) {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 var(--app-space-sm);
-  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
-  border-radius: 3px;
-  /* 每个筛选项给一层淡色底，按状态语义取色 */
-  background: color-mix(in srgb, var(--c-report) 8%, var(--app-bg-card));
-  color: var(--app-text-secondary);
-  font-weight: var(--app-font-weight-semibold);
-}
-.report-status-tabs :deep(.filter-tab:hover) {
-  border-color: color-mix(in srgb, var(--ink) 26%, transparent);
-  color: var(--app-text-primary);
-}
-.report-status-tabs :deep(.filter-tab[data-key="completed"]) {
-  background: color-mix(in srgb, var(--app-status-success-bg) 70%, var(--app-bg-card));
-}
-.report-status-tabs :deep(.filter-tab[data-key="failed"]) {
-  background: color-mix(in srgb, var(--app-status-danger-bg) 70%, var(--app-bg-card));
-}
-.report-status-tabs :deep(.filter-tab[data-key="interrupted"]) {
-  background: color-mix(in srgb, var(--app-status-warning-bg) 80%, var(--app-bg-card));
-}
-.report-status-tabs :deep(.filter-tab[data-key="stopped"]) {
-  background: color-mix(in srgb, var(--ink) 6%, var(--app-bg-card));
-}
-.report-status-tabs :deep(.filter-tab.active) {
-  color: var(--app-text-primary);
-  border-color: var(--ink);
-  background: color-mix(in srgb, var(--c-report) 12%, var(--app-bg-card));
-  box-shadow: 2px 2px 0 0 color-mix(in srgb, var(--c-report) 30%, var(--paper));
-}
-.report-status-tabs :deep(.filter-tab-count) {
-  color: inherit;
-  font-weight: var(--app-font-weight-heavy);
-}
-.report-table :deep(.el-table__cell) {
-  font-size: var(--app-size-sm);
-}
-.cell-time,
-.cell-duration {
-  color: var(--app-text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-.badge {
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 var(--app-space-sm);
-  border: 2px solid var(--ink);
-  border-radius: 2px;
-  font-size: var(--app-size-xs);
-  font-weight: var(--app-font-weight-bold);
-}
-.table-toolbar {
-  gap: var(--app-space-sm);
-}
-</style>
+<style src="./index.style.css" scoped></style>

@@ -2034,23 +2034,8 @@ paths:
   /api/reports/:
     get:
       operationId: report_list
-      description: GET /api/reports — 当前用户可见的助手任务卡列表 / KPI / 趋势。
+      description: GET /api/reports — 当前用户可见的已生成报告台账 / 报告数量统计。
       parameters:
-      - in: query
-        name: chart_range
-        schema:
-          type: string
-        description: 趋势天数
-      - in: query
-        name: creator
-        schema:
-          type: string
-        description: 按创建人过滤
-      - in: query
-        name: device_serial
-        schema:
-          type: string
-        description: 按设备序列号过滤
       - in: query
         name: end_date
         schema:
@@ -2058,86 +2043,27 @@ paths:
           format: date
         description: 结束日期
       - in: query
-        name: run_id
+        name: keyword
         schema:
           type: string
-        description: 按 run_id 过滤
+        description: 关键字：用例名称 / 任务 ID / 助手名称 / 助手编号
+      - in: query
+        name: source
+        schema:
+          type: string
+        description: 来源过滤：sop / agent
       - in: query
         name: start_date
         schema:
           type: string
           format: date
         description: 起始日期
-      - in: query
-        name: task_name
-        schema:
-          type: string
-        description: 按任务名过滤
       tags:
       - reports
       security:
       - jwtAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-  /api/reports/{filename}/:
-    get:
-      operationId: report_download
-      description: GET /api/reports/{filename} — Download report file.
-      parameters:
-      - in: path
-        name: filename
-        schema:
-          type: string
-        required: true
-      tags:
-      - reports
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/octet-stream:
-              schema:
-                type: string
-                format: binary
-          description: ''
-        '404':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-  /api/reports/{filename}/content/:
-    get:
-      operationId: report_content
-      description: GET /api/reports/{filename}/content — Return file content for inline
-        viewing.
-      parameters:
-      - in: path
-        name: filename
-        schema:
-          type: string
-        required: true
-      tags:
-      - reports
-      security:
-      - jwtAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: {}
-          description: ''
-        '404':
           content:
             application/json:
               schema:
@@ -3249,7 +3175,7 @@ tags:
 - name: bugs
   description: BUG 单管理：任务错误分类登记、检索与处理状态
 - name: reports
-  description: 测试报告：任务报告列表、用例分解、报告文件下载与查看
+  description: 测试报告：已生成报告台账（SOP + 智能体）、报告数量统计
 - name: serial-log
   description: 串口日志：端口监听开关、当前日志查看与关键词对照表
 - name: ops

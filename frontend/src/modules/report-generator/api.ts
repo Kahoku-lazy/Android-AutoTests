@@ -1,63 +1,16 @@
-/**
- * report-generator API & shared helpers — 测试报告模块
- */
-import client from "@/shared/api-client"
+/** 测试报告台账 API — 列表唯一 HTTP 出口，走 /api/reports/ */
+import client, { type DjangoResponse } from "@/shared/api-client"
+import type { ReportListData } from "./types"
 
-// ── 执行记录（报告列表）──
+export interface ReportListParams {
+  source?: string
+  keyword?: string
+  start_date?: string
+  end_date?: string
+}
 
-export function listRuns(params = {}) {
+export function listReports(
+  params: ReportListParams = {},
+): Promise<{ data: DjangoResponse<ReportListData> }> {
   return client.get("/reports/", { params })
-}
-
-// ── 文件下载 ──
-
-export function getReportContent(filename) {
-  return client.get(`/reports/${encodeURIComponent(filename)}/content/`)
-}
-
-export function getReportDownloadUrl(filename) {
-  return `/api/reports/${encodeURIComponent(filename)}`
-}
-
-// ── 共享工具函数 ──
-
-const STATUS_LABEL_MAP = {
-  completed: "通过",
-  success: "通过",
-  failed: "失败",
-  interrupted: "已中断",
-  running: "运行中",
-  stopped: "已停止",
-  cancelled: "已取消",
-  pending: "排队中",
-}
-
-export function statusLabel(status) {
-  return STATUS_LABEL_MAP[status] || status
-}
-
-export function statusBadgeClass(status) {
-  if (status === "completed" || status === "success") return "badge-pass"
-  if (status === "failed") return "badge-fail"
-  if (status === "cancelled") return "badge-stopped"
-  if (status === "interrupted") return "badge-interrupted"
-  if (status === "running") return "badge-running"
-  return "badge-stopped"
-}
-
-export function iterBadgeClass(result) {
-  if (result === "pass") return "badge-pass"
-  if (result === "fail" || result === "stopped") return "badge-fail"
-  return "badge-stopped"
-}
-
-export function formatTime(iso) {
-  if (!iso) return "—"
-  try {
-    const d = new Date(iso)
-    const pad = (n) => String(n).padStart(2, "0")
-    return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-  } catch (_) {
-    return iso
-  }
 }

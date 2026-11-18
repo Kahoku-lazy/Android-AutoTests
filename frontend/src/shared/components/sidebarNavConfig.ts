@@ -46,6 +46,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { path: "/tasks", icon: "clipboard-list", label: "任务清单" },
       { path: "/cases", icon: "layers", label: "用例管理" },
       { path: "/bugs", icon: "bug", label: "BUG单管理" },
+      { path: "/reports", icon: "file-bar-chart", label: "测试报告" },
     ],
   },
   {
@@ -72,7 +73,6 @@ export const MOD_COLORS = {
   "/ai-assistant": "var(--c-ai)",
   "/serial-log": "var(--c-workflow)",
   "/knowledge-search": "var(--c-case)",
-  "/agent-reports": "var(--c-report)",
   "/ops/users": "var(--c-account)",
   "/ops/agents": "var(--c-element)",
   "/ops/model-configs": "var(--c-ops)",

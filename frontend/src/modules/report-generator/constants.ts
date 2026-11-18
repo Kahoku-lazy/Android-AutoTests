@@ -1,170 +1,81 @@
 /**
- * report-generator 模块常量 — 测试报告
+ * report-generator 模块常量 — 测试报告台账
  *
- * 提取自 index.vue 和 api.js，避免魔法值散落。
+ * 列定义、筛选、文案与分页的唯一真相源；色值一律取 tokens.css 令牌。
  */
+
+// ── 页头配置 ──
+export const PAGE_HEADER = {
+  title: "测试报告",
+  subtitle: "任务与助手对话执行完成后生成的报告台账",
+  icon: "file-bar-chart",
+  iconGradient: "linear-gradient(135deg, var(--c-report), var(--c-ai))",
+}
+
+// ── 来源筛选（count 由 summary 提供）──
+export const SOURCE_TABS = [
+  { key: "all", label: "全部" },
+  { key: "sop", label: "SOP" },
+  { key: "agent", label: "智能体" },
+] as const
+
+export const SOURCE_LABELS: Record<string, string> = {
+  sop: "SOP",
+  agent: "智能体",
+}
 
 // ── 表格列定义 ──
 export const TABLE_COLUMNS = [
-  { title: "任务 ID", dataIndex: "run_id", minWidth: 120 },
-  { title: "类型", dataIndex: "task_kind", minWidth: 100, align: "center" },
-  { title: "设备", dataIndex: "device_serial", minWidth: 140 },
-  { title: "任务名称", dataIndex: "task_name", minWidth: 220 },
-  { title: "创建人", dataIndex: "creator", minWidth: 100 },
-  { title: "状态", dataIndex: "status", minWidth: 100, align: "center" },
-  { title: "耗时", dataIndex: "duration", minWidth: 90, align: "center" },
-  { title: "时间", dataIndex: "started_at", minWidth: 150 },
+  { title: "来源", dataIndex: "source", icon: "🧭", width: 110, align: "center" },
+  { title: "用例 / 助手", dataIndex: "identity", icon: "🏷", minWidth: 240 },
+  { title: "关联", dataIndex: "relation", icon: "🔗", width: 170 },
+  { title: "结果摘要", dataIndex: "outcome", icon: "🚦", minWidth: 200 },
+  { title: "生成时间", dataIndex: "moment", icon: "🕒", width: 170 },
+  { title: "操作", dataIndex: "actions", icon: "💬", width: 132, align: "center" },
 ]
 
-// ── 任务类型标签 ──
-export const TASK_KIND_LABELS: Record<string, string> = {
-  device_control: "设备执行",
-  case_authoring: "用例编写",
-}
-
-export function taskKindLabel(kind: string | undefined): string {
-  return TASK_KIND_LABELS[kind || "device_control"] || "设备执行"
-}
-
-// ── 分页配置 ──
-export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
-
-// ── 表格布局尺寸 (px) ──
-export const TABLE_TOOLBAR_HEIGHT = 52
-export const TABLE_HEADER_HEIGHT = 45
-export const TABLE_ROW_HEIGHT = 41
-export const TABLE_EMPTY_ROWS = 3
-export const TABLE_TAB_OFFSET = 88
-
-// ── 图表配置 ──
-export const CHART_RANGE_OPTIONS = [
-  { key: 7, label: "一周" },
-  { key: 30, label: "一月" },
-  { key: 90, label: "一季度" },
-]
-export const CHART_DEFAULT_RANGE = 30
-export const CHART_VISIBLE_DAYS = 5
-export const CHART_DEFAULT_DAY_WIDTH = 72
-export const CHART_CANVAS_HEIGHT = 200
-
-// ── 去抖延迟 (ms) ──
-export const FILTER_DEBOUNCE = 350
-export const CHART_RESIZE_DEBOUNCE = 150
-export const CHART_RENDER_DELAY = 100
-
-// ── 通过率阈值 ──
-export const PASS_RATE_EXCELLENT = 95
-export const PASS_RATE_WARNING = 80
-
-// ── 执行状态枚举（Step 1 后端小写收敛后单口径）──
-export const STATUS_KEYS = {
-  ALL: "all",
-  COMPLETED: "completed",
-  FAILED: "failed",
-  INTERRUPTED: "interrupted",
-  STOPPED: "stopped",
-}
-
-// ── 状态筛选项（count 由页面按当前查询结果计算） ──
-export const STATUS_TAB_LABELS = {
-  [STATUS_KEYS.ALL]: "全部",
-  [STATUS_KEYS.COMPLETED]: "已完成",
-  [STATUS_KEYS.FAILED]: "失败",
-  [STATUS_KEYS.INTERRUPTED]: "已中断",
-  [STATUS_KEYS.STOPPED]: "已停止",
-}
-
-// ── 状态标签映射（小写口径）──
-export const STATUS_LABEL_MAP = {
+// ── SOP 终态标签（台账只收录已完成报告，只有这两类）──
+export const SOP_STATUS_LABELS: Record<string, string> = {
   completed: "通过",
   success: "通过",
   failed: "失败",
-  interrupted: "已中断",
-  running: "运行中",
-  stopped: "已停止",
-  cancelled: "已取消",
-  pending: "排队中",
 }
 
-// ── 状态 CSS 类映射（小写口径）──
-export const STATUS_BADGE_CLASS = {
-  completed: "badge-pass",
-  success: "badge-pass",
-  passed: "badge-pass",
-  failed: "badge-fail",
-  interrupted: "badge-interrupted",
-  running: "badge-running",
-  stopped: "badge-stopped",
-  pending: "badge-stopped",
+export const SOP_STATUS_CLASS: Record<string, string> = {
+  completed: "is-pass",
+  success: "is-pass",
+  failed: "is-fail",
 }
 
-// ── 图表配色 ──
-export const CHART_COLORS = {
-  passRate: {
-    line: "#19c8b9",
-    fill: "rgba(25,200,185,0.08)",
-    point: "#19c8b9",
-    pointBorder: "#fff",
-  },
-  passBar: {
-    fill: "rgba(111,186,44,0.75)",
-    stroke: "#6fba2c",
-  },
-  failBar: {
-    fill: "rgba(224,90,90,0.75)",
-    stroke: "#e05a5a",
-  },
-  /** 轴文字 / 轴标题 / 滑块手柄：原散落在两个图表组件 script 内的字面量，2026-09-15 集中于此（画布例外，见 frontend/AGENTS.md L4 §③.7）*/
-  axis: {
-    labelText: "#9f927d",
-    titleText: "#725d42",
-    handle: "#19c8b9",
-  },
-}
+// ── 分页与去抖 ──
+export const PAGE_SIZE_OPTIONS = [10, 20, 50]
+export const FILTER_DEBOUNCE = 350
 
-// ── 图表样式参数 ──
-export const CHART_STYLE = {
-  pointBorderWidth: 2,
-  pointRadius: 4,
-  pointHoverRadius: 6,
-  lineBorderWidth: 2.5,
-  barBorderWidth: 1.5,
-  barBorderRadius: 6,
-  barPercentage: 0.9,
-  categoryPercentage: 0.7,
-  xMaxRotation: 45,
-  xMinRotation: 0,
-  yMin: 0,
-  yMax: 105,
-  legendLabelPadding: 20,
-  stepSize: 1,
-  precision: 0,
-}
-
-// ── 列表动画配置 ──
-export const LIST_ANIMATION = {
-  opacity: [0, 1],
-  translateY: [16, 0],
-  staggerDelay: 40,
-  duration: 380,
-  ease: "outCubic",
-}
-
-// ── 页头配置 ──
-// 列表页与页头共用同一图标与底纹，避免同一串颜色/图标名在多处硬编码
-export const REPORT_HEADER_ICON = "file-bar-chart"
-export const REPORT_HEADER_GRADIENT = "linear-gradient(135deg,#999,#8b7f8f)"
-
-export const PAGE_HEADER = {
-  title: "测试报告",
-  subtitle: "查看 AI 助手任务执行记录",
-  icon: REPORT_HEADER_ICON,
-  iconGradient: REPORT_HEADER_GRADIENT,
-}
-
-// ── 空状态文案 ──
+// ── 文案 ──
+export const KEYWORD_PLACEHOLDER = "搜索用例名称 / 任务 ID / 助手名称或编号"
 export const EMPTY_TEXT = {
-  noData: "暂无执行记录，请先在 AI 助手发布任务",
-  noRecords: "暂无执行记录",
-  hint: "请先在 AI 助手发布任务，完成后将自动出现在此列表",
+  noData: "暂无报告",
+  hint: "报告在执行完成后生成：去任务清单发布任务，或在平台助手跑一轮对话",
+}
+export const REPORT_MESSAGES = {
+  missing: "报告不存在",
+  openFailed: "报告打开失败",
+  loadFailed: "加载报告失败，请检查服务状态",
+}
+
+// ── 纯函数：来源与状态展示 ──
+export function sourceLabel(source: string): string {
+  return SOURCE_LABELS[source] || source
+}
+
+export function sourceClass(source: string): string {
+  return source === "agent" ? "is-agent" : "is-sop"
+}
+
+export function sopStatusLabel(status: string): string {
+  return SOP_STATUS_LABELS[status] || status || "—"
+}
+
+export function sopStatusClass(status: string): string {
+  return SOP_STATUS_CLASS[status] || "is-fail"
 }

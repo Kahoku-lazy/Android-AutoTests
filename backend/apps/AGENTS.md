@@ -27,7 +27,7 @@
 ### 1.3 契约规则
 
 - 响应信封 `{status, data}` / `{status, message}`；HTTP JSON **snake_case**（前端 camelCase 转换在前端侧）。
-- **信封特例**：无。报告接口（`/reports/*` 与 `/tasks/{id}/report/`）已于 2026-10-21 收敛为全局 `{status, data}`；仅文件下载保持 `FileResponse` 附件语义。
+- **信封特例**：无。报告接口（`/reports/*`）已于 2026-10-21 收敛为全局 `{status, data}`；旧 csv/md 文件下载端点已随 rework-test-report-inventory 退役。助手对话栏日志的 ticket 读取保持 `FileResponse` 附件语义（`assistant-log-ticket` 规格）。
 - 契约对照：前端 api 层、本 App Serializer；改路径/字段必须双边同步。
 
 

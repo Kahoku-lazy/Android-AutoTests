@@ -8,22 +8,22 @@
 
 | 只做 | 禁止 |
 |------|------|
-| 报告只读列表 + 文件查看/下载 | 写业务数据（跨 App 写必须走对方 api） |
-| `FileResponse` 下载报告文件 | 把文件内容塞进 JSON 信封 |
-| 列表只读聚合可见 `task_list.Task`（`task_list/task_reports.py`） | import dashboard / ai_assistant / task_list 的 service、views |
+| 已生成报告的只读台账（`report_inventory.py` 聚合） | 写业务数据（跨 App 写必须走对方 api） |
+| 只读 `task_list.Task` 与 `ai_assistant` 三张 Model、`task_list.case_identity` 纯函数 | import dashboard / ai_assistant / task_list 的 service、views、runner |
+| 列表统计报告数量（总数 / SOP / 智能体） | 扫磁盘目录发现报告；统计任务通过率或趋势 |
 
-- **列表数据源**：`GET /api/reports` 读当前用户可见的 `task_list.Task`（成功 = `completed`/`success`，失败 = `failed`）；不写 `task_tasks`。
-- **详情**：任务事件流程归任务清单 `GET /api/tasks/{id}/report/`；本 App 不提供 Run 详情或用例分解端点。
-- 下载/查看端点必须防路径穿越（`{filename}` 校验），现有 403/404 语义保持。
+- **列表数据源**：`GET /api/reports` 返回已生成的报告——SOP 报告取带 `report_run/report_name` 定位的终态任务；智能体报告取带 `report_id` 的助手消息（仅正常完成轮次）。未执行/执行中/取消/中断不入列。不写任何业务表。
+- **限量**：遵守 `platform-load-budget`——每来源扫描 ≤1000、合并返回 ≤500；不联表读智能体大字段。
+- **报告正文读取不在本 App**：SOP 走 `ai_assistant` 的 `/api/ai/agent-reports/{run}/{name}/`；智能体走对话栏日志 ticket 通道。本 App 不提供文件下载/查看端点。
+- 旧 csv/md 文件端点（`{filename}` / `{filename}/content`）、`rg_reports` / `rg_report_templates` 表与 `ReportGenerator` / `save_report` 已随 rework-test-report-inventory 退役，**禁止复活**。
 
 ## 本 App 契约（特例 + 真相源）
 
-真相源：`backend/apps/report_generator/urls.py`（3 端点：`""` / `{filename}/content` / `{filename}`）+ `views.py` + `api.py`（任务列表聚合读 `task_list.task_reports`）。2026-10-23 已删除 `cases` 与 `run/{run_id}` 两个空壳端点。
+真相源：`backend/apps/report_generator/urls.py`（1 端点：`""`）+ `views.py`（只分发）+ `report_inventory.py`（只读聚合）。
 
-**响应信封**：`/reports/*` 的列表/内容统一为全局 `{status, data}`，业务负载放在 `data` 中，不再自带 `status`；错误为 `{status: false, message}` + 404。
+**响应信封**：`/reports/` 统一为全局 `{status, data}`，`data` 含 `summary`（`total_reports/sop_reports/agent_reports`）、`total`、`items`；错误为 `{status: false, message}`。`/api/reports/cases/`、`/api/reports/run/{run_id}/`、`/api/reports/{filename}*` 一律 404。
 
-- 下载走 `FileResponse`（`{filename}` 端点），前端用 `fetch().text()` 消费，**不套 JSON 信封**（附件语义，不算信封特例）。
-- `{filename}/content` 为 JSON 内容查看端点（`data.content`）。
+**行字段**：SOP 行带 `report_run/report_name/task_id/task_title/case_label/device/status/started_at/finished_at/duration`；智能体行带 `assistant_id/assistant_name/thread_id/report_id/summary/created_at`。`case_label` 只由冻结用例身份算出（与任务清单、BUG 单同口径）。
 
 ## 本 App 协议要点
 
@@ -32,8 +32,8 @@
 ## 关单附加项（全局清单的 delta）
 
 ```
-[ ] 无 ORM 写业务表；只读查询 + 文件读取
-[ ] 列表只读 task_list.Task + ai_assistant.api 只读函数，无 service import
-[ ] 路径穿越防护：恶意 filename 返回 403/404（不落盘、不泄漏）
-[ ] 响应为 `{status, data}` 标准信封；FileResponse 下载形态未变（前端按附件/文本读取）
+[ ] 无 ORM 写业务表；只读查询，无磁盘扫描
+[ ] 列表只读 task_list.Task + ai_assistant Model + case_identity 纯函数，无 service/views import
+[ ] 响应为 `{status, data}` 标准信封；summary 统计报告数量
+[ ] python -m pytest -c tests/pytest.ini tests/report
 ```

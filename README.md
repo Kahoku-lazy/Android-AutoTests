@@ -4,12 +4,15 @@
 
 **AI 驱动的 Android UI 自动化测试平台**
 
+[![CI](https://github.com/Kahoku-lazy/Android-AutoTests/actions/workflows/ci-phase1.yml/badge.svg?branch=Kahoku)](https://github.com/Kahoku-lazy/Android-AutoTests/actions/workflows/ci-phase1.yml)
 [![Python](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/)
 [![Django](https://img.shields.io/badge/Django-6.0.6-green.svg)](https://www.djangoproject.com/)
 [![Vue](https://img.shields.io/badge/Vue-3.5-brightgreen.svg)](https://vuejs.org/)
 [![AgentScope](https://img.shields.io/badge/AgentScope-2.0.9%2B-orange.svg)](https://docs.agentscope.io/)
 ![Theme](https://img.shields.io/badge/theme-Doodle%20Craft-f5a623.svg)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+**中文** | [English](README.en.md)
 
 </div>
 
@@ -254,6 +257,22 @@ python -m pytest -c tests/pytest.ini   # 全量用例；check 不会跑这个
 - 覆盖：Django system check、ruff（平台范围、`tests/` 与 `engines/`，版本钉在 `requirements.txt`）、迁移与模型一致、pytest **收集**（不执行用例）、OpenAPI 契约与业务路径覆盖、前端 vitest / vite build / eslint / vue-tsc / prettier / 样式令牌、硬编码凭据（含 `engines/` 与 `.ts`）、模块边界（含底座包不得反向依赖）、Vue 文件体积、伪造数据、内联样式、静默吞异常、`engines/agents` 退役守门，以及 `Agent(...)` 只能出现在 `creator.py`。
 - 改接口必须同步 `openspec/openapi.yaml`，否则门禁失败。
 - CI 为 `.github/workflows/ci-phase1.yml` 的 2 个 job：`python` · `frontend`。判定调用 `utils/check_gates.py --only`，不在 workflow 里另写一套命令。只在推送 `Kahoku` 和指向 `Kahoku` 的 pull request 时跑。
+
+---
+
+## 🤝 社区与贡献
+
+所有改动走 **feature 分支 → PR → CI 全绿** 合入单主干 `Kahoku`（分支保护强制，管理员同样生效）。
+
+| 入口 | 说明 |
+|------|------|
+| [贡献指南](CONTRIBUTING.md) | 环境准备、PR 流程、硬性规则 |
+| [行为准则](CODE_OF_CONDUCT.md) | Contributor Covenant 2.1 |
+| [安全策略](SECURITY.md) | 漏洞**私密报告**渠道，勿公开提 Issue |
+| [变更日志](CHANGELOG.md) | Keep a Changelog 格式 |
+| [Discussions](https://github.com/Kahoku-lazy/Android-AutoTests/discussions) | 问答、想法交流 |
+| [Issues](https://github.com/Kahoku-lazy/Android-AutoTests/issues/new/choose) | Bug / 功能建议（含模板） |
+| [Releases](https://github.com/Kahoku-lazy/Android-AutoTests/releases) | 版本发布与源码下载 |
 
 ---
 

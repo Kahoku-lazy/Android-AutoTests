@@ -1,0 +1,31 @@
+# Dependabot 依赖更新配置。
+# 目标分支是单主干 Kahoku；更新以 PR 形式进入，走 CI 双 job 闸门。
+# Django 锁定 6.0.x（见 README：6.1 的模型字段检查会在无数据库时连 MySQL，
+# 导致 CI 的 manage.py check 失败），因此忽略 django 的 minor/major 升级，只收 patch。
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    target-branch: "Kahoku"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "django"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-major"
+
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    target-branch: "Kahoku"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "Kahoku"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5

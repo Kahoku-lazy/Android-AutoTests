@@ -1,0 +1,63 @@
+name: 🐞 Bug 报告
+description: 报告平台缺陷（安全漏洞请走 SECURITY.md 的私密渠道，勿在此公开）
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！请尽量填全以下信息，便于复现与定位。
+        ⚠️ 安全漏洞请勿在此提交，见 [SECURITY.md](https://github.com/Kahoku-lazy/Android-AutoTests/blob/Kahoku/SECURITY.md)。
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 问题描述
+      description: 发生了什么？期望的行为是什么？
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤
+      description: 从哪个页面 / 接口开始，逐步操作到问题出现
+      placeholder: |
+        1. 打开「任务清单」
+        2. 从工作流 X 提交任务到设备 Y
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果（含报错 / 日志 / 截图）
+      description: 任务结果、后端日志、浏览器控制台报错等
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本 / 提交号
+      description: Release 版本号或 git 提交号（git rev-parse --short HEAD）
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: 运行环境
+      description: 操作系统、Python / Node 版本、数据库（MySQL/SQLite）、设备型号与 Android 版本、ADB 连接方式（USB/WiFi）
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已搜索过现有 Issue，没有重复
+          required: true
+        - label: 这不是安全漏洞（安全漏洞走私密渠道）
+          required: true

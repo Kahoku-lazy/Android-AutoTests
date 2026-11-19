@@ -323,8 +323,7 @@ async function resetPassword(user: OpsUser): Promise<void> {
               :key="`head-${col.prop}`"
               v-slot:[`header-${col.prop}`]
             >
-              <span class="th-ico" aria-hidden="true">{{ col.icon }}</span
-              >{{ col.label }}
+              <span class="th-ico" aria-hidden="true">{{ col.icon }}</span>{{ col.label }}
             </template>
 
             <template #cell-_select="{ record }">

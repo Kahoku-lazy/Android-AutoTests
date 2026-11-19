@@ -233,8 +233,7 @@ function errorMessage(error: unknown, fallback: string): string {
             :key="`head-${col.dataIndex}`"
             v-slot:[`header-${col.dataIndex}`]
           >
-            <span class="th-ico" aria-hidden="true">{{ col.icon }}</span
-            >{{ col.title }}
+            <span class="th-ico" aria-hidden="true">{{ col.icon }}</span>{{ col.title }}
           </template>
 
           <template #cell-bug_no="{ record }">

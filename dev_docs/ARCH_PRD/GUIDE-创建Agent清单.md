@@ -1,96 +1,60 @@
-# GUIDE — 创建 Agent 清单
+# GUIDE — 新增一项 Agent 能力
 
-> 目标：让 AI / 开发者按 **Model + Harness → 角色** 新增能力，而不是把逻辑写进 Django View 或前端。  
-> 必读：根 [`AGENTS.md`](../../AGENTS.md)「平台架构定位」· [`engines/AGENTS.md`](../../engines/AGENTS.md) · [`engines/agents/AGENTS.md`](../../engines/agents/AGENTS.md)（含「创建 Agent 统一流程」）· 风格 [`.agents/rules/engines-code-style.md`](../../.agents/rules/engines-code-style.md) · OpenSpec [`agent-harness`](../../openspec/specs/agent-harness/spec.md)
+> 目标：能力进 `ae_harness`，角色与流程进 `backend_bridge`。不要把逻辑写进 Django View 或前端。
+> 必读：根 [`AGENTS.md`](../../AGENTS.md)「平台架构定位」· [`engines/AGENTS.md`](../../engines/AGENTS.md) · [`engines/ae_harness/AGENTS.md`](../../engines/ae_harness/AGENTS.md) · [`engines/backend_bridge/AGENTS.md`](../../engines/backend_bridge/AGENTS.md)
 
 ## 0. 先判定落点
 
 | 你想做的事 | 落点 | 不要做的事 |
 | --- | --- | --- |
-| 新智能体角色（推理+工具） | `engines/agents/`（本清单） | 在 `backend/apps/*/views` 里写 SOP/工具调用 |
-| 只改任务下发/密钥/落库展示 | `backend/apps/ai_assistant`、`task_list` 等 | 在 engines 里写 Django ORM |
-| 新设备/串口/OCR 原子能力 | `engines/device` / `uart_log` / `vision`，再经 `tool_*.py` 暴露 | 上层直接 import uiautomator2/airtest |
-| 仅 UI 文案或列表展示 | `frontend/` | 在前端拼模型密钥或直连设备 |
+| 新工具（一个动作） | `engines/ae_harness/tools/<域>/`，并在 `catalog.py` 登记 | 在工具里编排多步，或在 View 里调设备 |
+| 新角色、新提示词、新流程 | `engines/backend_bridge/`；提示词与连接参数由调用方传入 | 在 `ae_harness` 写提示词文件或角色脚本 |
+| 只改任务下发、落库、展示 | `backend/apps/` | 在 engines 里写 Django ORM |
+| 新设备、串口、OCR 原子能力 | `engines/device` / `uart_log` / `vision`，再经工具暴露 | 上层直接 import uiautomator2 |
 
-**公式：** `角色 = Model（provider/模型名/密钥来源）+ Harness（提示词 + 工具/技能/知识/上下文）`，经 `AgentRoleFactory`（LLM）或 `realtime_vocie_agent`（Voice）装配。
+`ae_harness` 只造智能体和提供工具。它不保存角色、提示词或具体流程。
 
-## 1. 最小必做清单（代码角色）
+## 1. 最小必做清单
 
-对照现有：`agent_builders.py`（UI / 用例 `build_*`）、`realtime_vocie_agent.py`（Omni）。
+1. **工具**
+   - 放 `engines/ae_harness/tools/<域>/`，一个函数只做一个动作。
+   - 在 `tools/catalog.py` 登记域、全部预设与只读预设。
+   - 文本工具返回 JSON，带 `timestamp` 与 `status`。
 
-1. **模型**  
-   - 在 `config/data/agent_config.yaml` 增加角色节的 `ModelConfig`（及四分段）；数据只留在 `config/data`。  
-   - 运行时经 `engines.agents.models` 包入口取模型（`get_chat_model("角色键")`）；密钥只写环境变量名，连接参数与工厂都在 `models/`。
+2. **装配**
+   - 在 `backend_bridge` 调 `create_agent`，传入名称、提示词正文、`provider`、`api_key_env`、`model_name`、`base_url`。
+   - 再按调用方的勾选挂工具。验收侧只取勾选与只读目录的交集。
+   - 不在 `ae_harness` 新增 `agent_<role>.py`，也不新增提示词文件。
 
-2. **提示词**  
-   - 新增 `engines/agents/config/data/prompts/<TOKEN>.md`。  
-   - YAML `RoleConfig.system_prompt` 填 token；在 `role_sys_prompts.py` 登记类方法或常量（若需模块级导出）。  
-   - **禁止**在 View / 其它包硬编码整段 system prompt；**禁止**再引入已删的 `prompts/` 包或 `prompt_config.py`。
+3. **流程（若是 SOP）**
+   - 步骤由调用方提供 YAML，经 `load_spec` 加载，经 `run_sop` 执行。
+   - 不在 `ae_harness/workflow/` 写死具体流程，也不另写一套编排循环。
 
-3. **工具（若需要）**  
-   - 实现放 `engines/agents/tools/tool_<领域>.py`（命名必须 `tool_*.py`）。  
-   - 在 `tools_config.py` 增加 `build_<角色>_toolkit()`（或扩展现有 build）。  
-   - **禁止**在 builder 里直接 `from .tools.tool_xxx import ...` 绑业务工具绕过 `tools_config`。
-
-4. **技能（若需要）**  
-   - 技能目录放 `config/data/skills/`，挂到 `tools_config` 的 `skill_dirs`。
-
-5. **角色装配**  
-   - LLM：在 `agent_builders.py`（或同包 builder）用 `AgentRoleFactory(...).create()`，提供 `build_xxx() -> Agent`，**每次新实例**。  
-   - Voice：扩展 `realtime_vocie_agent` + `realtime_vocie` 会话；勿恢复 livetranslate/pipeline。  
-   - **禁止**再使用已删除的 `role/` 包、`BaseRole`、`case_roles.py`。
-
-6. **工作流（若走 SOP）**  
-   - 步骤编排放 `workflow/`；**不在 workflow 里**创建角色或旁路绑工具/提示词。
-
-7. **知识（若需要 RAG）**  
-   - 走 `rag/`，遵守其 AGENTS；结果只注入当轮上下文。
-
-8. **记忆与上下文**  
-   - 优先复用 messaging / Omni session；不要平行再造一套写业务库的历史存储。
-
-## 2. 平台通道清单（要可配置、可计量、可展示时）
-
-1. `backend/apps/ai_assistant`：智能体与 `route_configs`（密钥 Fernet）。  
-2. 任务路径：`task_list` 提交 → 解密配置 → 调用 engines 入口 → 事件/用量入库。  
-3. 前端：`ai-assistant` / `task-list` 展示；**不**在前端保存明文长期密钥。  
-4. engines **不**直接写业务库。
-
-## 3. 自检（做完必须跑）
-
-```text
-cd .agents/skills/engines-agents-style-check
-python -m scripts.check_engines_agents_style
-
-python -m utils.check_gates --only engines-agents-style
-# 或
-python run.py check
-```
+## 2. 自检
 
 人工核对：
 
-- [ ] 提示词只经 `role_sys_prompts` + `config/data/prompts`  
-- [ ] 模型只经 `engines.agents.models` 包入口 + `agent_config.yaml`（数据在 `config/data`）  
-- [ ] 工具只经 `tools_config` + `tool_*.py`  
-- [ ] LLM 经 `AgentRoleFactory` / `build_*`；Voice 经 `realtime_vocie_agent`  
-- [ ] 无 `import apps` / `django` 出现在本次 engines 改动  
-- [ ] 未在 View 内嵌 SOP 循环或设备操作  
+- [ ] 提示词由调用方传入，`ae_harness` 没有新的提示词文件
+- [ ] 模型经 `create_model(provider, api_key_env, model_name, base_url)`，没有模型短名
+- [ ] 工具在 `tools/<域>/`，并登记进 `catalog.py`
+- [ ] 角色装配在 `backend_bridge`，只经 `create_agent`
+- [ ] 本次 engines 改动没有 `import apps` / `django`
+- [ ] 没有在 View 里嵌 SOP 循环或设备操作
 
-## 4. 反模式（看到就停）
+## 3. 反模式（看到就停）
 
-- 在 DRF View / `api.py` 里直接 `Agent(` 或调用 uiautomator2  
-- 新工具文件命名 `test_*.py` 或放在 `backend/`  
-- 复制提示词到 frontend / backend「方便改」  
-- 复活 `role/`、`prompt_config`、`prompts/*_prompt.py`、BaseRole  
-- 为图省事 `git add -A` 把 temps / 密钥加进提交  
+- 在 DRF View / `api.py` 里直接 `Agent(` 或调用 uiautomator2
+- 在 `ae_harness` 新增角色脚本、提示词文件或写死的流程
+- 恢复 `engines/agents/`、模型短名、`role_sys_prompts`、`prompts/*.md`
+- 把工具文件堆在 `tools/` 根上
+- 为图省事 `git add -A`
 
-## 5. 参考实现
+## 4. 参考实现
 
 | 场景 | 参考 |
 | --- | --- |
-| 设备执行 + 验收 | `agent_builders.build_ui_executor` / `build_ui_verifier` + `tools_config` |
-| 用例规划/编写/验收 | `agent_builders.build_case_*` |
-| Omni 语音 | `realtime_vocie_agent` + `realtime_vocie` |
-| 提示词登记 | `role_sys_prompts.py` + `config/data/prompts/*.md` |
-| 模型登记 | `engines/agents/models/` + `config/data/agent_config.yaml` |
-| 工具登记 | `tools_config.py` + `tools/tool_*.py` |
+| 造智能体 | `engines/ae_harness/agents/creator.py` |
+| 设备工具 | `engines/ae_harness/tools/adb/` |
+| 名片绑定的一对角色 | `engines/backend_bridge/workflow/bound_roles.py` |
+| 一次 SOP | `engines/backend_bridge/workflow/bound_sop.py` |
+| 单角色会话 | `engines/backend_bridge/agents/ui_executor.py` |

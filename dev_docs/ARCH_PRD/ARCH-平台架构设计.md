@@ -47,15 +47,15 @@ Android 自动化测试与智能体平台：**前端只展示，后端只做通�
 
 ### 2.2 Model、Harness、角色
 
-- **Model**：推理与生成（DeepSeek、Dashscope / Omni 等），由角色配置选用。  
-- **Harness**（集中在 `engines/agents/`）：角色跑起来所需外围能力  
-  - 工具：`tools/tool_*.py` + **唯一分配入口** `tools_config.py`  
-  - 技能：`skills/`  
-  - 知识库：`rag/`（MCP 等见 `mcp_config/`）  
-  - 记忆与上下文：会话/历史与当轮上下文（messaging、语音 session/pipeline 等；RAG 只注入当轮，不进长期历史）  
-  - 提示词：`prompts/` + **唯一配置入口** `prompt_config.py`  
-- **角色**：`agent_builders.py` 的 `AgentRoleFactory` + `build_*`，把选定 Model 与 Harness 装配成可下发、可计量的 Agent（四分段类型在 `config/role_types.py`；语音角色在 `realtime_vocie_agent.py`）。  
-- **工作流**：`workflow/` 管 SOP 步骤与单次运行；**禁止**在此创建角色或旁路绑定工具/提示词。
+- **Model**：推理与生成。连接参数由调用方传给 `ae_harness.agents.create_model`，没有模型短名，也没有 `models.yaml`。
+- **Harness**（`engines/ae_harness/`）：只提供能力，不保存角色、提示词或具体流程。
+  - 工具：`tools/<域>/`（adb、用例库、文档），目录在 `catalog.py`
+  - 知识库：`knowledge/`，只读检索
+  - 事件与报告：`event/`
+  - 中间件：观测、重试、预算与取消
+  - SOP 抽象：`workflow/sop/`，只编排，不建角色
+- **角色**：在 `engines/backend_bridge/` 装配。调用方传入提示词正文和连接参数，经 `create_agent` 造出智能体，再按勾选挂工具。
+- **工作流**：平台流程在 `backend_bridge/workflow/`。步骤由调用方提供，执行经 `ae_harness` 的 `load_spec` / `run_sop`。
 
 ### 2.3 Harness 的控制与数据底座
 
@@ -65,7 +65,7 @@ Android 自动化测试与智能体平台：**前端只展示，后端只做通�
 | `engines/uart_log` | 串口日志采集与处理 |
 | `engines/vision` | 页面 OCR，供引擎侧工具调用 |
 
-上述能力经 `tool_*.py` 暴露给角色，**禁止**上层直接 import `airtest` / `uiautomator2` 绕过引擎。
+上述能力经 `ae_harness/tools/<域>/` 暴露给调用方，**禁止**上层直接 import `airtest` / `uiautomator2` 绕过引擎。
 
 ### 2.4 花费、任务与展示闭环
 

@@ -176,8 +176,7 @@ async function openReport(task: TaskRecord) {
       empty-text="暂无数据"
     >
       <template v-for="col in COLUMNS" :key="col.dataIndex" v-slot:[`header-${col.dataIndex}`]>
-        <span class="th-ico" aria-hidden="true">{{ col.icon }}</span
-        >{{ col.title }}
+        <span class="th-ico" aria-hidden="true">{{ col.icon }}</span>{{ col.title }}
       </template>
       <template #cell-case_label="{ record }">
         <span class="case-label" :title="caseHover(record.case_rows)">{{

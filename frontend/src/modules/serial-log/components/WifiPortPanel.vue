@@ -56,8 +56,7 @@
           :key="`h-${col.dataIndex}`"
           v-slot:[`header-${col.dataIndex}`]
         >
-          <span class="th-ico" aria-hidden="true">{{ col.icon }}</span
-          >{{ col.title }}
+          <span class="th-ico" aria-hidden="true">{{ col.icon }}</span>{{ col.title }}
         </template>
         <template #cell-port="{ record }">
           <div class="lp-id">

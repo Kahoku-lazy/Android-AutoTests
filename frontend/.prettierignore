@@ -1,0 +1,4 @@
+# vite build 会重写这两个生成文件，且根 .gitignore 已排除。
+# prettier-ignore 注释只忽略下一节点，挡不住整份生成物。
+src/auto-imports.d.ts
+src/components.d.ts

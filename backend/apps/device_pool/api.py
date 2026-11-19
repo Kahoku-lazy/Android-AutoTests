@@ -150,8 +150,8 @@ def _resolve_device(serial: str) -> Device:
         raise ValueError("未选择设备，请先连接设备")
     try:
         dev = Device.objects.get(serial=serial)
-    except Device.DoesNotExist:
-        raise ValueError("设备未注册")
+    except Device.DoesNotExist as exc:
+        raise ValueError("设备未注册") from exc
 
     if dev.status == DeviceStatus.BUSY and dev.occupied_by:
         for prefix in RUNNER_OCCUPIED_PREFIXES:
@@ -162,6 +162,6 @@ def _resolve_device(serial: str) -> Device:
 
 def use_device(serial: str) -> None:
     """切到目标设备 + 可用性/执行引擎占用校验（跨 App 统一入口）。"""
-    dev = _resolve_device(serial)
+    _resolve_device(serial)
     if device.current_serial != serial:
         device.switch_to(serial)

@@ -26,8 +26,8 @@ def _device(serial: str) -> Device:
     """取设备记录，不存在抛 404。"""
     try:
         return Device.objects.get(serial=serial)
-    except Device.DoesNotExist:
-        raise DeviceError(f"设备 {serial} 未注册", status_code=404)
+    except Device.DoesNotExist as exc:
+        raise DeviceError(f"设备 {serial} 未注册", status_code=404) from exc
 
 
 # ═══════════════════════════════════════════════

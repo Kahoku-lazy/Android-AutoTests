@@ -244,15 +244,15 @@ class DeviceDetector:
             probe_u2(addr)
         except AdbUnavailableError as e:
             raise DeviceError(str(e), status_code=503) from e
-        except subprocess.TimeoutExpired:
-            raise DeviceError("连接超时，请检查设备 USB/WiFi 连接", status_code=504)
+        except subprocess.TimeoutExpired as exc:
+            raise DeviceError("连接超时，请检查设备 USB/WiFi 连接", status_code=504) from exc
         except EngineConnectError as e:
             error_msg = str(e)
             if "atx-agent" in error_msg.lower() or "offline" in error_msg.lower():
                 raise DeviceError(
                     "设备 ATX Agent 未运行，请在设备端启动 uiautomator2 服务", status_code=502
-                )
-            raise DeviceError("连接超时，请检查设备 USB/WiFi 连接", status_code=504)
+                ) from e
+            raise DeviceError("连接超时，请检查设备 USB/WiFi 连接", status_code=504) from e
 
     def pair(self, ip: str, pair_port: str, pair_code: str) -> None:
         """首次无线调试：adb pair IP:配对端口 配对码。已配对视为成功。"""

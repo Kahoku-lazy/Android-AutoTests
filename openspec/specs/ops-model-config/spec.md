@@ -7,19 +7,19 @@
 
 ### Requirement: 模型类型与厂商的支持关系
 
-系统 SHALL 按以下关系限定某个模型类型可选的厂商：聊天支持 deepseek、dashscope、govee；实时语音只支持 dashscope；语音合成只支持 dashscope。厂商下拉 MUST 只列出当前模型类型支持的厂商，MUST NOT 出现不受支持的厂商选项。
+系统 SHALL 按以下关系限定某个模型类型可选的厂商：聊天支持 deepseek、dashscope、openai；实时语音只支持 dashscope；语音合成只支持 dashscope。厂商下拉 MUST 只列出当前模型类型支持的厂商，MUST NOT 出现不受支持的厂商选项。
 
 #### Scenario: 聊天分类显示三家厂商
 - **WHEN** 用户把模型类型选为聊天
-- **THEN** 厂商下拉恰好包含 deepseek、dashscope、govee
+- **THEN** 厂商下拉恰好包含 deepseek、dashscope、openai
 
 #### Scenario: 实时语音只显示 dashscope
 - **WHEN** 用户把模型类型选为实时语音
-- **THEN** 厂商下拉只有 dashscope，deepseek 与 govee 不出现
+- **THEN** 厂商下拉只有 dashscope，deepseek 与 openai 不出现
 
 #### Scenario: 语音合成只显示 dashscope
 - **WHEN** 用户把模型类型选为语音合成
-- **THEN** 厂商下拉只有 dashscope，deepseek 与 govee 不出现
+- **THEN** 厂商下拉只有 dashscope，deepseek 与 openai 不出现
 
 ### Requirement: 切换模型类型时的默认厂商与密钥
 
@@ -46,7 +46,7 @@
 打开一条既有配置编辑时，若其厂商不在该模型类型支持的集合内，系统 MUST 把厂商显示为该类型的默认厂商，MUST NOT 把不受支持的厂商回显到下拉里；模型类型及模型名称、地址等其它字段 MUST 保持原值。
 
 #### Scenario: 历史脏组合被归一
-- **WHEN** 用户编辑一条模型类型为语音合成、厂商为 govee 的历史配置
+- **WHEN** 用户编辑一条模型类型为语音合成、厂商为 openai 的历史配置
 - **THEN** 厂商显示为 dashscope，模型类型仍为语音合成
 
 ### Requirement: 列表展示模型类型

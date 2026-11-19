@@ -260,7 +260,7 @@ OPENAPI_GENERATED = ROOT / "temps" / "openapi.generated.yaml"
 MODEL_KEY_ENV = {
     "DEEPSEEK_API_KEY": "local-collect-placeholder",
     "DASHSCOPE_API_KEY": "local-collect-placeholder",
-    "GOVEE_API_KEY": "local-collect-placeholder",
+    "OPENAI_API_KEY": "local-collect-placeholder",
 }
 OPENAPI_ENV = {
     "DJANGO_SECRET_KEY": "local-check-key-not-for-prod",

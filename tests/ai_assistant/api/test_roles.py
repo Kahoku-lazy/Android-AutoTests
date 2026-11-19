@@ -81,9 +81,9 @@ def test_model_config_round_trip(db):
         "post",
         "/api/ai/model-configs/",
         {
-            "provider": "govee",
+            "provider": "openai",
             "api_protocol": "openai",
-            "api_key_env": "GOVEE_API_KEY",
+            "api_key_env": "OPENAI_API_KEY",
             "model_name": "deepseek-flash",
             "base_url": "https://example.test/v1",
         },
@@ -92,16 +92,16 @@ def test_model_config_round_trip(db):
         "post",
         "/api/ai/model-configs/",
         {
-            "provider": "govee",
+            "provider": "openai",
             "api_protocol": "openai",
-            "api_key_env": "GOVEE_API_KEY",
+            "api_key_env": "OPENAI_API_KEY",
             "base_url": "https://example.test/v1",
             "model_name": "grok-4.7",
         },
     )
     assert first.status_code == 201
     assert second.status_code == 201
-    assert AIModelConfig.objects.filter(api_key_env="GOVEE_API_KEY").count() == 2
+    assert AIModelConfig.objects.filter(api_key_env="OPENAI_API_KEY").count() == 2
     listed = call("get", "/api/ai/model-configs/")
     assert {row["model_name"] for row in listed.data["configs"]} == {"deepseek-flash", "grok-4.7"}
 

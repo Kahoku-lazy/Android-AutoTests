@@ -104,8 +104,8 @@ if __name__ == "__main__":
         create_agent(
             "probe",
             "你是探针。",
-            provider="govee",
-            api_key_env="GOVEE_API_KEY",
+            provider="openai",
+            api_key_env="OPENAI_API_KEY",
             model_name="deepseek-flash",
         ).api_key_env
     )

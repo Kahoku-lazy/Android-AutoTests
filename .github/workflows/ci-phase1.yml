@@ -38,7 +38,7 @@ jobs:
           # 占位值。检查不调用模型；名字与 models.py 的三把钥匙一致。
           DEEPSEEK_API_KEY: ci-placeholder
           DASHSCOPE_API_KEY: ci-placeholder
-          GOVEE_API_KEY: ci-placeholder
+          OPENAI_API_KEY: ci-placeholder
         run: |
           gates=django-check,ruff-format,ruff-lint,makemigrations-check,pytest-collect
           gates="$gates,openapi-schema,openapi-coverage"

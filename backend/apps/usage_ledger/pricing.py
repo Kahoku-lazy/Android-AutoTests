@@ -40,15 +40,15 @@ _PRICING = _load()
 
 
 def normalize_provider(provider: str, model: str = "") -> str:
-    """把厂商归一为 deepseek / dashscope / govee。厂商只用于归类，不用于选价。"""
+    """把厂商归一为 deepseek / dashscope / openai。厂商只用于归类，不用于选价。"""
     value = (provider or "").strip().lower()
-    if value in ("deepseek", "dashscope", "govee"):
+    if value in ("deepseek", "dashscope", "openai"):
         return value
     if value in ("omni", "qwen", "sambert"):
         return "dashscope"
     name = (model or "").lower()
     if name.startswith("grok"):
-        return "govee"
+        return "openai"
     if "qwen" in name or "sambert" in name:
         return "dashscope"
     if name.startswith("deepseek"):

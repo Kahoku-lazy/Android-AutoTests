@@ -8,7 +8,7 @@
 
 ### Requirement: 连接参数在创建时校验
 
-`create_model` MUST 校验 `provider`、`api_key_env`、`model_name` 与 `base_url`。`provider` MUST 是 `deepseek`、`dashscope`、`govee` 之一，且 MUST 与允许的密钥环境变量名成对。密钥缺失、参数类型不合法或厂商与密钥名不匹配时 MUST 失败，异常信息 MUST NOT 含密钥明文。
+`create_model` MUST 校验 `provider`、`api_key_env`、`model_name` 与 `base_url`。`provider` MUST 是 `deepseek`、`dashscope`、`openai` 之一，且 MUST 与允许的密钥环境变量名成对。密钥缺失、参数类型不合法或厂商与密钥名不匹配时 MUST 失败，异常信息 MUST NOT 含密钥明文。
 
 #### Scenario: 合法参数通过
 

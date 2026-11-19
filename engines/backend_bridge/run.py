@@ -86,8 +86,8 @@ if __name__ == "__main__":
         run_ui_task(
             "只回复 OK 两个字母，不要调用任何工具。",
             system_prompt="你是 UI 执行者。",
-            provider="govee",
-            api_key_env="GOVEE_API_KEY",
+            provider="openai",
+            api_key_env="OPENAI_API_KEY",
             model_name="deepseek-flash",
         )
     )

@@ -42,7 +42,7 @@ def discover_models(provider: str, api_key_env: str, base_url: str = "") -> dict
     查询该密钥下厂商当前列出的模型 id。
 
     Args:
-        provider: 厂商名，只能是 deepseek、dashscope、govee。
+        provider: 厂商名，只能是 deepseek、dashscope、openai。
         api_key_env: 密钥所在的环境变量名，必须与厂商成对。
         base_url: 查询地址，不能为空。
 

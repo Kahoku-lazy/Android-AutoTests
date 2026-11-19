@@ -94,7 +94,7 @@ async def _fake_build(
     """替身：装配角色，返回假智能体与观测中间件。"""
     del system_prompt, provider, api_key_env, model_name, base_url, controls
     watcher = observer if observer is not None else ObservationMiddleware()
-    return AgentBundle(agent=_Agent(), api_key_env="GOVEE_API_KEY"), watcher
+    return AgentBundle(agent=_Agent(), api_key_env="OPENAI_API_KEY"), watcher
 
 
 async def test_run_returns_structured_result(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
@@ -104,8 +104,8 @@ async def test_run_returns_structured_result(tmp_path: Path, monkeypatch: pytest
     result = await run_ui_task(
         "只回复 OK",
         system_prompt="你是执行者。",
-        provider="govee",
-        api_key_env="GOVEE_API_KEY",
+        provider="openai",
+        api_key_env="OPENAI_API_KEY",
         model_name="deepseek-flash",
         report_root=tmp_path,
     )
@@ -113,9 +113,9 @@ async def test_run_returns_structured_result(tmp_path: Path, monkeypatch: pytest
     assert isinstance(result, UiRunResult)
     assert result.final_text == "OK"
     assert result.tokens == {"input": 100, "output": 10, "cache_hit": 60, "cache_creation": 0}
-    assert result.by_api_key_env == {"GOVEE_API_KEY": 1}
+    assert result.by_api_key_env == {"OPENAI_API_KEY": 1}
     assert len(result.usages) == 1
-    assert result.usages[0]["api_key_env"] == "GOVEE_API_KEY"
+    assert result.usages[0]["api_key_env"] == "OPENAI_API_KEY"
 
 
 async def test_report_and_log_written_under_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
@@ -125,8 +125,8 @@ async def test_report_and_log_written_under_root(tmp_path: Path, monkeypatch: py
     result = await run_ui_task(
         "只回复 OK",
         system_prompt="你是执行者。",
-        provider="govee",
-        api_key_env="GOVEE_API_KEY",
+        provider="openai",
+        api_key_env="OPENAI_API_KEY",
         model_name="deepseek-flash",
         report_root=tmp_path,
     )
@@ -145,8 +145,8 @@ async def test_run_prints_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     await run_ui_task(
         "只回复 OK",
         system_prompt="你是执行者。",
-        provider="govee",
-        api_key_env="GOVEE_API_KEY",
+        provider="openai",
+        api_key_env="OPENAI_API_KEY",
         model_name="deepseek-flash",
         report_root=tmp_path,
     )

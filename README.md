@@ -35,7 +35,7 @@
 
 **非本期**：iOS、Web、API 自动化的执行引擎 · 设备云租用 · 多团队隔离 · OAuth / SSO · AI 自我修复失败用例 · 分布式执行集群 · 实时语音（知识库助手 WebSocket 已下线，`websocket_urlpatterns` 为空）
 
-模型与密钥**不在页面上填写明文**。运营在「模型配置」登记厂商、密钥环境变量名、协议、地址和模型名；密钥只从仓库根 `.env` 读取。当前三家：`DEEPSEEK_API_KEY`、`DASHSCOPE_API_KEY`、`GOVEE_API_KEY`。平台助手与已发布工作流在运行时读取这些配置，并把厂商、密钥名、地址、模型名显式传给 `create_agent`。没有模型短名，也没有写死的默认角色。
+模型与密钥**不在页面上填写明文**。运营在「模型配置」登记厂商、密钥环境变量名、协议、地址和模型名；密钥只从仓库根 `.env` 读取。当前三家：`DEEPSEEK_API_KEY`、`DASHSCOPE_API_KEY`、`OPENAI_API_KEY`。平台助手与已发布工作流在运行时读取这些配置，并把厂商、密钥名、地址、模型名显式传给 `create_agent`。没有模型短名，也没有写死的默认角色。
 
 ---
 
@@ -142,7 +142,7 @@ python run.py setup
 
 cp .env.example .env
 # 至少改：DJANGO_SECRET_KEY、DB_*，以及实际要用的密钥
-# DEEPSEEK_API_KEY / DASHSCOPE_API_KEY / GOVEE_API_KEY 按模型配置填写；不把密钥写进页面或仓库
+# DEEPSEEK_API_KEY / DASHSCOPE_API_KEY / OPENAI_API_KEY 按模型配置填写；不把密钥写进页面或仓库
 
 python manage.py migrate
 python manage.py shell -c "

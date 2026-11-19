@@ -44,8 +44,8 @@
 
 #### Scenario: 显式参数创建
 
-- **WHEN** 调用方传入 `provider=govee`、`api_key_env=GOVEE_API_KEY` 和模型名
-- **THEN** 返回的模型可用，且密钥环境变量名为 `GOVEE_API_KEY`，返回值不含密钥明文
+- **WHEN** 调用方传入 `provider=openai`、`api_key_env=OPENAI_API_KEY` 和模型名
+- **THEN** 返回的模型可用，且密钥环境变量名为 `OPENAI_API_KEY`，返回值不含密钥明文
 
 #### Scenario: 厂商与密钥名不匹配
 

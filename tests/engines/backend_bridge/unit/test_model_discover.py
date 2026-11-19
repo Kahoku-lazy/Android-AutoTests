@@ -14,24 +14,24 @@ def test_provider_key_pairs():
     """三家厂商各自只认一个密钥环境变量。"""
     assert expected_key("deepseek") == "DEEPSEEK_API_KEY"
     assert expected_key("dashscope") == "DASHSCOPE_API_KEY"
-    assert expected_key("govee") == "GOVEE_API_KEY"
+    assert expected_key("openai") == "OPENAI_API_KEY"
 
 
 def test_models_url_requires_address():
     """地址必须由调用方传入，空地址不再补默认。"""
     assert models_url("deepseek", "") == ""
-    assert models_url("govee", "https://example.test/v1") == "https://example.test/v1/models"
+    assert models_url("openai", "https://example.test/v1") == "https://example.test/v1/models"
 
 
 def test_models_url_does_not_duplicate_suffix():
     """地址已经以 /models 结尾时不再追加。"""
-    assert models_url("govee", "https://example.test/v1/models") == "https://example.test/v1/models"
+    assert models_url("openai", "https://example.test/v1/models") == "https://example.test/v1/models"
 
 
 def test_discover_rejects_mismatched_key():
     """厂商和密钥环境变量不成对时拒绝查询。"""
     with pytest.raises(ValueError):
-        discover_models("deepseek", "GOVEE_API_KEY")
+        discover_models("deepseek", "OPENAI_API_KEY")
 
 
 def test_discover_manual_when_secret_missing(monkeypatch):

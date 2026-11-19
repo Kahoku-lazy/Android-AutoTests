@@ -85,7 +85,7 @@ def test_start_reports_wrong_package_with_installed_hint():
     control, _ = _control(
         {
             "cmd package resolve-activity": "No activity found\n",
-            "monkey -p govee.home.com": RuntimeError(
+            "monkey -p openai.home.com": RuntimeError(
                 "** No activities found to run, monkey aborted."
             ),
             "pm list packages": "package:com.govee.home\npackage:com.govee.life\n",
@@ -93,7 +93,7 @@ def test_start_reports_wrong_package_with_installed_hint():
     )
 
     with pytest.raises(RuntimeError) as err:
-        control.app_start("govee.home.com")
+        control.app_start("openai.home.com")
 
     message = str(err.value)
     assert "未安装或没有 LAUNCHER 入口" in message
@@ -104,13 +104,13 @@ def test_stop_refuses_unknown_package():
     """停止未安装的包要报错：am force-stop 对它也会返回成功，不校验会误判。"""
     control, fake = _control(
         {
-            "pm list packages govee.home.com": "package:com.govee.home\n",
+            "pm list packages openai.home.com": "package:com.govee.home\n",
             "pm list packages": "package:com.govee.home\npackage:com.govee.life\n",
         }
     )
 
     with pytest.raises(RuntimeError) as err:
-        control.app_stop("govee.home.com")
+        control.app_stop("openai.home.com")
 
     assert "未安装" in str(err.value)
     assert "com.govee.home" in str(err.value)

@@ -26,7 +26,7 @@ from __future__ import annotations
 KEY_BY_PROVIDER = {
     "deepseek": "DEEPSEEK_API_KEY",
     "dashscope": "DASHSCOPE_API_KEY",
-    "govee": "GOVEE_API_KEY",
+    "openai": "OPENAI_API_KEY",
 }
 
 # 当前引擎真实支持的三种客户端协议。
@@ -35,7 +35,7 @@ API_PROTOCOLS = ("deepseek", "dashscope", "openai")
 # 空地址时用来查模型名单。dashscope 必须带业务空间 ID，这里不给默认。
 _DEFAULT_BASE = {
     "deepseek": "https://api.deepseek.com",
-    "govee": "https://test-llm.lanjingerp.com/v1",
+    "openai": "https://test-llm.lanjingerp.com/v1",
 }
 
 
@@ -54,7 +54,7 @@ def expected_key(provider: str) -> str:
     """
     key = KEY_BY_PROVIDER.get(str(provider or "").strip())
     if not key:
-        raise ValueError("厂商只允许 deepseek、dashscope、govee")
+        raise ValueError("厂商只允许 deepseek、dashscope、openai")
     return key
 
 

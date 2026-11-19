@@ -148,7 +148,7 @@ def summarize(usages: list[TokenUsage] | tuple[TokenUsage, ...]) -> UsageSummary
 
 if __name__ == "__main__":
     demo = TokenUsage(
-        api_key_env="GOVEE_API_KEY",
+        api_key_env="OPENAI_API_KEY",
         round_index=1,
         started_at="2026-11-13_18-00-00.000",
         ended_at="2026-11-13_18-00-03.721",

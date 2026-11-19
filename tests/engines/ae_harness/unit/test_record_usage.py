@@ -18,7 +18,7 @@ from engines.ae_harness.event.usage import TokenUsage, summarize
 
 pytestmark = [pytest.mark.unit]
 
-LABEL = "GOVEE_API_KEY"
+LABEL = "OPENAI_API_KEY"
 
 
 @dataclass
@@ -153,8 +153,8 @@ def test_label_follows_agent_name(tmp_path: Path):
     recorder = AgentEventRecorder(
         tmp_path,
         "probe",
-        api_key_env="GOVEE_API_KEY",
-        role_api_keys={"ui_executor": "GOVEE_API_KEY", "ui_verifier": "DEEPSEEK_API_KEY"},
+        api_key_env="OPENAI_API_KEY",
+        role_api_keys={"ui_executor": "OPENAI_API_KEY", "ui_verifier": "DEEPSEEK_API_KEY"},
     )
     recorder.begin("mixed task")
     recorder.on_event(CustomEvent("SOP_STEP_STARTED", {"step": "1"}))
@@ -166,9 +166,9 @@ def test_label_follows_agent_name(tmp_path: Path):
     recorder.on_event(ModelCallEndEvent(20, 2, reply_id="r2"))
     record = recorder.finish(1.0)
 
-    assert [item.api_key_env for item in record.usages] == ["GOVEE_API_KEY", "DEEPSEEK_API_KEY"]
+    assert [item.api_key_env for item in record.usages] == ["OPENAI_API_KEY", "DEEPSEEK_API_KEY"]
     summary = summarize(record.usages)
-    assert summary.by_api_key_env == {"GOVEE_API_KEY": 1, "DEEPSEEK_API_KEY": 1}
+    assert summary.by_api_key_env == {"OPENAI_API_KEY": 1, "DEEPSEEK_API_KEY": 1}
     assert summary.input_tokens == 30
 
 
@@ -178,7 +178,7 @@ def test_unregistered_role_falls_back(tmp_path: Path):
         tmp_path,
         "probe",
         api_key_env="FALLBACK_KEY",
-        role_api_keys={"ui_executor": "GOVEE_API_KEY"},
+        role_api_keys={"ui_executor": "OPENAI_API_KEY"},
     )
     recorder.begin("fallback")
     recorder.on_event(ReplyStartEvent("r9", "someone_else"))
@@ -192,7 +192,7 @@ def test_label_persisted_on_model_call_rows(tmp_path: Path):
     recorder = AgentEventRecorder(
         tmp_path,
         "probe",
-        role_api_keys={"ui_executor": "GOVEE_API_KEY", "ui_verifier": "DEEPSEEK_API_KEY"},
+        role_api_keys={"ui_executor": "OPENAI_API_KEY", "ui_verifier": "DEEPSEEK_API_KEY"},
     )
     recorder.begin("mixed")
     recorder.on_event(CustomEvent("SOP_STEP_STARTED", {"step": "1"}))
@@ -206,8 +206,8 @@ def test_label_persisted_on_model_call_rows(tmp_path: Path):
         json.loads(line) for line in Path(record.log_path).read_text(encoding="utf-8").splitlines()
     ]
     ends = [row for row in rows if row["event"] == "ModelCallEndEvent"]
-    assert [row["api_key_env"] for row in ends] == ["GOVEE_API_KEY", "DEEPSEEK_API_KEY"]
-    assert rows[-1]["by_api_key_env"] == {"GOVEE_API_KEY": 1, "DEEPSEEK_API_KEY": 1}
+    assert [row["api_key_env"] for row in ends] == ["OPENAI_API_KEY", "DEEPSEEK_API_KEY"]
+    assert rows[-1]["by_api_key_env"] == {"OPENAI_API_KEY": 1, "DEEPSEEK_API_KEY": 1}
 
 
 def test_run_record_carries_label(tmp_path: Path):

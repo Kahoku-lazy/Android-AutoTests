@@ -20,7 +20,7 @@ pytestmark = [pytest.mark.unit]
 STAMP = "2026-11-14T18:40:44.944345"
 EVENT_ID = "ev-0001"
 SESSION = "sess-0001"
-LABEL = "GOVEE_API_KEY"
+LABEL = "OPENAI_API_KEY"
 
 
 @dataclass

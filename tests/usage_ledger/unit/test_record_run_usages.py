@@ -13,7 +13,7 @@ from backend.apps.usage_ledger.models import ModelUsage
 pytestmark = [pytest.mark.unit]
 
 
-def _usage(round_index: int = 1, env: str = "GOVEE_API_KEY") -> dict:
+def _usage(round_index: int = 1, env: str = "OPENAI_API_KEY") -> dict:
     """造一条平台运行产出的用量字典（键与事件层一致）。"""
     return {
         "api_key_env": env,
@@ -31,7 +31,7 @@ def test_provider_inferred_from_env_name():
     """密钥环境变量名决定厂商标签。"""
     assert api._provider_of("DEEPSEEK_API_KEY") == "deepseek"
     assert api._provider_of("DASHSCOPE_API_KEY") == "dashscope"
-    assert api._provider_of("GOVEE_API_KEY") == "govee"
+    assert api._provider_of("OPENAI_API_KEY") == "openai"
     assert api._provider_of("") == ""
 
 

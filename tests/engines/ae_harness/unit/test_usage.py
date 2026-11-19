@@ -15,7 +15,7 @@ pytestmark = [pytest.mark.unit]
 
 def _usage(
     *,
-    api_key_env: str = "GOVEE_API_KEY",
+    api_key_env: str = "OPENAI_API_KEY",
     round_index: int = 1,
     input_tokens: int = 1000,
     output_tokens: int = 200,
@@ -48,7 +48,7 @@ def test_record_has_eight_fields():
         "cache_input_tokens",
         "cache_creation_input_tokens",
     }
-    assert payload["api_key_env"] == "GOVEE_API_KEY"
+    assert payload["api_key_env"] == "OPENAI_API_KEY"
 
 
 def test_cache_is_not_added_into_input():
@@ -78,15 +78,15 @@ def test_same_key_calls_grouped():
     summary = summarize([_usage(round_index=1), _usage(round_index=2), _usage(round_index=3)])
     assert summary.calls == 3
     assert summary.input_tokens == 3000
-    assert summary.by_api_key_env == {"GOVEE_API_KEY": 3}
+    assert summary.by_api_key_env == {"OPENAI_API_KEY": 3}
 
 
 def test_two_keys_grouped_separately():
     """两把密钥各自成组，不合并。"""
     summary = summarize(
-        [_usage(api_key_env="GOVEE_API_KEY"), _usage(api_key_env="DEEPSEEK_API_KEY")]
+        [_usage(api_key_env="OPENAI_API_KEY"), _usage(api_key_env="DEEPSEEK_API_KEY")]
     )
-    assert summary.by_api_key_env == {"GOVEE_API_KEY": 1, "DEEPSEEK_API_KEY": 1}
+    assert summary.by_api_key_env == {"OPENAI_API_KEY": 1, "DEEPSEEK_API_KEY": 1}
     assert summary.calls == 2
 
 

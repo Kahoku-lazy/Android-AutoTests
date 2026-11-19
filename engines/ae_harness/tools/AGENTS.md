@@ -22,8 +22,8 @@ tools/
 agent = create_agent(
     name,
     system_prompt=system_prompt,
-    provider="govee",
-    api_key_env="GOVEE_API_KEY",
+    provider="openai",
+    api_key_env="OPENAI_API_KEY",
     model_name="deepseek-flash",
 ).agent
 for tool in build_adb_tools():

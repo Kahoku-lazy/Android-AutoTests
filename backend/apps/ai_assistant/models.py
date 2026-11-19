@@ -13,12 +13,12 @@ class AIModelConfig(models.Model):
     PROVIDER_CHOICES = [
         ("deepseek", "deepseek"),
         ("dashscope", "dashscope"),
-        ("govee", "govee"),
+        ("openai", "openai"),
     ]
     API_KEY_CHOICES = [
         ("DEEPSEEK_API_KEY", "DEEPSEEK_API_KEY"),
         ("DASHSCOPE_API_KEY", "DASHSCOPE_API_KEY"),
-        ("GOVEE_API_KEY", "GOVEE_API_KEY"),
+        ("OPENAI_API_KEY", "OPENAI_API_KEY"),
     ]
 
     provider = models.CharField(max_length=32, choices=PROVIDER_CHOICES)

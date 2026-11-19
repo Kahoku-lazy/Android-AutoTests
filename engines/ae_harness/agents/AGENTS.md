@@ -28,13 +28,13 @@ from engines.ae_harness.agents.creator import create_agent
 bundle = create_agent(
     "runner",
     system_prompt="你是执行者。",
-    provider="govee",
-    api_key_env="GOVEE_API_KEY",
+    provider="openai",
+    api_key_env="OPENAI_API_KEY",
     model_name="deepseek-flash",
     base_url="https://test-llm.lanjingerp.com/v1",
 )
 agent = bundle.agent  # 挂工具、跑任务都从这里拿
-print(bundle.api_key_env)  # GOVEE_API_KEY；用量记账按这个名字归组
+print(bundle.api_key_env)  # OPENAI_API_KEY；用量记账按这个名字归组
 ```
 
 **为什么多一个 `api_key_env`，这不违反红线 2**：红线 2 禁止的是给**角色**加第四样能力（工具、记忆、**能力型**中间件、路由、编排参数）。`api_key_env` 不是能力，而是「这次用的是哪把密钥」的回执——它不改变智能体行为，只让调用方不必再读配置表。返回结构变了两段，但角色本身仍只有名称、模型、系统提示词三样。

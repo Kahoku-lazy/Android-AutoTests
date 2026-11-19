@@ -5,24 +5,28 @@
 Python 调试：➡️ python -m engines.ae_harness.agents.models 🏁
 时间：➡️ 2026-11-13 🏁
 作者：➡️ kahoku 🏁
-版本：➡️ 1.1.0 🏁
-修改时间: ➡️ 2026-11-16 🏁
+版本：➡️ 1.3.0 🏁
+修改时间: ➡️ 2026-11-19 🏁
 类型: ➡️ 模型配置模块 🏁
 简介说明：➡️
 1. ChatModel: 一条聊天模型配置的形状；字段声明即校验。
 2. CreatedModel: 造模型的结果——模型实例 + 本次使用的密钥环境变量名（不含明文）。
 3. create_model: 按调用方传入的厂商、密钥名、地址、模型名创建聊天模型。
 4. 密钥由本模块自己解析：先查仓库根 .env，再查进程环境；不经 config。
-5. 密钥环境变量只有三个：DEEPSEEK_API_KEY、DASHSCOPE_API_KEY、GOVEE_API_KEY。
-6. GoveeChatFormatter: govee 通道去掉 system 与 assistant 消息的 name 键。
-7. GoveeThinkingChatModel: 思考模式拒绝强制选工具时，按请求类型只重发一次。
+5. 密钥环境变量只有三个：DEEPSEEK_API_KEY、DASHSCOPE_API_KEY、OPENAI_API_KEY。
+6. OpenAIGatewayFormatter: openai 通道去掉 system 与 assistant 消息的 name 键。
+7. OpenAIGatewayChatModel: 思考模式拒绝强制选工具时，按请求类型只重发一次。
+8. create_model 支持显式配置模型层内置重试次数（默认 1），与可靠性中间件分层，避免叠加放大。
+9. OpenAIGatewayChatModel 经官方扩展点 _get_disable_thinking_kwargs 向结构化输出策略阶梯声明关思考参数。
 🏁
 关联模块：➡️
 1. 无本地依赖：只用标准库、dotenv 与 agentscope。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_govee_message_name.py: govee 消息名过滤
-2. tests/engines/ae_harness/unit/test_govee_tool_choice.py: 思考模式拒绝强制选工具时的重发
+1. tests/engines/ae_harness/unit/test_openai_message_name.py: openai 消息名过滤
+2. tests/engines/ae_harness/unit/test_openai_tool_choice.py: 思考模式拒绝强制选工具时的重发
+3. tests/engines/ae_harness/unit/test_model_max_retries.py: 模型层重试默认 1 与显式配置透传
+4. tests/engines/ae_harness/unit/test_openai_disable_thinking.py: 关思考扩展点形状与普通 400 不重发
 🏁
 """
 
@@ -58,7 +62,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 __all__ = [
     "ChatModel",
     "CreatedModel",
-    "GoveeChatFormatter",
+    "OpenAIGatewayFormatter",
     "create_model",
     "load_secret",
 ]
@@ -67,17 +71,17 @@ __all__ = [
 _ENV_PATH = Path(__file__).resolve().parents[3] / ".env"
 _ENV = dotenv_values(_ENV_PATH) if _ENV_PATH.exists() else {}
 
-# 调用方没传地址时用厂商默认。govee 不再钉死，传入值优先。
+# 调用方没传地址时用厂商默认。openai 不再钉死，传入值优先。
 _DEFAULT_BASE_URL = {
     "deepseek": "https://api.deepseek.com",
-    "govee": "https://test-llm.lanjingerp.com/v1",
+    "openai": "https://test-llm.lanjingerp.com/v1",
 }
 
 # provider → 唯一允许的密钥环境变量名。
 _API_KEY_ENV = {
     "deepseek": "DEEPSEEK_API_KEY",
     "dashscope": "DASHSCOPE_API_KEY",
-    "govee": "GOVEE_API_KEY",
+    "openai": "OPENAI_API_KEY",
 }
 
 
@@ -89,7 +93,7 @@ class ChatModel(BaseModel):
         provider: 厂商名；决定用哪个客户端类。
         api_key: 密钥所在的环境变量名；只能是预定的三个之一。
         model_name: 厂商正式模型名。
-        base_url: 基础地址；空串表示用厂商默认。govee 固定。
+        base_url: 基础地址；空串表示用厂商默认。openai 固定。
 
     Raises:
         ValidationError: 字段缺失、类型不对、出现未知字段，或密钥名与 provider 不匹配。
@@ -97,8 +101,8 @@ class ChatModel(BaseModel):
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True, frozen=True)
 
-    provider: Literal["deepseek", "dashscope", "govee"]
-    api_key: Literal["DEEPSEEK_API_KEY", "DASHSCOPE_API_KEY", "GOVEE_API_KEY"]
+    provider: Literal["deepseek", "dashscope", "openai"]
+    api_key: Literal["DEEPSEEK_API_KEY", "DASHSCOPE_API_KEY", "OPENAI_API_KEY"]
     model_name: str = Field(min_length=1)
     base_url: str = ""
 
@@ -111,7 +115,7 @@ class ChatModel(BaseModel):
             校验通过的自身。
 
         Raises:
-            ValueError: 两者不匹配，如 provider=deepseek 却写 GOVEE_API_KEY。
+            ValueError: 两者不匹配，如 provider=deepseek 却写 OPENAI_API_KEY。
         """
         expected = _API_KEY_ENV[self.provider]
         if self.api_key != expected:
@@ -135,9 +139,9 @@ class CreatedModel:
     api_key_env: str
 
 
-class GoveeChatFormatter(OpenAIChatFormatter):
+class OpenAIGatewayFormatter(OpenAIChatFormatter):
     """
-    govee 网关用的 OpenAI 兼容格式化器。
+    openai 网关用的 OpenAI 兼容格式化器。
 
     先按 OpenAI 形状写出消息，再删除 system 与 assistant 上的 name 键。
     user 与 tool 的 name 保留。不按模型名分支。
@@ -209,12 +213,22 @@ def _only_structured(tools: list[dict] | None) -> list[dict]:
     ]
 
 
-class GoveeThinkingChatModel(OpenAIChatModel):
+class OpenAIGatewayChatModel(OpenAIChatModel):
     """
-    govee 通道的聊天模型。
+    openai 通道的聊天模型。
 
     思考模式拒绝强制选工具时，按请求类型重发。普通请求、已开始的流、其它错误都不重发。
+    另经官方扩展点声明关思考参数，供框架结构化输出策略阶梯的 no_think 档使用。
     """
+
+    def _get_disable_thinking_kwargs(self) -> dict:
+        """
+        向框架结构化输出策略阶梯声明关思考参数（与官方 DeepSeek 实现同款）。
+
+        Returns:
+            no_think 档叠加的请求参数：extra_body.thinking.type=disabled。
+        """
+        return {"extra_body": {"thinking": {"type": "disabled"}}}
 
     async def _call_api(
         self,
@@ -282,16 +296,20 @@ def create_model(
     base_url: str = "",
     *,
     stream: bool = True,
+    max_retries: int = 1,
 ) -> CreatedModel:
     """
     按调用方传入的连接参数创建聊天模型，并交出用的是哪把密钥。
 
     Args:
-        provider: 厂商名，只能是 deepseek、dashscope、govee。
+        provider: 厂商名，只能是 deepseek、dashscope、openai。
         api_key_env: 密钥所在的环境变量名，必须与厂商成对。
         model_name: 厂商正式模型名。
         base_url: 基础地址；空串时用该厂商默认地址。
         stream: 是否流式输出。
+        max_retries: 模型层内置重试次数，默认 1（最多尝试 2 次）。
+            与可靠性中间件分层：中间件负责错误分类、退避抖动与流式首块前兜底，
+            模型层只留一次快速重试，避免两层叠加放大调用次数。
 
     Returns:
         模型实例与本次使用的密钥环境变量名（不含明文）。
@@ -318,6 +336,7 @@ def create_model(
                 credential=DeepSeekCredential(api_key=api_key, base_url=resolved),
                 model=entry.model_name,
                 stream=stream,
+                max_retries=max_retries,
                 formatter=DeepSeekMultiAgentFormatter(),
             ),
             api_key_env=entry.api_key,
@@ -333,19 +352,21 @@ def create_model(
                 credential=credential,
                 model=entry.model_name,
                 stream=stream,
+                max_retries=max_retries,
                 formatter=DashScopeMultiAgentFormatter(),
             ),
             api_key_env=entry.api_key,
         )
-    if entry.provider == "govee":
+    if entry.provider == "openai":
         if not resolved:
-            raise ValueError("govee 的 base_url 不能为空")
+            raise ValueError("openai 的 base_url 不能为空")
         return CreatedModel(
-            model=GoveeThinkingChatModel(
+            model=OpenAIGatewayChatModel(
                 credential=OpenAICredential(api_key=api_key, base_url=resolved),
                 model=entry.model_name,
                 stream=stream,
-                formatter=GoveeChatFormatter(),
+                max_retries=max_retries,
+                formatter=OpenAIGatewayFormatter(),
             ),
             api_key_env=entry.api_key,
         )

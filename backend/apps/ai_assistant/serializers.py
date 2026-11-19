@@ -25,12 +25,12 @@ class ModelConfigSerializer(serializers.Serializer):
     """模型配置入参与出参。只校验字段形状，不创建模型。"""
 
     id = serializers.IntegerField(read_only=True)
-    provider = serializers.ChoiceField(choices=["deepseek", "dashscope", "govee"])
+    provider = serializers.ChoiceField(choices=["deepseek", "dashscope", "openai"])
     api_protocol = serializers.ChoiceField(choices=["deepseek", "dashscope", "openai"])
     model_kind = serializers.ChoiceField(choices=["chat", "tts", "realtime"], default="chat")
     voice = serializers.CharField(required=False, allow_blank=True, max_length=64)
     api_key_env = serializers.ChoiceField(
-        choices=["DEEPSEEK_API_KEY", "DASHSCOPE_API_KEY", "GOVEE_API_KEY"]
+        choices=["DEEPSEEK_API_KEY", "DASHSCOPE_API_KEY", "OPENAI_API_KEY"]
     )
     base_url = serializers.CharField(max_length=500, required=False, allow_blank=True)
     model_name = serializers.CharField(required=False, allow_blank=True, max_length=100)

@@ -99,7 +99,7 @@ async def _fake_build(
     """替身：装配角色。"""
     del provider, api_key_env, model_name, base_url
     watcher = observer if observer is not None else ObservationMiddleware()
-    return AgentBundle(agent=_Agent(), api_key_env="GOVEE_API_KEY"), watcher
+    return AgentBundle(agent=_Agent(), api_key_env="OPENAI_API_KEY"), watcher
 
 
 async def test_session_for_reuses_same_instance(monkeypatch: pytest.MonkeyPatch):
@@ -111,16 +111,16 @@ async def test_session_for_reuses_same_instance(monkeypatch: pytest.MonkeyPatch)
         "s-reuse",
         "AAA",
         system_prompt="你是执行者。",
-        provider="govee",
-        api_key_env="GOVEE_API_KEY",
+        provider="openai",
+        api_key_env="OPENAI_API_KEY",
         model_name="deepseek-flash",
     )
     second = await session_for(
         "s-reuse",
         "BBB",
         system_prompt="你是执行者。",
-        provider="govee",
-        api_key_env="GOVEE_API_KEY",
+        provider="openai",
+        api_key_env="OPENAI_API_KEY",
         model_name="deepseek-flash",
     )
 
@@ -137,8 +137,8 @@ async def test_session_for_requires_session_id(monkeypatch: pytest.MonkeyPatch):
             "   ",
             "AAA",
             system_prompt="你是执行者。",
-            provider="govee",
-            api_key_env="GOVEE_API_KEY",
+            provider="openai",
+            api_key_env="OPENAI_API_KEY",
             model_name="deepseek-flash",
         )
 
@@ -149,8 +149,8 @@ async def test_run_turn_prefixes_serial(tmp_path: Path, monkeypatch: pytest.Monk
     session = await open_session(
         SERIAL,
         system_prompt="你是执行者。",
-        provider="govee",
-        api_key_env="GOVEE_API_KEY",
+        provider="openai",
+        api_key_env="OPENAI_API_KEY",
         model_name="deepseek-flash",
     )
     assert isinstance(session, UiExecutorSession)
@@ -169,8 +169,8 @@ async def test_run_turn_writes_one_report_per_turn(tmp_path: Path, monkeypatch: 
     session = await open_session(
         SERIAL,
         system_prompt="你是执行者。",
-        provider="govee",
-        api_key_env="GOVEE_API_KEY",
+        provider="openai",
+        api_key_env="OPENAI_API_KEY",
         model_name="deepseek-flash",
     )
 
@@ -180,8 +180,8 @@ async def test_run_turn_writes_one_report_per_turn(tmp_path: Path, monkeypatch: 
     assert first.report_path.exists() and second.report_path.exists()
     assert first.report_path.parent != second.report_path.parent
     assert first.tokens == {"input": 100, "output": 5, "cache_hit": 60, "cache_creation": 0}
-    assert first.by_api_key_env == {"GOVEE_API_KEY": 1}
-    assert first.usages[0]["api_key_env"] == "GOVEE_API_KEY"
+    assert first.by_api_key_env == {"OPENAI_API_KEY": 1}
+    assert first.usages[0]["api_key_env"] == "OPENAI_API_KEY"
     rows = [
         json.loads(line) for line in Path(first.log_path).read_text(encoding="utf-8").splitlines()
     ]

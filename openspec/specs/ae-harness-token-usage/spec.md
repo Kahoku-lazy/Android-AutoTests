@@ -13,8 +13,8 @@
 
 #### Scenario: 创建时直接拿到密钥环境变量名
 
-- **WHEN** 调用方以 `provider=govee`、`api_key_env=GOVEE_API_KEY` 创建模型
-- **THEN** 返回值同时给出模型实例与 `GOVEE_API_KEY`
+- **WHEN** 调用方以 `provider=openai`、`api_key_env=OPENAI_API_KEY` 创建模型
+- **THEN** 返回值同时给出模型实例与 `OPENAI_API_KEY`
 - **AND** 返回值里不存在密钥明文
 
 #### Scenario: 另一条配置给出另一把密钥名
@@ -28,9 +28,9 @@
 
 #### Scenario: 创建智能体后拿到密钥名
 
-- **WHEN** 调用方用 `provider=govee`、`api_key_env=GOVEE_API_KEY` 与一段提示词正文创建智能体
+- **WHEN** 调用方用 `provider=openai`、`api_key_env=OPENAI_API_KEY` 与一段提示词正文创建智能体
 - **THEN** 返回值的智能体可运行
-- **AND** 同一返回值的密钥环境变量名为 `GOVEE_API_KEY`
+- **AND** 同一返回值的密钥环境变量名为 `OPENAI_API_KEY`
 
 ### Requirement: 一次模型调用产生一条用量记录
 
@@ -63,7 +63,7 @@
 
 #### Scenario: 同一把密钥的调用归到一组
 
-- **WHEN** 一次运行里三次调用都用 `GOVEE_API_KEY`
+- **WHEN** 一次运行里三次调用都用 `OPENAI_API_KEY`
 - **THEN** 汇总给出该组 3 次调用与四类 token 合计
 
 #### Scenario: 没有标签的记录不丢弃

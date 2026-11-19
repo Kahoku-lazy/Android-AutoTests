@@ -1,18 +1,18 @@
-# govee-thinking-tool-choice Specification
+# openai-thinking-tool-choice Specification
 
 ## Purpose
 
-约束 Govee 网关在思考模式拒绝强制选工具时只重发一次，并且重发不得改点设备、不得在收尾轮再点一次。
+约束 OpenAI 网关在思考模式拒绝强制选工具时只重发一次，并且重发不得改点设备、不得在收尾轮再点一次。
 
 ## Requirements
 
 ### Requirement: 只重发这一种未执行的 400
 
-govee 通道 SHALL 只在网关返回文案含 `Thinking mode does not support this tool_choice` 时重发。其它 400、超时、连接失败 MUST NOT 重发。流已经开始返回内容后 MUST NOT 重发。同一次模型调用最多重发一次。第二次仍是这句 400 时，错误 MUST 原样抛出，由任务收口记为失败。deepseek 与 dashscope 通道 MUST NOT 套用本规则。
+openai 通道 SHALL 只在网关返回文案含 `Thinking mode does not support this tool_choice` 时重发。其它 400、超时、连接失败 MUST NOT 重发。流已经开始返回内容后 MUST NOT 重发。同一次模型调用最多重发一次。第二次仍是这句 400 时，错误 MUST 原样抛出，由任务收口记为失败。deepseek 与 dashscope 通道 MUST NOT 套用本规则。
 
 #### Scenario: 普通 400 不重发
 
-- **WHEN** govee 模型收到与思考模式无关的 400
+- **WHEN** openai 模型收到与思考模式无关的 400
 - **THEN** 请求只发出一次
 - **AND** 错误原样抛出
 
@@ -27,7 +27,7 @@ govee 通道 SHALL 只在网关返回文案含 `Thinking mode does not support t
 
 #### Scenario: 普通工具调用不重发
 
-- **WHEN** govee 模型本次请求没有强制选择工具，却收到这句 400
+- **WHEN** openai 模型本次请求没有强制选择工具，却收到这句 400
 - **THEN** 请求只发出一次
 
 ### Requirement: 交结论时保持结构化输出

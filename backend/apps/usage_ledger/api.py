@@ -63,7 +63,7 @@ def _provider_of(api_key_env: object) -> str:
     由密钥环境变量名推断厂商标签。
 
     Args:
-        api_key_env: 形如 `DEEPSEEK_API_KEY` / `GOVEE_API_KEY` 的名字。
+        api_key_env: 形如 `DEEPSEEK_API_KEY` / `OPENAI_API_KEY` 的名字。
 
     Returns:
         `deepseek` / `dashscope` / 其它原样小写；交给账本再归一。
@@ -73,8 +73,8 @@ def _provider_of(api_key_env: object) -> str:
         return "dashscope"
     if "DEEPSEEK" in text:
         return "deepseek"
-    if "GOVEE" in text:
-        return "govee"
+    if "OPENAI" in text:
+        return "openai"
     return ""
 
 

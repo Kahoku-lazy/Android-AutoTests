@@ -110,7 +110,7 @@ describe("[P0] 模型类型与厂商映射", () => {
     expect(providersForKind("chat").map((item) => item.value)).toEqual([
       "deepseek",
       "dashscope",
-      "govee",
+      "openai",
     ])
     expect(providersForKind("realtime").map((item) => item.value)).toEqual(["dashscope"])
     expect(providersForKind("tts").map((item) => item.value)).toEqual(["dashscope"])
@@ -124,10 +124,10 @@ describe("[P0] 模型类型与厂商映射", () => {
   })
 
   it("归一厂商：受支持保留，不受支持回退默认", () => {
-    expect(normalizeProvider("chat", "govee")).toBe("govee")
+    expect(normalizeProvider("chat", "openai")).toBe("openai")
     expect(normalizeProvider("realtime", "dashscope")).toBe("dashscope")
     expect(normalizeProvider("realtime", "deepseek")).toBe("dashscope")
-    expect(normalizeProvider("tts", "govee")).toBe("dashscope")
+    expect(normalizeProvider("tts", "openai")).toBe("dashscope")
   })
 
   it("类型标签覆盖三类，缺失或未知按聊天显示", () => {
@@ -148,7 +148,7 @@ describe("[P0] 模型类型与厂商映射", () => {
   it("密钥变量与厂商成对", () => {
     expect(keyForProvider("deepseek")).toBe("DEEPSEEK_API_KEY")
     expect(keyForProvider("dashscope")).toBe("DASHSCOPE_API_KEY")
-    expect(keyForProvider("govee")).toBe("GOVEE_API_KEY")
+    expect(keyForProvider("openai")).toBe("OPENAI_API_KEY")
     expect(keyForProvider("unknown")).toBe("")
   })
 })
@@ -162,7 +162,7 @@ describe("[P0] 新建模型抽屉的厂商联动", () => {
 
     const providerField = fieldByLabel(wrapper, "厂商")
     expect(selectedValue(providerField)).toBe("deepseek")
-    expect(optionValues(providerField)).toEqual(["deepseek", "dashscope", "govee"])
+    expect(optionValues(providerField)).toEqual(["deepseek", "dashscope", "openai"])
 
     const keyInput = fieldByLabel(wrapper, "密钥环境变量").find("input")
     expect((keyInput.element as HTMLInputElement).value).toBe("DEEPSEEK_API_KEY")
@@ -192,7 +192,7 @@ describe("[P0] 新建模型抽屉的厂商联动", () => {
 
     await kindField.find("select").setValue("chat")
     expect(selectedValue(fieldByLabel(wrapper, "厂商"))).toBe("dashscope")
-    expect(optionValues(fieldByLabel(wrapper, "厂商"))).toEqual(["deepseek", "dashscope", "govee"])
+    expect(optionValues(fieldByLabel(wrapper, "厂商"))).toEqual(["deepseek", "dashscope", "openai"])
   })
 })
 

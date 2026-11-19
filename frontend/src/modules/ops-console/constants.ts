@@ -246,7 +246,7 @@ export const OPS_PROVIDER_OPTIONS: OpsProviderOption[] = [
     key: "DASHSCOPE_API_KEY",
     kinds: ["chat", "realtime", "tts"],
   },
-  { value: "govee", label: "govee", key: "GOVEE_API_KEY", kinds: ["chat"] },
+  { value: "openai", label: "openai", key: "OPENAI_API_KEY", kinds: ["chat"] },
 ]
 
 /**

@@ -61,7 +61,7 @@ def test_lookup_rate_uses_model_name():
 def test_cache_hit_is_not_added_to_input():
     """缓存是输入的子集，未命中只按差额计价。"""
     priced = price_usage(
-        "govee",
+        "openai",
         "deepseek-flash",
         input_tokens=1_000_000,
         cache_input_tokens=400_000,
@@ -74,8 +74,8 @@ def test_cache_hit_is_not_added_to_input():
 
 def test_grok_long_context_uses_high_tier_for_whole_call():
     """输入达到 20 万时，整笔使用高档美元价并折成人民币。"""
-    priced = price_usage("govee", "grok-4.7", input_tokens=200_000, output_tokens=0)
-    short = price_usage("govee", "grok-4.7", input_tokens=199_999, output_tokens=0)
+    priced = price_usage("openai", "grok-4.7", input_tokens=200_000, output_tokens=0)
+    short = price_usage("openai", "grok-4.7", input_tokens=199_999, output_tokens=0)
 
     assert priced["cost_total"] == Decimal("5.37056000")
     assert short["cost_total"] == Decimal("2.68526657")

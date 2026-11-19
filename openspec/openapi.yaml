@@ -3070,12 +3070,12 @@ components:
       enum:
       - DEEPSEEK_API_KEY
       - DASHSCOPE_API_KEY
-      - GOVEE_API_KEY
+      - OPENAI_API_KEY
       type: string
       description: |-
         * `DEEPSEEK_API_KEY` - DEEPSEEK_API_KEY
         * `DASHSCOPE_API_KEY` - DASHSCOPE_API_KEY
-        * `GOVEE_API_KEY` - GOVEE_API_KEY
+        * `OPENAI_API_KEY` - OPENAI_API_KEY
     ApiProtocolEnum:
       enum:
       - deepseek
@@ -3366,12 +3366,12 @@ components:
       enum:
       - deepseek
       - dashscope
-      - govee
+      - openai
       type: string
       description: |-
         * `deepseek` - deepseek
         * `dashscope` - dashscope
-        * `govee` - govee
+        * `openai` - openai
     Query:
       type: object
       description: 多选提问入参：问题与勾选库名均非空。

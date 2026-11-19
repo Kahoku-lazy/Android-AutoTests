@@ -11,7 +11,7 @@
 
 - 随机 UUID `usage_id`（主键）
 - 唯一 `event_id` 与 `execution_id`
-- `provider`：`deepseek` / `dashscope` / `govee`
+- `provider`：`deepseek` / `dashscope` / `openai`
 - `category`：`LLM` / `TTS` / `Realtime` / `Embedding` / `ASR`
 - `model`、`occurred_at`
 - `input_tokens` / `output_tokens` / `cache_input_tokens` / `cache_creation_tokens` / `total_tokens` / `characters`
@@ -42,7 +42,7 @@
 
 ### Requirement: 模型分类与厂商
 
-系统 SHALL 按以下分类统计：`LLM`（对话与工具调用）、`TTS`（文本转语音）、`Realtime`（语音到语音）、`Embedding`（向量化）、`ASR`（语音识别）。`provider` 只标识密钥归属：DeepSeek Key → `deepseek`，DashScope Key → `dashscope`，Govee Key → `govee`。出现其他类型时 MUST 新增分类或厂商条目，不得归入错误分类。计价基数 MUST 按模型名选择，MUST NOT 因 `provider=govee` 改用 DeepSeek 价目。
+系统 SHALL 按以下分类统计：`LLM`（对话与工具调用）、`TTS`（文本转语音）、`Realtime`（语音到语音）、`Embedding`（向量化）、`ASR`（语音识别）。`provider` 只标识密钥归属：DeepSeek Key → `deepseek`，DashScope Key → `dashscope`，OpenAI Key → `openai`。出现其他类型时 MUST 新增分类或厂商条目，不得归入错误分类。计价基数 MUST 按模型名选择，MUST NOT 因 `provider=openai` 改用 DeepSeek 价目。
 
 #### Scenario: 分类统计
 
@@ -50,9 +50,9 @@
 - **THEN** 返回按 LLM/TTS/Realtime/Embedding/ASR 分组的 token 与费用
 - **AND** 每组带 provider 拆分
 
-#### Scenario: Govee 网关不按厂商套价
+#### Scenario: OpenAI 网关不按厂商套价
 
-- **WHEN** 一笔调用的密钥归属为 govee，模型名为 `grok-4.7`
+- **WHEN** 一笔调用的密钥归属为 openai，模型名为 `grok-4.7`
 - **THEN** 该笔按 `grok-4.7` 的基数计价，不按 DeepSeek 价目计价
 
 ### Requirement: 账本是平台费用的唯一汇总源

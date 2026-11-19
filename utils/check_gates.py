@@ -512,6 +512,13 @@ def build_gates() -> list[Gate]:
         ),
         # pytest 收集门禁：不跑用例，只保证整套测试可导入（防再积压失效测试）
         cmd_gate(
+            "makemigrations-check",
+            "迁移与模型一致（makemigrations --check）",
+            [py, "manage.py", "makemigrations", "--check", "--dry-run"],
+            blocking=True,
+            env={"DJANGO_SECRET_KEY": "local-check-key-not-for-prod"},
+        ),
+        cmd_gate(
             "pytest-collect",
             "Python 测试收集（pytest --collect-only）",
             [py, "-m", "pytest", "-c", "tests/pytest.ini", "--collect-only", "-q"],

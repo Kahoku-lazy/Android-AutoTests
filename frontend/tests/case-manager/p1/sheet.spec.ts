@@ -75,9 +75,10 @@ describe("[P1] 视图计算", () => {
 
   it("sort_order 按数值比较而不是按字符串", () => {
     const rows = [makeRow("ten", { sort_order: 10 }), makeRow("two", { sort_order: 2 })]
-    expect(sortRows(rows, { field: "sort_order", direction: "asc" }).map((row) => row.id)).toEqual(
-      ["two", "ten"],
-    )
+    expect(sortRows(rows, { field: "sort_order", direction: "asc" }).map((row) => row.id)).toEqual([
+      "two",
+      "ten",
+    ])
   })
 })
 

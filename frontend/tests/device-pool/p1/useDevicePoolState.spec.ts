@@ -2,7 +2,7 @@
  * [P1] 建议测 — 设备池状态写操作联动（mock 整个 api 模块，不断真网络）
  * 目录：tests/device-pool/p1/
  *
- * useDevicePoolState：do* 成功联动 fetchDevices 刷新、doHeartbeat 吞异常仅 debug。
+ * useDevicePoolState：do* 成功联动 fetchDevices 刷新、doHeartbeat 吞异常仅 warn。
  */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import * as dpApi from "@/modules/device-pool/api"
@@ -58,17 +58,17 @@ describe("[P1] useDevicePoolState", () => {
     expect(dpApi.apiListDevices).toHaveBeenCalledTimes(1)
   })
 
-  it("doHeartbeat 异常：吞掉不抛，仅 console.debug 记录", async () => {
+  it("doHeartbeat 异常：吞掉不抛，仅 console.warn 记录", async () => {
     vi.mocked(dpApi.apiHeartbeat).mockRejectedValue(new Error("net down"))
-    const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => {})
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
     const s = useDevicePoolState()
     await expect(s.doHeartbeat()).resolves.toBeUndefined()
 
     expect(dpApi.apiHeartbeat).toHaveBeenCalledTimes(1)
-    expect(debugSpy).toHaveBeenCalledTimes(1)
-    expect(debugSpy.mock.calls[0][0]).toContain("[device-pool] heartbeat:")
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+    expect(warnSpy.mock.calls[0][0]).toContain("[device-pool] heartbeat:")
 
-    debugSpy.mockRestore()
+    warnSpy.mockRestore()
   })
 })

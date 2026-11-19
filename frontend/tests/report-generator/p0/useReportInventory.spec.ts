@@ -12,7 +12,9 @@ vi.mock("@/modules/report-generator/api", () => ({
   listReports: vi.fn(),
 }))
 
-function payload(overrides: Partial<ReportListData> = {}): { data: { status: boolean; data: ReportListData } } {
+function payload(overrides: Partial<ReportListData> = {}): {
+  data: { status: boolean; data: ReportListData }
+} {
   return {
     data: {
       status: true,

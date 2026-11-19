@@ -25,7 +25,7 @@ AgentScope 2.0.9 用法审计（2026-11-19，只读）确认：仓库存在 1 �
 ### Modified Capabilities
 
 - `agent-model-resilience`: 新增「模型层内置重试与中间件重试分层」需求：模型层 `max_retries` 默认 1 且可经 `create_model` 显式配置；中间件重试规则不变。（既有「回退备用模型」「重试与回退写入任务事件流」两条需求描述的是已退役实现，与现行 ae_harness 代码不符，属存量欠账，本变更不改动、不清理，另行立项。）
-- `openai-thinking-tool-choice`: 新增「关思考参数经官方扩展点声明」需求：openai 通道必须向框架结构化输出策略阶梯提供关思考参数；既有重发规则全部不变。
+- `govee-thinking-tool-choice`: 新增「关思考参数经官方扩展点声明」需求：openai 通道（原 govee 通道，能力路径沿用旧名）必须向框架结构化输出策略阶梯提供关思考参数；既有重发规则全部不变。
 - `ae-harness-event-full-record`: 新增「SOP 角色归属按名字映射」需求：提供映射时角色归属必须按 agent 名判定，不得依赖 reply 顺序；步骤尝试序号必须取自官方 `SOP_STEP_STARTED` 事件并落进工具记录。
 
 ## Impact

@@ -163,6 +163,28 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/ai/assistants/{assistant_id}/publish/:
+    post:
+      operationId: ai_assistants_publish_create
+      description: POST /api/ai/assistants/{assistant_id}/publish/ — 发布当前草稿。
+      parameters:
+      - in: path
+        name: assistant_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - ai
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/ai/assistants/{assistant_id}/threads/:
     get:
       operationId: ai_assistant_threads_list
@@ -840,6 +862,28 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/ai/sop-workflows/{workflow_id}/publish/:
+    post:
+      operationId: ai_sop_workflows_publish_create
+      description: POST /api/ai/sop-workflows/{workflow_id}/publish/ — 发布当前草稿。
+      parameters:
+      - in: path
+        name: workflow_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ai
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/ai/tool-catalog/:
     get:
       operationId: ai_tool_catalog_retrieve
@@ -2022,6 +2066,28 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/ops/users/{user_id}/grant-author/:
+    post:
+      operationId: ops_users_grant_author_create
+      description: POST /api/ops/users/<int:user_id>/grant-author/ — 授予助手作者（仅超管）。
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ops
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/ops/users/{user_id}/grant-operator/:
     post:
       operationId: ops_users_grant_operator_create
@@ -2044,10 +2110,68 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/ops/users/{user_id}/model-grants/:
+    post:
+      operationId: ops_users_model_grants_create
+      description: POST /api/ops/users/<int:user_id>/model-grants/ — 修改模型名单（仅超管）。
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ops
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/ops/users/{user_id}/reset-password/:
     post:
       operationId: ops_users_reset_password_create
       description: POST /api/ops/users/<int:user_id>/reset-password/ — 重置普通账号密码（运营）。
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ops
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/ops/users/{user_id}/revoke-author/:
+    post:
+      operationId: ops_users_revoke_author_create
+      description: POST /api/ops/users/<int:user_id>/revoke-author/ — 收回助手作者（仅超管）。
       parameters:
       - in: path
         name: user_id
@@ -2792,7 +2916,7 @@ paths:
   /api/tasks/{task_id}/rerun/:
     post:
       operationId: tasks_rerun_create
-      description: POST /api/tasks/{task_id}/rerun — 失败/中断任务克隆新建并调度。
+      description: POST /api/tasks/{task_id}/rerun — 已结束任务克隆新建并调度。
       parameters:
       - in: path
         name: task_id
@@ -2977,6 +3101,8 @@ components:
           items:
             type: object
             additionalProperties: {}
+        revision:
+          type: integer
     AssistantOutput:
       type: object
       description: 助手列表出参。不下发头像正文。
@@ -2996,6 +3122,10 @@ components:
           type: string
           readOnly: true
         tools: {}
+        release_state:
+          type: string
+        revision:
+          type: integer
         created_at:
           type: string
           format: date-time
@@ -3005,6 +3135,8 @@ components:
       - display_name
       - has_avatar
       - marker
+      - release_state
+      - revision
       - role_id
       - role_name
       - tools
@@ -3037,6 +3169,16 @@ components:
       required:
       - model_config_id
       - module_id
+    KindsEnum:
+      enum:
+      - executor
+      - verifier
+      - planner
+      type: string
+      description: |-
+        * `executor` - executor
+        * `verifier` - verifier
+        * `planner` - planner
     Login:
       type: object
       properties:
@@ -3122,6 +3264,8 @@ components:
           items:
             type: object
             additionalProperties: {}
+        revision:
+          type: integer
     PatchedBugStatusInput:
       type: object
       description: Body for PATCH /api/bugs/{id}/.
@@ -3171,7 +3315,11 @@ components:
           type: boolean
     PatchedRoleInput:
       type: object
-      description: Agent 配置入参。不查模型配置是否存在。
+      description: |-
+        Agent 配置入参。不查模型配置是否存在。
+
+        `kinds`：新建 MUST 恰好 1 项（在视图里校验，因为 PATCH 缺省表示不改动）；
+        更新时显式提交 [] 表示置为未分类。一份配置 MUST NOT 同时有多个类型。
       properties:
         name:
           type: string
@@ -3181,19 +3329,39 @@ components:
           minimum: 1
         system_prompt:
           type: string
+        kinds:
+          type: array
+          items:
+            $ref: '#/components/schemas/KindsEnum'
     PatchedSopWorkflowInput:
       type: object
-      description: 新建 SOP 工作流入参。只收名称与两个名片编号。
+      description: 新建或编辑工作流入参。编排与种类只在新建时生效。
       properties:
         name:
           type: string
           maxLength: 200
+        orchestration:
+          type: string
+          default: sop
+          maxLength: 16
+        kind:
+          type: string
+          default: ui_automation
+          maxLength: 32
         executor_assistant_id:
           type: string
           maxLength: 12
         verifier_assistant_id:
           type: string
           maxLength: 12
+        leader_assistant_id:
+          type: string
+          maxLength: 12
+        members:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
     ProviderEnum:
       enum:
       - deepseek
@@ -3243,7 +3411,11 @@ components:
           default: ''
     RoleInput:
       type: object
-      description: Agent 配置入参。不查模型配置是否存在。
+      description: |-
+        Agent 配置入参。不查模型配置是否存在。
+
+        `kinds`：新建 MUST 恰好 1 项（在视图里校验，因为 PATCH 缺省表示不改动）；
+        更新时显式提交 [] 表示置为未分类。一份配置 MUST NOT 同时有多个类型。
       properties:
         name:
           type: string
@@ -3253,6 +3425,10 @@ components:
           minimum: 1
         system_prompt:
           type: string
+        kinds:
+          type: array
+          items:
+            $ref: '#/components/schemas/KindsEnum'
     RoleOutput:
       type: object
       description: Agent 配置出参。关联字段由写库层 select_related 后交给这里。
@@ -3281,6 +3457,12 @@ components:
           default: ''
         system_prompt:
           type: string
+        kinds:
+          type: array
+          items:
+            type: string
+          description: 类型标签数组；未分类时为空数组。prefetch_related 生效时不额外查库。
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -3289,6 +3471,7 @@ components:
           format: date-time
       required:
       - created_at
+      - kinds
       - model_config_id
       - name
       - role_id
@@ -3296,21 +3479,35 @@ components:
       - updated_at
     SopWorkflowInput:
       type: object
-      description: 新建 SOP 工作流入参。只收名称与两个名片编号。
+      description: 新建或编辑工作流入参。编排与种类只在新建时生效。
       properties:
         name:
           type: string
           maxLength: 200
+        orchestration:
+          type: string
+          default: sop
+          maxLength: 16
+        kind:
+          type: string
+          default: ui_automation
+          maxLength: 32
         executor_assistant_id:
           type: string
           maxLength: 12
         verifier_assistant_id:
           type: string
           maxLength: 12
+        leader_assistant_id:
+          type: string
+          maxLength: 12
+        members:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
       required:
-      - executor_assistant_id
       - name
-      - verifier_assistant_id
     SopWorkflowOutput:
       type: object
       description: 工作流出参。不下发提示词、模型参数或工具勾选。
@@ -3319,10 +3516,21 @@ components:
           type: integer
         name:
           type: string
+        orchestration:
+          type: string
+        kind:
+          type: string
         executor_assistant_id:
           type: string
         verifier_assistant_id:
           type: string
+        leader_assistant_id:
+          type: string
+        members: {}
+        release_state:
+          type: string
+        revision:
+          type: integer
         created_at:
           type: string
           format: date-time
@@ -3333,7 +3541,13 @@ components:
       - created_at
       - executor_assistant_id
       - id
+      - kind
+      - leader_assistant_id
+      - members
       - name
+      - orchestration
+      - release_state
+      - revision
       - updated_at
       - verifier_assistant_id
     StatusEnum:

@@ -5,20 +5,23 @@
 Python 调试：➡️ python -m engines.ae_harness.event.record 🏁
 时间：➡️ 2026-11-13 🏁
 作者：➡️ kahoku 🏁
-版本：➡️ 1.0.0 🏁
-修改时间: ➡️ 2026-11-13 🏁
+版本：➡️ 1.1.0 🏁
+修改时间: ➡️ 2026-11-19 🏁
 类型: ➡️ Agent 能力模块 🏁
 简介说明：➡️
 1. StepRecord / RunRecord: 一轮运行里「一步」与「整轮」的数据结构。
 2. AgentEventRecorder: 喂事件进来，按轮次落 JSONL，最后产出 RunRecord。
 3. 本模块不认识任何具体工具，也不调用 Agent 的回复接口。
+4. SOP 角色归属优先按调用方传入的名字映射判定；尝试序号取自官方 SOP_STEP_STARTED 事件。
 🏁
 关联模块：➡️
 1. agentscope.event: 事件对象来源，只按类型名与通用字段读取。
 2. engines.ae_harness.event.render: 消费 RunRecord 生成页面（调用方串联）。
 🏁
 测试：➡️
-1. 见 engines.ae_harness.assistant.agent_executor。
+1. tests/engines/ae_harness/unit/test_record_usage.py: 用量按角色密钥归组与 SOP 步骤事件。
+2. tests/engines/ae_harness/unit/test_record_full.py: 全量模式字段与块级折叠。
+3. tests/engines/ae_harness/unit/test_record_sop_roles.py: SOP 角色名字映射与尝试序号。
 🏁
 """
 
@@ -97,6 +100,7 @@ class StepRecord:
         span_ms: 工具执行耗时（入参确定到结果返回）。
         agent_role: 发起这次调用的角色名；推断不出时为空串。
         sop_step: 所属 SOP 步骤名；不在流程里跑时为空串。
+        sop_attempt: 所属 SOP 步骤的第几次尝试，取自官方步骤起点事件；不在流程里跑时为 0。
     """
 
     index: int
@@ -112,6 +116,7 @@ class StepRecord:
     span_ms: float = 0.0
     agent_role: str = ""
     sop_step: str = ""
+    sop_attempt: int = 0
 
 
 @dataclass
@@ -170,6 +175,7 @@ class AgentEventRecorder:
         api_key_env: str = "",
         role_api_keys: dict[str, str] | None = None,
         role_models: dict[str, str] | None = None,
+        sop_roles: dict[str, str] | None = None,
         observations: list | None = None,
         full: bool = True,
     ) -> None:
@@ -184,6 +190,9 @@ class AgentEventRecorder:
             role_api_keys: 角色名（agent 名）到密钥环境变量名的绑定。密钥绑在角色上，
                 每次调用按 `reply_id` 反查发起它的角色再取标签。
             role_models: 角色名到模型名的绑定。不传时逐次记录的模型名为空串。
+            sop_roles: agent 名到 SOP 角色（executor / verifier）的绑定。
+                提供时回复按名字归属角色，不依赖步骤内回复顺序；
+                不提供时沿用既有奇偶推断（每步第一次回复为执行者，第二次为验收者）。
             observations: 观测中间件的记录队列；记录器按到达顺序取出并落盘。
                 传进来的是同一个列表对象，取出即从队列移除，避免重复写。
             full: 全量模式，默认开启。开启时补齐框架提供的公共字段
@@ -196,6 +205,7 @@ class AgentEventRecorder:
         self._api_key_env = str(api_key_env or "")
         self._role_api_keys = dict(role_api_keys or {})
         self._role_models = dict(role_models or {})
+        self._sop_roles = dict(sop_roles or {})
         self._observations = observations if observations is not None else []
         self._observed: list[dict] = []
         self._full = bool(full)
@@ -225,6 +235,7 @@ class AgentEventRecorder:
         self._tool_start: dict[str, float] = {}
         self._tokens = {"input": 0, "output": 0, "cache_hit": 0, "cache_creation": 0}
         self._sop_step = ""
+        self._sop_attempt = 0
         self._reply_in_step = 0
         self._reply_role: dict[str, str] = {}
         self._sop_steps: list[dict] = []
@@ -392,6 +403,7 @@ class AgentEventRecorder:
         self._tool_start = {}
         self._tokens = {"input": 0, "output": 0, "cache_hit": 0, "cache_creation": 0}
         self._sop_step = ""
+        self._sop_attempt = 0
         self._reply_in_step = 0
         self._reply_role = {}
         self._usages = []
@@ -496,6 +508,7 @@ class AgentEventRecorder:
                     span_ms=span_ms,
                     agent_role=self._reply_role.get(getattr(event, "reply_id", ""), ""),
                     sop_step=self._sop_step,
+                    sop_attempt=self._sop_attempt,
                 )
             )
 
@@ -592,8 +605,9 @@ class AgentEventRecorder:
             row["name"] = name
             row["value"] = value
             if name == "SOP_STEP_STARTED":
-                # 进入新步骤：重置本步内的 reply 计数，后续按奇偶推断角色。
+                # 进入新步骤：记录官方给出的尝试序号，并重置本步内的 reply 计数（无名字映射时兜底用）。
                 self._sop_step = str(value.get("step", ""))
+                self._sop_attempt = int(value.get("attempt", 0) or 0)
                 self._reply_in_step = 0
 
         elif kind == "ReplyEndEvent":
@@ -609,11 +623,14 @@ class AgentEventRecorder:
             self._reply_label[reply_id] = self._role_api_keys.get(agent_name, self._api_key_env)
             self._reply_model[reply_id] = self._role_models.get(agent_name, "")
 
-            # 只在 SOP 步骤内推断执行者 / 验收者：每步第一次 reply 是执行者，第二次是验收者。
+            # SOP 步骤内归属执行者 / 验收者：有名字映射按 agent 名判定（不依赖回复顺序）；
+            # 无映射时沿用既有奇偶推断（每步第一次 reply 是执行者，第二次是验收者）。
             if not self._sop_step:
                 return
             self._reply_in_step += 1
-            role = "executor" if self._reply_in_step % 2 == 1 else "verifier"
+            role = self._sop_roles.get(agent_name)
+            if role is None:
+                role = "executor" if self._reply_in_step % 2 == 1 else "verifier"
             self._reply_role[event.reply_id] = role
             row["reply_id"] = event.reply_id
             row["agent_name"] = agent_name

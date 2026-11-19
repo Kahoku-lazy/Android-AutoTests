@@ -5,13 +5,14 @@
 Python 调试：➡️ python -m engines.ae_harness.workflow.sop.runner 🏁
 时间：➡️ 2026-11-13 🏁
 作者：➡️ kahoku 🏁
-版本：➡️ 1.0.0 🏁
-修改时间: ➡️ 2026-11-13 🏁
+版本：➡️ 1.1.0 🏁
+修改时间: ➡️ 2026-11-19 🏁
 类型: ➡️ Agent 能力模块 🏁
 简介说明：➡️
 1. run_sop: 调用方只传执行者、验收者、步骤与模型身份，其余由本函数处理。
 2. 内部负责建 SOP、跑引擎、记录事件、渲染报告、汇总每步结论。
 3. 不认识具体工具，也不建角色；执行者与验收者由调用方准备好。
+4. 把执行者 / 验收者的名字映射传给记录器，报告角色按名字归属，不依赖回复顺序。
 🏁
 关联模块：➡️
 1. agentscope.sop: SOP / SOPStep / SOPEngine。
@@ -19,7 +20,7 @@ Python 调试：➡️ python -m engines.ae_harness.workflow.sop.runner 🏁
 3. engines.ae_harness.workflow.sop.spec: SopSpec / StepSpec。
 🏁
 测试：➡️
-1. 见 engines.ae_harness.workflow.sop_runner。
+1. tests/engines/backend_bridge/unit/test_bound_sop.py: 结果字段与用量汇总。
 🏁
 """
 
@@ -207,6 +208,10 @@ async def run_sop(
         api_key_env=api_key_env,
         role_api_keys=role_api_keys,
         role_models=role_models,
+        sop_roles={
+            str(getattr(executor, "name", "") or ""): "executor",
+            str(getattr(verifier, "name", "") or ""): "verifier",
+        },
         observations=observations,
     )
     recorder.begin(

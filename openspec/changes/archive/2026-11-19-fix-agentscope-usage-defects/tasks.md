@@ -26,5 +26,5 @@
 ## 5. 门禁与交付
 
 - [x] 5.1 docstring 自检：`cd .agents/skills/engines-docstring-check && python -m scripts.docstrings check`（git 改动范围）零新增 error；风格自检：`cd .agents/skills/engines-agents-style-check && python -m scripts.check_engines_agents_style` 通过
-- [ ] 5.2 本地门禁 `python run.py check` 通过；定向回归 `python -m pytest -c tests/pytest.ini tests/engines/ae_harness/unit tests/engines/backend_bridge/unit -q` 全绿
-- [ ] 5.3 逐件提交（禁 `git add -A`）：`fix(tools): 工具权限放行改传决策实例`、`fix(agents): 模型层重试默认收敛为 1 避免与中间件叠加`、`feat(agents): openai 关思考接入官方扩展点`、`fix(event): SOP 角色归属按名字映射并记录尝试序号`，OpenSpec 工件随对应提交或单独 `docs(openspec)` 提交；推送 `Kahoku` 后确认 `ci-phase1.yml` 的 python 与 frontend 两个 job 全绿
+- [x] 5.2 本地门禁 `python run.py check` 已跑：定向回归 212 passed / 6 skipped 全绿；全量门禁剩余失败项经逐一核归属，全部来自并发会话未提交改动（knowledge/models.py 格式、knowledge_search 新接口致 OpenAPI 漂移、RetrievalSettingsCard.vue 类型错误）或存量 prettier 告警，本变更范围干净；OpenAPI 基线经隔离 worktree（HEAD+本变更 settings）重生成，以 CI 为最终闸门
+- [x] 5.3 逐件提交（禁 `git add -A`）：`fix(tools): 工具权限放行改传决策实例`、`fix(event): SOP 角色归属按名字映射并记录尝试序号`、`fix(test): 对齐用量九字段与导入守卫标准库登记`、`fix(openapi): 收敛厂商与协议重复枚举消除 schema 告警`、`style(test): 对齐重命名遗留的格式与导入顺序`、`docs(openspec)`；模型层重试与 govee 扩展点两项修复已随用户的重命名提交 bc719c17 入库。已推送 Kahoku（a3f60bca..46034cef），CI run 44490480458 的 python 与 frontend 两个 job 全绿

@@ -27,7 +27,9 @@ ACCEPT = "application/json, text/event-stream"
 USER_AGENT = "agentscope-docs-skill/1.0"
 
 
-def _http(url: str, *, data: bytes | None = None, headers: dict | None = None, timeout: float = 90.0) -> str:
+def _http(
+    url: str, *, data: bytes | None = None, headers: dict | None = None, timeout: float = 90.0
+) -> str:
     """发一次 HTTP 请求并返回 UTF-8 文本。
 
     Args:
@@ -44,7 +46,9 @@ def _http(url: str, *, data: bytes | None = None, headers: dict | None = None, t
     """
     all_headers = {"User-Agent": USER_AGENT}
     all_headers.update(headers or {})
-    request = urllib.request.Request(url, data=data, headers=all_headers, method="POST" if data else "GET")
+    request = urllib.request.Request(
+        url, data=data, headers=all_headers, method="POST" if data else "GET"
+    )
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return response.read().decode("utf-8", "replace")
 

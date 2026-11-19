@@ -32,6 +32,7 @@ import ast
 import json
 import re
 import sys
+
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -81,11 +82,7 @@ FLAG = "\U0001f3c1"  # U+1F3C1
 _FIELD_RE_CACHE: dict[str, re.Pattern[str]] = {}
 
 _LEGACY_SHUOMING_RE = re.compile(
-    r"(?m)^说明\s*[:：]\s*"
-    + ARROW
-    + r"(?:\ufe0f)?"
-    + r"(.*?)"
-    + FLAG,
+    r"(?m)^说明\s*[:：]\s*" + ARROW + r"(?:\ufe0f)?" + r"(.*?)" + FLAG,
     re.DOTALL,
 )
 
@@ -111,12 +108,7 @@ def _field_re(name: str) -> re.Pattern[str]:
     """Match field markers: name[:：] + U+27A1 + optional U+FE0F + value + U+1F3C1."""
     if name not in _FIELD_RE_CACHE:
         _FIELD_RE_CACHE[name] = re.compile(
-            re.escape(name)
-            + r"\s*[:：]\s*"
-            + ARROW
-            + r"(?:\ufe0f)?"
-            + r"(.*?)"
-            + FLAG,
+            re.escape(name) + r"\s*[:：]\s*" + ARROW + r"(?:\ufe0f)?" + r"(.*?)" + FLAG,
             re.DOTALL,
         )
     return _FIELD_RE_CACHE[name]
@@ -211,14 +203,10 @@ def validate_module_docstring(
 
     if check_path_match and rel:
         if fields.get("路径") and fields["路径"] != rel:
-            issues.append(
-                f"路径不匹配：期望 {rel}，实际 {fields['路径']}"
-            )
+            issues.append(f"路径不匹配：期望 {rel}，实际 {fields['路径']}")
         expected_name = Path(rel).name
         if fields.get("文件名") and fields["文件名"] != expected_name:
-            issues.append(
-                f"文件名不匹配：期望 {expected_name}，实际 {fields['文件名']}"
-            )
+            issues.append(f"文件名不匹配：期望 {expected_name}，实际 {fields['文件名']}")
 
     py_dbg = (fields.get("Python 调试") or "").strip()
     if check_python_debug_format and py_dbg and not looks_like_python_m(py_dbg):
@@ -233,9 +221,7 @@ def validate_module_docstring(
     return out
 
 
-def extract_module_docstring_from_source(
-    source: str, *, filename: str = "<unknown>"
-) -> str:
+def extract_module_docstring_from_source(source: str, *, filename: str = "<unknown>") -> str:
     """Return the module docstring from Python source, or empty string."""
     try:
         tree = ast.parse(source, filename=filename)
@@ -286,7 +272,6 @@ def read_module_docstring(
 def is_compliant(fields: dict[str, str], rel_path: str | Path) -> bool:
     """True when required fields, type, path/filename, and python -m look OK."""
     return not validate_module_docstring(fields, rel_path=rel_path)
-
 
 
 def iter_python_modules(
@@ -523,13 +508,9 @@ def main(argv: list[str] | None = None) -> int:
 
     # Single-file mode (default strict unless --no-strict)
     try:
-        fields = read_module_docstring(
-            target_path, repo_root=root, strict=not args.no_strict
-        )
+        fields = read_module_docstring(target_path, repo_root=root, strict=not args.no_strict)
     except ModuleDocstringValidationError as e:
-        text = json.dumps(
-            {"error": str(e), "issues": e.issues}, ensure_ascii=False, indent=2
-        )
+        text = json.dumps({"error": str(e), "issues": e.issues}, ensure_ascii=False, indent=2)
         print(text)
         if args.out:
             out_path = Path(args.out)
@@ -544,7 +525,6 @@ def main(argv: list[str] | None = None) -> int:
         out_path.write_text(text + "\n", encoding="utf-8")
     print("validate: OK", file=sys.stderr)
     return 0
-
 
 
 if __name__ == "__main__":

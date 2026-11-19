@@ -19,6 +19,8 @@ exclude = [
     "engines/agents/skills/**/skill-creator/**",
     # 同上：skill-creator 已随 skills 数据迁到 config/data/skills 下
     "engines/agents/config/data/skills/**/skill-creator/**",
+    # 外部 skill 整目录：供应商产物，不按本仓库 lint 改
+    ".agents/skills/stylekit-skill/**",
 ]
 
 # ── Formatter ──────────────────────────────────────────
@@ -38,17 +40,22 @@ select = [
     # ─ §3: 禁止 from module import * (F403, F405)
     "F403",
     "F405",
-    # ─ §3: 禁止未使用的 import (F401)
+    # ─ §3: 禁止未使用的 import (F401) 与赋值了没用的变量 (F841)
     "F401",
+    "F841",
     # ─ §3: 禁止"用了却没导入的名字" (F821)：模块漏 import 只会在运行期才炸，
     #   历史上真出过（模型调试台装配函数调用了未导入的 build_device_models），故纳入门禁。
     "F821",
     # ─ §8: 禁止裸 except: (E722)
     "E722",
+    # ─ except 里再 raise 必须带 from，避免异常链断掉 (B904)
+    "B904",
     # ─ §11: 禁止 print() (T201)
     "T201",
     # ─ §11: 双引号 (Q000)
     "Q",
+    # ─ 禁止用字符串拼接拼 SQL (S608)
+    "S608",
 ]
 
 # ── isort 配置 (§3 import 顺序) ────────────────────────
@@ -64,7 +71,7 @@ section-order = ["future", "standard-library", "third-party", "first-party", "lo
 # ─ CLI 入口 / 种子脚本: 允许 print() 输出
 "run.py" = ["T201"]
 # utils/ 下只有这四个是 CLI 脚本（utils/logs.py 是库，不放开 print）
-"utils/{check_gates,gen_arch_stats,check_openapi_coverage,live_screen}.py" = ["T201"]
+"utils/{check_gates,gen_arch_stats,check_openapi_coverage,live_screen,module_docstring}.py" = ["T201"]
 # ─ engines AGENTS style checker (skill scripts CLI): allow print()
 ".agents/skills/engines-agents-style-check/scripts/check_engines_agents_style.py" = ["T201"]
 # ─ engines docstring 读写 CLI（同一类技能脚本）: allow print()
@@ -72,15 +79,16 @@ section-order = ["future", "standard-library", "third-party", "first-party", "lo
 # ─ Django 6.1 文档读写 CLI（同一类技能脚本）: allow print()
 ".agents/skills/django-61-docs/scripts/*.py" = ["T201"]
 ".agents/skills/agentscope-docs/scripts/*.py" = ["T201"]
+# ─ repo-viz-board 技能的数据生成 CLI 模板: 控制台输出，属 CLI 而非库代码
+".agents/skills/repo-viz-board/assets/template/gen_data.template.py" = ["T201"]
+# ─ dev_docs 可视化看板的侧边栏同步 CLI: 同上
+"dev_docs/project-viz/tools/sync_sidebar.py" = ["T201"]
 # ─ Omni 本地 S2S 演示入口（run_local_s2s / main）: 用 print 输出，属 CLI 而非库代码
 "engines/agents/realtime_vocie_agent.py" = ["T201"]
 "engines/agents/realtime_vocie/demo.py" = ["T201"]
 # ─ ae_harness 原型链的角色入口与 SOP 入口: 交互式控制台输出，属 CLI 而非库代码
 #   _bootstrap 是这几个入口共用的打印骨架（汇总 / 异常），本身也只服务 CLI
 "engines/ae_harness/assistant/_bootstrap.py" = ["T201"]
-"engines/ae_harness/assistant/agent_executor.py" = ["T201"]
-"engines/ae_harness/assistant/agent_verifier.py" = ["T201"]
-"engines/ae_harness/workflow/sop_runner.py" = ["T201"]
 # ─ 知识库探针（index / retrieve）与模块自测入口：控制台工具，非库代码
 "engines/ae_harness/knowledge/probe.py" = ["T201"]
 # ─ tests/: 放宽限制

@@ -436,7 +436,9 @@ def _write_stop_timeout_mark(ids: list[int]) -> None:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
-            json.dumps({"ids": ids, "written_at": time.strftime("%Y-%m-%dT%H:%M:%S")}, ensure_ascii=False),
+            json.dumps(
+                {"ids": ids, "written_at": time.strftime("%Y-%m-%dT%H:%M:%S")}, ensure_ascii=False
+            ),
             encoding="utf-8",
         )
     except OSError as exc:

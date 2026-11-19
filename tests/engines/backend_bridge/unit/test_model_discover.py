@@ -25,7 +25,9 @@ def test_models_url_requires_address():
 
 def test_models_url_does_not_duplicate_suffix():
     """地址已经以 /models 结尾时不再追加。"""
-    assert models_url("openai", "https://example.test/v1/models") == "https://example.test/v1/models"
+    assert (
+        models_url("openai", "https://example.test/v1/models") == "https://example.test/v1/models"
+    )
 
 
 def test_discover_rejects_mismatched_key():

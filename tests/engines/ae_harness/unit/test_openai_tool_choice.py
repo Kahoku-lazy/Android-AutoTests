@@ -8,8 +8,8 @@ from agentscope.model import DashScopeChatModel, DeepSeekChatModel
 from agentscope.tool import ToolChoice
 
 from engines.ae_harness.agents.models import (
-    OpenAIGatewayChatModel,
     OpenAIChatModel,
+    OpenAIGatewayChatModel,
     create_model,
 )
 

@@ -127,7 +127,11 @@ async function remove(): Promise<void> {
       <span class="assistant-field__label">组合</span>
       <span class="assistant-select">
         <select v-model="pairKey" class="assistant-input" :disabled="editing">
-          <option v-for="item in PAIRS" :key="item.label" :value="`${item.orchestration}:${item.kind}`">
+          <option
+            v-for="item in PAIRS"
+            :key="item.label"
+            :value="`${item.orchestration}:${item.kind}`"
+          >
             {{ item.label }}
           </option>
         </select>
@@ -166,9 +170,15 @@ async function remove(): Promise<void> {
             </option>
           </select>
         </span>
-        <input v-model="member.description" class="assistant-input" placeholder="擅长什么，交回什么" />
+        <input
+          v-model="member.description"
+          class="assistant-input"
+          placeholder="擅长什么，交回什么"
+        />
       </div>
-      <DoodleBtn tone="paper" @click="members.push({ assistantId: '', description: '' })">添加成员</DoodleBtn>
+      <DoodleBtn tone="paper" @click="members.push({ assistantId: '', description: '' })"
+        >添加成员</DoodleBtn
+      >
     </template>
 
     <label v-if="orchestration !== 'team'" class="assistant-field">

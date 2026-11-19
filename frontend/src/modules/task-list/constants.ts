@@ -119,12 +119,7 @@ export function taskStatusLabel(status: string): string {
 }
 
 /** 已经结束、可以再跑一次的状态。待执行和执行中不在此列。 */
-const RERUNNABLE_TONES = new Set<TaskStatusTone>([
-  "success",
-  "failed",
-  "interrupted",
-  "cancelled",
-])
+const RERUNNABLE_TONES = new Set<TaskStatusTone>(["success", "failed", "interrupted", "cancelled"])
 
 const ORCHESTRATION_LABELS: Record<string, string> = {
   sop: "SOP",

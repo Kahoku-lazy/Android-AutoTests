@@ -83,7 +83,12 @@ onMounted(load)
     <div class="doc-body">
       <SectionBar title="AI 助手" :count="`共 ${cards.length} 位助手`">
         <template #action>
-          <DoodleBtn v-if="isAssistantAuthor" tone="teal" @click="router.push('/ai-assistant/evals')">评测</DoodleBtn>
+          <DoodleBtn
+            v-if="isAssistantAuthor"
+            tone="teal"
+            @click="router.push('/ai-assistant/evals')"
+            >评测</DoodleBtn
+          >
           <DoodleBtn v-if="isAssistantAuthor" tone="yellow" @click="openCreate">新建助手</DoodleBtn>
         </template>
       </SectionBar>

@@ -8,16 +8,37 @@ import {
 
 describe("SOP 表单", () => {
   it("两侧都必选", () => {
-    expect(sopCreateError({ name: "检查", executorId: "", verifierId: "20261117_B" })).toBe(
-      "先选执行助手",
-    )
-    expect(sopCreateError({ name: "检查", executorId: "20261117_A", verifierId: "" })).toBe(
-      "先选验收助手",
-    )
+    expect(
+      sopCreateError({
+        name: "检查",
+        orchestration: "sop",
+        executorId: "",
+        verifierId: "20261117_B",
+        leaderId: "",
+        members: [],
+      }),
+    ).toBe("先选执行助手")
+    expect(
+      sopCreateError({
+        name: "检查",
+        orchestration: "sop",
+        executorId: "20261117_A",
+        verifierId: "",
+        leaderId: "",
+        members: [],
+      }),
+    ).toBe("先选验收助手")
   })
 
   it("同一张名片可以同时担任两侧", () => {
-    const input = { name: "自检", executorId: "20261117_A", verifierId: "20261117_A" }
+    const input = {
+      name: "自检",
+      orchestration: "sop" as const,
+      executorId: "20261117_A",
+      verifierId: "20261117_A",
+      leaderId: "",
+      members: [],
+    }
     expect(sopCreateError(input)).toBe("")
     expect(sameCardAllowed(input.executorId, input.verifierId)).toBe(true)
   })

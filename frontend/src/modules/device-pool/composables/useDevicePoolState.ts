@@ -222,7 +222,7 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
     try {
       await apiHeartbeat()
     } catch (e: unknown) {
-      console.debug("[device-pool] heartbeat:", (e as { message?: string })?.message || e)
+      console.warn("[device-pool] heartbeat:", (e as { message?: string })?.message || e)
     }
   }
 

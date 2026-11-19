@@ -35,7 +35,8 @@ export function workflowCards(workflows: SopWorkflow[], cards: AssistantCard[]):
       verifier_name: verifier?.display_name || "验收助手已不存在",
       leader_name: leader?.display_name || "队长已不存在",
       member_count: workflow.members?.length || 0,
-      marker: (workflow.orchestration === "team" ? leader?.marker : executor?.marker) || FALLBACK_MARKER,
+      marker:
+        (workflow.orchestration === "team" ? leader?.marker : executor?.marker) || FALLBACK_MARKER,
       release_state: workflow.release_state,
     }
   })

@@ -20,8 +20,12 @@ const card: Card = {
 const workflow: SopWorkflowCard = {
   id: 3,
   name: "桌面检查",
+  orchestration: "sop",
+  kind: "ui_automation",
   executor_name: "执行甲",
   verifier_name: "验收乙",
+  leader_name: "",
+  member_count: 0,
   marker: "moss",
 }
 

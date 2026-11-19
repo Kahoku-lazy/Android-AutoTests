@@ -14,10 +14,9 @@ import { avatarUrl } from "../api/assistants"
 import { markerVars } from "../helpers/marker"
 import type { MarkerTile } from "../types"
 
-const props = withDefaults(
-  defineProps<{ item: MarkerTile; index: number; canEdit?: boolean }>(),
-  { canEdit: true },
-)
+const props = withDefaults(defineProps<{ item: MarkerTile; index: number; canEdit?: boolean }>(), {
+  canEdit: true,
+})
 const emit = defineEmits<{ edit: []; activate: [] }>()
 
 const src = ref("")

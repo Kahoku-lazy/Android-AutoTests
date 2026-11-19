@@ -2,6 +2,8 @@
 # 目标分支是单主干 Kahoku；更新以 PR 形式进入，走 CI 双 job 闸门。
 # Django 锁定 6.0.x（见 README：6.1 的模型字段检查会在无数据库时连 MySQL，
 # 导致 CI 的 manage.py check 失败），因此忽略 django 的 minor/major 升级，只收 patch。
+# 其余被忽略的大版本见各 ecosystem 的 ignore 注释：均为跨大版本、与现有技术栈
+# 规范冲突或 CI 未覆盖运行时、需人工协调升级的依赖；将来主动升级时再放开对应规则。
 version: 2
 updates:
   - package-ecosystem: "pip"
@@ -15,6 +17,11 @@ updates:
         update-types:
           - "version-update:semver-minor"
           - "version-update:semver-major"
+      # opencv-python-headless 锁 4.x：5.0 为跨大版本，utils/live_screen.py 直接用
+      # cv2 且是 uiautomator2 运行时依赖，CI 不执行图像/设备代码，兼容性未验证。
+      - dependency-name: "opencv-python-headless"
+        update-types:
+          - "version-update:semver-major"
 
   - package-ecosystem: "npm"
     directory: "/frontend"
@@ -22,6 +29,23 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    ignore:
+      # vite 锁 5.x（frontend/AGENTS.md 规范 Vite 5）：6/7/8 跨大版本，vite 8 改用
+      # rolldown 打包器，与 @vitejs/plugin-vue 5 不兼容，vite-build 直接失败。
+      - dependency-name: "vite"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-major"
+      # pinia 锁 2.x：pinia 4 要求 TS>=5.6 与必需 peer @vue/devtools-api 8，与仓库
+      # TS 5.4 规范冲突；当前无模块使用 store，无升级紧迫性。
+      - dependency-name: "pinia"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-major"
+      # @vitest/ui 锁 4.x：须与 vitest 核心同版升级，单独升 major 会坏 test:ui。
+      - dependency-name: "@vitest/ui"
+        update-types:
+          - "version-update:semver-major"
 
   - package-ecosystem: "github-actions"
     directory: "/"

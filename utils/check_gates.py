@@ -41,6 +41,9 @@ PY_SCOPES = [
     "backend/shared/",
     "backend/models/",
 ]
+# ruff 门禁专用范围：平台目录 + tests/（2026-11-19 经需求方确认纳入）。
+# 不复用 PY_SCOPES：凭据扫描门禁按位置取 PY_SCOPES[:-1]，往其中追加会改变其语义。
+RUFF_SCOPES = [*PY_SCOPES, "tests/"]
 # 走查文件时跳过的目录：不改变判定口径，只是避免扫进依赖与缓存
 SKIP_DIRS = {"node_modules", "__pycache__", ".venv", "venv", "dist", ".git", ".pytest_cache"}
 
@@ -252,10 +255,16 @@ def inline_style_gate() -> Gate:
 
 OPENAPI_BASELINE = ROOT / "openspec" / "openapi.yaml"
 OPENAPI_GENERATED = ROOT / "temps" / "openapi.generated.yaml"
+# 占位值只满足「导入期不缺变量」。模型在调用时才读密钥，检查本身不连模型。
+# 名字与 engines/ae_harness/agents/models.py 的三把钥匙一致，不再使用已退役的 OPENAI_API_KEY。
+MODEL_KEY_ENV = {
+    "DEEPSEEK_API_KEY": "local-collect-placeholder",
+    "DASHSCOPE_API_KEY": "local-collect-placeholder",
+    "GOVEE_API_KEY": "local-collect-placeholder",
+}
 OPENAPI_ENV = {
     "DJANGO_SECRET_KEY": "local-check-key-not-for-prod",
-    "OPENAI_API_KEY": "local-collect-placeholder",
-    "DEEPSEEK_API_KEY": "local-collect-placeholder",
+    **MODEL_KEY_ENV,
 }
 
 
@@ -308,7 +317,7 @@ def _openapi_text(path: Path) -> str:
     return path.read_text(encoding="utf-8").replace("\r\n", "\n")
 
 
-# ── 检查清单（对应 CI 的 6 个 job） ───────────────────────────
+# ── 检查清单（CI 的 python / frontend 两个 job 都从这里点名） ──
 
 
 # 受管业务资产目录：平台主干不得在此存放客户专项业务资料
@@ -363,6 +372,47 @@ def business_asset_gate() -> Gate:
         "业务资产（受管目录禁厂商标识 / 禁用路径不复活）",
         blocking=True,
         run=run,
+    )
+
+
+# ── 唯一 Agent 构造点 ──────────────────────────────────────────
+
+# 平台角色只能经 create_agent 创建。agentscope.agent.Agent 的直接构造只允许这一处。
+AGENT_CONSTRUCTOR_FILE = "engines/ae_harness/agents/creator.py"
+
+
+def single_agent_constructor_gate() -> Gate:
+    """engines 里直接构造 Agent 的位置只能有 creator.py 一处。
+
+    看 AST 调用，不看字符串。测试里的 `_Agent()` 名字不同，不会命中。
+    """
+
+    def _run() -> tuple[bool, list[str]]:
+        hits: list[str] = []
+        for path in _iter_files(["engines"], {".py"}):
+            rel = path.relative_to(ROOT).as_posix()
+            text = path.read_text(encoding="utf-8", errors="replace")
+            try:
+                tree = ast.parse(text)
+            except SyntaxError as exc:
+                hits.append(f"{rel}: 解析失败 {exc}")
+                continue
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Call):
+                    continue
+                func = node.func
+                if not isinstance(func, ast.Name) or func.id != "Agent":
+                    continue
+                if rel == AGENT_CONSTRUCTOR_FILE:
+                    continue
+                hits.append(f"{rel}:{node.lineno}: 直接构造 Agent，必须改走 create_agent")
+        return not hits, hits
+
+    return Gate(
+        "single-agent-constructor",
+        "Agent 只在 creator.py 构造（其余位置走 create_agent）",
+        blocking=True,
+        run=_run,
     )
 
 
@@ -450,14 +500,14 @@ def build_gates() -> list[Gate]:
         ),
         cmd_gate(
             "ruff-format",
-            "Python 格式（ruff format，平台范围）",
-            [py, "-m", "ruff", "format", "--check", *PY_SCOPES],
+            "Python 格式（ruff format，平台+tests）",
+            [py, "-m", "ruff", "format", "--check", *RUFF_SCOPES],
             blocking=True,
         ),
         cmd_gate(
             "ruff-lint",
-            "Python lint（ruff check，平台范围）",
-            [py, "-m", "ruff", "check", *PY_SCOPES],
+            "Python lint（ruff check，平台+tests）",
+            [py, "-m", "ruff", "check", *RUFF_SCOPES],
             blocking=True,
         ),
         # pytest 收集门禁：不跑用例，只保证整套测试可导入（防再积压失效测试）
@@ -468,8 +518,7 @@ def build_gates() -> list[Gate]:
             blocking=True,
             env={
                 "DJANGO_SECRET_KEY": "local-check-key-not-for-prod",
-                "OPENAI_API_KEY": "local-collect-placeholder",
-                "DEEPSEEK_API_KEY": "local-collect-placeholder",
+                **MODEL_KEY_ENV,
             },
         ),
         openapi_schema_gate(),
@@ -526,11 +575,18 @@ def build_gates() -> list[Gate]:
             blocking=True,
             cwd=FRONTEND,
         ),
+        cmd_gate(
+            "style-gates",
+            "前端样式（字号 / 令牌 / 阴影 / 圆角 / 动效）",
+            [NPM, "run", "lint:styles"],
+            blocking=True,
+            cwd=FRONTEND,
+        ),
         # Job 3 security-scan（规则 3 在 CI 中仅提示，不置违规）
         grep_gate(
             "cred-password",
             "硬编码密码",
-            PY_SCOPES,
+            [*PY_SCOPES, "engines"],
             {".py"},
             r"password\s*=\s*'[^']+'",
             excludes=(r"password\s*=\s*''", "PASSWORD"),
@@ -538,7 +594,7 @@ def build_gates() -> list[Gate]:
         grep_gate(
             "cred-apikey",
             "明文 API Key",
-            PY_SCOPES[:-1],
+            [*PY_SCOPES[:-1], "engines"],
             {".py"},
             r"(api_key|apikey|API_KEY)\s*=\s*'sk-[A-Za-z0-9]+'",
         ),
@@ -555,7 +611,7 @@ def build_gates() -> list[Gate]:
         grep_gate(
             "cred-secret",
             "硬编码 Token/Secret",
-            PY_SCOPES[:-1],
+            [*PY_SCOPES[:-1], "engines"],
             {".py"},
             r"(secret_key|SECRET_KEY|private_key)\s*=\s*'[^']+'",
             excludes=("os.environ", "getenv"),
@@ -564,7 +620,7 @@ def build_gates() -> list[Gate]:
             "cred-frontend",
             "前端硬编码凭据",
             ["frontend/src"],
-            {".js", ".vue"},
+            {".js", ".vue", ".ts"},
             r"(api_key|password|token|secret)\s*[=:]\s*['\"]\w{8,}",
             excludes=("node_modules", ".test."),
             # 排除 Vue 属性绑定（v-model:password / :token）与属性访问、连字符命名前缀，
@@ -598,6 +654,7 @@ def build_gates() -> list[Gate]:
         silent_except_gate(),
         business_asset_gate(),
         engines_agents_retirement_gate(),
+        single_agent_constructor_gate(),
         # engines 风格检查（告警项：先看效果，暂不阻塞；正文 .agents/rules/engines-code-style.md，流程 engines/AGENTS.md）
         cmd_gate(
             "engines-agents-style",

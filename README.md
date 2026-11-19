@@ -35,7 +35,7 @@
 
 **非本期**：iOS、Web、API 自动化的执行引擎 · 设备云租用 · 多团队隔离 · OAuth / SSO · AI 自我修复失败用例 · 分布式执行集群 · 实时语音（知识库助手 WebSocket 已下线，`websocket_urlpatterns` 为空）
 
-模型与密钥**不在页面上填写明文**。运营在「模型配置」登记厂商、密钥环境变量名、协议、地址和模型名；密钥只从仓库根 `.env` 读取。当前三家：`DEEPSEEK_API_KEY`、`DASHSCOPE_API_KEY`、`GOVEE_API_KEY`。平台助手与已发布工作流在运行时读取这些配置；默认 UI SOP 仍用模型短名 `govee_chat_flash`（Govee 地址上的 `deepseek-flash`，密钥 `GOVEE_API_KEY`），这是重构前的兼容入口，新角色必须显式传入连接参数。
+模型与密钥**不在页面上填写明文**。运营在「模型配置」登记厂商、密钥环境变量名、协议、地址和模型名；密钥只从仓库根 `.env` 读取。当前三家：`DEEPSEEK_API_KEY`、`DASHSCOPE_API_KEY`、`GOVEE_API_KEY`。平台助手与已发布工作流在运行时读取这些配置，并把厂商、密钥名、地址、模型名显式传给 `create_agent`。没有模型短名，也没有写死的默认角色。
 
 ---
 
@@ -100,11 +100,11 @@ Django 锁在 6.0.x：6.1 的模型字段检查会在没有数据库时连 MySQL
 
 1. **配角色**：运营在「模型配置」「Agent 配置」登记连接参数与系统提示词，再做成助手名片，最后收成 SOP 工作流并发布。
 2. **下发**：设备执行类工作流要选设备和用例来源（平台用例，或上传一份里程碑 YAML）。用例编写 / 需求拆解改为上传文档，不占设备。同一设备串行，不同设备并行。
-3. **装配**：`task_runner` 在后台线程调用 `engines.backend_bridge`。名片绑定的 SOP 走 `run_bound_sop`；未绑定的 UI SOP 走 `run_sop_once`（默认模型短名 `govee_chat_flash`）。编排实现只在 `ae_harness/workflow/sop`，平台侧不得再写一套循环。
+3. **装配**：`task_runner` 在后台线程调用 `engines.backend_bridge`，一律走 `run_bound_sop`：提示词、模型连接参数和工具勾选在运行时从名片现读。编排实现只在 `ae_harness/workflow/sop`，平台侧不得再写一套循环。
 4. **执行 + 验收**：执行者挂全量 adb 工具；验收者只挂只读工具，按步骤 YAML 里「必须达成的结果」判定。用例编写与需求拆解不操作设备。
 5. **落库与回看**：终态、用量和失败步骤写回任务。HTML 报告与 JSONL 落在 `logs/agents/backend_bridge/`。报告页只做已生成报告的台账；失败进入 BUG 单。
 
-换一条平台角色的模型，改运营库里的模型配置，不要把密钥再传到 Django 或前端。默认 UI SOP 的短名兼容表在 `engines/ae_harness/agents/creator.py`，只剩 `govee_chat_flash` 与 `deepseek_chat_flash`，新调用不得再加短名。
+换一条平台角色的模型，改运营库里的模型配置，不要把密钥再传到 Django 或前端。`create_agent` 只收调用方传入的连接参数，不再有模型短名。
 
 ---
 
@@ -239,7 +239,7 @@ python run.py check      # 本地质量门禁（与 CI 同一批检查，不跑�
 
 - 长期分支只有 `Kahoku`。Conventional Commits：`{type}({scope}): {描述}`，type 取 `feat` / `fix` / `refactor` / `docs` / `test` / `chore` / `style` / `security`。
 - 一次提交只做一件事。逐文件 `git add`，不要 `git add -A`。禁止对 `Kahoku` 强推。
-- 提交前跑 `python run.py check`。推送后确认 `ci-phase1.yml` 的 6 个 job 全绿。
+- 提交前跑 `python run.py check`。推送后确认 `ci-phase1.yml` 的 `python` 与 `frontend` 两个 job 全绿。
 
 ---
 
@@ -250,10 +250,10 @@ python run.py check      # 本地门禁，阻塞项失败则退出码 1
 python -m pytest -c tests/pytest.ini   # 全量用例；check 不会跑这个
 ```
 
-- 检查清单以 `utils/check_gates.py` 的 `build_gates()` 为真相源。当前 29 项：27 个阻塞项；`cred-default-pwd`、`inline-style`、`engines-agents-style` 只告警，不影响退出码。
-- 覆盖：Django system check、ruff（平台范围与 `engines/`）、pytest **收集**（不执行用例）、OpenAPI 契约与业务路径覆盖、前端 vitest / vite build / eslint / vue-tsc / prettier、硬编码凭据、模块边界、Vue 文件体积、伪造数据、内联样式、静默吞异常，以及 `engines/agents` 退役守门。
+- 检查清单以 `utils/check_gates.py` 的 `build_gates()` 为真相源。当前 31 项：29 个阻塞项；`cred-default-pwd`、`inline-style`、`engines-agents-style` 只告警，不影响退出码。
+- 覆盖：Django system check、ruff（平台范围与 `engines/`）、pytest **收集**（不执行用例）、OpenAPI 契约与业务路径覆盖、前端 vitest / vite build / eslint / vue-tsc / prettier / 样式令牌、硬编码凭据（含 `engines/` 与 `.ts`）、模块边界（含底座包不得反向依赖）、Vue 文件体积、伪造数据、内联样式、静默吞异常、`engines/agents` 退役守门，以及 `Agent(...)` 只能出现在 `creator.py`。
 - 改接口必须同步 `openspec/openapi.yaml`，否则门禁失败。
-- CI 为 `.github/workflows/ci-phase1.yml` 的 6 个 job：`backend-check` · `frontend-check` · `static-checks` · `security-scan` · `boundary-check` · `frontend-quality`。推送到 `Kahoku`（以及 workflow 里列出的其它分支）和指向 `Kahoku` 的 pull request 都会跑。仓库日常只维护 `Kahoku`。
+- CI 为 `.github/workflows/ci-phase1.yml` 的 2 个 job：`python` · `frontend`。判定调用 `utils/check_gates.py --only`，不在 workflow 里另写一套命令。只在推送 `Kahoku` 和指向 `Kahoku` 的 pull request 时跑。
 
 ---
 

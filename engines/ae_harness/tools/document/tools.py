@@ -5,8 +5,8 @@
 Python 调试: ➡️ python -m engines.ae_harness.tools.document.tools 🏁
 时间: ➡️ 2026-11-18 🏁
 作者: ➡️ kahoku 🏁
-版本: ➡️ 1.0.0 🏁
-修改时间: ➡️ 2026-11-18 🏁
+版本: ➡️ 1.0.1 🏁
+修改时间: ➡️ 2026-11-19 🏁
 类型: ➡️ 工具模块 🏁
 简介说明: ➡️
 1. bind_requirement_text: 注入本次需求正文。
@@ -17,6 +17,7 @@ Python 调试: ➡️ python -m engines.ae_harness.tools.document.tools 🏁
 🏁
 测试: ➡️
 1. tests/engines/backend_bridge/unit/test_tool_selection.py: 需求拆解不挂设备工具
+2. tests/engines/ae_harness/unit/test_tool_permission.py: 权限检查返回放行决策实例
 🏁
 """
 
@@ -30,7 +31,9 @@ from agentscope.tool import FunctionTool
 __all__ = ["bind_requirement_text", "build_document_tools"]
 
 _text = ""
-_ALLOW = lambda _request: PermissionDecision(behavior=PermissionBehavior.ALLOW)
+# 静态放行决策必须是 PermissionDecision 实例：FunctionTool.check_permissions 原样返回它，
+# 传可调用对象会让权限引擎拿到函数而非决策（见 harness-tool-permission 规格）。
+_ALLOW = PermissionDecision(behavior=PermissionBehavior.ALLOW, message="文档只读工具，允许执行")
 
 
 def bind_requirement_text(text: str) -> None:

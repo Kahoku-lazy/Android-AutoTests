@@ -26,5 +26,5 @@
 
 - [x] 5.1 补齐 tests/knowledge_search 评测场景对照 spec（超限 400、重复触发 409、非超管 403、运行中改模块不影响、失败不拖垮检索、两类用量入账）；验证 `pytest -c tests/pytest.ini -m "unit or integration"` 相关路径全绿 + api 套件通过
 - [x] 5.2 PRD 条目补写（自动评测，编号沿用体例，注明 2026-11-18 需求方确认）；验证人工审阅与 proposal 关联文档一致
-- [ ] 5.3 全链路人工验收：选模型→触发→进度→报告→账本核对 LLM 与 Embedding 行→改阈值重跑对比；验证 `python run.py check` 退出码 0 + `python utils/gen_arch_stats.py --check-boundaries` 通过
+- [x] 5.3 全链路人工验收：选模型→触发→进度→报告→账本核对 LLM 与 Embedding 行→改阈值重跑对比；验证 `python run.py check` 退出码 0 + `python utils/gen_arch_stats.py --check-boundaries` 通过
 - [x] 5.4 按 Conventional Commits 分提交（backend / frontend / docs 逐文件暂存，禁 git add -A），推送 Kahoku；验证 ci-phase1.yml 6 个 job 全绿

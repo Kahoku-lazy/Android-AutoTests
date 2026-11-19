@@ -12,6 +12,7 @@ import { me } from "@/shared/api/auth"
 
 const isSuperuser = ref(false)
 const isOperator = ref(false)
+const isAssistantAuthor = ref(false)
 const loaded = ref(false)
 let pending: Promise<void> | null = null
 
@@ -23,10 +24,13 @@ function load(): Promise<void> {
         isSuperuser.value = !!u.is_superuser
         // 老后端没有 is_operator 时退回超管口径，避免升级顺序造成入口消失
         isOperator.value = u.is_operator === undefined ? !!u.is_superuser : !!u.is_operator
+        isAssistantAuthor.value =
+          u.is_assistant_author === undefined ? !!u.is_superuser : !!u.is_assistant_author
       })
       .catch(() => {
         isSuperuser.value = false
         isOperator.value = false
+        isAssistantAuthor.value = false
       })
       .finally(() => {
         loaded.value = true
@@ -38,13 +42,14 @@ function load(): Promise<void> {
 
 export function useAuthUser() {
   if (!loaded.value) void load()
-  return { isSuperuser, isOperator, loaded, ensure: load }
+  return { isSuperuser, isOperator, isAssistantAuthor, loaded, ensure: load }
 }
 
 /** 登出或切换账号时清空缓存。 */
 export function resetAuthUser(): void {
   isSuperuser.value = false
   isOperator.value = false
+  isAssistantAuthor.value = false
   loaded.value = false
   pending = null
 }

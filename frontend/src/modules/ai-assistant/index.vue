@@ -13,12 +13,14 @@ import AssistantCardView from "./components/AssistantCard.vue"
 import SectionBar from "./components/SectionBar.vue"
 import SopWorkflowSection from "./components/SopWorkflowSection.vue"
 import AssistantEditor from "./components/AssistantEditor.vue"
+import { useAuthUser } from "@/shared/composables/useAuthUser"
 import { listAssistants } from "./api/assistants"
 import type { AssistantCard } from "./types"
 import "./tokens.css"
 import "./editor-form.css"
 
 const router = useRouter()
+const { isAssistantAuthor } = useAuthUser()
 const cards = ref<AssistantCard[]>([])
 const loading = ref(false)
 const loaded = ref(false)
@@ -81,7 +83,8 @@ onMounted(load)
     <div class="doc-body">
       <SectionBar title="AI 助手" :count="`共 ${cards.length} 位助手`">
         <template #action>
-          <DoodleBtn tone="yellow" @click="openCreate">新建助手</DoodleBtn>
+          <DoodleBtn v-if="isAssistantAuthor" tone="teal" @click="router.push('/ai-assistant/evals')">评测</DoodleBtn>
+          <DoodleBtn v-if="isAssistantAuthor" tone="yellow" @click="openCreate">新建助手</DoodleBtn>
         </template>
       </SectionBar>
 
@@ -100,6 +103,7 @@ onMounted(load)
             :key="card.assistant_id"
             :item="{ kind: 'assistant', card }"
             :index="index"
+            :can-edit="isAssistantAuthor"
             @edit="openEdit(card)"
             @activate="openChat(card)"
           />

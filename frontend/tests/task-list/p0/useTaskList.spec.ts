@@ -163,21 +163,28 @@ describe("[P0] useTaskList", () => {
     wrapper.unmount()
   })
 
-  it("rerun 失败任务：调用 API 并刷新列表；非失败不调用", async () => {
+  it("rerun 已结束任务：失败、成功、取消都调用 API；执行中不调用", async () => {
     const failed = { ...makeTask(1), status: "failed", assistant_name: "UI 视觉自动化" }
     const ok = { ...makeTask(2), status: "completed", assistant_name: "UI 视觉自动化" }
+    const cancelled = { ...makeTask(4), status: "cancelled", assistant_name: "UI 视觉自动化" }
+    const running = { ...makeTask(5), status: "running", assistant_name: "UI 视觉自动化" }
+    const refreshed = {
+      status: true,
+      data: {
+        tasks: [
+          failed,
+          ok,
+          cancelled,
+          running,
+          { ...makeTask(3), status: "pending", assistant_name: "UI 视觉自动化" },
+        ],
+      },
+    }
     vi.mocked(taskApi.listTasks)
-      .mockResolvedValueOnce({ status: true, data: { tasks: [failed, ok] } })
-      .mockResolvedValueOnce({
-        status: true,
-        data: {
-          tasks: [
-            failed,
-            ok,
-            { ...makeTask(3), status: "pending", assistant_name: "UI 视觉自动化" },
-          ],
-        },
-      })
+      .mockResolvedValueOnce({ status: true, data: { tasks: [failed, ok, cancelled, running] } })
+      .mockResolvedValueOnce(refreshed)
+      .mockResolvedValueOnce(refreshed)
+      .mockResolvedValueOnce(refreshed)
     vi.mocked(taskApi.rerunTask).mockResolvedValue({
       status: true,
       data: { id: 3, status: "pending" },
@@ -186,14 +193,22 @@ describe("[P0] useTaskList", () => {
     const { result, wrapper } = await mountComposable(() => useTaskList())
     await flushPromises()
 
-    await result.rerun(ok)
+    await result.rerun(running)
     await flushPromises()
     expect(taskApi.rerunTask).not.toHaveBeenCalled()
 
     await result.rerun(failed)
     await flushPromises()
     expect(taskApi.rerunTask).toHaveBeenCalledWith(1)
-    expect(result.tasks.value).toHaveLength(3)
+
+    await result.rerun(ok)
+    await flushPromises()
+    expect(taskApi.rerunTask).toHaveBeenCalledWith(2)
+
+    await result.rerun(cancelled)
+    await flushPromises()
+    expect(taskApi.rerunTask).toHaveBeenCalledWith(4)
+    expect(result.tasks.value).toHaveLength(5)
     expect(result.tasks.value.every((t: TaskRecord) => t.assistant_name === "UI 视觉自动化")).toBe(
       true,
     )

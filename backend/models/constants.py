@@ -97,6 +97,7 @@ class BugCategory(StrEnum):
 
     UI_AUTOMATION = "ui_automation"
     CASE_AUTHORING = "case_authoring"
+    REQUIREMENT_BREAKDOWN = "requirement_breakdown"
 
 
 class BugStatus(StrEnum):

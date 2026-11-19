@@ -12,9 +12,11 @@ class BugTicket(models.Model):
 
     CATEGORY_UI_AUTOMATION = "ui_automation"
     CATEGORY_CASE_AUTHORING = "case_authoring"
+    CATEGORY_REQUIREMENT_BREAKDOWN = "requirement_breakdown"
     CATEGORY_CHOICES = [
         (CATEGORY_UI_AUTOMATION, "UI 自动化"),
         (CATEGORY_CASE_AUTHORING, "测试用例编写"),
+        (CATEGORY_REQUIREMENT_BREAKDOWN, "需求拆解"),
     ]
 
     STATUS_OPEN = "open"

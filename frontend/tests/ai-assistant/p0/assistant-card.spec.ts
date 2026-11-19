@@ -31,8 +31,23 @@ describe("助手颜料片", () => {
     expect(wrapper.text()).toContain("小助")
     expect(wrapper.text()).toContain("执行配置")
     expect(wrapper.find(".assistant-card__swatch").exists()).toBe(true)
+    const draft = mount(AssistantCard, {
+      props: {
+        item: { kind: "assistant", card: { ...card, release_state: "draft" } },
+        index: 0,
+      },
+    })
+    expect(draft.text()).toContain("草稿")
     expect(wrapper.find("img").exists()).toBe(false)
     expect(wrapper.text()).not.toContain("20261116")
+  })
+
+  it("非作者不显示配置入口", () => {
+    const wrapper = mount(AssistantCard, {
+      props: { item: { kind: "assistant", card }, index: 0, canEdit: false },
+    })
+    expect(wrapper.find(".assistant-card__action--config").exists()).toBe(false)
+    expect(wrapper.text()).toContain("对话")
   })
 
   it("上边沿有笔色图钉，笔色圆排在名称之上", () => {
@@ -67,6 +82,12 @@ describe("工作流便签卡", () => {
       "验收者：验收乙",
     ])
     expect(wrapper.find(".assistant-card__pin").exists()).toBe(false)
+
+    const reader = mount(AssistantCard, {
+      props: { item: { kind: "workflow", card: workflow }, index: 1, canEdit: false },
+    })
+    expect(reader.find(".sop-card__action--config").exists()).toBe(false)
+    expect(reader.text()).toContain("任务")
     expect(wrapper.find(".assistant-card__swatch").exists()).toBe(false)
   })
 

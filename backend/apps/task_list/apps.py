@@ -11,6 +11,7 @@ SWEEP_INTERVAL_SECONDS = 30
 
 class TaskListConfig(AppConfig):
     name = "backend.apps.task_list"
+    label = "task_list"
     verbose_name = "任务清单"
 
     def ready(self):

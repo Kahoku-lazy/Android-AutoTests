@@ -9,6 +9,12 @@ class Task(models.Model):
     title = models.CharField(max_length=500)
     # 任务类型快照：device_control=设备执行；case_authoring=家电测试用例编写。
     task_kind = models.CharField(max_length=32, default="device_control")
+    # 启动时冻结。workflow_id 不建外键，工作流删除后历史任务仍可读。
+    workflow_id = models.PositiveIntegerField(null=True, blank=True)
+    # 提交时冻结的发布版本。开跑和重跑读它，不读名片当前内容。
+    release_version = models.PositiveIntegerField(null=True, blank=True)
+    orchestration = models.CharField(max_length=16, default="", blank=True)
+    kind = models.CharField(max_length=32, default="", blank=True)
     # 任务发起人快照：用例入库按发起人隔离，不能回落到共享 Agent 的 owner。
     created_by = models.CharField(max_length=64, default="", blank=True)
     goal = models.TextField(default="", blank=True)

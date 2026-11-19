@@ -9,7 +9,7 @@ from pathlib import Path
 
 from utils.logs import backend_log
 
-DOCUMENT_EXTENSIONS = {".md", ".docx", ".pdf"}
+DOCUMENT_EXTENSIONS = {".md", ".markdown", ".docx", ".pdf", ".yaml", ".yml"}
 CONFIG_EXTENSIONS = {".yaml", ".yml"}
 TASK_ATTACHMENT_MAX_SIZE = 20 * 1024 * 1024
 MAX_CASE_DOCUMENTS = 5
@@ -136,8 +136,8 @@ def parse_document_bytes(filename: str, content: bytes) -> tuple[str, str]:
     base = _safe_name(filename)
     ext = _suffix(base)
     if ext not in DOCUMENT_EXTENSIONS:
-        raise AttachmentError("文档仅支持 Markdown、Word（.docx）与 PDF")
-    if ext == ".md":
+        raise AttachmentError("文档仅支持 Markdown、Word（.docx）、PDF 与 YAML")
+    if ext in {".md", ".markdown", ".yaml", ".yml"}:
         try:
             text = content.decode("utf-8")
         except UnicodeDecodeError as exc:

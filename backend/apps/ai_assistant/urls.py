@@ -10,18 +10,22 @@ from rest_framework.routers import DefaultRouter
 from .views_drf import (
     AgentReportView,
     AssistantAvatarView,
+    AssistantPublishView,
     AssistantThreadDeleteView,
     AssistantThreadDetailView,
     AssistantThreadLogFileView,
     AssistantThreadLogView,
     AssistantThreadView,
     AssistantViewSet,
+    EvalRunView,
+    LiveEvalDetailView,
     ModelConfigDiscoverView,
     ModelConfigViewSet,
     RoleViewSet,
     SopWorkflowDetailView,
     SopWorkflowView,
     ToolCatalogView,
+    WorkflowPublishView,
 )
 
 app_name = "ai"
@@ -33,8 +37,15 @@ router.register("assistants", AssistantViewSet, basename="ai_assistant_card")
 
 urlpatterns = [
     path("tool-catalog/", ToolCatalogView.as_view(), name="ai_tool_catalog"),
+    path("evals/run/", EvalRunView.as_view(), name="ai_eval_run"),
+    path("evals/runs/<int:run_id>/", LiveEvalDetailView.as_view(), name="ai_eval_detail"),
     path("agent-reports/<str:run>/<str:name>/", AgentReportView.as_view(), name="ai_agent_report"),
     path("sop-workflows/", SopWorkflowView.as_view(), name="ai_sop_workflows"),
+    path(
+        "sop-workflows/<int:workflow_id>/publish/",
+        WorkflowPublishView.as_view(),
+        name="ai_sop_workflow_publish",
+    ),
     path(
         "sop-workflows/<int:workflow_id>/",
         SopWorkflowDetailView.as_view(),
@@ -64,6 +75,11 @@ urlpatterns = [
         "assistants/threads/<str:thread_id>/delete/",
         AssistantThreadDeleteView.as_view(),
         name="ai_assistant_thread_delete",
+    ),
+    path(
+        "assistants/<str:assistant_id>/publish/",
+        AssistantPublishView.as_view(),
+        name="ai_assistant_publish",
     ),
     path(
         "assistants/<str:assistant_id>/avatar/",

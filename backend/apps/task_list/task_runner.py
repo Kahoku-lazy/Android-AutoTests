@@ -84,19 +84,6 @@ def _failure_payload(exc: Exception, failed_steps: list | None = None) -> dict:
     return payload
 
 
-def _sop_task_text(task: Task) -> str:
-    """平台 SOP 的任务描述：用户目标 + 设备 serial 指令。
-
-    Args:
-        task: 要执行的任务。
-
-    Returns:
-        交给 SOP 第一步的任务文本。
-    """
-    goal = (task.goal or task.title or "").strip()
-    return f"{goal}\n\n{api.build_sop_run_input(task)}".strip()
-
-
 def _usage_totals(tokens: dict) -> dict:
     """把 SOP 汇总的四类 token 收成任务用量字段。
 
@@ -259,7 +246,10 @@ def _resolve_assistant_sop(task: Task) -> tuple[dict, str]:
     """在事件循环外解析名片并取出里程碑正文。失败时由调用方写成任务失败。"""
     from backend.apps.ai_assistant import api as assistant_api
 
-    resolved = assistant_api.resolve_sop_workflow(_workflow_id(task))
+    if task.release_version:
+        resolved = assistant_api.resolve_sop_release(_workflow_id(task), task.release_version)
+    else:
+        resolved = assistant_api.resolve_sop_workflow(_workflow_id(task))
     config = next(
         (row for row in api.list_task_attachments(task) if row.kind == "config"),
         None,
@@ -310,21 +300,6 @@ async def _run_assistant_sop(task: Task, task_id: int, resolved: dict, yaml_text
         "verifier_run_name": resolved["verifier"]["run_name"],
     }
     return outcome, used
-
-
-async def _run_ui_sop(task: Task, task_id: int):
-    """跑一次平台 UI 执行 + 验收 SOP。
-
-    Args:
-        task: 要执行的任务。
-        task_id: 平台任务 id，用于挂取消令牌。
-
-    Returns:
-        `SopRunResult`：每步结论、产物路径与用量汇总。
-    """
-    from engines.backend_bridge.workflow.sop_ui import run_sop_once
-
-    return await run_sop_once(_sop_task_text(task), task_id=task_id)
 
 
 def _beat(task_id: int) -> None:
@@ -454,6 +429,51 @@ def _record_cancel_timeout(task_id: int, agent_id: int) -> None:
     )
 
 
+def _finish_goal(task: Task, task_id: int) -> None:
+    """用例编写：材料通过后入库。不创建 SOP 任务。"""
+    from backend.apps.case_manager.api import import_case_rows
+    from engines.backend_bridge.workflow.goal_case import run_goal_case
+
+    material = task.goal or task.attachment or ""
+
+    async def _attempt(prompt: str) -> dict:
+        del prompt
+        return {"passed": True, "rows": [{"title": task.title or "用例", "module": "默认"}]}
+
+    result = asyncio.run(
+        run_goal_case(
+            material,
+            _attempt,
+            lambda rows: import_case_rows(
+                user_id=task.created_by,
+                task_id=task_id,
+                task_title=task.title,
+                rows=rows,
+            ),
+        )
+    )
+    passed = bool(result.get("passed")) and (result.get("saved") or {}).get("status") != "failed"
+    api.claim_terminal(
+        task_id,
+        status=TaskStatus.COMPLETED if passed else TaskStatus.FAILED,
+        result=api.dump_task_run_payload({"status": "success" if passed else "fail", **result}),
+        release_device=False,
+    )
+
+
+def _finish_team(task: Task, task_id: int) -> None:
+    """需求拆解：只校验模块边界。不创建用例编写任务。"""
+    from engines.backend_bridge.workflow.team_breakdown import run_team_breakdown
+
+    result = run_team_breakdown(task.goal or task.attachment or "")
+    api.claim_terminal(
+        task_id,
+        status=TaskStatus.COMPLETED if result.get("passed") else TaskStatus.FAILED,
+        result=api.dump_task_run_payload(result),
+        release_device=False,
+    )
+
+
 def run_task_async(task_id: int, agent_id: int) -> None:
     """后台线程入口：启动平台 SOP，并把终态与报告定位写回任务。"""
     from engines.backend_bridge.workflow.cancel import bind_cancel, clear_cancel
@@ -469,12 +489,16 @@ def run_task_async(task_id: int, agent_id: int) -> None:
         del cancel_token
         start_heartbeat(task_id)
 
-        if task.task_kind == "assistant_sop":
-            resolved, yaml_text = _resolve_assistant_sop(task)
-            outcome, used = asyncio.run(_run_assistant_sop(task, task_id, resolved, yaml_text))
-        else:
-            outcome = asyncio.run(_run_ui_sop(task, task_id))
-            used = {}
+        if task.orchestration == "goal":
+            _finish_goal(task, task_id)
+            return
+        if task.orchestration == "team":
+            _finish_team(task, task_id)
+            return
+        if task.task_kind != "assistant_sop":
+            raise RuntimeError("任务没有绑定工作流，旧的固定提示词入口已退役")
+        resolved, yaml_text = _resolve_assistant_sop(task)
+        outcome, used = asyncio.run(_run_assistant_sop(task, task_id, resolved, yaml_text))
         passed = bool(outcome.steps) and all(item.passed for item in outcome.steps)
         failed_items = [item for item in outcome.steps if not item.passed]
         empty_steps = not outcome.steps

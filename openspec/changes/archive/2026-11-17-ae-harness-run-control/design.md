@@ -44,7 +44,7 @@
 started = False
 async for chunk in stream:
     started = True
-    yield chunk          # 一旦产出过，后续失败不再重试
+    yield chunk  # 一旦产出过，后续失败不再重试
 ```
 
 理由：已显示的文本无法撤回，重放会让用户看到重复内容。这与 `engines/agents` 的「流式不重放」一致。

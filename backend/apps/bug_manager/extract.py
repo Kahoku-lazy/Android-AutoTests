@@ -57,8 +57,21 @@ def build_bug_drafts(task: Any) -> list[BugDraft]:
         TaskStatus.CANCELLED,
     }:
         return []
-    if kind == TaskKind.CASE_AUTHORING:
+    frozen = str(getattr(task, "kind", "") or "")
+    if frozen == "requirement_breakdown":
+        return _requirement_drafts(task, status, payload)
+    if frozen == "case_authoring" or kind == TaskKind.CASE_AUTHORING:
         return _case_drafts(task, status, payload)
+    if frozen == "ui_automation":
+        return (
+            [_workflow_draft(task, status, payload)]
+            if status
+            in {
+                TaskStatus.FAILED,
+                TaskStatus.INTERRUPTED,
+            }
+            else []
+        )
     if kind == TaskKind.ASSISTANT_SOP and _failed_steps(payload):
         return [_workflow_draft(task, status, payload)]
     return _ui_drafts(task, status, payload)
@@ -174,6 +187,25 @@ def _ui_drafts(task: Any, status: str, payload: dict) -> list[BugDraft]:
         )
     )
     return drafts
+
+
+def _requirement_drafts(task: Any, status: str, payload: dict) -> list[BugDraft]:
+    """需求拆解只在没有合法模块清单或中断时登记一张。"""
+    if payload.get("passed") or payload.get("modules"):
+        return []
+    if status not in {TaskStatus.FAILED, TaskStatus.INTERRUPTED}:
+        return []
+    return [
+        _draft(
+            task,
+            BugCategory.REQUIREMENT_BREAKDOWN,
+            "task",
+            f"需求拆解未形成模块：{_task_title(task)}",
+            "\n".join(
+                [*_common_lines(task), f"原因：{payload.get('reason') or '未形成合法模块清单'}"]
+            ),
+        )
+    ]
 
 
 def _case_drafts(task: Any, status: str, payload: dict) -> list[BugDraft]:

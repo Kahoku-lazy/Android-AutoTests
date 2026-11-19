@@ -153,6 +153,7 @@ def _fetch_sop_candidates() -> list[dict]:
             "device_serial",
             "device_label",
             "case_identity",
+            "kind",
             "result",
             "started_at",
             "finished_at",
@@ -168,6 +169,7 @@ def _fetch_sop_candidates() -> list[dict]:
             "device_serial": row.device_serial or "",
             "device_label": row.device_label or "",
             "case_identity": row.case_identity,
+            "kind": row.kind or "",
             "result": row.result or "",
             "started_at": row.started_at,
             "finished_at": row.finished_at,
@@ -231,9 +233,14 @@ def _sop_item(row: dict) -> dict | None:
         "report_name": name,
         "task_id": row.get("task_id"),
         "task_title": row.get("title") or "",
-        "case_label": case_identity_label(row.get("case_identity")),
-        "device": (row.get("device_label") or "").strip()
-        or (row.get("device_serial") or "").strip(),
+        "case_label": ""
+        if row.get("kind") == "requirement_breakdown"
+        else case_identity_label(row.get("case_identity")),
+        "device": ""
+        if row.get("kind") in {"case_authoring", "requirement_breakdown"}
+        else (row.get("device_label") or "").strip() or (row.get("device_serial") or "").strip(),
+        "workflow_kind": row.get("kind") or "",
+        "module_count": _module_count(row.get("result")),
         "status": status,
         "started_at": _iso(started or row.get("created_at")),
         "finished_at": _iso(finished),
@@ -268,6 +275,20 @@ def _agent_item(row: dict, assistant_names: dict[str, str]) -> dict | None:
         "created_at": _iso(row.get("created_at")),
         "_moment": row.get("created_at"),
     }
+
+
+def _module_count(result: object) -> int:
+    """从拆解结果读取模块数量。没有时返回 0。"""
+    try:
+        payload = json.loads(result or "{}")
+    except (TypeError, ValueError):
+        return 0
+    if not isinstance(payload, dict):
+        return 0
+    try:
+        return int(payload.get("module_count") or 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _report_locator(result: object) -> tuple[str, str]:

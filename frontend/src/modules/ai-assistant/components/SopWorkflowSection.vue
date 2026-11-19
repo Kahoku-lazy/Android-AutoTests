@@ -14,6 +14,7 @@ import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
 import { formatApiError } from "@/shared/api-client"
+import { useAuthUser } from "@/shared/composables/useAuthUser"
 import { listSopWorkflows } from "../api/assistants"
 import { workflowCards } from "../helpers/sop-card"
 import { sopSubmittedMessage } from "../helpers/sop-form"
@@ -24,6 +25,7 @@ import SopWorkflowEditor from "./SopWorkflowEditor.vue"
 import type { AssistantCard, SopWorkflow, SopWorkflowCard } from "../types"
 
 const router = useRouter()
+const { isAssistantAuthor } = useAuthUser()
 
 const props = defineProps<{ cards: AssistantCard[] }>()
 
@@ -109,7 +111,7 @@ onMounted(load)
   <section class="sop-section" aria-label="工作流">
     <SectionBar title="工作流" :count="`共 ${workflows.length} 条`">
       <template #action>
-        <DoodleBtn tone="yellow" @click="openCreate">新建工作流</DoodleBtn>
+        <DoodleBtn v-if="isAssistantAuthor" tone="yellow" @click="openCreate">新建工作流</DoodleBtn>
       </template>
     </SectionBar>
 
@@ -127,6 +129,7 @@ onMounted(load)
           v-for="(tile, index) in tiles"
           :key="tile.id"
           :item="{ kind: 'workflow', card: tile }"
+          :can-edit="isAssistantAuthor"
           :index="index"
           @edit="openEdit(tile)"
           @activate="openRun(tile)"

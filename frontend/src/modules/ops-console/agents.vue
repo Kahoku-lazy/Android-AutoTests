@@ -8,6 +8,15 @@ import DoodleBtn from "@/shared/components/DoodleBtn.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
+import OpsPromptPreview from "./components/OpsPromptPreview.vue"
+import OpsAgentKindTags from "./components/OpsAgentKindTags.vue"
+import {
+  draftFromAgent,
+  draftProblem,
+  draftToInput,
+  emptyDraft,
+  type AgentFormDraft,
+} from "./helpers/agent-form"
 import { formatApiError } from "@/shared/api-client"
 import {
   createOpsAgent,
@@ -20,13 +29,14 @@ import {
   OPS_AGENT_COLUMNS,
   OPS_AGENT_DELETE_HINT,
   OPS_AGENT_EMPTY,
+  OPS_AGENT_KIND_OPTIONS,
   OPS_AGENT_PAGE_SIZE,
   OPS_AGENT_PAGE_SUBTITLE,
   OPS_AGENT_PAGE_TITLE,
   OPS_PAGE_ICON,
   OPS_PAGE_ICON_GRADIENT,
 } from "./constants"
-import type { OpsAgent, OpsAgentInput, OpsModelConfig } from "./types"
+import type { OpsAgent, OpsModelConfig } from "./types"
 
 const agents = ref<OpsAgent[]>([])
 const loading = ref(false)
@@ -36,8 +46,18 @@ const saving = ref(false)
 const editorOpen = ref(false)
 const editingId = ref<string | null>(null)
 const configs = ref<OpsModelConfig[]>([])
-const form = ref<OpsAgentInput>({ name: "", model_config_id: null, system_prompt: "" })
+const form = ref<AgentFormDraft>({ name: "", model_config_id: null, system_prompt: "", kind: "" })
 const promptFile = ref<HTMLInputElement>()
+
+// ── 系统提示词全文预览：列表只放一行摘要，全文在弹窗里读 ──
+const previewOpen = ref(false)
+const previewAgent = ref<OpsAgent | null>(null)
+
+/** 打开全文预览：先落定是哪一条，再开弹窗 */
+function openPreview(agent: OpsAgent): void {
+  previewAgent.value = agent
+  previewOpen.value = true
+}
 
 const modelOptions = computed(() =>
   configs.value.map((item) => ({
@@ -102,32 +122,24 @@ function readPromptFile(event: Event): void {
 
 function openCreate(): void {
   editingId.value = null
-  form.value = { name: "", model_config_id: null, system_prompt: "" }
+  form.value = emptyDraft()
   editorOpen.value = true
 }
 
 function openEdit(agent: OpsAgent): void {
   editingId.value = agent.role_id
-  form.value = {
-    name: agent.name || "",
-    model_config_id: agent.model_config_id,
-    system_prompt: agent.system_prompt || "",
-  }
+  form.value = draftFromAgent(agent)
   editorOpen.value = true
 }
 
 async function save(): Promise<void> {
-  const name = form.value.name.trim()
-  if (!name) {
-    ElMessage.warning("请填写名称")
-    return
-  }
-  if (form.value.model_config_id == null) {
-    ElMessage.warning("请选择模型配置")
+  const payload = draftToInput(form.value)
+  const problem = draftProblem(payload)
+  if (problem) {
+    ElMessage.warning(problem)
     return
   }
   saving.value = true
-  const payload = { ...form.value, name }
   try {
     const { data } =
       editingId.value == null
@@ -213,7 +225,22 @@ onMounted(load)
           <template #cell-model_name="{ record }">
             {{ record.api_key_env }} / {{ record.model_name }}
           </template>
-          <template #cell-system_prompt="{ record }">{{ record.system_prompt || "—" }}</template>
+          <template #cell-kinds="{ record }">
+            <OpsAgentKindTags :kinds="record.kinds" />
+          </template>
+          <template #cell-system_prompt="{ record }">
+            <button
+              v-if="record.system_prompt"
+              class="ops-prompt"
+              type="button"
+              :aria-label="`查看「${record.name}」的系统提示词全文`"
+              @click.stop="openPreview(record)"
+            >
+              <span class="ops-prompt__text">{{ record.system_prompt }}</span>
+              <span class="ops-prompt__more">查看</span>
+            </button>
+            <span v-else class="ops-prompt__none">—</span>
+          </template>
           <template #cell-actions="{ record }">
             <DoodleBtn tone="paper" @click.stop="openEdit(record)">编辑</DoodleBtn>
             <DoodleBtn tone="danger" @click.stop="remove(record)">删除</DoodleBtn>
@@ -234,6 +261,18 @@ onMounted(load)
         <label class="ops-field">
           名称
           <el-input v-model="form.name" maxlength="200" placeholder="给智能体起个名字" />
+        </label>
+        <label class="ops-field">
+          类型
+          <el-radio-group v-model="form.kind" class="ops-kind-picker">
+            <el-radio-button
+              v-for="item in OPS_AGENT_KIND_OPTIONS"
+              :key="item.value"
+              :value="item.value"
+            >
+              {{ item.label }}
+            </el-radio-button>
+          </el-radio-group>
         </label>
         <label class="ops-field">
           模型配置
@@ -273,6 +312,12 @@ onMounted(load)
         </div>
       </div>
     </el-drawer>
+
+    <OpsPromptPreview
+      v-model="previewOpen"
+      :name="previewAgent?.name || ''"
+      :prompt="previewAgent?.system_prompt || ''"
+    />
   </div>
 </template>
 
@@ -312,5 +357,52 @@ onMounted(load)
   display: flex;
   justify-content: flex-end;
   gap: var(--app-space-sm);
+}
+
+/* 系统提示词单元格：整格是一个按钮（一行摘要 + 「查看」），
+   摘要用 width:0 + flex:1 让文本宽度只受列宽约束，超长才出省略号。 */
+.ops-prompt {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ops-prompt__text {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--app-text-primary);
+}
+
+.ops-prompt__more {
+  flex: 0 0 auto;
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ops-prompt:hover .ops-prompt__more {
+  color: var(--app-text-primary);
+}
+
+.ops-prompt:focus-visible {
+  outline: 2px solid var(--c-dashboard);
+  outline-offset: 2px;
+}
+
+.ops-prompt__none {
+  color: var(--app-text-secondary);
 }
 </style>

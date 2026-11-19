@@ -16,6 +16,10 @@ AVATAR_MAX_EDGE = 128
 AVATAR_MAX_CHARS = 12 * 1024
 
 
+class AssistantRevisionConflict(Exception):
+    """保存时版本戳与当前记录不一致。"""
+
+
 class AssistantRoleMissingError(Exception):
     """引用的运营 Agent 配置不存在。"""
 
@@ -143,6 +147,12 @@ def update_assistant(assistant: AIAssistant, data: dict) -> AIAssistant:
     if "avatar" in data:
         raw = data["avatar"]
         assistant.avatar = "" if raw in (None, b"", "") else compress_avatar(raw)
+    if "revision" in data and int(data["revision"]) != assistant.revision:
+        raise AssistantRevisionConflict("内容已变化，请先刷新")
+    runtime_changed = "role_id" in data or "tools" in data
+    if runtime_changed and assistant.release_state == "published":
+        assistant.release_state = "draft"
+    assistant.revision += 1
     assistant.save()
     return assistant
 

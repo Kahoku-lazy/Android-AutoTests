@@ -8,6 +8,7 @@
 def _run_startup_recovery(self) -> None:
     ...
     from .models import AITask
+
     recovered = AITask.objects.filter(status=TaskStatus.RUNNING).update(
         status=TaskStatus.FAILED,
         result="执行中断：服务重启导致任务线程终止",

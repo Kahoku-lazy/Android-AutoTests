@@ -1,5 +1,5 @@
 /** 运营后台的常量与文案（用户管理 / 智能体 / 模型配置；唯一真相源）。 */
-import type { OpsIdentity, OpsModelKind, OpsStatusFilter } from "./types"
+import type { OpsAgentKind, OpsIdentity, OpsModelKind, OpsStatusFilter } from "./types"
 
 export const OPS_PAGE_TITLE = "用户管理"
 export const OPS_PAGE_SUBTITLE = "运营后台：停用 / 启用账号，重置一次性密码；可对本页勾选批量停用"
@@ -96,10 +96,28 @@ export const OPS_AGENT_EMPTY = "还没有 Agent 配置"
 export const OPS_AGENT_DELETE_HINT = "删除后不可恢复。"
 /** Agent 配置列表每页固定 10 条（与用户管理同口径，翻页键常驻） */
 export const OPS_AGENT_PAGE_SIZE = 10
+/** Agent 配置的类型：执行者 / 验收者 / 规划者。与后端 `kinds` 取值一一对应。 */
+export const OPS_AGENT_KIND_OPTIONS: { value: OpsAgentKind; label: string }[] = [
+  { value: "executor", label: "执行者" },
+  { value: "verifier", label: "验收者" },
+  { value: "planner", label: "规划者" },
+]
+/** 类型 → 中文名；由 options 派生，避免两处维护同一份文案 */
+export const OPS_AGENT_KIND_LABELS = Object.fromEntries(
+  OPS_AGENT_KIND_OPTIONS.map((item) => [item.value, item.label]),
+) as Record<OpsAgentKind, string>
+/** 存量配置还没打类型时的占位文案 */
+export const OPS_AGENT_KIND_UNSET = "未分类"
 export const OPS_AGENT_COLUMNS = [
   { label: "名称", prop: "name", minWidth: 160 },
-  { label: "模型配置", prop: "model_name", minWidth: 220 },
-  { label: "系统提示词", prop: "system_prompt", minWidth: 220 },
+  { label: "类型", prop: "kinds", width: 130 },
+  { label: "模型配置", prop: "model_name", minWidth: 200 },
+  /**
+   * 系统提示词是一份几千字的 Markdown：单元格只放一行摘要 + 「查看」，全文交给弹窗。
+   * 关掉 EP 溢出 tooltip —— 它会把整段原文塞进一个按内容撑开的深色浮层，超出屏幕即被切掉。
+   * 用固定 width 而不是 minWidth：摘要是被裁切的一行，按内容量宽度只会越分越窄。
+   */
+  { label: "系统提示词", prop: "system_prompt", width: 340, showOverflowTooltip: false },
   { label: "操作", prop: "actions", width: 160, align: "right" },
 ]
 /** 模型配置列表每页固定 10 条（与用户管理 / Agent 配置同口径，翻页键常驻） */

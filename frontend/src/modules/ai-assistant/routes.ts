@@ -8,6 +8,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: "平台助手" },
   },
   {
+    path: "/ai-assistant/evals",
+    name: "ai-assistant-evals",
+    component: () => import("@/modules/ai-assistant/evals.vue"),
+    meta: { title: "评测" },
+  },
+  {
     path: "/ai-assistant/:assistantId/chat",
     name: "ai-assistant-chat",
     component: () => import("@/modules/ai-assistant/chat.vue"),

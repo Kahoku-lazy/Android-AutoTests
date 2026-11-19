@@ -80,6 +80,8 @@ export interface TaskRecord {
   report_name?: string
   workflow_id?: number | null
   workflow_name?: string
+  orchestration?: string
+  kind?: string
 }
 
 export interface TaskSubmitPayload {

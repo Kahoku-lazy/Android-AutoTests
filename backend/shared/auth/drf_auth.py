@@ -56,15 +56,15 @@ class JWTAuthentication(BaseAuthentication):
                 payload = verify_token(token, expected_type="access")
             except Exception as exc:
                 msg = str(exc) if str(exc) else "Invalid or expired token"
-                raise exceptions.AuthenticationFailed(msg)
+                raise exceptions.AuthenticationFailed(msg) from exc
 
             user_id = payload["sub"]
 
         User = get_user_model()
         try:
             user = User.objects.get(pk=int(user_id))
-        except (User.DoesNotExist, ValueError, TypeError):
-            raise exceptions.AuthenticationFailed("用户不存在或已删除")
+        except (User.DoesNotExist, ValueError, TypeError) as exc:
+            raise exceptions.AuthenticationFailed("用户不存在或已删除") from exc
         return (user, token)
 
     def authenticate_header(self, request):

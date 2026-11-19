@@ -8,6 +8,7 @@ export interface AssistantCard {
   role_id: string
   role_name: string
   tools: ToolSelection[]
+  release_state?: string
 }
 
 export interface ToolSelection {
@@ -24,21 +25,36 @@ export interface ToolCatalogDomain {
   tools: { name: string; description: string; read_only: boolean }[]
 }
 
+export interface WorkflowMember {
+  assistant_id: string
+  description: string
+}
+
 export interface SopWorkflow {
   id: number
   name: string
+  orchestration?: "sop" | "goal" | "team"
+  kind?: "ui_automation" | "case_authoring" | "requirement_breakdown"
   executor_assistant_id: string
   verifier_assistant_id: string
+  leader_assistant_id?: string
+  members?: WorkflowMember[]
+  release_state?: string
 }
 
 /** 工作流卡片的展示字段：名称、两侧名片显示名与笔色，由 helpers/sop-card.ts 现算。 */
 export interface SopWorkflowCard {
   id: number
   name: string
+  orchestration: "sop" | "goal" | "team"
+  kind: "ui_automation" | "case_authoring" | "requirement_breakdown"
   executor_name: string
   verifier_name: string
+  leader_name: string
+  member_count: number
   /** 笔色键：取执行助手的 marker，执行助手已不存在时回落 teal */
   marker: string
+  release_state?: string
 }
 
 /** 卡片网格里的一张颜料片：助手名片与 SOP 工作流共用同一个组件的两种形体。 */

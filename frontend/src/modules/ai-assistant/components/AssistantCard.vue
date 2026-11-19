@@ -14,7 +14,10 @@ import { avatarUrl } from "../api/assistants"
 import { markerVars } from "../helpers/marker"
 import type { MarkerTile } from "../types"
 
-const props = defineProps<{ item: MarkerTile; index: number }>()
+const props = withDefaults(
+  defineProps<{ item: MarkerTile; index: number; canEdit?: boolean }>(),
+  { canEdit: true },
+)
 const emit = defineEmits<{ edit: []; activate: [] }>()
 
 const src = ref("")
@@ -30,13 +33,17 @@ const detail = computed(() =>
 )
 
 /** 便签卡正文分三行：名称、执行者、验收者；助手卡片用不到这两行。 */
-const executorLine = computed(() =>
-  props.item.kind === "workflow" ? `执行者：${props.item.card.executor_name}` : "",
-)
+const executorLine = computed(() => {
+  if (props.item.kind !== "workflow") return ""
+  if (props.item.card.orchestration === "team") return `队长：${props.item.card.leader_name}`
+  return `执行者：${props.item.card.executor_name}`
+})
 
-const verifierLine = computed(() =>
-  props.item.kind === "workflow" ? `验收者：${props.item.card.verifier_name}` : "",
-)
+const verifierLine = computed(() => {
+  if (props.item.kind !== "workflow") return ""
+  if (props.item.card.orchestration === "team") return `成员：${props.item.card.member_count} 名`
+  return `验收者：${props.item.card.verifier_name}`
+})
 
 /** 第二枚动作：助手是进对话，工作流是开任务弹窗。 */
 const secondaryLabel = computed(() => (props.item.kind === "assistant" ? "对话" : "任务"))
@@ -61,10 +68,14 @@ onMounted(async () => {
     <span class="assistant-card__pin" aria-hidden="true" />
     <img v-if="avatar" class="assistant-card__avatar" :src="avatar" alt="" />
     <span v-else class="assistant-card__swatch" aria-hidden="true" />
-    <h3 class="assistant-card__name" :title="title">{{ title }}</h3>
+    <h3 class="assistant-card__name" :title="title">
+      {{ title }}
+      <span v-if="item.kind === 'assistant' && item.card.release_state === 'draft'">草稿</span>
+    </h3>
     <p class="assistant-card__role" :title="detail">{{ detail }}</p>
     <div class="assistant-card__actions">
       <button
+        v-if="canEdit !== false"
         type="button"
         class="assistant-card__action assistant-card__action--config"
         @click="emit('edit')"
@@ -83,11 +94,19 @@ onMounted(async () => {
 
   <article v-else class="sop-card" :style="markerVars(item.card.marker)" :data-tilt="index % 3">
     <span class="sop-card__tape" aria-hidden="true" />
-    <h3 class="sop-card__name" :title="title">{{ title }}</h3>
+    <h3 class="sop-card__name" :title="title">
+      {{ title }}
+      <span v-if="item.card.release_state === 'draft'">草稿</span>
+    </h3>
     <p class="sop-card__line" :title="executorLine">{{ executorLine }}</p>
     <p class="sop-card__line" :title="verifierLine">{{ verifierLine }}</p>
     <div class="sop-card__trail">
-      <button type="button" class="sop-card__action sop-card__action--config" @click="emit('edit')">
+      <button
+        v-if="canEdit !== false"
+        type="button"
+        class="sop-card__action sop-card__action--config"
+        @click="emit('edit')"
+      >
         配置
       </button>
       <button

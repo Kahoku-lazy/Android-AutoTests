@@ -2,6 +2,9 @@
 
 from rest_framework import serializers
 
+# 类型取值：执行者 / 验收者 / 规划者。与 AIRoleKind.KIND_CHOICES 同源，改一处必须改两处。
+ROLE_KIND_VALUES = ("executor", "verifier", "planner")
+
 
 def _valid_http_url(value, schemes: set[str] | None = None) -> str:
     """地址必须是带主机名的链接。实时语音额外允许 ws 与 wss。"""
@@ -55,17 +58,33 @@ class ModelConfigSerializer(serializers.Serializer):
 
 
 class RoleInputSerializer(serializers.Serializer):
-    """Agent 配置入参。不查模型配置是否存在。"""
+    """Agent 配置入参。不查模型配置是否存在。
+
+    `kinds`：新建 MUST 恰好 1 项（在视图里校验，因为 PATCH 缺省表示不改动）；
+    更新时显式提交 [] 表示置为未分类。一份配置 MUST NOT 同时有多个类型。
+    """
 
     name = serializers.CharField(required=False, max_length=200)
     model_config_id = serializers.IntegerField(required=False, min_value=1)
     system_prompt = serializers.CharField(required=False, allow_blank=True)
+    kinds = serializers.ListField(
+        child=serializers.ChoiceField(choices=ROLE_KIND_VALUES),
+        required=False,
+    )
 
     def validate_name(self, value):
         name = (value or "").strip()
         if not name:
             raise serializers.ValidationError("名称不能为空")
         return name
+
+    def validate_kinds(self, value):
+        kinds = list(dict.fromkeys(value))
+        if len(kinds) != len(value):
+            raise serializers.ValidationError("类型不能重复")
+        if len(kinds) > 1:
+            raise serializers.ValidationError("一份配置只能有一个类型")
+        return kinds
 
 
 class AssistantInputSerializer(serializers.Serializer):
@@ -74,6 +93,7 @@ class AssistantInputSerializer(serializers.Serializer):
     display_name = serializers.CharField(required=False, max_length=200)
     role_id = serializers.CharField(required=False, max_length=11)
     tools = serializers.ListField(required=False, child=serializers.DictField())
+    revision = serializers.IntegerField(required=False)
 
     def validate_display_name(self, value):
         name = (value or "").strip()
@@ -92,6 +112,8 @@ class AssistantOutputSerializer(serializers.Serializer):
     role_id = serializers.CharField()
     role_name = serializers.SerializerMethodField()
     tools = serializers.JSONField()
+    release_state = serializers.CharField()
+    revision = serializers.IntegerField()
     created_at = serializers.DateTimeField()
 
     def get_has_avatar(self, obj) -> bool:
@@ -103,11 +125,15 @@ class AssistantOutputSerializer(serializers.Serializer):
 
 
 class SopWorkflowInputSerializer(serializers.Serializer):
-    """新建 SOP 工作流入参。只收名称与两个名片编号。"""
+    """新建或编辑工作流入参。编排与种类只在新建时生效。"""
 
     name = serializers.CharField(max_length=200)
-    executor_assistant_id = serializers.CharField(max_length=12)
-    verifier_assistant_id = serializers.CharField(max_length=12)
+    orchestration = serializers.CharField(max_length=16, required=False, default="sop")
+    kind = serializers.CharField(max_length=32, required=False, default="ui_automation")
+    executor_assistant_id = serializers.CharField(max_length=12, required=False, allow_blank=True)
+    verifier_assistant_id = serializers.CharField(max_length=12, required=False, allow_blank=True)
+    leader_assistant_id = serializers.CharField(max_length=12, required=False, allow_blank=True)
+    members = serializers.ListField(child=serializers.DictField(), required=False, default=list)
 
     def validate_name(self, value: str) -> str:
         name = (value or "").strip()
@@ -121,8 +147,14 @@ class SopWorkflowOutputSerializer(serializers.Serializer):
 
     id = serializers.IntegerField()
     name = serializers.CharField()
+    orchestration = serializers.CharField()
+    kind = serializers.CharField()
     executor_assistant_id = serializers.CharField()
     verifier_assistant_id = serializers.CharField()
+    leader_assistant_id = serializers.CharField()
+    members = serializers.JSONField()
+    release_state = serializers.CharField()
+    revision = serializers.IntegerField()
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
 
@@ -139,5 +171,10 @@ class RoleOutputSerializer(serializers.Serializer):
     base_url = serializers.CharField(source="model_config.base_url", default="")
     api_protocol = serializers.CharField(source="model_config.api_protocol", default="")
     system_prompt = serializers.CharField()
+    kinds = serializers.SerializerMethodField()
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
+
+    def get_kinds(self, obj) -> list[str]:
+        """类型标签数组；未分类时为空数组。prefetch_related 生效时不额外查库。"""
+        return [item.kind for item in obj.kinds.all()]

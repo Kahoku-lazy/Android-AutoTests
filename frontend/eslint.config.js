@@ -116,6 +116,14 @@ export default [
     },
   },
 
+  // ── 业务页面禁止 console.log；warn / error 仍用于失败留痕 ──
+  {
+    files: ["src/modules/**", "src/views/**"],
+    rules: {
+      "no-console": ["error", { allow: ["warn", "error"] }],
+    },
+  },
+
   // ── 唯一出口 SSOT 豁免：仅这两个文件允许 import axios ──
   {
     files: ["src/shared/api-client.ts", "src/shared/api-auth-interceptors.ts"],

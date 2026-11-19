@@ -437,6 +437,58 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/ai/evals/run/:
+    post:
+      operationId: ai_evals_run_create
+      description: POST /api/ai/evals/run/ — 作者选择一条助手或工作流后自测。
+      tags:
+      - ai
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/ai/evals/runs/{run_id}/:
+    get:
+      operationId: ai_evals_runs_retrieve
+      description: GET /api/ai/evals/runs/{run_id}/ — 一次评测的进度与逐条过程。
+      parameters:
+      - in: path
+        name: run_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ai
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/ai/model-configs/:
     get:
       operationId: ai_model_configs_list

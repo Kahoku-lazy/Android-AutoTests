@@ -27,6 +27,12 @@ from backend.apps.accounts.api import (
     set_user_active,
     set_user_password,
 )
+from backend.apps.ai_assistant.api import (
+    grant_assistant_author,
+    grant_model_use,
+    revoke_assistant_author,
+    revoke_model_use,
+)
 from backend.shared.users import OPERATOR_GROUP, is_superuser
 from utils.logs import backend_log
 
@@ -94,6 +100,53 @@ def list_users(
         "page": safe_page,
         "page_size": safe_size,
     }
+
+
+def set_model_use(actor_id: int, target_id: int, model_config_id: int, enabled: bool) -> dict:
+    """把一个模型加入或移出某人的主动使用名单。只有超级管理员可以。"""
+    if not is_superuser(actor_id):
+        raise PermissionError("只有超级管理员可以修改模型名单")
+    user = get_user_model().objects.filter(pk=target_id).first()
+    if user is None:
+        raise LookupError("账号不存在")
+    if enabled:
+        grant_model_use(user.id, int(model_config_id))
+    else:
+        revoke_model_use(user.id, int(model_config_id))
+    return {
+        "user_id": user.id,
+        "model_config_id": int(model_config_id),
+        "enabled": bool(enabled),
+    }
+
+
+def set_assistant_author(actor_id: int, target_id: int, enabled: bool) -> dict:
+    """授予或收回助手作者。只有超级管理员可以，作者不能转授。
+
+    Args:
+        actor_id: 操作者主键。
+        target_id: 目标账号主键。
+        enabled: True 授予，False 收回。
+
+    Returns:
+        目标账号主键与授予后的作者标记。
+
+    Raises:
+        PermissionError: 操作者不是超级管理员，或目标就是操作者本人。
+        LookupError: 目标账号不存在。
+    """
+    if not is_superuser(actor_id):
+        raise PermissionError("只有超级管理员可以授予助手作者")
+    if int(actor_id) == int(target_id):
+        raise PermissionError("不能授予自己")
+    user = get_user_model().objects.filter(pk=target_id).first()
+    if user is None:
+        raise LookupError("账号不存在")
+    if enabled:
+        grant_assistant_author(user.id)
+    else:
+        revoke_assistant_author(user.id)
+    return {"user_id": user.id, "is_assistant_author": bool(enabled)}
 
 
 def set_active(actor_id: int, target_id: int, active: bool) -> dict:

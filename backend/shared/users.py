@@ -44,6 +44,29 @@ def is_superuser(user_id) -> bool:
 OPERATOR_GROUP = "运营"
 
 
+def is_assistant_author(user_id) -> bool:
+    """按 ``user_id`` 判定是否为助手作者（超级管理员天然算作者）。
+
+    作者资格来自单独授权，不属于「运营」用户组。空值、非数字或查无此人算 False。
+
+    Args:
+        user_id: 用户主键。
+
+    Returns:
+        是否可以创建、修改、删除助手与工作流。
+    """
+    if is_superuser(user_id):
+        return True
+    if not user_id:
+        return False
+    try:
+        from backend.apps.ai_assistant.api import has_assistant_author_grant
+
+        return has_assistant_author_grant(int(str(user_id)))
+    except (ValueError, TypeError):
+        return False
+
+
 def is_operator(user_id) -> bool:
     """按 ``user_id`` 判定是否为运营（超级管理员天然算运营）。
 

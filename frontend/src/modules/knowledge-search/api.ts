@@ -108,6 +108,6 @@ export async function fetchEvalModelConfigs(): Promise<{
   data?: { configs?: EvalModelConfig[] }
   message?: string
 }> {
-  const { data } = await djangoClient.get("/ai/model-configs/")
+  const { data } = await djangoClient.get("/ai/model-configs/", { params: { selectable: 1 } })
   return data
 }

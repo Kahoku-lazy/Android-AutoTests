@@ -41,6 +41,7 @@ export interface MeUser {
   username: string
   is_superuser: boolean
   is_operator: boolean
+  is_assistant_author?: boolean
 }
 
 export async function me(): Promise<MeUser> {

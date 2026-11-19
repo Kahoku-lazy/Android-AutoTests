@@ -79,6 +79,54 @@ export async function avatarUrl(assistantId: string): Promise<string> {
   return raw ? `data:image/jpeg;base64,${raw}` : ""
 }
 
+export interface EvalFailure {
+  sample: string
+  ruler: string
+  text: string
+}
+
+export interface EvalStep {
+  role: string
+  text: string
+  tool: string
+  input: Record<string, unknown>
+}
+
+export interface EvalSample {
+  sample: string
+  title: string
+  passed: boolean
+  failures: EvalFailure[]
+  steps: EvalStep[]
+}
+
+export interface EvalRunDetail {
+  id: number
+  status: string
+  phase: string
+  progress_done: number
+  progress_total: number
+  error: string
+  samples: EvalSample[]
+}
+
+export async function runEval(
+  kind: "assistant" | "workflow",
+  targetId: string,
+): Promise<{ id: number }> {
+  const { data } = await djangoClient.post<DjangoResponse<{ id: number }>>("/ai/evals/run/", {
+    kind,
+    target_id: targetId,
+  })
+  return data.data || { id: 0 }
+}
+
+export async function fetchEvalRun(id: number): Promise<EvalRunDetail> {
+  const { data } = await djangoClient.get<DjangoResponse<EvalRunDetail>>(`/ai/evals/runs/${id}/`)
+  if (!data.data) throw data
+  return data.data
+}
+
 export async function listSopWorkflows(): Promise<SopWorkflow[]> {
   const { data } = await djangoClient.get<DjangoResponse<SopWorkflow[]>>("/ai/sop-workflows/")
   return data.data || []
@@ -86,8 +134,12 @@ export async function listSopWorkflows(): Promise<SopWorkflow[]> {
 
 export async function createSopWorkflow(payload: {
   name: string
-  executor_assistant_id: string
-  verifier_assistant_id: string
+  orchestration: string
+  kind: string
+  executor_assistant_id?: string
+  verifier_assistant_id?: string
+  leader_assistant_id?: string
+  members?: { assistant_id: string; description: string }[]
 }): Promise<SopWorkflow> {
   const { data } = await djangoClient.post<DjangoResponse<SopWorkflow>>(
     "/ai/sop-workflows/",
@@ -100,7 +152,13 @@ export async function createSopWorkflow(payload: {
 /** 编辑工作流：三字段整幅回写，编号与创建时间不变。 */
 export async function updateSopWorkflow(
   workflowId: number,
-  payload: { name: string; executor_assistant_id: string; verifier_assistant_id: string },
+  payload: {
+    name: string
+    executor_assistant_id?: string
+    verifier_assistant_id?: string
+    leader_assistant_id?: string
+    members?: { assistant_id: string; description: string }[]
+  },
 ): Promise<SopWorkflow> {
   const { data } = await djangoClient.patch<DjangoResponse<SopWorkflow>>(
     `/ai/sop-workflows/${workflowId}/`,
@@ -130,6 +188,7 @@ export async function runSopWorkflow(payload: {
   yaml?: File | null
   caseIds?: string[]
   serial?: string
+  material?: File | null
 }): Promise<{ id: number; status: string }> {
   const body = new FormData()
   body.set("title", payload.title)
@@ -138,6 +197,7 @@ export async function runSopWorkflow(payload: {
   if (payload.yaml) body.set("config", payload.yaml)
   if (payload.caseIds?.length) body.set("case_ids", JSON.stringify(payload.caseIds))
   if (payload.serial) body.set("device_serial", payload.serial)
+  if (payload.material) body.set("material", payload.material)
   const { data } = await djangoClient.post<DjangoResponse<{ id: number; status: string }>>(
     "/tasks/submit/",
     body,

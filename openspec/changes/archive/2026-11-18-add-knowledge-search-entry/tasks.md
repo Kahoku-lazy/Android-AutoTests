@@ -27,5 +27,5 @@
 
 - [x] 5.1 补齐 `tests/knowledge_search/{unit,integration,api}` 对照 spec 全场景（改路径后旧文件不再命中、增量跳过、种子导入、权限 403、信封与尾斜杠、嵌入入账逐调用一条）；验证 `pytest -c tests/pytest.ini -m "unit or integration"` 相关路径全绿 + api 套件通过
 - [x] 5.2 PRD 条目补写：`dev_docs/ARCH_PRD/PRD-平台总需求.md` 增「数据组知识库只读检索入口」条目（编号沿用文档体例，注明 2026-11-18 需求方确认）；验证人工审阅与 proposal 关联文档编号一致
-- [ ] 5.3 全链路人工验收：新增模块→预建索引→多选提问看原文→改路径→删除模块→账本核对 Embedding 行与 token 数；验证 `python run.py check` 退出码 0 + `python utils/gen_arch_stats.py --check-boundaries` 通过
+- [x] 5.3 全链路人工验收：新增模块→预建索引→多选提问看原文→改路径→删除模块→账本核对 Embedding 行与 token 数；验证 `python run.py check` 退出码 0 + `python utils/gen_arch_stats.py --check-boundaries` 通过
 - [x] 5.4 按 Conventional Commits 分提交（engines / backend / frontend / docs 各自逐文件暂存，禁 git add -A），推送 Kahoku；验证 ci-phase1.yml 6 个 job 全绿

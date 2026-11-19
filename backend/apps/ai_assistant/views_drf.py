@@ -19,7 +19,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from backend.shared.users import is_operator
+from backend.shared.users import is_assistant_author, is_operator
 
 from . import api
 from .models import AIAssistant, AIModelConfig, AIRole
@@ -75,7 +75,12 @@ class ModelConfigViewSet(viewsets.ModelViewSet):
         return api.list_model_configs()
 
     def list(self, request, *args, **kwargs):
-        return Response({"configs": ModelConfigSerializer(self.get_queryset(), many=True).data})
+        # 运营维护配置时仍看全部。主动选择只看自己的名单。
+        if request.query_params.get("selectable") == "1":
+            configs = api.list_selectable_model_configs(_user_id(request))
+        else:
+            configs = self.get_queryset()
+        return Response({"configs": ModelConfigSerializer(configs, many=True).data})
 
     def create(self, request, *args, **kwargs):
         self._require_operator(request)
@@ -140,9 +145,17 @@ class RoleViewSet(viewsets.ModelViewSet):
         data = serializer.validated_data
         if "name" not in data or "model_config_id" not in data:
             raise ValidationError("名称与模型配置不能为空")
+        if not api.can_select_model(_user_id(request), data["model_config_id"]):
+            raise PermissionDenied("不能使用该模型")
+        kinds = data.get("kinds") or []
+        if not kinds:
+            raise ValidationError("请选择类型")
         try:
             role = api.create_role(
-                data["name"], data["model_config_id"], data.get("system_prompt", "")
+                data["name"],
+                data["model_config_id"],
+                data.get("system_prompt", ""),
+                kinds=kinds,
             )
         except api.ModelConfigMissingError as exc:
             raise ValidationError(str(exc)) from exc
@@ -157,8 +170,15 @@ class RoleViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("Forbidden")
         serializer = RoleInputSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
+        data = dict(serializer.validated_data)
+        # 缺省＝不改动类型；显式 [] ＝置为未分类。
+        kinds = data.pop("kinds", None)
+        if "model_config_id" in data and not api.can_select_model(
+            _user_id(request), data["model_config_id"]
+        ):
+            raise PermissionDenied("不能使用该模型")
         try:
-            role = api.update_role(self.get_object(), serializer.validated_data)
+            role = api.update_role(self.get_object(), data, kinds)
         except api.ModelConfigMissingError as exc:
             raise ValidationError(str(exc)) from exc
         except api.RoleConflictError as exc:
@@ -187,7 +207,10 @@ class AssistantViewSet(viewsets.ModelViewSet):
         return AssistantOutputSerializer
 
     def get_queryset(self):
-        return api.list_assistants()
+        rows = api.list_assistants()
+        if is_assistant_author(_user_id(self.request)):
+            return rows
+        return rows.filter(release_state="published")
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -204,7 +227,7 @@ class AssistantViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(self.get_object()).data)
 
     def create(self, request, *args, **kwargs):
-        self._require_operator(request)
+        self._require_author(request)
         payload = _assistant_payload(request)
         serializer = AssistantInputSerializer(data=payload)
         serializer.is_valid(raise_exception=True)
@@ -230,7 +253,7 @@ class AssistantViewSet(viewsets.ModelViewSet):
         )
 
     def partial_update(self, request, *args, **kwargs):
-        self._require_operator(request)
+        self._require_author(request)
         serializer = AssistantInputSerializer(data=_assistant_payload(request), partial=True)
         serializer.is_valid(raise_exception=True)
         payload = dict(serializer.validated_data)
@@ -242,10 +265,12 @@ class AssistantViewSet(viewsets.ModelViewSet):
             raise ValidationError(str(exc)) from exc
         except api.AvatarRejectedError as exc:
             raise ValidationError(str(exc)) from exc
+        except api.AssistantRevisionConflict as exc:
+            return Response({"message": str(exc)}, status=status.HTTP_409_CONFLICT)
         return Response(AssistantOutputSerializer(card, context=self._names_for([card])).data)
 
     def destroy(self, request, *args, **kwargs):
-        self._require_operator(request)
+        self._require_author(request)
         card = self.get_object()
         assistant_id = card.assistant_id
         api.delete_assistant(card)
@@ -259,8 +284,8 @@ class AssistantViewSet(viewsets.ModelViewSet):
             )
         }
 
-    def _require_operator(self, request) -> None:
-        if not is_operator(_user_id(request)):
+    def _require_author(self, request) -> None:
+        if not is_assistant_author(_user_id(request)):
             raise PermissionDenied("Forbidden")
 
 
@@ -442,6 +467,83 @@ def _sop_workflow_or_404(workflow_id: int):
         raise NotFound("工作流不存在") from exc
 
 
+class LiveEvalDetailView(APIView):
+    """GET /api/ai/evals/runs/{run_id}/ — 一次评测的进度与逐条过程。"""
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request, run_id: int):
+        _require_author(request)
+        detail = api.live_run_detail(run_id)
+        if detail is None:
+            raise NotFound("评测运行不存在")
+        return Response(detail)
+
+
+class EvalRunView(APIView):
+    """POST /api/ai/evals/run/ — 作者选择一条助手或工作流后自测。"""
+
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    def post(self, request):
+        _require_author(request)
+        kind = str(request.data.get("kind") or "")
+        target_id = str(request.data.get("target_id") or "")
+        if kind not in {"assistant", "workflow"} or not target_id:
+            raise ValidationError("请选择助手或工作流")
+        try:
+            run = api.start_live_eval(kind, target_id)
+            from backend.apps.ai_assistant.services.live_runner import start_live_eval
+
+            start_live_eval(run.pk)
+            return Response({"id": run.pk, "status": run.status})
+        except LookupError as exc:
+            raise NotFound(str(exc)) from exc
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
+
+
+class AssistantPublishView(APIView):
+    """POST /api/ai/assistants/{assistant_id}/publish/ — 发布当前草稿。"""
+
+    serializer_class = None
+
+    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
+    def post(self, request, assistant_id: str):
+        _require_author(request)
+        card = api.get_assistant(assistant_id)
+        if card is None:
+            return Response({"message": "助手不存在"}, status=status.HTTP_404_NOT_FOUND)
+        payload = api._release_payload_for_assistant(card)
+        if not api.eval_passed("assistant", card.assistant_id, payload):
+            raise ValidationError("自测未通过，不能发布")
+        release = api.publish_assistant(card)
+        secret = "api_key" in release.payload or "secret" in release.payload
+        return Response(
+            {"assistant_id": assistant_id, "version": release.version, "has_secret": secret}
+        )
+
+
+class WorkflowPublishView(APIView):
+    """POST /api/ai/sop-workflows/{workflow_id}/publish/ — 发布当前草稿。"""
+
+    serializer_class = None
+
+    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
+    def post(self, request, workflow_id: int):
+        _require_author(request)
+        try:
+            workflow = api.get_sop_workflow(workflow_id)
+            if api.workflow_requires_eval(workflow) and not api.eval_passed(
+                "workflow", str(workflow.id), api.workflow_eval_payload(workflow)
+            ):
+                raise ValidationError("自测未通过，不能发布")
+            release = api.publish_workflow(workflow)
+        except api.AISopWorkflow.DoesNotExist as exc:
+            raise NotFound("工作流不存在") from exc
+        except api.WorkflowBindingError as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response({"id": workflow_id, "version": release.version})
+
+
 class AgentReportView(APIView):
     """GET /api/ai/agent-reports/{run}/{name}/ — 只读平台报告正文。"""
 
@@ -465,22 +567,33 @@ class SopWorkflowView(APIView):
 
     @extend_schema(responses=SopWorkflowOutputSerializer(many=True))
     def get(self, request):
-        return Response(SopWorkflowOutputSerializer(api.list_sop_workflows(), many=True).data)
+        rows = api.list_sop_workflows()
+        if not is_assistant_author(_user_id(request)):
+            rows = [row for row in rows if row.release_state == "published"]
+        return Response(SopWorkflowOutputSerializer(rows, many=True).data)
 
     @extend_schema(request=SopWorkflowInputSerializer, responses=SopWorkflowOutputSerializer)
     def post(self, request):
+        _require_author(request)
         serializer = SopWorkflowInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         try:
             workflow = api.create_sop_workflow(
                 data["name"],
-                data["executor_assistant_id"],
-                data["verifier_assistant_id"],
+                data.get("executor_assistant_id") or "",
+                data.get("verifier_assistant_id") or "",
+                orchestration=data.get("orchestration") or api.ORCHESTRATION_SOP,
+                kind=data.get("kind") or api.KIND_UI,
+                leader_assistant_id=data.get("leader_assistant_id") or "",
+                members=data.get("members") or [],
             )
-        except api.WorkflowNameError as exc:
-            raise ValidationError(str(exc)) from exc
-        except api.WorkflowAssistantMissingError as exc:
+        except (
+            api.WorkflowNameError,
+            api.WorkflowAssistantMissingError,
+            api.WorkflowPairError,
+            api.WorkflowBindingError,
+        ) as exc:
             raise ValidationError(str(exc)) from exc
         return Response(SopWorkflowOutputSerializer(workflow).data, status=status.HTTP_201_CREATED)
 
@@ -494,6 +607,7 @@ class SopWorkflowDetailView(APIView):
 
     @extend_schema(request=SopWorkflowInputSerializer, responses=SopWorkflowOutputSerializer)
     def patch(self, request, workflow_id: int):
+        _require_author(request)
         workflow = _sop_workflow_or_404(workflow_id)
         serializer = SopWorkflowInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -502,17 +616,23 @@ class SopWorkflowDetailView(APIView):
             workflow = api.update_sop_workflow(
                 workflow,
                 data["name"],
-                data["executor_assistant_id"],
-                data["verifier_assistant_id"],
+                data.get("executor_assistant_id") or "",
+                data.get("verifier_assistant_id") or "",
+                leader_assistant_id=data.get("leader_assistant_id") or "",
+                members=data.get("members") or [],
             )
-        except api.WorkflowNameError as exc:
-            raise ValidationError(str(exc)) from exc
-        except api.WorkflowAssistantMissingError as exc:
+        except (
+            api.WorkflowNameError,
+            api.WorkflowAssistantMissingError,
+            api.WorkflowPairError,
+            api.WorkflowBindingError,
+        ) as exc:
             raise ValidationError(str(exc)) from exc
         return Response(SopWorkflowOutputSerializer(workflow).data)
 
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def delete(self, request, workflow_id: int):
+        _require_author(request)
         workflow = _sop_workflow_or_404(workflow_id)
         api.delete_sop_workflow(workflow)
         return Response({"id": workflow_id, "deleted": True})
@@ -537,6 +657,12 @@ class AssistantAvatarView(APIView):
         if card is None:
             return Response({"message": "助手不存在"}, status=status.HTTP_404_NOT_FOUND)
         return Response({"assistant_id": card.assistant_id, "avatar": card.avatar})
+
+
+def _require_author(request) -> None:
+    """助手与工作流的写操作只允许助手作者。运营身份本身不够。"""
+    if not is_assistant_author(_user_id(request)):
+        raise PermissionDenied("Forbidden")
 
 
 def _assistant_payload(request) -> dict:

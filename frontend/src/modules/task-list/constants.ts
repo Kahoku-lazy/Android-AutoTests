@@ -117,3 +117,35 @@ export function taskStatusTone(status: string): TaskStatusTone {
 export function taskStatusLabel(status: string): string {
   return TASK_STATUS_LABELS[(status || "").toLowerCase()] || status || "待执行"
 }
+
+/** 已经结束、可以再跑一次的状态。待执行和执行中不在此列。 */
+const RERUNNABLE_TONES = new Set<TaskStatusTone>([
+  "success",
+  "failed",
+  "interrupted",
+  "cancelled",
+])
+
+const ORCHESTRATION_LABELS: Record<string, string> = {
+  sop: "SOP",
+  goal: "目标",
+  team: "团队",
+}
+
+const KIND_LABELS: Record<string, string> = {
+  ui_automation: "UI 自动化",
+  case_authoring: "用例编写",
+  requirement_breakdown: "需求拆解",
+}
+
+export function orchestrationLabel(value: string): string {
+  return ORCHESTRATION_LABELS[value] || "—"
+}
+
+export function workflowKindLabel(value: string): string {
+  return KIND_LABELS[value] || "—"
+}
+
+export function canRerunTask(status: string): boolean {
+  return RERUNNABLE_TONES.has(taskStatusTone(status))
+}

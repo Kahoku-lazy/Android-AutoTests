@@ -77,6 +77,204 @@ class AIRole(models.Model):
         return f"{self.role_id} {self.name}"
 
 
+class AIRoleKind(models.Model):
+    """Agent 配置的类型标签 → ai_role_kinds。
+
+    一行只表示「一条配置的一个类型」，类型不写进 AIRole，
+    角色记录仍只描述角色本身（见 specs/ai-role-registry）。
+    关联以配置为父：配置删除时标签随之删除，不留孤儿行。
+    """
+
+    KIND_EXECUTOR = "executor"
+    KIND_VERIFIER = "verifier"
+    KIND_PLANNER = "planner"
+    KIND_CHOICES = [
+        (KIND_EXECUTOR, "执行者"),
+        (KIND_VERIFIER, "验收者"),
+        (KIND_PLANNER, "规划者"),
+    ]
+
+    role = models.ForeignKey(AIRole, on_delete=models.CASCADE, related_name="kinds")
+    kind = models.CharField(max_length=16, choices=KIND_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ai_role_kinds"
+        verbose_name = "Agent配置类型"
+        verbose_name_plural = "Agent配置类型"
+        constraints = [
+            # 需求方口径：一份配置只能是执行者 / 验收者 / 规划者之一，先由库锁 1:1。
+            # 将来放开多类型只需删掉这一条，表结构与 kinds 数组契约不动。
+            models.UniqueConstraint(fields=["role"], name="uniq_ai_role_kind_role"),
+            models.UniqueConstraint(fields=["role", "kind"], name="uniq_ai_role_kind_pair"),
+        ]
+
+    def __str__(self):
+        return f"{self.role_id} {self.kind}"
+
+
+class ModelUseGrant(models.Model):
+    """模型主动使用名单 → ai_model_use_grants。
+
+    一行表示这个人可以在对话和新建助手时主动选择该模型。
+    空名单表示不能主动选择任何模型，不表示全部允许。
+    已发布工作流使用冻结版本，不查这张表。
+    """
+
+    user_id = models.PositiveIntegerField()
+    model_config = models.ForeignKey(
+        AIModelConfig,
+        on_delete=models.CASCADE,
+        related_name="use_grants",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ai_model_use_grants"
+        verbose_name = "模型使用名单"
+        verbose_name_plural = "模型使用名单"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user_id", "model_config"],
+                name="uniq_ai_model_use_grant",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user_id}:{self.model_config_id}"
+
+
+class AssistantLiveRun(models.Model):
+    """一次真模型评测 → ai_assistant_live_runs。
+
+    发布只认指纹相符、样本集是当前这份、失败清单为空的最新一次完成运行。
+    逐条过程在 AssistantLiveSample。旧的 scripted 自测不再作为发布依据。
+    """
+
+    STATUS_PENDING = "pending"
+    STATUS_RUNNING = "running"
+    STATUS_DONE = "done"
+    STATUS_FAILED = "failed"
+
+    target_kind = models.CharField(max_length=16)
+    target_id = models.CharField(max_length=32)
+    fingerprint = models.CharField(max_length=64)
+    sample_ids = models.JSONField(default=list)
+    status = models.CharField(max_length=16, default=STATUS_PENDING)
+    phase = models.CharField(max_length=32, default="", blank=True)
+    progress_done = models.PositiveIntegerField(default=0)
+    progress_total = models.PositiveIntegerField(default=0)
+    failures = models.JSONField(default=list)
+    error = models.TextField(default="", blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "ai_assistant_live_runs"
+        verbose_name = "助手评测运行"
+        verbose_name_plural = "助手评测运行"
+
+    def __str__(self):
+        return f"{self.target_kind}:{self.target_id} [{self.status}]"
+
+
+class AssistantLiveSample(models.Model):
+    """一条评测样本的规则结果与过程 → ai_assistant_live_samples。
+
+    steps 只保留展示字段：角色、原文、工具名、入参摘要、返回摘要。
+    不存密钥、图片或二进制。
+    """
+
+    run = models.ForeignKey(AssistantLiveRun, on_delete=models.CASCADE, related_name="samples")
+    sample_id = models.CharField(max_length=32)
+    title = models.CharField(max_length=200, default="", blank=True)
+    passed = models.BooleanField(default=False)
+    failures = models.JSONField(default=list)
+    steps = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ai_assistant_live_samples"
+        ordering = ["id"]
+        verbose_name = "助手评测样本"
+        verbose_name_plural = "助手评测样本"
+
+    def __str__(self):
+        return f"{self.sample_id} [{'过' if self.passed else '未过'}]"
+
+
+class AssistantEvalRun(models.Model):
+    """旧自测结果 → ai_assistant_eval_runs。
+
+    只保留历史。发布不再读取本表，改认 AssistantLiveRun。
+    """
+
+    target_kind = models.CharField(max_length=16)
+    target_id = models.CharField(max_length=32)
+    fingerprint = models.CharField(max_length=64)
+    sample_ids = models.JSONField(default=list)
+    failures = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ai_assistant_eval_runs"
+        verbose_name = "助手自测"
+        verbose_name_plural = "助手自测"
+
+    def __str__(self):
+        return f"{self.target_kind}:{self.target_id}"
+
+
+class AssistantRelease(models.Model):
+    """已发布版本 → ai_assistant_releases。
+
+    一行是发布当时复制出的运行内容。之后修改草稿不改这些行。
+    密钥不进 payload，只保留密钥环境变量名。
+    """
+
+    KIND_ASSISTANT = "assistant"
+    KIND_WORKFLOW = "workflow"
+
+    target_kind = models.CharField(max_length=16)
+    target_id = models.CharField(max_length=32)
+    version = models.PositiveIntegerField()
+    payload = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ai_assistant_releases"
+        verbose_name = "助手发布版本"
+        verbose_name_plural = "助手发布版本"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["target_kind", "target_id", "version"],
+                name="uniq_ai_assistant_release",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.target_kind}:{self.target_id}@{self.version}"
+
+
+class AssistantAuthorGrant(models.Model):
+    """助手作者授权 → ai_assistant_author_grants。
+
+    只记录被超级管理员单独授予的账号。超级管理员不需要记录，
+    判定时天然算作者。停用账号时删除对应行，重新启用不自动恢复。
+    """
+
+    user_id = models.PositiveIntegerField(unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ai_assistant_author_grants"
+        verbose_name = "助手作者授权"
+        verbose_name_plural = "助手作者授权"
+
+    def __str__(self):
+        return str(self.user_id)
+
+
 class AIAssistant(models.Model):
     """用户助手名片 → ai_assistants。
 
@@ -95,6 +293,10 @@ class AIAssistant(models.Model):
     tools = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # draft 只有作者和超级管理员可见；published 才对其他人开放。
+    release_state = models.CharField(max_length=16, default="draft")
+    # 每次保存加一。后保存的人若仍拿旧值，整次拒绝。
+    revision = models.PositiveIntegerField(default=1)
 
     class Meta:
         db_table = "ai_assistants"
@@ -113,10 +315,18 @@ class AISopWorkflow(models.Model):
     """
 
     name = models.CharField(max_length=200)
-    executor_assistant_id = models.CharField(max_length=12)
-    verifier_assistant_id = models.CharField(max_length=12)
+    # 编排与种类成对保存。现有 UI 工作流回填为 sop + ui_automation。
+    orchestration = models.CharField(max_length=16, default="sop")
+    kind = models.CharField(max_length=32, default="ui_automation")
+    executor_assistant_id = models.CharField(max_length=12, default="", blank=True)
+    verifier_assistant_id = models.CharField(max_length=12, default="", blank=True)
+    # Team 才使用。成员项为 {assistant_id, description}。
+    leader_assistant_id = models.CharField(max_length=12, default="", blank=True)
+    members = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    release_state = models.CharField(max_length=16, default="draft")
+    revision = models.PositiveIntegerField(default=1)
 
     class Meta:
         db_table = "ai_sop_workflows"

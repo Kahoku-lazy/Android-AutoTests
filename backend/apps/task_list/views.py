@@ -47,6 +47,61 @@ def _platform_milestone(case_ids: list[str], user_id: str):
     return prepared, {"source": "platform", "rows": rows}
 
 
+def _current_release_version(workflow_id: int) -> int | None:
+    """读取工作流当前已发布版本号。没有版本时留空。"""
+    from backend.apps.ai_assistant.models import AssistantRelease
+
+    return (
+        AssistantRelease.objects.filter(target_kind="workflow", target_id=str(workflow_id))
+        .order_by("-version")
+        .values_list("version", flat=True)
+        .first()
+    )
+
+
+def _submit_material_workflow(request, workflow, title: str, user_id):
+    """用例编写与需求拆解：上传文档，解析成 Markdown 后作为任务正文。"""
+    from backend.apps.task_list.attachments import (
+        AttachmentError,
+        parse_document_bytes,
+        store_flat_upload,
+    )
+
+    uploaded = request.FILES.get("material")
+    if uploaded is None:
+        raise ValidationError("请上传需求文档或模块材料")
+    try:
+        markdown, filename = parse_document_bytes(uploaded.name, uploaded.read())
+    except AttachmentError as exc:
+        raise ValidationError(str(exc)) from exc
+    if not markdown.strip():
+        raise ValidationError("文档没有可用文本")
+    with transaction.atomic():
+        task = api.create_task(
+            title=title,
+            goal=markdown,
+            task_kind=TaskKind.ASSISTANT_SOP,
+            created_by=str(user_id or ""),
+            workflow_id=workflow.id,
+            release_version=_current_release_version(workflow.id),
+            orchestration=workflow.orchestration,
+            kind=workflow.kind,
+        )
+        task.result = api.dump_task_run_payload({"workflow_id": workflow.id})
+        task.save(update_fields=["result"])
+        api.add_task_attachment(
+            task,
+            kind="document",
+            filename=filename,
+            body=markdown,
+            sort_order=0,
+            stored_path=store_flat_upload(filename, markdown.encode("utf-8")),
+        )
+    api.dispatch_case_authoring(task)
+    task.refresh_from_db()
+    return Response({"id": task.id, "status": task.status, "result": ""})
+
+
 def _submit_assistant_sop(
     request, title: str, goal: str, device_serial: str, device_label: str, user_id
 ):
@@ -64,6 +119,10 @@ def _submit_assistant_sop(
         workflow = assistant_api.get_sop_workflow(workflow_id)
     except (ValueError, assistant_api.AISopWorkflow.DoesNotExist) as exc:
         raise ValidationError("工作流不存在") from exc
+    if workflow.release_state != "published":
+        raise ValidationError("工作流尚未发布")
+    if workflow.kind in {"case_authoring", "requirement_breakdown"}:
+        return _submit_material_workflow(request, workflow, title, user_id)
     if not device_serial:
         raise ValidationError("请选择设备")
     source = str(request.data.get("case_source") or "yaml")
@@ -84,6 +143,10 @@ def _submit_assistant_sop(
             case_identity=identity,
             task_kind=TaskKind.ASSISTANT_SOP,
             created_by=str(user_id or ""),
+            workflow_id=workflow.id,
+            release_version=_current_release_version(workflow.id),
+            orchestration=workflow.orchestration,
+            kind=workflow.kind,
         )
         task.result = api.dump_task_run_payload({"workflow_id": workflow.id})
         task.save(update_fields=["result"])
@@ -193,17 +256,24 @@ class AgentTaskCancelAPIView(APIView):
 
 
 class AgentTaskRerunAPIView(APIView):
-    """POST /api/tasks/{task_id}/rerun — 失败/中断任务克隆新建并调度。"""
+    """POST /api/tasks/{task_id}/rerun — 已结束任务克隆新建并调度。"""
 
     @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def post(self, request, task_id: int):
         task = _visible_task(request, task_id)
         if task is None:
             raise NotFound("任务不存在")
-        if task.status not in {TaskStatus.FAILED, TaskStatus.INTERRUPTED}:
-            raise ValidationError("仅失败或已中断任务可重新执行")
+        if task.status not in {
+            TaskStatus.FAILED,
+            TaskStatus.INTERRUPTED,
+            TaskStatus.COMPLETED,
+            TaskStatus.CANCELLED,
+        }:
+            raise ValidationError("待执行或执行中的任务不能重新执行")
         new_task = api.rerun_task(task)
-        if new_task.task_kind == TaskKind.CASE_AUTHORING:
+        if new_task.kind in {"case_authoring", "requirement_breakdown"}:
+            api.dispatch_case_authoring(new_task)
+        elif new_task.task_kind == TaskKind.CASE_AUTHORING:
             api.dispatch_case_authoring(new_task)
         else:
             api.dispatch_device(new_task.device_serial or "")

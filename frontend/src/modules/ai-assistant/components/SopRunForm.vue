@@ -22,6 +22,7 @@ const props = defineProps<{ workflow: SopWorkflow }>()
 const emit = defineEmits<{ close: []; submitted: [taskId: number] }>()
 
 const source = ref<"yaml" | "platform">("platform")
+const material = ref<File | null>(null)
 const yaml = ref<File | null>(null)
 const selectedCaseIds = ref<string[]>([])
 const projects = ref<CaseProjectGroup[]>([])
@@ -45,16 +46,22 @@ const deviceOptions = computed(() =>
 const picked = computed(() => summarizePicked(selectedCaseIds.value, projects.value))
 
 /** 缺项原因与提交按钮同源：`sop-form.ts` 是唯一判据。 */
-const blockReason = computed(
-  () =>
-    sopRunError({
-      workflowId: props.workflow.id,
-      source: source.value,
-      yamlName: yaml.value?.name || "",
-      caseCount: selectedCaseIds.value.length,
-      serial: serial.value,
-    }) || "",
-)
+const kind = computed(() => props.workflow.kind || "ui_automation")
+const blockReason = computed(() => {
+  if (kind.value !== "ui_automation" && !material.value) return "先上传文档"
+  return (
+    sopRunError(
+      {
+        workflowId: props.workflow.id,
+        source: source.value,
+        yamlName: yaml.value?.name || "",
+        caseCount: selectedCaseIds.value.length,
+        serial: serial.value,
+      },
+      kind.value,
+    ) || ""
+  )
+})
 
 const canRun = computed(() => !blockReason.value && !running.value && !devicesError.value)
 
@@ -102,6 +109,11 @@ function onFile(event: Event): void {
   error.value = ""
 }
 
+function onMaterial(event: Event): void {
+  material.value = (event.target as HTMLInputElement).files?.[0] || null
+  error.value = ""
+}
+
 async function run(): Promise<void> {
   if (!canRun.value) return
   if (source.value === "yaml" && !yaml.value) return
@@ -114,6 +126,7 @@ async function run(): Promise<void> {
       yaml: source.value === "yaml" ? yaml.value : null,
       caseIds: source.value === "platform" ? selectedCaseIds.value : [],
       serial: serial.value.trim(),
+      material: kind.value === "ui_automation" ? null : material.value,
     })
     emit("submitted", created.id)
   } catch (e) {
@@ -128,7 +141,19 @@ async function run(): Promise<void> {
   <div class="sop-run">
     <p class="sop-run__meta">工作流：{{ workflow.name }}</p>
 
-    <div class="sop-run__grid">
+    <label v-if="kind !== 'ui_automation'" class="assistant-field">
+      <span class="assistant-field__label">{{
+        kind === "case_authoring" ? "模块材料" : "需求文档"
+      }}</span>
+      <input
+        class="assistant-input"
+        type="file"
+        accept=".pdf,.doc,.docx,.md,.markdown,.yaml,.yml"
+        @change="onMaterial"
+      />
+      <span class="sop-run__hint">支持 PDF、Word、Markdown、YAML，提交后统一解析成 Markdown</span>
+    </label>
+    <div v-else class="sop-run__grid">
       <aside class="sop-run__side">
         <div class="assistant-field">
           <span id="sop-source-label" class="assistant-field__label">用例来源</span>

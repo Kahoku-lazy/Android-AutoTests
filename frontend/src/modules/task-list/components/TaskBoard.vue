@@ -16,7 +16,10 @@ import {
   TASK_DEFAULT_PAGE_SIZE,
   TASK_PAGE_SIZE_OPTIONS,
   TASK_STATUS_LABELS,
+  canRerunTask,
+  orchestrationLabel,
   taskStatusLabel,
+  workflowKindLabel,
   taskStatusTone,
 } from "../constants"
 import { caseHover } from "../helpers/case-identity"
@@ -30,6 +33,8 @@ const STATUS_OPTIONS = ["pending", "running", "success", "failed", "interrupted"
 const COLUMNS = [
   { dataIndex: "id", title: "编号", icon: "#", minWidth: 80, align: "center" },
   { dataIndex: "workflow_name", title: "工作流", icon: "☰", minWidth: 180, align: "left" },
+  { dataIndex: "orchestration", title: "编排", icon: "☰", minWidth: 90, align: "center" },
+  { dataIndex: "kind", title: "种类", icon: "☰", minWidth: 110, align: "center" },
   { dataIndex: "case_label", title: "用例", icon: "☰", minWidth: 180, align: "left" },
   { dataIndex: "status", title: "执行状态", icon: "●", minWidth: 120, align: "center" },
   { dataIndex: "device", title: "设备", icon: "▣", minWidth: 150, align: "center" },
@@ -81,9 +86,8 @@ function deviceDisplay(task: TaskRecord): string {
   return (task.device_label || task.device_serial || "—").trim() || "—"
 }
 
-function isFailed(task: TaskRecord): boolean {
-  const tone = taskStatusTone(task.status)
-  return tone === "failed" || tone === "interrupted"
+function canRerun(task: TaskRecord): boolean {
+  return canRerunTask(task.status)
 }
 
 async function openReport(task: TaskRecord) {
@@ -180,6 +184,10 @@ async function openReport(task: TaskRecord) {
           record.case_label || "—"
         }}</span>
       </template>
+      <template #cell-orchestration="{ record }">{{
+        orchestrationLabel(record.orchestration || "")
+      }}</template>
+      <template #cell-kind="{ record }">{{ workflowKindLabel(record.kind || "") }}</template>
       <template #cell-status="{ record }">
         <span class="status-pill" :class="`is-${taskStatusTone(record.status)}`">{{
           taskStatusLabel(record.status)
@@ -200,7 +208,7 @@ async function openReport(task: TaskRecord) {
           >关闭</DoodleBtn
         >
         <DoodleBtn
-          v-if="isFailed(record)"
+          v-if="canRerun(record)"
           tone="yellow"
           :disabled="rerunningId === record.id"
           @click="rerun(record)"

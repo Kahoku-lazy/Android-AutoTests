@@ -162,30 +162,6 @@
 - **WHEN** 用例的每一步都只有 `action` 与 `assert`
 - **THEN** 装配与提示内容与本变更前一致，唯一差别是每步新建角色实例
 
-### Requirement: Verifier steps carry the per-SKU log keyword catalog
-
-验收角色的步骤提示 SHALL 带上该步型号的关键词目录（`功能点 → 关键词`），来源是 `engines/agents/config/data/log_keywords/<SKU>.md`，按 `log.sku` 选取。某步没有 `log.sku` 时，装配 MUST 用用例级型号（从用例标题识别，例如「H6810 定时功能测试」→ `H6810`）取同一份目录，MUST NOT 因为缺 `log` 就跳过注入；此时提示里 MUST NOT 出现具体关键词，只给目录让验收按功能点选。目录缺失或不可读时 MUST NOT 中断该步：提示里 MUST 明确写出「该型号关键词目录缺失」，并把判定退回「先截图核对页面」。目录存在时，其条目 MUST 只包含全量关键词目录里已登记的关键词；一个都不符时 MUST 视为目录损坏并按缺失处理，MUST NOT 把臆造的关键词交给验收角色。
-
-#### Scenario: Catalog is attached to the step
-
-- **WHEN** 某步 `log.sku` 为 `H6810`，且该型号目录存在
-- **THEN** 验收角色收到的提示里含该型号的「功能点 → 关键词」条目
-
-#### Scenario: Case-level SKU fills in for old steps
-
-- **WHEN** 某步没有 `log`，但用例标题里有型号 `H6810`
-- **THEN** 验收角色收到的提示里仍含 H6810 的关键词表，且不含具体关键词那一行
-
-#### Scenario: Missing catalog degrades instead of failing
-
-- **WHEN** 某步 `log.sku` 对应的目录不存在
-- **THEN** 该步照常开始，验收角色提示里写明目录缺失并可退回截图核对，运行不因缺目录中断
-
-#### Scenario: Unknown keywords are dropped
-
-- **WHEN** 目录里出现全量关键词目录没有登记的关键词
-- **THEN** 该条目不进入验收提示，其余条目照常注入
-
 ### Requirement: 运行中收到停止信号即中断当前步骤
 
 工作流 MUST 在每个事件边界检查调用方给出的停止信号。信号为真时工作流 MUST 立即结束当前步骤并以取消结束本次运行，MUST NOT 把被中断的步骤记成一次被驳回的尝试，MUST NOT 触发该步的重试，MUST NOT 继续推进后续步骤。

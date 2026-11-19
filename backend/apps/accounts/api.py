@@ -230,6 +230,10 @@ def set_user_active(user_id: int, active: bool) -> User:
     if not target:
         # 重复停用也重写账号档：以最后一次停用时刻作废此前签发的令牌。
         revoke_user(user.id)
+        # 停用同时失去助手作者。重新启用后不恢复，要超级管理员再授一次。
+        from backend.apps.ai_assistant.api import revoke_assistant_author
+
+        revoke_assistant_author(user.id)
     return user
 
 

@@ -70,14 +70,18 @@ describe("工作流配置弹窗", () => {
     const wrapper = mount(SopWorkflowEditor, { props: { cards } })
     await wrapper.find("input.assistant-input").setValue("桌面检查")
     const selects = wrapper.findAll("select")
-    await selects[0].setValue("20261117_A01")
-    await selects[1].setValue("20261117_B02")
+    await selects[1].setValue("20261117_A01")
+    await selects[2].setValue("20261117_B02")
     await button(wrapper, "创建").trigger("click")
     await flushPromises()
     expect(createWorkflow).toHaveBeenCalledWith({
       name: "桌面检查",
+      orchestration: "sop",
+      kind: "ui_automation",
       executor_assistant_id: "20261117_A01",
       verifier_assistant_id: "20261117_B02",
+      leader_assistant_id: "",
+      members: [],
     })
     expect(wrapper.emitted("saved")).toHaveLength(1)
     expect(updateWorkflow).not.toHaveBeenCalled()
@@ -88,16 +92,21 @@ describe("工作流配置弹窗", () => {
     const input = wrapper.find("input.assistant-input")
     expect((input.element as HTMLInputElement).value).toBe("桌面检查")
     const selects = wrapper.findAll("select")
-    expect((selects[0].element as HTMLSelectElement).value).toBe("20261117_A01")
-    expect((selects[1].element as HTMLSelectElement).value).toBe("20261117_B02")
+    expect((selects[0].element as HTMLSelectElement).disabled).toBe(true)
+    expect((selects[1].element as HTMLSelectElement).value).toBe("20261117_A01")
+    expect((selects[2].element as HTMLSelectElement).value).toBe("20261117_B02")
 
     await input.setValue("桌面检查（新）")
     await button(wrapper, "保存").trigger("click")
     await flushPromises()
     expect(updateWorkflow).toHaveBeenCalledWith(7, {
       name: "桌面检查（新）",
+      orchestration: "sop",
+      kind: "ui_automation",
       executor_assistant_id: "20261117_A01",
       verifier_assistant_id: "20261117_B02",
+      leader_assistant_id: "",
+      members: [],
     })
     expect(createWorkflow).not.toHaveBeenCalled()
     expect(wrapper.emitted("saved")).toHaveLength(1)

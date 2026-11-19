@@ -155,6 +155,42 @@ class OpsUserEnableView(APIView):
         return Response(_toggle(request, user_id, active=True))
 
 
+class OpsUserModelGrantView(APIView):
+    """POST /api/ops/users/<int:user_id>/model-grants/ — 修改模型名单（仅超管）。"""
+
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    def post(self, request, user_id: int):
+        raw = request.data.get("model_config_id")
+        if isinstance(raw, bool) or not isinstance(raw, int) or raw < 1:
+            raise ValidationError("模型配置主键必须是正整数")
+        enabled = bool(request.data.get("enabled", True))
+        try:
+            payload = api.set_model_use(_actor_id(request), user_id, raw, enabled)
+        except LookupError as exc:
+            raise NotFound(str(exc)) from exc
+        except PermissionError as exc:
+            raise PermissionDenied(str(exc)) from exc
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response(payload)
+
+
+class OpsUserGrantAuthorView(APIView):
+    """POST /api/ops/users/<int:user_id>/grant-author/ — 授予助手作者（仅超管）。"""
+
+    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
+    def post(self, request, user_id: int):
+        return Response(_author(request, user_id, enabled=True))
+
+
+class OpsUserRevokeAuthorView(APIView):
+    """POST /api/ops/users/<int:user_id>/revoke-author/ — 收回助手作者（仅超管）。"""
+
+    @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
+    def post(self, request, user_id: int):
+        return Response(_author(request, user_id, enabled=False))
+
+
 class OpsUserGrantOperatorView(APIView):
     """POST /api/ops/users/<int:user_id>/grant-operator/ — 设为运营（仅超管）。"""
 
@@ -209,6 +245,16 @@ def _parse_user_ids(raw) -> list[int]:
         if item not in seen:
             seen.append(item)
     return seen
+
+
+def _author(request, user_id: int, *, enabled: bool) -> dict:
+    """授予或收回助手作者，并把领域错误映射成 HTTP 状态码。"""
+    try:
+        return api.set_assistant_author(_actor_id(request), user_id, enabled)
+    except LookupError as exc:
+        raise NotFound(str(exc)) from exc
+    except PermissionError as exc:
+        raise PermissionDenied(str(exc)) from exc
 
 
 def _grant(request, user_id: int, *, enabled: bool) -> dict:

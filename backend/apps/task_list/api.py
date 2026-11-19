@@ -228,6 +228,10 @@ def create_task(
     case_identity: dict | None = None,
     task_kind: str = TaskKind.DEVICE_CONTROL,
     created_by: str = "",
+    workflow_id: int | None = None,
+    release_version: int | None = None,
+    orchestration: str = "",
+    kind: str = "",
 ) -> Task:
     """创建任务（任务发布）；device_serial 须已在提交时固化。"""
     return Task.objects.create(
@@ -241,6 +245,10 @@ def create_task(
         device_label=device_label,
         case_title=case_title,
         case_identity=case_identity or {},
+        workflow_id=workflow_id,
+        release_version=release_version,
+        orchestration=orchestration,
+        kind=kind,
         status=TaskStatus.PENDING,
     )
 
@@ -357,10 +365,47 @@ def set_config_load_message(task: Task, message: str) -> None:
     )
 
 
-def rerun_task(task: Task) -> Task:
-    """失败任务克隆新建：复制标题/目标/附件/设备/agent/指定用例，不改原记录。
+def workflow_id_of(task: Task) -> int:
+    """从任务结果里取出工作流编号。没有或不是正整数时返回 0。"""
+    raw = parse_task_result(task.result).get("workflow_id")
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return 0
+    return value if value > 0 else 0
 
-    调用方负责校验 status==failed，并在返回后 dispatch_device。
+
+def resolve_rerun_workflow_id(task: Task) -> int:
+    """重跑用的工作流编号：当前记录没有时，沿同一设备同一用例往回找。
+
+    旧的重跑会把编号丢掉。再点那些失败记录时，编号只存在更早的原任务上。
+    """
+    found = workflow_id_of(task)
+    if found:
+        return found
+    serial = (task.device_serial or "").strip()
+    if not serial:
+        return 0
+    earlier = Task.objects.filter(
+        task_kind=task.task_kind,
+        device_serial=serial,
+        title=task.title or "",
+        case_identity=task.case_identity or {},
+        id__lt=task.id,
+    ).order_by("-id")
+    for row in earlier[:20]:
+        found = workflow_id_of(row)
+        if found:
+            return found
+    return 0
+
+
+def rerun_task(task: Task) -> Task:
+    """失败任务克隆新建：复制标题/目标/附件/设备/指定用例，并只保留工作流编号。
+
+    工作流编号存在 result JSON 里，执行器靠它解析名片。不复制失败原因、
+    报告路径和费用，避免新任务继承上一次的终态。调用方负责校验状态，
+    并在返回后调度。
     """
     created = create_task(
         title=task.title or "",
@@ -373,7 +418,15 @@ def rerun_task(task: Task) -> Task:
         case_identity=task.case_identity or {},
         task_kind=task.task_kind,
         created_by=task.created_by,
+        workflow_id=task.workflow_id,
+        release_version=task.release_version,
+        orchestration=task.orchestration or "",
+        kind=task.kind or "",
     )
+    workflow_id = resolve_rerun_workflow_id(task)
+    if workflow_id:
+        created.result = dump_task_run_payload({"workflow_id": workflow_id})
+        created.save(update_fields=["result"])
     copy_task_attachments(task, created)
     return created
 
@@ -799,6 +852,9 @@ def serialize_agent_task_row(task: Task, *, assistant_name: str | None = None) -
         "id": task.id,
         "title": task.title,
         "task_kind": task.task_kind,
+        "workflow_ref": task.workflow_id,
+        "orchestration": task.orchestration or "",
+        "kind": task.kind or "",
         "goal": task.goal,
         "status": task.status,
         "result": task_result_preview(task.result),

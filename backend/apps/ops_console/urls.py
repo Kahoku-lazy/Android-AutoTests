@@ -6,10 +6,13 @@ from .views import (
     OpsUserBatchDisableView,
     OpsUserDisableView,
     OpsUserEnableView,
+    OpsUserGrantAuthorView,
     OpsUserGrantOperatorView,
     OpsUserListView,
+    OpsUserModelGrantView,
     OpsUserPurgeView,
     OpsUserResetPasswordView,
+    OpsUserRevokeAuthorView,
     OpsUserRevokeOperatorView,
 )
 
@@ -28,6 +31,21 @@ urlpatterns = [
         "users/<int:user_id>/enable/",
         OpsUserEnableView.as_view(),
         name="ops_user_enable",
+    ),
+    path(
+        "users/<int:user_id>/model-grants/",
+        OpsUserModelGrantView.as_view(),
+        name="ops_user_model_grant",
+    ),
+    path(
+        "users/<int:user_id>/grant-author/",
+        OpsUserGrantAuthorView.as_view(),
+        name="ops_user_grant_author",
+    ),
+    path(
+        "users/<int:user_id>/revoke-author/",
+        OpsUserRevokeAuthorView.as_view(),
+        name="ops_user_revoke_author",
     ),
     path(
         "users/<int:user_id>/grant-operator/",

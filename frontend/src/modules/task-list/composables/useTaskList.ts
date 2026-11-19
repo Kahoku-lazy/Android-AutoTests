@@ -14,6 +14,7 @@ import {
   TASK_FILTER_TABS,
   TASK_STATUS_GROUPS,
   TASK_STATUS_GROUPS_DEFAULT_OPEN,
+  canRerunTask,
   taskStatusTone,
   type TaskStatusTone,
 } from "../constants"
@@ -155,8 +156,8 @@ export function useTaskList() {
 
   async function rerun(task: TaskRecord) {
     if (rerunningId.value != null) return
-    if (taskStatusTone(task.status) !== "failed") {
-      ElMessage.warning("仅失败任务可重新执行")
+    if (!canRerunTask(task.status)) {
+      ElMessage.warning("待执行或执行中的任务不能重新执行")
       return
     }
     rerunningId.value = task.id

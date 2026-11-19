@@ -46,6 +46,9 @@ export interface OpsPurgeResult {
   deleted: number[]
 }
 
+/** Agent 配置的类型：与后端 `kind` 字段一一对应。一份配置只有一个类型。 */
+export type OpsAgentKind = "executor" | "verifier" | "planner"
+
 /** 运营页里的一条 Agent 配置。模型字段来自关联的模型配置。 */
 export interface OpsAgent {
   role_id: string
@@ -57,13 +60,18 @@ export interface OpsAgent {
   base_url: string
   api_protocol: string
   system_prompt: string
+  /** 类型标签；存量未分类时为空数组 */
+  kinds: OpsAgentKind[]
+  created_at?: string
+  updated_at?: string
 }
 
-/** 新建 / 修改入参。模型必须是一条已有模型配置。 */
+/** 新建 / 修改入参。模型必须是一条已有模型配置，新建时类型必须恰好一项。 */
 export interface OpsAgentInput {
   name: string
   model_config_id: number | null
   system_prompt: string
+  kinds: OpsAgentKind[]
 }
 
 /** 一条模型配置。密钥只存环境变量名。 */

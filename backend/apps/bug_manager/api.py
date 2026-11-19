@@ -279,6 +279,7 @@ def _summary(qs) -> dict:
         "total": qs.count(),
         "ui_automation": by_category.get(BugTicket.CATEGORY_UI_AUTOMATION, 0),
         "case_authoring": by_category.get(BugTicket.CATEGORY_CASE_AUTHORING, 0),
+        "requirement_breakdown": by_category.get(BugTicket.CATEGORY_REQUIREMENT_BREAKDOWN, 0),
         "open": by_status.get(BugTicket.STATUS_OPEN, 0),
         "resolved": by_status.get(BugTicket.STATUS_RESOLVED, 0),
         "ignored": by_status.get(BugTicket.STATUS_IGNORED, 0),

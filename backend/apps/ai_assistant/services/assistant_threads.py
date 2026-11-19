@@ -152,6 +152,8 @@ def message_rows(thread: AIAssistantThread) -> list[dict]:
 
 def _snapshot_for(card: AIAssistant) -> dict:
     """从当前名片与运营配置组装首次发送快照。不把快照写回名片。"""
+    if card.release_state != "published":
+        raise AssistantRoleMissingError("助手尚未发布")
     role = AIRole.objects.select_related("model_config").filter(role_id=card.role_id).first()
     if role is None:
         raise AssistantRoleMissingError("Agent 配置不存在")

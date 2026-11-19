@@ -35,8 +35,8 @@ def _usage(
     )
 
 
-def test_record_has_eight_fields():
-    """记录只留八项：标签、轮次、两个时刻、四类 token。"""
+def test_record_has_nine_fields():
+    """记录共九项：标签、轮次、两个时刻、四类 token 与模型名（v2.0.0 起按角色记模型名）。"""
     payload = _usage().as_dict()
     assert set(payload) == {
         "api_key_env",
@@ -47,8 +47,10 @@ def test_record_has_eight_fields():
         "output_tokens",
         "cache_input_tokens",
         "cache_creation_input_tokens",
+        "model",
     }
     assert payload["api_key_env"] == "OPENAI_API_KEY"
+    assert payload["model"] == ""
 
 
 def test_cache_is_not_added_into_input():

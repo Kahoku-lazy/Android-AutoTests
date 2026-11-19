@@ -30,13 +30,16 @@ ALLOWED_ROOTS = {
     "agentscope",
     "asyncio",
     "chinese_calendar",  # 模型费用按法定节假日判高峰（model_billing）
+    "collections",  # 目标循环的可替换执行签名（goal_case）
     "dataclasses",
     "datetime",
     "decimal",  # 费用用 Decimal 保 8 位小数（model_billing）
     "engines",
+    "json",  # 模型名单查询与结果校验（discover / fake_world / team_breakdown）
     "pathlib",
     "time",
     "typing",
+    "urllib",  # 标准库发模型名单查询，不引第三方 HTTP 客户端（discover）
     "utils",
     "zoneinfo",  # 北京时间换算（model_billing）
 }

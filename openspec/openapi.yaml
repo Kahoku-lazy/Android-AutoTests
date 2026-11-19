@@ -3196,7 +3196,7 @@ components:
           type: integer
           readOnly: true
         provider:
-          $ref: '#/components/schemas/ProviderEnum'
+          $ref: '#/components/schemas/ApiProtocolEnum'
         api_protocol:
           $ref: '#/components/schemas/ApiProtocolEnum'
         model_kind:
@@ -3280,7 +3280,7 @@ components:
           type: integer
           readOnly: true
         provider:
-          $ref: '#/components/schemas/ProviderEnum'
+          $ref: '#/components/schemas/ApiProtocolEnum'
         api_protocol:
           $ref: '#/components/schemas/ApiProtocolEnum'
         model_kind:
@@ -3362,16 +3362,6 @@ components:
           items:
             type: object
             additionalProperties: {}
-    ProviderEnum:
-      enum:
-      - deepseek
-      - dashscope
-      - openai
-      type: string
-      description: |-
-        * `deepseek` - deepseek
-        * `dashscope` - dashscope
-        * `openai` - openai
     Query:
       type: object
       description: 多选提问入参：问题与勾选库名均非空。

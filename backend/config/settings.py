@@ -308,6 +308,12 @@ SPECTACULAR_SETTINGS = {
     # 固定 API 路径前缀：否则新增非 /api 路由（如 /media 签名直链）会让
     # drf-spectacular 重新推断公共前缀，连带改写所有 operationId 与 tag。
     "SCHEMA_PATH_PREFIX": "/api",
+    # 厂商改名 openai 后，provider 与 api_protocol 的取值集完全相同；
+    # 不钉名字会让同一集合生成两个枚举名触发告警（门禁 --fail-on-warn 失败）。
+    # 统一收敛到既有的 ApiProtocolEnum，前端不按枚举名引用，契约取值不变。
+    "ENUM_NAME_OVERRIDES": {
+        "ApiProtocolEnum": ["deepseek", "dashscope", "openai"],
+    },
     # 文档页资产随包分发（drf-spectacular-sidecar）：断网环境仍可渲染
     "SWAGGER_UI_DIST": "SIDECAR",
     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",

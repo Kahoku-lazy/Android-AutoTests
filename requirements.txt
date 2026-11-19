@@ -8,7 +8,7 @@ Django==6.0.8
 djangorestframework>=3.15
 # drf-spectacular-sidecar：Swagger UI/Redoc 静态资产随包分发，断网也能渲染文档页
 drf-spectacular>=0.30.0
-drf-spectacular-sidecar>=2026.9.1
+drf-spectacular-sidecar>=2026.10.1
 daphne>=4.2.3
 channels>=4.0
 django-cors-headers>=4.0

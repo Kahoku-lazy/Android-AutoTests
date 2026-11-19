@@ -40,15 +40,15 @@ jobs:
           DEEPSEEK_API_KEY: ci-placeholder
           DASHSCOPE_API_KEY: ci-placeholder
           GOVEE_API_KEY: ci-placeholder
-        run: >
-          python utils/check_gates.py --only
-          django-check,ruff-format,ruff-lint,pytest-collect,
-          openapi-schema,openapi-coverage,
-          ruff-engines-format,ruff-engines-lint,
-          silent-except,business-asset,engines-agents-retirement,
-          single-agent-constructor,
-          cred-password,cred-apikey,cred-secret,
-          boundary,vue-file-size,mock-data
+        run: |
+          gates=django-check,ruff-format,ruff-lint,pytest-collect
+          gates="$gates,openapi-schema,openapi-coverage"
+          gates="$gates,ruff-engines-format,ruff-engines-lint"
+          gates="$gates,silent-except,business-asset,engines-agents-retirement"
+          gates="$gates,single-agent-constructor"
+          gates="$gates,cred-password,cred-apikey,cred-secret"
+          gates="$gates,boundary,vue-file-size,mock-data"
+          python utils/check_gates.py --only "$gates"
 
   frontend:
     runs-on: ubuntu-latest
@@ -76,7 +76,7 @@ jobs:
       - name: Frontend quality gates
         env:
           DJANGO_SECRET_KEY: ci-not-for-prod
-        run: >
-          python utils/check_gates.py --only
-          vitest,vite-build,prettier,eslint,dashed-whitelist,
-          vue-tsc,prettier-ts,style-gates,cred-frontend
+        run: |
+          gates=vitest,vite-build,prettier,eslint,dashed-whitelist
+          gates="$gates,vue-tsc,prettier-ts,style-gates,cred-frontend"
+          python utils/check_gates.py --only "$gates"

@@ -39,9 +39,10 @@
         frontend: css("--c-case", "#4ecdc4"),
         backend: css("--c-device", "#6bcb77"),
         engine: css("--c-element", "#a78bfa"),
-        /* ae_harness 五个模块的固定色（架构图 / 条形 / 柱状图共用） */
+        /* ae_harness 七个原语模块的固定色（架构图 / 卡片 / 柱状图共用） */
         agents: css("--c-runner", "#ffb5a7"),
         tools: css("--c-tool", "#f4a261"),
+        knowledge: css("--c-account", "#8fb8f0"),
         assistant: css("--c-device", "#6bcb77"),
         workflow: css("--c-case", "#4ecdc4"),
         event: css("--c-workflow", "#89cff0"),

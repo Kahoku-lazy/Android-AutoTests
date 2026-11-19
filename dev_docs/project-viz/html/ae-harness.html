@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ae_harness · Android-AutoTests</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="../styles.css" />
 </head>
 <body>
   <div id="app" v-cloak>
@@ -20,20 +20,19 @@
 
         <nav class="sidebar__nav" aria-label="导航">
           <p class="sidebar__group">视图</p>
-          <a class="sidebar__nav-item" href="index.html">总览</a>
+          <a class="sidebar__nav-item" href="../index.html">总览</a>
           <p class="sidebar__group">前端</p>
           <a class="sidebar__nav-item" href="frontend.html">前端功能模块</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-workflow.html">workflow</a>
+          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-ai-assistant.html">ai-assistant</a>
+          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-ops-console.html">ops-console</a>
+          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-dashboard.html">dashboard</a>
+          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-serial-log.html">serial-log</a>
+          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-device-pool.html">device-pool</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-task-list.html">task-list</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-case-manager.html">case-manager</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-dashboard.html">dashboard</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-device-pool.html">device-pool</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-knowledge-assistant.html">knowledge-assistant</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-report-generator.html">report-generator</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-ai-assistant.html">ai-assistant</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-serial-log.html">serial-log</a>
+          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-knowledge-search.html">knowledge-search</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-bug-manager.html">bug-manager</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-agent-reports.html">agent-reports</a>
+          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-report-generator.html">report-generator</a>
           <p class="sidebar__group">后端</p>
           <a class="sidebar__nav-item" href="backend.html">后端功能模块</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-accounts.html">accounts</a>
@@ -42,14 +41,14 @@
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-case_manager.html">case_manager</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-dashboard.html">dashboard</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-device_pool.html">device_pool</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-knowledge_assistant.html">knowledge_assistant</a>
+          <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-knowledge_search.html">knowledge_search</a>
+          <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-ops_console.html">ops_console</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-report_generator.html">report_generator</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-serial_log.html">serial_log</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-task_list.html">task_list</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-usage_ledger.html">usage_ledger</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-workflow.html">workflow</a>
           <p class="sidebar__group">引擎</p>
-          <a class="sidebar__nav-item" href="agents.html">智能体功能模块</a>
+          <a class="sidebar__nav-item" href="agents.html">引擎功能模块</a>
           <p class="sidebar__group">ae_harness</p>
           <a class="sidebar__nav-item is-active" href="ae-harness.html" aria-current="page">原型链路</a>
         </nav>
@@ -90,7 +89,8 @@
                 <figure class="dep-diagram">
                   <svg
                     class="dep-diagram__svg"
-                    viewBox="0 0 1180 600"
+                    viewBox="0 0 1180 460"
+                    style="aspect-ratio: 1180 / 460"
                     role="group"
                     aria-label="AE Harness 模块架构与模块关系"
                   >
@@ -157,6 +157,7 @@
                           :height="node.h"
                           rx="9"
                           class="dep-node"
+                          :class="{ 'dep-node--external': node.external }"
                           :style="{ '--node-color': node.color }"
                         ></rect>
                         <text :x="node.cx" :y="node.cy + 5" class="dep-node__title" text-anchor="middle">
@@ -199,8 +200,8 @@
 
                 <div class="pair">
                   <div class="pair__col">
-                    <h3 class="pair__title">目录依赖关系</h3>
-                    <p class="pair__hint">节点 = 模块，箭头 = 跨模块 import 次数；AST 静态解析，不等于运行期调用链。</p>
+                    <h3 class="pair__title">目录依赖关系（包内）</h3>
+                    <p class="pair__hint">节点 = 模块，箭头 = 跨模块 import 次数；AST 静态解析，不等于运行期调用链。本包只出原语，<b>包内跨组引用只有 1 条</b>（workflow → event）；其余引用都来自包外的装配方，见下表。</p>
 
                     <div class="tabbar tabbar--inline" role="tablist" aria-label="切换依赖视图">
                       <button
@@ -251,7 +252,7 @@
 
                   <div class="pair__col pair__col--narrow">
                     <h3 class="pair__title">模块代码量</h3>
-                    <p class="pair__hint">按根目录六个文件夹统计，一行 = 该目录全部 <code>.py</code> 的非空行合计。</p>
+                    <p class="pair__hint">按根目录七个文件夹统计，一行 = 该目录全部 <code>.py</code> 的非空行合计。</p>
 
                     <article v-for="module in modules" :key="'code-' + module.key" class="code-card">
                       <p class="code-card__name">
@@ -271,6 +272,38 @@
                         <span class="code-card__unit">行代码</span>
                       </p>
                     </article>
+                  </div>
+                </div>
+
+                <!-- 包外装配方：本包只出原语，谁在装配写在表里（带真实符号名） -->
+                <div class="dep-external">
+                  <h3 class="pair__title">外部装配方：谁在 import 这些原语</h3>
+                  <p class="pair__hint">
+                    共计 <b>{{ fmt(externalTotal) }}</b> 处引用，来自
+                    <b>{{ externalLayers.map(location => location.name).join(" / ") || "（无）" }}</b>。
+                    <b>一处 = 一个文件对同一个组</b>（同一文件引用多个组会分别计数，所以比引擎页的目录级数字更细）。
+                    符号名取自 AST 的 import 列表：只证明"引用了什么"，不证明运行期谁调谁。
+                    <b>assistant</b> 不在表内，因为它只服务控制台调试，平台不得引用。
+                  </p>
+                  <div class="sheet-wrap">
+                    <table class="sheet-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">被引用的模块</th>
+                          <th scope="col">引用方（处数）</th>
+                          <th scope="col">真实符号</th>
+                          <th scope="col" class="num">引用处数</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="row in externalRows" :key="'ext-' + row.to">
+                          <td class="name-cell">{{ row.to }}</td>
+                          <td>{{ row.layers }}</td>
+                          <td class="dep-external__symbols">{{ row.symbols }}</td>
+                          <td class="num">{{ fmt(row.count) }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </section>
@@ -327,12 +360,12 @@
     </div>
   </div>
 
-  <script src="data/board.js"></script>
-  <script src="vendor/vue.global.prod.js"></script>
-  <script src="vendor/echarts.min.js"></script>
-  <script src="charts/chart-framework.js"></script>
-  <script src="charts/board-options.js"></script>
-  <script src="markdown.js"></script>
-  <script src="ae-harness.js"></script>
+  <script src="../data/board.js"></script>
+  <script src="../vendor/vue.global.prod.js"></script>
+  <script src="../vendor/echarts.min.js"></script>
+  <script src="../charts/chart-framework.js"></script>
+  <script src="../charts/board-options.js"></script>
+  <script src="../markdown.js"></script>
+  <script src="../ae-harness.js"></script>
 </body>
 </html>

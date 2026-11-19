@@ -755,28 +755,31 @@ def build() -> dict[str, Any]:
     return payload
 
 
-# 模块 = ae_harness 根目录下的五个文件夹（顺序按需求：agent / tools / assistant / workflow / event）
+# 模块 = ae_harness 根目录下的七个文件夹（原语层，顺序即页面顺序）
 AE_HARNESS_GROUPS = (
     ("agents", "创建智能体", "创建智能体：模型配置 + 提示词 + create_agent"),
-    ("tools", "智能体工具箱", "智能体工具箱：给 Agent 提供工具（adb 设备动作）"),
-    ("assistant", "智能体助手", "智能体助手：Agent + tools 合成一个可运行角色"),
-    ("workflow", "工作流", "工作流：多个 Agent 组合成一条 SOP"),
-    ("event", "智能体事件", "智能体事件：可视化 assistant 与 workflow 的执行过程"),
-    ("middleware", "观测中间件", "观测中间件：只读 hook，采集事件流看不到的信息（system prompt / 上下文压缩）"),
+    ("tools", "智能体工具箱", "智能体工具箱：给 Agent 提供工具（adb 设备动作 + 用例库 + 文档）"),
+    ("knowledge", "知识检索", "知识检索：向量模型配置、按库增量索引、只读检索工具（整目录可删）"),
+    (
+        "assistant",
+        "运行骨架",
+        "运行骨架：控制台调试入口的运行时引导（编码 / 日志级别 / 汇总 / 异常包装）",
+    ),
+    ("workflow", "工作流", "工作流：SOP 抽象（步骤模型、加载、执行者 + 验收者编排）"),
+    ("event", "智能体事件", "智能体事件：记录执行过程并渲染 HTML 报告（含用量汇总）"),
+    ("middleware", "观测中间件", "观测中间件：只读 hook、模型调用重试、预算与取消控制"),
 )
 
-# 跨组引用「为什么被调用」：import 只能证明引用了，因果得人写；key = "引用方->被引用方"
+# 本包内部「跨组引用」的人工因果说明：import 只能证明引用了，因果得人写；key = "引用方->被引用方"
 AE_HARNESS_WHY = {
-    "assistant->agents": "入口要跑一轮角色，必须先经 create_agent 拿到 AgentBundle（Agent 实例 + 密钥名），工具挂载与 reply 都要用它。",
-    "assistant->tools": "工具不属于角色三要素，create_agent 不接收；入口建好 Agent 后，自己把 adb 工具 add_tool 挂上去（验收侧只挂只读集）。",
-    "assistant->event": "一轮执行的过程要落成结构化记录并出 HTML 报告，报告统一走 event/ 的记录器与渲染器，入口不自己拼页面。",
-    "workflow->agents": "SOP 每一步都要一对执行者与验收者，必须先经 create_agent 造出两个角色再交给 run_sop。",
-    "workflow->assistant": "编排入口复用 assistant/_bootstrap 的运行时骨架（编码、日志级别、汇总、异常包装），不重复实现一套。",
     "workflow->event": "每步的执行与验收事件都要记下来并出报告，记录与渲染都用 event/，workflow 不碰 HTML。",
-    "workflow->tools": "执行者要写操作工具、验收者只要只读工具，两套工具集在编排入口装配后传给角色。",
-    "assistant->middleware": "入口创建角色时可注入只读观测中间件，采样本轮最终 system prompt 与上下文压缩决策；中间件不改行为、不落盘。",
-    "workflow->middleware": "SOP 里两个角色共用同一个观测实例，记录带 agent 名区分归属；同样只读，不参与编排。",
 }
+
+# 本包只出原语：真正的装配在包外（顺序即图上「外部装配方」的层级说明）
+AE_HARNESS_EXTERNAL_LAYERS = (
+    ("engines/backend_bridge", "平台装配"),
+    ("backend/apps", "后端 app"),
+)
 
 
 def collect_frontend_modules(frontend: dict[str, Any]) -> dict[str, Any]:
@@ -821,10 +824,17 @@ def collect_frontend_modules(frontend: dict[str, Any]) -> dict[str, Any]:
                 if not files:
                     continue
                 units.append(
-                    {"name": item.name + "/", "kind": "dir", "files": len(files), "loc": count_loc(files)}
+                    {
+                        "name": item.name + "/",
+                        "kind": "dir",
+                        "files": len(files),
+                        "loc": count_loc(files),
+                    }
                 )
             elif item.suffix in code_ext:
-                units.append({"name": item.name, "kind": "file", "files": 1, "loc": count_loc([item])})
+                units.append(
+                    {"name": item.name, "kind": "file", "files": 1, "loc": count_loc([item])}
+                )
         units.sort(key=lambda unit: (-int(unit["loc"]), unit["name"]))
         modules.append(
             {
@@ -900,10 +910,10 @@ PROJECT_SKIP_DIRS = {
     "vendor",
     "platform-tools",
 }
-# 前端接口前缀 → 后端 app（人工对照 backend/apps/*/urls.py，前缀不是自动推出来的）
+# 前端接口前缀 → 后端 app（人工对照 backend/config/urls.py 的 include 前缀，不自动推）
 HTTP_API_APPS = {
+    "/auth": "accounts",
     "/cases": "case_manager",
-    "/workflow": "workflow",
     "/tasks": "task_list",
     "/devices": "device_pool",
     "/ai": "ai_assistant",
@@ -911,7 +921,8 @@ HTTP_API_APPS = {
     "/serial-log": "serial_log",
     "/dashboard": "dashboard",
     "/reports": "report_generator",
-    "/knowledge-assistant": "knowledge_assistant",
+    "/knowledge-search": "knowledge_search",
+    "/ops": "ops_console",
 }
 
 PROJECT_CODE_EXT = {".py", ".ts", ".tsx", ".vue", ".js", ".mjs", ".css", ".html"}
@@ -969,11 +980,18 @@ def collect_project_modules(frontend: dict[str, Any] | None = None) -> dict[str,
                 if not files:
                     continue
                 units.append(
-                    {"name": item.name + "/", "kind": "dir", "files": len(files), "loc": count_loc(files)}
+                    {
+                        "name": item.name + "/",
+                        "kind": "dir",
+                        "files": len(files),
+                        "loc": count_loc(files),
+                    }
                 )
                 owned.extend(files)
             elif item.suffix in PROJECT_CODE_EXT:
-                units.append({"name": item.name, "kind": "file", "files": 1, "loc": count_loc([item])})
+                units.append(
+                    {"name": item.name, "kind": "file", "files": 1, "loc": count_loc([item])}
+                )
                 owned.append(item)
         units.sort(key=lambda unit: (-int(unit["loc"]), unit["name"]))
         for path in owned:
@@ -1037,9 +1055,7 @@ def collect_project_modules(frontend: dict[str, Any] | None = None) -> dict[str,
             bucket["calls"] += count
             bucket["paths"].add(path)
     if http_calls and any(module["key"] == "frontend" for module in modules):
-        relations.append(
-            {"from": "frontend", "to": "backend", "count": http_calls, "kind": "http"}
-        )
+        relations.append({"from": "frontend", "to": "backend", "count": http_calls, "kind": "http"})
         relations.sort(key=lambda row: (-int(row["count"]), str(row["from"])))
 
     http_by_app_rows = [
@@ -1072,12 +1088,12 @@ BACKEND_MODULES = (
     ("case_manager", "用例管理"),
     ("dashboard", "看板聚合"),
     ("device_pool", "设备池"),
-    ("knowledge_assistant", "知识问答"),
+    ("knowledge_search", "知识检索"),
+    ("ops_console", "运营后台"),
     ("report_generator", "报告生成"),
     ("serial_log", "串口日志"),
     ("task_list", "任务清单"),
     ("usage_ledger", "用量记账"),
-    ("workflow", "工作流"),
 )
 
 
@@ -1209,11 +1225,18 @@ def collect_backend_modules() -> dict[str, Any]:
                 if not files:
                     continue
                 units.append(
-                    {"name": item.name + "/", "kind": "dir", "files": len(files), "loc": count_loc(files)}
+                    {
+                        "name": item.name + "/",
+                        "kind": "dir",
+                        "files": len(files),
+                        "loc": count_loc(files),
+                    }
                 )
                 owned.extend(files)
             elif item.suffix == ".py":
-                units.append({"name": item.name, "kind": "file", "files": 1, "loc": count_loc([item])})
+                units.append(
+                    {"name": item.name, "kind": "file", "files": 1, "loc": count_loc([item])}
+                )
                 owned.append(item)
         units.sort(key=lambda unit: (-int(unit["loc"]), unit["name"]))
         for path in owned:
@@ -1272,9 +1295,12 @@ def collect_backend_modules() -> dict[str, Any]:
 
 
 ENGINE_MODULES = (
-    ("ae_harness", "原型链路", "多智能体编排原型：agents / tools / assistant / workflow / event / middleware"),
-    ("agents", "智能体", "角色装配、模型、工具、RAG、实时语音与知识问答"),
-    ("backend_bridge", "后端桥", "给 Django 用的入口：智能体调用、报告与用量回写"),
+    (
+        "ae_harness",
+        "原型链路",
+        "Agent 原语层：agents / tools / knowledge / assistant / workflow / event / middleware",
+    ),
+    ("backend_bridge", "后端桥", "给 Django 用的入口：智能体编排装配、报告与用量回写"),
     ("device", "设备", "Android 设备连接、动作执行与日志"),
     ("uart_log", "串口日志", "串口检测、参数、接收、切换与落盘"),
     ("utils", "通用工具", "文件与通用 IO"),
@@ -1319,7 +1345,11 @@ def collect_engine_modules() -> dict[str, Any]:
             if item.is_dir():
                 if item.name in skip_dirs:
                     continue
-                files = [f for f in sorted(item.rglob("*.py")) if "__pycache__" not in f.parts and f.name != "__init__.py"]
+                files = [
+                    f
+                    for f in sorted(item.rglob("*.py"))
+                    if "__pycache__" not in f.parts and f.name != "__init__.py"
+                ]
                 if not files:
                     continue
                 units.append(
@@ -1377,7 +1407,11 @@ def collect_engine_modules() -> dict[str, Any]:
                 names = [node.module]
             for name in names:
                 parts = name.split(".")
-                if len(parts) >= 2 and parts[0] == "engines" and parts[1] in {item[0] for item in ENGINE_MODULES}:
+                if (
+                    len(parts) >= 2
+                    and parts[0] == "engines"
+                    and parts[1] in {item[0] for item in ENGINE_MODULES}
+                ):
                     if parts[1] != source_key:
                         targets.add(parts[1])
         for target in targets:
@@ -1400,12 +1434,110 @@ def collect_engine_modules() -> dict[str, Any]:
     }
 
 
+def _symbol_label(counter: Counter[str], limit: int = 3) -> str:
+    """把真实符号名拼成图上的一句话标签（函数加括号，类名原样）。
+
+    Args:
+        counter: {符号名: 出现次数}。
+        limit: 最多保留几个符号。
+
+    Returns:
+        "run_sop() · SopSpec" 这样的标签；没有符号时返回空串。
+    """
+    names = [name for name, _count in counter.most_common(limit)]
+    parts = [f"{name}()" if name[:1].islower() else name for name in names]
+    return " · ".join(parts)
+
+
+def collect_ae_harness_external(group_keys: set[str]) -> dict[str, Any]:
+    """包外「谁在装配这些原语」：按外部层级统计 import 次数与被引用的真实符号。
+
+    口径：只认 `from engines.ae_harness.<组>` / `import engines.ae_harness.<组>` 这种绝对导入；
+    相对导入在包外不可能出现。**一个文件对同一个目标组只计一次**（与 engines / backend 页同一口径），
+    backend_bridge 是平台装配，backend/apps 是后端 app 直接引用。
+
+    Args:
+        group_keys: ae_harness 的组名集合（其余组一律忽略）。
+
+    Returns:
+        {"layers": [...], "edges": [{"to", "count", "label", "layers"}], "total": n}。
+    """
+    counts: dict[str, Counter[str]] = {}
+    symbols: dict[str, Counter[str]] = {}
+    layer_totals: dict[str, int] = {}
+
+    for rel_root, layer_label in AE_HARNESS_EXTERNAL_LAYERS:
+        base = REPO / rel_root
+        if not base.is_dir():
+            continue
+        total = 0
+        for path in _walk_code(base, (".py",)):
+            try:
+                tree = ast.parse(path.read_text(encoding="utf-8", errors="ignore"))
+            except (SyntaxError, OSError):
+                continue
+            # 同一个文件里对同一目标组的多条 import 合并成一条（与 engines / backend 页同一口径）
+            file_groups: set[str] = set()
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and node.module and not node.level:
+                    parts = node.module.split(".")
+                    if len(parts) < 3 or parts[0] != "engines" or parts[1] != "ae_harness":
+                        continue
+                    if parts[2] not in group_keys:
+                        continue
+                    file_groups.add(parts[2])
+                    symbols.setdefault(parts[2], Counter()).update(
+                        alias.name for alias in node.names if alias.name != "*"
+                    )
+                elif isinstance(node, ast.Import):
+                    for alias in node.names:
+                        parts = alias.name.split(".")
+                        if len(parts) < 3 or parts[0] != "engines" or parts[1] != "ae_harness":
+                            continue
+                        if parts[2] not in group_keys:
+                            continue
+                        file_groups.add(parts[2])
+                        symbols.setdefault(parts[2], Counter())[parts[-1]] += 1
+            for group in file_groups:
+                total += 1
+                counts.setdefault(group, Counter())[layer_label] += 1
+        if total:
+            layer_totals[layer_label] = total
+
+    edges = []
+    for group, layer_counter in counts.items():
+        edges.append(
+            {
+                "to": group,
+                "count": sum(layer_counter.values()),
+                "label": _symbol_label(symbols.get(group, Counter())),
+                "layers": [
+                    {"name": name, "count": count}
+                    for name, count in sorted(
+                        layer_counter.items(), key=lambda item: (-item[1], item[0])
+                    )
+                ],
+            }
+        )
+    edges.sort(key=lambda row: (-int(row["count"]), str(row["to"])))
+
+    return {
+        "layers": [
+            {"name": rel_root, "label": layer_label, "calls": layer_totals.get(layer_label, 0)}
+            for rel_root, layer_label in AE_HARNESS_EXTERNAL_LAYERS
+            if layer_totals.get(layer_label)
+        ],
+        "edges": edges,
+        "total": sum(int(row["count"]) for row in edges),
+    }
+
+
 def collect_ae_harness() -> dict[str, Any]:
-    """engines/ae_harness 按角色/事件/工具/工作流分组的模块行数与 import 关系。
+    """engines/ae_harness 按原语分组统计模块行数、包内 import 与包外装配方。
 
     口径：一行一个 .py（排除 logs/ 与 vendor）；代码行 = 非空物理行。
-    assistant/ 是角色调试入口，并入「角色」组，不单开一栏。
-    import 只算本包内部模块之间的引用，外部依赖（agentscope 等）不计。
+    组内 import 只算本包内部跨组引用；包外引用（backend_bridge / backend/apps）单独汇总成
+    「外部装配方」，并带上被引用的真实符号名——本包只出原语，装配在包外。
     """
     root = REPO / "engines" / "ae_harness"
     modules: dict[str, Path] = {}
@@ -1462,6 +1594,7 @@ def collect_ae_harness() -> dict[str, Any]:
 
     files_by_group: dict[str, list[dict[str, Any]]] = {key: [] for key, *_ in AE_HARNESS_GROUPS}
     cross: Counter[tuple[str, str]] = Counter()
+    cross_symbols: dict[tuple[str, str], Counter[str]] = {}
     internal: Counter[str] = Counter()
     pairs: list[dict[str, str]] = []
     seen_pairs: set[tuple[str, str]] = set()
@@ -1491,6 +1624,14 @@ def collect_ae_harness() -> dict[str, Any]:
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom):
                 targets.update(candidates(path, node))
+                # 跨组引用的真实符号名（import 只证明引用了谁，符号证明用到了什么）
+                prefix = candidates(path, node)[0] if candidates(path, node) else ""
+                resolved_prefix = prefix if prefix in modules else prefix + ".__init__"
+                if resolved_prefix in modules and resolved_prefix != module_name:
+                    target_group = group_of(resolved_prefix)
+                    if target_group not in (group, "(根)"):
+                        bucket = cross_symbols.setdefault((group, target_group), Counter())
+                        bucket.update(alias.name for alias in node.names if alias.name != "*")
             elif isinstance(node, ast.Import):
                 targets.update(alias.name for alias in node.names)
         for target in sorted(targets):
@@ -1580,6 +1721,7 @@ def collect_ae_harness() -> dict[str, Any]:
                 "fromLabel": by_key.get(from_group, {}).get("label", from_group),
                 "toLabel": by_key.get(to_group, {}).get("label", to_group),
                 "count": int(cross.get((from_group, to_group), 0)),
+                "label": _symbol_label(cross_symbols.get((from_group, to_group), Counter())),
                 "fromFiles": from_files,
                 "toFiles": to_files,
                 "why": AE_HARNESS_WHY.get(f"{from_group}->{to_group}", ""),
@@ -1589,6 +1731,7 @@ def collect_ae_harness() -> dict[str, Any]:
     return {
         "groups": groups,
         "relations": relations,
+        "external": collect_ae_harness_external(set(by_key)),
         "totals": {
             "files": sum(int(group["totals"]["files"]) for group in groups),
             "loc": sum(int(group["totals"]["loc"]) for group in groups),
@@ -1603,7 +1746,8 @@ def collect_ae_harness() -> dict[str, Any]:
             "internal": dict(sorted(internal.items())),
             "pairs": sorted(pairs, key=lambda item: (item["from"], item["to"])),
         },
-        "note": "独立原型链路，与 engines/agents 并存，不替代它。assistant 归入角色组。",
+        "note": "本包只出原语（agents / tools / knowledge / assistant / workflow / event / middleware），"
+        "平台装配在 engines/backend_bridge 与 backend/apps。",
     }
 
 
@@ -1702,13 +1846,13 @@ def _append_history(payload: dict[str, Any]) -> list[dict[str, Any]]:
             {k: v for k, v in last.get(cat, {}).items() if k != "at"}
             != {k: v for k, v in snapshot.get(cat, {}).items() if k != "at"}
             for cat in (
-        *CATEGORY_KEYS,
-        "ae_harness",
-        "engine_modules",
-        "backend_modules",
-        "frontend_modules",
-        "project_modules",
-    )
+                *CATEGORY_KEYS,
+                "ae_harness",
+                "engine_modules",
+                "backend_modules",
+                "frontend_modules",
+                "project_modules",
+            )
         )
     if changed:
         rows.append(snapshot)
@@ -1836,7 +1980,9 @@ def write_outputs(payload: dict[str, Any], *, check_only: bool) -> int:
         section = payload.get(payload_key)
         if not section:
             continue
-        comparison = _module_comparison(payload, history, payload_key=payload_key, history_key=history_key)
+        comparison = _module_comparison(
+            payload, history, payload_key=payload_key, history_key=history_key
+        )
         section["comparison"] = comparison
         for module in section["modules"]:
             for unit in module["units"]:
@@ -1902,7 +2048,8 @@ def write_outputs(payload: dict[str, Any], *, check_only: bool) -> int:
         ("引擎", payload["engineModules"]),
     ]
     detail = " · ".join(
-        f"{label} {section['totals']['modules']} 模块 / {section['totals']['loc']} 行" for label, section in summary
+        f"{label} {section['totals']['modules']} 模块 / {section['totals']['loc']} 行"
+        for label, section in summary
     )
     print(  # noqa: T201
         f"已写出 {json_path.name}, {js_path.name}, history.js：{detail} · 历史 {len(history)} 次"

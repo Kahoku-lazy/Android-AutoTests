@@ -41,7 +41,8 @@ metadata:
 
 ```python
 from pathlib import Path
-root = Path("engines")            # 换成用户指的目录
+
+root = Path("engines")  # 换成用户指的目录
 for item in sorted(root.iterdir()):
     if item.is_dir() and item.name != "__pycache__":
         dirs = [d.name for d in sorted(item.iterdir()) if d.is_dir()]

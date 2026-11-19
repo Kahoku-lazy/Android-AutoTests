@@ -13,19 +13,18 @@
   var RELATIONS = DATA.relations || [];
   var SHARED_KEY = "共享层（shared/views/router）";
 
-  /* 架构图布局（viewBox 1180×680）：11 个业务模块三行，共享层单独落底 */
+  /* 架构图布局（viewBox 1180×680）：10 个业务模块三行，共享层单独落底 */
   var DIAGRAM_LAYOUT = {
-    workflow: { x: 60, y: 60, w: 200, h: 54, tilt: -0.4 },
-    "task-list": { x: 330, y: 60, w: 200, h: 54, tilt: 0.3 },
-    "case-manager": { x: 600, y: 60, w: 200, h: 54, tilt: -0.3 },
-    dashboard: { x: 870, y: 60, w: 200, h: 54, tilt: 0.4 },
+    "ai-assistant": { x: 60, y: 60, w: 200, h: 54, tilt: -0.4 },
+    "ops-console": { x: 330, y: 60, w: 200, h: 54, tilt: 0.3 },
+    dashboard: { x: 600, y: 60, w: 200, h: 54, tilt: -0.3 },
+    "serial-log": { x: 870, y: 60, w: 200, h: 54, tilt: 0.4 },
     "device-pool": { x: 60, y: 200, w: 200, h: 54, tilt: 0.4 },
-    "knowledge-assistant": { x: 330, y: 200, w: 200, h: 54, tilt: -0.4 },
-    "report-generator": { x: 600, y: 200, w: 200, h: 54, tilt: 0.3 },
-    "ai-assistant": { x: 870, y: 200, w: 200, h: 54, tilt: -0.3 },
-    "serial-log": { x: 60, y: 340, w: 200, h: 54, tilt: -0.3 },
-    "bug-manager": { x: 330, y: 340, w: 200, h: 54, tilt: 0.4 },
-    "agent-reports": { x: 600, y: 340, w: 200, h: 54, tilt: -0.4 },
+    "task-list": { x: 330, y: 200, w: 200, h: 54, tilt: -0.4 },
+    "case-manager": { x: 600, y: 200, w: 200, h: 54, tilt: 0.3 },
+    "knowledge-search": { x: 870, y: 200, w: 200, h: 54, tilt: -0.3 },
+    "bug-manager": { x: 330, y: 340, w: 200, h: 54, tilt: -0.3 },
+    "report-generator": { x: 600, y: 340, w: 200, h: 54, tilt: 0.4 },
     shared: { x: 470, y: 520, w: 240, h: 54, tilt: 0 }
   };
 
@@ -136,7 +135,7 @@
       },
       subtitle: function () {
         return (
-          "backend/apps · " + this.totals.modules + " 个模块 · " + this.totals.units + " 个单元 · " +
+          "frontend/src/modules · " + this.totals.modules + " 个模块 · " + this.totals.units + " 个单元 · " +
           fmt(this.totals.files) + " 个 .py · " + fmt(this.totals.loc) + " 行 · 生成于 " + this.generatedAt
         );
       },
@@ -248,7 +247,7 @@
           };
         });
 
-        /* 共享层不是业务模块，但 11 个模块都依赖它——画一个虚框，避免图上出现一堆孤立节点 */
+        /* 共享层不是业务模块，但 10 个模块都依赖它——画一个虚框，避免图上出现一堆孤立节点 */
         var sharedLayout = DIAGRAM_LAYOUT.shared;
         nodes.push({
           key: "shared",
@@ -300,7 +299,8 @@
             to: rel.shared ? "shared" : rel.to,
             label: rel.count + " 次",
             labelX: (from.cx + to.cx) / 2,
-            labelY: midY - 6,
+            /* 同一水平段可能有多条边（midY 相同），按序号上下错开，避免数字叠在一起 */
+            labelY: midY - 6 - (index % 3) * 13,
             labelAnchor: "middle",
             d: orthPath(points)
           });

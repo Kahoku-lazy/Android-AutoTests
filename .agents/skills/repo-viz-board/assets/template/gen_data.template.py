@@ -20,6 +20,7 @@ import ast
 import json
 import subprocess
 import sys
+
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -87,7 +88,12 @@ def collect_modules() -> dict[str, Any]:
                 if not files:
                     continue
                 units.append(
-                    {"name": item.name + "/", "kind": "dir", "files": len(files), "loc": _loc(files)}
+                    {
+                        "name": item.name + "/",
+                        "kind": "dir",
+                        "files": len(files),
+                        "loc": _loc(files),
+                    }
                 )
                 owned.extend(files)
             elif item.suffix == ".py":
@@ -202,7 +208,9 @@ def _comparison(payload: dict[str, Any], history: list[dict[str, Any]]) -> dict[
             subtotal = 0
             for unit in module["units"]:
                 has = unit["name"] in values
-                units[module["key"]][unit["name"]].append(int(values[unit["name"]]) if has else None)
+                units[module["key"]][unit["name"]].append(
+                    int(values[unit["name"]]) if has else None
+                )
                 if has:
                     subtotal += int(values[unit["name"]])
             totals[module["key"]].append(subtotal if values else None)
@@ -249,7 +257,11 @@ def write_outputs(payload: dict[str, Any], *, check_only: bool) -> int:
     }
 
     if check_only:
-        stale = [path.name for path, text in files.items() if not path.is_file() or path.read_text(encoding="utf-8") != text]
+        stale = [
+            path.name
+            for path, text in files.items()
+            if not path.is_file() or path.read_text(encoding="utf-8") != text
+        ]
         # generated_at / commit 漂移不算过期
         if stale:
             print("数据已过期：" + "、".join(stale))
@@ -270,7 +282,11 @@ def write_outputs(payload: dict[str, Any], *, check_only: bool) -> int:
 def _commit() -> str:
     try:
         out = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"], cwd=REPO, capture_output=True, text=True, timeout=5
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         return out.stdout.strip() if out.returncode == 0 else ""
     except (OSError, subprocess.SubprocessError):

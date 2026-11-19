@@ -1497,6 +1497,22 @@ body {
   stroke-width: 2.4;
 }
 
+/* 外部装配方（不属于本包）：虚线框 + 纸底，与包内模块区分开 */
+.dep-node--external {
+  fill: var(--app-bg-subtle);
+  stroke-dasharray: 7 5;
+}
+
+/* 第 2 节下方的「外部装配方」表：与上面两栏留出间距 */
+.dep-external {
+  margin-top: var(--app-space-lg);
+}
+
+.dep-external__symbols {
+  color: var(--app-text-secondary);
+  font-size: var(--app-size-xs);
+}
+
 .dep-node__shadow {
   fill: var(--ink);
   opacity: 0.12;

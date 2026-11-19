@@ -5840,5 +5840,392 @@
         "logs.py": 85
       }
     }
+  },
+  {
+    "at": "2026-11-18 18:39",
+    "agents": {
+      "modules": 0,
+      "features": 0,
+      "files": 0,
+      "classes": 0,
+      "methods": 0,
+      "loc": 0,
+      "tests": 0
+    },
+    "ae_harness": {
+      "groups": {
+        "agents": 480,
+        "tools": 1316,
+        "knowledge": 1470,
+        "assistant": 80,
+        "workflow": 321,
+        "event": 1886,
+        "middleware": 630
+      },
+      "files": {
+        "agents/models.py": 296,
+        "agents/creator.py": 126,
+        "agents/config.py": 58,
+        "tools/adb/tools.py": 857,
+        "tools/adb/core.py": 233,
+        "tools/catalog.py": 77,
+        "tools/adb/render.py": 60,
+        "tools/case_library/tools.py": 46,
+        "tools/document/tools.py": 43,
+        "knowledge/service.py": 294,
+        "knowledge/store.py": 285,
+        "knowledge/config.py": 276,
+        "knowledge/usage.py": 160,
+        "knowledge/indexer.py": 150,
+        "knowledge/tool.py": 126,
+        "knowledge/probe.py": 79,
+        "knowledge/models.py": 75,
+        "knowledge/__main__.py": 25,
+        "assistant/_bootstrap.py": 80,
+        "workflow/sop/runner.py": 205,
+        "workflow/sop/spec.py": 116,
+        "event/render.py": 1150,
+        "event/record.py": 600,
+        "event/usage.py": 136,
+        "middleware/retry.py": 238,
+        "middleware/observer.py": 210,
+        "middleware/control.py": 182
+      }
+    },
+    "engine_modules": {
+      "ae_harness": {
+        "event/": 1886,
+        "knowledge/": 1470,
+        "tools/": 1316,
+        "middleware/": 630,
+        "agents/": 480,
+        "workflow/": 321,
+        "assistant/": 80
+      },
+      "backend_bridge": {
+        "workflow/": 819,
+        "agents/": 327,
+        "session.py": 218,
+        "event_log.py": 167,
+        "model_billing/": 162,
+        "models/": 135,
+        "run.py": 81,
+        "result.py": 48,
+        "reports/": 32
+      },
+      "device": {
+        "android/": 834,
+        "action.py": 322,
+        "logbus.py": 110,
+        "logfiles.py": 57,
+        "connection.py": 47
+      },
+      "uart_log": {
+        "receiver.py": 165,
+        "switch.py": 109,
+        "detect.py": 59,
+        "params.py": 35,
+        "writer.py": 35
+      },
+      "utils": {
+        "io_files.py": 126
+      },
+      "vision": {
+        "ocr.py": 77
+      }
+    },
+    "backend_modules": {
+      "accounts": {
+        "api.py": 269,
+        "views.py": 211,
+        "serializers.py": 70,
+        "models.py": 43,
+        "urls.py": 13,
+        "apps.py": 7
+      },
+      "ai_assistant": {
+        "services/": 1235,
+        "api.py": 608,
+        "views_drf.py": 568,
+        "models.py": 309,
+        "serializers.py": 144,
+        "urls.py": 89,
+        "apps.py": 15,
+        "admin.py": 6
+      },
+      "bug_manager": {
+        "extract.py": 384,
+        "api.py": 312,
+        "views.py": 72,
+        "models.py": 64,
+        "management/": 31,
+        "serializers.py": 19,
+        "urls.py": 13,
+        "admin.py": 10,
+        "apps.py": 7
+      },
+      "case_manager": {
+        "api_rows.py": 489,
+        "models.py": 169,
+        "views_drf.py": 159,
+        "api_import.py": 158,
+        "api_projects.py": 135,
+        "api_ids.py": 57,
+        "api.py": 50,
+        "serializers.py": 16,
+        "admin.py": 13,
+        "urls.py": 7,
+        "apps.py": 5
+      },
+      "dashboard": {
+        "ai_usage.py": 428,
+        "views.py": 205,
+        "urls.py": 17,
+        "apps.py": 4
+      },
+      "device_pool": {
+        "manager.py": 631,
+        "views.py": 298,
+        "api.py": 138,
+        "models.py": 93,
+        "contracts.py": 47,
+        "admin.py": 35,
+        "urls.py": 27,
+        "pool.py": 15,
+        "apps.py": 5
+      },
+      "knowledge_search": {
+        "api.py": 276,
+        "eval_runner.py": 227,
+        "views.py": 176,
+        "retrieval.py": 168,
+        "eval_generation.py": 160,
+        "eval_corpus.py": 93,
+        "models.py": 79,
+        "registry.py": 72,
+        "serializers.py": 71,
+        "eval_metrics.py": 42,
+        "urls.py": 19,
+        "apps.py": 7
+      },
+      "ops_console": {
+        "api.py": 363,
+        "views.py": 231,
+        "urls.py": 61,
+        "serializers.py": 53,
+        "apps.py": 10
+      },
+      "report_generator": {
+        "report_inventory.py": 330,
+        "views.py": 45,
+        "urls.py": 7,
+        "apps.py": 5,
+        "models.py": 5,
+        "admin.py": 1
+      },
+      "serial_log": {
+        "port_service.py": 371,
+        "api.py": 294,
+        "views.py": 176,
+        "keywords.py": 92,
+        "sources.py": 61,
+        "models.py": 58,
+        "apps.py": 45,
+        "urls.py": 19
+      },
+      "task_list": {
+        "api.py": 1017,
+        "task_runner.py": 519,
+        "views.py": 319,
+        "attachments.py": 259,
+        "media_storage.py": 185,
+        "models.py": 173,
+        "views_upload.py": 149,
+        "management/": 143,
+        "serializers.py": 94,
+        "media_links.py": 68,
+        "upload_cleanup.py": 66,
+        "case_identity.py": 59,
+        "media_views.py": 57,
+        "apps.py": 45,
+        "sweep_mark.py": 35,
+        "urls.py": 33,
+        "workflow_snapshot.py": 31,
+        "engine_adapter.py": 26,
+        "log_history.py": 21,
+        "task_cost.py": 17,
+        "admin.py": 6,
+        "deepseek_billing.py": 3
+      },
+      "usage_ledger": {
+        "api.py": 619,
+        "pricing.py": 203,
+        "rates.py": 68,
+        "models.py": 41,
+        "management/": 33,
+        "apps.py": 7
+      }
+    },
+    "frontend_modules": {
+      "ai-assistant": {
+        "components/": 2035,
+        "helpers/": 357,
+        "api/": 273,
+        "chat.vue": 253,
+        "evals.vue": 176,
+        "index.vue": 128,
+        "types.ts": 78,
+        "routes.ts": 22,
+        "constants.ts": 10
+      },
+      "ops-console": {
+        "components/": 534,
+        "model-configs.vue": 420,
+        "index.vue": 379,
+        "agents.vue": 377,
+        "constants.ts": 321,
+        "composables/": 228,
+        "helpers/": 138,
+        "api.ts": 105,
+        "types.ts": 92,
+        "routes.ts": 22
+      },
+      "dashboard": {
+        "components/": 1337,
+        "composables/": 418,
+        "index.vue": 411,
+        "DashboardView.logic.ts": 99,
+        "helpers/": 39,
+        "api.ts": 15,
+        "routes.ts": 10
+      },
+      "serial-log": {
+        "components/": 903,
+        "composables/": 461,
+        "helpers/": 313,
+        "api.ts": 160,
+        "constants.ts": 131,
+        "index.vue": 45,
+        "routes.ts": 10
+      },
+      "device-pool": {
+        "components/": 595,
+        "composables/": 437,
+        "DevicePoolView.logic.ts": 258,
+        "index.vue": 229,
+        "constants.ts": 145,
+        "helpers.ts": 97,
+        "api.ts": 39,
+        "routes.ts": 10
+      },
+      "task-list": {
+        "components/": 861,
+        "helpers/": 483,
+        "composables/": 219,
+        "constants.ts": 120,
+        "api/": 84,
+        "index.vue": 24,
+        "routes.ts": 10
+      },
+      "case-manager": {
+        "components/": 733,
+        "helpers/": 269,
+        "ProjectSheet.vue": 258,
+        "ProjectList.vue": 182,
+        "types.ts": 107,
+        "composables/": 83,
+        "api.ts": 51,
+        "routes.ts": 20
+      },
+      "knowledge-search": {
+        "components/": 997,
+        "composables/": 218,
+        "types.ts": 112,
+        "api.ts": 102,
+        "index.vue": 95,
+        "constants.ts": 64,
+        "helpers/": 32,
+        "routes.ts": 10
+      },
+      "bug-manager": {
+        "index.vue": 264,
+        "components/": 235,
+        "helpers/": 167,
+        "composables/": 121,
+        "constants.ts": 88,
+        "types.ts": 56,
+        "api.ts": 25,
+        "routes.ts": 10
+      },
+      "report-generator": {
+        "index.vue": 209,
+        "composables/": 143,
+        "constants.ts": 69,
+        "helpers/": 42,
+        "types.ts": 38,
+        "api.ts": 14,
+        "routes.ts": 10
+      }
+    },
+    "project_modules": {
+      "backend": {
+        "apps/": 20822,
+        "config/": 496,
+        "shared/": 463,
+        "templates/": 193,
+        "gateway/": 127,
+        "models/": 120
+      },
+      "engines": {
+        "ae_harness/": 6532,
+        "backend_bridge/": 2182,
+        "device/": 1415,
+        "uart_log/": 439,
+        "utils/": 126,
+        "vision/": 99
+      },
+      "frontend": {
+        "src/": 31582,
+        "tests/": 9529,
+        "eslint.config.js": 122,
+        "vite.config.js": 83,
+        "vite-proxy.js": 31,
+        "index.html": 16
+      },
+      "tests": {
+        "engines/": 3668,
+        "ai_assistant/": 2626,
+        "arch/": 1829,
+        "task/": 1537,
+        "serial_log/": 1038,
+        "knowledge_search/": 895,
+        "device/": 709,
+        "e2e/": 705,
+        "auth/": 590,
+        "bug_ticket/": 585,
+        "ops_console/": 563,
+        "dashboard/": 514,
+        "report/": 308,
+        "api_kit/": 281,
+        "case/": 245,
+        "usage_ledger/": 67,
+        "api/": 41,
+        "conftest.py": 22,
+        "test_settings.py": 19,
+        "config/": 0,
+        "models/": 0
+      },
+      "utils": {
+        "gen_arch_stats.py": 1098,
+        "check_gates.py": 587,
+        "module_docstring.py": 469,
+        "live_screen.py": 293,
+        "platform_tools.py": 292,
+        "adb.py": 90,
+        "check_openapi_coverage.py": 85,
+        "logs.py": 85,
+        "netinfo.py": 29
+      }
+    }
   }
 ]

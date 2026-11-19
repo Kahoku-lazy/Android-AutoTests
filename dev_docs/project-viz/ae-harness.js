@@ -1,8 +1,8 @@
 /*
- * ae_harness 页：六个模块（根目录文件夹）的架构、代码量、依赖与逐文件对比。
+ * ae_harness 页：七个原语模块（根目录文件夹）的架构、代码量、依赖与逐文件对比。
  *
  * 数据来源：window.__BOARD__.ae_harness（生成器产出）
- *   1. 架构：模块关系（人工定义，见 DIAGRAM_EDGES）
+ *   1. 架构：模块关系（节点顺序固定，边的两端与次数来自生成器：包内 relations + 包外 external）
  *   2. 模块代码量：每组 .py 的行数合计
  *   3. 目录依赖：AST import（只证明"引用了谁"）
  *   4. 逐文件代码量：每个文件三个值（本次 / 最近一次 / 最近两次）
@@ -86,20 +86,21 @@
     };
   }
 
-  /* 模块 = ae_harness 根目录的六个文件夹，顺序固定（与页面第 2/3 节一致） */
-  var MODULE_ORDER = ["agents", "tools", "assistant", "workflow", "event", "middleware"];
+  /* 模块 = ae_harness 根目录的七个文件夹，顺序固定（与页面第 2/3 节一致） */
+  var MODULE_ORDER = ["agents", "tools", "knowledge", "assistant", "workflow", "event", "middleware"];
 
-  /* 架构图坐标（viewBox 1180×580）
-     布局目标：创建链路顺流不交叉 —— 左上 agents、左中 tools，左下 assistant，右上 workflow，底部 event */
+  /* 架构图坐标（viewBox 1180×460）：
+     顶部一条是「外部装配方」（backend_bridge / backend/apps）——本包只出原语，装配在包外；
+     第一行四个模块、第二行三个模块，第二行的竖线走第一行之间的空档，不穿节点。 */
   var DIAGRAM_LAYOUT = {
-    /* 节点位置固定（viewBox 1180×600）：上 agents、左中 tools、左下 assistant、右中 workflow、
-       底部 event 与 middleware 并排（两者都是"被调用的支撑件"） */
-    agents: { x: 620, y: 60, w: 240, h: 54, tilt: -0.5 },
-    tools: { x: 90, y: 215, w: 240, h: 54, tilt: 0.5 },
-    assistant: { x: 300, y: 380, w: 240, h: 54, tilt: -0.3 },
-    workflow: { x: 830, y: 180, w: 240, h: 54, tilt: 0.4 },
-    event: { x: 620, y: 500, w: 240, h: 54, tilt: -0.4 },
-    middleware: { x: 300, y: 500, w: 240, h: 54, tilt: -0.2 }
+    external: { x: 60, y: 40, w: 1060, h: 54, tilt: 0 },
+    agents: { x: 40, y: 180, w: 200, h: 54, tilt: -0.4 },
+    tools: { x: 330, y: 180, w: 200, h: 54, tilt: 0.4 },
+    knowledge: { x: 620, y: 180, w: 200, h: 54, tilt: -0.3 },
+    assistant: { x: 910, y: 180, w: 200, h: 54, tilt: 0.3 },
+    workflow: { x: 185, y: 340, w: 200, h: 54, tilt: -0.3 },
+    event: { x: 475, y: 340, w: 200, h: 54, tilt: 0.4 },
+    middleware: { x: 765, y: 340, w: 200, h: 54, tilt: -0.4 }
   };
 
   /* 折线 → path：直角折线 + 拐角 8px 圆角；可选在某一段插 10px 跳桥（跨过另一条线） */
@@ -141,35 +142,31 @@
     return d;
   }
 
-  /* 正交布线（参考 archify 的自动路由原则）：
-     一条主路径、直角折线、端口从节点边中点出、标签贴线段、跨线处画 6px 跳桥。
-     points = 折线拐点（绝对坐标）；bridge = {seg: 第几段, at: 交叉坐标轴向位置} */
-  var DIAGRAM_EDGES = [
-    /* 创建 assistant：tools 从左边进、agents 从右边进 */
-    { id: "tools->assistant", from: "tools", to: "assistant", label: "build_adb_tools()",
-      points: [[210, 269], [210, 330], [390, 330], [390, 380]], labelAt: [300, 316] },
-    { id: "agents->assistant", from: "agents", to: "assistant", label: "create_agent()",
-      points: [[620, 87], [470, 87], [470, 380]], labelAt: [545, 73] },
-    /* assistant 组装成工作流 */
-    { id: "assistant->workflow", from: "assistant", to: "workflow", label: "run_sop() + _bootstrap",
-      points: [[540, 407], [780, 407], [780, 207], [830, 207]], labelAt: [768, 300], labelAnchor: "end" },
-    /* workflow 自己也用 agents / tools：各走一条上弧 */
-    { id: "agents->workflow", from: "agents", to: "workflow", label: "create_agent() ×2",
-      points: [[740, 60], [740, 40], [950, 40], [950, 180]], labelAt: [850, 26], secondary: true },
-    { id: "tools->workflow", from: "tools", to: "workflow", label: "build_*_tools()",
-      points: [[210, 215], [210, 150], [830, 150], [830, 197]],
-      labelAt: [520, 136], bridge: { seg: 1, axis: "x", at: 470 }, secondary: true },
-    /* 观测中间件：assistant / workflow 各注入一次（只读观测） */
-    { id: "assistant->middleware", from: "assistant", to: "middleware", label: "ObservationMiddleware",
-      points: [[360, 434], [360, 500]], labelAt: [372, 476], labelAnchor: "start" },
-    { id: "workflow->middleware", from: "workflow", to: "middleware", label: "ObservationMiddleware",
-      points: [[950, 234], [950, 480], [570, 480], [570, 500]], labelAt: [760, 466], secondary: true },
-    /* 运行阶段：向下汇到 event */
-    { id: "assistant->event", from: "assistant", to: "event", label: "AgentEventRecorder",
-      points: [[480, 434], [480, 460], [700, 460], [700, 500]], labelAt: [600, 446], runtime: true },
-    { id: "workflow->event", from: "workflow", to: "event", label: "HtmlReportRenderer",
-      points: [[860, 234], [860, 440], [760, 440], [760, 500]], labelAt: [812, 426], runtime: true }
-  ];
+  /* 一条边的走线：同一行 → 横线；外部装配方 → 落到目标顶边中点；其余走中缝的直角折线。
+     边全部来自生成器统计（包内 relations + 包外 external），不在这里手写。 */
+  function routeEdge(from, to) {
+    if (Math.abs(to.cy - from.cy) < 12) {
+      return {
+        points: [[from.right, from.cy], [to.left, to.cy]],
+        labelAt: [(from.right + to.left) / 2, from.cy - 9],
+        anchor: "middle"
+      };
+    }
+    if (from.key === "external") {
+      return {
+        points: [[to.cx, from.bottom], [to.cx, to.top]],
+        labelAt: [to.cx + 6, to.top - 9]
+      };
+    }
+    var goingDown = to.cy > from.cy;
+    var startY = goingDown ? from.bottom : from.top;
+    var endY = goingDown ? to.top : to.bottom;
+    var midY = (startY + endY) / 2;
+    return {
+      points: [[from.cx, startY], [from.cx, midY], [to.cx, midY], [to.cx, endY]],
+      labelAt: [from.cx + 6, midY - 9]
+    };
+  }
 
   function fmt(value) {
     return Number(value || 0).toLocaleString("zh-CN");
@@ -201,7 +198,7 @@
         parts.push(this.dirty ? "工作区有未提交改动" : "工作区干净");
         return parts.join(" · ");
       },
-      /* 按固定顺序排列的六个模块（含颜色、三次总量、逐文件趋势、柱状图 option） */
+      /* 按固定顺序排列的七个模块（含颜色、三次总量、逐文件趋势、柱状图 option） */
       modules: function () {
         var theme = this.theme;
         var comparison = this.comparison;
@@ -218,7 +215,7 @@
             if (item.key === key) group = item;
           });
           if (!group) return null;
-          /* 六个模块的固定色，与架构图同色（tokens 里已登记） */
+          /* 七个模块的固定色，与架构图同色（tokens 里已登记） */
           var color = (theme.colors || {})[key] || (theme.palette || [])[index % 7];
           var values = (comparison.groups || {})[key] || [group.totals.loc, null, null];
           var files = group.files.map(function (file) {
@@ -256,9 +253,11 @@
           return at;
         });
       },
-      /* 架构图：节点 = 六个模块；边 = 正交折线（谁在用谁） */
+      /* 架构图：节点 = 七个原语模块 + 一条「外部装配方」；边 = 生成器统计的 import（内外都算） */
       diagram: function () {
         var modules = this.modules;
+        var theme = this.theme || {};
+        var external = DATA.external || {};
         var nodes = modules.map(function (module) {
           var layout = DIAGRAM_LAYOUT[module.key] || { x: 0, y: 0, w: 240, h: 54, tilt: 0 };
           return {
@@ -274,27 +273,73 @@
             cx: layout.x + layout.w / 2,
             cy: layout.y + layout.h / 2,
             top: layout.y,
-            bottom: layout.y + layout.h
+            bottom: layout.y + layout.h,
+            left: layout.x,
+            right: layout.x + layout.w
           };
         });
 
-        var edges = DIAGRAM_EDGES.map(function (edge) {
-          return {
-            id: edge.id,
-            key: edge.id,
-            from: edge.from,
-            to: edge.to,
-            label: edge.label,
-            runtime: Boolean(edge.runtime),
-            secondary: Boolean(edge.secondary),
-            labelX: edge.labelAt[0],
-            labelY: edge.labelAt[1],
-            labelAnchor: edge.labelAnchor || "middle",
-            d: orthPath(edge.points, edge.bridge)
-          };
+        /* 外部装配方：不在本包内，用虚线框和灰色区分；数字来自 external.total */
+        var extLayout = DIAGRAM_LAYOUT.external;
+        var extLayers = (external.layers || []).map(function (layer) {
+          return layer.name;
+        });
+        nodes.push({
+          key: "external",
+          external: true,
+          title:
+            "外部装配方：" + (extLayers.join(" / ") || "无") + "（" + fmt(external.total || 0) + " 处引用）",
+          doc: false,
+          color: theme.secondary || "#96918c",
+          x: extLayout.x,
+          y: extLayout.y,
+          w: extLayout.w,
+          h: extLayout.h,
+          tilt: extLayout.tilt,
+          cx: extLayout.x + extLayout.w / 2,
+          cy: extLayout.y + extLayout.h / 2,
+          top: extLayout.y,
+          bottom: extLayout.y + extLayout.h,
+          left: extLayout.x,
+          right: extLayout.x + extLayout.w
         });
 
-        return { nodes: nodes, edges: edges, width: 1180, height: 600 };
+        var byKey = {};
+        nodes.forEach(function (node) {
+          byKey[node.key] = node;
+        });
+
+        var pairs = [];
+        (external.edges || []).forEach(function (row) {
+          pairs.push({ from: "external", to: row.to, count: row.count });
+        });
+        (this.relations || []).forEach(function (row) {
+          pairs.push({ from: row.from, to: row.to, count: row.count });
+        });
+
+        var edges = pairs
+          .map(function (pair, index) {
+            var from = byKey[pair.from];
+            var to = byKey[pair.to];
+            if (!from || !to) return null;
+            var route = routeEdge(from, to);
+            return {
+              id: pair.from + "->" + pair.to + "-" + index,
+              key: pair.from + "->" + pair.to + "-" + index,
+              from: pair.from,
+              to: pair.to,
+              label: fmt(pair.count) + " 处引用",
+              runtime: false,
+              secondary: false,
+              labelX: route.labelAt[0],
+              labelY: route.labelAt[1],
+              labelAnchor: route.anchor || "start",
+              d: orthPath(route.points)
+            };
+          })
+          .filter(Boolean);
+
+        return { nodes: nodes, edges: edges, width: 1180, height: 460 };
       },
       /* 打开某个模块的 AGENTS.md */
       docGroup: function () {
@@ -321,7 +366,7 @@
       depRows: function () {
         var rows = [];
         (this.imports.edges || []).forEach(function (edge) {
-          /* 模块只有六个文件夹；根目录 __init__.py 不属于任何模块，别混进表里 */
+          /* 模块只有七个文件夹；根目录 __init__.py 不属于任何模块，别混进表里 */
           if (edge.from === "(根)" || edge.to === "(根)") return;
           rows.push({ from: edge.from, to: edge.to, count: edge.count });
         });
@@ -329,6 +374,27 @@
           return b.count - a.count;
         });
         return rows;
+      },
+      /* 第 2 节：包外装配方一览（谁在 import 这些原语，带真实符号名） */
+      externalRows: function () {
+        return ((DATA.external || {}).edges || []).map(function (row) {
+          return {
+            to: row.to,
+            count: row.count,
+            symbols: row.label,
+            layers: (row.layers || [])
+              .map(function (layer) {
+                return layer.name + " " + layer.count;
+              })
+              .join(" · ")
+          };
+        });
+      },
+      externalLayers: function () {
+        return (DATA.external || {}).layers || [];
+      },
+      externalTotal: function () {
+        return (DATA.external || {}).total || 0;
       },
       graphOption: function () {
         var theme = this.theme;

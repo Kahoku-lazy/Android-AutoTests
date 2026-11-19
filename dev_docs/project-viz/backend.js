@@ -14,14 +14,14 @@
   /* 架构图布局（viewBox 1180×620）：按「谁引用谁」分五层，被引用多的在下 */
   var DIAGRAM_LAYOUT = {
     dashboard: { x: 470, y: 60, w: 200, h: 54, tilt: -0.4 },
-    knowledge_assistant: { x: 830, y: 60, w: 200, h: 54, tilt: 0.4 },
+    knowledge_search: { x: 830, y: 60, w: 200, h: 54, tilt: 0.4 },
     accounts: { x: 80, y: 60, w: 200, h: 54, tilt: 0.3 },
     bug_manager: { x: 290, y: 180, w: 200, h: 54, tilt: -0.3 },
     report_generator: { x: 620, y: 180, w: 200, h: 54, tilt: 0.3 },
     task_list: { x: 470, y: 300, w: 200, h: 54, tilt: -0.5 },
     ai_assistant: { x: 470, y: 420, w: 200, h: 54, tilt: 0.4 },
     case_manager: { x: 80, y: 420, w: 200, h: 54, tilt: -0.4 },
-    workflow: { x: 830, y: 420, w: 200, h: 54, tilt: 0.4 },
+    ops_console: { x: 830, y: 420, w: 200, h: 54, tilt: 0.4 },
     usage_ledger: { x: 290, y: 540, w: 200, h: 54, tilt: -0.3 },
     device_pool: { x: 620, y: 540, w: 200, h: 54, tilt: 0.3 },
     serial_log: { x: 920, y: 540, w: 200, h: 54, tilt: -0.2 }
@@ -261,7 +261,8 @@
             to: rel.to,
             label: rel.count + " 次",
             labelX: (from.cx + to.cx) / 2,
-            labelY: midY - 6,
+            /* 同一水平段可能有多条边（midY 相同），按序号上下错开，避免"1 次次"叠字 */
+            labelY: midY - 6 - (index % 3) * 13,
             labelAnchor: "middle",
             d: orthPath(points)
           });

@@ -10,35 +10,24 @@
   var DATA = (window.__BOARD__ || {}).engineModules || {};
   var MODULE_COLOR_KEY = {
     ae_harness: "engine",
-    agents: "frontend",
-    backend_bridge: "backend",
-    device: "agents",
+    backend_bridge: "workflow",
+    device: "assistant",
     uart_log: "tools",
     utils: "utils",
     vision: "event"
   };
 
-  var MODULE_ORDER = ["agents", "ae_harness", "backend_bridge", "device", "uart_log", "utils", "vision"];
+  var MODULE_ORDER = ["ae_harness", "backend_bridge", "device", "uart_log", "utils", "vision"];
 
-  /* 架构图坐标（viewBox 1180×520）：依赖方向从上到下、从右到左 */
+  /* 架构图坐标（viewBox 1180×480）：上层是「原语层 + 平台装配」，下层是四块底座 */
   var DIAGRAM_LAYOUT = {
-    backend_bridge: { x: 90, y: 60, w: 220, h: 54, tilt: -0.4 },
-    ae_harness: { x: 860, y: 60, w: 220, h: 54, tilt: 0.4 },
-    uart_log: { x: 90, y: 230, w: 220, h: 54, tilt: 0.3 },
-    device: { x: 860, y: 250, w: 220, h: 54, tilt: -0.3 },
-    agents: { x: 460, y: 220, w: 240, h: 54, tilt: -0.5 },
-    utils: { x: 180, y: 400, w: 220, h: 54, tilt: 0.4 },
-    vision: { x: 560, y: 400, w: 220, h: 54, tilt: -0.3 }
+    backend_bridge: { x: 120, y: 60, w: 240, h: 54, tilt: -0.4 },
+    ae_harness: { x: 620, y: 60, w: 240, h: 54, tilt: 0.4 },
+    device: { x: 120, y: 250, w: 220, h: 54, tilt: 0.3 },
+    vision: { x: 400, y: 250, w: 220, h: 54, tilt: -0.3 },
+    uart_log: { x: 680, y: 250, w: 220, h: 54, tilt: 0.4 },
+    utils: { x: 960, y: 250, w: 200, h: 54, tilt: -0.2 }
   };
-
-  /* 边：from → to 表示「from 引用了 to」，count 是引用次数 */
-  var DIAGRAM_EDGES = [
-    { from: "backend_bridge", to: "ae_harness", label: "调 ae_harness 跑角色" },
-    { from: "agents", to: "device", label: "设备动作" },
-    { from: "device", to: "agents", label: "回调角色" },
-    { from: "agents", to: "utils", label: "文件 IO" },
-    { from: "agents", to: "vision", label: "OCR" }
-  ];
 
   var renderMarkdown = window.SimpleMarkdown.render;
 
@@ -259,39 +248,30 @@
         });
 
         var edges = [];
-        DIAGRAM_EDGES.forEach(function (edge, index) {
-          var from = byKey[edge.from];
-          var to = byKey[edge.to];
+        /* 边直接来自 AST 统计的 relations（不是手写清单）：图上每条线都能对回代码 */
+        this.relations.forEach(function (rel, index) {
+          var from = byKey[rel.from];
+          var to = byKey[rel.to];
           if (!from || !to) return;
           var points;
           var labelAt;
-          if (from.key === "backend_bridge" && to.key === "ae_harness") {
+          if (Math.abs(to.cy - from.cy) < 12) {
+            /* 同一行：右出左进 */
             points = [[from.right, from.cy], [to.left, to.cy]];
             labelAt = [(from.right + to.left) / 2, from.cy - 10];
-          } else if (from.key === "backend_bridge" && to.key === "agents") {
-            points = [[from.cx, from.bottom], [from.cx, (from.bottom + to.cy) / 2], [to.left, (from.bottom + to.cy) / 2], [to.left, to.cy]];
-            labelAt = [from.cx + 8, (from.bottom + to.cy) / 2 - 10];
-          } else if (from.key === "agents" && to.key === "device") {
-            points = [[from.right, from.cy], [to.left, to.cy]];
-            labelAt = [(from.right + to.left) / 2, from.cy - 10];
-          } else if (from.key === "device" && to.key === "agents") {
-            points = [[from.left, from.cy + 14], [to.x + to.w, to.cy + 14]];
-            labelAt = [(from.left + to.right) / 2, to.cy + 34];
-          } else if (from.key === "agents" && to.key === "utils") {
-            points = [[from.cx - 60, from.bottom], [from.cx - 60, 350], [to.cx, 350], [to.cx, to.top]];
-            labelAt = [from.cx - 70, 336];
-          } else if (from.key === "agents" && to.key === "vision") {
-            points = [[from.cx + 60, from.bottom], [from.cx + 60, to.top]];
-            labelAt = [from.cx + 70, 340];
           } else {
-            points = [[from.right, from.cy], [to.left, to.cy]];
-            labelAt = [(from.right + to.left) / 2, (from.cy + to.cy) / 2 - 10];
+            var goingDown = to.cy > from.cy;
+            var startY = goingDown ? from.bottom : from.top;
+            var endY = goingDown ? to.top : to.bottom;
+            var midY = (startY + endY) / 2;
+            points = [[from.cx, startY], [from.cx, midY], [to.cx, midY], [to.cx, endY]];
+            labelAt = [from.cx + 8, midY - 10];
           }
           edges.push({
-            id: edge.from + "->" + edge.to + "-" + index,
-            from: edge.from,
-            to: edge.to,
-            label: edge.label,
+            id: rel.from + "->" + rel.to + "-" + index,
+            from: rel.from,
+            to: rel.to,
+            label: rel.count + " 个文件引用",
             labelX: labelAt[0],
             labelY: labelAt[1],
             labelAnchor: "middle",

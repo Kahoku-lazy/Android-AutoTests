@@ -6,21 +6,23 @@
 
 ## 打开
 
-直接双击 [`index.html`](index.html)，或起一个本地服务（推荐，避免浏览器缓存 CSS）：
+直接双击根目录的 [`index.html`](index.html)（入口），或起一个本地服务（推荐，避免浏览器缓存 CSS）：
 
 ```bash
 python -m http.server 8811 --directory dev_docs/project-viz
 # http://127.0.0.1:8811/index.html
 ```
 
-五个页面：
+**入口页在项目根，其余 26 个页面在 [`html/`](html/)**：入口页的资源引用是同级（`styles.css` / `data/` …），其余页面的资源引用是 `../`；侧栏链接已按两套目录分别生成。
 
-- [index.html](index.html) —— **总览**：仓库一级目录（backend / engines / frontend / tests / utils）
-- [frontend.html](frontend.html) —— **前端**：`frontend/src/modules/` 下 11 个业务目录
-- **23 个模块页** —— 前端 11 个（如 [frontend-workflow.html](frontend-workflow.html)）+ 后端 12 个（如 [backend-task_list.html](backend-task_list.html)），每个业务模块一页，三节与主页面同构：单元引用关系图 / 单元依赖（图+表）+ 代码量饼图 / 单元三次对比
-- [backend.html](backend.html) —— **后端**：`backend/apps/` 下 12 个 Django app
-- [agents.html](agents.html) —— **引擎**：`engines/` 下 7 个顶层目录
-- [ae-harness.html](ae-harness.html) —— **原型链路**：`engines/ae_harness/` 下 6 个文件夹
+页面清单：
+
+- [index.html](index.html) —— **入口 / 总览**：仓库一级目录（backend / engines / frontend / tests / utils）
+- [html/frontend.html](html/frontend.html) —— **前端**：`frontend/src/modules/` 下 10 个业务目录
+- **22 个模块页**（都在 `html/`）—— 前端 10 个（如 [html/frontend-ops-console.html](html/frontend-ops-console.html)）+ 后端 12 个（如 [html/backend-task_list.html](html/backend-task_list.html)），每个业务模块一页，三节与主页面同构：单元引用关系图 / 单元依赖（图+表）+ 代码量饼图 / 单元三次对比
+- [html/backend.html](html/backend.html) —— **后端**：`backend/apps/` 下 12 个 Django app
+- [html/agents.html](html/agents.html) —— **引擎**：`engines/` 下 6 个顶层目录
+- [html/ae-harness.html](html/ae-harness.html) —— **原型链路**：`engines/ae_harness/` 下 7 个原语模块 + 一条「外部装配方」
 
 ## 每个页面都是三节
 
@@ -36,12 +38,13 @@ python -m http.server 8811 --directory dev_docs/project-viz
 
 | 路径 | 职责 |
 | --- | --- |
-| `index.html` · `overview.js` | 总览页（数据键 `projectModules`） |
-| `frontend.html` · `frontend.js` | 前端页（`frontendModules`） |
-| `frontend-<key>.html`（11）+ `backend-<key>.html`（12）· `module.js` | 模块页（每个业务模块一页） |
-| `backend.html` · `backend.js` | 后端页（`backendModules`） |
-| `agents.html` · `agents.js` | 引擎页（`engineModules`） |
-| `ae-harness.html` · `ae-harness.js` | 原型链路页（`ae_harness`） |
+| `index.html` · `overview.js` | **入口页**（总览，数据键 `projectModules`），资源引用是同级（`styles.css` / `data/` / `vendor/` …） |
+| `html/` | **其余 26 个页面**（4 个分类页 + 22 模块页）；资源引用一律 `../`，指向入口写 `../index.html` |
+| `html/frontend.html` · `frontend.js` | 前端页（`frontendModules`） |
+| `html/frontend-<key>.html`（10）+ `html/backend-<key>.html`（12）· `module.js` | 模块页（每个业务模块一页） |
+| `html/backend.html` · `backend.js` | 后端页（`backendModules`） |
+| `html/agents.html` · `agents.js` | 引擎页（`engineModules`） |
+| `html/ae-harness.html` · `ae-harness.js` | 原型链路页（`ae_harness`） |
 | `styles.css` | 五页共用：令牌子集 + 骨架 + 组件配方 |
 | `markdown.js` | AGENTS.md 弹层用的极简 markdown 渲染（共享） |
 | `charts/chart-framework.js` | 图表底层：生命周期 + 令牌 + `<viz-chart>` |
@@ -49,6 +52,8 @@ python -m http.server 8811 --directory dev_docs/project-viz
 | `data/board.js` · `board.json` | 当前快照（`window.__BOARD__` / 机器可读） |
 | `data/history.json` · `history.js` | 历史快照（生成器追加，数值没变不追加） |
 | `tools/gen_board_data.py` | 生成器：扫仓库 → 写上面四个数据文件 |
+| `tools/gen_module_pages.py` | 按模板批量生成 22 个模块页到 `html/` |
+| `tools/sync_sidebar.py` | 按 `data/board.json` 刷新侧栏（根入口 + 4 个分类页 + 模块页模板） |
 | `tools/count_frontend.mjs` | 前端计数（本地 TypeScript 语法树，无网络） |
 | `vendor/` | Vue 3.5.44 全局构建 + ECharts 5.6.0 完整构建（本地化） |
 
@@ -66,7 +71,7 @@ python dev_docs/project-viz/tools/gen_board_data.py --check  # 比对，过期�
 
 ## 已定 / 未定
 
-**已定**：五页三节结构、每页的模块与单元口径、依赖图与饼图、三次对比、AGENTS.md 弹层。
+**已定**：五页三节结构、每页的模块与单元口径、依赖图与饼图、三次对比、AGENTS.md 弹层、ae_harness 页的「外部装配方」表。
 
 **未定**：历史趋势的更长视图（现在只到三次）、跨页跳转（点模块跳到对应页）。
 

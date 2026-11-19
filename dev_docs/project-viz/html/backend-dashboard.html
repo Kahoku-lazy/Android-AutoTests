@@ -1,28 +1,7 @@
 <!DOCTYPE html>
 <!--
-  模块详情页模板（前端 / 后端共用）：dashboard / dashboard / backend / 后端 /
-            <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-workflow.html">workflow</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-task-list.html">task-list</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-case-manager.html">case-manager</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-dashboard.html">dashboard</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-device-pool.html">device-pool</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-knowledge-assistant.html">knowledge-assistant</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-report-generator.html">report-generator</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-ai-assistant.html">ai-assistant</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-serial-log.html">serial-log</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-bug-manager.html">bug-manager</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-agent-reports.html">agent-reports</a> /           <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-accounts.html">accounts</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-ai_assistant.html">ai_assistant</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-bug_manager.html">bug_manager</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-case_manager.html">case_manager</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub is-active" href="backend-dashboard.html" aria-current="page">dashboard</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-device_pool.html">device_pool</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-knowledge_assistant.html">knowledge_assistant</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-report_generator.html">report_generator</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-serial_log.html">serial_log</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-task_list.html">task_list</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-usage_ledger.html">usage_ledger</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-workflow.html">workflow</a> 由 tools/gen_module_pages.py 替换。
+  模块详情页模板（前端 / 后端共用）：页面的模块 key、标题、所属 scope 与两侧栏的模块项
+  都由 tools/gen_module_pages.py 在生成时替换（占位符别直接写在这里，否则会被替换进注释）。
   三节与主页面同构：① 单元引用关系图（自绘 SVG，椭圆布局，点节点高亮）② 单元依赖（图/表 tab）+ 代码量饼图
   ③ 单元代码量最近三次对比。
 -->
@@ -31,7 +10,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>dashboard · 后端模块 · Android-AutoTests</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="../styles.css" />
 </head>
 <body>
   <div id="app" v-cloak>
@@ -47,20 +26,19 @@
 
         <nav class="sidebar__nav" aria-label="导航">
           <p class="sidebar__group">视图</p>
-          <a class="sidebar__nav-item" href="index.html">总览</a>
+          <a class="sidebar__nav-item" href="../index.html">总览</a>
           <p class="sidebar__group">前端</p>
           <a class="sidebar__nav-item" href="frontend.html">前端功能模块</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-workflow.html">workflow</a>
+          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-ai-assistant.html">ai-assistant</a>
+          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-ops-console.html">ops-console</a>
+          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-dashboard.html">dashboard</a>
+          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-serial-log.html">serial-log</a>
+          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-device-pool.html">device-pool</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-task-list.html">task-list</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-case-manager.html">case-manager</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-dashboard.html">dashboard</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-device-pool.html">device-pool</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-knowledge-assistant.html">knowledge-assistant</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-report-generator.html">report-generator</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-ai-assistant.html">ai-assistant</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-serial-log.html">serial-log</a>
+          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-knowledge-search.html">knowledge-search</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-bug-manager.html">bug-manager</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-agent-reports.html">agent-reports</a>
+          <a class="sidebar__nav-item sidebar__nav-item--sub" href="frontend-report-generator.html">report-generator</a>
           <p class="sidebar__group">后端</p>
           <a class="sidebar__nav-item" href="backend.html">后端功能模块</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-accounts.html">accounts</a>
@@ -69,14 +47,14 @@
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-case_manager.html">case_manager</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub is-active" href="backend-dashboard.html" aria-current="page">dashboard</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-device_pool.html">device_pool</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-knowledge_assistant.html">knowledge_assistant</a>
+          <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-knowledge_search.html">knowledge_search</a>
+          <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-ops_console.html">ops_console</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-report_generator.html">report_generator</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-serial_log.html">serial_log</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-task_list.html">task_list</a>
           <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-usage_ledger.html">usage_ledger</a>
-          <a class="sidebar__nav-item sidebar__nav-item--sub" href="backend-workflow.html">workflow</a>
           <p class="sidebar__group">引擎</p>
-          <a class="sidebar__nav-item" href="agents.html">智能体功能模块</a>
+          <a class="sidebar__nav-item" href="agents.html">引擎功能模块</a>
           <p class="sidebar__group">ae_harness</p>
           <a class="sidebar__nav-item" href="ae-harness.html">原型链路</a>
         </nav>
@@ -237,11 +215,11 @@
     window.__MODULE_KEY__ = "dashboard";
     window.__MODULE_SCOPE__ = "backend";
   </script>
-  <script src="data/board.js"></script>
-  <script src="vendor/vue.global.prod.js"></script>
-  <script src="vendor/echarts.min.js"></script>
-  <script src="charts/chart-framework.js"></script>
-  <script src="charts/board-options.js"></script>
-  <script src="module.js"></script>
+  <script src="../data/board.js"></script>
+  <script src="../vendor/vue.global.prod.js"></script>
+  <script src="../vendor/echarts.min.js"></script>
+  <script src="../charts/chart-framework.js"></script>
+  <script src="../charts/board-options.js"></script>
+  <script src="../module.js"></script>
 </body>
 </html>

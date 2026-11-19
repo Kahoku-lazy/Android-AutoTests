@@ -1,4 +1,9 @@
-"""角色注册表接口契约：五个方法的状态码、信封、字段集合与错误码。"""
+"""角色注册表接口契约：五个方法的状态码、信封、字段集合与错误码。
+
+旧 AIAgent / AgentViewSet 用例已删除（2026-11-19）：模型与视图已演进为
+AIAssistant / AssistantViewSet（路由 /api/ai/assistants/），旧用例引用已退役
+名字，执行必 NameError；经需求方确认按失效用例删除，不改写。
+"""
 
 from __future__ import annotations
 
@@ -11,7 +16,7 @@ from django.test import RequestFactory
 from django.urls import Resolver404, resolve
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from backend.apps.ai_assistant.models import AIModelConfig, AIRole
+from backend.apps.ai_assistant.models import AIRole
 from backend.apps.ai_assistant.views_drf import RoleViewSet
 from backend.gateway.middleware import JWTAuthenticationMiddleware
 
@@ -53,91 +58,6 @@ def call(user, method, path, data=None, **url_kwargs):
             )(request, **url_kwargs)
         )
     )
-
-
-def _config():
-    return AIModelConfig.objects.create(
-        provider="deepseek",
-        api_key_env="DEEPSEEK_API_KEY",
-        api_protocol="deepseek",
-        model_name="deepseek-flash",
-        base_url="https://api.deepseek.com",
-    )
-
-
-def _agent_call(user, method, path, data=None, action="list", **url_kwargs):
-    factory = APIRequestFactory()
-    request = getattr(factory, method)(path, data or {}, format="json")
-    request.user_id = str(user.id)
-    force_authenticate(request, user=user)
-    view = AgentViewSet.as_view({"get": action, "post": action})
-    return view(request, **url_kwargs)
-
-
-def test_agent_routes_resolve():
-    assert resolve("/api/ai/agents/").func.cls is AgentViewSet
-    assert resolve("/api/ai/agents/create/").func.cls is AgentViewSet
-    assert resolve("/api/ai/agents/7/").func.cls is AgentViewSet
-    assert resolve("/api/ai/agents/7/update/").func.cls is AgentViewSet
-    assert resolve("/api/ai/agents/7/delete/").func.cls is AgentViewSet
-
-
-def test_create_agent_requires_operator(user):
-    """普通用户不能创建。"""
-    response = _agent_call(
-        user, "post", "/api/ai/agents/create/", {"name": "新助手"}, action="create_agent"
-    )
-    assert response.status_code == 403
-    assert AIAgent.objects.count() == 0
-
-
-def test_create_agent_persists_for_operator(db):
-    """运营可创建，且不把创建者写成归属人。"""
-    from django.contrib.auth.models import Group
-
-    from backend.apps.ai_assistant.models import AIModelConfig
-    from backend.shared.users import OPERATOR_GROUP
-
-    operator = get_user_model().objects.create_user(username="agent-ops", password="pass")
-    operator.groups.add(Group.objects.get_or_create(name=OPERATOR_GROUP)[0])
-    AIModelConfig.objects.create(
-        provider="govee", api_key_env="GOVEE_API_KEY", model_name="deepseek-flash"
-    )
-    response = _agent_call(
-        operator,
-        "post",
-        "/api/ai/agents/create/",
-        {"name": "新助手", "api_key_env": "GOVEE_API_KEY", "model_name": "deepseek-flash"},
-        action="create_agent",
-    )
-    assert response.status_code == 201
-    agent = AIAgent.objects.get(id=response.data["id"])
-    assert agent.owner_id is None
-    assert agent.api_key_env == "GOVEE_API_KEY"
-    assert agent.model_name == "deepseek-flash"
-
-
-def test_create_agent_persists_for_superuser(db):
-    from backend.apps.ai_assistant.models import AIModelConfig
-
-    admin = get_user_model().objects.create_user(
-        username="agent-admin", password="pass", is_superuser=True, is_staff=True
-    )
-    AIModelConfig.objects.create(
-        provider="govee", api_key_env="GOVEE_API_KEY", model_name="deepseek-flash"
-    )
-    response = _agent_call(
-        admin,
-        "post",
-        "/api/ai/agents/create/",
-        {"name": "新助手", "api_key_env": "GOVEE_API_KEY", "model_name": "deepseek-flash"},
-        action="create_agent",
-    )
-    assert response.status_code == 201
-    agent = AIAgent.objects.get(id=response.data["id"])
-    assert agent.owner_id is None
-    assert agent.name == "新助手"
-    assert agent.model_name == "deepseek-flash"
 
 
 def test_model_config_round_trip(db):
@@ -184,119 +104,6 @@ def test_model_config_round_trip(db):
     assert AIModelConfig.objects.filter(api_key_env="GOVEE_API_KEY").count() == 2
     listed = call("get", "/api/ai/model-configs/")
     assert {row["model_name"] for row in listed.data["configs"]} == {"deepseek-flash", "grok-4.7"}
-
-
-def test_create_agent_rejects_blank_name(db):
-    admin = get_user_model().objects.create_user(
-        username="agent-admin2", password="pass", is_superuser=True, is_staff=True
-    )
-    response = _agent_call(
-        admin, "post", "/api/ai/agents/create/", {"name": "   "}, action="create_agent"
-    )
-    assert response.status_code == 400
-    assert AIAgent.objects.count() == 0
-
-
-def test_agent_list_detail_update_delete(db):
-    from backend.apps.ai_assistant.models import AIModelConfig
-
-    admin = get_user_model().objects.create_user(
-        username="agent-admin3", password="pass", is_superuser=True, is_staff=True
-    )
-    AIModelConfig.objects.create(
-        provider="govee", api_key_env="GOVEE_API_KEY", model_name="deepseek-flash"
-    )
-    created = _agent_call(
-        admin,
-        "post",
-        "/api/ai/agents/create/",
-        {"name": "助手甲", "api_key_env": "GOVEE_API_KEY", "model_name": "deepseek-flash"},
-        action="create_agent",
-    )
-    agent_id = created.data["id"]
-
-    listed = _agent_call(admin, "get", "/api/ai/agents/")
-    assert listed.status_code == 200
-    assert agent_id in [row["id"] for row in listed.data["agents"]]
-
-    detail = _agent_call(
-        admin, "get", f"/api/ai/agents/{agent_id}/", action="retrieve", pk=agent_id
-    )
-    assert detail.status_code == 200
-    assert detail.data["agent"]["name"] == "助手甲"
-    assert "api_key" not in detail.data["agent"]
-
-    updated = _agent_call(
-        admin,
-        "post",
-        f"/api/ai/agents/{agent_id}/update/",
-        {"name": "助手甲改", "api_key_env": "GOVEE_API_KEY", "model_name": "deepseek-flash"},
-        action="update_agent",
-        pk=agent_id,
-    )
-    assert updated.status_code == 200
-    assert AIAgent.objects.get(id=agent_id).name == "助手甲改"
-
-    deleted = _agent_call(
-        admin, "post", f"/api/ai/agents/{agent_id}/delete/", action="delete_agent", pk=agent_id
-    )
-    assert deleted.status_code == 200
-    assert not AIAgent.objects.filter(id=agent_id).exists()
-
-
-def test_agent_write_forbidden_for_normal_user(user):
-    agent = AIAgent.objects.create(name="别人的助手", owner=user)
-    response = _agent_call(
-        user,
-        "post",
-        f"/api/ai/agents/{agent.id}/update/",
-        {"name": "改名"},
-        action="update_agent",
-        pk=agent.id,
-    )
-    assert response.status_code == 403
-    assert AIAgent.objects.get(id=agent.id).name == "别人的助手"
-
-
-def test_operator_can_update_any_agent(db, user):
-    """运营可以改别人名下的智能体，不按归属人限制。"""
-    from django.contrib.auth.models import Group
-
-    from backend.shared.users import OPERATOR_GROUP
-
-    operator = get_user_model().objects.create_user(username="agent-ops2", password="pass")
-    from backend.apps.ai_assistant.models import AIModelConfig
-
-    operator.groups.add(Group.objects.get_or_create(name=OPERATOR_GROUP)[0])
-    AIModelConfig.objects.create(
-        provider="govee", api_key_env="GOVEE_API_KEY", model_name="deepseek-flash"
-    )
-    agent = AIAgent.objects.create(name="别人的助手", owner=user)
-    response = _agent_call(
-        operator,
-        "post",
-        f"/api/ai/agents/{agent.id}/update/",
-        {"name": "运营改的", "api_key_env": "GOVEE_API_KEY", "model_name": "deepseek-flash"},
-        action="update_agent",
-        pk=agent.id,
-    )
-    assert response.status_code == 200
-    assert AIAgent.objects.get(id=agent.id).name == "运营改的"
-
-
-def test_normal_user_sees_all_agents(user):
-    """登录用户看到全部智能体，包括挂在别人名下的。"""
-    owner = get_user_model().objects.create_user(username="other-owner", password="pass")
-    hidden = AIAgent.objects.create(name="别人的", owner=owner)
-    listed = _agent_call(user, "get", "/api/ai/agents/")
-    assert listed.status_code == 200
-    assert hidden.id in [row["id"] for row in listed.data["agents"]]
-
-
-def test_missing_agent_detail_is_404(user):
-    """记录不存在是 404，不用 403 表示不存在。"""
-    response = _agent_call(user, "get", "/api/ai/agents/999999/", action="retrieve", pk=999999)
-    assert response.status_code == 404
 
 
 def test_routes_resolve():

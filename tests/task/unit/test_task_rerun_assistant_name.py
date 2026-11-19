@@ -18,7 +18,10 @@ def test_rerun_task_clones_without_mutating_original():
         attachment_filename="a.pdf",
         device_serial="SER1",
         device_label="SM-S9010",
-        case_identity={"source": "platform", "rows": [{"project": "灯", "id": "1", "title": "定时"}]},
+        case_identity={
+            "source": "platform",
+            "rows": [{"project": "灯", "id": "1", "title": "定时"}],
+        },
         created_by="42",
     )
     api.finalize_task(original, status=TaskStatus.FAILED, result="执行异常: 402")
@@ -40,6 +43,66 @@ def test_rerun_task_clones_without_mutating_original():
     assert cloned.device_label == original.device_label
     assert cloned.created_by == "42"
     assert cloned.case_identity == original.case_identity
+    assert cloned.result == ""
+    assert cloned.workflow_id == original.workflow_id
+    assert cloned.orchestration == original.orchestration
+    assert cloned.kind == original.kind
+
+
+def test_rerun_keeps_workflow_id_and_drops_previous_failure():
+    original = api.create_task(
+        title="Android-UI-SOP",
+        goal="",
+        device_serial="RF8N21MSW7A",
+        task_kind="assistant_sop",
+        created_by="42",
+        workflow_id=1,
+        orchestration="sop",
+        kind="ui_automation",
+    )
+    original.result = api.dump_task_run_payload(
+        {
+            "workflow_id": 1,
+            "status": "fail",
+            "reason": "模型网关不可用",
+            "report_path": "logs/old.html",
+        }
+    )
+    original.status = TaskStatus.FAILED
+    original.save(update_fields=["result", "status"])
+
+    cloned = api.rerun_task(original)
+
+    assert api.parse_task_result(cloned.result) == {"workflow_id": 1}
+    original.refresh_from_db()
+    assert "模型网关不可用" in original.result
+
+
+def test_rerun_recovers_workflow_id_lost_by_an_earlier_clone():
+    source = api.create_task(
+        title="Android-UI-SOP",
+        goal="",
+        device_serial="RF8N21MSW7A",
+        task_kind="assistant_sop",
+        case_identity={"source": "platform", "rows": [{"id": "9"}]},
+    )
+    source.result = api.dump_task_run_payload({"workflow_id": 1, "status": "fail"})
+    source.status = TaskStatus.FAILED
+    source.save(update_fields=["result", "status"])
+    lost = api.create_task(
+        title=source.title,
+        goal="",
+        device_serial=source.device_serial,
+        task_kind=source.task_kind,
+        case_identity=source.case_identity,
+    )
+    lost.status = TaskStatus.FAILED
+    lost.result = api.dump_task_run_payload({"status": "fail", "reason": "任务没有工作流编号"})
+    lost.save(update_fields=["status", "result"])
+
+    cloned = api.rerun_task(lost)
+
+    assert api.parse_task_result(cloned.result) == {"workflow_id": 1}
 
 
 def test_list_row_uses_workflow_name_not_retired_agent(monkeypatch):

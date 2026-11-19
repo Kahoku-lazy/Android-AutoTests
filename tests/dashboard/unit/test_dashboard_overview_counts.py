@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 
@@ -61,9 +62,7 @@ def test_overview_counts_workflow_tasks_only(client):
 def test_operator_and_superuser_receive_ops_counts(client):
     operator = User.objects.create_user(username="overview-ops", password="x")
     operator.groups.add(Group.objects.create(name=OPERATOR_GROUP))
-    superuser = User.objects.create_user(
-        username="overview-root", password="x", is_superuser=True
-    )
+    superuser = User.objects.create_user(username="overview-root", password="x", is_superuser=True)
     _seed_counts()
 
     for user in (operator, superuser):

@@ -6,30 +6,31 @@ Python 调试：➡ python -m engines.device.android.android_device 🏁
 时间：➡ 2026-10-20 🏁
 作者：➡ kahoku 🏁
 版本：➡ 1.0.0 🏁
-修改时间: ➡ 2026-11-02 🏁
+修改时间: ➡ 2026-11-19 🏁
 类型: ➡ 工具模块 🏁
 简介说明：➡
-1. AndroidConnectionConfig / AndroidConnection: 无线/USB 双栈连接、探活与重连
+1. AndroidConnectionConfig / AndroidConnection: 无线/USB 双栈连接、探活与断开
 2. AdbChannel: adb 命令通道（只执行、取回，不做解析）
 3. AdbInfo: 分辨率 / 前台应用 / 包名 / 已连接设备 / 层级 XML
 4. AdbControl: 点击 / 长按 / 滑动 / 拖动 / 输入 / 按键 / 截图 / 应用启停
 5. AndroidControl: 在 AdbControl 之上补 u2（xpath 等）
-6. capture_png: 截图辅助
 🏁
 关联模块：➡
 1. engines.device.action: DeviceConnection / DeviceControl 等抽象
 2. utils.logs: device_log
+3. utils.adb: adb_binary（平台自带 adb 路径解析）
 🏁
 测试：➡
-1. tests/engines/devices/test_android_device.py: Android 设备控制
-2. tests/engines/agents/test_tool_device_e2e.py: 设备工具 e2e
-3. tests/engines/agents/test_xpath_action_coords.py: xpath 动作坐标
+1. tests/engines/device/unit/test_android_device.py: 连接 / 命令通道 / 解析器
+2. tests/device/unit/test_device_app_control.py: 应用启停与错误提示
+3. tests/device/unit/test_device_foreground.py: 前台应用解析
 🏁
 """
 
 from __future__ import annotations
 
 import re
+import shlex
 import subprocess
 import time
 
@@ -38,19 +39,69 @@ from dataclasses import dataclass
 import uiautomator2 as u2
 
 from engines.device.action import DeviceConnection, DeviceControl, DeviceInfo, EngineConnectError
+from utils.adb import adb_binary
 from utils.logs import device_log
 
 # u2 单操作 HTTP 超时上限（秒）。u2 默认 HTTP_TIMEOUT=300，设备冻结会永久阻塞。
 U2_OP_TIMEOUT = 20
 
+# 真实超时异常类在这里固定一份：单测会把 `subprocess` 换成替身，替身上没有 TimeoutExpired。
+_SUBPROCESS_TIMEOUT = subprocess.TimeoutExpired
+
+
+def _tune_u2_http_timeout() -> None:
+    """把 u2 的单次请求超时收紧到 `U2_OP_TIMEOUT`。
+
+    uiautomator2 3.x 没有会话级超时开关：每次 jsonrpc 的 timeout 默认取 `base` 模块里
+    绑定的 `HTTP_TIMEOUT`（300 秒），设备冻结时一次调用就能挂满 5 分钟。
+    这里在建立会话前改掉该模块常量——进程级生效，device 模块是进程内唯一的 u2 控制入口。
+    拿不到该常量（u2 升级改了内部结构）时只记一条告警，不阻断连接。
+    """
+    try:
+        from uiautomator2 import base as u2_base
+    except ImportError:  # pragma: no cover - 仅 u2 结构变化时触发
+        device_log.warning("uiautomator2.base 不可导入，u2 请求超时保持默认值")
+        return
+    current = getattr(u2_base, "HTTP_TIMEOUT", None)
+    if current == U2_OP_TIMEOUT:
+        return
+    if current is None:  # pragma: no cover - 仅 u2 结构变化时触发
+        device_log.warning("uiautomator2 没有 HTTP_TIMEOUT，u2 请求超时保持默认值")
+        return
+    u2_base.HTTP_TIMEOUT = U2_OP_TIMEOUT
+
+
 _CONNECTED_KEYWORDS = ("connected", "already", "已连接", "已经连接", "成功")
+
+
+def _masked_command(args: tuple[str, ...]) -> str:
+    """拼出可写日志的 adb 命令行；`pair` 的配对码用固定掩码替换。
+
+    Args:
+        args: 传给 adb 的子命令与参数。
+
+    Returns:
+        空格拼接后的命令行文本；配对码位置已打码，不落真实凭据。
+    """
+    parts = list(args)
+    if parts and parts[0] == "pair" and len(parts) >= 3:
+        parts[-1] = "******"
+    return " ".join(parts)
 
 
 @dataclass(frozen=True)
 class AndroidConnectionConfig:
-    # USB 连接 设备UUID
-    """Android 连接配置（序列号、无线地址、adb 可执行文件等）。"""
+    """Android 连接配置：USB 用序列号，无线用地址/端口，首次配对再带配对码。
 
+    Attributes:
+        uuid: USB 设备序列号；无线连接时为空。
+        address: 无线连接地址。
+        address_port: 无线连接端口。
+        pair_port: 无线配对端口。
+        pair_code: 无线配对码（凭据，不写入日志）。
+    """
+
+    # USB 连接 设备UUID
     uuid: str | None = None
 
     # 无线连接 设备地址与端口号
@@ -69,19 +120,26 @@ class AndroidConnection(DeviceConnection):
 
     def __init__(self, config: AndroidConnectionConfig) -> None:
         """
+        保存连接配置并准备设备日志。
+
         Args:
-            config: AndroidConnectionConfig
+            config: 目标设备（USB 序列号或无线地址/端口/配对码）。
         """
         self.config = config
         self.log = device_log  # 设备日志
 
     def _check_ip_address(self) -> str:
         """
-        检查 IP 地址是否有效
-        args:
-            参数来自 self.config 中的 address 和 address_port
-                address: 无线连接地址
-                address_port: 无线连接端口
+        检查 IP 地址是否有效。
+
+        Args:
+            参数来自 self.config 中的 address 和 address_port。
+
+        Returns:
+            `地址:端口` 形式的连接端点。
+
+        Raises:
+            EngineConnectError: address 或 address_port 缺失。
         """
         if self.config.address is None or self.config.address_port is None:
             raise EngineConnectError("无线连接地址与端口号不能为空，请检查配置")
@@ -94,6 +152,15 @@ class AndroidConnection(DeviceConnection):
 
         返回 (地址:配对端口, 配对码)。两者必须分开传给 ``adb pair``，
         拼成一个参数时 adb 会把整串当成地址，并在终端等待输入配对码。
+
+        Args:
+            参数来自 self.config 中的 address、pair_port 与 pair_code。
+
+        Returns:
+            `(地址:配对端口, 配对码)`。
+
+        Raises:
+            EngineConnectError: 配对码、地址或配对端口缺失。
         """
         if (
             self.config.pair_code is None
@@ -105,8 +172,19 @@ class AndroidConnection(DeviceConnection):
         return f"{self.config.address}:{self.config.pair_port}", self.config.pair_code
 
     def _run_adb(self, *args: str, stdin=None) -> str:
-        """执行 adb 子命令并记录命令与结果。失败或超时抛 EngineConnectError，成功返回拼接文本。"""
-        shown = " ".join(args)
+        """执行 adb 子命令并记录命令与结果。失败或超时抛 EngineConnectError，成功返回拼接文本。
+
+        Args:
+            *args: adb 子命令与参数，例如 ``("connect", "192.168.1.5:5555")``。
+            stdin: 子进程标准输入；``adb pair`` 传 DEVNULL 以避免终端等待。
+
+        Returns:
+            stdout 与 stderr 拼接后的文本，供关键词判定使用。
+
+        Raises:
+            EngineConnectError: 超过 10 秒超时，或 adb 退出码非 0。
+        """
+        shown = _masked_command(args)
         self.log.info(f"执行命令: adb {shown}")
         try:
             result = subprocess.run(
@@ -119,9 +197,9 @@ class AndroidConnection(DeviceConnection):
         except subprocess.TimeoutExpired:
             raise EngineConnectError(f"ADB {shown} timed out (10s). Check network.") from None
         output = f"{result.stdout} + {result.stderr}".strip()
-        self.log.info(f"adb {args[0]} 命令的执行结果是: {output}")
+        self.log.info(f"adb {shown} 命令的执行结果是: {output}")
         if result.returncode != 0:
-            raise EngineConnectError(f"ADB {args[0]} failed. {output}")
+            raise EngineConnectError(f"ADB {shown} failed. {output}")
         return output
 
     def _adb_connect(self) -> str:
@@ -175,40 +253,59 @@ class AndroidConnection(DeviceConnection):
         """
 
         endpoint, code = self._check_pair_code()
-        self.log.info(f"待配对的设备地址信息是（地址、端口号、配对码）: {endpoint} {code}")
+        self.log.info(f"待配对的设备地址与端口号是: {endpoint}")
         self._run_adb("pair", endpoint, code, stdin=subprocess.DEVNULL)
 
+    def _verify_usb(self) -> None:
+        """USB 连接校验：确认该序列号的设备在线。
+
+        Raises:
+            EngineConnectError: adb 报错，或设备状态不是 device。
+        """
+        output = self._run_adb("-s", str(self.config.uuid), "get-state")
+        if "device" not in output:
+            raise EngineConnectError(f"USB 设备不在线: {self.config.uuid}")
+
     def disconnect(self) -> None:
-        """断开无线设备连接。USB 没有地址，直接返回。"""
+        """断开无线设备连接。USB 没有地址，直接返回。
+
+        Raises:
+            EngineConnectError: 无线断开失败。
+        """
         if self.config.address is None:
             return
         self._adb_disconnect()
 
     def connect(self) -> None:
         """
-        连接设备，先配对设备，再连接设备；如果已经配对，则直接连接设备。
-        USB 只保留序列号，不走 adb connect。
+        连接设备：有配对码先配对，随后 adb connect；USB 只校验设备在线。
 
-        args:
-            参数来自 self.config 中的 pair_code
-                pair_code: 配对码
         Raises:
-            EngineConnectError: 连接失败
+            EngineConnectError: 配对、无线连接或 USB 探活失败。
         """
         if self.config.pair_code is not None:
             self._adb_pair()
         if self.config.address is not None:
             self._adb_connect()
+        elif self.config.uuid:
+            self._verify_usb()
 
     def adb_devices(self) -> str:
-        """返回 ``adb devices`` 原文。已连接行形如 ``192.168.35.57:44123     device``。"""
+        """返回 ``adb devices`` 原文。已连接行形如 ``192.168.35.57:44123     device``。
+
+        Returns:
+            adb devices 的原始文本。
+
+        Raises:
+            EngineConnectError: adb 超时或退出码非 0。
+        """
         return self._run_adb("devices")
 
 
 def _bounds_center(bounds: str) -> tuple[int, int]:
     """把 `[left,top][right,bottom]` 解成中心点；解析失败返回 (0, 0)。"""
     parts = bounds.replace("][", ",").replace("[", "").replace("]", "").split(",")
-    if len(parts) != 4 or not all(part.strip().lstrip("-").isdigit() for part in parts):
+    if len(parts) != 4 or not all(re.fullmatch(r"-?\d+", part.strip()) for part in parts):
         return 0, 0
     left, top, right, bottom = (int(part) for part in parts)
     return (left + right) // 2, (top + bottom) // 2
@@ -221,38 +318,6 @@ def _bounds_center(bounds: str) -> tuple[int, int]:
 # System.control("android") -> AndroidControl（本文件末尾，继承 AdbControl）
 # 本文件末尾的 AndroidControl 只额外补 u2 的两项能力：xpath 元素查找与非 ASCII 输入。
 # ══════════════════════════════════════════════════════════════════════
-
-from pathlib import Path
-
-from utils.adb import adb_binary
-
-
-def _run(args: list[str], timeout: float = 30.0) -> tuple[int, bytes, bytes]:
-    """跑一条 adb 命令, 返回 (退出码, stdout 字节, stderr 字节)。
-    stdout 必须是字节: screencap 是二进制, 一旦按文本解码就会被换行转换破坏。
-    """
-    proc = subprocess.run([adb_binary(), *args], capture_output=True, timeout=timeout)
-    return proc.returncode, proc.stdout, proc.stderr
-
-
-def capture_png(serial: str, file_path: str) -> bytes:
-    """adb exec-out screencap -p -> PNG 原始字节。
-
-    args:
-        serial: 设备序列号
-
-    return: PNG 原始字节
-
-    """
-    code, out, err = _run(["-s", serial, "exec-out", "screencap", "-p"])
-    if code != 0:
-        raise RuntimeError(f"screencap 失败: {err.decode('utf-8', 'ignore').strip()}")
-    if not out.startswith(b"\x89PNG"):
-        raise RuntimeError(f"返回的不是 PNG, 前 8 字节 = {out[:8]!r}")
-
-    Path(file_path).write_bytes(out)
-    return out
-
 
 _UIDUMP_PATH = "/data/local/tmp/window_dump.xml"
 _FAIL_DETAIL_LIMIT = 200
@@ -280,10 +345,32 @@ def _failure_detail(stdout: bytes, stderr: bytes) -> str:
     return "未知错误"
 
 
+def _quoted_input_text(text: str) -> str:
+    """把待输入文本变成可安全交给设备 shell 的单个参数。
+
+    空格先换成 `%s`（`input text` 的空格转义），再按 POSIX 规则加引号；
+    分号、管道、反引号、`$()`、单引号都会被留在引号内，不再被设备 shell 当成命令。
+
+    Args:
+        text: 用户或模型给出的原始文本。
+
+    Returns:
+        加好引号的字面量，可直接作为 `input text` 的最后一个参数。
+    """
+    return shlex.quote(str(text or "").replace(" ", "%s"))
+
+
 class AdbChannel:
     """adb 命令通道：只负责执行命令并取回结果，不做任何解析。"""
 
     def __init__(self, serial: str, executable: str | None = None) -> None:
+        """
+        绑定一台设备并解析 adb 可执行文件。
+
+        Args:
+            serial: 设备序列号（无线设备是 ``IP:port``）。
+            executable: adb 可执行文件路径；省略时用平台解析结果。
+        """
         self.serial = serial
         self.executable = executable or adb_binary()
 
@@ -298,7 +385,7 @@ class AdbChannel:
             标准输出文本。
 
         Raises:
-            RuntimeError: 命令退出码非 0。
+            RuntimeError: 命令退出码非 0，或超过 timeout 秒。
         """
         return self.shell_bytes(args, timeout).decode("utf-8", "replace")
 
@@ -313,7 +400,7 @@ class AdbChannel:
             标准输出字节。
 
         Raises:
-            RuntimeError: 命令退出码非 0。
+            RuntimeError: 命令退出码非 0，或超过 timeout 秒。
         """
         return self._exec(["shell", *args], timeout)
 
@@ -330,7 +417,7 @@ class AdbChannel:
             标准输出字节。
 
         Raises:
-            RuntimeError: 命令退出码非 0。
+            RuntimeError: 命令退出码非 0，或超过 timeout 秒。
         """
         return self._exec(["exec-out", *args], timeout)
 
@@ -345,7 +432,7 @@ class AdbChannel:
             标准输出文本。
 
         Raises:
-            RuntimeError: 命令退出码非 0。
+            RuntimeError: 命令退出码非 0，或超过 timeout 秒。
         """
         return self._exec(args, timeout, with_serial=False).decode("utf-8", "replace")
 
@@ -361,12 +448,17 @@ class AdbChannel:
             标准输出字节。
 
         Raises:
-            RuntimeError: 命令退出码非 0。
+            RuntimeError: 命令退出码非 0，或超过 timeout 秒。
         """
         command = [self.executable]
         if with_serial:
             command += ["-s", self.serial]
-        proc = subprocess.run(command + args, capture_output=True, timeout=timeout)
+        try:
+            proc = subprocess.run(command + args, capture_output=True, timeout=timeout)
+        except _SUBPROCESS_TIMEOUT as exc:
+            # 设备冻结 / 掉线时 subprocess 抛 TimeoutExpired；统一成 RuntimeError，
+            # 与四个公开方法声明的异常契约一致，调用方不必同时捕获两种类型。
+            raise RuntimeError(f"adb {' '.join(args)} 超时（{timeout}s）") from exc
         if proc.returncode != 0:
             detail = _failure_detail(proc.stdout, proc.stderr)
             raise RuntimeError(f"adb {' '.join(args)} 失败：{detail}")
@@ -455,7 +547,12 @@ class AdbInfo(DeviceInfo):
     """设备信息查询（纯 adb）。不需要 uiautomator2 服务。"""
 
     def __init__(self, serial: str) -> None:
-        self.log = device_log
+        """
+        绑定一台设备的信息查询通道。
+
+        Args:
+            serial: 设备序列号（无线设备是 ``IP:port``）。
+        """
         self.adb = AdbChannel(serial)
 
     def screen_size(self) -> tuple[int, int]:
@@ -526,6 +623,12 @@ class AdbControl(DeviceControl):
     screenshot_media_type = "image/png"
 
     def __init__(self, serial: str) -> None:
+        """
+        绑定一台设备的控制通道与信息查询通道。
+
+        Args:
+            serial: 设备序列号（无线设备是 ``IP:port``）。
+        """
         self.log = device_log
         self.adb = AdbChannel(serial)
         self.info = AdbInfo(serial)
@@ -643,6 +746,9 @@ class AdbControl(DeviceControl):
     def input_text(self, text: str, clear_first: bool = True) -> None:
         """向当前输入框输入文本（仅 ASCII）。
 
+        文本会先按 POSIX 规则加引号再交给设备 shell：`adb shell` 之后的参数由设备上的
+        `/system/bin/sh` 重新解析，只替换空格挡不住分号、管道与反引号。
+
         Args:
             text: 要输入的文本。
             clear_first: 输入前是否清空。
@@ -656,7 +762,7 @@ class AdbControl(DeviceControl):
         if clear_first:
             self.adb.shell(["input", "keyevent", "KEYCODE_MOVE_END"])
             self.adb.shell(["input", "keyevent", "KEYCODE_CLEAR"])
-        self.adb.shell(["input", "text", value.replace(" ", "%s")])
+        self.adb.shell(["input", "text", _quoted_input_text(value)])
 
     def press_key(self, key: str = "back") -> None:
         """按系统按键。
@@ -828,6 +934,12 @@ class AndroidControl(AdbControl):
     """设备控制：动作全部走纯 adb；u2 只在 xpath 查找与非 ASCII 输入时按需连接。"""
 
     def __init__(self, serial: str) -> None:
+        """
+        建立纯 adb 控制通道，u2 会话留给首次 xpath / 非 ASCII 输入时再连。
+
+        Args:
+            serial: 设备序列号（无线设备是 ``IP:port``）。
+        """
         super().__init__(serial)
         # 惰性 u2 会话：截图 / 点击 / 滑动 / dump 等纯 adb 动作永远不碰它
         self._u2_device = None
@@ -836,6 +948,8 @@ class AndroidControl(AdbControl):
     def device(self):
         """uiautomator2 会话：首次访问才连接，之后复用同一实例。
 
+        连接前把 u2 的请求超时收紧到 `U2_OP_TIMEOUT`，避免设备冻结时一次 jsonrpc 挂满 5 分钟。
+
         Returns:
             已连接的 u2 设备对象。
 
@@ -843,6 +957,7 @@ class AndroidControl(AdbControl):
             RuntimeError: u2 服务不可用或设备掉线，连接失败。
         """
         if self._u2_device is None:
+            _tune_u2_http_timeout()
             try:
                 self._u2_device = u2.connect(self.adb.serial)
             except Exception as exc:  # noqa: BLE001 - u2 各类异常统一转可读失败
@@ -867,7 +982,8 @@ class AndroidControl(AdbControl):
         device = self.device
         try:
             elements = device.xpath(str(xpath)).all()
-        except Exception:
+        except Exception as exc:  # noqa: BLE001 - 查询失败按「没查到」处理，但要留痕
+            self.log.debug("xpath 查询失败，按空结果处理: %s", exc)
             return []
         found: list[dict] = []
         for el in elements or []:
@@ -878,6 +994,8 @@ class AndroidControl(AdbControl):
 
     def input_text(self, text: str, clear_first: bool = True) -> None:
         """向当前输入框输入文本；走 u2 的 send_keys，支持中文等非 ASCII。
+
+        send_keys 失败时退回 `input text`，文本仍按 POSIX 规则加引号后再交给设备 shell。
 
         Args:
             text: 要输入的文本。
@@ -898,5 +1016,4 @@ class AndroidControl(AdbControl):
         try:
             device.send_keys(text)
         except Exception:
-            safe = text.replace(" ", "%s").replace("'", "\\'")
-            device.shell(f"input text '{safe}'")
+            device.shell(f"input text {_quoted_input_text(text)}")

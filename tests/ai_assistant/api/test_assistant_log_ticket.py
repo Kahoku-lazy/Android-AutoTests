@@ -31,7 +31,9 @@ def test_open_without_ticket_is_401():
     thread = _thread()
     factory = APIRequestFactory()
     request = factory.get("/api/ai/assistants/threads/x/logs/20261116_180000/")
-    response = AssistantThreadLogView.as_view()(request, thread_id=thread.thread_id, report_id="20261116_180000")
+    response = AssistantThreadLogView.as_view()(
+        request, thread_id=thread.thread_id, report_id="20261116_180000"
+    )
     assert response.status_code == 401
 
 
@@ -44,6 +46,8 @@ def test_running_does_not_issue_ticket():
     request = factory.post("/api/ai/assistants/threads/x/logs/20261116_180000/")
     request.user_id = str(user.id)
     force_authenticate(request, user=user)
-    response = AssistantThreadLogView.as_view()(request, thread_id=thread.thread_id, report_id="20261116_180000")
+    response = AssistantThreadLogView.as_view()(
+        request, thread_id=thread.thread_id, report_id="20261116_180000"
+    )
     assert response.status_code == 409
     assert "ticket" not in response.data

@@ -9,8 +9,7 @@ Python 调试：➡️ python -m engines.ae_harness.agents.config 🏁
 修改时间: ➡️ 2026-11-13 🏁
 类型: ➡️ Harness 配置模块 🏁
 简介说明：➡️
-1. load_prompt: 只读 SOP 重构前仍在使用的两份提示词。
-2. load_log_keywords: 按型号读日志关键词目录，供验收提示注入；缺失时降级为空串。
+1. load_log_keywords: 按型号读日志关键词目录，供验收提示注入；缺失时降级为空串。
 🏁
 关联模块：➡️
 1. 无本地依赖：只依赖 yaml 与 dotenv。
@@ -27,30 +26,10 @@ import re
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
-PROMPTS_DIR = _HERE / "config" / "prompts"
 LOG_KEYWORDS_DIR = _HERE / "config" / "log_keywords"
 
 # 型号名白名单：只允许字母、数字、下划线与短横，避免把 YAML 里的字符串直接拼成路径。
 _SKU_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
-
-
-def load_prompt(name: str) -> str:
-    """
-    读 SOP 重构前仍在使用的提示词正文。
-
-    Args:
-        name: 提示词文件名，不带 .md。只允许执行者与验收者两份。
-
-    Returns:
-        提示词正文。
-
-    Raises:
-        ValueError: 文件名不在 SOP 兼容范围内。
-        FileNotFoundError: 提示词文件不存在。
-    """
-    if name not in {"UI_EXECUTOR_PROMPT", "UI_VERIFIER_PROMPT"}:
-        raise ValueError(f"不支持的提示词文件 {name}")
-    return (PROMPTS_DIR / f"{name}.md").read_text(encoding="utf-8")
 
 
 def load_log_keywords(sku: str) -> str:

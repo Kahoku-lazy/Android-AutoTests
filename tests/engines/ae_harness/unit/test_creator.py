@@ -58,17 +58,35 @@ def test_create_agent_returns_bundle_with_key_name():
     """创建出口返回两段：智能体可运行，密钥名与传入一致。"""
     if not load_secret("GOVEE_API_KEY"):
         pytest.skip("未配置 GOVEE_API_KEY，跳过需要真实模型构造的用例")
-    bundle = create_agent("probe", "你是探针。", **_GOVEE)
+    bundle = create_agent("probe", system_prompt="你是探针。", **_GOVEE)
     assert isinstance(bundle, AgentBundle)
     assert bundle.agent.name == "probe"
     assert bundle.api_key_env == "GOVEE_API_KEY"
+
+
+def test_create_agent_treats_prompt_name_as_text():
+    """提示词参数只当正文，不再按名字读文件。"""
+    if not load_secret("GOVEE_API_KEY"):
+        pytest.skip("未配置 GOVEE_API_KEY，跳过需要真实模型构造的用例")
+    bundle = create_agent("probe", system_prompt="PROMPT_FILE_NAME", **_GOVEE)
+
+    assert bundle.agent._system_prompt == "PROMPT_FILE_NAME"  # noqa: SLF001
+
+
+def test_secret_file_is_repo_root_env():
+    """密钥文件定位在仓库根，不在 engines/ 下。"""
+    from engines.ae_harness.agents import models
+
+    repo_root = models.Path(__file__).resolve().parents[4]
+    assert models._ENV_PATH == repo_root / ".env"  # noqa: SLF001
+    assert (repo_root / "AGENTS.md").is_file()
 
 
 def test_bundle_key_name_has_no_secret():
     """返回值里只有环境变量名，没有密钥明文。"""
     if not load_secret("GOVEE_API_KEY"):
         pytest.skip("未配置 GOVEE_API_KEY，无法断言明文不出现在返回值里")
-    bundle = create_agent("probe", "你是探针。", **_GOVEE)
+    bundle = create_agent("probe", system_prompt="你是探针。", **_GOVEE)
     secret = load_secret("GOVEE_API_KEY")
     assert secret not in bundle.api_key_env
     assert bundle.api_key_env.endswith("_API_KEY")

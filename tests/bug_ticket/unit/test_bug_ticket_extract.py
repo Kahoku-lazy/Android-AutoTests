@@ -32,6 +32,25 @@ def _result(payload: dict) -> str:
     return json.dumps(payload, ensure_ascii=False)
 
 
+def test_requirement_breakdown_registers_only_invalid_or_interrupted():
+    valid = _task(
+        task_kind="assistant_sop",
+        kind="requirement_breakdown",
+        status=TaskStatus.COMPLETED,
+        result=_result({"passed": True, "modules": [{"name": "开关"}]}),
+    )
+    failed = _task(
+        task_kind="assistant_sop",
+        kind="requirement_breakdown",
+        status=TaskStatus.FAILED,
+        result=_result({"passed": False, "reason": "没有形成模块清单"}),
+    )
+    assert build_bug_drafts(valid) == []
+    drafts = build_bug_drafts(failed)
+    assert len(drafts) == 1
+    assert drafts[0].category == BugCategory.REQUIREMENT_BREAKDOWN
+
+
 def test_ui_failure_creates_one_ticket_per_failed_case():
     task = _task(
         result=_result(
@@ -76,7 +95,13 @@ def test_ui_failure_without_case_titles_falls_back_to_task_ticket():
 def test_interrupted_task_creates_task_ticket():
     task = _task(
         status=TaskStatus.INTERRUPTED,
-        result=_result({"status": "interrupted", "cause": "process_lost", "reason": "进程退出时任务仍在执行，结果未写回"}),
+        result=_result(
+            {
+                "status": "interrupted",
+                "cause": "process_lost",
+                "reason": "进程退出时任务仍在执行，结果未写回",
+            }
+        ),
     )
 
     drafts = build_bug_drafts(task)
@@ -139,7 +164,9 @@ def test_workflow_without_steps_still_splits_old_cases():
 
 
 def test_provider_failure_uses_kind_source_ref():
-    task = _task(result=_result({"failure_kind": "provider", "reason": "模型拒绝（400）", "failed": []}))
+    task = _task(
+        result=_result({"failure_kind": "provider", "reason": "模型拒绝（400）", "failed": []})
+    )
 
     drafts = build_bug_drafts(task)
 

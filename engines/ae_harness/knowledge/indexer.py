@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 
 from pathlib import Path
 from typing import Final
@@ -34,6 +35,8 @@ from agentscope.rag import ApproxTokenChunker, KnowledgeBase, TextParser
 from .config import KnowledgeBaseSpec
 
 __all__ = ["CHUNKER_VERSION", "KnowledgeIndexer"]
+
+_LOG = logging.getLogger(__name__)
 
 # 写入 index_state；切块策略变化时强制全量重建。
 CHUNKER_VERSION: Final[str] = "approx_token_v1"
@@ -124,8 +127,13 @@ class KnowledgeIndexer:
             state[relative] = signature
             reindexed += 1
 
+        # 以向量库里实际存在的文档为准清理，不依赖状态文件：状态文件丢失时也能删掉残留。
+        stale = {item.document_id for item in documents.values()} - {
+            _document_id(relative) for relative in current
+        }
+        for document_id in sorted(stale):
+            await self.knowledge_base.delete_document(document_id)
         for relative in set(state) - set(current):
-            await self.knowledge_base.delete_document(_document_id(relative))
             state.pop(relative, None)
 
         self._write_state(state)
@@ -163,7 +171,7 @@ class KnowledgeIndexer:
                 encoding="utf-8",
             )
         except OSError:
-            return
+            _LOG.warning("知识库 %s 的索引状态写失败，下次会按文件重新嵌入", self.spec.name)
 
 
 def _document_id(relative_path: str) -> str:

@@ -44,7 +44,7 @@ Harness 内的**独立知识库模块**：自带向量模型配置与库目录�
 
 ## 如何接回 Agent（评测通过后再做）
 
-在目标入口 `assistant/agent_<role>.py` 的 `build_agent` 里加一处局部可选导入并挂载：
+控制台入口已删除。接回时在 `backend_bridge` 的目标装配函数里加一处局部可选导入并挂载：
 
 ```python
 try:  # 知识库可选：整目录删除后自动跳过
@@ -83,5 +83,5 @@ python -m pytest -c tests/pytest.ini tests/engines/ae_harness/unit/test_knowledg
 | --- | --- |
 | 上层 Harness 约束 | [`../AGENTS.md`](../AGENTS.md) |
 | 工具目录准入 | [`../tools/AGENTS.md`](../tools/AGENTS.md) |
-| 接回时的落点（当前未挂载） | [`../assistant/agent_executor.py`](../assistant/agent_executor.py) |
+| 接回时的落点（当前未挂载） | `engines/backend_bridge/` 的目标装配函数 |
 | 风格规范 | [`.agents/rules/engines-code-style.md`](../../../.agents/rules/engines-code-style.md) |

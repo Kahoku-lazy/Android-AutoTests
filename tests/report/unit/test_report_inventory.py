@@ -159,7 +159,9 @@ def test_deleted_assistant_card_falls_back_to_empty_name():
 
 
 def test_case_identity_single_row_shows_title():
-    _sop_task(identity={"source": "platform", "rows": [{"project": "灯", "id": "1", "title": "定时"}]})
+    _sop_task(
+        identity={"source": "platform", "rows": [{"project": "灯", "id": "1", "title": "定时"}]}
+    )
 
     row = build_report_inventory("1")["items"][0]
 
@@ -186,7 +188,9 @@ def test_case_identity_milestone_and_empty():
     _sop_task(identity={"source": "milestone"})
     _sop_task(identity={}, title="旧任务")
 
-    labels = {item["task_title"]: item["case_label"] for item in build_report_inventory("1")["items"]}
+    labels = {
+        item["task_title"]: item["case_label"] for item in build_report_inventory("1")["items"]
+    }
 
     assert labels["H6810 全功能测试"] == "里程碑"
     assert labels["旧任务"] == ""

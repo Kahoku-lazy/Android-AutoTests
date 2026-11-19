@@ -5,23 +5,20 @@
 
 ## 1. 定位：平台侧智能体角色的唯一落点
 
-**平台（后端任务、前端卡片）使用的智能体角色，一律在本目录创建与运行；控制台调试入口在 [`engines/ae_harness/assistant/`](../ae_harness/AGENTS.md)。**
+**平台（后端任务、前端卡片）使用的智能体角色，一律在本目录创建与运行。** `ae_harness` 只提供原语，不保存角色、提示词或流程；它的控制台入口已删除。
 
 | 谁 | 入口在哪 | 形态 | 报告落在 |
 | --- | --- | --- | --- |
-| **控制台**（开发者调试） | `engines/ae_harness/assistant/*`、`engines/ae_harness/workflow/sop_runner.py` | CLI 脚本：读 `sys.argv`、打印、交互循环 | `engines/ae_harness/logs/` |
 | **平台**（后端 / 前端卡片） | **本目录** | 库函数：收参数、返回结构化结果 | `logs/agents/backend_bridge/` |
 
-两者**只共享原语**：`ae_harness.agents.create_agent`、`ae_harness.tools`、`ae_harness.event`（记录器与渲染器）、`ae_harness.middleware`（观测）。各自装配，互不调用对方的入口。
-
-判断口诀：**要不要给人盯着终端看？要 → `ae_harness/assistant/`；不要，结果交给程序 → 本目录。**
+本目录用的原语：`ae_harness.agents.create_agent`、`ae_harness.tools`、`ae_harness.event`（记录器与渲染器）、`ae_harness.middleware`、`ae_harness.workflow.sop`。角色怎么配、提示词写什么、挂哪些工具，都由调用方传入，不回 `ae_harness` 取。
 
 ## 2. 目标结构（按需逐个落地，不预先铺空文件）
 
 ```text
 backend_bridge/
   agents/            平台角色定义：调 create_agent 装配角色，挂工具与观测
-  workflow/          平台编排装配：调用 ae_harness 的 SOP 抽象（spec / runner / 步骤 YAML）
+  workflow/          平台编排装配：用调用方给的步骤调 ae_harness 的 SOP 抽象
   events/            事件落库：接收方绑定、运行上下文、预算计数、步骤中断、批量折叠
   reports/           报告落盘：logs/agents/backend_bridge/<时间戳>_<role>.html
   run.py             平台入口：跑一次 → 返回报告路径、token 汇总、逐次用量
@@ -35,10 +32,10 @@ backend_bridge/
 | --- | --- | --- |
 | 谁做 | 一个执行者 | 执行者动手 + 验收者核对 |
 | 完成判据 | 模型自己说做完 | 验收者逐条判「必须达成的结果」 |
-| 步骤来源 | 无步骤 | `ae_harness` 的 `steps/*.yaml`（**不自创步骤**） |
+| 步骤来源 | 无步骤 | 调用方提供的步骤 YAML（**不在引擎里保存流程**） |
 | 会话语义 | 一次连接复用同一角色，多轮连续 | **不进对话页**：一次运行跑一条流程，跑完即弃 |
 
-**SOP 只允许「使用」，不允许「自创」**：`engines/ae_harness/workflow/sop/` 是**通用抽象**（步骤模型、加载、编排执行、步骤 YAML），不属于控制台，任何调用方都从它调用；只有 `ae_harness/workflow/sop_runner.py` 是控制台装配。
+**SOP 只允许「使用」，不允许「自创」**：`engines/ae_harness/workflow/sop/` 是**通用抽象**（步骤模型、加载、编排执行），不保存具体流程。步骤由本目录的调用方提供。
 
 平台侧的装配放在**本目录的 `workflow/`**：调用 `load_spec` / `run_sop`，只做三件事——装配两个角色、指定报告目录、把结果整理成返回值。**禁止**在本目录再写一套编排循环、另立步骤格式或新造验收逻辑。
 
@@ -52,10 +49,10 @@ backend_bridge/
 2. **禁止绕过 `create_agent` 造角色** —— 不得在本目录直接 `Agent(...)`，角色装配只经 `ae_harness.agents.create_agent`。
 3. **禁止打印与交互** —— 本目录是库，不得 `print`、不得读 `sys.argv`、不得 `input()`；要给人看的信息通过返回值交给调用方。
 4. **禁止自定报告路径** —— 报告一律落 `logs/agents/backend_bridge/`；路径常量只在一处定义，禁止各处拼接。
-5. **禁止把控制台参数塞进来** —— `_bootstrap` 的运行时引导、汇总打印、交互循环属于控制台，不属于本目录。
+5. **禁止依赖已删除的控制台入口** —— 不得引用 `ae_harness/assistant` 或 `sop_runner`；运行参数由调用方传入。
 6. **禁止在未定事项上自行决策** —— 见第 5 节，动手前先问。
 7. **禁止自创 SOP** —— 步骤格式、重试、验收判定一律用 `ae_harness.workflow.sop` 的现成实现；本目录不得出现第二套编排循环或第二份步骤 YAML 格式。
-8. **禁止给验收角色挂写操作工具** —— 验收侧固定 `build_adb_readonly_tools()`。
+8. **禁止给验收角色挂写操作工具** —— 验收侧只取勾选与只读目录的交集。
 9. **事件落库只在本目录** —— 接收方绑定、运行上下文、预算计数、步骤中断与批量折叠归 `events/`；`ae_harness` 只写本地记录与报告，**禁止**在 `ae_harness` 写库或依赖后端事件类型。
 10. **运行取消归本目录** —— 取消置位、当前步骤中断与清理只在本目录实现，禁止在 `ae_harness` 或后端另立第二套取消。
 

@@ -61,6 +61,15 @@ def test_docx_falls_back_to_python_docx():
     assert "| 待机 | 单击 POWER |" in text
 
 
+def test_markdown_and_yaml_are_kept_as_utf8_text():
+    text, name = parse_document_bytes("模块.md", "# 开关\n只覆盖电源".encode("utf-8"))
+    assert name == "模块.md"
+    assert text.startswith("# 开关")
+    yaml_text, yaml_name = parse_document_bytes("边界.yaml", "name: 开关\n".encode("utf-8"))
+    assert yaml_name == "边界.yaml"
+    assert "name: 开关" in yaml_text
+
+
 def test_pdf_falls_back_to_pymupdf():
     text, name = parse_document_bytes("prd.pdf", _pdf_bytes())
     assert name == "prd.pdf"

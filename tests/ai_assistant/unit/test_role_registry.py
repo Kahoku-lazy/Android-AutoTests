@@ -10,10 +10,10 @@ import pytest
 
 from django.utils import timezone
 
-from backend.apps.ai_assistant.services import agent_configs as api
 from backend.apps.ai_assistant.models import AIModelConfig, AIRole
-from backend.apps.ai_assistant.services.role_id import generate_role_id, generate_unique_role_id
 from backend.apps.ai_assistant.serializers import RoleInputSerializer
+from backend.apps.ai_assistant.services import agent_configs as api
+from backend.apps.ai_assistant.services.role_id import generate_role_id, generate_unique_role_id
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 

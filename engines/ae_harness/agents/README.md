@@ -68,14 +68,7 @@ print(bundle.api_key_env)  # GOVEE_API_KEY，供用量记账归组
 
 系统提示词不在本目录维护。平台新建 Agent 时从运营配置读取正文，再传给 `create_agent`。
 
-### 现有模型短名
-
-| 短名 | provider | 客户端 | 地址 |
-| --- | --- | --- | --- |
-| `deepseek_chat_flash` | deepseek | `DeepSeekChatModel` | `https://api.deepseek.com` |
-| `govee_chat_flash` | govee | `OpenAIChatModel` | `https://test-llm.lanjingerp.com/v1` |
-
-两者的 `model_name` 都是 `deepseek-flash`，区别只在网关。
+没有模型短名，也没有 `models.yaml`。换模型只改调用方传入的 `provider`、`api_key_env`、`model_name`、`base_url`。
 
 ## 跑一次回复
 
@@ -93,32 +86,19 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-完整可运行版本见 `agent_executor.py`：
-
-```bash
-python -m engines.ae_harness.assistant.agent_executor
-```
+本目录没有可运行的角色入口。要跑一轮，在 `backend_bridge` 用上面的参数装配。
 
 ## 增加模型
 
-在 `config/models.yaml` 追加一条，短名就是新键：
+不改本目录。调用方传入一组新的连接参数即可，`provider` 与 `api_key_env` 必须对应：
 
-```yaml
-deepseek_pro:
-  provider: deepseek
-  api_key: DEEPSEEK_API_KEY
-  model_name: deepseek-v4-pro
-```
-
-`provider` 与 `api_key` 必须对应：
-
-| provider | api_key | base_url |
+| provider | api_key_env | base_url |
 | --- | --- | --- |
 | `deepseek` | `DEEPSEEK_API_KEY` | 不写用 `https://api.deepseek.com` |
 | `dashscope` | `DASHSCOPE_API_KEY` | 不用 |
 | `govee` | `GOVEE_API_KEY` | 固定 `https://test-llm.lanjingerp.com/v1` |
 
-`base_url` 留空不要写成 `base_url:`，空值会被解析成 `null` 导致校验失败。
+`base_url` 不需要时传空串，由 `models.py` 用厂商默认地址。
 
 ## 工具
 
@@ -250,5 +230,5 @@ print(adb_binary())  # D:\...\tools\platform-tools\adb.exe
    ```
 
    `add_tool` 是 async；默认权限是询问，不给 `ALLOW` 会停下来等确认。
-3. **提示词要与工具匹配。** 现有 4 个提示词都要求使用设备工具；不挂工具时模型会尝试调用不存在的工具，输出里出现未解析的工具标签。纯对话请新增一个不带工具要求的提示词。
+3. **提示词要与工具匹配。** 提示词由调用方传入；正文要求使用的工具必须已经挂上，否则模型会尝试调用不存在的工具。
 4. **上下文会累积。** 同一个 Agent 连续 `reply` 共享上下文；要干净开始就重新 `create_agent`。

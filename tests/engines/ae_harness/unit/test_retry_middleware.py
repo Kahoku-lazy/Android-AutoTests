@@ -158,6 +158,28 @@ async def test_stream_retries_before_first_chunk():
     assert len(calls) == 2
 
 
+async def test_stream_retries_when_the_reopen_itself_fails():
+    """流式：重发本身再失败时继续重试，而不是把这次失败直接抛出。"""
+    calls: list[int] = []
+
+    async def handler(**_kwargs):
+        calls.append(1)
+
+        async def outcome():
+            if len(calls) < 3:
+                raise _ApiError(503)
+            yield "唯一一块"
+
+        return outcome()
+
+    middleware = ModelRetryMiddleware(RetrySettings(max_attempts=3, backoff_base=0.0))
+    stream = await middleware.on_model_call(object(), {}, handler)
+    chunks = [chunk async for chunk in stream]
+
+    assert chunks == ["唯一一块"]
+    assert len(calls) == 3
+
+
 async def test_stream_does_not_replay_after_first_chunk():
     """流式：已产出后失败直接上抛，不重放。"""
     calls: list[int] = []

@@ -443,6 +443,22 @@ def adb_long_press(nx: float, ny: float, duration_ms: int = 800, serial: str = "
         return _fail(exc)
 
 
+def _shell_quote(text: str) -> str:
+    """
+    把文本包成设备 shell 的单引号参数。
+
+    `adb shell` 之后的参数由设备上的 `/system/bin/sh` 解释，
+    只替换空格挡不住分号、管道与反引号。
+
+    Args:
+        text: 原始文本。
+
+    Returns:
+        以单引号包裹、内部单引号已转义的字符串。
+    """
+    return "'" + text.replace("'", "'\\''") + "'"
+
+
 def adb_input_text(text: str, serial: str = "") -> str:
     """
     向当前聚焦的输入框输入文本。
@@ -460,7 +476,9 @@ def adb_input_text(text: str, serial: str = "") -> str:
         if not text.isascii():
             return _fail(ValueError("input text 只支持 ASCII；中文请用设备输入法"))
         target = resolve_serial(serial)
-        run_adb(["shell", "input", "text", text.replace(" ", "%s")], serial=target)
+        # 空格换成 %s 是 input text 的转义；再加单引号，避免被设备 shell 当成命令。
+        payload = _shell_quote(text.replace(" ", "%s"))
+        run_adb(["shell", "input", "text", payload], serial=target)
         return _ok(action="input_text", serial=target, text=text)
     except AdbError as exc:
         return _fail(exc)

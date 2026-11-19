@@ -23,6 +23,8 @@ Python 调试：➡️ python -m engines.ae_harness.tools.catalog 🏁
 from __future__ import annotations
 
 from .adb import build_adb_readonly_tools, build_adb_tools
+from .case_library.tools import build_case_library_readonly_tools, build_case_library_tools
+from .document.tools import build_document_readonly_tools, build_document_tools
 
 __all__ = ["list_tool_catalog"]
 
@@ -32,6 +34,18 @@ _DOMAINS = (
         "label": "adb",
         "all_builder": build_adb_tools,
         "readonly_builder": build_adb_readonly_tools,
+    },
+    {
+        "domain": "case_library",
+        "label": "用例库",
+        "all_builder": build_case_library_tools,
+        "readonly_builder": build_case_library_readonly_tools,
+    },
+    {
+        "domain": "document",
+        "label": "文档",
+        "all_builder": build_document_tools,
+        "readonly_builder": build_document_readonly_tools,
     },
 )
 

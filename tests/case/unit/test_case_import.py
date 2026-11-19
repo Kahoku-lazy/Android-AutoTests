@@ -6,7 +6,12 @@ import pytest
 
 from backend.apps.case_manager import api_import
 from backend.apps.case_manager.api import import_case_rows
-from backend.apps.case_manager.models import LIBRARY_FUNCTIONAL, CaseProject, FunctionalCase, FunctionalStep
+from backend.apps.case_manager.models import (
+    LIBRARY_FUNCTIONAL,
+    CaseProject,
+    FunctionalCase,
+    FunctionalStep,
+)
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db]
 
@@ -75,7 +80,9 @@ def test_same_task_is_idempotent():
 
 
 def test_over_limit_keeps_existing_rows(monkeypatch):
-    project = CaseProject.objects.create(name=api_import.PROJECT_NAME, library_kind="functional", created_by="7")
+    project = CaseProject.objects.create(
+        name=api_import.PROJECT_NAME, library_kind="functional", created_by="7"
+    )
     first = _import(task_id=201)
     assert first["status"] == "imported"
     monkeypatch.setattr(api_import, "_project_row_count", lambda _project: 998)

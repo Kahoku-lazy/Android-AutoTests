@@ -1,14 +1,15 @@
 """
-单文件调试指令：python -m pytest tests/engines/devices/test_android_device.py -vv -s --tb=short
+单文件调试指令：python -m pytest tests/engines/device/unit/test_android_device.py -vv -s --tb=short
 
 1. TestAndroidConnection 类测试 AndroidConnection 类的连接、断开、配对功能。
 2. TestAndroidControl 类测试 AndroidControl 类的启动应用、关闭应用（AndroidControl 继承纯 adb 实现）。
-3. TestAdbChannel 类测试 AdbChannel 类的命令拼装、解码与失败上报（替身接管 subprocess，不连设备）。
+3. TestAdbChannel 类测试 AdbChannel 类的命令拼装、解码、超时与失败上报（替身接管 subprocess，不连设备）。
 4. TestAdbInfo 类测试 AdbInfo 类的分辨率 / 前台应用 / 包名 / 已连接设备 / 层级解析（替身接管 subprocess，样本取自真机输出）。
 5. TestAdbChannelDevice 类用真机验证 AdbChannel 的命令通道（数据取自 test_data.yaml 的 TestAdbChannel）。
 6. TestAdbInfoDevice 类用真机验证 AdbInfo 的各查询方法（数据取自 test_data.yaml 的 TestAdbInfo）。
+7. TestInputTextQuoting / TestPairCodeRedaction 类校验设备 shell 引号与配对码脱敏。
 
-第一、二、五、六类需要真机，第三、四类是纯单测。
+第一、二、五、六类需要真机，其余是纯单测。
 """
 
 import io
@@ -24,11 +25,14 @@ from engines.device.action import EngineConnectError
 from engines.device.android import android_device
 from engines.device.android.android_device import (
     AdbChannel,
+    AdbControl,
     AdbInfo,
     AndroidConnection,
     AndroidConnectionConfig,
     AndroidControl,
     _bounds_center,
+    _masked_command,
+    _quoted_input_text,
 )
 
 _DATA_KEY = "TestAndroidConnection"
@@ -355,13 +359,13 @@ class TestAdbChannel:
         assert isinstance(output, str)
         assert "\ufffd" in output
 
-    def test_timeout_expired_propagates(self, fake_subprocess):
-        """subprocess 超时异常原样向上抛，不被吞掉。"""
+    def test_timeout_becomes_readable_runtime_error(self, fake_subprocess):
+        """超时统一成 RuntimeError：调用方只需处理一种异常，消息带命令与秒数。"""
         import subprocess as real_subprocess
 
         fake_subprocess(real_subprocess.TimeoutExpired(cmd="adb", timeout=2.5))
 
-        with pytest.raises(real_subprocess.TimeoutExpired):
+        with pytest.raises(RuntimeError, match="超时"):
             AdbChannel(_SERIAL).shell(["wm", "size"], timeout=2.5)
 
 
@@ -385,6 +389,77 @@ class TestBoundsCenter:
         """解析失败返回 (0, 0)，不抛异常。"""
         assert _bounds_center("bad") == (0, 0)
         assert _bounds_center("") == (0, 0)
+
+    def test_double_minus_is_not_a_number(self):
+        """`--5` 不是合法整数：按解析失败返回 (0, 0)，不让 int() 抛 ValueError。"""
+        assert _bounds_center("[--5,0][1,1]") == (0, 0)
+
+
+@pytest.mark.unit
+class TestInputTextQuoting:
+    """input text：文本进设备 shell 前必须加引号。"""
+
+    def test_quoted_text_neutralizes_shell_metacharacters(self):
+        """分号、管道、反引号与单引号都留在引号内。"""
+        quoted = _quoted_input_text("a; rm -rf /sdcard; `id` | cat 'x'")
+
+        assert quoted.startswith("'")
+        assert quoted.endswith("'")
+        assert ";" in quoted
+
+    def test_spaces_become_percent_s(self):
+        """空格按 input text 的转义换成 %s，整串仍是一个参数。"""
+        assert _quoted_input_text("hello world") == "hello%sworld"
+
+    def test_adb_input_text_passes_single_quoted_argument(self, fake_subprocess):
+        """AdbControl 把加好引号的文本作为一个 argv 元素交给 adb。"""
+        fake = fake_subprocess()
+
+        AdbControl(_SERIAL).input_text("hi; id", clear_first=False)
+
+        assert fake.command == ["adb", "-s", _SERIAL, "shell", "input", "text", "'hi;%sid'"]
+
+    def test_non_ascii_still_rejected(self):
+        """非 ASCII 仍按硬限制拒绝（非 ASCII 交给 u2 实现）。"""
+        with pytest.raises(ValueError):
+            AdbControl(_SERIAL).input_text("中文", clear_first=False)
+
+
+@pytest.mark.unit
+class TestPairCodeRedaction:
+    """配对码是凭据：日志里只能出现地址，不能出现配对码。"""
+
+    def test_masked_command_hides_pair_code(self):
+        """命令行日志把 pair 的末位参数打码。"""
+        assert (
+            _masked_command(("pair", "192.0.2.1:37123", "123456")) == "pair 192.0.2.1:37123 ******"
+        )
+
+    def test_mask_leaves_other_commands_untouched(self):
+        """非 pair 命令原样拼接。"""
+        assert _masked_command(("connect", "192.0.2.1:5555")) == "connect 192.0.2.1:5555"
+
+    def test_pair_log_does_not_contain_code(self, monkeypatch):
+        """配对日志只写地址与端口，不写配对码。"""
+        rows: list[str] = []
+
+        class _Recorder:
+            def info(self, message, *args):
+                rows.append(str(message))
+
+        connection = AndroidConnection(
+            AndroidConnectionConfig(
+                address="192.0.2.1", address_port=5555, pair_port=37123, pair_code="123456"
+            )
+        )
+        monkeypatch.setattr(connection, "log", _Recorder())
+        monkeypatch.setattr(connection, "_run_adb", lambda *_a, **_k: "connected to 192.0.2.1:5555")
+
+        connection.connect()
+
+        joined = " ".join(rows)
+        assert "192.0.2.1:37123" in joined
+        assert "123456" not in joined
 
 
 # ── AdbInfo：纯单测，样本取自真机输出 ──
@@ -446,7 +521,7 @@ class TestAdbInfo:
             "package": "com.govee.home",
             "activity": "com.govee.h70b3.adjust.H681XSettingAc",
         }
-        assert fake.command == ["adb", "-s", _SERIAL, "shell", "dumpsys", "window"]
+        assert fake.command == ["adb", "-s", _SERIAL, "shell", "dumpsys", "window", "displays"]
 
     def test_current_app_returns_empty_when_no_focus(self, fake_subprocess):
         """没有 mCurrentFocus 时返回空串，不抛异常。"""
@@ -600,10 +675,8 @@ class TestAdbChannelDevice:
         assert "未知错误" not in str(exc.value)
 
     def test_command_timeout_raises(self, case):
-        """命令超时抛 subprocess.TimeoutExpired，不被吞掉。"""
-        import subprocess as real_subprocess
-
-        with pytest.raises(real_subprocess.TimeoutExpired):
+        """命令超时抛 RuntimeError，消息带命令与秒数，不被吞掉。"""
+        with pytest.raises(RuntimeError, match="超时"):
             _open_adb_channel(case).shell(["sleep", "3"], timeout=0.3)
 
 
@@ -760,3 +833,13 @@ class TestAndroidControlU2Lazy:
             control.find_xpath("//x")
 
         assert "uiautomator2 连接失败" in str(exc.value)
+
+    def test_u2_http_timeout_tuned_on_connect(self, monkeypatch):
+        """建会话前把 u2 的请求超时收紧到 U2_OP_TIMEOUT，避免一次 jsonrpc 挂满 5 分钟。"""
+        u2_base = pytest.importorskip("uiautomator2.base")
+        monkeypatch.setattr(u2_base, "HTTP_TIMEOUT", 300)
+        _install_u2_spy(monkeypatch)
+
+        android_device.AndroidControl("serial-timeout").find_xpath("//x")
+
+        assert u2_base.HTTP_TIMEOUT == android_device.U2_OP_TIMEOUT

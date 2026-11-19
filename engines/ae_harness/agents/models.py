@@ -63,8 +63,8 @@ __all__ = [
     "load_secret",
 ]
 
-# 仓库根：engines/ae_harness/agents/models.py 往上三级。只读这一份 .env。
-_ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
+# 仓库根：engines/ae_harness/agents/models.py 往上四级。只读这一份 .env。
+_ENV_PATH = Path(__file__).resolve().parents[3] / ".env"
 _ENV = dotenv_values(_ENV_PATH) if _ENV_PATH.exists() else {}
 
 # 调用方没传地址时用厂商默认。govee 不再钉死，传入值优先。

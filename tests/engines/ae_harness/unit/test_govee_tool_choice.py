@@ -25,7 +25,9 @@ TOOLS = [
 @pytest.fixture
 def govee(monkeypatch):
     monkeypatch.setattr("engines.ae_harness.agents.models.load_secret", lambda _name: "sk-test")
-    created = create_model("govee", "GOVEE_API_KEY", "deepseek-flash", "https://example.invalid/v1", stream=False)
+    created = create_model(
+        "govee", "GOVEE_API_KEY", "deepseek-flash", "https://example.invalid/v1", stream=False
+    )
     return created.model
 
 
@@ -33,7 +35,9 @@ def _patch(monkeypatch, responses: list):
     calls = []
 
     async def fake(_self, model_name, messages, tools=None, tool_choice=None, **kwargs):
-        calls.append({"tools": tools, "tool_choice": tool_choice, "extra": kwargs.get("extra_body")})
+        calls.append(
+            {"tools": tools, "tool_choice": tool_choice, "extra": kwargs.get("extra_body")}
+        )
         item = responses[len(calls) - 1]
         if isinstance(item, Exception):
             raise item

@@ -46,7 +46,9 @@ def test_rerun_keeps_snapshot_after_case_rename():
     from backend.apps.task_list import api
 
     user = get_user_model().objects.create_user(username="rerun-case", password="x")
-    project_id = case_api.create_project(name="灯", library_kind="automation", user_id=str(user.id))["id"]
+    project_id = case_api.create_project(
+        name="灯", library_kind="automation", user_id=str(user.id)
+    )["id"]
     row = case_api.create_row(
         project_id=project_id,
         user_id=str(user.id),
@@ -56,10 +58,15 @@ def test_rerun_keeps_snapshot_after_case_rename():
     original = api.create_task(
         title="工作流",
         goal="",
-        case_identity={"source": "platform", "rows": [{"project": "灯", "id": row["id"], "title": "定时"}]},
+        case_identity={
+            "source": "platform",
+            "rows": [{"project": "灯", "id": row["id"], "title": "定时"}],
+        },
         created_by=str(user.id),
     )
-    case_api.update_row(project_id=project_id, case_id=row["id"], user_id=str(user.id), title="定时已改")
+    case_api.update_row(
+        project_id=project_id, case_id=row["id"], user_id=str(user.id), title="定时已改"
+    )
     cloned = api.rerun_task(original)
     assert cloned.case_identity["rows"][0]["title"] == "定时"
 
@@ -102,7 +109,9 @@ def test_one_label_reaches_task_bug_and_dashboard(monkeypatch):
     from backend.apps.task_list.views import TaskSubmitAPIView
 
     user = get_user_model().objects.create_user(username="same-label", password="x")
-    project_id = case_api.create_project(name="灯", library_kind="automation", user_id=str(user.id))["id"]
+    project_id = case_api.create_project(
+        name="灯", library_kind="automation", user_id=str(user.id)
+    )["id"]
     first = case_api.create_row(
         project_id=project_id,
         user_id=str(user.id),
@@ -115,7 +124,9 @@ def test_one_label_reaches_task_bug_and_dashboard(monkeypatch):
         title="场景",
         steps=[{"action": "点", "assertion": "亮"}],
     )
-    monkeypatch.setattr("backend.apps.task_list.api.dispatch_device", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        "backend.apps.task_list.api.dispatch_device", lambda *_args, **_kwargs: None
+    )
     monkeypatch.setattr(
         "backend.apps.ai_assistant.api.get_sop_workflow",
         lambda workflow_id: type("Workflow", (), {"id": workflow_id})(),

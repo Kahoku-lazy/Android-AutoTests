@@ -50,7 +50,9 @@ def test_batch_disable_skips_already_disabled(operator_user, other_user):
     assert outcomes[peer.id] == "disabled"
 
 
-def test_batch_disable_rejects_unmanageable_without_aborting(operator_user, admin_user, operator_group):
+def test_batch_disable_rejects_unmanageable_without_aborting(
+    operator_user, admin_user, operator_group
+):
     """自己、超管、其他运营被拒绝，普通用户仍被停用。"""
     peer = get_user_model().objects.create_user(username="peer-ops", password="pass-123456")
     peer.groups.add(operator_group)

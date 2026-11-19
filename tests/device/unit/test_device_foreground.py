@@ -33,10 +33,7 @@ class _FakeAdb:
 
 def test_parse_focus_window():
     """window 段：mCurrentFocus 里带包名与 Activity。"""
-    text = (
-        "  mCurrentFocus=Window{1fb9097 u0 com.govee.home/"
-        "com.govee.home.HomeActivity}\n"
-    )
+    text = "  mCurrentFocus=Window{1fb9097 u0 com.govee.home/com.govee.home.HomeActivity}\n"
 
     assert _parse_current_app(text) == {
         "package": "com.govee.home",

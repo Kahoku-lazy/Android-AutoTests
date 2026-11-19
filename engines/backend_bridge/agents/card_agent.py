@@ -61,7 +61,7 @@ async def build_card_agent(
     """
     bundle = create_agent(
         name,
-        system_prompt,
+        system_prompt=system_prompt,
         provider=provider,
         api_key_env=api_key_env,
         model_name=model_name,

@@ -26,8 +26,8 @@ agents/
 from engines.ae_harness.agents.creator import create_agent
 
 bundle = create_agent(
-    "ui_executor",
-    "你是 UI 执行者。",
+    "runner",
+    system_prompt="你是执行者。",
     provider="govee",
     api_key_env="GOVEE_API_KEY",
     model_name="deepseek-flash",

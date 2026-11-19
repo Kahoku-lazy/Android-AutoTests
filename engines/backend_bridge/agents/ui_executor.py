@@ -83,7 +83,7 @@ async def build_ui_executor(
     role = UI_EXECUTOR_ROLE
     bundle = create_agent(
         role.role_key,
-        system_prompt,
+        system_prompt=system_prompt,
         provider=provider,
         api_key_env=api_key_env,
         model_name=model_name,

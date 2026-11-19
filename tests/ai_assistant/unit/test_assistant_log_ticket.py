@@ -18,7 +18,9 @@ def test_ticket_opens_once():
 
 def test_expired_ticket_is_rejected(monkeypatch):
     ticket = log_ticket.issue_log_ticket("lane", "20261116_180000")
-    monkeypatch.setattr(log_ticket, "time", type("T", (), {"monotonic": staticmethod(lambda: 10**9)})())
+    monkeypatch.setattr(
+        log_ticket, "time", type("T", (), {"monotonic": staticmethod(lambda: 10**9)})()
+    )
     with pytest.raises(log_ticket.LogTicketError):
         log_ticket.consume_log_ticket(ticket, "lane", "20261116_180000")
 

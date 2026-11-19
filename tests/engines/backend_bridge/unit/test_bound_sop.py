@@ -22,7 +22,9 @@ def _binding(name: str, model: str) -> RoleBinding:
 
 
 def _spec() -> SopSpec:
-    return SopSpec(name="检查桌面", steps=[StepSpec(subject="回到桌面", description="停在桌面")], task="看桌面")
+    return SopSpec(
+        name="检查桌面", steps=[StepSpec(subject="回到桌面", description="停在桌面")], task="看桌面"
+    )
 
 
 def test_runner_source_does_not_read_spec_keys():
@@ -51,7 +53,9 @@ async def test_serial_is_appended_only_when_present(monkeypatch):
 
     async def fake_build(executor, verifier, **kwargs):
         def bundle(name: str, key: str):
-            return type("Bundle", (), {"agent": type("Agent", (), {"name": name})(), "api_key_env": key})()
+            return type(
+                "Bundle", (), {"agent": type("Agent", (), {"name": name})(), "api_key_env": key}
+            )()
 
         return type(
             "Roles",
@@ -68,7 +72,9 @@ async def test_serial_is_appended_only_when_present(monkeypatch):
     monkeypatch.setattr(bound_sop_module, "cancel_controls", lambda task_id: [])
 
     plain = _spec()
-    await run_bound_sop(plain, _binding("执行", "deepseek-flash"), _binding("验收", "deepseek-v4-pro"))
+    await run_bound_sop(
+        plain, _binding("执行", "deepseek-flash"), _binding("验收", "deepseek-v4-pro")
+    )
     assert seen["task"] == "看桌面"
 
     with_serial = _spec()

@@ -101,6 +101,7 @@ async def build_bound_roles(
     *,
     observer: ObservationMiddleware | None = None,
     controls: list | None = None,
+    kind: str = "ui_automation",
 ) -> SopRoles:
     """
     按绑定参数装配一对角色。
@@ -112,6 +113,7 @@ async def build_bound_roles(
         verifier: 验收侧绑定。
         observer: 观测中间件；不传则新建一个，两个角色共用。
         controls: 额外中间件；不传则只挂观测。两个角色共用同一批。
+        kind: 工作流类型，决定执行侧工具目录；默认 UI 自动化。
 
     Returns:
         含两个角色 bundle 与共用观测中间件的 `SopRoles`。
@@ -124,7 +126,7 @@ async def build_bound_roles(
     extra = [watcher, *list(controls or [])]
     executor_bundle = create_agent(
         executor.run_name,
-        executor.system_prompt,
+        system_prompt=executor.system_prompt,
         provider=executor.provider,
         api_key_env=executor.api_key_env,
         model_name=executor.model_name,
@@ -133,13 +135,13 @@ async def build_bound_roles(
     )
     verifier_bundle = create_agent(
         verifier.run_name,
-        verifier.system_prompt,
+        system_prompt=verifier.system_prompt,
         provider=verifier.provider,
         api_key_env=verifier.api_key_env,
         model_name=verifier.model_name,
         base_url=verifier.base_url,
         observers=extra,
     )
-    await _mount(executor_bundle, select_tools(list(executor.tools)))
+    await _mount(executor_bundle, select_tools(list(executor.tools), kind=kind))
     await _mount(verifier_bundle, _readonly_intersection(verifier.tools))
     return SopRoles(executor=executor_bundle, verifier=verifier_bundle, observer=watcher)

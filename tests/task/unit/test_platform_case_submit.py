@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 import pytest
+
 from django.contrib.auth import get_user_model
 from django.test import RequestFactory
 
@@ -29,8 +30,12 @@ def _post(user, body):
 
 def test_platform_submit_stores_milestone_without_new_rows(monkeypatch):
     user = User.objects.create_user(username="sheet-runner", password="x")
-    project_id = case_api.create_project(name="可执行", library_kind="automation", user_id=str(user.id))["id"]
-    first = case_api.create_row(project_id=project_id, user_id=str(user.id), title="甲", steps=_STEP)
+    project_id = case_api.create_project(
+        name="可执行", library_kind="automation", user_id=str(user.id)
+    )["id"]
+    first = case_api.create_row(
+        project_id=project_id, user_id=str(user.id), title="甲", steps=_STEP
+    )
     second = case_api.create_row(
         project_id=project_id,
         user_id=str(user.id),
@@ -38,7 +43,9 @@ def test_platform_submit_stores_milestone_without_new_rows(monkeypatch):
         steps=[{"action": "返回", "assertion": "回到桌面"}],
     )
     before = AutomationCase.objects.count()
-    monkeypatch.setattr("backend.apps.task_list.api.dispatch_device", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        "backend.apps.task_list.api.dispatch_device", lambda *_args, **_kwargs: None
+    )
     monkeypatch.setattr(
         "backend.apps.ai_assistant.api.get_sop_workflow",
         lambda workflow_id: type("Workflow", (), {"id": workflow_id})(),

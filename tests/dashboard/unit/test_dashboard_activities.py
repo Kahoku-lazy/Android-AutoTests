@@ -47,9 +47,7 @@ def test_default_returns_at_most_ten(client, visible_user):
 def test_offset_skips_board_page(client, visible_user):
     user = visible_user
     for i in range(15):
-        Task.objects.create(
-            title=f"page-{i}", status="completed", task_kind=TaskKind.ASSISTANT_SOP
-        )
+        Task.objects.create(title=f"page-{i}", status="completed", task_kind=TaskKind.ASSISTANT_SOP)
 
     first = client.get(ACTIVITIES_URL, **_auth_headers(user)).json()["data"]
     second = client.get(ACTIVITIES_URL, {"offset": 10, "limit": 50}, **_auth_headers(user)).json()[

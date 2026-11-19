@@ -55,9 +55,7 @@ def test_content_hit_fails(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     assert any("asset.md" in line for line in lines)
 
 
-def test_forbidden_path_revival_fails(
-    monkeypatch: pytest.MonkeyPatch, tmp_path
-) -> None:
+def test_forbidden_path_revival_fails(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     revived = tmp_path / "revived.md"
     revived.write_text("x", encoding="utf-8")
     monkeypatch.setattr("utils.check_gates.BUSINESS_ASSET_DIRS", ())

@@ -8,7 +8,7 @@
 - **平台总思路**（前端展示 / 后端通道与记账 / engines 能力核心；Agent = Model + Harness）见根 [AGENTS.md](../AGENTS.md)「平台架构定位」；本文只写 engines 落地与红线。
 - `engines/`：可替换引擎层——设备控制、串口日志、视觉 OCR、智能体（SOP / 角色 / 工具）运行时等。导入边界：零 `apps.*`、零 `django.*`（业务工具经注入）。
 - 一级子包（一句话）：
-  - `ae_harness/`：**Agent 原语层**——`create_agent`、设备工具（adb）、事件记录与报告渲染、中间件、SOP 抽象、只读知识检索。其中 `assistant/` **只服务控制台调试**。
+  - `ae_harness/`：**Agent 原语层**——`create_agent`、工具、事件记录与报告渲染、中间件、SOP 抽象、只读知识检索。不定义角色、不保存提示词、不保存流程；控制台入口已删除。
   - `backend_bridge/`：**平台侧智能体角色的唯一落点**（后端任务 / 前端卡片用），在 `ae_harness` 原语上装配，并承接**事件落库、运行取消、报告与用量**。详见 [backend_bridge/AGENTS.md](backend_bridge/AGENTS.md)。
   - `device/`：设备引擎；对外入口是 `action`。
   - `uart_log/`：串口日志采集与处理。

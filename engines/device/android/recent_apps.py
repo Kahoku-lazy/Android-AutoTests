@@ -6,7 +6,7 @@ Python 调试：➡ python -m engines.device.android.recent_apps 🏁
 时间：➡ 2026-10-20 🏁
 作者：➡ kahoku 🏁
 版本：➡ 1.0.0 🏁
-修改时间: ➡ 2026-11-02 🏁
+修改时间: ➡ 2026-11-19 🏁
 类型: ➡ 工具模块 🏁
 简介说明：➡
 1. parse_recent_packages: 从最近任务原文取出包名
@@ -16,10 +16,10 @@ Python 调试：➡ python -m engines.device.android.recent_apps 🏁
 🏁
 关联模块：➡
 1. engines.device.action: 设备控制入口
-2. utils.logs: 过程日志（agent_event_log），不依赖任何 Agent 包
+2. utils.logs: 过程日志（device_log）
 🏁
 测试：➡
-1. tests/engines/agents/test_close_recent_apps.py: 关闭最近应用
+1. 暂无专门单测（真机收尾流程，依赖桌面解析结果）
 🏁
 """
 
@@ -28,7 +28,7 @@ from __future__ import annotations
 import re
 
 from engines.device.action import System, open_device
-from utils.logs import agent_event_log
+from utils.logs import device_log
 
 SYSTEM_UI = "com.android.systemui"
 FALLBACK_LAUNCHERS = frozenset(
@@ -59,11 +59,18 @@ def _write_line(action: str) -> None:
     Args:
         action: 这一行的动作或汇总文本。
     """
-    agent_event_log.info(" ".join(str(action or "").split()) or "-")
+    device_log.info(" ".join(str(action or "").split()) or "-")
 
 
 def parse_recent_packages(text: str) -> list[str]:
-    """从 `dumpsys activity recents` 原文取包名，按出现顺序去重。"""
+    """从 `dumpsys activity recents` 原文取包名，按出现顺序去重。
+
+    Args:
+        text: `dumpsys activity recents` 的原始输出。
+
+    Returns:
+        包名列表（按首次出现顺序，已去重）。
+    """
     found: list[str] = []
     for match in _PACKAGE_IN_RECENTS.finditer(text or ""):
         name = match.group(1)
@@ -73,7 +80,14 @@ def parse_recent_packages(text: str) -> list[str]:
 
 
 def parse_home_package(text: str) -> str:
-    """从桌面 Activity 解析结果取包名。取不到时返回空串。"""
+    """从桌面 Activity 解析结果取包名。取不到时返回空串。
+
+    Args:
+        text: `cmd package resolve-activity --brief` 的原始输出。
+
+    Returns:
+        桌面包名；解析不到时是空串。
+    """
     for line in reversed((text or "").splitlines()):
         item = line.strip()
         if "/" not in item or "=" in item:
@@ -83,7 +97,15 @@ def parse_home_package(text: str) -> str:
 
 
 def packages_to_stop(packages: list[str], home_package: str) -> list[str]:
-    """留下要停止的包。系统界面始终跳过；桌面解析到了就跳过它，否则跳过常见桌面。"""
+    """留下要停止的包。系统界面始终跳过；桌面解析到了就跳过它，否则跳过常见桌面。
+
+    Args:
+        packages: 最近任务里的包名列表。
+        home_package: 解析到的桌面包名；空串表示没解析到。
+
+    Returns:
+        需要 `am force-stop` 的包名列表。
+    """
     skip = {SYSTEM_UI}
     home = str(home_package or "").strip()
     if home:

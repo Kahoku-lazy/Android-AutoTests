@@ -55,9 +55,7 @@ def test_yaml_rejects_missing_step_milestone_and_hints():
 def test_import_over_limit_rejects_whole_file(monkeypatch):
     project_id = _project("functional")
     monkeypatch.setattr("backend.apps.case_manager.api_rows._lock_count", lambda _project: 990)
-    text = "\n".join(
-        f"- title: 行{i}\n  steps: [{{action: a, assertion: b}}]" for i in range(20)
-    )
+    text = "\n".join(f"- title: 行{i}\n  steps: [{{action: a, assertion: b}}]" for i in range(20))
     with pytest.raises(ConflictError, match="还可追加 9"):
         case_api.import_yaml_text(project_id=project_id, user_id="7", text=text)
 
@@ -69,7 +67,9 @@ def test_view_is_per_user_and_rejects_unknown_field():
         user_id="7",
         payload={"hidden_columns": ["module"], "filters": {"priority": "P0"}, "group_by": "module"},
     )
-    assert case_api.get_sheet(project_id=project_id, user_id="7")["view"]["hidden_columns"] == ["module"]
+    assert case_api.get_sheet(project_id=project_id, user_id="7")["view"]["hidden_columns"] == [
+        "module"
+    ]
     assert case_api.get_sheet(project_id=project_id, user_id="8")["view"]["hidden_columns"] == []
     with pytest.raises(ValueError, match="未登记"):
         case_api.save_sheet_view(

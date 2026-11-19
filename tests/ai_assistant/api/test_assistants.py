@@ -1,4 +1,4 @@
-"""助手名片接口：写限运营，读限登录，列表不含头像正文。"""
+"""助手名片接口：写限助手作者，读限登录，列表不含头像正文。"""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from django.urls import resolve
 from PIL import Image
 from rest_framework.test import APIRequestFactory, force_authenticate
 
+from backend.apps.ai_assistant.api import grant_assistant_author
 from backend.apps.ai_assistant.models import AIModelConfig, AIRole
 from backend.apps.ai_assistant.views_drf import AssistantAvatarView, AssistantViewSet
 from backend.shared.users import OPERATOR_GROUP
@@ -37,6 +38,12 @@ def _role() -> AIRole:
 def _operator():
     user = get_user_model().objects.create_user(username="ops-assistant", password="pass")
     user.groups.add(Group.objects.create(name=OPERATOR_GROUP))
+    return user
+
+
+def _author(name: str = "author-assistant"):
+    user = get_user_model().objects.create_user(username=name, password="pass")
+    grant_assistant_author(user.id)
     return user
 
 
@@ -70,14 +77,25 @@ def test_routes_resolve():
     assert resolve("/api/ai/assistants/20261116_K3M/avatar/").func.cls is AssistantAvatarView
 
 
-def test_operator_create_returns_201_without_avatar_body():
+def test_author_create_returns_201_without_avatar_body():
     role = _role()
-    response = call(_operator(), "post", {"display_name": "小助", "role_id": role.role_id, "tools": []})
+    response = call(
+        _author(), "post", {"display_name": "小助", "role_id": role.role_id, "tools": []}
+    )
     assert response.status_code == 201
     assert response.data["display_name"] == "小助"
     assert response.data["role_name"] == "执行配置"
     assert "avatar" not in response.data
     assert response.data["has_avatar"] is False
+
+
+def test_operator_create_is_403_and_writes_nothing():
+    role = _role()
+    response = call(
+        _operator(), "post", {"display_name": "小助", "role_id": role.role_id, "tools": []}
+    )
+    assert response.status_code == 403
+    assert response.renderer_context["view"].get_queryset().count() == 0
 
 
 def test_plain_user_create_is_403():
@@ -104,7 +122,7 @@ def test_unknown_assistant_is_404():
 def test_avatar_endpoint_returns_body():
     role = _role()
     created = call(
-        _operator(),
+        _author(),
         "post",
         {"display_name": "小助", "role_id": role.role_id},
         files={"avatar": io.BytesIO(_png())},
@@ -118,5 +136,5 @@ def test_avatar_endpoint_returns_body():
     response = AssistantAvatarView.as_view()(request, assistant_id=created.data["assistant_id"])
     assert response.status_code == 200
     assert response.data["avatar"]
-    listed = call(user, "get")
+    listed = call(_author("author-assistant-list"), "get")
     assert "avatar" not in listed.data[0]

@@ -84,6 +84,22 @@ async def test_removed_file_is_deleted(tmp_path):
     assert knowledge.deleted == knowledge.inserted
 
 
+async def test_removed_file_is_deleted_without_state_file(tmp_path):
+    """状态文件丢失时，仍按向量库里的文档清理已删除的资料。"""
+    knowledge = _FakeKnowledge()
+    indexer = _indexer(tmp_path, knowledge)
+    path = indexer.spec.data_dir / "a.md"
+    path.write_text("# 标题\n\n正文内容。\n", encoding="utf-8")
+    await indexer.ensure_index()
+
+    path.unlink()
+    indexer._state_path.unlink()  # noqa: SLF001 - 模拟状态文件丢失
+
+    assert await indexer.ensure_index() == 0
+    assert knowledge.documents == set()
+    assert knowledge.deleted == knowledge.inserted
+
+
 async def test_non_text_files_are_ignored(tmp_path):
     """只索引 .md 与 .txt。"""
     knowledge = _FakeKnowledge()

@@ -40,7 +40,9 @@ CASE_TEXT = """
 
 
 def _user():
-    return get_user_model().objects.create_user(username=f"sop-user-{get_user_model().objects.count()}", password="pass")
+    return get_user_model().objects.create_user(
+        username=f"sop-user-{get_user_model().objects.count()}", password="pass"
+    )
 
 
 def _card(suffix: str, prompt: str) -> AIAssistant:
@@ -60,6 +62,7 @@ def _card(suffix: str, prompt: str) -> AIAssistant:
         display_name=f"助手{suffix}",
         marker="teal",
         role_id=role.role_id,
+        release_state="published",
     )
 
 
@@ -77,7 +80,11 @@ def test_accepts_milestone_and_ignores_role_fields(monkeypatch):
     monkeypatch.setattr(api, "dispatch_device", lambda serial: None)
     executor = _card("EX1", "执行提示词")
     verifier = _card("VF1", "验收提示词")
-    workflow = assistant_api.create_sop_workflow("桌面", executor.assistant_id, verifier.assistant_id)
+    workflow = assistant_api.create_sop_workflow(
+        "桌面", executor.assistant_id, verifier.assistant_id
+    )
+    workflow.release_state = "published"
+    workflow.save(update_fields=["release_state"])
     before = AISopWorkflow.objects.count()
 
     response = _submit(
@@ -138,7 +145,10 @@ def test_finished_task_starts_earliest_pending(monkeypatch):
 def test_delete_queued_task_starts_the_next(monkeypatch):
     """删除挡住队列的任务后，同地址最早 pending 被拉起。"""
     monkeypatch.setattr("backend.apps.task_list.task_runner.spawn_task_thread", lambda *args: None)
-    monkeypatch.setattr("backend.apps.task_list.media_storage.get_media_storage", lambda: type("S", (), {"delete_task": lambda self, task_id: None})())
+    monkeypatch.setattr(
+        "backend.apps.task_list.media_storage.get_media_storage",
+        lambda: type("S", (), {"delete_task": lambda self, task_id: None})(),
+    )
     blocker = api.create_task(
         title="挡住", goal="", device_serial="PHONE-A", task_kind=TaskKind.ASSISTANT_SOP
     )
@@ -171,15 +181,23 @@ def test_drain_logs_refused_dispatch(caplog):
 def test_task_list_returns_only_workflow_rows():
     """列表只返回工作流记录，并带现存工作流名称。"""
     executor = _card("EX9", "提示词")
-    workflow = assistant_api.create_sop_workflow("灯带检查", executor.assistant_id, executor.assistant_id)
+    workflow = assistant_api.create_sop_workflow(
+        "灯带检查", executor.assistant_id, executor.assistant_id
+    )
+    workflow.release_state = "published"
+    workflow.save(update_fields=["release_state"])
     workflow_task = api.create_task(
         title="工作流", goal="", device_serial="PHONE-A", task_kind=TaskKind.ASSISTANT_SOP
     )
     workflow_task.result = api.dump_task_run_payload({"workflow_id": workflow.id})
     workflow_task.save(update_fields=["result"])
-    api.create_task(title="设备", goal="", device_serial="PHONE-B", task_kind=TaskKind.DEVICE_CONTROL)
+    api.create_task(
+        title="设备", goal="", device_serial="PHONE-B", task_kind=TaskKind.DEVICE_CONTROL
+    )
     user = _user()
-    request = APIRequestFactory().get("/api/tasks/", {"workflow_id": workflow.id, "status": "pending"})
+    request = APIRequestFactory().get(
+        "/api/tasks/", {"workflow_id": workflow.id, "status": "pending"}
+    )
     request.user_id = str(user.id)
     force_authenticate(request, user=user)
 
@@ -206,7 +224,11 @@ def test_submit_without_workflow_is_rejected():
 def test_rejects_workflow_without_device():
     """工作流没有设备时拒绝，并且不建任务。"""
     executor = _card("EX0", "提示词")
-    workflow = assistant_api.create_sop_workflow("缺设备", executor.assistant_id, executor.assistant_id)
+    workflow = assistant_api.create_sop_workflow(
+        "缺设备", executor.assistant_id, executor.assistant_id
+    )
+    workflow.release_state = "published"
+    workflow.save(update_fields=["release_state"])
 
     response = _submit(
         _user(),
@@ -222,7 +244,11 @@ def test_rejects_workflow_without_device():
 def test_rejects_case_yaml_and_missing_subject():
     """用例格式与缺字段都拒绝，并且不建任务。"""
     executor = _card("EX2", "提示词")
-    workflow = assistant_api.create_sop_workflow("拒绝", executor.assistant_id, executor.assistant_id)
+    workflow = assistant_api.create_sop_workflow(
+        "拒绝", executor.assistant_id, executor.assistant_id
+    )
+    workflow.release_state = "published"
+    workflow.save(update_fields=["release_state"])
 
     case_response = _submit(
         _user(),
@@ -258,6 +284,8 @@ def test_resolve_failure_does_not_start_the_run(monkeypatch):
     monkeypatch.setattr("engines.backend_bridge.workflow.cancel.clear_cancel", lambda task_id: None)
     card = _card("EX3", "提示词")
     workflow = assistant_api.create_sop_workflow("将缺失", card.assistant_id, card.assistant_id)
+    workflow.release_state = "published"
+    workflow.save(update_fields=["release_state"])
     task = api.create_task(title="失败", goal="", task_kind=TaskKind.ASSISTANT_SOP)
     task.result = api.dump_task_run_payload({"workflow_id": workflow.id})
     task.save(update_fields=["result"])

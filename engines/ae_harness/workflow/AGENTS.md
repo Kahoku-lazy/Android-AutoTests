@@ -1,17 +1,14 @@
 # engines/ae_harness/workflow AGENTS.md
 
-## 定位：抽象层 + 一个控制台装配
+## 定位：只有抽象，没有装配
 
 | 位置 | 是什么 | 谁能用 |
 | --- | --- | --- |
-| `sop/spec.py`、`sop/runner.py`、`sop/steps/*.yaml` | **通用的 SOP 抽象**：步骤模型、加载、编排执行、步骤 YAML | **任何调用方**——控制台、平台都从这里调用 |
-| `sop_runner.py` | **控制台装配**：读命令行、建两个角色、打印结论 | 只服务控制台调试 |
+| `sop/spec.py`、`sop/runner.py` | **通用的 SOP 抽象**：步骤模型、从调用方给的 YAML 加载、编排执行 | 任何调用方 |
 
-`sop/` 不属于控制台，它是被复用的地基；换一个调用方（例如平台）只是换装配方式，不重写抽象。
+本目录不建角色、不挂工具、不读命令行。控制台装配 `sop_runner.py` 已删除。
 
-**平台（后端任务 / 前端卡片）用的执行 + 验收 SOP 在 [`engines/backend_bridge/workflow/`](../../backend_bridge/AGENTS.md) 新建装配**，由它调用本目录 `sop/` 的 `load_spec` / `run_sop`。
-
-判断：要人盯着终端看 → 用 `sop_runner.py`；结果是交给程序 → 在 `backend_bridge/workflow/` 自己装配，但**只调抽象、不复制实现**。
+**平台（后端任务 / 前端卡片）的装配在 [`engines/backend_bridge/workflow/`](../../backend_bridge/AGENTS.md)**：它准备好两个角色和步骤，再调用本目录的 `load_spec` / `run_sop`。步骤内容由调用方提供，不在本目录维护流程。
 
 ## 职责
 
@@ -22,8 +19,6 @@ workflow/
   sop/
     spec.py           StepSpec / SopSpec / load_spec
     runner.py         build_sop / run_sop / SopResult
-    steps/*.yaml      流程定义：步骤名 + 必须达成的结果 + 重试次数
-  sop_runner.py       命令行入口：读 YAML、建两个角色、跑流程、打印结论
 ```
 
 调用方式：
@@ -31,7 +26,7 @@ workflow/
 ```python
 from engines.ae_harness.workflow.sop import load_spec, run_sop
 
-spec = load_spec(Path("steps/ui_task.yaml"))
+spec = load_spec(steps_path)  # 步骤文件由调用方提供
 result = await run_sop(executor, verifier, spec, log_dir=LOG_DIR)
 ```
 
@@ -62,13 +57,13 @@ steps:
 
 1. **禁止在 `workflow/` 建角色或挂工具** —— 执行者与验收者由调用方建好传入；本目录不调 `create_agent`、不 `add_tool`。
 2. **禁止绕过 `run_sop` 自己写编排循环** —— 步骤推进、重试预算、驳回记录都由 SOP 引擎负责，不要在别处重写一遍。
-3. **禁止把步骤写死在 Python 里** —— 步骤是数据，只放 `steps/*.yaml`；代码里只保留默认路径。
+3. **禁止把步骤写死在 Python 里** —— 步骤是调用方给的数据；本目录只定义字段，不保存具体流程。
 4. **禁止在 `workflow/` 拼 HTML** —— 报告一律走 `event/` 的 `HtmlReportRenderer`。
-5. **禁止给验收者传带写操作的工具集** —— 验收侧必须是 `build_adb_readonly_tools()`。
-6. **禁止在 `workflow/` 读提示词** —— 提示词只能经 `agents/config.py`。聊天模型没有配置文件，连接参数由调用方传给 `create_agent`；步骤 YAML 属于流程数据，允许在本目录读。
+5. **禁止在 `workflow/` 读提示词或造模型** —— 提示词正文与连接参数由调用方在 `backend_bridge` 准备；本目录只消费已经建好的角色。
+6. **禁止在本目录决定验收者的工具** —— 谁挂只读工具由调用方装配，本目录不 `add_tool`。
 
 ## 已知限制
 
-1. 步骤 YAML 目前手写，没有从任务文本自动拆分的逻辑。
+1. 本目录不从任务文本拆步骤；步骤由调用方准备好后传入。
 2. 报告里「执行者 / 验收者」的分块靠 reply 顺序推断（每步第一次 reply 是执行者，第二次是验收者），依赖 SOP 引擎当前「先执行后验收」的固定结构。
 3. SOP 模块在 AgentScope 2.0.9 里标为实验性，升级前需复核 `SOPStep.reply_stream` 的调用顺序。

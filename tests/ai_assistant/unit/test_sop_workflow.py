@@ -29,7 +29,9 @@ def _role(name: str, prompt: str, model_name: str = "deepseek-flash") -> AIRole:
     )
 
 
-def _card(assistant_id: str, role: AIRole, display_name: str, tools: list | None = None) -> AIAssistant:
+def _card(
+    assistant_id: str, role: AIRole, display_name: str, tools: list | None = None
+) -> AIAssistant:
     return AIAssistant.objects.create(
         assistant_id=assistant_id,
         display_name=display_name,
@@ -63,6 +65,43 @@ def test_workflow_accepts_same_card_on_both_sides():
     workflow = api.create_sop_workflow("自检", card.assistant_id, card.assistant_id)
 
     assert workflow.executor_assistant_id == workflow.verifier_assistant_id == card.assistant_id
+    assert workflow.orchestration == "sop"
+    assert workflow.kind == "ui_automation"
+
+
+def test_allowed_pairs_create_and_crossed_pairs_do_not_persist():
+    role = _role("组合配置abc", "提示词")
+    one = _card("20261117_P01", role, "甲")
+    two = _card("20261117_P02", role, "乙")
+    three = _card("20261117_P03", role, "丙")
+
+    goal = api.create_sop_workflow(
+        "编写",
+        one.assistant_id,
+        two.assistant_id,
+        orchestration="goal",
+        kind="case_authoring",
+    )
+    team = api.create_sop_workflow(
+        "拆解",
+        orchestration="team",
+        kind="requirement_breakdown",
+        leader_assistant_id=one.assistant_id,
+        members=[
+            {"assistant_id": two.assistant_id, "description": "拆边界"},
+            {"assistant_id": three.assistant_id, "description": "列测试点"},
+        ],
+    )
+
+    assert (goal.orchestration, goal.kind) == ("goal", "case_authoring")
+    assert team.leader_assistant_id == one.assistant_id
+    assert len(team.members) == 2
+    before = AISopWorkflow.objects.count()
+    with pytest.raises(api.WorkflowPairError, match="不能组合"):
+        api.create_sop_workflow(
+            "错配", one.assistant_id, two.assistant_id, orchestration="sop", kind="case_authoring"
+        )
+    assert AISopWorkflow.objects.count() == before
 
 
 def test_workflow_rejects_blank_name():
@@ -185,4 +224,3 @@ def test_workflow_delete_keeps_cards_and_roles():
     assert not AISopWorkflow.objects.filter(pk=workflow.pk).exists()
     assert AIAssistant.objects.filter(pk=card.pk).exists()
     assert AIRole.objects.filter(pk=role.pk).exists()
-

@@ -75,4 +75,3 @@ def execute_case(base_url: str, api_session, case: dict, ctx: dict) -> None:
         assert actual == expected, (
             f"{case['id']}（{case['title']}）: {path} 期望 {expected!r}，实际 {actual!r}"
         )
-

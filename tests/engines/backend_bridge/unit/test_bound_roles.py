@@ -7,7 +7,7 @@ import inspect
 import pytest
 
 from engines.ae_harness.agents.models import load_secret
-from engines.backend_bridge.workflow import RoleBinding, build_bound_roles, build_sop_roles
+from engines.backend_bridge.workflow import RoleBinding, build_bound_roles
 from engines.backend_bridge.workflow import bound_roles as bound_roles_module
 
 pytestmark = [pytest.mark.unit]
@@ -41,22 +41,10 @@ def test_new_builder_source_has_no_short_name_or_prompt_file():
     assert "UI_VERIFIER_PROMPT" not in source
 
 
-async def test_old_builder_still_accepts_short_name():
-    """旧装配函数的调用方式保持不变。"""
-    if not load_secret("GOVEE_API_KEY"):
-        pytest.skip("未配置 GOVEE_API_KEY，跳过旧装配用例")
-    roles = await build_sop_roles()
-
-    assert roles.executor.agent.name == "ui_executor"
-    assert roles.verifier.agent.name == "ui_verifier"
-
-
 async def test_verifier_drops_write_tools():
     """验收勾选里的写工具不会挂到验收实例上。"""
     _needs_key()
-    tools = (
-        {"domain": "adb", "preset": "readonly", "add": ["adb_tap"], "remove": []},
-    )
+    tools = ({"domain": "adb", "preset": "readonly", "add": ["adb_tap"], "remove": []},)
     roles = await build_bound_roles(_binding("执行"), _binding("验收", tools))
     schemas = await roles.verifier.agent.toolkit.get_tool_schemas()
     names = [item["function"]["name"] for item in schemas]

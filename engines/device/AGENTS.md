@@ -14,12 +14,12 @@ Android 设备控制引擎：连接、只读信息、点击/长按/滑动/拖动
 | `logbus.py` / `logfiles.py` | 设备侧日志总线与文件 |
 | `android/` | Android 实现；由 `action` 加载，非公共导入面 |
 
-Harness 侧经 `engines/agents/tools/tool_device.py` 暴露给角色，不由 Django View 直调底层。
+Harness 侧经 `engines/ae_harness/tools/adb/` 暴露给调用方，不由 Django View 直调底层。
 
 ## 红线（禁止）
 
 1. **禁止**跳过本文件与上层流程直接改本包对外契约（尤其 `action` 动作名与语义）。
-2. **对外入口**：业务与工具只经 `action`（或经 agents 的 `tool_device`）；**禁止**上层 `import engines.device.android...` 绕过抽象。
+2. **对外入口**：业务与工具只经 `action`（或经 `ae_harness/tools/adb/`）；**禁止**上层 `import engines.device.android...` 绕过抽象。
 3. **零 Django**：禁止 `import apps.*` / `django.*` / `backend.apps.*`。
 4. **动作名统一**：三端实现 MUST NOT 自创别名；在 `action` 抽象层对齐。
 5. **不写业务库**：设备池台账、锁、任务表由 backend 管理；本包不写 ORM。
@@ -37,5 +37,5 @@ Harness 侧经 `engines/agents/tools/tool_device.py` 暴露给角色，不由 Dj
 | 用途 | 路径 |
 |------|------|
 | 上层入口 | [`engines/AGENTS.md`](../AGENTS.md) |
-| Agent 工具封装 | `engines/agents/tools/tool_device.py` |
+| Agent 工具封装 | `engines/ae_harness/tools/adb/` |
 | 风格检查技能 | [`.agents/skills/engines-agents-style-check/`](../../.agents/skills/engines-agents-style-check/) |

@@ -5,7 +5,10 @@ from __future__ import annotations
 import pytest
 
 from backend.apps.ai_assistant.models import AIAssistant, AIAssistantThread
-from backend.apps.ai_assistant.services.assistant_threads import cancel_thread, mark_interrupted_running
+from backend.apps.ai_assistant.services.assistant_threads import (
+    cancel_thread,
+    mark_interrupted_running,
+)
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db]
 

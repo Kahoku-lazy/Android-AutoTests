@@ -12,11 +12,11 @@ Python 调试：➡️ python -m engines.backend_bridge.workflow.cancel 🏁
 1. bind_cancel: 为一次任务登记取消令牌，返回可共享的令牌。
 2. request_cancel: 从别的线程置位取消；令牌不存在时返回 False。
 3. clear_cancel: 运行结束后清掉登记，避免下次运行误取消。
-4. cancel_controls: 把令牌包成中间件，交给 run_sop_once 的 controls。
+4. cancel_controls: 把令牌包成中间件，交给一次运行的 controls。
 🏁
 关联模块：➡️
 1. engines.ae_harness.middleware.control: 导入 CancelToken / CancelMiddleware，取消判定只用现成实现。
-2. engines.backend_bridge.workflow.sop_ui: 调用方，把 controls 交给 run_sop。
+2. engines.backend_bridge.workflow.bound_sop: 调用方，把 controls 交给 run_sop。
 🏁
 测试：➡️
 1. tests/engines/backend_bridge/unit/test_sop_cancel.py: 登记、置位、清理与中间件装配
@@ -97,7 +97,7 @@ def cancel_controls(task_id: int) -> list:
         task_id: 平台任务 id；没有登记时返回空列表。
 
     Returns:
-        中间件列表，可直接并入 `run_sop_once` 的 `controls`。
+        中间件列表，可直接并入一次运行的 `controls`。
     """
     token = _TOKENS.get(int(task_id or 0))
     return [CancelMiddleware(token)] if token is not None else []

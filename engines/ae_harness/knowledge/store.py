@@ -27,6 +27,7 @@ import json
 import math
 import sqlite3
 
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -69,11 +70,26 @@ class SQLiteVectorStore(VectorStoreBase):
         """退出异步上下文；没有需要关闭的长连接。"""
         return None
 
-    def _connect(self) -> sqlite3.Connection:
-        """打开数据库连接。"""
+    @contextmanager
+    def _connect(self):
+        """
+        打开数据库连接，用完即关。
+
+        sqlite3 的连接作上下文管理器只提交事务，不关闭句柄，所以这里单独包一层。
+
+        Yields:
+            已设置行工厂的连接。
+        """
         connection = sqlite3.connect(str(self.db_path))
         connection.row_factory = sqlite3.Row
-        return connection
+        try:
+            yield connection
+            connection.commit()
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
 
     def _init_db(self) -> None:
         """建表；幂等。"""
@@ -238,6 +254,9 @@ class SQLiteVectorStore(VectorStoreBase):
 
         Returns:
             按相似度降序的结果；查询向量为零向量时为空列表。
+
+        Raises:
+            RuntimeError: 查询向量与库存向量维度不同。
         """
         with self._connect() as connection:
             rows = connection.execute(
@@ -256,10 +275,14 @@ class SQLiteVectorStore(VectorStoreBase):
             ):
                 continue
             vector = [float(value) for value in json.loads(row["vector"])]
+            if len(vector) != len(query_vector):
+                raise RuntimeError(
+                    f"查询向量维度不符：期望 {len(vector)}，实际 {len(query_vector)}",
+                )
             norm = math.sqrt(sum(value * value for value in vector))
             if norm == 0:
                 continue
-            score = sum(left * right for left, right in zip(query_vector, vector, strict=False)) / (
+            score = sum(left * right for left, right in zip(query_vector, vector, strict=True)) / (
                 query_norm * norm
             )
             results.append(

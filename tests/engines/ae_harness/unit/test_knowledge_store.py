@@ -92,6 +92,16 @@ async def test_dimension_mismatch_and_missing_collection(tmp_path):
             await store.create_collection("kb", 3)
 
 
+async def test_search_rejects_wrong_query_dimension(tmp_path):
+    """查询向量与集合维度不同时拒绝，不返回截断后的假分数。"""
+    store = SQLiteVectorStore(tmp_path / "rag.sqlite3")
+    async with store:
+        await store.create_collection("kb", 2)
+        await store.insert("kb", [_record("doc_a", 0, "一", [1.0, 0.0])])
+        with pytest.raises(RuntimeError, match="维度不符"):
+            await store.search("kb", [1.0], top_k=1)
+
+
 async def test_metadata_filter_limits_results(tmp_path):
     """metadata_filter 只返回匹配的记录。"""
     store = SQLiteVectorStore(tmp_path / "rag.sqlite3")

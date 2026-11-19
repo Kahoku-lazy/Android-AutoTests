@@ -8,8 +8,8 @@ import pytest
 
 from PIL import Image
 
-from backend.apps.ai_assistant.models import AIAssistant, AIModelConfig, AIRole
 from backend.apps.ai_assistant.api import create_assistant
+from backend.apps.ai_assistant.models import AIAssistant, AIModelConfig, AIRole
 from backend.apps.ai_assistant.services.assistant_cards import (
     AssistantRoleMissingError,
     AvatarRejectedError,

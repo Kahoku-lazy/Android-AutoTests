@@ -279,9 +279,10 @@ class ModelRetryMiddleware(MiddlewareBase):
                     raise
                 if not is_transient_model_error(exc):
                     raise
-                await asyncio.sleep(self.settings.delay_for(used))
-                used += 1
-                current = await next_handler(**input_kwargs)
+            # 重发放在 except 之外：重发本身再失败时回到循环顶部，继续按同一规则重试。
+            await asyncio.sleep(self.settings.delay_for(used))
+            used += 1
+            current = await next_handler(**input_kwargs)
 
 
 if __name__ == "__main__":

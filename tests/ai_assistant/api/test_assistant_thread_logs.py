@@ -28,7 +28,9 @@ def _thread(status: str) -> AIAssistantThread:
 
 
 def call(thread_id: str, report_id: str = ""):
-    user = get_user_model().objects.create_user(username=f"log-{thread_id}-{report_id or 'list'}", password="pass")
+    user = get_user_model().objects.create_user(
+        username=f"log-{thread_id}-{report_id or 'list'}", password="pass"
+    )
     factory = APIRequestFactory()
     request = factory.get("/api/ai/assistants/threads/x/logs/")
     request.user_id = str(user.id)

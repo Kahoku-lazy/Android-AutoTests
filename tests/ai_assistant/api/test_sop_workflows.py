@@ -10,6 +10,7 @@ from django.contrib.auth import get_user_model
 from django.urls import resolve
 from rest_framework.test import APIRequestFactory, force_authenticate
 
+from backend.apps.ai_assistant.api import grant_assistant_author
 from backend.apps.ai_assistant.models import AIAssistant, AIModelConfig, AIRole, AISopWorkflow
 from backend.apps.ai_assistant.views_drf import SopWorkflowDetailView, SopWorkflowView
 
@@ -37,14 +38,14 @@ def _card(assistant_id: str, display_name: str) -> AIAssistant:
     )
 
 
-def _call(method: str, workflow_id: int | None = None, data: dict | None = None):
+def _call(method: str, workflow_id: int | None = None, data: dict | None = None, *, author=True):
     """按视图类直调接口，绕开中间件但注入 user_id。"""
     user = get_user_model().objects.create_user(username=f"wf-{uuid4().hex[:8]}", password="pass")
+    if author:
+        grant_assistant_author(user.id)
     factory = APIRequestFactory()
     path = (
-        "/api/ai/sop-workflows/"
-        if workflow_id is None
-        else f"/api/ai/sop-workflows/{workflow_id}/"
+        "/api/ai/sop-workflows/" if workflow_id is None else f"/api/ai/sop-workflows/{workflow_id}/"
     )
     request = getattr(factory, method)(path, data or {}, format="json")
     request.user_id = str(user.id)
@@ -52,6 +53,32 @@ def _call(method: str, workflow_id: int | None = None, data: dict | None = None)
     if workflow_id is None:
         return SopWorkflowView.as_view()(request)
     return SopWorkflowDetailView.as_view()(request, workflow_id=workflow_id)
+
+
+def test_plain_user_cannot_create_patch_or_delete():
+    """普通用户创建、修改、删除都是 403，记录保持原样。"""
+    card = _card("20261117_PD1", "留着")
+    workflow = AISopWorkflow.objects.create(
+        name="原样",
+        executor_assistant_id=card.assistant_id,
+        verifier_assistant_id=card.assistant_id,
+    )
+    payload = {
+        "name": "不该写成",
+        "executor_assistant_id": card.assistant_id,
+        "verifier_assistant_id": card.assistant_id,
+    }
+
+    created = _call("post", data=payload, author=False)
+    patched = _call("patch", workflow.id, payload, author=False)
+    deleted = _call("delete", workflow.id, author=False)
+
+    assert created.status_code == 403
+    assert patched.status_code == 403
+    assert deleted.status_code == 403
+    stored = AISopWorkflow.objects.get(pk=workflow.pk)
+    assert stored.name == "原样"
+    assert AISopWorkflow.objects.count() == 1
 
 
 def test_routes_resolve():

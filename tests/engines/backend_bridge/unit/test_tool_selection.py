@@ -26,3 +26,35 @@ def test_unknown_function_is_rejected():
 
 def test_empty_selection_returns_no_tools():
     assert select_tools([]) == []
+
+
+def test_case_authoring_drops_device_write_tools():
+    tools = select_tools(
+        [
+            {"domain": "adb", "preset": "all", "add": [], "remove": []},
+            {"domain": "case_library", "preset": "all", "add": [], "remove": []},
+        ],
+        kind="case_authoring",
+    )
+    names = {tool.name for tool in tools}
+    assert names == {"save_authored_case"}
+
+
+def test_requirement_breakdown_drops_device_tools():
+    tools = select_tools(
+        [
+            {"domain": "adb", "preset": "readonly", "add": [], "remove": []},
+            {"domain": "document", "preset": "readonly", "add": [], "remove": []},
+        ],
+        kind="requirement_breakdown",
+    )
+    names = {tool.name for tool in tools}
+    assert names == {"read_requirement"}
+
+
+def test_unknown_case_tool_rejects_before_start():
+    with pytest.raises(ToolSelectionError, match="未知工具"):
+        select_tools(
+            [{"domain": "case_library", "preset": "all", "add": ["missing"], "remove": []}],
+            kind="case_authoring",
+        )

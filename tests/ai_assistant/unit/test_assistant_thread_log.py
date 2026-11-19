@@ -5,7 +5,10 @@ from __future__ import annotations
 import pytest
 
 from backend.apps.ai_assistant.models import AIAssistant, AIAssistantMessage, AIAssistantThread
-from backend.apps.ai_assistant.services.assistant_threads import resolve_thread_report, thread_log_dir
+from backend.apps.ai_assistant.services.assistant_threads import (
+    resolve_thread_report,
+    thread_log_dir,
+)
 from engines.backend_bridge.reports import ASSISTANT_LOG_ROOT, REPORT_ROOT
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db]

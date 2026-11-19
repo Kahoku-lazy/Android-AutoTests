@@ -8,8 +8,10 @@
 
 ```text
 tools/
-  catalog.py 只读目录：域、预设、函数名与一句说明；不含实现
-  adb/       设备操作：16 个函数 + build_adb_tools / build_adb_readonly_tools
+  catalog.py       只读目录：域、预设、函数名与一句说明；不含实现
+  adb/             设备操作 + build_adb_tools / build_adb_readonly_tools
+  case_library/    保存用例；写入函数由调用方注入
+  document/        读取调用方绑定的文档正文
 ```
 
 `list_tool_catalog()` 只给配置页下拉用。勾选过滤在 `backend_bridge`，不在本目录。
@@ -18,8 +20,8 @@ tools/
 
 ```python
 agent = create_agent(
-    "ui_executor",
-    "你是 UI 执行者。",
+    name,
+    system_prompt=system_prompt,
     provider="govee",
     api_key_env="GOVEE_API_KEY",
     model_name="deepseek-flash",

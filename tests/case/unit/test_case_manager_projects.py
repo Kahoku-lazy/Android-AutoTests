@@ -27,7 +27,9 @@ def test_directory_and_file_apis_are_gone():
 
 
 def test_user_isolation():
-    project_id = case_api.create_project(name="仅自己", library_kind="functional", user_id="42")["id"]
+    project_id = case_api.create_project(name="仅自己", library_kind="functional", user_id="42")[
+        "id"
+    ]
     assert case_api.get_project(project_id=project_id, user_id="99") is None
     with pytest.raises(LookupError):
         case_api.create_row(

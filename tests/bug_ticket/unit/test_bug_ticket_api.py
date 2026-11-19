@@ -15,7 +15,9 @@ from backend.models.constants import TaskKind, TaskStatus
 pytestmark = [pytest.mark.unit, pytest.mark.django_db]
 
 
-def _task(*, status=TaskStatus.FAILED, title="H6810 全功能测试", failed=None, kind=TaskKind.DEVICE_CONTROL):
+def _task(
+    *, status=TaskStatus.FAILED, title="H6810 全功能测试", failed=None, kind=TaskKind.DEVICE_CONTROL
+):
     payload = {
         "status": "fail" if status == TaskStatus.FAILED else status,
         "reason": "设备掉线",
@@ -119,7 +121,10 @@ def test_keyword_matches_case_label_when_title_does_not():
         title="工作流",
         task_kind=TaskKind.ASSISTANT_SOP,
         status=TaskStatus.FAILED,
-        case_identity={"source": "platform", "rows": [{"project": "灯", "id": "1", "title": "独有用例"}]},
+        case_identity={
+            "source": "platform",
+            "rows": [{"project": "灯", "id": "1", "title": "独有用例"}],
+        },
         result=json.dumps(
             {"failed_steps": [{"seq": 1, "name": "模型拒绝", "kind": "provider"}]},
             ensure_ascii=False,
@@ -188,7 +193,9 @@ def test_finalize_task_records_bug_and_ignores_registration_failure(monkeypatch)
     task_api.finalize_task(
         task,
         status=TaskStatus.FAILED,
-        result=json.dumps({"status": "fail", "reason": "设备掉线", "failed": []}, ensure_ascii=False),
+        result=json.dumps(
+            {"status": "fail", "reason": "设备掉线", "failed": []}, ensure_ascii=False
+        ),
     )
 
     assert BugTicket.objects.filter(task_id=task.id).count() == 1

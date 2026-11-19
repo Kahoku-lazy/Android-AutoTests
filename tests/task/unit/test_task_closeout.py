@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+
+from types import SimpleNamespace
+
 import pytest
 
 from backend.apps.task_list import api
 from backend.apps.task_list.models import Task
 from backend.apps.task_list.task_runner import _failure_payload, run_task_async
-from types import SimpleNamespace
 from backend.models.constants import TaskKind, TaskStatus
 from engines.ae_harness.middleware.control import BudgetExceeded
 
@@ -133,7 +135,9 @@ def test_verdict_keeps_four_questions_and_workflow():
             message="没看到 dock",
             expected="设备停在桌面，能看见 dock",
         ),
-        SimpleNamespace(subject="打开设置", passed=True, attempts=1, message="已打开", expected="设置页"),
+        SimpleNamespace(
+            subject="打开设置", passed=True, attempts=1, message="已打开", expected="设置页"
+        ),
     ]
     rows = api.failed_step_rows(steps, "verdict")
     api.claim_terminal(

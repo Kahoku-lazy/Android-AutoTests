@@ -301,7 +301,7 @@ def test_platform_brand_font_is_inlined(tmp_path: Path) -> None:
     # 老写法是 ../../../../frontend/public/fonts/ziku-feiyang.ttf：blob: 里解析不了，
     # 字体静默 404 后标题回落系统黑体——正是「两处标题栏和平台字体不一样」的成因。
     assert "frontend/public/fonts" not in page
-    assert ".ttf\") format" not in page
+    assert '.ttf") format' not in page
 
 
 def test_type_scale_is_three_tiers(tmp_path: Path) -> None:
@@ -321,7 +321,10 @@ def test_type_scale_is_three_tiers(tmp_path: Path) -> None:
     assert ".check-card li { font-size: var(--app-size-sm)" in page
     assert ".tip { font-size: var(--app-size-sm)" in page
     assert ".task-box p { margin: 0; font-size: var(--app-size-sm)" in page
-    assert ".side-list { list-style: none; margin: 0 0 16px; padding: 0; font-size: var(--app-size-sm); }" in page
+    assert (
+        ".side-list { list-style: none; margin: 0 0 16px; padding: 0; font-size: var(--app-size-sm); }"
+        in page
+    )
     assert "align-items: baseline; font-size: var(--app-size-sm); padding: 3px 0;" in page
     assert "font-size: var(--app-size-sm); align-items: start;" in page
     assert "font-size: var(--app-size-sm); white-space: pre-wrap; word-break: break-all;" in page
@@ -336,7 +339,9 @@ def test_type_scale_is_three_tiers(tmp_path: Path) -> None:
     assert ".phase-h h3 { flex: 1 1 auto; min-width: 0; font-size: var(--app-size-md)" in page
     assert ".tool { font-family: var(--app-font-mono); font-size: var(--app-size-md)" in page
     assert "margin: 0 0 10px; font-size: var(--app-size-md); font-weight: 800;" in page
-    assert "table.marks th { background: var(--app-bg-subtle); font-size: var(--app-size-md)" in page
+    assert (
+        "table.marks th { background: var(--app-bg-subtle); font-size: var(--app-size-md)" in page
+    )
 
     # 两处页面标题栏不压到 16：侧栏品牌 20、页头 24（与平台 WorkbenchHeader 同档）。
     assert "font-size: var(--app-size-lg);\n  font-weight: 400;\n  letter-spacing: 0;" in page

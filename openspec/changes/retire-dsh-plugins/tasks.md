@@ -19,8 +19,8 @@
 
 ## 4. 提交与 PR
 
-- [ ] 4.1 从 `Kahoku` 切出特性分支 `retire-dsh-plugins`（分支切换不改工作区文件，并发会话的未提交改动原样保留）。验证：`git rev-parse --abbrev-ref HEAD` 为 `retire-dsh-plugins`；`git status --short` 中并发会话条目与切换前逐条一致（数量与路径不变）。
-- [ ] 4.2 逐文件暂存本变更面：6 个 `D` + `utils/gen_arch_stats.py` + `dev_docs/project-viz/index.html` + `openspec/changes/retire-dsh-plugins/{proposal.md,design.md,tasks.md,.openspec.yaml}`。**禁止 `git add -A`**。验证：`git diff --cached --name-status` 恰好 12 行（6 `D` + 2 `M` + 4 `A`），无其它路径。
-- [ ] 4.3 提交 `chore(dsh-plugins): 退役从未加载的 arch-gate 写后边界插件`。验证：`git log -1 --stat` 的文件清单与 4.2 的暂存清单逐条一致。
-- [ ] 4.4 推特性分支并开 PR：`git push origin retire-dsh-plugins`、`gh pr create --base Kahoku`，等 `ci-phase1.yml` 的 `python` 与 `frontend` 两个 job 全绿。验证：`gh pr checks` 两 job 均为 pass；失败则按日志修复后重推（不强推主干、不改写历史）。
-- [ ] 4.5 合并后归档：`openspec archive retire-dsh-plugins`，逐文件 `git add` 归档产物后提交 `docs(openspec): 归档 retire-dsh-plugins`。验证：`openspec list` 不再列出该 change；`openspec/changes/archive/<日期>-retire-dsh-plugins/` 含归档后的 4 个产物。
+- [x] 4.1 从 `Kahoku` 切出特性分支 `retire-dsh-plugins`（分支切换不改工作区文件，并发会话的未提交改动原样保留）。验证：`git rev-parse --abbrev-ref HEAD` 为 `retire-dsh-plugins`；`git status --short` 中并发会话条目与切换前逐条一致（数量与路径不变）。**实测**：`git switch -c retire-dsh-plugins` 后 HEAD 指向新分支，工作区未动；并发会话的改动条目一条未少，只有本变更的 12 个文件进入提交。
+- [x] 4.2 逐文件暂存本变更面：6 个 `D` + `utils/gen_arch_stats.py` + `dev_docs/project-viz/index.html` + `openspec/changes/retire-dsh-plugins/{proposal.md,design.md,tasks.md,.openspec.yaml}`。**禁止 `git add -A`**。验证：`git diff --cached --name-status` 恰好 12 行（6 `D` + 2 `M` + 4 `A`），无其它路径。**实测**：暂存清单 12 行（`D`×6、`M`×2、`A`×4），`git diff --cached --numstat` 显示两个改动文件各为 1 行、2 行的最小 diff，无行尾噪声。
+- [x] 4.3 提交 `chore(dsh-plugins): 退役从未加载的 arch-gate 写后边界插件`。验证：`git log -1 --stat` 的文件清单与 4.2 的暂存清单逐条一致。**实测**：提交 `5bf5173c`，`12 files changed, 126 insertions(+), 350 deletions(-)`，清单与 4.2 完全一致。
+- [x] 4.4 推特性分支并开 PR：`git push origin retire-dsh-plugins`、`gh pr create --base Kahoku`，等 `ci-phase1.yml` 的 `python` 与 `frontend` 两个 job 全绿。验证：`gh pr checks` 两 job 均为 pass；失败则按日志修复后重推（不强推主干、不改写历史）。**实测**：本机 Clash 代理（`127.0.0.1:7897`）未启动导致首次推送失败，绕过代理（`git -c http.proxy= -c https.proxy= push`）推送成功；PR **#36** https://github.com/Kahoku-lazy/Android-AutoTests/pull/36 ；`gh pr checks 36` → `python pass 3m03s`、`frontend pass 1m43s`。**注**：本地 `run.py check` 的 10 个红项在 CI 上不复现，直接印证它们是并发会话未提交改动所致。
+- [ ] 4.5 合并后归档：`openspec archive retire-dsh-plugins`，逐文件 `git add` 归档产物后提交 `docs(openspec): 归档 retire-dsh-plugins`。验证：`openspec list` 不再列出该 change；`openspec/changes/archive/<日期>-retire-dsh-plugins/` 含归档后的 4 个产物。（待 PR #36 合并后执行）

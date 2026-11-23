@@ -27,8 +27,8 @@ from pathlib import Path
 
 # 控制台输出统一 UTF-8：本脚本会打印 emoji（📝 / ✅ / 🔴/❌）。
 # Windows 中文环境下 stdout 默认是 GBK，被管道/重定向捕获时 print 会抛
-# UnicodeEncodeError 并以退出码 1 结束——与「发现边界违规」无法区分，会让
-# CI 与 dsh-plugins/arch-gate（execFile 捕获 + passMarker "零违规"）误判失败。
+# UnicodeEncodeError 并以退出码 1 结束——与「发现边界违规」的退出码无法区分，
+# 任何按退出码判定的调用方（CI 步骤、脚本门禁）都会误判为检查失败。
 # 修复放在脚本内而非要求调用方设 PYTHONIOENCODING：单点覆盖所有输出路径。
 # 被 pytest 等捕获时 stdout 可能不是 TextIOWrapper，故用 hasattr 守卫。
 for _stream in (sys.stdout, sys.stderr):

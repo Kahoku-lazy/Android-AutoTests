@@ -1,15 +1,11 @@
-"""adb 可执行文件解析：平台自带优先，不回退系统 PATH。
-
-业务功能：
-1. adb_binary: 按优先级返回本次进程应使用的 adb 路径，并同步给 adbutils/uiautomator2。
-2. adb_status: 只读地报告当前来源（env / platform / bundled / missing），供状态面板与排障使用。
-3. reset_cache: 安装器完成安装后强制重新解析。
-
-优先级（命中即可用）：
-1. `ADB_PATH` 环境变量（显式覆盖）；
-2. 项目内 `tools/platform-tools/adb(.exe)`（`python run.py setup` 安装到这里）；
-3. Python 依赖 `adbutils` 包内置的 adb。
-系统 PATH 不在候选列表中：版本不可控，且静默使用会掩盖部署配置问题。
+"""
+模块功能：➡️ adb 可执行文件解析：平台自带优先，不回退系统 PATH 🏁
+Python 调试：➡️ python -m utils.adb 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/device/unit/test_adb_resolver.py: 候选优先级与环境变量覆盖
+2. tests/device/unit/test_device_adb_missing.py: adb 缺失时的报错路径
+🏁
 """
 
 from __future__ import annotations

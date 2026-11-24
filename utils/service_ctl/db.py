@@ -1,15 +1,10 @@
-"""数据库前置检查与连接清理：启动后端前确认库可用，停机后清理空闲连接。
-
-本模块的业务功能如下：
-1. DbConfig.from_env: 连接参数的唯一真相源（引擎 / 主机 / 端口 / 账号 / 密码 / 库名 / 服务名）。
-2. reachable: 用真实连接验证网络 + 账号 + 库名；sqlite 直接视为可用。
-3. ensure: 启动前编排——可达即通过，本机库可尝试拉起服务，远程库只报错。
-4. status_line: `status` 命令里的数据库描述行，永不抛异常。
-5. start_local_service / elevation_hint: 按平台拉起本机数据库服务，并给出提权命令。
-6. cleanup_idle_connections: Windows 强杀 Daphne 后清理孤儿 Sleep 连接。
-
-依赖：标准库 + MySQLdb（函数内延迟 import，sqlite 环境不加载）。
-测试归属 `tests/arch/unit/test_run_db_preflight.py`。
+"""
+模块功能：➡️ 数据库前置检查与连接清理：启动前确认库可用，停机后清理空闲连接 🏁
+Python 调试：➡️ python -m utils.service_ctl.db 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/arch/unit/test_run_db_preflight.py: 连接参数、可达性判定与连接清理
+🏁
 """
 
 from __future__ import annotations

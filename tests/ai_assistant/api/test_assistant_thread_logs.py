@@ -1,4 +1,11 @@
-"""助手日志接口：越权 404，进行中 409，响应不含绝对路径。"""
+"""
+模块功能：➡️ 助手日志接口：越权 404，进行中 409，响应不含绝对路径 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ai_assistant/api/test_assistant_thread_logs.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/ai_assistant
+🏁
+"""
 
 from __future__ import annotations
 

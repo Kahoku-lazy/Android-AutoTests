@@ -1,4 +1,11 @@
-"""停机超时名单：run.py 在杀进程前写下任务编号，清扫读完即删。"""
+"""
+模块功能：➡️ 停机超时名单：run.py 在杀进程前写下任务编号，清扫读完即删 🏁
+Python 调试：➡️ python -m backend.apps.task_list.sweep_mark 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 task_list 的功能用例间接覆盖，未直接 import 本模块）
+🏁
+"""
 
 from __future__ import annotations
 

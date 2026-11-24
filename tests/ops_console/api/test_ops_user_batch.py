@@ -1,4 +1,11 @@
-"""运营后台：本页批量停用与仅超管批量注销。"""
+"""
+模块功能：➡️ 运营后台：本页批量停用与仅超管批量注销 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ops_console/api/test_ops_user_batch.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/case_manager、backend/apps/ops_console
+🏁
+"""
 
 from __future__ import annotations
 

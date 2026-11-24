@@ -1,7 +1,10 @@
-"""D4 契约：枚举唯一真相源在 `models/` —— device_pool 不得重复定义设备枚举。
-
-本用例用 `is`（而非值相等）断言：值相等在「两份重复定义」下同样会通过，
-只有 `is` 能证明全仓只有一个定义。见 `设计方案-Django设计系统分层.html` 行 269/331/375。
+"""
+模块功能：➡️ D4 契约：枚举唯一真相源在 `models/` —— device_pool 不得重复定义设备枚举 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_enum_ssot.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/device_pool、backend/models
+🏁
 """
 
 from __future__ import annotations

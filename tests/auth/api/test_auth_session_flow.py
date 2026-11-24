@@ -1,10 +1,10 @@
-"""会话生命周期流程用例 — 登出后 access 与 refresh 同时失效。
-
-这组用例在 YAML 里带 `setup: logout`：loader 是单请求模型，前置步骤由本驱动完成 ——
-先以现场登录的 session 调一次登出，再用**同一份凭证**断言后续请求被拒。
-期望值（状态码 / schema / 文案）仍写在 YAML 里，与其它 32 条用例同源。
-
-用例源：tests/api/case/{logout,refresh,me}.yaml
+"""
+模块功能：➡️ 会话生命周期流程用例 — 登出后 access 与 refresh 同时失效 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/auth/api/test_auth_session_flow.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/accounts（账号与会话）
+🏁
 """
 
 import pytest

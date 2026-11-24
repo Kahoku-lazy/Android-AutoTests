@@ -1,8 +1,10 @@
-"""串口日志接口契约：鉴权、权限、路径与开关落库。
-
-用视图直调 + 轻量请求工厂，不依赖运行中的 Redis / 现场端口：
-- 未登录 401 由网关中间件负责；
-- 端口开关的 TCP 监听用假 switch 替身，真实落库仍走 `apps.serial_log.api`。
+"""
+模块功能：➡️ 串口日志接口契约：鉴权、权限、路径与开关落库 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/serial_log/api/test_serial_log_api.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/serial_log、backend/gateway/middleware.py
+🏁
 """
 
 from __future__ import annotations

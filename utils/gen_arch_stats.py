@@ -1,19 +1,11 @@
 #!/usr/bin/env python3
 """
-Architecture stats generator — 扫描代码库，输出当前架构的可度量事实。
-
-用途:
-  - architect agent 被调用时自动运行，对比指定架构文档的 auto 区域
-  - 发现 drift 后自动更新文档的事实部分
-  - 也支持 --json 输出，供 CI/hook 消费
-
-用法:
-  python utils/gen_arch_stats.py                              # 输出 Markdown 片段
-  python utils/gen_arch_stats.py --json                       # 输出 JSON（供 CI/hook 消费）
-  python utils/gen_arch_stats.py --check-md --doc <文档路径>    # 对比架构文档，输出 drift 报告
-  python utils/gen_arch_stats.py --check-boundaries [--verbose] # 模块边界检查（CI python job）
-  python utils/gen_arch_stats.py --check-frontend             # 前端文件体积检查（CI python job）
-  python utils/gen_arch_stats.py --update-agents-md           # 同步 AGENTS.md 的 AUTO_STATS 区块
+模块功能：➡️ 架构事实生成器：代码量、依赖与模块边界检查，供架构文档与 CI 消费 🏁
+Python 调试：➡️ python -m utils.gen_arch_stats 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（门禁 `boundary` / `vue-file-size` 直接调用其 --check-* 开关）
+🏁
 """
 
 import ast

@@ -1,13 +1,10 @@
-"""公开 API 文档面契约（`api-docs-surface`）：以 schema + Swagger UI 为唯一文档面。
-
-对照 `openspec/changes/retire-handwritten-api-docs` 的 spec，看守四件事：
-
-1. 已删除的手写文档路径（`/api/docs` / `/api/docs.html`）不再提供文档；
-2. 保留的 `/api/schema/` 与 `/api/swagger/` 免 JWT 公开可达；
-3. schema 内每个 operation、每个分组（tag）都有中文说明；
-4. Swagger UI 页面不引用第三方域名，且引用的静态资产同源可取（离线可用）。
-
-运行：`pytest tests/graybox/unit/test_api_docs_surface.py -v`
+"""
+模块功能：➡️ 公开 API 文档面契约（`api-docs-surface`）：以 schema + Swagger UI 为唯一文档面 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_api_docs_surface.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 前端与后端源码的一致性面（只读源码断言）
+🏁
 """
 
 from __future__ import annotations

@@ -1,4 +1,11 @@
-"""助手名片接口：写限助手作者，读限登录，列表不含头像正文。"""
+"""
+模块功能：➡️ 助手名片接口：写限助手作者，读限登录，列表不含头像正文 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ai_assistant/api/test_assistants.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/ai_assistant、backend/shared/users.py
+🏁
+"""
 
 from __future__ import annotations
 

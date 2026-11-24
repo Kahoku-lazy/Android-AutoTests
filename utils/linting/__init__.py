@@ -1,7 +1,10 @@
-"""模块依赖检查（配置：仓库根 `.linting`）。
-
-允许清单回答“每个包可以依赖谁”，禁止合同回答“谁绝不许依赖谁”。
-门禁名为 `linting`，入口 `python -m utils.linting`；规则说明见 `.agents/lint/linting.md`。
+"""
+模块功能：➡️ 模块依赖检查包：允许清单 + 禁止合同，入口 python -m utils.linting 🏁
+Python 调试：➡️ python -m utils.linting 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（门禁 `linting` 直接调用）
+🏁
 """
 
 from utils.linting.checks import check

@@ -1,4 +1,11 @@
-"""草稿、发布与版本戳：作者可见草稿，普通用户得到 404。"""
+"""
+模块功能：➡️ 草稿、发布与版本戳：作者可见草稿，普通用户得到 404 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ai_assistant/api/test_release.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/ai_assistant
+🏁
+"""
 
 from __future__ import annotations
 

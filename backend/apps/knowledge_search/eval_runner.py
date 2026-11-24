@@ -1,7 +1,10 @@
-"""评测运行器：后台线程 + 快照隔离 + 逐题进度 + 两类用量入账。
-
-ORM 写经 api.py；异步段内的落库用 sync_to_async。
-快照目录由触发时冻结的模块登记派生，运行期间登记变更不影响该运行。
+"""
+模块功能：➡️ 评测运行器：后台线程 + 快照隔离 + 逐题进度 + 两类用量入账 🏁
+Python 调试：➡️ python -m backend.apps.knowledge_search.eval_runner 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 knowledge_search 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 from __future__ import annotations

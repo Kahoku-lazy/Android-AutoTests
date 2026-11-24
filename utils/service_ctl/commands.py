@@ -1,13 +1,10 @@
-"""`run.py` 的命令实现：服务名解析、启停/重启/状态/日志/检查/setup 与 adb 处理。
-
-本模块的业务功能如下：
-1. resolve_services: 把命令行服务名解析成注册表里的服务；退役服务只提示，非法服务退出码 1。
-2. cmd_start / cmd_stop / cmd_restart: 编排先停后起、数据库预检、adb 检查与成功横幅。
-3. cmd_status / cmd_logs: 状态四行与日志尾部。
-4. cmd_check / cmd_setup 与 adb 状态/自动安装。
-
-依赖：`utils.service_ctl.{config,db,proc,services}` + `utils.{adb,platform_tools}`（函数内延迟 import）。
-测试归属 `tests/arch/unit/test_run_startup_orchestration.py`。
+"""
+模块功能：➡️ run.py 的命令实现：服务名解析、启停/重启/状态/日志/检查/setup 与 adb 处理 🏁
+Python 调试：➡️ python -m utils.service_ctl.commands 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/arch/unit/test_run_startup_orchestration.py: 启动编排与数据库预检
+🏁
 """
 
 from __future__ import annotations

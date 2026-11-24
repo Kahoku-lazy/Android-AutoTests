@@ -1,4 +1,11 @@
-"""工作流任务提交：必须有工作流和设备；上传里程碑不把文件名写入用例身份。"""
+"""
+模块功能：➡️ 工作流任务提交：必须有工作流和设备；上传里程碑不把文件名写入用例身份 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/task/api/test_task_submit_sop.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/task_list、backend/apps/ai_assistant
+🏁
+"""
 
 from __future__ import annotations
 

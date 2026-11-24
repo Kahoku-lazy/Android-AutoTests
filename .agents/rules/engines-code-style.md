@@ -11,44 +11,23 @@
 
 | 层级 | 路径 | 本文哪几节生效 |
 |------|------|----------------|
-| 全 engines | `engines/**`（含 `agents`、`device`、`uart_log`、`vision` 等） | §2–§5、§7 |
-| 仅 agents | `engines/agents/**` | 另加 §6（工具函数注释专规） |
+| 全仓 Python（含 engines 之外） | 见 [`.agents/rules/python-docstring-style.md`](python-docstring-style.md) §1 的纳入 / 排除清单 | 注释模板**不再由本文定义**，见 §2 |
+| 全 engines | `engines/**`（含 `ae_harness`、`device`、`uart_log`、`vision` 等） | §3–§5、§7 |
+| 仅工具函数 | `engines/ae_harness/tools/**` | 另加 §6（工具函数 docstring 专规） |
 
-功能架构、目录职责、工具必须经 `tools_config` 分配等，见 [`engines/agents/AGENTS.md`](../../engines/agents/AGENTS.md)，本文不重复展开。
+注释（模块头 4 字段）的正文在 [`.agents/rules/python-docstring-style.md`](python-docstring-style.md)：2026-11-24 起该方案已推广到全仓 Python 代码，本文不再重复模板，避免两处正文漂移。
 
-## 2. 注释与文档字符串（极简版：只保留模块头 4 字段）
+功能架构、目录职责、工具必须经 `tools_config` 分配等，见 [`engines/AGENTS.md`](../../engines/AGENTS.md)，本文不重复展开。
 
-> 本节里**能机械化**的部分（模块头 4 字段、工具函数「首行摘要 + `Args:`」）由技能 [`.agents/skills/engines-docstring-check/`](../skills/engines-docstring-check/) 校验；注释文案是否准确仍需人判断。
+## 2. 注释与文档字符串（模板正文已外移）
 
-1. **只有模块开头的文件头注释**：每个 `.py` 文件开头写一个模块 docstring，字段严格按下方模板，**不得增加模板以外的字段**。
-2. **其余位置默认不写注释**：类 docstring、普通函数 / 方法 docstring、函数体内的 `#` 行内注释，没有明确要求就**不写**。
-3. **唯一例外——工具函数**：会被 `FunctionTool(...)` 注册、把说明交给模型看的函数（`engines/ae_harness/tools/**` 等）必须写 docstring，且只写「首行一句话摘要 + `Args:`」；`Args:` 每个参数一行说明。工具函数**不再要求** `Returns:` / `Raises:`（保留不报错，但不要为凑段而写）。
-4. 确需解释「**为什么**这么写」（非显然的协议约束、顺序敏感的实现细节）时，允许在该行上方写**一行**短注释，只写原因、不写做法；**禁止**复述代码、**禁止**把改动历史写进注释。
+**模板、字段取值、纳入/排除清单、tests 口径、检查命令**统一由 [`.agents/rules/python-docstring-style.md`](python-docstring-style.md) 定义。
+本节只保留 engines 侧必须记住的三条：
 
-### 模块头模板（唯一允许的字段）
-
-```python
-"""
-模块功能：➡️ 模型配置工具 🏁
-Python 调试：➡️python -m engines.agents.config.models_config 🏁
-时间：➡️ 2026-10-29 🏁
-测试:➡️
-1. tests/.../test_xxx.py: 覆盖的测试项简述
-🏁
-"""
-```
-
-**字段说明**（➡️ 是起始符、🏁 是结束符，用于正则取字段内容）：
-
-| 字段 | 必填 | 取值要求 |
-| --- | --- | --- |
-| 模块功能 | 是 | 一句话职责；不写编号、不写调试命令 |
-| Python 调试 | 是 | 可直接复制的 `python -m …` 入口，不加任何前缀 |
-| 时间 | 是 | `YYYY-MM-DD` |
-| 测试 | 是 | 测试文件路径 + 覆盖项，一行一条、从 `1.` 连续编号；确实没有测试写「1. 暂无」 |
-
-**已删除、不要再写的字段**：`文件名`、`路径`、`作者`、`版本`、`修改时间`、`类型`、`简介说明`、`关联模块`。  
-历史文件里的这些字段不要求立刻删除（本次不迁移存量）；新写或改写的文件头只保留上表 4 个字段。
+1. 模块头 4 字段（模块功能 / Python 调试 / 时间 / 测试）是**全仓要求**，engines 不例外；
+2. **工具函数**（`engines/ae_harness/tools/**` 里被 `FunctionTool(...)` 注册的函数）必须写「首行一句话摘要 + `Args:`」——
+   这是交给模型的说明，细则见 §6；
+3. 其余位置（类 docstring、普通函数 / 方法 docstring、函数体内 `#` 注释）默认不写；确需解释「为什么」时按全仓规范 §3.3 写一行原因。
 
 ## 3. 模块划分与单一职责
 
@@ -70,13 +49,13 @@ Python 调试：➡️python -m engines.agents.config.models_config 🏁
 
 1. 异常只用内置类型（`ValueError` / `RuntimeError` / `TypeError` / `SystemExit`）或仓库 / 框架**既有**类型（如 `DeveloperOrientedException`、`FrozenInstanceError`）。
 2. **禁止**在 engines 内随意新增自定义异常类；确有需要时先在对应子目录 AGENTS 中立项约定。
-3. **不再要求**把 `raise` 写进 docstring 的 `Raises:` 段（与 §2.2「其余位置默认不写注释」一致）；失败面由异常类型本身与工具返回契约表达。
+3. **不再要求**把 `raise` 写进 docstring 的 `Raises:` 段（与全仓规范 §3「其余位置默认不写注释」一致）；失败面由异常类型本身与工具返回契约表达。
 
-## 6. agents 专规（仅 `engines/agents/**`）
+## 6. 工具函数专规（仅 `engines/ae_harness/tools/**`）
 
-1. **工具函数**（`tools/tool_*.py`）：docstring **首行摘要**就是模型可见的工具说明（实测：AgentScope `FunctionTool` 取首行摘要作 `description`、取 `Args:` 作参数说明；`Raises:` 不进入模型侧）。因此工具函数**必须**写「首行摘要 + `Args:`」，`Args:` 覆盖每个参数。
-2. **公开入口**（如 `Agent.reply` / `reply_stream` / `interrupt`（及语音 session））：按 §2.2 不写 docstring；失败面由异常类型表达，不再要求 `Raises:`。
-3. 工具文件命名、经 `tools_config.py` 分配、禁止业务代码直接 `import` 绑工具等，见 [`engines/agents/AGENTS.md`](../../engines/agents/AGENTS.md)。
+1. **工具函数**（`engines/ae_harness/tools/<域>/tools.py` 等，被 `FunctionTool(...)` 注册的函数）：docstring **首行摘要**就是模型可见的工具说明（实测：AgentScope `FunctionTool` 取首行摘要作 `description`、取 `Args:` 作参数说明；`Raises:` 不进入模型侧）。因此工具函数**必须**写「首行摘要 + `Args:`」，`Args:` 覆盖每个参数。
+2. **公开入口**（如 `Agent.reply` / `reply_stream` / `interrupt`（及语音 session））：按全仓规范 §3（其余位置默认不写）不写 docstring；失败面由异常类型表达，不再要求 `Raises:`。
+3. 工具文件命名、经门面函数分配（`build_adb_tools()` / `build_adb_readonly_tools()`）、禁止业务代码直接 `import` 绑工具等，见 [`engines/AGENTS.md`](../../engines/AGENTS.md) 与 [`ae_harness_tools_domain_tools.md`](../docs/engines/ae_harness_tools/ae_harness_tools_domain_tools.md)。
 
 ## 7. 建议一并遵守（通用）
 
@@ -88,6 +67,7 @@ Python 调试：➡️python -m engines.agents.config.models_config 🏁
 
 ## 8. 修订说明（相对旧版）
 
+- **2026-11-24 注释方案全仓化**：模块头 4 字段模板正文迁至 [`python-docstring-style.md`](python-docstring-style.md)，适用范围从 `engines/**` 扩到全仓在册 Python 代码（排除 Django 固定脚手架与非产品代码）；本文 §2 变为指针，§6 范围由 `engines/agents/**` 更正为 `engines/ae_harness/tools/**`。变更单：`openspec/changes/repo-wide-python-docstring`。
 - **2026-11-24 注释收敛**：模块头只保留 4 字段（模块功能 / Python 调试 / 时间 / 测试），删除 `文件名`、`路径`、`作者`、`版本`、`修改时间`、`类型`、`简介说明`、`关联模块`；函数 / 类 / 行内注释默认不写，仅工具函数保留「首行摘要 + `Args:`」；`Raises:` 不再强制。存量代码不迁移，检查器只对新写 / 改动的文件生效。
 - 修正工具示例名为 `tool_device.py` / `tool_serial.py`，与 `engines/agents/AGENTS.md` 一致。  
 - 区分全 `engines` 通用规则与 `agents` 专规。  

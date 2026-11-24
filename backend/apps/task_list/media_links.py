@@ -1,9 +1,10 @@
 """
-python -m 调试路径: backend.apps.task_list.media_links
-
-本模块的业务功能如下：
-1. sign: 为一张任务截图签发带过期时间的直链路径。
-2. verify: 校验直链的过期时间与 HMAC 签名。
+模块功能：➡️ 任务截图的签名链接：按 TTL 与摘要生成并校验路径 🏁
+Python 调试：➡️ python -m backend.apps.task_list.media_links 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 task_list 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 from __future__ import annotations

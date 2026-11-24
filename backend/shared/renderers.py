@@ -1,13 +1,10 @@
-"""Shared DRF renderers — enforce the project-wide response envelope.
-
-By default DRF returns bare JSON; the frontend api-client expects every
-response to follow the ``{status, data}`` convention defined in
-``frontend/src/shared/api-client.ts`` (``DjangoResponse<T>``).
-
-``EnvelopeJSONRenderer`` wraps all successful (2xx) responses in this
-envelope.  Errors (4xx/5xx) are left unwrapped so DRF's built-in error
-format (``{detail: ...}`` or field-level errors) is preserved, which the
-frontend's ``formatApiError()`` already understands.
+"""
+模块功能：➡️ Shared DRF renderers — enforce the project-wide response envelope. 🏁
+Python 调试：➡️ python -m backend.shared.renderers 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 shared 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 from rest_framework.renderers import JSONRenderer

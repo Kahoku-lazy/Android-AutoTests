@@ -1,4 +1,11 @@
-"""助手测试对话栏。写库只在本模块，运行交给 backend_bridge。"""
+"""
+模块功能：➡️ 助手测试对话栏。写库只在本模块，运行交给 backend_bridge 🏁
+Python 调试：➡️ python -m backend.apps.ai_assistant.services.assistant_threads 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 ai_assistant 的功能用例间接覆盖，未直接 import 本模块）
+🏁
+"""
 
 from __future__ import annotations
 

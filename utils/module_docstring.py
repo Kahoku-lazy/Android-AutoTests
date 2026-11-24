@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 模块功能：➡️ 模块 docstring 字段解析、校验与按文件夹批量提取 🏁
-Python 调试：➡️python -m utils.module_docstring 🏁
+Python 调试：➡️ python -m utils.module_docstring 🏁
 时间：➡️ 2026-11-24 🏁
 测试:➡️
-1. 暂无专门单测；python -m utils.module_docstring 可对样例冒烟
-2. 单文件: python -m utils.module_docstring engines/ae_harness/tools/document/tools.py --repo-root .
-3. 批量文件夹: python -m utils.module_docstring engines --repo-root . --out temps/engines_fields.json
+1. 暂无专门单测（可用 `python -m utils.module_docstring <文件> --repo-root .` 冒烟）
 🏁
 """
 

@@ -1,4 +1,11 @@
-"""助手报告的一次性开门凭证。只记栏编号与报告编号，不记磁盘路径。"""
+"""
+模块功能：➡️ 助手报告的一次性开门凭证。只记栏编号与报告编号，不记磁盘路径 🏁
+Python 调试：➡️ python -m backend.apps.ai_assistant.services.log_ticket 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 ai_assistant 的功能用例间接覆盖，未直接 import 本模块）
+🏁
+"""
 
 from __future__ import annotations
 

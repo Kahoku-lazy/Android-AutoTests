@@ -1,4 +1,11 @@
-"""E2E data-testid 常量 — 与前端 DOM 一一对应，禁止在用例中散写脆弱选择器。"""
+"""
+模块功能：➡️ E2E 选择器常量：data-testid 与前端 DOM 一一对应，禁止在用例里散写 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/e2e/selectors.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 frontend/src 的 data-testid 约定
+🏁
+"""
 
 # ── 登录页 ──
 LOGIN_PAGE = "login-page"

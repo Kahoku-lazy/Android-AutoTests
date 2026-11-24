@@ -1,13 +1,10 @@
-"""drf-spectacular 扩展：声明本平台的 Bearer JWT 认证方案。
-
-背景：`REST_FRAMEWORK.DEFAULT_AUTHENTICATION_CLASSES` 指向自定义的 `JWTAuthentication`，
-drf-spectacular 不认识它，会对**每一个端点**报一次
-`W001 could not resolve authenticator <class shared.auth.drf_auth.JWTAuthentication>`。
-这里注册一个 `OpenApiAuthenticationExtension`，把认证方案声明成标准的 `http bearer`，
-使 `/api/schema` 与 `/api/swagger` 能正确展示并在 UI 里输入令牌。
-
-注：drf-spectacular 通过「类定义即注册」的元类收集扩展，故本模块必须在生成 schema 前被导入；
-`shared` 是注册在 `INSTALLED_APPS` 的应用，其根级 `schema.py` 由 drf-spectacular 自动加载。
+"""
+模块功能：➡️ drf-spectacular 扩展：声明本平台的 Bearer JWT 认证方案 🏁
+Python 调试：➡️ python -m backend.shared.schema 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 shared 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 from drf_spectacular.extensions import OpenApiAuthenticationExtension

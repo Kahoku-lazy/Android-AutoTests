@@ -1,12 +1,10 @@
-"""YAML 用例加载、占位符解析与执行断言。
-
-用例字段约定（见 tests/api/case/*.yaml）：
-  - id / title / point  编号 / 测试标题 / 测试点
-  - method / path       请求方法与路径
-  - body / raw_body     请求体（json / 原始文本）
-  - expect.status       期望 HTTP 状态码
-  - expect.schema       响应 JSONSchema 名（见 schemas.SCHEMAS）
-  - expect.check        定点字段断言（点分路径 -> 期望值，支持占位符）
+"""
+模块功能：➡️ YAML 用例加载：占位符解析与断言执行 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/api_kit/loader.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 tests/api/case 下的接口用例 YAML
+🏁
 """
 
 from pathlib import Path

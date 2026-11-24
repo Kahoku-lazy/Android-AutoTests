@@ -1,10 +1,10 @@
-"""并发同名注册（TC-REG-023）— 唯一性由数据库唯一约束保证，并发下也只一个成功。
-
-用例源：tests/api/case/register.yaml 的 TC-REG-023（带 `concurrent: 2` 标记的多请求用例，
-故由本驱动执行，不进 test_login_page.py 的单请求参数化）。
-
-期望：两个并发请求恰好一个 200、一个 409「用户名已存在」，绝不出现 500
-（校验层不做唯一性判重，冲突由数据库约束翻译为领域错误）。
+"""
+模块功能：➡️ 并发同名注册（TC-REG-023）— 唯一性由数据库唯一约束保证，并发下也只一个成功 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/auth/api/test_auth_register_concurrency.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/accounts（账号与会话）
+🏁
 """
 
 import uuid

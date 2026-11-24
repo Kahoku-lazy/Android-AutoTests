@@ -1,7 +1,10 @@
-"""自定义端口写库口（api.py）与双轨配置同步的集成测试。
-
-覆盖：ensure_log_ports 只碰 config 行、同号 custom 跳过并记 warning、
-custom 增删改的数据侧兜底、开关写入不改来源与三列。
+"""
+模块功能：➡️ 自定义端口写库口（api.py）与双轨配置同步的集成测试 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/serial_log/integration/test_custom_port_api.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/serial_log、engines/device
+🏁
 """
 
 from __future__ import annotations

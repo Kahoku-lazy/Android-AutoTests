@@ -1,13 +1,11 @@
-"""按注册表启停服务：拉起并等待就绪、停机排空、数据库空闲连接清理与超时名单。
-
-本模块的业务功能如下：
-1. start_service: 按 ServiceSpec 拉起进程并轮询就绪地址，失败给出日志位置。
-2. stop_service: 先停派发并等待运行中的任务归零（排空），再清理数据库空闲连接并杀端口。
-3. drain: 调后端 `/api/system/drain/` 等 running 归零；超时则记下仍在跑的任务编号。
-4. write_stop_timeout_mark: 把超时名单写到 `temps/stop-timeout-tasks.json` 供启动清扫识别。
-
-依赖：`utils.service_ctl.{config,db,proc}`；不 import `backend.apps.*`（名单写入保留本地实现）。
-测试归属 `tests/arch/unit/test_platform_services.py` 与 `tests/task/unit/test_task_sweep.py`。
+"""
+模块功能：➡️ 按注册表启停服务：拉起并等待就绪、停机排空、空闲连接清理与超时名单 🏁
+Python 调试：➡️ python -m utils.service_ctl.services 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/arch/unit/test_platform_services.py: 启停与排空
+2. tests/task/unit/test_task_sweep.py: 停机超时名单与启动清扫
+🏁
 """
 
 from __future__ import annotations

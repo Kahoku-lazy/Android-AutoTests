@@ -1,11 +1,10 @@
-"""测试环境 Django 配置。
-
-位置：`tests/test_settings.py`（测试相关代码统一收在 `tests/` 下）。
-继承正式配置，覆盖以下项：
-- 数据库：SQLite 内存库（测试间事务隔离，自动回滚）
-- DEBUG：开启（测试中获取详细错误信息）
-
-Channel layer 不再单独覆盖：正式配置本身就是 InMemory（Redis 已退役），测试与生产同构。
+"""
+模块功能：➡️ 测试环境 Django 配置：继承生产 settings 并覆盖测试专用项 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/test_settings.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 被全部 pytest 用例加载（无独立用例）
+🏁
 """
 
 from backend.config.settings import *  # noqa: F403

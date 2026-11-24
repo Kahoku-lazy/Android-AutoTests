@@ -1,6 +1,10 @@
-"""改路径集成场景：登记 → 组装引擎配置 → 改路径后目录切换。
-
-不联网、不调嵌入 API；索引内容清理由引擎 test_knowledge_index.py 守护。
+"""
+模块功能：➡️ 改路径集成场景：登记 → 组装引擎配置 → 改路径后目录切换 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/knowledge_search/integration/test_path_change.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/ai_assistant、backend/apps/knowledge_search
+🏁
 """
 
 from __future__ import annotations

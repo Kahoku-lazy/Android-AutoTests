@@ -1,4 +1,11 @@
-"""对账任务截图文件与 task_media 行：清理孤儿文件、报告缺失文件。"""
+"""
+模块功能：➡️ 对账任务截图文件与 task_media 行：清理孤儿文件、报告缺失文件 🏁
+Python 调试：➡️ python -m backend.apps.task_list.management.commands.reconcile_task_media 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（管理命令，无自动化用例）
+🏁
+"""
 
 from django.core.management.base import BaseCommand
 

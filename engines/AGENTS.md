@@ -50,6 +50,12 @@
 
 技能是**辅助**：注释是否可信、设计是否合理仍要人判断，过检 ≠ 整份规范合规。
 
+**注释正文位置（2026-11-24 变更）**：模块头 4 字段方案已推广到全仓 Python 代码，正文在
+[`.agents/rules/python-docstring-style.md`](../.agents/rules/python-docstring-style.md)；本文档链到的
+[`.agents/rules/engines-code-style.md`](../.agents/rules/engines-code-style.md) §2 已改为指向该文件，
+engines 只在 §6 保留「`engines/ae_harness/tools/**` 工具函数必须写首行摘要 + `Args:`」这条追加条款
+（那是交给模型的工具说明，不得删减）。检查命令不变，见上表。
+
 1. **任何时候进入 engines 任务**：先读本 `engines/AGENTS.md`（职责 + 红线 + 本流程）。
 2. **即将编写或修改 `engines/**` 代码时**（含补 docstring、改工具、改 role、改设备/串口/视觉等）：  
    **必须先阅读** [`.agents/rules/engines-code-style.md`](../.agents/rules/engines-code-style.md) 全文（或至少与本次改动相关的章节），**禁止**未读规范就写代码。

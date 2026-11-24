@@ -1,7 +1,10 @@
-"""Backfill BUG tickets from historical task errors.
-
-Usage:
-    python manage.py sync_bug_tickets
+"""
+模块功能：➡️ Backfill BUG tickets from historical task errors. 🏁
+Python 调试：➡️ python -m backend.apps.bug_manager.management.commands.sync_bug_tickets 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（管理命令，无自动化用例）
+🏁
 """
 
 from django.core.management.base import BaseCommand

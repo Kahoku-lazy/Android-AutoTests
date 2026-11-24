@@ -1,4 +1,11 @@
-"""评测运行器集成场景：替身承接引擎与模型，验证生命周期、进度、入账与失败收口。"""
+"""
+模块功能：➡️ 评测运行器集成场景：替身承接引擎与模型，验证生命周期、进度、入账与失败收口 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/knowledge_search/integration/test_eval_runner.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/knowledge_search、backend/apps/usage_ledger、engines/ae_harness
+🏁
+"""
 
 from __future__ import annotations
 

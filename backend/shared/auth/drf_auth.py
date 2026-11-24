@@ -1,12 +1,11 @@
-"""DRF authentication bridge — reuses the existing PyJWT verify_token().
-
-This module provides a DRF ``BaseAuthentication`` subclass that delegates
-to ``shared.auth.jwt_auth.verify_token()``, the same function used by the
-Django middleware (``gateway.middleware.JWTAuthenticationMiddleware``).
-
-The two authentication paths coexist during the DRF migration:
-  - Middleware: continues to protect all existing plain-Django views
-  - This class: protects new DRF ViewSets (opt-in via DEFAULT_AUTHENTICATION_CLASSES)
+"""
+模块功能：➡️ DRF authentication bridge — reuses the existing PyJWT verify_token(). 🏁
+Python 调试：➡️ python -m backend.shared.auth.drf_auth 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/arch/unit/test_auth_single_verify.py: 覆盖本模块
+2. tests/arch/unit/test_jwt_hardening.py: 同上
+🏁
 """
 
 from django.contrib.auth import get_user_model

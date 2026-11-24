@@ -1,9 +1,10 @@
 """
-python -m 调试路径: backend.apps.task_list.case_identity
-
-本模块的业务功能如下：
-1. case_identity_label: 把冻结的用例身份收成一句展示文案。
-2. case_identity_rows: 取出按选择顺序冻结的行，供悬停与详情使用。
+模块功能：➡️ 用例身份（标签与身份行）：任务与 BUG 单共用同一口径 🏁
+Python 调试：➡️ python -m backend.apps.task_list.case_identity 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 task_list 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 _MILESTONE = "milestone"

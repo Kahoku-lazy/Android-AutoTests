@@ -1,7 +1,10 @@
-"""DevicePool — 设备状态管理（仅当前激活设备指针）。
-
-设备连接/感知/操作的物理实现已全部下沉 engines/；本类只保留「当前激活设备」
-指针。连接类型/地址直接从 Device 表读取，不再进程内缓存。
+"""
+模块功能：➡️ DevicePool — 设备状态管理（仅当前激活设备指针） 🏁
+Python 调试：➡️ python -m backend.apps.device_pool.pool 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 device_pool 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 

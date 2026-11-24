@@ -1,18 +1,10 @@
 """
-实时屏幕镜像 — 只读显示手机屏幕内容，不对设备做任何操作
-
-用法:
-  python -m utils.live_screen R5CT62RH88F              # 自动选后端
-  python -m utils.live_screen R5CT62RH88F --backend adb
-  python -m utils.live_screen R5CT62RH88F --scale 0.4  # 指定缩放
-  python -m utils.live_screen --list                   # 列出已连接设备
-
-按键:
-  q / ESC  退出        f  切换 适应窗口 / 原始 1:1
-  h        HUD 开关    s  保存当前帧到 temps/
-
-后端说明（取帧耗时实测，1080x2340）:
-  uiautomator2 ~210ms/帧 (约 4~5 FPS)   adb screencap ~470ms/帧 (约 2 FPS)
+模块功能：➡️ 实时屏幕镜像（只读）：uiautomator2 / adb 取帧；q 退出、f 切缩放、h HUD、s 存帧 🏁
+Python 调试：➡️ python -m utils.live_screen --list 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无
+🏁
 """
 
 import argparse

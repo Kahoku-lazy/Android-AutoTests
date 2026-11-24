@@ -42,7 +42,14 @@ def bind_case_writer(writer) -> None:
 
 
 def save_authored_case(title: str, module: str, priority: str, steps: str) -> str:
-    """保存一条编写完成的用例。未注入写入函数时返回失败。"""
+    """保存一条编写完成的用例。未注入写入函数时返回失败。
+
+    Args:
+        title: 用例标题。
+        module: 用例所属功能模块。
+        priority: 优先级标记，取值由调用方约定。
+        steps: 用例步骤正文（纯文本，落库格式由注入的写入方负责）。
+    """
     if _writer is None:
         return json.dumps({"status": False, "error": "用例库未接入"}, ensure_ascii=False)
     return json.dumps(

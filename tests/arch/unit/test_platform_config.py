@@ -1,4 +1,11 @@
-"""`utils.service_ctl.config` 的行为契约：开关解析口径、服务注册表与环境默认值。"""
+"""
+模块功能：➡️ `utils.service_ctl.config` 的行为契约：开关解析口径、服务注册表与环境默认值 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_platform_config.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 utils/service_ctl
+🏁
+"""
 
 from __future__ import annotations
 

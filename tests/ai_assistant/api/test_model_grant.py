@@ -1,4 +1,11 @@
-"""模型名单接口：列表、角色保存和运营后台三类入口。"""
+"""
+模块功能：➡️ 模型名单接口：列表、角色保存和运营后台三类入口 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ai_assistant/api/test_model_grant.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/ai_assistant、backend/apps/ops_console、backend/shared/users.py
+🏁
+"""
 
 from __future__ import annotations
 

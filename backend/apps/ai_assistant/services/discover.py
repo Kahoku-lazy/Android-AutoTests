@@ -1,4 +1,11 @@
-"""向厂商查询模型名。视图不直接调用引擎。"""
+"""
+模块功能：➡️ 向厂商查询模型名。视图不直接调用引擎 🏁
+Python 调试：➡️ python -m backend.apps.ai_assistant.services.discover 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 ai_assistant 的功能用例间接覆盖，未直接 import 本模块）
+🏁
+"""
 
 from engines.backend_bridge.models import discover_models
 from engines.backend_bridge.models.catalog import expected_key

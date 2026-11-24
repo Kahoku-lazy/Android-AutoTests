@@ -1,7 +1,10 @@
-"""通用鉴权装饰器 — 检查 request.user_id（由 gateway JWT 中间件注入）。
-
-shared 层：跨 App 可 import；与 gateway/middleware.py 同语义（中间件拦 /api/* 全局，
-本装饰器供裸 Django view 做防御性二次检查）。
+"""
+模块功能：➡️ 通用鉴权装饰器 — 检查 request.user_id（由 gateway JWT 中间件注入） 🏁
+Python 调试：➡️ python -m backend.shared.auth.require_auth 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 shared 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 import asyncio

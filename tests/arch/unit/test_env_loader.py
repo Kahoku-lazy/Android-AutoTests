@@ -1,4 +1,11 @@
-"""`.env` 加载单一实现（`config/env.py`）的行为契约。"""
+"""
+模块功能：➡️ `.env` 加载单一实现（`config/env.py`）的行为契约 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_env_loader.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/config/env.py
+🏁
+"""
 
 from __future__ import annotations
 

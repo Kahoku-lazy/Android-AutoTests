@@ -1,16 +1,10 @@
-"""Android-AutoTests platform manager — start / stop / restart / status / logs / check.
-
-Usage:
-    python run.py start [backend|frontend ...] [--no-db]
-    python run.py stop  [backend|frontend ...]
-    python run.py restart [...] [--no-db]
-    python run.py status
-    python run.py logs [backend|frontend ...]
-    python run.py check          # 本地质量门禁（实现见 utils/check_gates.py）
-    python run.py setup          # 安装项目内 platform-tools（唯一会联网的命令）
-    python run.py setup --check  # 只检测 adb，缺失时退出码 1
-
-本文件只做入口：加载 .env、解析参数、分发命令。命令实现在 utils/service_ctl/。
+"""
+模块功能：➡️ 平台管理入口：start/stop/restart/status/logs/check/setup，实现落在 utils.service_ctl 🏁
+Python 调试：➡️ python -m run status 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（命令编排与测试见 utils/service_ctl 各模块头）
+🏁
 """
 
 from __future__ import annotations

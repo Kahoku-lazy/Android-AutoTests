@@ -1,4 +1,11 @@
-"""评测指标纯函数：Recall@k / MRR / 误命中率，零依赖、可手算对拍。"""
+"""
+模块功能：➡️ 评测指标纯函数：Recall@k / MRR / 误命中率，零依赖、可手算对拍 🏁
+Python 调试：➡️ python -m backend.apps.knowledge_search.eval_metrics 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 knowledge_search 的功能用例间接覆盖，未直接 import 本模块）
+🏁
+"""
 
 from __future__ import annotations
 

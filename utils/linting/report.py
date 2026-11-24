@@ -1,4 +1,11 @@
-"""把检查结果渲染成人类可读文本或 JSON。"""
+"""
+模块功能：➡️ 把检查结果渲染成人类可读文本或 JSON 🏁
+Python 调试：➡️ python -m utils.linting.report 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无
+🏁
+"""
 
 from __future__ import annotations
 

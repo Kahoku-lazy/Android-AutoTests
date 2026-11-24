@@ -1,4 +1,11 @@
-"""D0 日志配置契约：`LOGGING` 必须真正生效（框架日志只留控制台）。"""
+"""
+模块功能：➡️ D0 日志配置契约：`LOGGING` 必须真正生效（框架日志只留控制台） 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_logging_config.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 前端与后端源码的一致性面（只读源码断言）
+🏁
+"""
 
 from __future__ import annotations
 

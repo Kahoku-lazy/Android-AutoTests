@@ -111,7 +111,7 @@ backend/apps/case_manager/management/commands/import_h717d_cases.py
 dev_docs/_archive/
 
 # ── Claude Code sessions & Superpowers (auto-generated, DO NOT upload) ──
-docs/
+/docs/
 .superpowers/
 .workbuddy/
 

@@ -8,7 +8,7 @@
 [![Python](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/)
 [![Django](https://img.shields.io/badge/Django-6.0.6-green.svg)](https://www.djangoproject.com/)
 [![Vue](https://img.shields.io/badge/Vue-3.5-brightgreen.svg)](https://vuejs.org/)
-[![AgentScope](https://img.shields.io/badge/AgentScope-2.0.9%2B-orange.svg)](https://docs.agentscope.io/)
+[![AgentScope](https://img.shields.io/badge/AgentScope-2.0.12%2B-orange.svg)](https://docs.agentscope.io/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **English** | [中文](README.md)
@@ -25,7 +25,7 @@ Android-AutoTests is an **AI Agent platform for Android test engineers**. One Ag
 | --- | --- | --- |
 | **Frontend** | Vue 3.5 + Vite 5 + Element Plus + Pinia + TypeScript | Visualization of tasks, costs, capabilities and run status (10 business modules, hand-drawn "Doodle Craft" theme) |
 | **Backend** | Python 3.13 · Django 6.0.6 + DRF + Daphne | Task dispatch, auth and accounting; 12 apps, OpenAPI contract baseline |
-| **Engines** | AgentScope ≥ 2.0.9 + ADB | The capability core: agent runtime, harness primitives, device / serial / vision support |
+| **Engines** | AgentScope ≥ 2.0.12 + ADB | The capability core: agent runtime, harness primitives, device / serial / vision support |
 
 The primary scenario: published **SOP workflows** (an *executor* role operates the device, a *verifier* role checks results with read-only tools) run end-to-end, and results flow back into **tasks** and **test reports**.
 

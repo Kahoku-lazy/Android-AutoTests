@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- AgentScope 下限由 2.0.9 提到 2.0.12。本地向量库 `delete` 接受可选 `metadata_filter`，与该版 `VectorStoreBase` 对齐
+
 ### Added
 
 - 开源社区基础设施：贡献指南（CONTRIBUTING）、行为准则（CODE_OF_CONDUCT）、安全策略（SECURITY）、Issue 模板、Dependabot 依赖更新、英文 README

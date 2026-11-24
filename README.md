@@ -69,7 +69,7 @@ Vue SPA :5173 ──HTTP(/api,/media)──▶ Vite 代理 ──▶ Daphne :876
 
 | 层 | 技术 | 说明 |
 |----|------|------|
-| **前端** | Vue 3.5（声明 `^3.4`）+ Vite 5 + Element Plus + Pinia + TypeScript 5.4 | 10 个业务模块，Doodle Craft 手绘主题。HTTP 经各模块 `api.ts` 进入 `frontend/src/shared/api-client.ts` |
+| **前端** | Vue 3.5（声明 `^3.4`）+ Vite 6 + Element Plus + Pinia + TypeScript 5.4 | 10 个业务模块，Doodle Craft 手绘主题。HTTP 经各模块 `api.ts` 进入 `frontend/src/shared/api-client.ts` |
 | **后端** | Django 6.0.6 + DRF + Daphne | 12 个 App。自有业务表 33 张（另复用 Django `auth_user`）。契约基线 `openspec/openapi.yaml`，当前 81 条 path |
 | **AI 引擎** | AgentScope ≥ 2.0.12，跑在 Daphne 进程内 | 原语在 `ae_harness`；平台装配在 `backend_bridge`。角色只经 `create_agent` 创建 |
 | **设备控制** | ADB | 对外入口 `engines.device.action`。角色侧工具是 `ae_harness` 的 `build_adb_tools()`（16 个）与只读子集（5 个）。验收角色不得挂写操作 |

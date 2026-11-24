@@ -83,69 +83,167 @@
 
             <div v-else class="doc-sections">
             <section class="doc-section" id="arch">
-              <h2 class="doc-section__title">1. 项目模块架构：模块关系</h2>
+              <h2 class="doc-section__title">1. 项目架构 → 实际代码依赖</h2>
               <p class="doc-section__hint">
-                模块 = <code>backend</code> / <code>engines</code> / <code>frontend</code> / <code>tests</code> / <code>utils</code>
-                五个工程目录；<code>dev_docs</code>（含本看板）、<code>temps</code> 等缓存与临时目录、
-                <code>openspec</code>（规格文档）、<code>tools/platform-tools</code>（adb 二进制）
-                都不是工程代码目录，<b>不计入</b>。
+                两套本体：<b>1.1 平台架构</b>画运行时组件与调用链（谁连谁、什么协议），
+                <b>1.2 实际代码依赖</b>画代码怎么切块、谁引用谁多少次。
+                1.1 来自已评审的架构 spec（<b>人工语义</b>），1.2 来自 AST 静态解析（可重跑）；
+                两者<b>不同源、不能互相验证</b>，也都不含对方的信息。
               </p>
 
-              <figure class="dep-diagram">
-                <svg class="dep-diagram__svg" viewBox="0 0 1180 520" style="aspect-ratio: 1180 / 520" role="group" aria-label="仓库一级目录的关系图">
-                  <defs>
-                    <marker id="eng-arrow" viewBox="0 0 10 10" refX="9" refY="5"
-                            markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                      <path d="M 0 0 L 10 5 L 0 10 z" class="dep-arrowhead"></path>
-                    </marker>
-                    <marker id="eng-arrow-active" viewBox="0 0 10 10" refX="9" refY="5"
-                            markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                      <path d="M 0 0 L 10 5 L 0 10 z" class="dep-arrowhead-active"></path>
-                    </marker>
-                  </defs>
+              <div class="dep-figure dep-figure--platform">
+                <h3 class="dep-figure__title">1.1 平台架构：运行时组件与调用链</h3>
+                <p class="dep-figure__hint">
+                  节点 = <b>运行时角色</b>（不是目录）：浏览器 / SPA / ASGI / DRF / 数据库 / 线程 / 引擎原语 / 外部系统；
+                  三行 = 接入 → 服务与执行 → 外部。边上写的是协议或动作，<b>不写次数</b>。
+                </p>
 
-                  <g v-for="edge in diagram.edges" :key="edge.key" class="dep-edge-group"
-                     :class="{ 'is-active': isEdgeActive(edge), 'is-secondary': true }">
-                    <path :d="edge.d" class="dep-edge" :class="{ 'is-http': edge.kind === 'http' }"
-                          :marker-end="isEdgeActive(edge) ? 'url(#eng-arrow-active)' : 'url(#eng-arrow)'"></path>
-                    <text :x="edge.labelX" :y="edge.labelY" class="dep-edge__label"
-                          :text-anchor="edge.labelAnchor">{{ edge.label }}</text>
-                  </g>
+                <figure class="dep-diagram">
+                  <svg class="dep-diagram__svg" viewBox="0 0 1560 600" style="aspect-ratio: 1560 / 600"
+                       role="img" aria-label="平台架构：浏览器经 SPA、ASGI 到 DRF 与数据库；执行链经 task_runner、backend_bridge、ae_harness 到硬件与 LLM">
+                    <defs>
+                      <marker id="arch-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                              markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" class="dep-arrowhead-ink"></path>
+                      </marker>
+                    </defs>
 
-                  <g v-for="node in diagram.nodes" :key="node.key" class="dep-node-group"
-                     :class="{ 'is-selected': isNodeActive(node) }" tabindex="0" role="button"
-                     :aria-pressed="isNodeActive(node) ? 'true' : 'false'"
-                     :aria-label="node.title + '，点击高亮它的引用关系'"
-                     @click="activeModule = activeModule === node.key ? '' : node.key"
-                     @keydown.enter.prevent="activeModule = activeModule === node.key ? '' : node.key">
-                    <g :transform="'rotate(' + node.tilt + ' ' + node.cx + ' ' + (node.y + node.h / 2) + ')'">
-                      <rect :x="node.x + 5" :y="node.y + 5" :width="node.w" :height="node.h" rx="9"
-                            class="dep-node__shadow"></rect>
-                      <rect :x="node.x" :y="node.y" :width="node.w" :height="node.h" rx="9"
-                            class="dep-node" :style="{ '--node-color': node.color }"></rect>
-                      <text :x="node.cx" :y="node.cy + 5" class="dep-node__title" text-anchor="middle">
-                        {{ node.title }}
-                      </text>
+                    <!-- 区域边界：成员由 spec 的 wraps 决定，坐标由成员算 -->
+                    <g v-for="box in platform.boundaries" :key="'arch-box-' + box.key" class="dep-boundary">
+                      <rect class="dep-boundary__box" :x="box.x" :y="box.y"
+                            :width="box.w" :height="box.h" rx="10"></rect>
+                      <text class="dep-boundary__label" :x="box.x + 10" :y="box.y + 16">{{ box.label }}</text>
                     </g>
-                  <g
-                    v-if="node.doc"
-                    class="dep-doc-btn"
-                    :transform="'translate(' + (node.x + node.w - 54) + ',' + (node.y + node.h - 16) + ')'"
-                    role="button"
-                    tabindex="0"
-                    :aria-label="'查看 ' + node.key + ' 的 AGENTS.md'"
-                    @click.stop="openDoc(node.key)"
-                    @keydown.enter.stop.prevent="openDoc(node.key)"
-                  >
-                    <rect width="52" height="14" rx="3"></rect>
-                    <text x="26" y="10" text-anchor="middle">AGENTS</text>
-                  </g>
-                  </g>
-                </svg>
-                  <figcaption class="dep-diagram__note">
-                    紫色虚线 = 代码 import 依赖；<b>橙色虚线 = 前端通过 HTTP 调后端接口</b>（不是 import，按「处」计）
-                  </figcaption>
-              </figure>
+
+                    <!-- 连线：同行横线、跨行竖线，标签写协议/动作 -->
+                    <g v-for="edge in platform.edges" :key="'arch-edge-' + edge.key">
+                      <path :d="edge.d" class="dep-edge dep-edge--arch" marker-end="url(#arch-arrow)"></path>
+                      <text :x="edge.labelX" :y="edge.labelY" class="dep-edge__label"
+                            :text-anchor="edge.labelAnchor">{{ edge.label }}</text>
+                    </g>
+
+                    <!-- 节点：名称 / 职责 / 运行标记 -->
+                    <g v-for="node in platform.nodes" :key="'arch-node-' + node.id">
+                      <g :transform="'rotate(' + node.tilt + ' ' + node.cx + ' ' + node.cy + ')'">
+                        <rect :x="node.x + 5" :y="node.y + 5" :width="node.w" :height="node.h" rx="9"
+                              class="dep-node__shadow"></rect>
+                        <rect :x="node.x" :y="node.y" :width="node.w" :height="node.h" rx="9"
+                              class="dep-node" :style="{ '--node-color': node.color }"></rect>
+                        <rect :x="node.x + 12" :y="node.y + 14" width="8" :height="node.h - 28" rx="2"
+                              class="dep-node__stripe" :style="{ fill: node.color }"></rect>
+                        <text :x="node.x + 34" :y="node.y + 34" class="dep-node__title" text-anchor="start">
+                          {{ node.title }}
+                        </text>
+                        <text :x="node.x + 34" :y="node.y + 58" class="dep-node__sub" text-anchor="start">
+                          {{ node.sub }}
+                        </text>
+                        <text :x="node.x + 34" :y="node.y + 76" class="dep-node__meta" text-anchor="start">
+                          {{ node.tag }}
+                        </text>
+                      </g>
+                    </g>
+                  </svg>
+
+                  <div class="dep-legend">
+                    <p class="legend-chips">
+                      <span class="legend-chip" v-for="kind in platformLegend" :key="'arch-kind-' + kind.key">
+                        <i class="legend-chip__dot" :style="{ background: kind.color }"></i>
+                        <b>{{ kind.label }} {{ kind.count }}</b>
+                      </span>
+                    </p>
+                    <p class="dep-diagram__note">
+                      组件与连线来自 <code>dev_docs/ARCH_PRD/ARCH-平台架构图.spec.json</code>（人工语义，已评审）；
+                      这里只有「谁连谁、什么协议/动作」，没有量级。
+                    </p>
+                  </div>
+                </figure>
+
+                <div class="arch-cards">
+                  <div class="arch-card" v-for="card in platformCards" :key="'arch-card-' + card.title">
+                    <p class="arch-card__title">{{ card.title }}</p>
+                    <ul class="arch-card__list">
+                      <li v-for="item in card.items" :key="item">{{ item }}</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div class="dep-figure dep-figure--deps">
+                <h3 class="dep-figure__title">1.2 实际代码依赖：import 次数与 HTTP 处数</h3>
+                <p class="dep-figure__hint">
+                  节点 = 工程目录（不是运行时组件，那个在 1.1）；边 = 实际引用，标签 = 次数
+                  （紫 = import、<b>橙 = HTTP 调用</b>）；点节点高亮它的引用关系，再点取消。
+                </p>
+
+                <figure class="dep-diagram">
+                  <svg class="dep-diagram__svg" viewBox="0 0 1180 540" style="aspect-ratio: 1180 / 540"
+                       role="group" aria-label="仓库一级目录的实际代码依赖图，边上标注引用次数">
+                    <defs>
+                      <marker id="eng-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                              markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" class="dep-arrowhead"></path>
+                      </marker>
+                      <marker id="eng-arrow-active" viewBox="0 0 10 10" refX="9" refY="5"
+                              markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" class="dep-arrowhead-active"></path>
+                      </marker>
+                    </defs>
+
+                    <!-- 层名槽 -->
+                    <g v-for="layer in layers" :key="'layer-' + layer.key">
+                      <text class="dep-tier__label" x="40" :y="layer.cy + 4">{{ layer.label }}</text>
+                      <line class="dep-tier__rule" x1="40" x2="150" :y1="layer.cy + 14" :y2="layer.cy + 14"></line>
+                    </g>
+
+                    <!-- 区域边界（画在边与节点之下） -->
+                    <g v-if="boundary" class="dep-boundary">
+                      <rect class="dep-boundary__box" :x="boundary.x" :y="boundary.y"
+                            :width="boundary.w" :height="boundary.h" rx="10"></rect>
+                      <text class="dep-boundary__label" :x="boundary.x + 10" :y="boundary.y + 16">{{ boundary.label }}</text>
+                    </g>
+
+                    <g v-for="edge in diagram.edges" :key="edge.key" class="dep-edge-group"
+                       :class="{ 'is-active': isEdgeActive(edge) }">
+                      <path :d="edge.d" class="dep-edge" :class="{ 'is-http': edge.kind === 'http' }"
+                            :marker-end="isEdgeActive(edge) ? 'url(#eng-arrow-active)' : 'url(#eng-arrow)'"></path>
+                      <text :x="edge.labelX" :y="edge.labelY" class="dep-edge__label"
+                            :text-anchor="edge.labelAnchor">{{ edge.label }}</text>
+                    </g>
+
+                    <g v-for="node in diagram.nodes" :key="node.key" class="dep-node-group"
+                       :class="{ 'is-selected': isNodeActive(node) }" tabindex="0" role="button"
+                       :aria-pressed="isNodeActive(node) ? 'true' : 'false'"
+                       :aria-label="node.title + '，点击高亮它的引用关系'"
+                       @click="activeModule = activeModule === node.key ? '' : node.key"
+                       @keydown.enter.prevent="activeModule = activeModule === node.key ? '' : node.key">
+                      <g :transform="'rotate(' + node.tilt + ' ' + node.cx + ' ' + node.cy + ')'">
+                        <rect :x="node.x + 5" :y="node.y + 5" :width="node.w" :height="node.h" rx="9"
+                              class="dep-node__shadow"></rect>
+                        <rect :x="node.x" :y="node.y" :width="node.w" :height="node.h" rx="9"
+                              class="dep-node" :style="{ '--node-color': node.color }"></rect>
+                        <rect :x="node.x + 12" :y="node.y + 14" width="8" :height="node.h - 28" rx="2"
+                              class="dep-node__stripe" :style="{ fill: node.color }"></rect>
+                        <text :x="node.x + 34" :y="node.y + 34" class="dep-node__title" text-anchor="start">
+                          {{ node.title }}
+                        </text>
+                        <text :x="node.x + 34" :y="node.y + 58" class="dep-node__sub" text-anchor="start">
+                          {{ node.sub }}
+                        </text>
+                        <text :x="node.x + 34" :y="node.y + 76" class="dep-node__meta" text-anchor="start">
+                          {{ node.meta }}
+                        </text>
+                      </g>
+                    </g>
+                  </svg>
+
+                  <div class="dep-legend">
+                    <p class="dep-diagram__note">
+                      紫虚线 = 代码 import 依赖；<b>橙虚线 = 前端通过 HTTP 调后端接口</b>（不是 import，按「处」计）；
+                      虚线框 = <code>engines/</code> 零 <code>django</code> / <code>apps.*</code> 依赖
+                    </p>
+                  </div>
+                </figure>
+              </div>
             </section>
 
             <section class="doc-section" id="deps">
@@ -285,6 +383,7 @@
   </div>
 
   <script src="data/board.js"></script>
+  <script src="data/architecture.js"></script>
   <script src="data/history.js"></script>
   <script src="vendor/vue.global.prod.js"></script>
   <script src="vendor/echarts.min.js"></script>

@@ -1,8 +1,13 @@
 /**
- * 后端模块页（backend/apps）：模块关系、依赖、一层单元代码量。
+ * 总览页（仓库一级目录）：平台架构 + 实际代码依赖 + 依赖/代码量 + 单元代码量。
  *
- * 口径见 tools/gen_board_data.py 的 collect_backend_modules()：
- * 模块 = backend/apps 下的一个 Django app；单元 = app 下的直接子目录（整体算一个）或直接 .py。
+ * 两套本体，别混：
+ *   1.1 平台架构 = 运行时组件与调用链，数据来自 data/architecture.js（源头是
+ *       dev_docs/ARCH_PRD/ARCH-平台架构图.spec.json，**人工语义**，不是 AST）。
+ *   1.2 实际代码依赖 = 目录怎么切、谁 import 谁多少次，数据来自 data/board.js
+ *       的 projectModules（gen_board_data.py 生成，AST 静态解析）。
+ *
+ * 口径见 tools/gen_board_data.py 的 collect_project_modules() 与 tools/gen_arch_data.py。
  */
 (function () {
   "use strict";
@@ -11,25 +16,133 @@
   var MODULES = DATA.modules || [];
   var RELATIONS = DATA.relations || [];
 
-  /* 架构图布局（viewBox 1180×520）：tests 顶部（用得多），backend/engines 中层，
-     frontend 放 backend 正下方（它调后端的边就能直上直下），utils 落底（被依赖） */
-  var DIAGRAM_LAYOUT = {
-    tests: { x: 490, y: 50, w: 200, h: 54, tilt: -0.4 },
-    backend: { x: 110, y: 210, w: 200, h: 54, tilt: 0.3 },
-    engines: { x: 490, y: 210, w: 200, h: 54, tilt: -0.3 },
-    frontend: { x: 110, y: 370, w: 200, h: 54, tilt: 0.4 },
-    utils: { x: 490, y: 370, w: 200, h: 54, tilt: -0.2 }
+  /* ── 1.2 实际代码依赖：目录层 ───────────────────────────────────────── */
+
+  /* 分层架构图（viewBox 1180×540）：三行 = 三层，左槽写层名。
+     行 y 固定 50 / 210 / 370，节点统一 240×88；列 x=200（左）/ 760（右），底座居中 480。
+     坐标是排过的，不跑布局算法；改任何一个节点都要重新看一遍走廊（行间 72px）。
+     口径：层（入口 / 服务 / 底座）按依赖方向**人工划分**，不是算出来的。 */
+  var NODE_W = 240;
+  var NODE_H = 88;
+  var LAYOUT = {
+    frontend: { x: 200, y: 50, tilt: 0.3 },
+    tests: { x: 760, y: 50, tilt: -0.5 },
+    backend: { x: 200, y: 210, tilt: -0.3 },
+    engines: { x: 760, y: 210, tilt: 0.2 },
+    utils: { x: 480, y: 370, tilt: -0.2 }
   };
 
-  /* 同层或跨层的特殊走线：这些边手写折线，避免压节点 */
-  var EDGE_ROUTES = {
-    "backend->engines": { via: "horizontal" },
-    "engines->backend": { via: "horizontal" },
-    "tests->utils": { via: "leftWrap" },
-    "frontend->backend": { via: "rise", offset: -55 },
-    "backend->utils": { via: "rise", offset: 45 },
-    "frontend->engines": { via: "horizontal" }
+  var LAYERS = [
+    { key: "entry", label: "入口层", y: 50 },
+    { key: "service", label: "服务层", y: 210 },
+    { key: "base", label: "底座", y: 370 }
+  ];
+
+  /* 区域边界表达的是纪律，不是分组。已核实 engines/** 无 import django、无 backend.apps.*；
+     框上只写「零 django 依赖」（短，避免被 tests→engines 的竖线穿过），
+     apps.* 那半句在下方图例里写全。 */
+  var BOUNDARY = { key: "engines", pad: 22, label: "engines/ · 零 django 依赖" };
+
+  /* ── 1.1 平台架构：运行时组件 ───────────────────────────────────────── */
+
+  /* 数据来自 data/architecture.js（window.__ARCH__），源头是已评审的
+     dev_docs/ARCH_PRD/ARCH-平台架构图.spec.json —— **人工语义**，不是 AST 解析。
+     页面只做「摆位置 + 画线」，不改写组件、连线、标签的任何内容。 */
+  var ARCH = window.__ARCH__ || {};
+  var ARCH_COMPONENTS = ARCH.components || [];
+  var ARCH_CONNECTIONS = ARCH.connections || [];
+  var ARCH_BOUNDARIES = ARCH.boundaries || [];
+  var ARCH_CARDS = ARCH.cards || [];
+  var ARCH_KIND_COUNTS = ARCH.kindCounts || {};
+
+  var ARCH_W = 224;
+  var ARCH_H = 88;
+  var ARCH_CANVAS = { w: 1560, h: 600 };
+
+  /* 三行：接入 / 服务与执行 / 外部；列 28/348/668/988/1308（节点 224 宽、间隙 96），行 60/260/460。
+     间隙 96 是量出来的：最宽的行内标签 "axios · /api" / "create_agent" 各 84px，留 12px 呼吸。
+     竖线靠同列对齐：api 与 runner、harness 与 llm、support 与 hardware 各在同一列。 */
+  var ARCH_LAYOUT = {
+    users: { x: 28, y: 60 },
+    spa: { x: 348, y: 60 },
+    asgi: { x: 668, y: 60 },
+    api: { x: 988, y: 60 },
+    db: { x: 1308, y: 60 },
+    support: { x: 28, y: 260 },
+    harness: { x: 348, y: 260 },
+    bridge: { x: 668, y: 260 },
+    runner: { x: 988, y: 260 },
+    hardware: { x: 28, y: 460 },
+    llm: { x: 348, y: 460 }
   };
+
+  /* 语义类型 → 平台令牌（与 1.2 的模块色是两套，图例里写清楚） */
+  var ARCH_KIND = {
+    frontend: { label: "前端", color: "var(--c-element)" },
+    backend: { label: "后端", color: "var(--c-device)" },
+    database: { label: "数据库", color: "var(--c-tool)" },
+    security: { label: "安全", color: "var(--c-runner)" },
+    external: { label: "外部系统", color: "var(--app-text-secondary)" }
+  };
+  var ARCH_KIND_ORDER = ["frontend", "backend", "database", "security", "external"];
+
+  /* 手绘微倾：只为不呆板，不承载信息 */
+  var ARCH_TILT = {
+    users: -0.3, spa: 0.2, asgi: -0.2, api: 0.3, db: -0.3,
+    support: 0.2, harness: -0.3, bridge: 0.2, runner: -0.2,
+    hardware: 0.3, llm: -0.2
+  };
+
+  /* ── 布线（1.2 用）：四种走法，端点只从节点边中点出入，拐角 8px 圆角 ── */
+
+  /* 同列直上直下 */
+  function routeVertical(from, to, spec) {
+    var x = from.cx + (spec.dx || 0);
+    return {
+      points: [[x, from.bottom], [x, to.top]],
+      label: {
+        x: x + (spec.lx || 12),
+        y: (from.bottom + to.top) / 2 + 4,
+        anchor: spec.anchor || "start"
+      }
+    };
+  }
+
+  /* 出底边 → 行间走廊横走 → 落到目标顶边 */
+  function routeHdrop(from, to, spec) {
+    var sx = from.cx + (spec.sx || 0);
+    var tx = to.cx + (spec.tx || 0);
+    var laneY = from.bottom + (spec.lane || 32);
+    /* 标签默认落在走廊线上方；走廊上方被边界框压住时用 labelBelow 翻到下方 */
+    var labelY = spec.labelBelow ? laneY + 14 : laneY - 8;
+    return {
+      points: [[sx, from.bottom], [sx, laneY], [tx, laneY], [tx, to.top]],
+      label: { x: (sx + tx) / 2, y: labelY, anchor: "middle" }
+    };
+  }
+
+  /* 同层左右直连 */
+  function routeZlr(from, to) {
+    var y = from.cy;
+    return {
+      points: [[from.right, y], [to.left, y]],
+      label: { x: (from.right + to.left) / 2, y: y - 8, anchor: "middle" }
+    };
+  }
+
+  /* 从右侧出 → 走侧向走廊 → 从目标右边进（跨两层、不穿中间节点） */
+  function routeSideWrap(from, to, spec) {
+    var corridor = spec.corridor || to.right + 60;
+    return {
+      points: [
+        [from.right, from.cy],
+        [corridor, from.cy],
+        [corridor, to.cy],
+        [to.right, to.cy]
+      ],
+      label: { x: (to.right + corridor) / 2, y: to.cy - 8, anchor: "middle" }
+    };
+  }
 
   function fmt(value) {
     return Number(value || 0).toLocaleString("en-US");
@@ -137,12 +250,6 @@
       hasData: function () {
         return this.modules.length > 0;
       },
-      subtitle: function () {
-        return (
-          "backend/apps · " + this.totals.modules + " 个模块 · " + this.totals.units + " 个单元 · " +
-          fmt(this.totals.files) + " 个 .py · " + fmt(this.totals.loc) + " 行 · 生成于 " + this.generatedAt
-        );
-      },
       commitTitle: function () {
         return this.commit ? "git " + this.commit : "无 git 信息";
       },
@@ -169,6 +276,9 @@
             unitCount: module.totals.units,
             files: module.totals.files,
             loc: module.totals.loc,
+            /* 1.2 节点卡第 2/3 行：全部来自本模块自己的快照数字，不跨页取数 */
+            sub: (module.label ? module.label + " · " : "") + module.totals.units + " 个单元",
+            meta: fmt(module.totals.files) + " 个 .py · " + fmt(module.totals.loc) + " 行",
             trend: (module.totalTrend || [null, null, null]).slice(0, 3),
             wide: (module.units || []).length > 10,
             height: (module.units || []).length > 8 ? "360px" : "300px",
@@ -208,11 +318,11 @@
         var nodes = this.rows.map(function (row) {
           return { key: row.key, label: row.key, color: row.color, loc: row.loc, modules: row.unitCount };
         });
-        /* 用架构图的同一套分层坐标：circular 在 12 个节点时会挤成一团 */
+        /* 用架构图的同一套分层坐标：circular 在 5 个节点时会排歪 */
         var positions = {};
         this.rows.forEach(function (row) {
-          var layout = DIAGRAM_LAYOUT[row.key];
-          if (layout) positions[row.key] = [layout.x + layout.w / 2, layout.y + layout.h / 2];
+          var layout = LAYOUT[row.key];
+          if (layout) positions[row.key] = [layout.x + NODE_W / 2, layout.y + NODE_H / 2];
         });
         var links = this.relations.map(function (rel) {
           /* 数据流方向：被调用方 → 调用方 */
@@ -223,24 +333,160 @@
           positions: positions
         });
       },
+      /* 1.2 层名槽：层是人工划分的结构，写在图左侧 */
+      layers: function () {
+        return LAYERS.map(function (layer) {
+          return { key: layer.key, label: layer.label, cy: layer.y + NODE_H / 2 };
+        });
+      },
+      /* 1.2 区域边界：包住目标节点，pad 22 */
+      boundary: function () {
+        var layout = LAYOUT[BOUNDARY.key];
+        var exists = this.rows.some(function (row) {
+          return row.key === BOUNDARY.key;
+        });
+        if (!layout || !exists) return null;
+        return {
+          x: layout.x - BOUNDARY.pad,
+          y: layout.y - BOUNDARY.pad,
+          w: NODE_W + BOUNDARY.pad * 2,
+          h: NODE_H + BOUNDARY.pad * 2,
+          label: BOUNDARY.label
+        };
+      },
+      /* 1.1 平台架构：摆位置 + 直连（同行横线、跨行竖线），不自造折线 */
+      platform: function () {
+        var nodes = ARCH_COMPONENTS.map(function (comp) {
+          var layout = ARCH_LAYOUT[comp.id] || { x: 0, y: 0 };
+          var kind = ARCH_KIND[comp.type] || ARCH_KIND.external;
+          return {
+            id: comp.id,
+            title: comp.label,
+            sub: comp.sublabel,
+            tag: comp.tag,
+            kind: comp.type,
+            color: kind.color,
+            x: layout.x,
+            y: layout.y,
+            w: ARCH_W,
+            h: ARCH_H,
+            tilt: ARCH_TILT[comp.id] || 0,
+            cx: layout.x + ARCH_W / 2,
+            cy: layout.y + ARCH_H / 2,
+            top: layout.y,
+            bottom: layout.y + ARCH_H,
+            left: layout.x,
+            right: layout.x + ARCH_W
+          };
+        });
+        var byId = {};
+        nodes.forEach(function (node) {
+          byId[node.id] = node;
+        });
+
+        var edges = [];
+        ARCH_CONNECTIONS.forEach(function (conn, index) {
+          var from = byId[conn.from];
+          var to = byId[conn.to];
+          if (!from || !to) return;
+          var points;
+          var label;
+          if (from.cy === to.cy) {
+            /* 同一行：右出左进 / 左出右进 */
+            var rightward = to.cx > from.cx;
+            points = [
+              [rightward ? from.right : from.left, from.cy],
+              [rightward ? to.left : to.right, from.cy]
+            ];
+            label = { x: (points[0][0] + points[1][0]) / 2, y: from.cy - 8, anchor: "middle" };
+          } else {
+            /* 跨行：从底边落到顶边（或反向） */
+            var down = to.cy > from.cy;
+            points = [
+              [from.cx, down ? from.bottom : from.top],
+              [to.cx, down ? to.top : to.bottom]
+            ];
+            label = { x: from.cx + 12, y: (points[0][1] + points[1][1]) / 2 + 4, anchor: "start" };
+          }
+          edges.push({
+            key: conn.id + "-" + index,
+            from: conn.from,
+            to: conn.to,
+            label: conn.label,
+            labelX: label.x,
+            labelY: label.y,
+            labelAnchor: label.anchor,
+            d: "M " + points[0][0] + " " + points[0][1] + " L " + points[1][0] + " " + points[1][1]
+          });
+        });
+
+        /* 边界 = 成员的 padding 盒（spec 只给 wraps，坐标由成员算出来） */
+        var boundaries = [];
+        ARCH_BOUNDARIES.forEach(function (box) {
+          var members = box.wraps
+            .map(function (id) {
+              return byId[id];
+            })
+            .filter(Boolean);
+          if (!members.length) return;
+          var left = Math.min.apply(null, members.map(function (m) { return m.left; }));
+          var top = Math.min.apply(null, members.map(function (m) { return m.top; }));
+          var right = Math.max.apply(null, members.map(function (m) { return m.right; }));
+          var bottom = Math.max.apply(null, members.map(function (m) { return m.bottom; }));
+          boundaries.push({
+            key: box.label + "-" + top,
+            label: box.label,
+            x: left - box.pad,
+            y: top - box.pad,
+            w: right - left + box.pad * 2,
+            h: bottom - top + box.pad * 2
+          });
+        });
+
+        return {
+          nodes: nodes,
+          edges: edges,
+          boundaries: boundaries,
+          width: ARCH_CANVAS.w,
+          height: ARCH_CANVAS.h
+        };
+      },
+      platformLegend: function () {
+        return ARCH_KIND_ORDER.filter(function (key) {
+          return ARCH_KIND_COUNTS[key];
+        }).map(function (key) {
+          return {
+            key: key,
+            label: ARCH_KIND[key].label,
+            count: ARCH_KIND_COUNTS[key],
+            color: ARCH_KIND[key].color
+          };
+        });
+      },
+      platformCards: function () {
+        return ARCH_CARDS;
+      },
+      /* 1.2 实际代码依赖图 */
       diagram: function () {
         var nodes = this.rows.map(function (row) {
-          var layout = DIAGRAM_LAYOUT[row.key] || { x: 0, y: 0, w: 200, h: 54, tilt: 0 };
+          var layout = LAYOUT[row.key] || { x: 0, y: 0, tilt: 0 };
           return {
             key: row.key,
             title: row.key,
+            sub: row.sub,
+            meta: row.meta,
             color: row.color,
             x: layout.x,
             y: layout.y,
-            w: layout.w,
-            h: layout.h,
+            w: NODE_W,
+            h: NODE_H,
             tilt: layout.tilt,
-            cx: layout.x + layout.w / 2,
-            cy: layout.y + layout.h / 2,
+            cx: layout.x + NODE_W / 2,
+            cy: layout.y + NODE_H / 2,
             top: layout.y,
-            bottom: layout.y + layout.h,
+            bottom: layout.y + NODE_H,
             left: layout.x,
-            right: layout.x + layout.w
+            right: layout.x + NODE_W
           };
         });
         var byKey = {};
@@ -248,10 +494,9 @@
           byKey[node.key] = node;
         });
 
-        /* 双向引用合并成一条边（engine ⇄ backend），标签写两个次数 */
+        /* 双向引用合并成一条边，标签写两个次数；HTTP 是另一类关系，不并进 import 合并 */
         var merged = {};
         this.relations.forEach(function (rel) {
-          /* HTTP 调用是另一类关系，不并进 import 的双向合并 */
           var pair = rel.kind === "http"
             ? "http:" + rel.from + "->" + rel.to
             : [rel.from, rel.to].sort().join("|");
@@ -264,56 +509,25 @@
           }
         });
 
+        /* 每条边的走法（表驱动）：端点只从节点边中点出入，偏移量相对节点中心算 */
+        var ROUTES = {
+          "frontend->backend": { route: routeVertical, dx: -40, lx: -12, anchor: "end" },
+          "tests->backend": { route: routeHdrop, sx: -60, tx: 40, lane: 40 },
+          "tests->engines": { route: routeVertical, dx: 60 },
+          "backend->engines": { route: routeZlr },
+          "backend->utils": { route: routeHdrop, sx: 40, tx: -60, lane: 42 },
+          "engines->utils": { route: routeHdrop, sx: 0, tx: 60, lane: 42, labelBelow: true },
+          "tests->utils": { route: routeSideWrap, corridor: 1060 }
+        };
+
         var edges = [];
         Object.keys(merged).forEach(function (pair, index) {
           var rel = merged[pair];
           var from = byKey[rel.from];
           var to = byKey[rel.to];
           if (!from || !to) return;
-          var route = EDGE_ROUTES[rel.from + "->" + rel.to] || {};
-          var points;
-          var labelX;
-          var labelY;
-          if (route.via === "horizontal") {
-            /* 同层：右出左进 */
-            points = [[from.right, from.cy], [to.left, to.cy]];
-            labelX = (from.right + to.left) / 2;
-            labelY = from.cy - 26;
-          } else if (route.via === "rise") {
-            /* 垂直上升 / 下降：从 from 顶部（或底部）出，纵向走到 to 的边，x 用 offset 错开 */
-            var x = from.cx + (route.offset || 0);
-            var up = to.cy < from.cy;
-            points = [
-              [x, up ? from.top : from.bottom],
-              [x, up ? to.bottom : to.top]
-            ];
-            labelX = x + 40;
-            labelY = (from.cy + to.cy) / 2;
-          } else if (route.via === "leftWrap") {
-            /* 跨层绕左侧：从顶部节点左侧出，绕到 utils 下方再进 */
-            points = [
-              [from.left, from.cy],
-              [from.left - 70, from.cy],
-              [from.left - 70, to.bottom + 44],
-              [to.cx, to.bottom + 44],
-              [to.cx, to.bottom]
-            ];
-            labelX = to.cx - 120;
-            labelY = to.bottom + 34;
-          } else {
-            var goingDown = to.cy > from.cy;
-            var startY = goingDown ? from.bottom : from.top;
-            var endY = goingDown ? to.top : to.bottom;
-            var midY = (startY + endY) / 2;
-            points = [
-              [from.cx, startY],
-              [from.cx, midY],
-              [to.cx, midY],
-              [to.cx, endY]
-            ];
-            labelX = (from.cx + to.cx) / 2;
-            labelY = midY - 6;
-          }
+          var spec = ROUTES[rel.from + "->" + rel.to] || { route: routeHdrop, sx: 0, tx: 0, lane: 32 };
+          var routed = spec.route(from, to, spec);
           edges.push({
             key: pair + "-" + index,
             from: rel.from,
@@ -322,14 +536,14 @@
             label: rel.reverse
               ? rel.count + " / " + rel.reverse + " 次"
               : rel.count + (rel.kind === "http" ? " 处" : " 次"),
-            labelX: labelX,
-            labelY: labelY,
-            labelAnchor: "middle",
-            d: orthPath(points)
+            labelX: routed.label.x,
+            labelY: routed.label.y,
+            labelAnchor: routed.label.anchor,
+            d: orthPath(routed.points)
           });
         });
 
-        return { nodes: nodes, edges: edges, width: 1180, height: 520 };
+        return { nodes: nodes, edges: edges, width: 1180, height: 540 };
       }
     },
     methods: {

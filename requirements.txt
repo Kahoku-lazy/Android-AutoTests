@@ -11,7 +11,7 @@ drf-spectacular>=0.30.0
 drf-spectacular-sidecar>=2026.10.1
 daphne>=4.2.3
 channels>=4.0
-django-cors-headers>=4.0
+django-cors-headers>=4.9.0
 django-jazzmin>=3.0.5
 
 # ── Database ──

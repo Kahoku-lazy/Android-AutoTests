@@ -1,7 +1,10 @@
-"""device-pool 数据契约 — 检测/设备信息与 dp_devices 表一一对应。
-
-纯数据层：无 I/O、无 ORM 依赖，仅定义设备状态的枚举与设备信息契约。
-字段顺序与 Device 模型（dp_devices 表）保持一致，作为检测/信息阶段的类型边界。
+"""
+模块功能：➡️ device-pool 数据契约 — 检测/设备信息与 dp_devices 表一一对应 🏁
+Python 调试：➡️ python -m backend.apps.device_pool.contracts 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/device/integration/test_device_registry.py: 覆盖本模块
+🏁
 """
 
 from dataclasses import dataclass

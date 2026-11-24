@@ -1,4 +1,12 @@
-"""Gateway middleware — JWT authentication, logging, CORS."""
+"""
+模块功能：➡️ Gateway middleware — JWT authentication, logging, CORS. 🏁
+Python 调试：➡️ python -m backend.gateway.middleware 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/ai_assistant/api/test_roles.py: 覆盖本模块
+2. tests/arch/unit/test_auth_frontend_contract.py: 同上
+🏁
+"""
 
 import logging
 

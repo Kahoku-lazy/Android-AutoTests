@@ -1,9 +1,10 @@
-"""知识库只读检索桥：局部可选导入引擎、多库合并、预建索引与用量入账。
-
-引擎 knowledge 整目录删除后降级为「检索不可用」，不抛 500。
-本模块不造 Agent、不生成答案；命中原文逐字返回。
-ORM 读写（派生 yaml、入账）只在同步入口做；异步段只做检索，避免
-Django 的 SynchronousOnlyOperation。
+"""
+模块功能：➡️ 知识库只读检索桥：局部可选导入引擎、多库合并、预建索引与用量入账 🏁
+Python 调试：➡️ python -m backend.apps.knowledge_search.retrieval 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 knowledge_search 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 from __future__ import annotations

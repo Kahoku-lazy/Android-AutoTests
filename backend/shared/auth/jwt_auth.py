@@ -1,4 +1,12 @@
-"""JWT authentication utilities — shared between Django middleware and AgentScope FastAPI."""
+"""
+模块功能：➡️ JWT authentication utilities — shared between Django middleware and AgentScope… 🏁
+Python 调试：➡️ python -m backend.shared.auth.jwt_auth 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/arch/unit/test_api_path_convention.py: 覆盖本模块
+2. tests/arch/unit/test_auth_single_verify.py: 同上
+🏁
+"""
 
 import logging
 import time

@@ -1,16 +1,11 @@
-"""device-pool 设备管理 — 四个职责类（L3 业务层数据面）。
-
-单一职责划分：探测 / 注册落库 / 状态机 / 展示，各自独立、组合协作：
-  DeviceDetector      探测：ADB 发现 + 身份解析 + 元信息采集（产出 DeviceInfo，不落库）
-  DeviceRegistry      注册落库：dp_devices 增删 + 连接状态（依赖 Detector）
-  DeviceStateMachine  状态机：ONLINE/BUSY 判定 + 同步 + 锁定/释放/占用 + 心跳（依赖 Detector + Registry）
-  DeviceSerializer    展示：可见性过滤 + 序列化（只读，独立）
-
-与 pool.DevicePool 分工：本模块管「数据面」（dp_devices 记录与状态机），DevicePool 管
-「连接/会话/操作面」。写库仍经本模块类方法（由 api.py 白名单转调）。
-
-adb 来源统一走 `utils.adb.adb_binary()`（平台自带优先，不回退系统 PATH）；全部来源缺失时
-各方法抛 `AdbUnavailableError`，由视图映射为 503 + 「运行 python run.py setup」提示。
+"""
+模块功能：➡️ device-pool 设备管理 — 四个职责类（L3 业务层数据面） 🏁
+Python 调试：➡️ python -m backend.apps.device_pool.manager 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/device/integration/conftest.py: 覆盖本模块
+2. tests/device/integration/test_device_registry.py: 同上
+🏁
 """
 
 import subprocess

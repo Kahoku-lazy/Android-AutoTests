@@ -1,7 +1,10 @@
-"""UI 层级节点 — dump 输出的数据契约（D-2：Node 归属 models/）。
-
-当前实现：引擎只产出层级原始 XML；平台的层级解析、XPath 生成与分层分组实现均已下线，
-本模块的 Node 结构没有平台消费者，保留为数据契约；是否退役另行评估。
+"""
+模块功能：➡️ UI 层级节点 — dump 输出的数据契约（D-2：Node 归属 models/） 🏁
+Python 调试：➡️ python -m backend.models.ui_nodes 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 models 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 from dataclasses import dataclass, field

@@ -1,9 +1,10 @@
-"""Pure extraction rules: task terminal errors -> classified BUG drafts.
-
-The module deliberately knows nothing about Django models or the database. It reads
-only the public task snapshot attributes (id/title/task_kind/status/result/agent) and
-returns immutable drafts, so the same rules drive automatic recording and historical
-backfill.
+"""
+模块功能：➡️ Pure extraction rules: task terminal errors -> classified BUG drafts. 🏁
+Python 调试：➡️ python -m backend.apps.bug_manager.extract 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 bug_manager 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 from __future__ import annotations

@@ -1,10 +1,10 @@
-"""`.env` 加载 — D0 单一实现（`config.settings` 与 `run.py` 共用）。
-
-规则（与既有实现保持一致）：
-
-- 只处理 `KEY=VALUE` 行；空行与 `#` 注释跳过；
-- 值两侧的引号（成对 `"` 或 `'`）会被去掉；
-- **已存在的环境变量优先**：真实环境变量不会被 `.env` 覆盖（先到先得）。
+"""
+模块功能：➡️ `.env` 加载 — D0 单一实现（`config.settings` 与 `run.py` 共用） 🏁
+Python 调试：➡️ python -m backend.config.env 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/arch/unit/test_env_loader.py: 覆盖本模块
+🏁
 """
 
 import os

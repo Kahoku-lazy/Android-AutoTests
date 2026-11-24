@@ -1,6 +1,10 @@
-"""AI 任务后台线程：装配引擎、落进度与终态。
-
-与 views_drf 解耦，供 api.dispatch_device / 提交入口共用。
+"""
+模块功能：➡️ AI 任务后台线程：装配引擎、落进度与终态 🏁
+Python 调试：➡️ python -m backend.apps.task_list.task_runner 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 task_list 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 from __future__ import annotations

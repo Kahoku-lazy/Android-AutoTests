@@ -1,8 +1,10 @@
-"""评测语料只读采样与 gold 文档映射。
-
-采样用与索引相同的切块原语；gold 映射经引擎公开 list_documents，
-不复制索引内部 document_id 方案、不直读 SQLite 表。
-引擎 import 全部在函数内：引擎缺失时本模块仍可导入。
+"""
+模块功能：➡️ 评测语料只读采样与 gold 文档映射 🏁
+Python 调试：➡️ python -m backend.apps.knowledge_search.eval_corpus 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 knowledge_search 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 from __future__ import annotations

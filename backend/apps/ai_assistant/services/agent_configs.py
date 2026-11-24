@@ -1,4 +1,11 @@
-"""Agent 配置写库。只登记名称、模型配置外键和系统提示词，不创建 Agent。"""
+"""
+模块功能：➡️ Agent 配置写库。只登记名称、模型配置外键和系统提示词，不创建 Agent 🏁
+Python 调试：➡️ python -m backend.apps.ai_assistant.services.agent_configs 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 ai_assistant 的功能用例间接覆盖，未直接 import 本模块）
+🏁
+"""
 
 from django.db import IntegrityError, transaction
 

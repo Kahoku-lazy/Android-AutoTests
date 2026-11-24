@@ -1,14 +1,10 @@
 """
-python -m 调试路径: backend.apps.report_generator.report_inventory
-
-本模块的业务功能如下：
-1. build_report_inventory: 报告台账入口——取两来源候选并组装 {summary, total, items} 负载。
-2. assemble_inventory: 纯逻辑组装——候选行的过滤、排序、限量与报告数量统计，不访问数据库。
-
-数据源口径（DB 登记即索引，不扫磁盘）：
-- SOP 报告：终态任务且 result 里带 report_run/report_name 定位（执行完成才登记）。
-- 智能体报告：正常完成的助手对话轮次（助手消息带非空 report_id）。
-未执行/执行中/取消/中断的任务与轮次不进入台账。
+模块功能：➡️ 报告台账聚合：SOP 与智能体候选合成统一清单 🏁
+Python 调试：➡️ python -m backend.apps.report_generator.report_inventory 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 report_generator 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 from __future__ import annotations

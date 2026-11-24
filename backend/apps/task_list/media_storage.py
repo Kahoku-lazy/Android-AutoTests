@@ -1,10 +1,10 @@
 """
-python -m 调试路径: backend.apps.task_list.media_storage
-
-本模块的业务功能如下：
-1. encode: 把截图 base64 压成长边 720 的 WebP 缩略图，并给出原图 sha256。
-2. LocalMediaStorage: 任务截图的本地文件读写（保存、读取、存在性、按任务删除）。
-3. get_media_storage: 进程内一份存储实现，便于将来替换成对象存储。
+模块功能：➡️ 任务截图本地存储：WebP 编码、读写与路径校验 🏁
+Python 调试：➡️ python -m backend.apps.task_list.media_storage 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 task_list 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 from __future__ import annotations

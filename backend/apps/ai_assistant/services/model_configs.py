@@ -1,4 +1,11 @@
-"""模型配置写库。只登记连接参数，不创建模型实例。"""
+"""
+模块功能：➡️ 模型配置写库。只登记连接参数，不创建模型实例 🏁
+Python 调试：➡️ python -m backend.apps.ai_assistant.services.model_configs 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 ai_assistant 的功能用例间接覆盖，未直接 import 本模块）
+🏁
+"""
 
 from backend.apps.ai_assistant.models import AIModelConfig, AIRole
 

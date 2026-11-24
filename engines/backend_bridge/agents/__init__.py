@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/agents/__init__.py 🏁
 模块功能：➡️ 平台角色子包：对外只导出 UI 执行角色的装配入口 🏁
 Python 调试：➡️ python -m engines.backend_bridge.agents 🏁
-时间：➡️ 2026-11-14 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-14 🏁
@@ -16,7 +16,7 @@ Python 调试：➡️ python -m engines.backend_bridge.agents 🏁
 1. engines.backend_bridge.agents.ui_executor: 平台 UI 执行角色。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_ui_executor.py
+1. 暂无
 🏁
 """
 

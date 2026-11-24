@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/reports/__init__.py 🏁
 模块功能：➡️ 报告落盘子包：对外只导出根目录常量 🏁
 Python 调试：➡️ python -m engines.backend_bridge.reports 🏁
-时间：➡️ 2026-11-14 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-14 🏁
@@ -17,7 +17,7 @@ Python 调试：➡️ python -m engines.backend_bridge.reports 🏁
 1. engines.backend_bridge.reports.paths: 路径常量实现。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_paths.py
+1. 暂无
 🏁
 """
 

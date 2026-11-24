@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/workflow/fake_world.py 🏁
 模块功能：➡️ 评测用的同名假工具 🏁
 Python 调试：➡️ python -m engines.backend_bridge.workflow.fake_world 🏁
-时间：➡️ 2026-11-18 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-18 🏁
@@ -16,7 +16,7 @@ Python 调试：➡️ python -m engines.backend_bridge.workflow.fake_world 🏁
 1. engines.backend_bridge.agents.tool_selection: 导入 select_tools，取出真工具的名字与入参。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_fake_world.py: 同名、只记账、无真实副作用
+1. 暂无
 🏁
 """
 

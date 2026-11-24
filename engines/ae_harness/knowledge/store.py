@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/knowledge/store.py 🏁
 模块功能：➡️ 知识库本地 SQLite 向量库：集合与文档的建删查，实现 VectorStoreBase 🏁
 Python 调试：➡️ python -m engines.ae_harness.knowledge.store 🏁
-时间：➡️ 2026-11-15 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-20 🏁
@@ -18,7 +18,7 @@ Python 调试：➡️ python -m engines.ae_harness.knowledge.store 🏁
 1. 无 Harness 内依赖：只依赖 agentscope 与标准库。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_knowledge_store.py: 建集合、写入、按文档删除与相似度检索
+1. 暂无
 🏁
 """
 

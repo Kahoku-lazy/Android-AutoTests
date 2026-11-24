@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/tools/case_library/tools.py 🏁
 模块功能: ➡️ 用例库工具目录：保存一条用例，写入动作由调用方注入 🏁
 Python 调试: ➡️ python -m engines.ae_harness.tools.case_library.tools 🏁
-时间: ➡️ 2026-11-18 🏁
+时间: ➡️ 2026-11-24 🏁
 作者: ➡️ kahoku 🏁
 版本: ➡️ 1.0.1 🏁
 修改时间: ➡️ 2026-11-19 🏁
@@ -16,8 +16,7 @@ Python 调试: ➡️ python -m engines.ae_harness.tools.case_library.tools 🏁
 1. agentscope.tool: 导入 FunctionTool。
 🏁
 测试: ➡️
-1. tests/engines/backend_bridge/unit/test_tool_selection.py: 用例编写过滤掉设备工具
-2. tests/engines/ae_harness/unit/test_tool_permission.py: 权限检查返回放行决策实例
+1. 暂无
 🏁
 """
 

@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/workflow/bound_sop.py 🏁
 模块功能：➡️ 用名片绑定参数跑一次执行加验收 SOP 🏁
 Python 调试：➡️ python -m engines.backend_bridge.workflow.bound_sop 🏁
-时间：➡️ 2026-11-17 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-17 🏁
@@ -22,7 +22,7 @@ Python 调试：➡️ python -m engines.backend_bridge.workflow.bound_sop 🏁
 6. engines.backend_bridge.workflow.sop_ui: 复用 SopRunResult 的结果形状。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_bound_sop.py: 有 serial 与无 serial 两支，且不读步骤键
+1. 暂无
 🏁
 """
 

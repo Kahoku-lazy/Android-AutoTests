@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/agents/ui_executor.py 🏁
 模块功能：➡️ 平台侧 UI 执行角色：调 ae_harness 原语装配智能体并挂设备工具 🏁
 Python 调试：➡️ python -m engines.backend_bridge.agents.ui_executor 🏁
-时间：➡️ 2026-11-14 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-14 🏁
@@ -19,7 +19,7 @@ Python 调试：➡️ python -m engines.backend_bridge.agents.ui_executor 🏁
 3. engines.ae_harness.tools: 导入 build_adb_tools，给执行角色挂全量设备工具。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_ui_executor.py: 设备工具数量、密钥名、观测中间件
+1. 暂无
 🏁
 """
 

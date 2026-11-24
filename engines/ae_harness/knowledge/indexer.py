@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/knowledge/indexer.py 🏁
 模块功能：➡️ 按库增量建索引：只扫 .md/.txt，未变化文件不重复嵌入 🏁
 Python 调试：➡️ python -m engines.ae_harness.knowledge.indexer 🏁
-时间：➡️ 2026-11-15 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-15 🏁
@@ -17,7 +17,7 @@ Python 调试：➡️ python -m engines.ae_harness.knowledge.indexer 🏁
 2. agentscope.rag: TextParser / ApproxTokenChunker / KnowledgeBase。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_knowledge_index.py: 增量跳过、删除清理与缺失目录
+1. 暂无
 🏁
 """
 

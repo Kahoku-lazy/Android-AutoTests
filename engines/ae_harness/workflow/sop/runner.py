@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/workflow/sop/runner.py 🏁
 模块功能：➡️ 把执行者、验收者与步骤跑成一次 SOP，并产出记录与报告 🏁
 Python 调试：➡️ python -m engines.ae_harness.workflow.sop.runner 🏁
-时间：➡️ 2026-11-13 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.1.0 🏁
 修改时间: ➡️ 2026-11-19 🏁
@@ -20,7 +20,7 @@ Python 调试：➡️ python -m engines.ae_harness.workflow.sop.runner 🏁
 3. engines.ae_harness.workflow.sop.spec: SopSpec / StepSpec。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_bound_sop.py: 结果字段与用量汇总。
+1. 暂无
 🏁
 """
 

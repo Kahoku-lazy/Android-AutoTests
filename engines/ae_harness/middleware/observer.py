@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/middleware/observer.py 🏁
 模块功能：➡️ 只读观测中间件：采样本轮最终 system prompt 与上下文压缩决策 🏁
 Python 调试：➡️ python -m engines.ae_harness.middleware.observer 🏁
-时间：➡️ 2026-11-14 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-14 🏁
@@ -18,7 +18,7 @@ Python 调试：➡️ python -m engines.ae_harness.middleware.observer 🏁
 1. 无本地依赖：只依赖 agentscope.middleware 与标准库，不导入同包任何模块。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_observer.py: 透传一致、压缩两态、无 list_tools、两条投递路径
+1. 暂无
 🏁
 """
 

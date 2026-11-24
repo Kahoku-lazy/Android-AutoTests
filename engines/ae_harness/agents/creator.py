@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/agents/creator.py 🏁
 模块功能：➡️ 输出一个智能体角色：模型 + 系统提示词 + 角色名称，并交出用的是哪把密钥 🏁
 Python 调试：➡️ python -m engines.ae_harness.agents.creator 🏁
-时间：➡️ 2026-11-13 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 5.0.0 🏁
 修改时间: ➡️ 2026-11-14 🏁
@@ -18,7 +18,7 @@ Python 调试：➡️ python -m engines.ae_harness.agents.creator 🏁
 1. engines.ae_harness.agents.models: 造聊天模型，并交出密钥环境变量名。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_creator.py: 两段返回、密钥名透传、未知短名报错
+1. 暂无
 🏁
 """
 

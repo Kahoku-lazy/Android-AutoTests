@@ -1,25 +1,15 @@
-"""知识库模块登记与目录派生单测：校验规则、CRUD、yaml 派生与引擎校验复用。"""
+"""知识库模块登记单测：校验规则与 CRUD。"""
 
 from __future__ import annotations
 
 import importlib
 
 import pytest
-import yaml
 
-from django.conf import settings
-
-from backend.apps.knowledge_search import api, registry
+from backend.apps.knowledge_search import api
 from backend.apps.knowledge_search.models import KnowledgeModule
 
 pytestmark = [pytest.mark.unit, pytest.mark.django_db]
-
-
-@pytest.fixture(autouse=True)
-def _bases_file(tmp_path):
-    """把派生 yaml 指到临时目录，避免写真实 logs/。"""
-    settings.KNOWLEDGE_SEARCH_BASES_FILE = tmp_path / "bases.yaml"
-    return tmp_path / "bases.yaml"
 
 
 @pytest.fixture()
@@ -30,18 +20,16 @@ def data_dir(tmp_path):
     return target
 
 
-def test_create_module_and_sync_yaml(data_dir):
-    """合法登记落库并同步派生 yaml。"""
+def test_create_module_persists(data_dir):
+    """合法登记落库，资料目录取绝对路径。"""
     module = api.create_module(
         name="kb_a",
         description="测试库",
         data_dir=str(data_dir),
     )
     assert module.pk is not None
-    payload = yaml.safe_load(registry.bases_file().read_text(encoding="utf-8"))
-    assert payload["kb_a"]["data_dir"] == str(data_dir.resolve())
-    assert payload["kb_a"]["enabled"] is True
-    assert "defaults" in payload
+    assert module.data_dir == str(data_dir.resolve())
+    assert module.enabled is True
 
 
 @pytest.mark.parametrize("name", ["Bad", "1x", "bad-name", "", "kb a"])
@@ -92,16 +80,13 @@ def test_overlapping_enabled_dirs_rejected(data_dir):
 
 
 def test_update_path_and_enabled(data_dir, tmp_path):
-    """改路径与启停落库并刷新 yaml。"""
+    """改路径与启停落库。"""
     module = api.create_module(name="kb_a", description="说明", data_dir=str(data_dir))
     new_dir = tmp_path / "new_docs"
     new_dir.mkdir()
     updated = api.update_module(module.pk, data_dir=str(new_dir), enabled=False)
     assert updated.data_dir == str(new_dir.resolve())
     assert updated.enabled is False
-    payload = yaml.safe_load(registry.bases_file().read_text(encoding="utf-8"))
-    assert payload["kb_a"]["data_dir"] == str(new_dir.resolve())
-    assert payload["kb_a"]["enabled"] is False
 
 
 def test_update_unknown_field_and_missing_module(data_dir):
@@ -113,45 +98,16 @@ def test_update_unknown_field_and_missing_module(data_dir):
         api.update_module(999999, enabled=False)
 
 
-def test_delete_module_refreshes_yaml(data_dir):
-    """删除只删登记，yaml 同步移除。"""
+def test_delete_module_removes_row(data_dir):
+    """删除只删登记，不存在时返回假。"""
     module = api.create_module(name="kb_a", description="说明", data_dir=str(data_dir))
     assert api.delete_module(module.pk) is True
     assert api.delete_module(module.pk) is False
-    payload = yaml.safe_load(registry.bases_file().read_text(encoding="utf-8"))
-    assert "kb_a" not in payload
+    assert KnowledgeModule.objects.filter(name="kb_a").count() == 0
 
 
-def test_engine_load_config_accepts_derived_yaml(data_dir):
-    """派生 yaml 能被引擎 load_config 装载，defaults 保留引擎调优值。"""
-    from engines.ae_harness.knowledge.config import load_config
-
-    api.create_module(name="kb_a", description="说明", data_dir=str(data_dir))
-    config = load_config(bases_path=registry.bases_file())
-    assert config.base("kb_a") is not None
-    engine_defaults = yaml.safe_load(registry.engine_bases_file().read_text(encoding="utf-8"))
-    assert config.score_threshold == float(engine_defaults["defaults"]["score_threshold"])
-
-
-def test_engine_load_config_rejects_conflicting_dirs(data_dir):
-    """绕过 api 造冲突目录时，引擎装载仍拒绝（第二道闸）。"""
-    from engines.ae_harness.knowledge.config import load_config
-
-    child = data_dir / "sub"
-    child.mkdir()
-    KnowledgeModule.objects.create(
-        name="kb_a", description="说明", data_dir=str(data_dir), enabled=True
-    )
-    KnowledgeModule.objects.create(
-        name="kb_b", description="说明", data_dir=str(child), enabled=True
-    )
-    registry.sync_yaml()
-    with pytest.raises(ValueError, match="目录冲突"):
-        load_config(bases_path=registry.bases_file())
-
-
-def test_seed_migration_imports_engine_catalog():
-    """空表时种子导入引擎既有登记；重复执行不翻倍。"""
+def test_seed_migration_is_noop_without_engine_catalog():
+    """引擎库目录文件已删除：种子迁移找不到文件时不导入、不报错。"""
     KnowledgeModule.objects.all().delete()
     seed_migration = importlib.import_module(
         "backend.apps.knowledge_search.migrations.0002_seed_modules"
@@ -162,10 +118,4 @@ def test_seed_migration_imports_engine_catalog():
             return KnowledgeModule
 
     seed_migration.seed_modules(_Apps(), None)
-    names = set(KnowledgeModule.objects.values_list("name", flat=True))
-    assert "product_manuals" in names
-    assert "log_keywords" in names
-    assert KnowledgeModule.objects.get(name="log_keywords").enabled is False
-    count = KnowledgeModule.objects.count()
-    seed_migration.seed_modules(_Apps(), None)
-    assert KnowledgeModule.objects.count() == count
+    assert KnowledgeModule.objects.count() == 0

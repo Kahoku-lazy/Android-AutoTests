@@ -15,9 +15,10 @@ pytestmark = [pytest.mark.unit]
 
 BRIDGE_DIR = Path(__file__).resolve().parents[4] / "engines" / "backend_bridge"
 
-# 平台层绝对禁止的导入前缀：控制台入口（assistant 与 sop_runner）、后端与 Django。
-# 注意：`engines.ae_harness.workflow.sop` 是允许复用的通用抽象，不在禁用名单里。
+# 平台层绝对禁止的导入前缀：AgentScope 框架、控制台入口、后端与 Django。
+# 框架类型一律经 ae_harness 的函数取得。
 FORBIDDEN_PREFIXES = (
+    "agentscope",
     "engines.ae_harness.assistant",
     "engines.ae_harness.workflow.sop_runner",
     "django",
@@ -27,7 +28,6 @@ FORBIDDEN_PREFIXES = (
 # 允许的外部根：标准库 + 框架 + ae_harness 原语 + 共享基础设施（日志等）。
 ALLOWED_ROOTS = {
     "__future__",
-    "agentscope",
     "asyncio",
     "chinese_calendar",  # 模型费用按法定节假日判高峰（model_billing）
     "collections",  # 目标循环的可替换执行签名（goal_case）
@@ -83,13 +83,15 @@ def test_allowed_external_roots_only():
 
 
 def test_only_ae_harness_primitives_used():
-    """engines 内依赖只允许 ae_harness 的原语子包（agents/tools/event/middleware）。"""
+    """engines 内依赖只允许 ae_harness 的原语子包（agents/tools/event/middleware/workflow）。"""
     allowed = (
         "engines.ae_harness.agents",
         "engines.ae_harness.tools",
         "engines.ae_harness.event",
         "engines.ae_harness.middleware",
         "engines.ae_harness.workflow.sop",
+        "engines.ae_harness.workflow.goal",
+        "engines.ae_harness.workflow.team",
         "engines.backend_bridge",
     )
     offenders: list[str] = []

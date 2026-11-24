@@ -99,7 +99,7 @@ export function useLoad<T>(fetcher: () => Promise<T>) {
 ## 跨组件通信
 
 - 父子：`props` + `emits`，不要为了「方便」把事件一路 `$emit` 上去。
-- 远距离、非父子：本仓库已有 `mitt`（`shared/` 内使用），按现有总线约定发/收；**不要新造第二套事件总线**，也不要拿 `provide/inject` 当全局状态。
+- 远距离、非父子：用 `provide/inject` 配合组合式函数封装，或把共享状态收敛到模块 composable；**不要引入第三方事件总线**（`mitt` 已移除），也不要拿 `provide/inject` 当全局状态。
 
 ## 响应式坑
 

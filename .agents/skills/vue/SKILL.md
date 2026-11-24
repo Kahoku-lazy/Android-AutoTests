@@ -48,7 +48,7 @@ license: MIT
 
 - 共享件：`AppTable`、`AppCard`、`SketchCard`、`KpiCard`、`DoodleBtn`、`FilterTabs`、`WorkbenchHeader/Crumbs`、三态件（`SkeletonCard`/`ErrorState`/`EmptyState`）。新组件先找它们，别自造第二套。
 - HTTP 唯一出口：`shared/api-client.ts`；错误统一走 `formatApiError`，组件里不直接 `axios`。
-- 跨组件事件：已有 `mitt`；不要另造事件总线，也不要靠 `$emit` 跨层透传。
+- 跨组件事件：用 `props` + `emits` 或 `provide/inject` 组合式封装；不要引入第三方事件总线（`mitt` 已移除），也不要靠 `$emit` 跨层透传。
 - 本仓库**没有**：VueUse、Nuxt、`unplugin-vue-router`、自定义指令、`defineModel` 使用先例（要引入先在方案里说明）。
 
 ## 快速起点（仓库风格）

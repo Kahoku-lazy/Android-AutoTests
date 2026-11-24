@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/workflow/team_breakdown.py 🏁
 模块功能: ➡️ 需求拆解结果校验：只接受模块边界与测试点 🏁
 Python 调试: ➡️ python -m engines.backend_bridge.workflow.team_breakdown 🏁
-时间: ➡️ 2026-11-18 🏁
+时间: ➡️ 2026-11-24 🏁
 作者: ➡️ kahoku 🏁
 版本: ➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-18 🏁
@@ -16,7 +16,7 @@ Python 调试: ➡️ python -m engines.backend_bridge.workflow.team_breakdown �
 1. agentscope.pipeline.TeamPipeline: 生产运行由调用方装配，本模块只校验产物。
 🏁
 测试: ➡️
-1. tests/engines/backend_bridge/unit/test_team_breakdown.py: 缺字段失败，合法结果不带用例
+1. 暂无
 🏁
 """
 

@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/knowledge/__main__.py 🏁
 模块功能：➡️ 知识库探针命令入口 🏁
 Python 调试：➡️ python -m engines.ae_harness.knowledge index product_manuals 🏁
-时间：➡️ 2026-11-15 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-15 🏁
@@ -15,7 +15,7 @@ Python 调试：➡️ python -m engines.ae_harness.knowledge index product_manu
 1. engines.ae_harness.knowledge.probe: 导入 main。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_knowledge_probe.py: 命令行退出码
+1. 暂无
 🏁
 """
 

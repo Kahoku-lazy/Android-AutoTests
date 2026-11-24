@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/event/record.py 🏁
 模块功能：➡️ 订阅 reply_stream 事件，产出一轮运行的结构化记录 🏁
 Python 调试：➡️ python -m engines.ae_harness.event.record 🏁
-时间：➡️ 2026-11-13 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.1.0 🏁
 修改时间: ➡️ 2026-11-19 🏁
@@ -19,9 +19,7 @@ Python 调试：➡️ python -m engines.ae_harness.event.record 🏁
 2. engines.ae_harness.event.render: 消费 RunRecord 生成页面（调用方串联）。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_record_usage.py: 用量按角色密钥归组与 SOP 步骤事件。
-2. tests/engines/ae_harness/unit/test_record_full.py: 全量模式字段与块级折叠。
-3. tests/engines/ae_harness/unit/test_record_sop_roles.py: SOP 角色名字映射与尝试序号。
+1. 暂无
 🏁
 """
 

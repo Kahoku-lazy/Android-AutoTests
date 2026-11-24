@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/middleware/retry.py 🏁
 模块功能：➡️ 模型调用重试：错误分类、指数退避、流式不重放 🏁
 Python 调试：➡️ python -m engines.ae_harness.middleware.retry 🏁
-时间：➡️ 2026-11-14 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-14 🏁
@@ -17,7 +17,7 @@ Python 调试：➡️ python -m engines.ae_harness.middleware.retry 🏁
 1. 无本地依赖：只依赖标准库与框架的中间件基类。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_retry_middleware.py: 分类、退避、流式不重放、参数上限
+1. 暂无
 🏁
 """
 

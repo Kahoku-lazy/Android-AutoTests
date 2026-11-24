@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/workflow/eval_probe.py 🏁
 模块功能：➡️ 评测探针：同一实例两轮，或按剧本驱动假世界 🏁
 Python 调试：➡️ python -m engines.backend_bridge.workflow.eval_probe 🏁
-时间：➡️ 2026-11-18 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-18 🏁
@@ -18,7 +18,7 @@ Python 调试：➡️ python -m engines.backend_bridge.workflow.eval_probe 🏁
 3. engines.ae_harness.tools: 导入只读工具集，用来拦住验收者的写操作。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_eval_probe.py: 同一实例、一次通过、驳回后再通过、验收者写操作
+1. 暂无
 🏁
 """
 

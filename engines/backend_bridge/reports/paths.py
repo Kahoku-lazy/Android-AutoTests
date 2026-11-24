@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/reports/paths.py 🏁
 模块功能：➡️ 平台报告根目录的唯一来源 🏁
 Python 调试：➡️ python -m engines.backend_bridge.reports.paths 🏁
-时间：➡️ 2026-11-14 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-14 🏁
@@ -16,7 +16,7 @@ Python 调试：➡️ python -m engines.backend_bridge.reports.paths 🏁
 1. 无本地依赖：只依赖标准库 pathlib。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_paths.py: 根目录末三级与绝对路径
+1. 暂无
 🏁
 """
 

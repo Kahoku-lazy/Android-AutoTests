@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/run.py 🏁
 模块功能：➡️ 平台运行入口：跑一次 UI 执行任务，产出报告并返回结构化结果 🏁
 Python 调试：➡️ python -m engines.backend_bridge.run 🏁
-时间：➡️ 2026-11-14 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.1.0 🏁
 修改时间: ➡️ 2026-11-14 🏁
@@ -19,8 +19,7 @@ Python 调试：➡️ python -m engines.backend_bridge.run 🏁
 3. engines.backend_bridge.reports: 报告路径唯一来源（经由 session 使用）。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_run.py: 结果字段、目录按需创建、不打印
-2. 真机冒烟：报告落在 logs/agents/backend_bridge/ 下
+1. 真机冒烟：报告落在 logs/agents/backend_bridge/ 下
 🏁
 """
 

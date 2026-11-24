@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/middleware/control.py 🏁
 模块功能：➡️ 运行控制：模型调用次数/时长预算与外部取消 🏁
 Python 调试：➡️ python -m engines.ae_harness.middleware.control 🏁
-时间：➡️ 2026-11-14 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-14 🏁
@@ -17,7 +17,7 @@ Python 调试：➡️ python -m engines.ae_harness.middleware.control 🏁
 1. 无本地依赖：只依赖标准库与框架的中间件基类。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_run_control.py: 次数上限、时长上限、取消、异常类型可区分
+1. 暂无
 🏁
 """
 

@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/tools/catalog.py 🏁
 模块功能：➡️ 只读列出已注册工具域、预设与函数名 🏁
 Python 调试：➡️ python -m engines.ae_harness.tools.catalog 🏁
-时间：➡️ 2026-11-16 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-16 🏁
@@ -16,7 +16,7 @@ Python 调试：➡️ python -m engines.ae_harness.tools.catalog 🏁
 1. engines.ae_harness.tools.adb: 只读取已导出的装配函数来取名字。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_tool_catalog.py: adb 含全部与只读
+1. 暂无
 🏁
 """
 

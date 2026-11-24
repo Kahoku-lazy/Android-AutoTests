@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/agents/messages.py 🏁
 模块功能：➡️ 构造一轮发给智能体的用户消息 🏁
 Python 调试：➡️ python -m engines.ae_harness.agents.messages 🏁
-时间：➡️ 2026-11-19 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-19 🏁
@@ -15,7 +15,7 @@ Python 调试：➡️ python -m engines.ae_harness.agents.messages 🏁
 1. 无本地依赖：只依赖 agentscope 的消息类型。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_user_message.py: 名字与正文
+1. 暂无
 🏁
 """
 

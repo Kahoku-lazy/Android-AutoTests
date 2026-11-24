@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/workflow/goal_case.py 🏁
 模块功能: ➡️ 用例编写的目标循环：编写、验收、退回一次，通过后交给入库函数 🏁
 Python 调试: ➡️ python -m engines.backend_bridge.workflow.goal_case 🏁
-时间: ➡️ 2026-11-18 🏁
+时间: ➡️ 2026-11-24 🏁
 作者: ➡️ kahoku 🏁
 版本: ➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-18 🏁
@@ -16,7 +16,7 @@ Python 调试: ➡️ python -m engines.backend_bridge.workflow.goal_case 🏁
 1. agentscope.pipeline: 生产调用方传入官方 GoalPipeline。
 🏁
 测试: ➡️
-1. tests/engines/backend_bridge/unit/test_goal_case.py: 退回一次后通过并入库
+1. 暂无
 🏁
 """
 

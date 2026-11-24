@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/workflow/__init__.py 🏁
 模块功能：➡️ 平台编排装配子包：把 ae_harness 的 SOP 抽象装成平台可用入口 🏁
 Python 调试：➡️ python -m engines.backend_bridge.workflow 🏁
-时间：➡️ 2026-11-14 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-14 🏁
@@ -21,8 +21,7 @@ Python 调试：➡️ python -m engines.backend_bridge.workflow 🏁
 5. engines.ae_harness.workflow.sop: 被复用的通用 SOP 抽象。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_bound_roles.py: 验收者只读、共用观察者
-2. tests/engines/backend_bridge/unit/test_bound_sop.py: 结果字段与用量汇总
+1. 暂无
 🏁
 """
 

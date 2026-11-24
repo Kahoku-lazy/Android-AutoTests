@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/workflow/bound_team.py 🏁
 模块功能：➡️ 用名片绑定参数跑一次团队流水线 🏁
 Python 调试：➡️ python -m engines.backend_bridge.workflow.bound_team 🏁
-时间：➡️ 2026-11-19 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-19 🏁
@@ -19,7 +19,7 @@ Python 调试：➡️ python -m engines.backend_bridge.workflow.bound_team 🏁
 4. engines.backend_bridge.reports: 报告路径唯一来源。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_bound_team.py: 成员说明透传与队长回复
+1. 暂无
 🏁
 """
 

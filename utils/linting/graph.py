@@ -1,4 +1,11 @@
-"""禁止合同用到的图操作：表达式展开、ignore 删边、最短链搜索。"""
+"""
+模块功能：➡️ 禁止合同用到的图操作：表达式展开、ignore 删边、最短链搜索 🏁
+Python 调试：➡️ python -m utils.linting.graph 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无
+🏁
+"""
 
 from __future__ import annotations
 

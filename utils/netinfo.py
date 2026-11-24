@@ -1,8 +1,10 @@
 """
-python -m 调试路径: utils.netinfo
-
-本模块的业务功能如下：
-1. local_lan_ip: 探测本机出站局域网 IP（UDP connect 只选路由不发包），失败回退主机名解析。
+模块功能：➡️ 本机网络信息：探测出站局域网 IP（UDP connect，不发包） 🏁
+Python 调试：➡️ python -m utils.netinfo 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/serial_log/unit/test_netinfo.py: 局域网 IP 探测与主机名回退
+🏁
 """
 
 from __future__ import annotations

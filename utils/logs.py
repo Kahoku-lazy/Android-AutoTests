@@ -1,11 +1,10 @@
 """
-python -m 调试路径: utils.logs
-
-本模块的业务功能如下：
-1. build_logger: 用 logging 建一个记录器，文件 10MB 轮转、保留 3 个备份，警告及以上同时打到控制台。
-2. logging_now_stamp: 用 time 取本地当前时间，格式与 logging 的 asctime 一致。
-3. backend_log / agent_event_log / device_log / serial_log: 四个已经建好的记录器。
-4. uart_capture_logger: 按 SKU 与端口把抓到的串口日志写入 logs/serial_logs/{SKU}_{端口}.log。
+模块功能：➡️ 平台日志设施：四个记录器、文件轮转、串口按 SKU 与端口落盘 🏁
+Python 调试：➡️ python -m utils.logs 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/serial_log/integration/test_port_service_custom.py: 串口日志按 SKU 与端口落盘
+🏁
 """
 
 from __future__ import annotations

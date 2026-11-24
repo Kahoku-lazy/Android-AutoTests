@@ -1,11 +1,10 @@
-"""OpenAPI 覆盖门禁 — URLconf 的每条业务路径都必须出现在基线里。
-
-用法:
-    python utils/check_openapi_coverage.py
-
-退出码:
-    0  全部业务路径已被 openspec/openapi.yaml 覆盖
-    1  存在缺失（打印缺失清单与重新生成命令）
+"""
+模块功能：➡️ OpenAPI 覆盖门禁：URLconf 的每条业务路径都必须出现在基线里 🏁
+Python 调试：➡️ python -m utils.check_openapi_coverage 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无
+🏁
 """
 
 from __future__ import annotations

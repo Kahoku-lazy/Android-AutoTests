@@ -1,4 +1,11 @@
-"""linting 的数据结构：配置、事实、违规与报告。"""
+"""
+模块功能：➡️ linting 的数据结构：配置、事实、违规与报告 🏁
+Python 调试：➡️ python -m utils.linting.model 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无
+🏁
+"""
 
 from __future__ import annotations
 

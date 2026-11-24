@@ -1,14 +1,10 @@
-"""platform-tools 安装器：检测项目内 adb，缺失时下载官方包并校验安装。
-
-业务功能：
-1. install: 按当前操作系统下载/校验/解压官方 platform-tools 到 `tools/platform-tools/`。
-2. status: 报告项目内是否已安装、版本与来源，供 `run.py setup --check` 与 `status` 使用。
-3. verify: 对 zip 做大小 + sha1 校验，安装后再记录 sha256。
-
-设计口径：
-- 版本 pin 在 `ARCHIVE_VERSION`，校验值取自官方 `repository2-3.xml`；不做 `--latest`。
-- 只写入 `tools/platform-tools/`（gitignore），二进制不入库。
-- 解压后先自检 `adb version`，通过后才替换旧目录，失败保留原状。
+"""
+模块功能：➡️ platform-tools 安装器：下载、sha 校验、解压到 tools/platform-tools 🏁
+Python 调试：➡️ python -m utils.platform_tools 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（`python -m run setup --check` 可冒烟）
+🏁
 """
 
 from __future__ import annotations

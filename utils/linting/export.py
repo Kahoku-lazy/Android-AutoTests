@@ -1,4 +1,11 @@
-"""按 .linting 反向生成 tach.toml / .importlinter，供第三方工具复跑时使用。"""
+"""
+模块功能：➡️ 按 .linting 反向生成 tach.toml / .importlinter，供第三方工具复跑 🏁
+Python 调试：➡️ python -m utils.linting.export 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无
+🏁
+"""
 
 from __future__ import annotations
 

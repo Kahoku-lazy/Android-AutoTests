@@ -1,4 +1,11 @@
-"""扫描源码并抽取 import 事实：文件遍历、AST 解析、模块路径归一化。"""
+"""
+模块功能：➡️ 扫描源码抽取 import 事实：文件遍历、AST 解析、模块路径归一化 🏁
+Python 调试：➡️ python -m utils.linting.scan 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无
+🏁
+"""
 
 from __future__ import annotations
 

@@ -19,7 +19,7 @@ mysqlclient>=2.2
 
 # ── Device Control ──
 uiautomator2>=3.7.1
-opencv-python-headless>=4.5
+opencv-python-headless>=5.1.0.95
 Pillow>=13.0.0
 
 # ── OCR ──

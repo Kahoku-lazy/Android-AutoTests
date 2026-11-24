@@ -30,6 +30,18 @@ export interface QueryResult {
   errors: string[]
 }
 
+/** 全局检索配置：全库共用一份。 */
+export interface RetrievalSettings {
+  configured: boolean
+  embedding_model_id: number | null
+  top_k: number
+  score_threshold: number
+  chunk_size: number
+  chunk_overlap: number
+  index_epoch: number
+  reindex_required: boolean
+}
+
 /** 新增/编辑模块入参 */
 export interface ModulePayload {
   name: string

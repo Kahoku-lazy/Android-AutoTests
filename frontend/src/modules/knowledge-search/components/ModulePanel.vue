@@ -10,6 +10,7 @@ import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
 import { KS_DELETE_MESSAGE, KS_MANAGE_HINT } from "../constants"
 import type { KnowledgeModuleRow, ModulePayload } from "../types"
 import ModuleFormDialog from "./ModuleFormDialog.vue"
+import RetrievalSettingsCard from "./RetrievalSettingsCard.vue"
 
 defineProps<{
   modules: KnowledgeModuleRow[]
@@ -54,54 +55,57 @@ defineExpose({ closeDialog })
 </script>
 
 <template>
-  <AppCard tone="var(--c-case)" :pin="false" :tilt="0.3" class="ks-module-panel">
-    <template #header>
-      <div class="ks-module-panel__head">
-        <span class="ks-module-panel__title">知识模块</span>
-        <DoodleBtn v-if="canManage" tone="teal" @click="openCreate">新增</DoodleBtn>
-      </div>
-    </template>
-
-    <SkeletonCard v-if="loading" variant="list" :lines="4" />
-    <ErrorState v-else-if="error" :message="error" @retry="emit('refresh')" />
-    <EmptyState
-      v-else-if="modules.length === 0"
-      icon="📚"
-      text="暂无模块"
-      :hint="canManage ? '点「新增」登记一个资料目录' : KS_MANAGE_HINT"
-    />
-    <ul v-else class="ks-module-panel__list">
-      <li v-for="row in modules" :key="row.id" class="ks-module">
-        <div class="ks-module__row">
-          <el-checkbox
-            :model-value="selected.includes(row.name)"
-            :disabled="!row.enabled"
-            @update:model-value="emit('toggle-select', row.name)"
-          >
-            <span class="ks-module__name">{{ row.name }}</span>
-          </el-checkbox>
-          <span class="ks-module__state" :class="{ 'is-off': !row.enabled }">
-            {{ row.enabled ? "启用" : "禁用" }}
-          </span>
+  <div class="ks-module-column">
+    <RetrievalSettingsCard v-if="canManage" />
+    <AppCard tone="var(--c-case)" :pin="false" :tilt="0.3" class="ks-module-panel">
+      <template #header>
+        <div class="ks-module-panel__head">
+          <span class="ks-module-panel__title">知识模块</span>
+          <DoodleBtn v-if="canManage" tone="teal" @click="openCreate">新增</DoodleBtn>
         </div>
-        <p class="ks-module__desc">{{ row.description }}</p>
-        <p class="ks-module__dir" :title="row.data_dir">{{ row.data_dir }}</p>
-        <div v-if="canManage" class="ks-module__actions">
-          <DoodleBtn @click="openEdit(row)">编辑</DoodleBtn>
-          <DoodleBtn @click="emit('toggle-enabled', row)">
-            {{ row.enabled ? "停用" : "启用" }}
-          </DoodleBtn>
-          <DoodleBtn tone="teal" @click="emit('index', row.id)">预建索引</DoodleBtn>
-          <ConfirmButton doodle :message="KS_DELETE_MESSAGE" @confirm="emit('remove', row.id)">
-            删除
-          </ConfirmButton>
-        </div>
-      </li>
-    </ul>
-    <p v-if="!canManage" class="ks-module-panel__hint">{{ KS_MANAGE_HINT }}</p>
-  </AppCard>
+      </template>
 
-  <ModuleFormDialog v-model="dialogOpen" :editing="editing" @save="onSave" />
+      <SkeletonCard v-if="loading" variant="list" :lines="4" />
+      <ErrorState v-else-if="error" :message="error" @retry="emit('refresh')" />
+      <EmptyState
+        v-else-if="modules.length === 0"
+        icon="📚"
+        text="暂无模块"
+        :hint="canManage ? '点「新增」登记一个资料目录' : KS_MANAGE_HINT"
+      />
+      <ul v-else class="ks-module-panel__list">
+        <li v-for="row in modules" :key="row.id" class="ks-module">
+          <div class="ks-module__row">
+            <el-checkbox
+              :model-value="selected.includes(row.name)"
+              :disabled="!row.enabled"
+              @update:model-value="emit('toggle-select', row.name)"
+            >
+              <span class="ks-module__name">{{ row.name }}</span>
+            </el-checkbox>
+            <span class="ks-module__state" :class="{ 'is-off': !row.enabled }">
+              {{ row.enabled ? "启用" : "禁用" }}
+            </span>
+          </div>
+          <p class="ks-module__desc">{{ row.description }}</p>
+          <p class="ks-module__dir" :title="row.data_dir">{{ row.data_dir }}</p>
+          <div v-if="canManage" class="ks-module__actions">
+            <DoodleBtn @click="openEdit(row)">编辑</DoodleBtn>
+            <DoodleBtn @click="emit('toggle-enabled', row)">
+              {{ row.enabled ? "停用" : "启用" }}
+            </DoodleBtn>
+            <DoodleBtn tone="teal" @click="emit('index', row.id)">预建索引</DoodleBtn>
+            <ConfirmButton doodle :message="KS_DELETE_MESSAGE" @confirm="emit('remove', row.id)">
+              删除
+            </ConfirmButton>
+          </div>
+        </li>
+      </ul>
+      <p v-if="!canManage" class="ks-module-panel__hint">{{ KS_MANAGE_HINT }}</p>
+    </AppCard>
+
+    <ModuleFormDialog v-model="dialogOpen" :editing="editing" @save="onSave" />
+  </div>
 </template>
 
 <style scoped>
@@ -184,6 +188,13 @@ defineExpose({ closeDialog })
   flex-wrap: wrap;
   gap: var(--app-space-sm);
   margin-top: var(--app-space-xs);
+}
+
+.ks-module-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-md);
+  min-width: 0;
 }
 
 .ks-module-panel__hint {

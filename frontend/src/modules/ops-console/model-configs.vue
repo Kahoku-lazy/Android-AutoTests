@@ -90,6 +90,7 @@ function blankForm(): OpsModelConfigInput {
     api_protocol: "deepseek",
     model_kind: OPS_DEFAULT_MODEL_KIND,
     voice: "",
+    dimensions: null,
     api_key_env: keyForProvider(provider),
     base_url: "",
     model_name: "",
@@ -165,6 +166,7 @@ function openEdit(row: OpsModelConfig): void {
     api_protocol: row.api_protocol || "openai",
     model_kind: kind,
     voice: row.voice || "",
+    dimensions: row.dimensions ?? null,
     api_key_env: keyForProvider(provider),
     base_url: row.base_url || "",
     model_name: row.model_name,
@@ -175,10 +177,18 @@ function openEdit(row: OpsModelConfig): void {
 }
 
 async function save(): Promise<void> {
-  if (form.value.model_kind !== "tts" && !validApiUrl(form.value.base_url)) {
+  if (
+    form.value.model_kind !== "tts" &&
+    form.value.model_kind !== "embedding" &&
+    !validApiUrl(form.value.base_url)
+  ) {
     ElMessage.error(
       form.value.base_url.trim() ? "API 地址必须是 http 或 https 链接" : "API 地址不能为空",
     )
+    return
+  }
+  if (form.value.model_kind === "embedding" && !(Number(form.value.dimensions) > 0)) {
+    ElMessage.error("向量维度必须是正整数")
     return
   }
   const names = namesInForm()
@@ -378,7 +388,14 @@ onMounted(load)
               />
             </el-select>
           </label>
-          <label v-if="form.model_kind !== 'tts'" class="sketch-field">
+          <label v-if="form.model_kind === 'embedding'" class="sketch-field">
+            <span class="sketch-field__label">向量维度</span>
+            <el-input v-model.number="form.dimensions" placeholder="例如 1024" />
+          </label>
+          <label
+            v-if="form.model_kind !== 'tts' && form.model_kind !== 'embedding'"
+            class="sketch-field"
+          >
             <span class="sketch-field__label">API 地址</span>
             <el-input
               v-model="form.base_url"
@@ -418,7 +435,10 @@ onMounted(load)
               <el-input v-else v-model="singleModelName" />
             </div>
           </div>
-          <label v-if="form.model_kind !== 'chat'" class="sketch-field">
+          <label
+            v-if="form.model_kind !== 'chat' && form.model_kind !== 'embedding'"
+            class="sketch-field"
+          >
             <span class="sketch-field__label">音色</span>
             <el-select v-model="form.voice" filterable allow-create placeholder="选择或手填音色">
               <el-option

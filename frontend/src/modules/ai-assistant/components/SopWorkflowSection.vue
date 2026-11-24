@@ -28,6 +28,7 @@ const router = useRouter()
 const { isAssistantAuthor } = useAuthUser()
 
 const props = defineProps<{ cards: AssistantCard[] }>()
+const emit = defineEmits<{ loaded: [workflows: SopWorkflow[]] }>()
 
 const workflows = ref<SopWorkflow[]>([])
 const loading = ref(false)
@@ -47,6 +48,7 @@ async function load(): Promise<void> {
   try {
     workflows.value = await listSopWorkflows()
     loaded.value = true
+    emit("loaded", workflows.value)
   } catch (e) {
     error.value = formatApiError(e as never, "工作流加载失败")
   } finally {

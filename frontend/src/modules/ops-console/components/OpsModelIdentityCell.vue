@@ -14,7 +14,11 @@ const subtitle = computed(() => {
   const parts = [props.config.provider, modelKindLabel(props.config.model_kind)].filter(
     (part): part is string => Boolean(part),
   )
-  if (props.config.voice) parts.push(props.config.voice)
+  if (props.config.model_kind === "embedding" && props.config.dimensions) {
+    parts.push(`${props.config.dimensions} 维`)
+  } else if (props.config.voice) {
+    parts.push(props.config.voice)
+  }
   return parts.length ? parts.join(" · ") : "—"
 })
 
@@ -67,6 +71,10 @@ const tone = computed(() => {
 
 .ops-avatar--realtime {
   background: color-mix(in srgb, var(--c-ai) 28%, var(--app-bg-card));
+}
+
+.ops-avatar--embedding {
+  background: color-mix(in srgb, var(--c-element) 28%, var(--app-bg-card));
 }
 
 .ops-identity-cell__text {

@@ -16,16 +16,15 @@ from pathlib import Path
 
 from utils.logs import backend_log
 
-from . import registry
-
 # 局部可选导入：只吞知识库模块自身的缺失，内部写错仍要抛。
 try:
-    from engines.ae_harness.knowledge.config import load_config
+    from engines.ae_harness.knowledge.config import INDEX_DIR, build_config
     from engines.ae_harness.knowledge.service import KnowledgeRetriever
 except ModuleNotFoundError as exc:  # pragma: no cover - 引擎缺失分支由单测替身覆盖
     if not (exc.name or "").startswith("engines.ae_harness.knowledge"):
         raise
-    load_config = None
+    INDEX_DIR = None
+    build_config = None
     KnowledgeRetriever = None
 
 # 进程级 per-base 锁：检索器锁是实例级，挡不住跨请求并发首问重复建索引。
@@ -71,10 +70,10 @@ def search(
     if not engine_available():
         return {"result": "unavailable", "hits": [], "errors": ["检索不可用：引擎知识库模块缺失"]}
     execution_id = execution_id or uuid.uuid4().hex
-    bases_path = _sync_bases()
-    if bases_path is None:
-        return {"result": "unavailable", "hits": [], "errors": ["检索不可用：库目录派生失败"]}
-    outcome = asyncio.run(_search_async(text, names, top_k, bases_path))
+    config = _platform_config()
+    if isinstance(config, str):
+        return {"result": "unavailable", "hits": [], "errors": [config]}
+    outcome = asyncio.run(_search_async(text, names, top_k, config))
     _record_usage(outcome.pop("events"), execution_id)
     return outcome
 
@@ -93,10 +92,10 @@ def index_module(*, name: str, execution_id: str = "") -> dict:
     if not engine_available():
         return {"status": False, "error": "检索不可用：引擎知识库模块缺失", "reindexed": 0}
     execution_id = execution_id or uuid.uuid4().hex
-    bases_path = _sync_bases()
-    if bases_path is None:
-        return {"status": False, "error": "检索不可用：库目录派生失败", "reindexed": 0}
-    outcome = asyncio.run(_index_async(str(name).strip(), bases_path))
+    config = _platform_config()
+    if isinstance(config, str):
+        return {"status": False, "error": config, "reindexed": 0}
+    outcome = asyncio.run(_index_async(str(name).strip(), config))
     _record_usage(outcome.pop("events"), execution_id)
     return outcome
 
@@ -107,47 +106,88 @@ def _base_lock(base: str) -> threading.Lock:
         return _BASE_LOCKS.setdefault(base, threading.Lock())
 
 
-def _sync_bases() -> Path | None:
+def _platform_config():
     """
-    在同步上下文里由 DB 重生成平台库目录 yaml。
+    用平台检索配置与模块登记组装引擎配置。
 
     Returns:
-        yaml 路径；派生失败时 None。
+        引擎知识库配置；缺配置或参数非法时返回可读原因字符串。
     """
+    from .api import get_retrieval_settings, list_modules
+
+    settings_row = get_retrieval_settings()
+    if settings_row is None:
+        return "检索不可用：尚未配置检索参数"
+    from backend.apps.ai_assistant.models import AIModelConfig
+
+    model = AIModelConfig.objects.filter(pk=settings_row.embedding_model_id).first()
+    if model is None or model.model_kind != "embedding":
+        return "检索不可用：向量模型配置缺失"
     try:
-        return registry.sync_yaml()
-    except Exception as exc:  # noqa: BLE001 - 派生失败只降级
-        backend_log.exception("knowledge bases sync failed: %s", exc)
-        return None
+        config = build_config(
+            {
+                "provider": model.provider,
+                "api_key": model.api_key_env,
+                "model_name": model.model_name,
+                "dimensions": model.dimensions,
+            },
+            [
+                {
+                    "name": module.name,
+                    "description": module.description,
+                    "data_dir": module.data_dir,
+                    "enabled": module.enabled,
+                }
+                for module in list_modules()
+            ],
+            top_k=settings_row.top_k,
+            score_threshold=settings_row.score_threshold,
+            chunk_size=settings_row.chunk_size,
+            chunk_overlap=settings_row.chunk_overlap,
+            index_epoch=settings_row.index_epoch,
+        )
+    except (ValueError, TypeError) as exc:
+        backend_log.exception("knowledge config build failed: %s", exc)
+        return f"检索不可用：{exc}"
+    return config
 
 
-def _load_config(bases_path: Path):
+def _epoch_path(base: str) -> Path:
+    """一个库的索引版本标记文件。"""
+    return Path(INDEX_DIR) / f"{base}.epoch"
+
+
+def _epoch_matches(base: str, epoch: int) -> bool:
+    """标记文件内容与当前 epoch 一致才算索引可用。"""
+    try:
+        recorded = _epoch_path(base).read_text(encoding="utf-8").strip()
+    except OSError:
+        return False
+    return recorded == str(epoch)
+
+
+def mark_indexed(base: str, epoch: int) -> None:
     """
-    把平台库目录交给引擎校验装载。
+    预建索引成功后记下当前 epoch。
 
     Args:
-        bases_path: 平台库目录 yaml 路径。
-
-    Returns:
-        引擎知识库配置；装载失败时 None。
+        base: 库名。
+        epoch: 本次建索引使用的检索配置版本。
     """
-    try:
-        return load_config(bases_path=bases_path)
-    except Exception as exc:  # noqa: BLE001 - 配置非法只降级，不打断调用方
-        backend_log.exception("knowledge bases load failed: %s", exc)
-        return None
+    target = _epoch_path(base)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(str(epoch), encoding="utf-8")
 
 
-async def _search_async(
-    question: str, names: list[str], top_k: int | None, bases_path: Path
-) -> dict:
+async def _search_async(question: str, names: list[str], top_k: int | None, config) -> dict:
     """逐库检索并合并；单库失败只记错误，不拖垮其它库。"""
-    config = _load_config(bases_path)
-    if config is None:
+    epoch = config.index_epoch
+    stale = [name for name in names if not _epoch_matches(name, epoch)]
+    if stale:
         return {
             "result": "unavailable",
             "hits": [],
-            "errors": ["检索不可用：库目录装载失败"],
+            "errors": [f"{name}: 切块参数已变更，需重建索引" for name in stale],
             "events": [],
         }
     retriever = KnowledgeRetriever(config)
@@ -171,16 +211,8 @@ async def _search_async(
     return {"result": "no_hit", "hits": [], "errors": [], "events": events}
 
 
-async def _index_async(name: str, bases_path: Path) -> dict:
-    """重建单库索引；失败给可读原因。"""
-    config = _load_config(bases_path)
-    if config is None:
-        return {
-            "status": False,
-            "error": "检索不可用：库目录装载失败",
-            "reindexed": 0,
-            "events": [],
-        }
+async def _index_async(name: str, config) -> dict:
+    """重建单库索引；成功后写下当前 epoch，失败给可读原因。"""
     retriever = KnowledgeRetriever(config)
     with _base_lock(name):
         count = await retriever.ensure_index(name)
@@ -188,6 +220,7 @@ async def _index_async(name: str, bases_path: Path) -> dict:
     events = [event.as_dict() for event in retriever.usage_events()]
     if error:
         return {"status": False, "error": error, "reindexed": 0, "events": events}
+    mark_indexed(name, config.index_epoch)
     return {"status": True, "error": "", "reindexed": count, "events": events}
 
 

@@ -9,11 +9,13 @@ from .views import (
     KnowledgeModuleIndexAPIView,
     KnowledgeModuleListAPIView,
     KnowledgeQueryAPIView,
+    RetrievalSettingsAPIView,
 )
 
 app_name = "knowledge_search"
 
 urlpatterns = [
+    path("settings/", RetrievalSettingsAPIView.as_view(), name="settings"),
     path("modules/", KnowledgeModuleListAPIView.as_view(), name="modules"),
     path("modules/<int:pk>/", KnowledgeModuleDetailAPIView.as_view(), name="module_detail"),
     path("modules/<int:pk>/index/", KnowledgeModuleIndexAPIView.as_view(), name="module_index"),

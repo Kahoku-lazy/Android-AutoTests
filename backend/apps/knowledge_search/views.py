@@ -32,7 +32,29 @@ from .serializers import (
     ModulePatchSerializer,
     ModuleWriteSerializer,
     QuerySerializer,
+    RetrievalSettingsSerializer,
 )
+
+
+def _retrieval_snapshot() -> dict:
+    """冻结触发当时的检索配置；没有配置时给空字典，运行阶段会报可读原因。"""
+    row = api.get_retrieval_settings()
+    if row is None:
+        return {}
+    from backend.apps.ai_assistant.models import AIModelConfig
+
+    model = AIModelConfig.objects.filter(pk=row.embedding_model_id).first()
+    return {
+        "provider": model.provider if model else "",
+        "api_key_env": model.api_key_env if model else "",
+        "model_name": model.model_name if model else "",
+        "dimensions": model.dimensions if model else None,
+        "top_k": row.top_k,
+        "score_threshold": row.score_threshold,
+        "chunk_size": row.chunk_size,
+        "chunk_overlap": row.chunk_overlap,
+        "index_epoch": row.index_epoch,
+    }
 
 
 def _user_id(request) -> str:
@@ -52,6 +74,41 @@ def _module_or_404(pk: int):
     if module is None:
         raise NotFound("模块不存在")
     return module
+
+
+class RetrievalSettingsAPIView(APIView):
+    """GET / PUT 全局检索配置（仅超管）。"""
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        _require_superuser(request)
+        row = api.get_retrieval_settings()
+        if row is None:
+            return Response({"configured": False})
+        return Response(
+            {
+                "configured": True,
+                **RetrievalSettingsSerializer(row).data,
+                "reindex_required": False,
+            }
+        )
+
+    @extend_schema(request=RetrievalSettingsSerializer, responses=OpenApiTypes.OBJECT)
+    def put(self, request):
+        _require_superuser(request)
+        serializer = RetrievalSettingsSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            row, invalidated = api.save_retrieval_settings(**serializer.validated_data)
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response(
+            {
+                "configured": True,
+                **RetrievalSettingsSerializer(row).data,
+                "reindex_required": invalidated,
+            }
+        )
 
 
 class KnowledgeModuleListAPIView(APIView):
@@ -190,6 +247,7 @@ class EvalRunListAPIView(APIView):
                 "model_name": model_config.model_name,
                 "base_url": model_config.base_url,
             },
+            retrieval_snapshot=_retrieval_snapshot(),
             pos_count=data["pos_count"],
             neg_count=data["neg_count"],
             seed=random.randrange(1, 2**31),

@@ -49,6 +49,8 @@ __all__ = [
     "reset_password",
     "revoke_operator",
     "set_active",
+    "set_assistant_author",
+    "set_model_use",
 ]
 
 DEFAULT_PAGE_SIZE = 20

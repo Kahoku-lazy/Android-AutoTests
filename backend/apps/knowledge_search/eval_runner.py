@@ -12,14 +12,11 @@ import threading
 
 from pathlib import Path
 
-import yaml
-
 from asgiref.sync import sync_to_async
-from django.conf import settings
 
 from utils.logs import backend_log
 
-from . import api, registry
+from . import api
 from .eval_corpus import gold_document_map, sample_chunks
 from .eval_generation import generate_negative_questions, generate_positive_questions
 from .eval_metrics import first_gold_rank, summarize
@@ -27,14 +24,14 @@ from .eval_metrics import first_gold_rank, summarize
 # 局部可选导入：引擎缺失时评测降级失败，模块登记面不受影响。
 try:
     from engines.ae_harness.agents.models import create_model
-    from engines.ae_harness.knowledge.config import INDEX_DIR, load_config
+    from engines.ae_harness.knowledge.config import INDEX_DIR, build_config
     from engines.ae_harness.knowledge.service import KnowledgeRetriever
 except ModuleNotFoundError as exc:  # pragma: no cover - 引擎缺失分支由单测替身覆盖
     if not (exc.name or "").startswith("engines.ae_harness"):
         raise
     create_model = None
     INDEX_DIR = None
-    load_config = None
+    build_config = None
     KnowledgeRetriever = None
 
 # 评测检索条数：覆盖 Recall@5。
@@ -114,7 +111,7 @@ async def _run_async(run, collector: dict) -> dict:
         raise RuntimeError("检索不可用：引擎知识库模块缺失")
     snapshot = run.module_snapshot
     name = snapshot["name"]
-    config = load_config(bases_path=_snapshot_bases_file(run))
+    config = _config_from_snapshot(run)
     retriever = KnowledgeRetriever(config)
     await sync_to_async(api.set_eval_phase)(run.pk, "indexing")
     await retriever.ensure_index(name)
@@ -217,31 +214,44 @@ async def _retrieve(retriever, name: str, question: str, collector: dict) -> lis
     return [hit.as_dict() for hit in result.hits]
 
 
-def _snapshot_bases_file(run) -> Path:
+def _config_from_snapshot(run):
     """
-    由冻结快照派生运行专属库目录 yaml（与 DB 当前登记隔离）。
+    用触发时冻结的检索配置与模块快照组装引擎配置。
 
     Args:
         run: 评测运行。
 
     Returns:
-        yaml 路径。
+        引擎知识库配置。
+
+    Raises:
+        RuntimeError: 快照里没有检索配置。
     """
+    retrieval = (run.model_snapshot or {}).get("retrieval") or {}
+    if not retrieval.get("model_name"):
+        raise RuntimeError("检索不可用：评测触发时没有检索配置")
     snapshot = run.module_snapshot
-    payload = {
-        "defaults": registry.defaults(),
-        snapshot["name"]: {
-            "description": snapshot["description"],
-            "data_dir": snapshot["data_dir"],
-            "enabled": True,
+    return build_config(
+        {
+            "provider": retrieval["provider"],
+            "api_key": retrieval["api_key_env"],
+            "model_name": retrieval["model_name"],
+            "dimensions": retrieval["dimensions"],
         },
-    }
-    target = Path(settings.LOG_DIR) / "knowledge_search" / "eval" / str(run.run_id) / "bases.yaml"
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(
-        yaml.safe_dump(payload, allow_unicode=True, sort_keys=False), encoding="utf-8"
+        [
+            {
+                "name": snapshot["name"],
+                "description": snapshot["description"],
+                "data_dir": snapshot["data_dir"],
+                "enabled": True,
+            }
+        ],
+        top_k=retrieval["top_k"],
+        score_threshold=retrieval["score_threshold"],
+        chunk_size=retrieval["chunk_size"],
+        chunk_overlap=retrieval["chunk_overlap"],
+        index_epoch=retrieval["index_epoch"],
     )
-    return target
 
 
 def _record_usages(collector: dict, run) -> None:

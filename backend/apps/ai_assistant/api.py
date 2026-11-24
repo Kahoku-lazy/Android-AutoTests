@@ -27,6 +27,7 @@ from backend.apps.ai_assistant.services.agent_configs import (
 )
 from backend.apps.ai_assistant.services.assistant_cards import (
     AssistantIdExhaustedError,
+    AssistantInUseError,
     AssistantRevisionConflict,
     AssistantRoleMissingError,
     AvatarRejectedError,
@@ -80,6 +81,7 @@ from backend.apps.ai_assistant.services.sop_workflows import (
 __all__ = [
     "AISopWorkflow",
     "AssistantIdExhaustedError",
+    "AssistantInUseError",
     "AssistantRevisionConflict",
     "publish_assistant",
     "record_eval",
@@ -252,10 +254,10 @@ def can_select_model(user_id: int, model_config_id: int) -> bool:
 
 
 def list_selectable_model_configs(user_id: int):
-    """返回这个人名单内的模型配置。不返回名单外的名称。"""
+    """返回这个人名单内的聊天模型。向量、语音类没有对话入口。"""
     if not user_id:
         return AIModelConfig.objects.none()
-    return list_model_configs().filter(use_grants__user_id=int(user_id)).distinct()
+    return list_model_configs("chat").filter(use_grants__user_id=int(user_id)).distinct()
 
 
 def create_role(

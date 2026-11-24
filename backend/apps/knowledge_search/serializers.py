@@ -32,6 +32,18 @@ class ModulePatchSerializer(serializers.Serializer):
     enabled = serializers.BooleanField(required=False)
 
 
+class RetrievalSettingsSerializer(serializers.Serializer):
+    """检索配置入参与出参。"""
+
+    embedding_model_id = serializers.IntegerField(min_value=1)
+    top_k = serializers.IntegerField(min_value=1)
+    score_threshold = serializers.FloatField(min_value=0, max_value=1)
+    chunk_size = serializers.IntegerField(min_value=1)
+    chunk_overlap = serializers.IntegerField(min_value=1)
+    index_epoch = serializers.IntegerField(read_only=True)
+    reindex_required = serializers.BooleanField(read_only=True)
+
+
 class QuerySerializer(serializers.Serializer):
     """多选提问入参：问题与勾选库名均非空。"""
 

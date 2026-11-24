@@ -367,12 +367,6 @@ TASK_MEDIA_DIR = Path(os.environ.get("TASK_MEDIA_DIR", "").strip() or DATA_DIR /
 EXPORT_DIR = REPO_ROOT / "exports"
 LOG_DIR = REPO_ROOT / "logs"
 
-# 知识库检索：平台库目录 yaml（由 ks_modules 派生，gitignore 覆盖 logs/）。
-KNOWLEDGE_SEARCH_BASES_FILE = Path(
-    os.environ.get("KNOWLEDGE_SEARCH_BASES_FILE", "").strip()
-    or LOG_DIR / "knowledge_search" / "knowledge_bases.yaml"
-)
-
 # Internationalization
 LANGUAGE_CODE = "zh-hans"
 TIME_ZONE = "Asia/Shanghai"

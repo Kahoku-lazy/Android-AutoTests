@@ -70,7 +70,7 @@ Android 自动化测试与智能体平台：**前端只展示，后端只做通�
 ### 2.4 花费、任务与展示闭环
 
 1. 后端下发任务 / 建立会话 → 注入配置与密钥（解密后交给 engines）  
-2. engines 执行 Agent（SOP / 语音等）→ 产生事件与用量（messaging / billing、`model_usage` 等）  
+2. engines 执行 Agent（SOP 等）→ 产生事件与用量（messaging / billing、`model_usage` 等）  
 3. 后端写入 DB（任务事件、用量、费用汇总）  
 4. 前端展示时间线、仪表盘与报告  
 
@@ -79,7 +79,7 @@ Android 自动化测试与智能体平台：**前端只展示，后端只做通�
 ### 2.5 AI 实现时的优先顺序
 
 1. 改展示/API/表结构 → 读本文 §3–§8 + 对应 App  
-2. 改 Agent / 工具 / 提示词 / RAG / 语音 → 根 `AGENTS.md` §平台架构 + `engines/**/AGENTS.md` + style rules  
+2. 改 Agent / 工具 / 提示词 / RAG → 根 `AGENTS.md` §平台架构 + `engines/AGENTS.md`（索引）+ `.agents/rules/engines-code-style.md`  
 3. 不要把「本该是 tool/skill」的逻辑写进 DRF View 或前端
 
 ---
@@ -93,7 +93,7 @@ Android 自动化测试与智能体平台：**前端只展示，后端只做通�
                     Daphne :8766（ASGI）
                     backend/config/asgi.py: ProtocolTypeRouter
                        ├─ http      → Django（中间件 → URLconf → DRF）
-                       └─ websocket → /ws/knowledge-assistant/
+                       └─ websocket → （当前 0 生产路由，websocket_urlpatterns 为空）
                               │
         ┌─────────────────────┼──────────────────────────┐
         ▼                     ▼                          ▼
@@ -127,7 +127,7 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 
 ### 3.3 Channels
 
-仅生产路由 `/ws/knowledge-assistant/`（知识库助手，`?mode=voice|text`）。握手 `?token=` 调 `verify_token`，失败 4401；非法 `mode` 4400。通道只承载语音音频/转写/打断/播放进度与文字提问；**任务进度仍走 HTTP 轮询**。其它模块不得复用该通道做任务/设备/写操作。
+当前**没有** WebSocket 生产路由：`backend/gateway/routing.py` 的 `websocket_urlpatterns` 是空列表。知识助手（实时语音 + 文字问答）已随 `retire-engines-agents` 整体下线，平台不再有语音通道；任务进度与列表一律走 HTTP 轮询。`backend/config/asgi.py` 的 `ProtocolTypeRouter` 保留 websocket 分支与空清单，只为将来登记 consumer 时不必改 ASGI 入口；新增 WS 前先走 OpenSpec 变更。
 
 ---
 
@@ -228,13 +228,13 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 | task-list | `/tasks`… | `/api/tasks/*` |
 | case-manager | `/cases`… | `/api/cases/*` |
 | report-generator | `/reports` | `/api/reports/`（台账）；正文走 `/api/ai/agent-reports/*` 与对话栏日志 ticket |
-| knowledge-assistant | `/knowledge-assistant` | HTTP + `/ws/knowledge-assistant/` |
+| knowledge-assistant | `/knowledge-assistant` | HTTP（知识助手对话已下线，无 WS 通道） |
 
 - 侧栏：主区 / AI 功能 / 数据 / AI 任务  
 - 请求：模块 `api.ts` → `shared/api-client.ts`；401 单飞刷新  
 - 状态：Pinia 按需（页面流退役后当前无模块 store）；token 在 localStorage  
 - 设计令牌：`shared/styles/tokens.css`  
-- 实时性：任务轮询；唯一 WS 为知识库语音  
+- 实时性：无 WebSocket / SSE，任务进度与列表全走 HTTP 轮询
 
 ---
 

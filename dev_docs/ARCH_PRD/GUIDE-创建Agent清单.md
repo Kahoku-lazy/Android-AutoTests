@@ -1,7 +1,7 @@
 # GUIDE — 新增一项 Agent 能力
 
 > 目标：能力进 `ae_harness`，角色与流程进 `backend_bridge`。不要把逻辑写进 Django View 或前端。
-> 必读：根 [`AGENTS.md`](../../AGENTS.md)「平台架构定位」· [`engines/AGENTS.md`](../../engines/AGENTS.md) · [`engines/ae_harness/AGENTS.md`](../../engines/ae_harness/AGENTS.md) · [`engines/backend_bridge/AGENTS.md`](../../engines/backend_bridge/AGENTS.md)
+> 必读：根 [`AGENTS.md`](../../AGENTS.md)「平台架构定位」· [`engines/AGENTS.md`](../../engines/AGENTS.md) · [`ae_harness_overview.md`](../../.agents/docs/engines/ae_harness/ae_harness_overview.md) · [`backend_bridge_role_assembly.md`](../../.agents/docs/engines/backend_bridge/backend_bridge_role_assembly.md)
 
 ## 0. 先判定落点
 

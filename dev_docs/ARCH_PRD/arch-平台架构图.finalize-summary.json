@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "D:\\Github\\Android-AutoTests\\dev_docs\\ARCH_PRD\\ARCH-平台架构图.spec.json",
+    "sha256": "dcfbd93eff6d7dcff2061a049121a1761ae5ca8b4ef13ebc5085f3d74d0d3d68",
+    "bytes": 5630
+  },
+  "artifact": {
+    "path": "D:\\Github\\Android-AutoTests\\dev_docs\\ARCH_PRD\\ARCH-平台架构图.html",
+    "sha256": "72f817df5b93b2df0b2e09bc37f811e2c1eca38dc01f2f9e82d6fe8d7db391e6",
+    "bytes": 830369
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "D:\\Github\\Android-AutoTests\\dev_docs\\ARCH_PRD\\arch-平台架构图.finalize.json",
+    "summaryReceipt": "D:\\Github\\Android-AutoTests\\dev_docs\\ARCH_PRD\\arch-平台架构图.finalize-summary.json",
+    "browserCheckReceipt": "D:\\Github\\Android-AutoTests\\dev_docs\\ARCH_PRD\\arch-平台架构图.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-20T02:04:09.205Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 6439,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  }
+}

@@ -1,14 +1,11 @@
-"""平台服务注册表与启动开关：`run.py` 系列命令的唯一配置来源。
-
-本模块的业务功能如下：
-1. ServiceSpec: 一个服务一张卡（端口 / 日志 / 工作目录 / 就绪超时 / 附加环境变量 / 启动命令）。
-2. build_registry: 按当前环境变量惰性构造服务注册表，端口等取值只在这里读一次。
-3. env_flag: 环境变量开关的统一解析口径（true 集 / false 集 / 其余取默认）。
-4. base_env: 启动子进程时补充的平台默认环境变量（.env 已由入口加载）。
-5. stop_drain_timeout: 停机排空的最长等待秒数。
-
-依赖：仅标准库。被 `utils.service_ctl.{proc,services,commands}` 使用；
-测试归属 `tests/arch/unit/test_platform_config.py`。
+"""
+模块功能：➡️ 平台服务注册表与启动开关：run.py 系列命令的唯一配置来源 🏁
+Python 调试：➡️ python -m utils.service_ctl.config 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/arch/unit/test_platform_config.py: ServiceSpec / build_registry / env_flag 口径
+2. tests/arch/unit/test_platform_services.py: 注册表被启停编排消费
+🏁
 """
 
 from __future__ import annotations

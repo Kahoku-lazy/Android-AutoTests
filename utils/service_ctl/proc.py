@@ -1,13 +1,10 @@
-"""进程与端口工具：查监听端口、判断存活、优雅 / 强制结束、后台拉起、HTTP 就绪等待。
-
-本模块的业务功能如下：
-1. find_listening_pid / pid_alive: 按端口找监听 PID，判断 PID 是否还活着（Windows 用 netstat/tasklist）。
-2. kill / graceful_kill / kill_port: 先优雅后强制的结束流程，杀不到属预期竞态。
-3. wait_http: 轮询 HTTP 地址直到可访问或超时。
-4. make_env / spawn: 组装子进程环境并后台拉起，输出追加到 `logs/<log_name>`。
-
-依赖：仅标准库 + `utils.service_ctl.config`（ROOT / LOG_DIR / IS_WIN / base_env）；
-测试归属 `tests/arch/unit/test_platform_proc.py`。
+"""
+模块功能：➡️ 进程与端口工具：查监听端口、判断存活、优雅/强制结束、后台拉起、HTTP 就绪等待 🏁
+Python 调试：➡️ python -m utils.service_ctl.proc 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/arch/unit/test_platform_proc.py: 端口查找、存活判断、结束流程
+🏁
 """
 
 from __future__ import annotations

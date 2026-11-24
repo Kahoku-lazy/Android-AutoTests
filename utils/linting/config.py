@@ -1,4 +1,11 @@
-"""读取并校验仓库根的 .linting：不认识的键一律报错，不静默忽略。"""
+"""
+模块功能：➡️ 读取并校验仓库根的 .linting：不认识的键一律报错，不静默忽略 🏁
+Python 调试：➡️ python -m utils.linting.config 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无
+🏁
+"""
 
 from __future__ import annotations
 

@@ -1,10 +1,10 @@
-"""daphne 开发热重载入口 — 用 Django autoreload 包装 daphne（daphne 本身无 --reload）。
-
-由 ``run.py start backend`` 调用；监控项目 .py 文件变化并自动重启进程，
-避免改后端代码后手动 ``run.py restart backend``。
-
-用法（等价 ``python -m daphne ...``，额外带热重载）：
-    python run_daphne.py -p 8766 -b 0.0.0.0 backend.config.asgi:application
+"""
+模块功能：➡️ daphne 开发热重载入口：用 Django autoreload 包装 daphne 🏁
+Python 调试：➡️ python -m run_daphne -p 8766 -b 0.0.0.0 backend.config.asgi:application 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/arch/unit/test_platform_config.py: 启动命令走 run_daphne.py + asgi 应用
+🏁
 """
 
 import os

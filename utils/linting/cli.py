@@ -1,4 +1,11 @@
-"""命令行入口：检查、导出，以及两个只用于审计的覆盖开关。"""
+"""
+模块功能：➡️ linting 命令行：检查、导出，以及两个只用于审计的覆盖开关 🏁
+Python 调试：➡️ python -m utils.linting.cli 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无
+🏁
+"""
 
 from __future__ import annotations
 

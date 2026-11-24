@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/workflow/cancel.py 🏁
 模块功能：➡️ 平台运行取消：按任务号登记取消令牌，供后端在半途置位 🏁
 Python 调试：➡️ python -m engines.backend_bridge.workflow.cancel 🏁
-时间：➡️ 2026-11-15 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-15 🏁
@@ -19,7 +19,7 @@ Python 调试：➡️ python -m engines.backend_bridge.workflow.cancel 🏁
 2. engines.backend_bridge.workflow.bound_sop: 调用方，把 controls 交给 run_sop。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_sop_cancel.py: 登记、置位、清理与中间件装配
+1. 暂无
 🏁
 """
 

@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/knowledge/__init__.py 🏁
 模块功能：➡️ 独立知识库模块的包入口：只导出检索工具装配 🏁
 Python 调试：➡️ python -m engines.ae_harness.knowledge 🏁
-时间：➡️ 2026-11-15 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-15 🏁
@@ -16,7 +16,7 @@ Python 调试：➡️ python -m engines.ae_harness.knowledge 🏁
 1. engines.ae_harness.knowledge.tool: 工具实现。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_knowledge_tool.py: 工具返回契约
+1. 暂无
 🏁
 """
 

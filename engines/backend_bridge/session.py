@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/session.py 🏁
 模块功能：➡️ 平台 UI 执行会话：同一对话连接复用一个角色，逐轮出报告 🏁
 Python 调试：➡️ python -m engines.backend_bridge.session 🏁
-时间：➡️ 2026-11-14 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-14 🏁
@@ -19,7 +19,7 @@ Python 调试：➡️ python -m engines.backend_bridge.session 🏁
 3. engines.ae_harness.event: 导入记录器、渲染器与用量汇总。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_session.py: 复用、换设备、逐轮报告
+1. 暂无
 🏁
 """
 

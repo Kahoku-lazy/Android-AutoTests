@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/knowledge/probe.py 🏁
 模块功能：➡️ 知识库探针：建索引或打印未经改写的检索命中，不创建智能体 🏁
 Python 调试：➡️ python -m engines.ae_harness.knowledge.probe retrieve product_manuals "指示灯" 🏁
-时间：➡️ 2026-11-15 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-15 🏁
@@ -16,7 +16,7 @@ Python 调试：➡️ python -m engines.ae_harness.knowledge.probe retrieve pro
 1. engines.ae_harness.knowledge.service: KnowledgeRetriever。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_knowledge_probe.py: 退出码区分无命中与配置错误
+1. 暂无
 🏁
 """
 

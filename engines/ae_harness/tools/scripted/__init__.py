@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/tools/scripted/__init__.py 🏁
 模块功能：➡️ 按名字与入参形状构造一个只回放文本的假工具 🏁
 Python 调试：➡️ python -m engines.ae_harness.tools.scripted 🏁
-时间：➡️ 2026-11-19 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-19 🏁
@@ -15,7 +15,7 @@ Python 调试：➡️ python -m engines.ae_harness.tools.scripted 🏁
 1. 无本地依赖：只依赖 agentscope 的工具类型。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_scripted_tool.py: 工具名、入参形状与返回正文
+1. 暂无
 🏁
 """
 

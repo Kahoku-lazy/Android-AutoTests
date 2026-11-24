@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/models/catalog.py 🏁
 模块功能：➡️ 厂商、密钥环境变量名与默认查询地址的对应关系 🏁
 Python 调试：➡️ python -m engines.backend_bridge.models.catalog 🏁
-时间：➡️ 2026-11-16 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-16 🏁
@@ -17,7 +17,7 @@ Python 调试：➡️ python -m engines.backend_bridge.models.catalog 🏁
 1. engines.backend_bridge.models.discover: 按本表发查询请求。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_model_discover.py: 厂商与密钥必须成对。
+1. 暂无
 🏁
 """
 

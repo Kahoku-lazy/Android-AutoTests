@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/event_log.py 🏁
 模块功能：➡️ 把平台一轮对话的过程写进前端事件面板读的那份日志（全量颗粒度） 🏁
 Python 调试：➡️ python -m engines.backend_bridge.event_log 🏁
-时间：➡️ 2026-11-14 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.1.0 🏁
 修改时间: ➡️ 2026-11-14 🏁
@@ -18,7 +18,7 @@ Python 调试：➡️ python -m engines.backend_bridge.event_log 🏁
 2. 分段标记与历史引擎侧实现保持一致；引擎侧已退役（变更 retire-engines-agents）。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_event_log.py: 分段标记一致、全量内容、增量折叠
+1. 暂无
 🏁
 """
 

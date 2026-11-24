@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/workflow/goal.py 🏁
 模块功能：➡️ 把执行者与验收者跑成一次目标流水线，并产出记录与报告 🏁
 Python 调试：➡️ python -m engines.ae_harness.workflow.goal 🏁
-时间：➡️ 2026-11-19 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-19 🏁
@@ -18,7 +18,7 @@ Python 调试：➡️ python -m engines.ae_harness.workflow.goal 🏁
 3. engines.ae_harness.event: 导入记录器与报告渲染器。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_goal_pipeline.py: 退回一次后通过与用尽次数
+1. 暂无
 🏁
 """
 

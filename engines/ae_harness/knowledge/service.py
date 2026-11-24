@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/knowledge/service.py 🏁
 模块功能：➡️ 按库懒建索引并返回未经改写的检索命中，失败只降级不抛异常 🏁
 Python 调试：➡️ python -m engines.ae_harness.knowledge.service 🏁
-时间：➡️ 2026-11-15 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-18 🏁
@@ -21,7 +21,7 @@ Python 调试：➡️ python -m engines.ae_harness.knowledge.service 🏁
 4. engines.ae_harness.knowledge.usage: 嵌入用量记录代理与事件打标。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_knowledge_retrieve.py: 命中字段、无命中与不可用
+1. 暂无
 🏁
 """
 

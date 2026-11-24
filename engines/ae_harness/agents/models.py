@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/agents/models.py 🏁
 模块功能：➡️ 校验一条模型配置并创建聊天模型 🏁
 Python 调试：➡️ python -m engines.ae_harness.agents.models 🏁
-时间：➡️ 2026-11-13 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.3.0 🏁
 修改时间: ➡️ 2026-11-19 🏁
@@ -23,10 +23,7 @@ Python 调试：➡️ python -m engines.ae_harness.agents.models 🏁
 1. 无本地依赖：只用标准库、dotenv 与 agentscope。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_openai_message_name.py: openai 消息名过滤
-2. tests/engines/ae_harness/unit/test_openai_tool_choice.py: 思考模式拒绝强制选工具时的重发
-3. tests/engines/ae_harness/unit/test_model_max_retries.py: 模型层重试默认 1 与显式配置透传
-4. tests/engines/ae_harness/unit/test_openai_disable_thinking.py: 关思考扩展点形状与普通 400 不重发
+1. 暂无
 🏁
 """
 

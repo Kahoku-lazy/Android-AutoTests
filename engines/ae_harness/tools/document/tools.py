@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/tools/document/tools.py 🏁
 模块功能: ➡️ 只读文档工具：读取本次运行绑定的需求正文 🏁
 Python 调试: ➡️ python -m engines.ae_harness.tools.document.tools 🏁
-时间: ➡️ 2026-11-18 🏁
+时间: ➡️ 2026-11-24 🏁
 作者: ➡️ kahoku 🏁
 版本: ➡️ 1.0.1 🏁
 修改时间: ➡️ 2026-11-19 🏁
@@ -16,8 +16,7 @@ Python 调试: ➡️ python -m engines.ae_harness.tools.document.tools 🏁
 1. agentscope.tool: 导入 FunctionTool。
 🏁
 测试: ➡️
-1. tests/engines/backend_bridge/unit/test_tool_selection.py: 需求拆解不挂设备工具
-2. tests/engines/ae_harness/unit/test_tool_permission.py: 权限检查返回放行决策实例
+1. 暂无
 🏁
 """
 

@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/result.py 🏁
 模块功能：➡️ 平台一次运行的产物与用量结果对象 🏁
 Python 调试：➡️ python -m engines.backend_bridge.result 🏁
-时间：➡️ 2026-11-14 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-14 🏁
@@ -16,7 +16,7 @@ Python 调试：➡️ python -m engines.backend_bridge.result 🏁
 1. 无本地依赖：只依赖标准库 dataclasses 与 pathlib。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_run.py: 字段与取值
+1. 暂无
 🏁
 """
 

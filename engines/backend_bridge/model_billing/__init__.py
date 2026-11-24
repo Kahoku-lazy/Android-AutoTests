@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/model_billing/__init__.py 🏁
 模块功能：➡️ 平台侧模型费用计算子包：对外只导出 DeepSeekBilling 🏁
 Python 调试：➡️ python -m engines.backend_bridge.model_billing 🏁
-时间：➡️ 2026-11-15 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-15 🏁
@@ -18,7 +18,7 @@ Python 调试：➡️ python -m engines.backend_bridge.model_billing 🏁
 1. engines.backend_bridge.model_billing.billing: 导入 DeepSeekBilling，唯一公开入口。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_model_billing.py: 8 位小数、未知模型免费、快照字段、高峰倍率
+1. 暂无
 🏁
 """
 

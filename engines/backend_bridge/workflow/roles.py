@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/workflow/roles.py 🏁
 模块功能：➡️ 一次 SOP 运行用到的两个角色 🏁
 Python 调试：➡️ python -m engines.backend_bridge.workflow.roles 🏁
-时间：➡️ 2026-11-14 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-14 🏁
@@ -18,7 +18,7 @@ Python 调试：➡️ python -m engines.backend_bridge.workflow.roles 🏁
 3. engines.backend_bridge.workflow.bound_roles: 按名片绑定参数填这两个角色。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_bound_roles.py: 验收者只读、共用观察者
+1. 暂无
 🏁
 """
 

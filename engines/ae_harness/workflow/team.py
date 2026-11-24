@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/workflow/team.py 🏁
 模块功能：➡️ 把队长与成员跑成一次团队流水线，并产出记录与报告 🏁
 Python 调试：➡️ python -m engines.ae_harness.workflow.team 🏁
-时间：➡️ 2026-11-19 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-19 🏁
@@ -19,7 +19,7 @@ Python 调试：➡️ python -m engines.ae_harness.workflow.team 🏁
 3. engines.ae_harness.event: 导入记录器与报告渲染器。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_team_pipeline.py: 成员被分派与重名被拒绝
+1. 暂无
 🏁
 """
 

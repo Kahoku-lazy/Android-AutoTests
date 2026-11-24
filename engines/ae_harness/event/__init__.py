@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/event/__init__.py 🏁
 模块功能：➡️ 运行观测门面：记录器、报告渲染器与用量记录 🏁
 Python 调试：➡️ python -m engines.ae_harness.event 🏁
-时间：➡️ 2026-11-13 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.1.0 🏁
 修改时间: ➡️ 2026-11-13 🏁
@@ -19,8 +19,7 @@ Python 调试：➡️ python -m engines.ae_harness.event 🏁
 3. engines.ae_harness.event.usage: 用量记录形状与汇总。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/test_usage.py: 用量记录形状与汇总口径
-2. 见 engines.ae_harness.assistant.agent_executor
+1. 见 engines.ae_harness.assistant.agent_executor
 🏁
 """
 

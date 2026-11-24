@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/knowledge/tool.py 🏁
 模块功能：➡️ 把知识库检索包成只读工具，返回结构化命中 JSON 🏁
 Python 调试：➡️ python -m engines.ae_harness.knowledge.tool 🏁
-时间：➡️ 2026-11-15 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-15 🏁
@@ -17,7 +17,7 @@ Python 调试：➡️ python -m engines.ae_harness.knowledge.tool 🏁
 1. engines.ae_harness.knowledge.service: KnowledgeRetriever 与 KnowledgeHit。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_knowledge_tool.py: 三种返回文案与只读标记
+1. 暂无
 🏁
 """
 

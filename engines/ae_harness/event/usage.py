@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/event/usage.py 🏁
 模块功能：➡️ 一次模型调用的用量记录形状与按密钥归组：标签 + 轮次 + 时间 + 四类 token 🏁
 Python 调试：➡️ python -m engines.ae_harness.event.usage 🏁
-时间：➡️ 2026-11-13 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 2.0.0 🏁
 修改时间: ➡️ 2026-11-14 🏁
@@ -17,7 +17,7 @@ Python 调试：➡️ python -m engines.ae_harness.event.usage 🏁
 1. 无本地依赖：只依赖标准库 dataclasses，不导入同包其它模块。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_usage.py: 形状、按密钥归组、缓存不互加、空标签不丢弃
+1. 暂无
 🏁
 """
 

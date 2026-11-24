@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/workflow/sop_ui.py 🏁
 模块功能：➡️ 一次 SOP 运行的结果形状：每步结论与整体用量 🏁
 Python 调试：➡️ python -m engines.backend_bridge.workflow.sop_ui 🏁
-时间：➡️ 2026-11-14 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-14 🏁
@@ -17,7 +17,7 @@ Python 调试：➡️ python -m engines.backend_bridge.workflow.sop_ui 🏁
 1. engines.backend_bridge.workflow.bound_sop: 复用这两个结果类型整理一次运行。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_bound_sop.py: 结果字段与用量汇总
+1. 暂无
 🏁
 """
 

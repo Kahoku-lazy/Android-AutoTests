@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/middleware/__init__.py 🏁
 模块功能：➡️ 中间件门面：只读观测、模型调用重试、运行控制 🏁
 Python 调试：➡️ python -m engines.ae_harness.middleware 🏁
-时间：➡️ 2026-11-14 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 2.0.0 🏁
 修改时间: ➡️ 2026-11-14 🏁
@@ -19,9 +19,7 @@ Python 调试：➡️ python -m engines.ae_harness.middleware 🏁
 3. engines.ae_harness.middleware.control: 预算与取消实现。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_observer.py
-2. tests/engines/ae_harness/unit/test_retry_middleware.py
-3. tests/engines/ae_harness/unit/test_run_control.py
+1. 暂无
 🏁
 """
 

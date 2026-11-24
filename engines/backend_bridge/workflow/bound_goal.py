@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/workflow/bound_goal.py 🏁
 模块功能：➡️ 用名片绑定参数跑一次目标流水线 🏁
 Python 调试：➡️ python -m engines.backend_bridge.workflow.bound_goal 🏁
-时间：➡️ 2026-11-19 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-19 🏁
@@ -19,7 +19,7 @@ Python 调试：➡️ python -m engines.backend_bridge.workflow.bound_goal 🏁
 4. engines.backend_bridge.reports: 报告路径唯一来源。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_bound_goal.py: 绑定透传与验收结论
+1. 暂无
 🏁
 """
 

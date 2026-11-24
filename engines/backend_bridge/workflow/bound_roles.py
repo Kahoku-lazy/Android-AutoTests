@@ -3,7 +3,7 @@
 路径: ➡️ engines/backend_bridge/workflow/bound_roles.py 🏁
 模块功能：➡️ 按名片绑定参数装配一对 SOP 角色 🏁
 Python 调试：➡️ python -m engines.backend_bridge.workflow.bound_roles 🏁
-时间：➡️ 2026-11-17 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-17 🏁
@@ -20,7 +20,7 @@ Python 调试：➡️ python -m engines.backend_bridge.workflow.bound_roles �
 4. engines.ae_harness.middleware: 导入 ObservationMiddleware，两角色共用一个实例。
 🏁
 测试：➡️
-1. tests/engines/backend_bridge/unit/test_bound_roles.py: 不传短名、验收侧丢掉写工具、未知工具名拒绝
+1. 暂无
 🏁
 """
 

@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/knowledge/config.py 🏁
 模块功能：➡️ 校验调用方传入的向量模型参数、库列表与检索参数 🏁
 Python 调试：➡️ python -m engines.ae_harness.knowledge.config 🏁
-时间：➡️ 2026-11-15 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-15 🏁
@@ -19,7 +19,7 @@ Python 调试：➡️ python -m engines.ae_harness.knowledge.config 🏁
 1. 无 Harness 内依赖：只依赖 dotenv 与标准库，保证本模块可整目录删除。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_knowledge_config.py: 向量模型字段、库目录隔离与密钥取值
+1. 暂无
 🏁
 """
 

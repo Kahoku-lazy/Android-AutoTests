@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/knowledge/usage.py 🏁
 模块功能：➡️ 嵌入用量记录代理：透传模型调用并导出 token 用量事件 🏁
 Python 调试：➡️ python -m engines.ae_harness.knowledge.usage 🏁
-时间：➡️ 2026-11-18 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-18 🏁
@@ -17,7 +17,7 @@ Python 调试：➡️ python -m engines.ae_harness.knowledge.usage 🏁
 1. 无 Harness 内依赖：只依赖 agentscope 与标准库，保证本模块可整目录删除。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_knowledge_usage.py: 代理透传、事件字段、零 token 不记与打标
+1. 暂无
 🏁
 """
 

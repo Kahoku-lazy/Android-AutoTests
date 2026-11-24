@@ -3,7 +3,7 @@
 路径: ➡️ engines/ae_harness/knowledge/models.py 🏁
 模块功能：➡️ 按知识库自带配置创建向量模型，并交出用的是哪把密钥 🏁
 Python 调试：➡️ python -m engines.ae_harness.knowledge.models 🏁
-时间：➡️ 2026-11-15 🏁
+时间：➡️ 2026-11-24 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
 修改时间: ➡️ 2026-11-15 🏁
@@ -16,7 +16,7 @@ Python 调试：➡️ python -m engines.ae_harness.knowledge.models 🏁
 1. engines.ae_harness.knowledge.config: 提供向量模型配置与密钥取值。
 🏁
 测试：➡️
-1. tests/engines/ae_harness/unit/test_knowledge_config.py: 缺密钥时报可读错误且不泄露明文
+1. 暂无
 🏁
 """
 

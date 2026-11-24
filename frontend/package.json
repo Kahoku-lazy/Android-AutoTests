@@ -46,7 +46,7 @@
     "@eslint/js": "^10.0.1",
     "@types/js-yaml": "^4.0.9",
     "@typescript-eslint/eslint-plugin": "^8.72.2",
-    "@typescript-eslint/parser": "^8.72.2",
+    "@typescript-eslint/parser": "^8.73.0",
     "@vitejs/plugin-vue": "^6.0.11",
     "@vitest/ui": "^4.1.12",
     "@vue/test-utils": "^2.4.11",

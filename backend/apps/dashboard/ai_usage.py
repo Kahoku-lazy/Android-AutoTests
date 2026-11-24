@@ -1,9 +1,10 @@
-"""Dashboard AI 用量聚合 — 只读小时用量表。
-
-token、缓存命中和费用按平台全部小时用量合计：不限查看者的智能体可见范围，
-`agent_id = 0` 的自建运行也计入，平台费用才不会被少算。
-任务数、任务结果与活动流只计工作流任务（assistant_sop）。
-纯只读聚合，无任何写操作。
+"""
+模块功能：➡️ Dashboard AI 用量聚合 — 只读小时用量表 🏁
+Python 调试：➡️ python -m backend.apps.dashboard.ai_usage 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/dashboard/api/test_dashboard_agent_usage.py: 覆盖本模块
+🏁
 """
 
 from datetime import timedelta

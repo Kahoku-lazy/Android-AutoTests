@@ -1,6 +1,10 @@
-"""端口来源登记 —— 配置解析 + 自定义行双轨合并成日志来源列表。
-
-配置解析不碰监听、不碰文件；自定义行经 `api.py` 只读取得，不写库。
+"""
+模块功能：➡️ 端口来源登记 —— 配置解析 + 自定义行双轨合并成日志来源列表 🏁
+Python 调试：➡️ python -m backend.apps.serial_log.sources 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 serial_log 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 from __future__ import annotations

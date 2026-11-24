@@ -1,12 +1,11 @@
-"""公共常量 — 跨模块共享的状态枚举和常量定义。
-
-所有模块的状态字符串统一使用此处的 Enum，避免硬编码散布各处。
-
-使用方式:
-    from backend.models.constants import DeviceStatus
-    device.status = DeviceStatus.ONLINE
-    if device.status == DeviceStatus.BUSY:
-        ...
+"""
+模块功能：➡️ 公共常量 — 跨模块共享的状态枚举和常量定义 🏁
+Python 调试：➡️ python -m backend.models.constants 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/bug_ticket/api/test_bug_tickets.py: 覆盖本模块
+2. tests/report/integration/test_report_envelope.py: 同上
+🏁
 """
 
 from enum import StrEnum

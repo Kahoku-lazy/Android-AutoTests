@@ -1,9 +1,10 @@
 """
-python -m 调试路径: backend.apps.ai_assistant.services.role_id
-
-本模块的业务功能如下：
-1. generate_role_id: 生成一个「当天日期 + 3 位随机字符」的角色短标识。
-2. generate_unique_role_id: 在已占用集合之外生成一个未占用的短标识。
+模块功能：➡️ 生成角色 ID：随机生成并按库内唯一性查重 🏁
+Python 调试：➡️ python -m backend.apps.ai_assistant.services.role_id 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 ai_assistant 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 from __future__ import annotations

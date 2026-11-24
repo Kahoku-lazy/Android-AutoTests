@@ -1,4 +1,12 @@
-"""通用用户工具 — 跨 App 可 import 的共享能力（shared 层）。"""
+"""
+模块功能：➡️ 通用用户工具 — 跨 App 可 import 的共享能力（shared 层） 🏁
+Python 调试：➡️ python -m backend.shared.users 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/ai_assistant/api/test_assistants.py: 覆盖本模块
+2. tests/ai_assistant/api/test_model_grant.py: 同上
+🏁
+"""
 
 import logging
 

@@ -1,4 +1,11 @@
-"""把 task_media.thumb_b64 存量迁到本地 WebP 文件。可重复执行。"""
+"""
+模块功能：➡️ 把 task_media.thumb_b64 存量迁到本地 WebP 文件。可重复执行 🏁
+Python 调试：➡️ python -m backend.apps.task_list.management.commands.migrate_task_media_to_disk 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（管理命令，无自动化用例）
+🏁
+"""
 
 import base64
 

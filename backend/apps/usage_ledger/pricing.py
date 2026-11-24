@@ -1,7 +1,10 @@
-"""可配置的模型价目表与费用计算。
-
-公式只有一条：未命中、缓存、输出、字符分别乘单价，再乘倍率，再折成人民币。
-单价、倍率、门槛、汇率与模型映射都在 rates.py，更换它们不改本公式。
+"""
+模块功能：➡️ 可配置的模型价目表与费用计算 🏁
+Python 调试：➡️ python -m backend.apps.usage_ledger.pricing 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 usage_ledger 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 from __future__ import annotations

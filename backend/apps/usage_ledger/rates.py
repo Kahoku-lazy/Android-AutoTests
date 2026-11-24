@@ -1,4 +1,11 @@
-"""按模型名索引的计价基数。换单价只改本表，不改公式。"""
+"""
+模块功能：➡️ 按模型名索引的计价基数。换单价只改本表，不改公式 🏁
+Python 调试：➡️ python -m backend.apps.usage_ledger.rates 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 usage_ledger 的功能用例间接覆盖，未直接 import 本模块）
+🏁
+"""
 
 from __future__ import annotations
 

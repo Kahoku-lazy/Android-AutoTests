@@ -1,7 +1,10 @@
-"""任务装配：设备串兜底解析。
-
-模型与工具包全部由 `engines.backend_bridge` 装配，本模块不再读数据库里的
-模型配置、不再构造 `ModelConfig`，也不再做 provider / 密钥校验。
+"""
+模块功能：➡️ 任务装配：设备串兜底解析 🏁
+Python 调试：➡️ python -m backend.apps.task_list.engine_adapter 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 task_list 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 from __future__ import annotations

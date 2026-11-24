@@ -1,12 +1,10 @@
-"""任务费用读取（元）。本模块只读，不重算。
-
-价目口径：`engines/agents/messaging/billing.py::DeepSeekBilling` 与平台侧副本
-`engines/backend_bridge/model_billing/billing.py::DeepSeekBilling` 逐项对拍，两份结果一致。
-任务路径由 `fold.py` 算价 → `TaskEventSink` 写事件 → `api.rollup_task_cost` 回写任务；
-平台账本路径由 `usage_ledger.pricing` 用 backend_bridge 副本算价。
-
-业务侧（任务列表 / 任务详情 / 任务报告 / 仪表盘）统一读这一列，避免"再算一遍"
-导致同一任务在不同页面出现两个数。
+"""
+模块功能：➡️ 任务费用读取（元）。本模块只读，不重算 🏁
+Python 调试：➡️ python -m backend.apps.task_list.task_cost 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 task_list 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 from __future__ import annotations

@@ -1,7 +1,10 @@
-"""合成评测集出题：chat 模型按块生成正题与负样本，逐调用收集用量。
-
-不造 Agent；模型由运行器经 create_model 传入（stream=False）。
-引擎 / agentscope import 在函数内，引擎缺失时本模块仍可导入。
+"""
+模块功能：➡️ 合成评测集出题：chat 模型按块生成正题与负样本，逐调用收集用量 🏁
+Python 调试：➡️ python -m backend.apps.knowledge_search.eval_generation 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 knowledge_search 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 from __future__ import annotations

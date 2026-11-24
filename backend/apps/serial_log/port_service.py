@@ -1,17 +1,10 @@
-"""无线端口编排层 —— 把「库里的监听开关」落成「引擎层真正在监听的端口」，并汇总页面数据。
-
-边界：本模块不碰 ORM（写库一律经 `api.py`）、不碰 socket 与文件句柄（在引擎层
-`engines/uart_log`），只做四件事：
-
-1. `reconcile()`：读开关状态 → 逐端口启停采集（幂等；平台启动与接口访问都调它）；
-2. `set_enabled()`：写开关 + 立即生效（关闭即释放端口）；
-3. `create_port()` / `update_port()` / `delete_port()`：自定义端口增删改，
-   **单端口增量生效**，不重启其它端口；
-4. 页面只读数据：端口列表（含运行时监听状态、来源、本机监听地址与日志文件大小）、
-   当前日志文件尾部行。
-
-开关语义（见 `device-log-port-console`）：**无记录 = 开启**；关闭的端口 MUST NOT 被
-只读查询或 AI 任务顺手打开。端口登记双轨制：config 行真相源在配置，custom 行在库。
+"""
+模块功能：➡️ 无线端口编排层 —— 把「库里的监听开关」落成「引擎层真正在监听的端口」，并汇总页面数据 🏁
+Python 调试：➡️ python -m backend.apps.serial_log.port_service 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（经 serial_log 的功能用例间接覆盖，未直接 import 本模块）
+🏁
 """
 
 from __future__ import annotations

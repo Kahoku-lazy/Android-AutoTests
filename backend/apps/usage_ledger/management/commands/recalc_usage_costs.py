@@ -1,4 +1,11 @@
-"""管理命令：从账本表读 token 用量，按当前价目重算并回写费用。"""
+"""
+模块功能：➡️ 管理命令：从账本表读 token 用量，按当前价目重算并回写费用 🏁
+Python 调试：➡️ python -m backend.apps.usage_ledger.management.commands.recalc_usage_costs 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 暂无（管理命令，无自动化用例）
+🏁
+"""
 
 from __future__ import annotations
 

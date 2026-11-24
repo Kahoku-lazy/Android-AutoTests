@@ -1,0 +1,186 @@
+"""数据库前置检查与连接清理：启动后端前确认库可用，停机后清理空闲连接。
+
+本模块的业务功能如下：
+1. DbConfig.from_env: 连接参数的唯一真相源（引擎 / 主机 / 端口 / 账号 / 密码 / 库名 / 服务名）。
+2. reachable: 用真实连接验证网络 + 账号 + 库名；sqlite 直接视为可用。
+3. ensure: 启动前编排——可达即通过，本机库可尝试拉起服务，远程库只报错。
+4. status_line: `status` 命令里的数据库描述行，永不抛异常。
+5. start_local_service / elevation_hint: 按平台拉起本机数据库服务，并给出提权命令。
+6. cleanup_idle_connections: Windows 强杀 Daphne 后清理孤儿 Sleep 连接。
+
+依赖：标准库 + MySQLdb（函数内延迟 import，sqlite 环境不加载）。
+测试归属 `tests/arch/unit/test_run_db_preflight.py`。
+"""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+
+from dataclasses import dataclass
+
+from .config import IS_WIN
+
+DB_LOOPBACK = {"127.0.0.1", "localhost", "::1"}
+CONNECT_TIMEOUT_SECONDS = 3
+SERVICE_START_TIMEOUT_SECONDS = 60
+
+
+@dataclass(frozen=True)
+class DbConfig:
+    """数据库连接参数；预检、状态行与空闲连接清理共用同一份取值。"""
+
+    engine: str
+    host: str
+    port: int
+    user: str
+    password: str
+    name: str
+    service: str
+
+    @classmethod
+    def from_env(cls) -> "DbConfig":
+        """从环境变量读取连接参数（`.env` 已由入口加载）。"""
+        return cls(
+            engine=os.environ.get("DB_ENGINE", "mysql").strip().lower(),
+            host=os.environ.get("DB_HOST", "127.0.0.1").strip(),
+            port=int(os.environ.get("DB_PORT", "3306")),
+            user=os.environ.get("DB_USER", "root"),
+            password=os.environ.get("DB_PASSWORD", ""),
+            name=os.environ.get("DB_NAME", "android_autotests"),
+            service=os.environ.get("DB_SERVICE_NAME", "MySQL" if IS_WIN else "mysql").strip(),
+        )
+
+
+def is_loopback(host: str) -> bool:
+    """数据库地址是否为本机。"""
+    return host.strip().lower() in DB_LOOPBACK
+
+
+def reachable(cfg: DbConfig) -> tuple[bool, str]:
+    """用真实连接验证数据库（网络 + 账号 + 库名一次过）；sqlite 直接视为可用。
+
+    Returns:
+        tuple[bool, str]: (是否连通, 失败原因摘要)。
+    """
+    if cfg.engine == "sqlite":
+        return True, ""
+    try:
+        import MySQLdb
+
+        conn = MySQLdb.connect(
+            host=cfg.host,
+            port=cfg.port,
+            user=cfg.user,
+            passwd=cfg.password,
+            db=cfg.name,
+            connect_timeout=CONNECT_TIMEOUT_SECONDS,
+        )
+        conn.close()
+        return True, ""
+    except Exception as exc:  # noqa: BLE001 - 任何连接失败都转成可读摘要
+        return False, " ".join(str(exc).split())[:220]
+
+
+def status_line() -> str:
+    """`status` 命令里的数据库描述；永不抛异常。"""
+    cfg = DbConfig.from_env()
+    if cfg.engine == "sqlite":
+        return "SQLite  (DB_ENGINE=sqlite)"
+    ok, _ = reachable(cfg)
+    return f"{cfg.host}:{cfg.port}  {'ONLINE' if ok else 'OFFLINE'}"
+
+
+def start_local_service(cfg: DbConfig) -> tuple[bool, str]:
+    """按平台启动本机数据库服务；返回 (是否成功, 原始输出)。"""
+    service = cfg.service
+    if IS_WIN:
+        command = ["sc.exe", "start", service]
+    elif sys.platform == "darwin":
+        command = ["brew", "services", "start", service]
+    else:
+        command = ["systemctl", "start", service]
+    try:
+        proc = subprocess.run(
+            command, capture_output=True, text=True, timeout=SERVICE_START_TIMEOUT_SECONDS
+        )
+    except Exception as exc:  # noqa: BLE001 - 命令不存在/超时都按启动失败处理
+        return False, str(exc)
+    output = " ".join(((proc.stdout or "") + (proc.stderr or "")).split())
+    if proc.returncode == 0 or "already" in output.lower():
+        return True, output
+    return False, output
+
+
+def elevation_hint(cfg: DbConfig) -> str:
+    """给出当前平台启动数据库服务的提权命令。"""
+    service = cfg.service
+    if IS_WIN:
+        return f"net start {service}   （以管理员身份运行）"
+    if sys.platform == "darwin":
+        return f"brew services start {service}"
+    return f"sudo systemctl start {service}"
+
+
+def ensure(cfg: DbConfig, allow_autostart: bool) -> bool:
+    """启动后端前的数据库检查：可达即通过；本机可尝试拉起服务；否则报错中止。"""
+    ok, detail = reachable(cfg)
+    if ok:
+        print(f"  Database         : {cfg.host}:{cfg.port}  ONLINE")
+        return True
+
+    print(f"  Database         : {cfg.host}:{cfg.port}  OFFLINE（{detail or '连接失败'}）")
+    if not is_loopback(cfg.host):
+        print("  Database         : 远程数据库不可达，请检查网络与服务；不会尝试启动远程库。")
+        return False
+
+    hint = elevation_hint(cfg)
+    if not allow_autostart:
+        print(f"  Database         : 已禁用自动启动（DB_AUTOSTART=0）。请先启动：{hint}")
+        return False
+
+    print(f"  Database         : 尝试启动本机服务 {cfg.service} ...")
+    started, output = start_local_service(cfg)
+    if started and reachable(cfg)[0]:
+        print(f"  Database         : {cfg.host}:{cfg.port}  ONLINE（已启动）")
+        return True
+    if output:
+        print(f"  Database         : 启动失败：{output[:200]}")
+    print(f"  Database         : 请手动启动后重试：{hint}")
+    return False
+
+
+def cleanup_idle_connections(cfg: DbConfig) -> None:
+    """清理本平台账号下空闲的 Sleep 连接（best-effort：失败只提示，不阻断停机）。"""
+    if cfg.engine == "sqlite":
+        return
+    try:
+        import MySQLdb
+
+        conn = MySQLdb.connect(
+            host=cfg.host,
+            port=cfg.port,
+            user=cfg.user,
+            passwd=cfg.password,
+            db=cfg.name,
+            connect_timeout=CONNECT_TIMEOUT_SECONDS,
+        )
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT ID FROM information_schema.PROCESSLIST "
+            "WHERE USER = %s AND DB = %s AND COMMAND = 'Sleep' AND TIME > 5",
+            (cfg.user, cfg.name),
+        )
+        ids = [row[0] for row in cur.fetchall()]
+        for pid in ids:
+            try:
+                cur.execute(f"KILL {pid}")
+            except Exception:  # noqa: BLE001 - 连接可能在 SELECT 与 KILL 之间自行关闭：跳过这一条
+                pass
+        if ids:
+            print(f"  MySQL cleanup: closed {len(ids)} idle connection(s)")
+        cur.close()
+        conn.close()
+    except Exception as exc:  # noqa: BLE001 - 清理是 best-effort，失败留下可诊断线索即可
+        print(f"  MySQL cleanup skipped: {exc}")

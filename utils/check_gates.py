@@ -668,7 +668,7 @@ def build_gates() -> list[Gate]:
         # engines 风格检查（告警项：先看效果，暂不阻塞；正文 .agents/rules/engines-code-style.md，流程 engines/AGENTS.md）
         cmd_gate(
             "engines-agents-style",
-            "engines 风格（docstring / Raises / tool 命名；见 engines-code-style.md）",
+            "engines 风格（module-docstring / tool 命名 / 禁 django·apps import；见 engines-code-style.md）",
             [py, "-m", "scripts.check_engines_agents_style"],
             blocking=False,
             cwd=ROOT / ".agents" / "skills" / "engines-agents-style-check",

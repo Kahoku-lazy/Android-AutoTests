@@ -11,44 +11,44 @@
 ```
 tests/
   <模块>/
-    unit/           # 单元：灰盒、纯逻辑、零 I/O 零 DB
-    integration/    # 集成：Django ORM / 多模块协作
-    api/            # 接口：黑盒 HTTP（需要时才有）
-    e2e/            # 端到端：真实浏览器 / 设备（需要时才有）
+    api/            # 灰盒（接口）：功能链路 + 末尾落库校验
+    integration/    # 灰盒（服务层）：Django ORM / 多模块协作
+    e2e/            # 浏览器 b2b：真实浏览器点交互（需要时才有）
+  arch/unit/        # 契约守护（例外，唯一保留的 unit 目录）
 ```
 
-- `<模块>` = 被测功能的归属（`models` / `config` / `rag` / `agents` / `workflow` / `device` …），
+- `<模块>` = 被测功能的归属（`models` / `config` / `dashboard` / `ai_assistant` / `device` …），
   不是被测文件的路径照抄。
-- pytest 主 marker（`unit` / `integration` / `api` / `e2e`）**仍然按测试类型打**，与目录分类正交。
+- **不再有 `tests/<模块>/unit/`**：业务单元测试已退役，写代码时临时放在 `temps/`（见 `tests/AGENTS.md`）。
+- pytest marker（`api` / `integration` / `e2e` / `arch`）**仍然按测试类型打**，与目录分类正交；
+  `unit` marker 现在只被 `tests/arch/unit` 使用。
 - 每级目录都要有 `__init__.py`（`tests/` 是包，缺一层会让 pytest 把同名目录当同一个包而导入冲突）。
 
-### 迁移状态
+## 迁移状态
 
-大模块（平台功能）：`dashboard` / `ai_assistant` / `knowledge` / `device` / `serial_log` / `task` / `case` / `report` / `bug_ticket`；
-引擎统一在 `engines/`（按子模块再分层）；跨模块契约在 `arch/`。
+平台模块：`dashboard` / `ai_assistant` / `knowledge_search` / `device` / `serial_log` / `task` / `case` / `report` / `bug_ticket`；
+跨模块一致性在 `arch/`。
 
 | 目录 | 内容 | 状态 |
 |---|---|---|
-| `models/{unit,integration}` | 模型层 | ✅ |
-| `config/unit` | 配置层（读表、加解密、结构） | ✅ |
-| `dashboard/unit` | 仪表盘 | ✅ |
-| `ai_assistant/unit` | AI 助手（含 planner / verifier 提示词与任务） | ✅ |
-| `knowledge/{unit,integration}` | 知识库助理（文字 + 语音） | ✅ |
-| `device/{unit,integration}` | 设备管理 | ✅ |
-| `serial_log/unit` | 串口日志 | ✅ |
-| `task/unit` | 任务清单 | ✅ |
-| `case/{unit,integration}` | 用例管理 | ✅ |
-| `report/{unit,integration}` | 测试报告 | ✅ |
-| `bug_ticket/unit` | bug 单管理 | ✅ |
-| `engines/agents/{unit,e2e}` | 引擎：agents（SOP / 角色 / 工具 / 中间件 / RAG / 语音） | ✅ |
-| `engines/device/unit` | 引擎：device | ✅ |
-| `arch/unit` | 跨模块契约（API 路径、枚举 SSOT、鉴权、日志、DB 预检） | ✅ |
-| `auth/{api,e2e}` | 登录鉴权：4 个接口脚本 + 登录端到端 | ✅ |
-| `<模块>/api` | 接口脚本已按模块归位（device / serial_log / dashboard / task / case / bug_ticket） | ✅ |
-| `api_kit/` | 接口测试共享设施：`loader.py` / `schemas.py` | ✅ |
-| `api/` | 只留 `conftest.py`（夹具）与 `case/*.yaml`（用例数据） | 保留：契约测试硬编码了这两个路径 |
-| `e2e/` | 只留共享设施：`conftest.py` / `selectors.py` / `step_report.py` | 保留：端到端夹具 |
+| `arch/unit` | 跨模块契约守护（API 路径、鉴权姿态、表单校验、前端 DTO、日志、DB 预检） | ✅ 唯一保留的 unit |
+| `dashboard/{api,unit}` | 仪表盘（`unit` 已迁出） | 灰盒在 `api` |
+| `ai_assistant/api` | 平台助手 / 模型配置 / 角色 / SOP / 评估（`unit` 已迁出） | ✅ |
+| `knowledge_search/{api,integration}` | 知识库检索与评估（`unit` 已迁出） | ✅ |
+| `device/{api,integration}` | 设备管理（`unit` 已迁出） | ✅ |
+| `serial_log/{api,integration}` | 串口日志（`unit` 已迁出） | ✅ |
+| `task/api` | 任务清单（`unit` 已迁出） | ✅ |
+| `case/{api,integration}` | 用例管理（`unit` 已迁出） | ✅ |
+| `report/integration` | 测试报告（`unit` 已迁出） | ✅ |
+| `bug_ticket/api` | bug 单管理（`unit` 已迁出） | ✅ |
+| `auth/{api,e2e}` | 登录鉴权：接口用例 + 登录 b2b | ✅ |
+| `ops_console/api` | 运维控制台 | ✅ |
+| `usage_ledger/unit` | 用量账本 | ❌ 已迁出（`temps/tests-unit-archive/`） |
+| `config/unit`、`models/unit`、`engines/{ae_harness,backend_bridge,device}/unit` | 配置 / 模型 / 引擎 | ❌ 已迁出（`temps/tests-unit-archive/`） |
+| `api_kit/` | 灰盒共享设施：`loader.py` / `schemas.py` | ✅ |
+| `api/` | 只留 `conftest.py`（夹具）与 `case/*.yaml`（用例数据） | 保留：契约守护硬编码了这两个路径 |
+| `e2e/` | 只留共享设施：`conftest.py` / `selectors.py` / `step_report.py` | 保留：b2b 夹具 |
 
-已删除：`graybox/`（迁移后清空）、`ai_planner/`（无测试代码、`planner_eval` 命令已不存在）、`device_pool/`（迁入 `device/`）、
-`page_flow/`（页面流退役；`test_xpath_text_matches.py` 被测方法已随 engines 历史重构删除，失效用例经确认一并删除）、
-`test_element_locator_views_split.py`（`backend/apps/element_locator` 已下线）、`test_example_integration.py`（模板示例）。
+已删除：`graybox/`（迁移后清空）、`ai_planner/`（无测试代码）、`device_pool/`（迁入 `device/`）、
+`page_flow/`（页面流退役）、`test_element_locator_views_split.py`（`backend/apps/element_locator` 已下线）、
+`test_example_integration.py`（模板示例）；2026-11-24 再删全部 `tests/<模块>/unit/`（迁至 `temps/tests-unit-archive/`）。

@@ -1,7 +1,10 @@
-"""engines docstring 读取与合规检查（单一脚本，两个子命令）。
+"""Python 模块 docstring 读取与合规检查（单一脚本，两个子命令）。
+
+2026-11-24 起规范范围是全仓在册 Python 代码（正文 `.agents/rules/python-docstring-style.md`），
+不再是「仅 engines」；技能目录名沿用历史。
 
 本模块的业务功能如下：
-1. check: 按 .agents/rules/engines-code-style.md §2/§6 校验模块头 4 字段 + 工具函数摘要/Args。
+1. check: 按规范校验模块头 4 字段 + 引擎工具函数摘要/Args。
 2. read: 抽取模块字段 + 类/函数签名与 docstring，用于「读代码前先看注释了解详情」。
 
 python -m 调试路径: scripts.docstrings
@@ -11,11 +14,12 @@ Usage（先 cd 到本技能目录）:
 
     python -m scripts.docstrings check              # 默认：只查 git 改动文件，只报本次新引入
     python -m scripts.docstrings check --include-existing   # 连 HEAD 已有存量一起报
-    python -m scripts.docstrings check --all        # 全量审计（会列出存量欠账）
-    python -m scripts.docstrings check --path engines/agents/tools
+    python -m scripts.docstrings check --all        # 全仓在册文件全量审计（会列出存量欠账）
+    python -m scripts.docstrings check --all --summary      # 只出按规则聚合的计数（门禁用）
+    python -m scripts.docstrings check --path utils
     python -m scripts.docstrings check --format json
 
-    python -m scripts.docstrings read --path engines/agents/tools/tool_device.py
+    python -m scripts.docstrings read --path utils/gen_arch_stats.py
     python -m scripts.docstrings read --changed --format md
     python -m scripts.docstrings read --path engines --depth module
 
@@ -73,12 +77,91 @@ def _find_repo_root(start: Path) -> Path:
 
 
 ROOT = _find_repo_root(Path(__file__).resolve())
-DEFAULT_ROOT = ROOT / "engines"
+DEFAULT_ROOT = ROOT
 
 SKIP_DIR_NAMES = frozenset(
-    {"__pycache__", ".venv", "venv", "node_modules", ".git", ".pytest-tmp", ".testtmp"}
+    {
+        "__pycache__",
+        ".venv",
+        "venv",
+        ".dvenv",
+        "node_modules",
+        ".git",
+        ".pytest-tmp",
+        ".testtmp",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".import_linter_cache",
+    }
 )
 # 供应商技能树已随 engines/agents 退役（变更 retire-engines-agents）。
+
+# --------------------------------------------------------------------------
+# 注释规范范围（唯一判定入口；与 .agents/rules/python-docstring-style.md §1 逐行对应）
+# --------------------------------------------------------------------------
+
+# 纳入是**白名单**口径：新增顶层目录必须同时登记到这里与规则文档，否则不检查。
+IN_SCOPE_ROOTS = ("engines", "backend", "tests", "utils")
+# 仓库根的独立脚本按文件名白名单（manage.py 属 Django 脚手架，见排除表）。
+IN_SCOPE_ROOT_FILES = frozenset({"run.py", "run_daphne.py"})
+
+# Django 固定脚手架：文件名 + 模式（api.py / api_rows.py 只差一个词，必须确定性判定）。
+EXCLUDED_FILE_NAMES = frozenset(
+    {
+        "models.py",
+        "views.py",
+        "serializers.py",
+        "admin.py",
+        "urls.py",
+        "apps.py",
+        "asgi.py",
+        "wsgi.py",
+        "settings.py",
+        "api.py",
+        "manage.py",
+    }
+)
+EXCLUDED_FILE_PATTERNS = (
+    re.compile(r"^views_.*\.py$"),
+    re.compile(r"^.*_views\.py$"),
+    re.compile(r"^api_.*\.py$"),
+    re.compile(r"^serializers_.*\.py$"),
+)
+EXCLUDED_DIR_SEGMENTS = frozenset({"migrations"})
+
+
+def exclusion_reason(rel: str) -> str:
+    """Return why *rel* is out of the docstring rule scope ("" when in scope).
+
+    Django 固定脚手架的判定只在 `backend/` 下生效：`engines/**/models.py` 是引擎自己的
+    领域模型，不是 Django ORM 骨架，必须照常检查。
+
+    Args:
+        rel: 仓库相对路径（posix）。
+
+    Returns:
+        排除原因；在册时返回空串。
+    """
+    parts = rel.split("/")
+    name = parts[-1]
+    if len(parts) == 1:
+        if name in EXCLUDED_FILE_NAMES:
+            return "Django 固定脚手架文件"
+        return "" if name in IN_SCOPE_ROOT_FILES else "非项目自写脚本（根目录白名单外）"
+    if parts[0] not in IN_SCOPE_ROOTS:
+        return f"顶层目录 {parts[0]}/ 不在注释规范范围"
+    if parts[0] != "backend":
+        return ""
+    if EXCLUDED_DIR_SEGMENTS & set(parts[:-1]):
+        return "Django migrations"
+    if name in EXCLUDED_FILE_NAMES or any(p.match(name) for p in EXCLUDED_FILE_PATTERNS):
+        return "Django 固定脚手架文件"
+    return ""
+
+
+def in_scope(rel: str) -> bool:
+    """True when *rel* must carry the 4-field module header."""
+    return not exclusion_reason(rel)
 
 
 def should_skip(path: Path) -> bool:
@@ -433,7 +516,7 @@ def module_fields(raw: str) -> dict[str, str]:
 
 
 def _is_engines_path(rel: str) -> bool:
-    """True when the file lives under engines/ (模板字段规则只对它生效)."""
+    """True when the file lives under engines/ (仅用于 read 提示文案)."""
     return rel == "engines" or rel.startswith("engines/")
 
 
@@ -442,22 +525,28 @@ def _is_engines_path(rel: str) -> bool:
 # --------------------------------------------------------------------------
 
 
+def _is_empty_shell(tree: ast.Module, rel: str) -> bool:
+    """True for a package marker：`__init__.py` 无 def/class 且只有少量语句（含仅一行 docstring）。"""
+    if Path(rel).name != "__init__.py":
+        return False
+    has_defs = any(
+        isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) for n in tree.body
+    )
+    stmts = [
+        s
+        for s in tree.body
+        if not (isinstance(s, ast.Expr) and isinstance(getattr(s, "value", None), ast.Constant))
+    ]
+    return not has_defs and len(stmts) <= 2
+
+
 def _module_rules(rel: str, tree: ast.Module, raw: str) -> list[Violation]:
     """Module-level docstring rules."""
     out: list[Violation] = []
-    path = Path(rel)
+    # 空壳 __init__.py：无 defs 且只有少量语句时豁免（写不写模块头都行，写了不校验）
+    if _is_empty_shell(tree, rel):
+        return out
     if not raw.strip():
-        # 空壳 __init__.py：无 defs 且只有少量语句时豁免（与既有风格检查同口径）
-        stmts = [
-            s
-            for s in tree.body
-            if not (isinstance(s, ast.Expr) and isinstance(getattr(s, "value", None), ast.Constant))
-        ]
-        has_defs = any(
-            isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) for n in tree.body
-        )
-        if path.name == "__init__.py" and not has_defs and len(stmts) <= 2:
-            return out
         return [
             Violation(
                 "module-docstring",
@@ -469,7 +558,7 @@ def _module_rules(rel: str, tree: ast.Module, raw: str) -> list[Violation]:
             )
         ]
 
-    if not _is_engines_path(rel) or MODULE_TOOLS is None:
+    if not in_scope(rel) or MODULE_TOOLS is None:
         return out
 
     fields = module_fields(raw)
@@ -811,7 +900,7 @@ def render_text(digest: dict[str, Any], *, full: bool = False, depth: str = "ful
     else:
         summary = first_summary(digest["raw_doc"]) if digest["raw_doc"] else "-"
         lines.append(f"功能: {summary}")
-        lines.append("（该文件不是 engines 模板 docstring，只有普通说明）")
+        lines.append("（该文件没有 4 字段模板 docstring，只有普通说明）")
 
     if depth == "module":
         return "\n".join(lines)
@@ -902,19 +991,20 @@ def _resolve_targets(args: argparse.Namespace) -> tuple[list[Path], dict[str, An
         return iter_py_files(base), scope
 
     if args.all:
-        scope = {"mode": "all", "path": rel_posix(DEFAULT_ROOT)}
+        scope = {"mode": "all", "path": "(repo-wide)"}
         return iter_py_files(DEFAULT_ROOT), scope
 
     changes = changed_python_paths(args.base)
-    # 规范适用范围是 engines/**（rules §1）；非 engines 改动需 --repo 或 --path 显式要求。
+    # 规范范围见 .agents/rules/python-docstring-style.md §1（白名单 + Django 排除表）。
     # 已删除的文件不参与检查（git diff 仍会列出它们）。
-    paths = [p for p in changes if (args.repo or _is_engines_path(p)) and (ROOT / p).is_file()]
+    paths = [p for p in changes if in_scope(p) and (ROOT / p).is_file()]
     scope = {
         "mode": "changed",
         "base": args.base,
         "changed_files": len(changes),
         "in_scope": len(paths),
         "deleted": len(changes) - sum(1 for p in changes if (ROOT / p).is_file()),
+        "excluded": sum(1 for p in changes if not in_scope(p)),
     }
     return [ROOT / p for p in paths], scope
 
@@ -935,11 +1025,26 @@ def cmd_check(args: argparse.Namespace) -> int:
     # 全量 / 指定路径：warn 一并展示；改动模式：默认只报 error，避免存量噪声
     show_warn = args.all or args.strict or scope.get("mode") == "path"
 
-    if not files:
-        print(f"没有需要检查的 Python 文件（范围：{scope}）", file=sys.stderr)
+    # 排除清单（Django 固定脚手架、非产品代码）不是「暂时没写」，是「按规范不写」：
+    # 直接跳过并计数，不产生 violation（否则退出码会被无意义地置 1）。
+    scanned: list[Path] = []
+    skipped: list[tuple[str, str]] = []
+    for path in files:
+        rel = rel_posix(path)
+        reason = exclusion_reason(rel)
+        if reason:
+            skipped.append((rel, reason))
+            continue
+        scanned.append(path)
+
+    if not scanned:
+        print(
+            f"没有需要检查的 Python 文件（范围：{scope}；跳过 {len(skipped)} 个排除文件）",
+            file=sys.stderr,
+        )
         return 0
 
-    for path in files:
+    for path in scanned:
         try:
             violations = check_file(path)
         except OSError as exc:
@@ -965,12 +1070,26 @@ def cmd_check(args: argparse.Namespace) -> int:
     errors = [v for v in filtered if v.severity == "error"]
     warns = [v for v in filtered if v.severity == "warn"]
 
+    if args.summary:
+        by_rule = Counter(v.rule for v in filtered)
+        by_path = Counter(v.path for v in filtered)
+        print(f"files_in_scope: {len(scanned)}, files_excluded: {len(skipped)}")
+        for rule, count in sorted(by_rule.items()):
+            print(f"  {rule:<18} {count}")
+        print(f"errors: {len(errors)}, warns: {len(warns)}, files_with_issues: {len(by_path)}")
+        if by_path:
+            top = ", ".join(f"{path}({n})" for path, n in by_path.most_common(5))
+            print(f"top: {top}")
+        failed = bool(errors) or (args.strict and bool(warns))
+        return 1 if failed else 0
+
     if args.format == "json":
         print(
             json.dumps(
                 {
                     "scope": scope,
-                    "files_scanned": len(files),
+                    "files_scanned": len(scanned),
+                    "files_excluded": len(skipped),
                     "error_count": len(errors),
                     "warn_count": len(warns),
                     "hidden_out_of_scope": hidden,
@@ -995,10 +1114,12 @@ def cmd_check(args: argparse.Namespace) -> int:
             )
             if scope.get("deleted"):
                 where += f"（跳过 {scope['deleted']} 个已删除文件）"
+            if scope.get("excluded"):
+                where += f"（{scope['excluded']} 个改动文件不在注释规范范围）"
         else:
             where = f"{scope.get('mode')}: {scope.get('path')}"
         print(
-            f"scanned {len(files)} file(s) [{where}]; "
+            f"scanned {len(scanned)} file(s) [排除 {len(skipped)} 个] [{where}]; "
             f"{len(errors)} error(s), {len(warns)} warn(s): {detail}"
         )
         if hidden:
@@ -1064,7 +1185,10 @@ def build_parser() -> argparse.ArgumentParser:
     """Build the CLI parser with check/read subcommands."""
     parser = argparse.ArgumentParser(
         prog="scripts.docstrings",
-        description="engines docstring 读取与合规检查（规范：.agents/rules/engines-code-style.md §2/§5/§6）",
+        description=(
+            "Python 模块 docstring 读取与合规检查"
+            "（规范：.agents/rules/python-docstring-style.md；engines 工具函数另见 engines-code-style.md §6）"
+        ),
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -1072,7 +1196,11 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument(
             "--path", default="", help="目录或文件（相对仓库根；优先于 --all/--changed）"
         )
-        p.add_argument("--all", action="store_true", help="全量扫描 engines/")
+        p.add_argument(
+            "--all",
+            action="store_true",
+            help="全量扫描全仓在册文件（白名单见规范 §1，Django 固定脚手架自动跳过）",
+        )
         p.add_argument(
             "--changed",
             action="store_true",
@@ -1082,7 +1210,7 @@ def build_parser() -> argparse.ArgumentParser:
         p.add_argument(
             "--repo",
             action="store_true",
-            help="改动模式：连 engines/ 之外的改动一起查（只按通用规则，不套模块模板字段）",
+            help="[deprecated] 2026-11-24 起范围已是全仓，此开关无效果，保留仅为兼容旧命令",
         )
 
     check = sub.add_parser("check", help="校验 docstring 合规（默认只查 git 改动）")
@@ -1094,6 +1222,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="改动模式：连 HEAD 已有的存量违规一起报（默认只报这次改动新引入的）",
     )
     check.add_argument("--strict", action="store_true", help="warn 也视为失败，并全部展示")
+    check.add_argument(
+        "--summary",
+        action="store_true",
+        help="只输出按规则聚合的计数（门禁 / 全量巡检用，不逐条打印）",
+    )
     check.add_argument("--format", choices=("text", "json"), default="text")
 
     read = sub.add_parser("read", help="抽取 docstring/签名，用于读代码前了解详情")

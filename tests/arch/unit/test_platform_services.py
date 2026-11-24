@@ -1,4 +1,11 @@
-"""`utils.service_ctl.services` 的行为契约：拉起/停机顺序、排空短路、超时名单落盘。"""
+"""
+模块功能：➡️ `utils.service_ctl.services` 的行为契约：拉起/停机顺序、排空短路、超时名单落盘 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_platform_services.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 utils/service_ctl
+🏁
+"""
 
 from __future__ import annotations
 

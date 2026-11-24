@@ -1,4 +1,11 @@
-"""D1 鉴权硬化契约：缺 sub 的合法令牌必须 401（不是 500）；WWW-Authenticate realm 不得含密钥材料。"""
+"""
+模块功能：➡️ D1 鉴权硬化契约：缺 sub 的合法令牌必须 401（不是 500）；WWW-Authenticate realm 不得含密钥材料 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_jwt_hardening.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/shared/auth
+🏁
+"""
 
 from __future__ import annotations
 

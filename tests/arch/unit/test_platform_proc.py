@@ -1,6 +1,10 @@
-"""`utils.service_ctl.proc` 的行为契约：端口/进程查找、结束策略、就绪等待、后台拉起。
-
-全部走替身：不真的查端口、不真的杀进程、不真的拉起子进程。
+"""
+模块功能：➡️ `utils.service_ctl.proc` 的行为契约：端口/进程查找、结束策略、就绪等待、后台拉起 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_platform_proc.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 utils/service_ctl
+🏁
 """
 
 from __future__ import annotations

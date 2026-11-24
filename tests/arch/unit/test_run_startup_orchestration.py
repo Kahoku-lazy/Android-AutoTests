@@ -1,6 +1,10 @@
-"""`utils.service_ctl.commands` 的启动编排契约：先停后起、顺序、失败短路、横幅、服务名解析。
-
-只测编排，不真连数据库、不起进程：数据库预检、adb 检查与启停全部用替身。
+"""
+模块功能：➡️ `utils.service_ctl.commands` 的启动编排契约：先停后起、顺序、失败短路、横幅、服务名解析 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_run_startup_orchestration.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 utils/service_ctl
+🏁
 """
 
 from __future__ import annotations

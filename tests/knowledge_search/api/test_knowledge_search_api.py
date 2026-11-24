@@ -1,6 +1,10 @@
-"""知识库检索接口契约：鉴权、权限、信封、尾斜杠与三态结果。
-
-用视图直调 + 轻量请求工厂；检索用替身承接，不联网、不调真实嵌入 API。
+"""
+模块功能：➡️ 知识库检索接口契约：鉴权、权限、信封、尾斜杠与三态结果 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/knowledge_search/api/test_knowledge_search_api.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/knowledge_search、backend/gateway/middleware.py、engines/ae_harness
+🏁
 """
 
 from __future__ import annotations

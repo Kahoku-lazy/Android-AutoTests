@@ -1,9 +1,10 @@
-"""设备管理接口测试 — 鉴权 / 响应结构 / 404 错误路径。
-
-黑盒 HTTP（live server），保持约定不依赖 django_db。
-扫描/连接成功等需真实设备、400/409 需设备记录的路径，留给集成测试与真机验证。
-
-用例源：tests/api/case/devices.yaml
+"""
+模块功能：➡️ 设备管理接口测试 — 鉴权 / 响应结构 / 404 错误路径 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/device/api/test_devices.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/device_pool
+🏁
 """
 
 import pytest

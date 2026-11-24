@@ -1,16 +1,10 @@
-"""黑盒·端到端测试层 fixtures — Playwright 真实浏览器 + 带标注的步骤报告。
-
-依赖：pytest-playwright、前后端已启动（「python run.py start」，前端 5173 / 后端 8766）。
-环境变量（都可不设）：
-  TEST_FRONTEND_URL        默认 http://localhost:5173
-  TEST_BASE_URL            默认 http://localhost:8766（见 tests/conftest.py）
-  E2E_REPORT_DIR           步骤报告输出目录，默认 tests/reports/e2e
-
-本层**不需要任何密钥**：用公开注册端点自建一个固定账号，之后每轮运行复用。
-因此不会出现「没设密钥 → 静默跳过」的假守护。
-
-每一步的截图与标注见 tests/e2e/step_report.py；报告在会话结束时落到
-tests/reports/e2e/index.html。
+"""
+模块功能：➡️ 端到端层 fixture：Playwright 真实浏览器、前端可达性探测与步骤报告 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/e2e/conftest.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 被 tests/<模块>/e2e 用例共用（无独立用例）
+🏁
 """
 
 import os

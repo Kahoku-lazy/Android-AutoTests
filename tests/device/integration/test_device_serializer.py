@@ -1,6 +1,10 @@
-"""灰盒·集成测试 — 设备展示/可见性（DeviceSerializer）。
-
-业务场景五的可见性规则 + 列表序列化字段。
+"""
+模块功能：➡️ 灰盒·集成测试 — 设备展示/可见性（DeviceSerializer） 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/device/integration/test_device_serializer.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/device_pool
+🏁
 """
 
 import pytest

@@ -1,9 +1,10 @@
-"""接口响应 JSON Schema — 供 YAML 用例按名字引用（expect.schema）。
-
-Schema 角色：
-  1. 替代散落的 assert body["key"] 检查
-  2. additionalProperties: False 锁死响应结构，防止字段漂移
-  3. 作为 API 响应的可执行文档
+"""
+模块功能：➡️ 接口响应 JSON Schema 目录：供 YAML 用例按名字引用 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/api_kit/schemas.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 tests/api/case 下的接口用例 YAML
+🏁
 """
 
 AUTH_SUCCESS_SCHEMA = {

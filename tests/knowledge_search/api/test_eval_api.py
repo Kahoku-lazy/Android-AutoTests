@@ -1,4 +1,11 @@
-"""自动评测接口契约：权限、题量上限、409、模型校验与报告读取。"""
+"""
+模块功能：➡️ 自动评测接口契约：权限、题量上限、409、模型校验与报告读取 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/knowledge_search/api/test_eval_api.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/ai_assistant、backend/apps/knowledge_search
+🏁
+"""
 
 from __future__ import annotations
 

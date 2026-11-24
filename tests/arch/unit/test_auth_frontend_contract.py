@@ -1,18 +1,10 @@
-"""前端认证契约与后端事实的对拍：响应字段、公开端点清单。
-
-为什么需要它
---------------
-1. 前端用 TypeScript DTO 复述后端的响应形状。一旦声明了后端不返回的字段，
-   消费者会在运行时拿到 `undefined` 而不会有任何报错。
-   实例：原本 `AuthTokenData.user?: { id, username, email? }` 把 login（无 email）与
-   register（有 email）的差异掩盖掉了，而该字段在前端无任何读取点。
-2. 全局 401 拦截器需要知道哪些端点是公开的 —— 公开端点的 401 是“凭证错误”，
-   不是“令牌过期”。该清单与网关的公开路径清单必须一致，否则两边各自漂移。
-
-边界（见 tests/AGENTS.md §契约对拍测试）：只读源码、只做一致性断言、零外部依赖。
-已知边界：双端点共用的 DTO 只断言**顶层**字段；嵌套形状的差异靠“不声明该字段”消除，
-不在本模块机械覆盖。当前前端无嵌套声明，因此该局限不影响现状。
-规格：`openspec/specs/auth-response-shape` 与 `openspec/specs/auth-session`。
+"""
+模块功能：➡️ 前端认证契约与后端事实的对拍：响应字段、公开端点清单 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_auth_frontend_contract.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/gateway/middleware.py
+🏁
 """
 
 from __future__ import annotations

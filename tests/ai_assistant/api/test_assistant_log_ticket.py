@@ -1,4 +1,11 @@
-"""报告打开：无票 401，换票后可打开一次。"""
+"""
+模块功能：➡️ 报告打开：无票 401，换票后可打开一次 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ai_assistant/api/test_assistant_log_ticket.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/ai_assistant
+🏁
+"""
 
 from __future__ import annotations
 

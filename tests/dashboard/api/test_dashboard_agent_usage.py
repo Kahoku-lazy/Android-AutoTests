@@ -1,4 +1,11 @@
-"""仪表盘把一个智能体的小时用量合成一份。"""
+"""
+模块功能：➡️ 仪表盘把一个智能体的小时用量合成一份 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/dashboard/api/test_dashboard_agent_usage.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/dashboard、backend/apps/usage_ledger
+🏁
+"""
 
 from __future__ import annotations
 

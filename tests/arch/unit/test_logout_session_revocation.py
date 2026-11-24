@@ -1,8 +1,10 @@
-"""登出 = 退出本次登录 —— 会话级吊销契约（OpenSpec: db-backed-token-revocation）。
-
-逐条对应该变更 specs/auth-session/spec.md 的 Scenario。
-吊销记录持久化在数据库（测试库为 SQLite 内存库），不再依赖 Redis；
-记录带失效时刻，用例之间用不同 sid 相互隔离。
+"""
+模块功能：➡️ 登出 = 退出本次登录 —— 会话级吊销契约（OpenSpec: db-backed-token-revocation） 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_logout_session_revocation.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/accounts、backend/shared/auth
+🏁
 """
 
 from __future__ import annotations

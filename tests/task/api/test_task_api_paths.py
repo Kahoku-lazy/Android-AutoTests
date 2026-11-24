@@ -1,4 +1,11 @@
-"""任务域 API 路径：新 /api/tasks/* 存在，旧路径全部 404。"""
+"""
+模块功能：➡️ 任务域 API 路径：新 /api/tasks/* 存在，旧路径全部 404 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/task/api/test_task_api_paths.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/task_list
+🏁
+"""
 
 import pytest
 

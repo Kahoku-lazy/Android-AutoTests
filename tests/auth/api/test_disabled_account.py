@@ -1,4 +1,11 @@
-"""停用账号：旧令牌作废，受保护请求返回专用拒绝，续期失败。"""
+"""
+模块功能：➡️ 停用账号：旧令牌作废，受保护请求返回专用拒绝，续期失败 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/auth/api/test_disabled_account.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/accounts、backend/gateway/middleware.py、backend/shared/auth
+🏁
+"""
 
 from __future__ import annotations
 

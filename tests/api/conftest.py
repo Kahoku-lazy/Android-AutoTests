@@ -1,9 +1,10 @@
-"""接口测试层 fixtures — 黑盒 HTTP（live server）。
-
-约定：
-  - 不依赖 django_db，直接对运行中的后端发 HTTP 请求
-  - 用例定义在 tests/api/case/*.yaml，JSONSchema 在 tests/api/schemas.py
-  - 测试凭据为开发环境默认种子账号（admin/admin123），直接写进 YAML 用例
+"""
+模块功能：➡️ 接口层 fixture：live server 上的 HTTP 会话与登录态 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/api/conftest.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 被 tests/<模块>/api 用例共用（无独立用例）
+🏁
 """
 
 import uuid

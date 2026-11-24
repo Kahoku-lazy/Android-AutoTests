@@ -1,13 +1,10 @@
-"""灰盒·集成测试 — 设备状态机（DeviceStateMachine）。
-
-业务场景：
-- 场景三：设备断开被移除（离线清理）
-- 场景四：使用中的设备断线不误删（执行保护）
-- 场景五：无线设备锁定与公开
-- 场景六：设备占用与释放（在线 ⇄ 使用中）
-- 场景七：超时占用自动回收（防泄漏兜底）
-
-django_db + 注入 mock detector + 真实 registry。
+"""
+模块功能：➡️ 灰盒·集成测试 — 设备状态机（DeviceStateMachine） 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/device/integration/test_device_state_machine.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/device_pool
+🏁
 """
 
 import pytest

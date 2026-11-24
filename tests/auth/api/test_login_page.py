@@ -1,10 +1,10 @@
-"""登录页面接口测试 — POST /api/auth/login 与 /api/auth/register。
-
-登录页（LoginView）同时含登录卡与注册卡，两个端点统一在此模块测试，
-按 YAML 用例的 path 区分登录（/api/auth/login）与注册（/api/auth/register）。
-用例源：
-  - tests/api/case/login.yaml
-  - tests/api/case/register.yaml
+"""
+模块功能：➡️ 登录页面接口测试 — POST /api/auth/login 与 /api/auth/register 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/auth/api/test_login_page.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/accounts（账号与会话）
+🏁
 """
 
 import pytest

@@ -1,37 +1,10 @@
-"""全部调用方与后端路由表的一致性守护（前端 / 测试 / 接口用例）。
-
-为什么要这个测试
-----------------
-后端自身的路由约定由 `test_api_path_convention.py` 守护，但那只能证明“路由表是对的”。
-真正会断的是“调用方拼出来的路径在后端存不存在”。尾斜杠约定收紧时，
-认证链路的前端与测试夹具各自漏改一处，而既有测试一个都没发现：
-
-- `tests/api/case/*.yaml` 用的是带斜杠的路径 —— 只测后端；夹具（conftest）不在其覆盖内
-- `test_api_path_convention.py` 只遍历 `get_resolver()` —— 也是后端侧
-- `tests/e2e` 的登录用例需要凭据 + 运行中的前后端，默认 skip
-
-扫描方式：按“调用形态”扫整份文件，而不是按行
---------------------------------------------
-上一版守护逐行匹配“调用 + 字面量”，于是只要两者分处两行就整条漏掉。实测漏了
-`tests/api/conftest.py` 的登录路径（正是它本该抓住的违规）与前端 `toolbox.ts` 的两处调用。
-本模块把源文件整体读入后用支持跨行的正则匹配，行号由匹配起点反推，
-并用 `test_multiline_call_sites_are_captured` 把这个能力钉住。
-
-三个面都参与 resolve 断言
-------------------------
-前端 API 层、`tests/` 调用面与 `tests/api/case/*.yaml` 三个面**一并**纳入 resolve 断言。
-原第四个面「端点资产目录」（`tools/seed_api_endpoints.py`）已随元素定位的 Web/API 两域
-整体下线而退役（变更 remove-element-locator-web-api，规格 `api-endpoint-catalog` 已移除），
-其扫描分支与规模下限同步删除 —— 面不存在就不留恒为 0 的空面。
-
-「能 resolve」不等于「会被受理」
---------------------------------
-只断言路径能命中路由，会放过一类真实故障：DRF router 的详情路由 `<collection>/<pk>/`
-把字面量段（`create` / `import`）当成主键抢占，请求落到只接受 get/put/patch/delete 的
-详情视图上，得到 405「方法 "POST" 不被允许。」（变更 fix-workflow-create-route-shadowing
-的起因）。因此扫描同时记录 HTTP 方法，命中 router 视图时断言方法在其动作白名单内。
-
-规格：`openspec/specs/api-path-convention`。
+"""
+模块功能：➡️ 全部调用方与后端路由表的一致性守护（前端 / 测试 / 接口用例） 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_api_path_callers.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 前端与后端源码的一致性面（只读源码断言）
+🏁
 """
 
 from __future__ import annotations

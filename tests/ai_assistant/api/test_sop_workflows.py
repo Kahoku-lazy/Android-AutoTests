@@ -1,4 +1,11 @@
-"""SOP 工作流接口：编辑整幅回写三字段，删除只删工作流记录。"""
+"""
+模块功能：➡️ SOP 工作流接口：编辑整幅回写三字段，删除只删工作流记录 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ai_assistant/api/test_sop_workflows.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/ai_assistant
+🏁
+"""
 
 from __future__ import annotations
 

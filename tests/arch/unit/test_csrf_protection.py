@@ -1,7 +1,10 @@
-"""CSRF 保护与 JWT 豁免契约（D0 安全配置 + D1 通道）。
-
-注意：Django 测试客户端默认 `enforce_csrf_checks=False`（即默认豁免 CSRF），
-因此验证「保护是否生效」必须显式用 `Client(enforce_csrf_checks=True)`。
+"""
+模块功能：➡️ CSRF 保护与 JWT 豁免契约（D0 安全配置 + D1 通道） 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_csrf_protection.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/shared/auth
+🏁
 """
 
 from __future__ import annotations

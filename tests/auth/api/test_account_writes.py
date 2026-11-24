@@ -1,4 +1,11 @@
-"""账号写口：停用与改密的落库语义（运营后台经 `accounts.api` 调用）。"""
+"""
+模块功能：➡️ 账号写口：停用与改密的落库语义（运营后台经 `accounts.api` 调用） 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/auth/api/test_account_writes.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/accounts、backend/shared/users.py
+🏁
+"""
 
 from __future__ import annotations
 

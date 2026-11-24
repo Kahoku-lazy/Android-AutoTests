@@ -14,9 +14,21 @@ from engines.ae_harness.knowledge.usage import UsageEvent
 pytestmark = [pytest.mark.integration, pytest.mark.django_db(transaction=True)]
 
 
+_RETRIEVAL = {
+    "provider": "dashscope",
+    "api_key_env": "DASHSCOPE_API_KEY",
+    "model_name": "text-embedding-v4",
+    "dimensions": 1024,
+    "top_k": 4,
+    "score_threshold": 0.45,
+    "chunk_size": 400,
+    "chunk_overlap": 60,
+    "index_epoch": 0,
+}
+
+
 @pytest.fixture(autouse=True)
 def _dirs(tmp_path, settings):
-    settings.KNOWLEDGE_SEARCH_BASES_FILE = tmp_path / "bases.yaml"
     settings.LOG_DIR = tmp_path / "logs"
 
 
@@ -41,6 +53,7 @@ def run_row(tmp_path):
             "model_name": "qwen-flash",
             "base_url": "",
         },
+        retrieval_snapshot=_RETRIEVAL,
         pos_count=5,
         neg_count=2,
         seed=42,
@@ -106,9 +119,14 @@ class _FakeRetriever:
 def patched_engine(monkeypatch):
     """替身：配置 / 检索器 / 模型 / 采样 / gold 映射 / 出题。"""
     config = SimpleNamespace(
-        chunk_size=400, chunk_overlap=60, top_k=4, score_threshold=0.45, embedding=object()
+        chunk_size=400,
+        chunk_overlap=60,
+        top_k=4,
+        score_threshold=0.45,
+        index_epoch=0,
+        embedding=object(),
     )
-    monkeypatch.setattr(eval_runner, "load_config", lambda **kwargs: config)
+    monkeypatch.setattr(eval_runner, "build_config", lambda *args, **kwargs: config)
     monkeypatch.setattr(eval_runner, "KnowledgeRetriever", _FakeRetriever)
     monkeypatch.setattr(
         eval_runner,

@@ -1,6 +1,6 @@
 """D3 写库收敛守卫 — View 层不得直写 ORM，写库只经 api.py。
 
-依据 `apps/AGENTS.md` §1.2 红线（「View / Consumer / Tool 直接 ORM 写」与
+依据 `backend/AGENTS.md` §1.2 红线（「View / Consumer / Tool 直接 ORM 写」与
 「写库路径：View / Tool → api.py → ORM」），把 `django-backend-check/references/calibration.md` §7
 列为**手工** `rg` 扫描的那条固化成可执行的 `arch` 层门禁。
 

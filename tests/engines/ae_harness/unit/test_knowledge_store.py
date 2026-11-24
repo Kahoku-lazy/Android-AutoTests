@@ -15,7 +15,13 @@ from engines.ae_harness.knowledge.store import SQLiteVectorStore
 pytestmark = [pytest.mark.unit]
 
 
-def _record(document_id: str, index: int, text: str, vector: list[float]) -> VectorRecord:
+def _record(
+    document_id: str,
+    index: int,
+    text: str,
+    vector: list[float],
+    metadata: dict | None = None,
+) -> VectorRecord:
     """造一条带向量的文档块。
 
     Args:
@@ -35,7 +41,7 @@ def _record(document_id: str, index: int, text: str, vector: list[float]) -> Vec
             source=f"{document_id}.md",
             chunk_index=index,
             total_chunks=1,
-            metadata={},
+            metadata=metadata or {},
         ),
     )
 
@@ -77,6 +83,23 @@ async def test_delete_document_removes_all_chunks(tmp_path):
         documents = await store.list_documents("kb")
     assert [result.document_id for result in results] == ["doc_b"]
     assert [item.document_id for item in documents] == ["doc_b"]
+
+
+async def test_delete_with_metadata_filter_keeps_other_chunks(tmp_path):
+    """带过滤器时只删 metadata 全部匹配的块，同文档其余块留下。"""
+    store = SQLiteVectorStore(tmp_path / "rag.sqlite3")
+    async with store:
+        await store.create_collection("kb", 2)
+        await store.insert(
+            "kb",
+            [
+                _record("doc_a", 0, "甲", [1.0, 0.0], {"tenant": "a"}),
+                _record("doc_a", 1, "乙", [1.0, 0.0], {"tenant": "b"}),
+            ],
+        )
+        await store.delete("kb", "doc_a", metadata_filter={"tenant": "a"})
+        results = await store.search("kb", [1.0, 0.0], top_k=5)
+    assert [result.chunk.content.text for result in results] == ["乙"]
 
 
 async def test_dimension_mismatch_and_missing_collection(tmp_path):

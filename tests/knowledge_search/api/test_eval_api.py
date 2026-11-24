@@ -16,11 +16,6 @@ pytestmark = [pytest.mark.django_db, pytest.mark.api]
 
 
 @pytest.fixture(autouse=True)
-def _bases_file(tmp_path, settings):
-    settings.KNOWLEDGE_SEARCH_BASES_FILE = tmp_path / "bases.yaml"
-
-
-@pytest.fixture(autouse=True)
 def _no_thread(monkeypatch):
     """接口测试不起后台线程。"""
     monkeypatch.setattr(eval_runner, "start_eval_run", lambda pk: None)

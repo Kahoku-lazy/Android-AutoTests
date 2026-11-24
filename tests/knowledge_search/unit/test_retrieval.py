@@ -7,7 +7,9 @@ from __future__ import annotations
 
 import pytest
 
+from backend.apps.ai_assistant.models import AIModelConfig
 from backend.apps.knowledge_search import api, retrieval
+from backend.apps.knowledge_search.models import RetrievalSettings
 from backend.apps.usage_ledger.models import ModelUsage
 from engines.ae_harness.knowledge.service import KnowledgeHit, Retrieval
 from engines.ae_harness.knowledge.usage import UsageEvent
@@ -16,9 +18,24 @@ pytestmark = [pytest.mark.unit, pytest.mark.django_db]
 
 
 @pytest.fixture(autouse=True)
-def _bases_file(tmp_path, settings):
-    """派生 yaml 指到临时目录。"""
-    settings.KNOWLEDGE_SEARCH_BASES_FILE = tmp_path / "bases.yaml"
+def _retrieval_settings(tmp_path, monkeypatch):
+    """放一行检索配置，并把索引标记目录指到临时路径。"""
+    model = AIModelConfig.objects.create(
+        provider="dashscope",
+        api_key_env="DASHSCOPE_API_KEY",
+        model_kind="embedding",
+        model_name="text-embedding-v4",
+        dimensions=1024,
+    )
+    RetrievalSettings.objects.create(
+        embedding_model_id=model.id,
+        top_k=4,
+        score_threshold=0.45,
+        chunk_size=400,
+        chunk_overlap=60,
+        index_epoch=0,
+    )
+    monkeypatch.setattr(retrieval, "INDEX_DIR", tmp_path / "index")
 
 
 @pytest.fixture()
@@ -82,8 +99,15 @@ def fake_retriever(monkeypatch):
     return _FakeRetriever
 
 
+def _mark_ready(names):
+    """把勾选库的索引标记写成当前 epoch，表示已按现行切块建过索引。"""
+    for name in names:
+        retrieval.mark_indexed(name, api.get_retrieval_settings().index_epoch)
+
+
 def test_multi_base_merge_sort_truncate(two_modules, fake_retriever):
     """多库命中按相似度降序合并并截断。"""
+    _mark_ready(two_modules)
     fake_retriever.canned = {
         "kb_a": Retrieval("ok", hits=(_hit("kb_a", 0.6), _hit("kb_a", 0.9, 1))),
         "kb_b": Retrieval("ok", hits=(_hit("kb_b", 0.8),)),
@@ -97,6 +121,7 @@ def test_multi_base_merge_sort_truncate(two_modules, fake_retriever):
 
 def test_partial_failure_returns_hits_and_errors(two_modules, fake_retriever):
     """单库失败不拖垮其它库：返回命中并附逐库错误。"""
+    _mark_ready(two_modules)
     fake_retriever.canned = {
         "kb_a": Retrieval("ok", hits=(_hit("kb_a", 0.7),)),
         "kb_b": Retrieval("unavailable", error="索引失败"),
@@ -109,6 +134,7 @@ def test_partial_failure_returns_hits_and_errors(two_modules, fake_retriever):
 
 def test_all_unavailable_and_no_hit(two_modules, fake_retriever):
     """全部失败为 unavailable；库可用但没命中为 no_hit，文案不同。"""
+    _mark_ready(two_modules)
     fake_retriever.canned = {
         "kb_a": Retrieval("unavailable", error="密钥缺失"),
         "kb_b": Retrieval("unavailable", error="索引失败"),
@@ -141,18 +167,15 @@ def test_engine_missing_degrades(two_modules, monkeypatch):
 
 
 def test_config_load_failure_degrades(two_modules, fake_retriever, monkeypatch):
-    """库目录装载失败降级为 unavailable。"""
-
-    def broken_load(**kwargs):
-        raise ValueError("目录冲突")
-
-    monkeypatch.setattr(retrieval, "load_config", broken_load)
+    """检索配置缺失时降级为 unavailable。"""
+    RetrievalSettings.objects.all().delete()
     result = retrieval.search(question="问题", bases=two_modules)
     assert result["result"] == "unavailable"
 
 
 def test_usage_recorded_to_ledger(two_modules, fake_retriever):
     """检索结束把嵌入用量写入账本，source=knowledge。"""
+    _mark_ready(["kb_a"])
     fake_retriever.canned = {"kb_a": Retrieval("ok", hits=(_hit("kb_a", 0.7),))}
     fake_retriever.events = [
         UsageEvent(
@@ -179,6 +202,7 @@ def test_ledger_failure_does_not_block(two_modules, fake_retriever, monkeypatch)
         raise RuntimeError("账本不可写")
 
     monkeypatch.setattr(ledger_api, "record_embedding_usages", broken_record)
+    _mark_ready(["kb_a"])
     fake_retriever.canned = {"kb_a": Retrieval("ok", hits=(_hit("kb_a", 0.7),))}
     fake_retriever.events = [
         UsageEvent(model="m", api_key_env="DASHSCOPE_API_KEY", tokens=1, time=0.1)
@@ -187,10 +211,19 @@ def test_ledger_failure_does_not_block(two_modules, fake_retriever, monkeypatch)
     assert result["result"] == "ok"
 
 
+def test_stale_epoch_blocks_search(two_modules, fake_retriever):
+    """切块参数变更后未重建的库返回需重建，不返回旧命中。"""
+    fake_retriever.canned = {"kb_a": Retrieval("ok", hits=(_hit("kb_a", 0.9),))}
+    result = retrieval.search(question="问题", bases=["kb_a"])
+    assert result["result"] == "unavailable"
+    assert "需重建索引" in result["errors"][0]
+
+
 def test_index_module_success_and_failure(two_modules, fake_retriever):
     """预建索引返回重建数；失败给可读原因。"""
     ok = retrieval.index_module(name="kb_a", execution_id="idx-1")
     assert ok == {"status": True, "error": "", "reindexed": 2}
+    assert retrieval._epoch_matches("kb_a", api.get_retrieval_settings().index_epoch)
     fake_retriever.index_error = "资料目录不存在"
     bad = retrieval.index_module(name="kb_a")
     assert bad["status"] is False

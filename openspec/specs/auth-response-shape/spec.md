@@ -12,7 +12,7 @@
 前端认证 DTO 中声明的每个字段 SHALL 出现在其对应端点的后端响应里。
 同一 DTO 被多个端点复用时，MUST NOT 用一个宽泛的可选字段掩盖端点之间的形状差异。
 
-该一致性 SHALL 由 `tests/graybox/unit` 下的默认单元测试断言，MUST NOT 依赖运行中的服务。
+该一致性 SHALL 由 `tests/arch/unit` 下的契约守护断言，MUST NOT 依赖运行中的服务。
 
 #### Scenario: 登录与注册响应 DTO 的字段都在响应里
 

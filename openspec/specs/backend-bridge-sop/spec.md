@@ -9,7 +9,7 @@
 
 平台 SOP MUST 复用 `engines/ae_harness/workflow/sop` 的 `load_spec` 与 `run_sop` 完成编排；MUST NOT 另写步骤推进、重试预算、驳回记录或验收判定。
 
-步骤定义 MUST 来自 `ae_harness` 的 `steps/*.yaml`；MUST NOT 新增第二份步骤格式，MUST NOT 把步骤写死在代码里。
+步骤定义 MUST 由调用方以 YAML 提供给 `load_spec`；MUST NOT 新增第二份步骤格式，MUST NOT 把步骤写死在代码里，MUST NOT 由 `ae_harness` 自带步骤文件。
 
 本变更 MUST NOT 修改 `engines/ae_harness` 下的任何代码。
 
@@ -19,11 +19,11 @@
 - **THEN** 步骤推进与重试由 `run_sop` 完成
 - **AND** 本层源码里没有第二套编排循环
 
-#### Scenario: 步骤来自 YAML
+#### Scenario: 步骤来自调用方
 
-- **WHEN** 平台选择默认流程
-- **THEN** 步骤来自 `ae_harness` 的 `ui_task.yaml`
-- **AND** 传入的任务文本只覆盖流程的任务描述，不新增步骤
+- **WHEN** 平台跑一次 SOP
+- **THEN** 步骤来自调用方传入的 YAML
+- **AND** `ae_harness` 内不存在自带的步骤文件
 
 #### Scenario: ae_harness 零改动
 

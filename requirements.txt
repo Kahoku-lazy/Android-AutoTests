@@ -15,7 +15,7 @@ django-cors-headers>=4.0
 django-jazzmin>=3.0.5
 
 # ── Database ──
-mysqlclient>=2.2
+mysqlclient>=2.3.2
 
 # ── Device Control ──
 uiautomator2>=3.7.1

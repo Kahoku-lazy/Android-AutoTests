@@ -223,3 +223,7 @@ tools/.cache/
 
 # ── 设计方案与报告（只留本地，不入库；已入库部分已从最新版本移除）──
 dev_docs/DEV_TEST/设计方案与报告/
+
+# ── 本地诊断产物（ACL 修复备份、一次性命令输出，不入库）──
+_acl-recovery/
+result.json

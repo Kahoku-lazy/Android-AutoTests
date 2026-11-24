@@ -1,5 +1,5 @@
-"""engines 风格检查：用 AST 扫描 docstring / Raises / tool 命名与段序 / engines 禁 django·apps import。
-风格正文：.agents/rules/engines-code-style.md（§§2、5、6 等可机械化子集）。
+"""engines 风格检查：用 AST 扫描 module-docstring 存在性 / tool 命名 / engines 禁 django·apps import。
+风格正文：.agents/rules/engines-code-style.md（§§2、3、6 等可机械化子集）。
 何时检查 / 流程入口：engines/AGENTS.md。仅依赖标准库。
 
 本模块的业务功能如下：
@@ -30,7 +30,6 @@ from __future__ import annotations
 import argparse
 import ast
 import json
-import re
 import sys
 
 from collections import Counter
@@ -68,13 +67,8 @@ SKIP_DIR_NAMES = frozenset({"__pycache__", ".venv", "venv"})
 SKILL_CREATOR_MARKER = ("engines", "agents", "skills")
 
 RULE_MODULE_DOC = "module-docstring"
-RULE_RAISES = "raises-doc"
 RULE_TOOL_NAME = "tool-naming"
-RULE_TOOL_ORDER = "tool-doc-order"
 RULE_NO_DJANGO = "no-django-apps-import"
-
-SECTION_RE = re.compile(r"^(Args|Returns|Raises|Yields|Note|Notes|Example|Examples):\s*$")
-RAISES_TYPE_RE = re.compile(r"^([A-Za-z_][\w.]*)\s*:")
 
 
 @dataclass(frozen=True)
@@ -138,20 +132,6 @@ def _body_without_doc(tree: ast.Module) -> list[ast.stmt]:
     return body
 
 
-def _has_defs(tree: ast.AST) -> bool:
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            # Skip nested? For __init__ skip decision, any top-level or nested counts
-            # as "has classes/functions"
-            if node is tree:
-                continue
-            return True
-    # walk includes the module itself only as Module, so FunctionDef/ClassDef are enough
-    return any(
-        isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) for n in ast.walk(tree)
-    )
-
-
 def check_module_docstring(path: Path, tree: ast.Module) -> list[Violation]:
     rel = _rel(path)
     if path.name == "__init__.py":
@@ -201,9 +181,6 @@ def check_tool_naming(path: Path) -> list[Violation]:
             )
         ]
     return []
-
-
-
 
 
 def check_no_django_apps_import(path: Path, tree: ast.Module) -> list[Violation]:
@@ -311,8 +288,6 @@ def scan_file(path: Path) -> list[Violation]:
         return violations
 
     violations.extend(check_module_docstring(path, tree))
-    violations.extend(check_raises_docs(path, tree, source))
-    violations.extend(check_tool_doc_order(path, tree))
     violations.extend(check_no_django_apps_import(path, tree))
     return violations
 

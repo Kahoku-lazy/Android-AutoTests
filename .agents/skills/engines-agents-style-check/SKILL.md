@@ -2,7 +2,7 @@
 name: engines-agents-style-check
 description: >-
   Use whenever checking engines/ style in Android-AutoTests, after editing engines/,
-  fixing docstring/Raises/tool naming, or before claiming style is clean —
+  fixing module headers/tool naming, or before claiming style is clean —
   always run this project AST checker and report only what it covers. When to load
   this skill is directed by engines/AGENTS.md. Prose source of truth is
   .agents/rules/engines-code-style.md. Project-local skill for this repo's engines/
@@ -18,7 +18,7 @@ description: >-
 | 文档 | 作用 |
 |------|------|
 | [`engines/AGENTS.md`](../../../engines/AGENTS.md) | **必读流程**：何时读规范、何时用本技能（职责 / 红线 / AI 阅读与检查流程） |
-| [`.agents/rules/engines-code-style.md`](../../rules/engines-code-style.md) | **风格正文 source of truth**（docstring / Raises / SRP / agents 专规等散文） |
+| [`.agents/rules/engines-code-style.md`](../../rules/engines-code-style.md) | **风格正文 source of truth**（注释 / SRP / agents 专规等散文） |
 
 本技能**不**承载完整风格散文；`engines/AGENTS.md` 也不再堆放全文。检查器只覆盖正文里**能机械化**的子集。
 
@@ -27,8 +27,8 @@ description: >-
 按 [`engines/AGENTS.md`](../../../engines/AGENTS.md)「AI 阅读与检查流程」第 4 步：在下列情况**必须**阅读并按步骤执行，不要只靠口头对照规范正文：
 
 - 改动了 `engines/` 下任意 Python（含 `agents` / `device` / `uart_log` / `vision`）之后的自检
-- 用户要求检查是否符合规范、补 docstring / Raises、或「跑一下风格检查」
-- 准备宣称「已符合规范 / Raises 已对齐 / 工具命名没问题」之前
+- 用户要求检查是否符合规范、补模块头 / 工具说明、或「跑一下风格检查」
+- 准备宣称「已符合规范 / 工具命名没问题」之前
 - PR 或本地门禁里看到 `engines-agents-style` 告警，需要解释含义或复现
 
 **不要**在无关目录（纯 frontend、纯 backend apps）上无故全量跑，除非用户明确要求。  
@@ -43,18 +43,16 @@ description: >-
 | 规则 id（输出里可见） | 含义 |
 |---|---|
 | `module-docstring` | 模块是否有文件头 docstring（部分空壳 `__init__.py` 可跳过） |
-| `raises-doc` | 函数/方法体内有显式 `raise Xxx(...)` 时，docstring 是否有 `Raises:` 且写到该异常类型名 |
 | `tool-naming` | `engines/agents/tools/` 下除 `__init__.py` 外是否均为 `tool_*.py` |
-| `tool-doc-order` | 仅 `tool_*.py`：若有 `Raises:`，须在 `Returns:` 之后，且不得插在摘要与 `Args:` 之间 |
 | `no-django-apps-import` | `engines/**` **模块顶层**不得 `import django` / `apps` / `backend.apps`（函数内可选探测除外；对齐 OpenSpec `agent-harness`） |
+
+> 模块头 4 字段、工具函数「首行摘要 + `Args:`」由姊妹技能 [`engines-docstring-check`](../engines-docstring-check/SKILL.md) 校验；本检查器不重复判定。
 
 ### 它不能校验什么（禁止夸大）
 
 - 「一域一文件」、单一职责、模块低耦合
 - 类型注解是否完整、业务对错、该不该 `raise`
-- 异常说明文字是否准确
-- 裸 `raise` / `raise err`（变量再抛）— 检查器会忽略，避免误报
-- §6 穿透异常是否写全（未自动核对）
+- 模块头字段是否写对、工具函数摘要/`Args` 是否齐全（那是 `engines-docstring-check` 的范围）
 - `ruff` 已管的事（如 `print`）— 仍用 `ruff check engines`，不要说本技能已覆盖
 - 不执行代码、不验证导入、不替代 OpenSpec / 子目录 AGENTS 架构规则
 
@@ -117,12 +115,12 @@ blocking=False
 2. 若本次只改了某子树，用 `--path` 指向该子树（仓库根相对）；否则全量。
 3. 运行检查；保留完整输出。
 4. 向用户汇报时**只陈述检查器覆盖的规则**与具体路径/行号；需要谈职责划分、依赖时，单独作为人工/设计审查，勿写成「检查已通过所以设计也 OK」。
-5. 若要修复：只改 docstring / 命名等与报错对应的项；改完对同一 `--path` 再跑一遍确认。
-6. 不要在未再跑检查的情况下声称「Raises 已全部对齐」。
+5. 若要修复：只改模块头 / 命名等与报错对应的项；改完对同一 `--path` 再跑一遍确认。
+6. 不要在未再跑检查的情况下声称「工具命名已全部对齐」。
 
 ## 汇报模板（短）
 
 - 命令：…
 - 扫描范围 / 文件数：…
-- 结果：通过，或 `module-docstring=A, raises-doc=B, …`
-- 说明：仅覆盖 AST 可查条目；未覆盖单一职责 / 穿透 Raises / ruff 等
+- 结果：通过，或 `module-docstring=A, tool-naming=B, …`
+- 说明：仅覆盖 AST 可查条目；未覆盖单一职责 / 注释文案 / ruff 等

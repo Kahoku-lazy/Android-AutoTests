@@ -46,7 +46,7 @@ jobs:
           gates="$gates,silent-except,business-asset,engines-agents-retirement"
           gates="$gates,single-agent-constructor"
           gates="$gates,cred-password,cred-apikey,cred-secret"
-          gates="$gates,boundary,vue-file-size,mock-data"
+          gates="$gates,boundary,linting,vue-file-size,mock-data"
           python utils/check_gates.py --only "$gates"
 
   frontend:

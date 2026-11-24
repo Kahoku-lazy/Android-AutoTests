@@ -6,7 +6,7 @@
 
 **Architecture:** 单一扫描逻辑（`tests/module-scan.mjs`）供 vite.config 与 run.mjs 共用，避免清单漂移；HTML 报告复用 vitest JSON reporter 输出，生成器为纯 Node 无依赖单文件。
 
-**Tech Stack:** Node ≥20（ESM）、Vitest 4.1.10（projects / JSON reporter）、Vite 5、纯 JS 工具脚本（无新 npm 依赖）
+**Tech Stack:** Node ≥20（ESM）、Vitest 4.1.10（projects / JSON reporter）、Vite 6、纯 JS 工具脚本（无新 npm 依赖）
 
 **规格来源：** [DESIGN-module-classification.md](./DESIGN-module-classification.md) — 本计划中所有"验收"条目编号对应其 §8。
 

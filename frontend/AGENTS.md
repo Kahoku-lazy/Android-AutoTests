@@ -9,8 +9,7 @@
 
 1. 编程语言： TypeScript 5.4
 2. 前端框架： Vue 3.4 + Vite 6 + Element Plus
-3. 状态管理： Pinia
-4. 其它技术： Vue Router、ECharts、Mermaid、axios
+3. 其它技术： Vue Router、ECharts、axios
 
 ## 怎么用
 

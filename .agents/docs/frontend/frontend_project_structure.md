@@ -22,8 +22,7 @@ src/modules/{name}/
 ├── *.logic.ts       # 编排层（组合 composable + 提交前校验 + 清表单）
 ├── components/      # 私有业务组件（不跨模块复用）
 ├── composables/     # 状态与流程
-├── helpers/         # 纯函数（无状态无副作用）
-└── stores/          # Pinia（按需；页面流退役后当前无模块使用）
+└── helpers/         # 纯函数（无状态无副作用）
 ```
 
 ### 布局区域与归属

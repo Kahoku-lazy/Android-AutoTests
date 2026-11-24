@@ -232,7 +232,7 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 
 - 侧栏：主区 / AI 功能 / 数据 / AI 任务  
 - 请求：模块 `api.ts` → `shared/api-client.ts`；401 单飞刷新  
-- 状态：Pinia 按需（页面流退役后当前无模块 store）；token 在 localStorage  
+- 状态：无全局状态库（Pinia 已随页面流退役移除，组件内用 composable 管状态）；token 在 localStorage  
 - 设计令牌：`shared/styles/tokens.css`  
 - 实时性：无 WebSocket / SSE，任务进度与列表全走 HTTP 轮询
 

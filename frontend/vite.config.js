@@ -75,7 +75,7 @@ export default defineConfig({
         // ── vendor 分包：让浏览器并行下载，登录页不被全量库拖累 ──
         manualChunks: {
           'element-plus': ['element-plus'],
-          'vendor': ['vue', 'vue-router', 'pinia', 'axios', 'animejs'],
+          'vendor': ['vue', 'vue-router', 'axios', 'animejs'],
         },
       },
     },

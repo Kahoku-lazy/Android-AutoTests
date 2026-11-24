@@ -157,8 +157,52 @@ def update_assistant(assistant: AIAssistant, data: dict) -> AIAssistant:
     return assistant
 
 
+class AssistantInUseError(Exception):
+    """助手仍被工作流引用，拒绝删除。
+
+    Attributes:
+        names: 占用它的工作流名称，按工作流主键升序、去重。
+    """
+
+    def __init__(self, names: list[str]):
+        self.names = names
+        quoted = "、".join(f"「{name}」" for name in names)
+        super().__init__(f"该助手正被工作流{quoted}使用，请先解除绑定再删除")
+
+
+def workflows_using(assistant_id: str) -> list[str]:
+    """找出把该助手用作执行、验收、队长或成员的工作流名称。
+
+    Args:
+        assistant_id: 助手编号。
+
+    Returns:
+        工作流名称列表，同一条只出现一次，按主键升序。
+    """
+    from backend.apps.ai_assistant.models import AISopWorkflow
+
+    names: list[str] = []
+    for workflow in AISopWorkflow.objects.order_by("id"):
+        bound = [
+            workflow.executor_assistant_id,
+            workflow.verifier_assistant_id,
+            workflow.leader_assistant_id,
+        ]
+        bound.extend(str(item.get("assistant_id") or "") for item in workflow.members or [])
+        if assistant_id in bound:
+            names.append(workflow.name)
+    return names
+
+
 def delete_assistant(assistant: AIAssistant) -> None:
-    """物理删除助手名片。"""
+    """物理删除助手名片。仍被工作流引用时拒绝，名片保持原样。
+
+    Raises:
+        AssistantInUseError: 至少一条工作流还绑定该助手。
+    """
+    names = workflows_using(assistant.assistant_id)
+    if names:
+        raise AssistantInUseError(names)
     assistant.delete()
 
 

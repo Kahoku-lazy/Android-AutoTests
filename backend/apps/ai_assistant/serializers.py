@@ -27,8 +27,11 @@ class ModelConfigSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     provider = serializers.ChoiceField(choices=["deepseek", "dashscope", "openai"])
     api_protocol = serializers.ChoiceField(choices=["deepseek", "dashscope", "openai"])
-    model_kind = serializers.ChoiceField(choices=["chat", "tts", "realtime"], default="chat")
+    model_kind = serializers.ChoiceField(
+        choices=["chat", "tts", "realtime", "embedding"], default="chat"
+    )
     voice = serializers.CharField(required=False, allow_blank=True, max_length=64)
+    dimensions = serializers.IntegerField(required=False, allow_null=True, min_value=1)
     api_key_env = serializers.ChoiceField(
         choices=["DEEPSEEK_API_KEY", "DASHSCOPE_API_KEY", "OPENAI_API_KEY"]
     )
@@ -48,6 +51,11 @@ class ModelConfigSerializer(serializers.Serializer):
             if key != expected:
                 raise serializers.ValidationError("厂商与密钥环境变量不匹配")
         kind = attrs.get("model_kind") or "chat"
+        if kind == "embedding":
+            if not attrs.get("dimensions"):
+                raise serializers.ValidationError("向量维度必须是正整数")
+            attrs["base_url"] = ""
+            attrs["voice"] = ""
         if kind in {"chat", "realtime"} and ("base_url" in attrs or not self.partial):
             schemes = {"http", "https", "ws", "wss"} if kind == "realtime" else {"http", "https"}
             attrs["base_url"] = _valid_http_url(attrs.get("base_url"), schemes)

@@ -25,9 +25,11 @@ class AIModelConfig(models.Model):
     api_key_env = models.CharField(max_length=64, choices=API_KEY_CHOICES)
     # 调用协议：deepseek / dashscope / openai。openai 表示 OpenAI 兼容协议。
     api_protocol = models.CharField(max_length=32, default="", blank=True)
-    # chat=聊天，tts=语音合成，realtime=实时语音。决定后面按哪一类模型使用。
+    # chat=聊天，tts=语音合成，realtime=实时语音，embedding=向量。决定后面按哪一类模型使用。
     model_kind = models.CharField(max_length=32, default="chat", blank=True)
     voice = models.CharField(max_length=64, default="", blank=True)
+    # 向量维度：仅 embedding 必填。其它类型留空，不参与连接。
+    dimensions = models.PositiveIntegerField(null=True, blank=True)
     base_url = models.CharField(max_length=500, default="", blank=True)
     model_name = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)

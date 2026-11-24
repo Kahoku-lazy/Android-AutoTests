@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 测试对话接口：建栏不跑模型，缺配置时发送返回 409 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ai_assistant/api/test_assistant_threads.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/ai_assistant
-🏁
-"""
-
 from __future__ import annotations
 
 import pytest

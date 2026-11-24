@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 日志关键词对照表的只读目录（串口日志页「日志关键词」Tab） 🏁
-Python 调试：➡️ python -m backend.apps.serial_log.keywords 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（经 serial_log 的功能用例间接覆盖，未直接 import 本模块）
-🏁
-"""
-
 from __future__ import annotations
 
 from datetime import timedelta, timezone
@@ -22,12 +13,10 @@ __all__ = ["collect_keywords", "row_payload"]
 _ORIGIN_DB = "db"
 _ORIGIN_NONE = "none"
 
-# 平台时间口径：固定 UTC+8（不依赖 tzdata），与采集时间戳一致。
 _BEIJING = timezone(timedelta(hours=8))
 
 
 def row_payload(row) -> dict:
-    """单条关键词行 → 接口载荷（row_id 供编辑 / 删除定位）。"""
     return {
         "row_id": row.pk,
         "keyword": row.keyword,
@@ -40,7 +29,6 @@ def row_payload(row) -> dict:
 
 
 def _rows(objects: list) -> list[dict]:
-    """DB 行 → 逐关键词条目（保持登记行序，功能点带主键 / 编号 / 模块 / 名称 / 范围）。"""
     grouped: dict[str, list[dict]] = {}
     for row in objects:
         grouped.setdefault(row.keyword, []).append(
@@ -56,7 +44,6 @@ def _rows(objects: list) -> list[dict]:
 
 
 def _feature_count(rows: list[dict]) -> int:
-    """功能点数按「模块 + 编号 + 名称」去重（同一功能点可能挂在多个关键词下；范围不参与去重）。"""
     seen: set[tuple] = set()
     for row in rows:
         for item in row["features"]:
@@ -67,7 +54,6 @@ def _feature_count(rows: list[dict]) -> int:
 
 
 def _updated_at(objects: list) -> str:
-    """表内最近一次写入时间（北京时间，秒精度）；表为空给空串。"""
     stamps = [row.updated_at for row in objects if row.updated_at is not None]
     if not stamps:
         return ""
@@ -78,12 +64,6 @@ def _updated_at(objects: list) -> str:
 
 
 def collect_keywords() -> dict:
-    """当前关键词对照表：关键词 → 功能点（带范围），附计数、取值来源与最近写入时间。
-
-    Returns:
-        {keywords, keyword_count, feature_count, origin, updated_at, note}；
-        origin 为 "db"（有条目）或 "none"（空表 / 不可用，note 给可读原因）。
-    """
     try:
         objects = api.list_keyword_rows()
     except DBError as exc:

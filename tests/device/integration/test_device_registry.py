@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 灰盒·集成测试 — 设备注册落库（DeviceRegistry） 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/device/integration/test_device_registry.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/device_pool
-🏁
-"""
-
 import pytest
 
 from backend.apps.device_pool.contracts import DeviceInfo
@@ -18,7 +9,6 @@ from backend.apps.device_pool.models import Device
 @pytest.mark.django_db
 @pytest.mark.device_pool
 def test_register_new_usb_device(registry, detector):
-    """场景一：新 USB 设备接入 → 登记入库 + 自动采集型号/品牌/分辨率。"""
     detector.resolve_serial.return_value = ("RF8N21MSW7A", "")
     detector.is_wireless.return_value = False
     detector.get_info.return_value = DeviceInfo(
@@ -31,7 +21,6 @@ def test_register_new_usb_device(registry, detector):
     assert dev.connection_type == "USB"
     assert dev.status == "ONLINE"
     assert dev.added_by == "1"
-    # 自动采集信息已写库
     assert dev.model == "SM-G973F"
     assert dev.brand == "samsung"
     assert dev.screen_w == 1080
@@ -42,7 +31,6 @@ def test_register_new_usb_device(registry, detector):
 @pytest.mark.django_db
 @pytest.mark.device_pool
 def test_register_existing_device_not_created(registry, detector):
-    """场景二：设备已登记，重复扫描不重复登记、不重复采集。"""
     Device.objects.create(serial="RF8N21MSW7A", model="已有", screen_w=720)
     detector.resolve_serial.return_value = ("RF8N21MSW7A", "")
     detector.is_wireless.return_value = False
@@ -51,7 +39,6 @@ def test_register_existing_device_not_created(registry, detector):
 
     assert created is False
     assert Device.objects.filter(serial="RF8N21MSW7A").count() == 1
-    # 未重复采集
     detector.get_info.assert_not_called()
 
 
@@ -59,7 +46,6 @@ def test_register_existing_device_not_created(registry, detector):
 @pytest.mark.django_db
 @pytest.mark.device_pool
 def test_register_wireless_resolve_failure_raises(registry, detector):
-    """边界：无线设备拿不到真实序列号 → 抛错（502），不登记。"""
     detector.resolve_serial.return_value = ("", "192.168.1.5:5555")
 
     with pytest.raises(DeviceError):

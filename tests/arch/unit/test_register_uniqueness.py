@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 注册用户名唯一性契约（OpenSpec: fix-register-duplicate-race） 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_register_uniqueness.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/accounts
-🏁
-"""
-
 from __future__ import annotations
 
 import inspect
@@ -38,7 +29,6 @@ def _register(c, username, **over):
 
 
 def test_sequential_duplicate_returns_409():
-    """Scenario: 顺序重名注册。"""
     c = Client()
     assert _register(c, "dup_seq").status_code == 200
 
@@ -48,11 +38,6 @@ def test_sequential_duplicate_returns_409():
 
 
 def test_duplicate_appearing_at_write_time_returns_409(monkeypatch):
-    """Scenario: 并发重名注册 —— 同名用户在「校验通过之后、写入之前」被别人抢注。
-
-    真实并发无法稳定复现，因此把竞态的那一瞬固定下来：写口在真正插入前先插入一个同名用户。
-    修复前这条路径抛出未被捕获的 IntegrityError → 500。
-    """
     c = Client()
     original = api.create_user
 
@@ -68,25 +53,21 @@ def test_duplicate_appearing_at_write_time_returns_409(monkeypatch):
 
 
 def test_write_port_translates_integrity_error():
-    """Scenario: 写口不泄漏底层异常。"""
     api.create_user(username="dup_port", password=PASSWORD, email="a@b.c")
 
     with pytest.raises(api.ConflictError) as ei:
         api.create_user(username="dup_port", password=PASSWORD, email="a@b.c")
 
-    # 因果链保留，但抛给调用方的不再是 IntegrityError
     assert ei.value.__cause__ is not None
     assert ei.value.__cause__.__class__.__name__ == "IntegrityError"
 
 
 def test_conflict_does_not_break_caller_transaction():
-    """Scenario: 冲突不破坏调用方事务（savepoint 隔离）。"""
     api.create_user(username="dup_tx", password=PASSWORD, email="a@b.c")
 
     with transaction.atomic():
         with pytest.raises(api.ConflictError):
             api.create_user(username="dup_tx", password=PASSWORD, email="a@b.c")
-        # 外层事务仍可用：失败被 savepoint 隔离，后续查询与写入都能执行
         assert User.objects.filter(username="dup_tx").count() == 1
         api.create_user(username="after_tx", password=PASSWORD, email="c@d.e")
 
@@ -94,6 +75,5 @@ def test_conflict_does_not_break_caller_transaction():
 
 
 def test_serializer_does_not_guarantee_uniqueness():
-    """设计约束：唯一性权威在写口，校验层不得再做前置判重。"""
     src = inspect.getsource(RegisterSerializer)
     assert "User.objects" not in src, "校验层重新引入了唯一性前置检查（唯一性应由写口保证）"

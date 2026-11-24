@@ -151,7 +151,6 @@
 </template>
 
 <script setup lang="ts">
-/** LogKeywordPanel — 串口日志页「日志关键词」Tab：表格 + 搜索 / 范围筛选；超管可新建 / 编辑 / 删除 */
 import { computed, onMounted } from "vue"
 import AppTable from "@/shared/components/AppTable.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
@@ -184,7 +183,6 @@ import {
 
 const props = withDefaults(defineProps<{ canManage?: boolean }>(), { canManage: false })
 
-/** 四个数据列；超管另加操作列（编辑 / 删除），非超管恰四列 */
 const COLUMNS = computed(() => {
   const base = [
     { dataIndex: "feature", title: LOG_KEYWORD_COL_FEATURE, icon: "◈", minWidth: 240 },
@@ -214,7 +212,6 @@ const {
 
 const crud = useKeywordCrud(load)
 
-/** 模块配色按「全量行」的首次出现顺序分配：搜索过滤时已有配色不漂移 */
 const moduleColors = computed(() => buildModuleColorMap(rows.value.map((row) => row.module)))
 const moduleColorToken = (module: string): string => moduleColorOf(moduleColors.value, module)
 

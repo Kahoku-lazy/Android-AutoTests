@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** 账号详情抽屉 — 只渲染账号信息与两个动作；请求与二次确认由列表页负责。 */
 import { computed } from "vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
@@ -10,11 +9,11 @@ const props = defineProps<{
   modelValue: boolean
   user: OpsUser | null
   busy: boolean
-  /** 当前操作者能否管理这一行（超管行与其它运营行会置灰） */
+
   canManage: boolean
-  /** 当前操作者是否为超管：只有超管看得到授予/取消运营 */
+
   canGrant: boolean
-  /** 重置后的一次性密码；空串表示本次没有 */
+
   oneTimePassword: string
 }>()
 
@@ -191,8 +190,6 @@ const roleHint = computed(() => {
   flex-wrap: wrap;
 }
 
-/* 身份标签与启用状态：抽屉内容被 teleport 到 body，页面级 scoped 样式到不了这里。
-   皮肤与列表页表格 chip 同一套：1.5px 墨边 + 混底 + 14px 粗字（仓库表格口径）。 */
 .ops-identity {
   display: inline-flex;
   align-items: center;

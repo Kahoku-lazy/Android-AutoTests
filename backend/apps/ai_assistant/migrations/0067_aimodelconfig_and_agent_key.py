@@ -1,10 +1,7 @@
-# Generated for ops model-config form. Depends on 0066 because that file is already present.
-
 from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ai_assistant", "0066_airole"),
     ]

@@ -1,9 +1,4 @@
 <script setup lang="ts">
-/** KeywordFormDialog — 新建 / 编辑日志关键词（el-dialog 全局皮肤 + sketch-kit 表单）
- *
- * 组件只渲染与本地表单态：校验走 helpers/keyword-form，HTTP 编排走 useKeywordCrud。
- * 打开时按 editRow 重置 / 回填表单；范围下拉允许创建新 SKU 值（后端白名单兜底）。
- */
 import { reactive, ref, watch } from "vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
 import { validateKeywordForm } from "../helpers/keyword-form"
@@ -51,7 +46,6 @@ const form = reactive({
 })
 const localError = ref("")
 
-/** 打开即清表单 / 回填编辑行 */
 watch(
   () => props.visible,
   (open) => {

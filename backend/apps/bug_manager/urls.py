@@ -1,5 +1,3 @@
-"""bug-manager URL routing — endpoints under /api/bugs/."""
-
 from django.urls import path
 
 from backend.apps.bug_manager.views import (

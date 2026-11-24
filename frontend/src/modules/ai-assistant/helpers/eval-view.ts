@@ -1,5 +1,3 @@
-/** 评测页的纯判断：哪些组合可评，一行结果怎么说。 */
-
 import { EVAL_FAILED, EVAL_PASSED, EVAL_UNAVAILABLE } from "../constants"
 
 export function evalBlocked(orchestration: string): string {

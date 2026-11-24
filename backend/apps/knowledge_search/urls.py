@@ -1,5 +1,3 @@
-"""knowledge-search URL routing — 全部位于 /api/knowledge-search/ 之下，带尾斜杠。"""
-
 from django.urls import path
 
 from .views import (

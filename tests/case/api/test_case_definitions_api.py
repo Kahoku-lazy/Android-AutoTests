@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 项目表接口：创建锁定类型，目录和文件路由不再存在 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/case/api/test_case_definitions_api.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/case_manager、backend/shared/auth
-🏁
-"""
-
 from __future__ import annotations
 
 import json

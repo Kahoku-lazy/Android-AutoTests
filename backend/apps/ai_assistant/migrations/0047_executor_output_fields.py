@@ -1,16 +1,5 @@
-"""执行模型输出契约改三字段（result / click_timer / screenshot）。
-
-设备执行链路的执行模型自本次变更（executor-output-fields）起只回三个字段：`result`、
-`click_timer`（点击前时间戳，取点击类工具返回的 `action_time`）、`screenshot`（点击后
-截图路径，取 `screenshot_page(keep_local=true)` 返回的 `screenshot_path`）；验收模型的
-输入说明随之同步。本迁移对存量库做**短语级条件替换**：每处只在仍含平台原文锚点时才替换，
-管理员已改写过的提示词一律不动（与 0039 / 0040 / 0044 / 0046 同一口径）；reverse 按新文
-精确回退旧文，已迁过的行进不来也就不重复替换（幂等）。
-"""
-
 from django.db import migrations
 
-# (平台原文锚点, 新契约正文)：executor 四处
 _EXECUTOR_PAIRS: tuple[tuple[str, str], ...] = (
     (
         "## 输出字段\n"
@@ -47,7 +36,6 @@ _EXECUTOR_PAIRS: tuple[tuple[str, str], ...] = (
     ),
 )
 
-# (平台原文锚点, 新契约正文)：verifier 一处（输入说明）
 _VERIFIER_PAIRS: tuple[tuple[str, str], ...] = (
     (
         "- 执行模型的结果：action、result（PASS/FAIL）、message、操作结果截图。",
@@ -58,7 +46,6 @@ _VERIFIER_PAIRS: tuple[tuple[str, str], ...] = (
 
 
 def apply_contract(text: str, pairs: tuple[tuple[str, str], ...]) -> str:
-    """含旧文才替换（已改写 / 已迁移的行原样返回）。"""
     for old, new in pairs:
         if old in text:
             text = text.replace(old, new, 1)
@@ -66,7 +53,6 @@ def apply_contract(text: str, pairs: tuple[tuple[str, str], ...]) -> str:
 
 
 def revert_contract(text: str, pairs: tuple[tuple[str, str], ...]) -> str:
-    """反向：按新文精确回退旧文（含新文才换）。"""
     for old, new in pairs:
         if new in text:
             text = text.replace(new, old, 1)

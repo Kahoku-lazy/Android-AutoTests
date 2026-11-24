@@ -1,26 +1,3 @@
-"""
-文件名: ➡️ billing.py 🏁
-路径: ➡️ engines/backend_bridge/model_billing/billing.py 🏁
-模块功能：➡️ 平台侧 DeepSeek 模型费用计算：价目、高峰倍率与 8 位小数金额 🏁
-Python 调试：➡️ python -m engines.backend_bridge.model_billing.billing 🏁
-时间：➡️ 2026-11-24 🏁
-作者：➡️ kahoku 🏁
-版本：➡️ 1.0.0 🏁
-修改时间: ➡️ 2026-11-15 🏁
-类型: ➡️ Agent 能力模块 🏁
-简介说明：➡️
-1. DeepSeekBilling: 只计算 deepseek-flash 与 deepseek-v4-pro 的费用。
-2. 本模块是平台侧唯一的费用实现；原 engines.agents 价目副本已随包退役。
-3. 只算金额、不写库：三项金额（输入 / 输出 / 缓存命中）由后端写账。
-🏁
-关联模块：➡️
-1. 无本地 engines 依赖：只用标准库与 chinese_calendar 判断法定节假日。
-🏁
-测试：➡️
-1. 暂无
-🏁
-"""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -35,12 +12,9 @@ _SHANGHAI = ZoneInfo("Asia/Shanghai")
 _MILLION = Decimal(1_000_000)
 _PEAK_MULTIPLIER = Decimal(2)
 
-# 官方模型名：与 engines/agents/config/data/models.yaml 的 deepseek_flash / deepseek_pro 对齐。
-# 本副本不 import 角色配置，型号名在这里显式登记；改模型表时同步改这里与价目。
 _FLASH = "deepseek-flash"
 _PRO = "deepseek-v4-pro"
 
-# 官方价目页注 1：旧名仍被接受，但模型已下线，请求由 Flash-1017 提供并按 Flash 价计费。
 _MODEL_ALIASES = {
     "deepseek-v4-flash": _FLASH,
     "deepseek-v4-flash-vision-exp": _FLASH,
@@ -51,25 +25,15 @@ _ZERO = Decimal("0.00000000")
 
 
 def _billed_model(model_name: str) -> str:
-    """把模型名归一到计费档：官方给定的旧名映射到 Flash，其余原样返回。"""
     name = str(model_name or "").strip().lower()
     return _MODEL_ALIASES.get(name, name)
 
 
 def _eight_decimal_places(amount: Decimal) -> Decimal:
-    """金额保留小数点后 8 位，四舍五入。"""
     return amount.quantize(_EIGHT_DECIMAL, rounding=ROUND_HALF_UP)
 
 
 class DeepSeekBilling:
-    """
-    只计算 deepseek-flash 与 deepseek-v4-pro 的费用。
-
-    Attributes:
-        PRICING: 模型名到空闲时段三项单价（元 / 百万 tokens）的映射。
-    """
-
-    # 空闲时段单价（元 / 百万 tokens）
     PRICING: dict[str, dict[str, Decimal]] = {
         _FLASH: {
             "input_cache_hit": Decimal("0.02"),
@@ -91,22 +55,6 @@ class DeepSeekBilling:
         cache_hit_tokens: int,
         created_at: datetime | None = None,
     ) -> tuple[Decimal, Decimal, Decimal]:
-        """
-
-        按与用量相同的三项，返回费用（元，各保留小数点后 8 位、四舍五入）。
-
-        Args:
-            model_name: 模型名。取模型表里 deepseek_flash / deepseek_pro 的正式名；
-                官方旧名按 Flash 价计费；未登记模型三项为 0。
-            input_tokens: 输入 token。
-            output_tokens: 输出 token。
-            cache_hit_tokens: 缓存命中 token。超过输入 token 时按输入 token 计。
-            created_at: 调用时刻。None 按空闲时段；带时区则换算到北京时间。
-
-        Returns:
-            (输入费用, 输出费用, 缓存命中费用)。
-            输入费用只计缓存未命中部分。未登记模型返回三项 0.00000000。
-        """
         price = self.PRICING.get(_billed_model(model_name))
         if price is None:
             return _ZERO, _ZERO, _ZERO
@@ -129,18 +77,6 @@ class DeepSeekBilling:
         model_name: str,
         created_at: datetime | None = None,
     ) -> dict:
-        """
-
-        本次取价快照：模型、三项单价、倍率、是否高峰。不计算费用。
-
-        Args:
-            model_name: 模型名。旧名归一到计费档后取价；未登记时三项单价为 0。
-            created_at: 调用时刻。None 按空闲时段。
-
-        Returns:
-            含 model、hit_price、miss_price、output_price、multiplier、peak 的字典。
-            model 是归一后的计费档（旧名会显示成 deepseek-flash）。
-        """
         name = _billed_model(model_name)
         price = self.PRICING.get(name)
         peak = self._is_peak_time(created_at)
@@ -162,7 +98,6 @@ class DeepSeekBilling:
 
     @staticmethod
     def _is_peak_time(created_at: datetime | None) -> bool:
-        """北京时间周一至周五 9:00–12:00、14:00–18:00。法定节假日全天不算高峰。"""
         if created_at is None:
             return False
         moment = created_at.astimezone(_SHANGHAI) if created_at.tzinfo else created_at
@@ -175,15 +110,6 @@ class DeepSeekBilling:
 
 
 def _is_statutory_holiday(moment: datetime) -> bool:
-    """
-    该时刻所在日期是否为法定放假日。
-
-    Args:
-        moment: 已换算到北京时间的时刻。只在周一至周五调用。
-
-    Returns:
-        法定放假日为 True。节假日库未收录该年时为 False，退回工作日规则。
-    """
     try:
         on_holiday, _name = chinese_calendar.get_holiday_detail(moment.date())
     except NotImplementedError:

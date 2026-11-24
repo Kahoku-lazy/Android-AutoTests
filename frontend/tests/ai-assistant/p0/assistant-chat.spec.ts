@@ -36,7 +36,6 @@ vi.mock("vue-router", () => ({
 
 vi.mock("@/modules/ai-assistant/api/assistants", () => api)
 
-/** 打开日志面板：点工具条上唯一那个「日志」按钮。 */
 async function openLogs(wrapper: ReturnType<typeof mount>): Promise<void> {
   const button = wrapper.findAll("button").find((item) => item.text() === "日志")
   expect(button).toBeTruthy()
@@ -97,7 +96,7 @@ describe("助手对话", () => {
 
     expect(wrapper.find(".thread-log").exists()).toBe(true)
     expect(wrapper.find(".lane-column .thread-log").exists()).toBe(true)
-    // 回归：日志曾是 .ai-chat__body 的第三个网格子项，会把对话区挤进 240px 左栏
+
     expect(wrapper.element.querySelectorAll(".ai-chat__body > *")).toHaveLength(2)
     expect(wrapper.find(".ai-chat__body > .thread-log").exists()).toBe(false)
     expect(wrapper.find(".ai-chat__pane .thread-log").exists()).toBe(false)
@@ -131,7 +130,7 @@ describe("助手对话", () => {
     expect(wrapper.findAll(".thread-log__card")).toHaveLength(2)
     expect(wrapper.findAll(".thread-log__tape")).toHaveLength(2)
     const times = wrapper.findAll(".thread-log__time").map((item) => item.text())
-    // 有消息时间用消息时间；进行中的一轮没有时间，给占位符
+
     expect(times).toEqual(["11-16 17:45", "—"])
     expect(wrapper.find(".thread-log__time").attributes("datetime")).toBe(
       "2026-11-16T17:45:30+08:00",
@@ -162,7 +161,7 @@ describe("助手对话", () => {
     await wrapper.find(".error-state__btn").trigger("click")
     await flushPromises()
     expect(wrapper.text()).toContain("跑完一轮")
-    // 老数据没有消息时间：回落报告编号里的时间戳
+
     expect(wrapper.find(".thread-log__time").text()).toBe("11-16 12:00")
     wrapper.unmount()
     vi.useRealTimers()

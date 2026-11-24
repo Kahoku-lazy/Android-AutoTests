@@ -1,5 +1,3 @@
-"""serial-log URL routing — 九个端点，全部位于 /api/serial-log/ 之下。"""
-
 from django.urls import path
 
 from .views import (

@@ -24,7 +24,6 @@
   white-space: nowrap;
 }
 
-/* 已选计数：模块色只做浅底与描边，不铺正文 */
 .case-picker__picked {
   padding: 1px var(--app-space-sm);
   border: 1.5px solid color-mix(in srgb, var(--c-case) 75%, transparent);
@@ -35,7 +34,6 @@
   white-space: nowrap;
 }
 
-/* 搜索框：与模块表单控件同口径（墨框 2px + 纸底 + 2px 圆角） */
 .case-picker__search {
   position: relative;
   display: flex;
@@ -71,7 +69,6 @@
   outline-offset: 2px;
 }
 
-/* 原生搜索框的清除按钮与自己画的重了，只留自己那个 */
 .case-picker__input::-webkit-search-cancel-button,
 .case-picker__input::-webkit-search-decoration {
   appearance: none;
@@ -93,7 +90,6 @@
   cursor: pointer;
 }
 
-/* 其他项目也命中的提示：整条用黄底，动作仍走文字链 */
 .case-picker__hit {
   display: flex;
   align-items: center;

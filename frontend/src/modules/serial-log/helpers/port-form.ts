@@ -1,9 +1,3 @@
-/** port-form — 新增 / 编辑端口表单的纯校验（无状态、无 HTTP）
- *
- * 与后端口径一致：端口 1–65535 整数、不与已登记端口重号（编辑模式除外）、
- * SKU 必填 ≤100 字符、波特率正整数。弹窗提交前与 composable 提交前共用。
- */
-
 import {
   PORT_ERR_BAUD_INVALID,
   PORT_ERR_PORT_DUPLICATE,
@@ -25,11 +19,9 @@ export interface PortFormPayload {
   baud: number
 }
 
-/** 校验结果：字符串判别（本仓 tsconfig 关闭 strictNullChecks，布尔字面量不收窄） */
 export type PortFormCheck =
   { kind: "ok"; payload: PortFormPayload } | { kind: "error"; error: string }
 
-/** 校验表单输入；编辑模式下端口号取 editPort，不做端口校验与重号检查。 */
 export function validatePortForm(
   input: PortFormInput,
   opts: { editMode: boolean; editPort?: number; existingPorts: number[] },

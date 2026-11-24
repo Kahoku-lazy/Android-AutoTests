@@ -1,5 +1,3 @@
-/* CaseStepDrawer 私有样式：步骤卡片列表 + 编辑框 */
-
 .step-drawer {
   display: flex;
   flex-direction: column;
@@ -102,7 +100,6 @@
   align-self: flex-start;
 }
 
-/* 执行提示：来自 YAML 的页面锚点 / 日志证据，只读展示 */
 .step-drawer__hints {
   list-style: none;
   margin: 0;

@@ -1,4 +1,3 @@
-/** 助手名片与测试对话。任务清单仍走 api/agents.ts，不经过这里。 */
 import djangoClient from "@/shared/api-client"
 import type { DjangoResponse } from "@/shared/api-client"
 import type {
@@ -45,12 +44,10 @@ export async function createAssistant(payload: {
   return data.data
 }
 
-/** 删除助手名片。只删名片本身，对话记录、历史任务与 Agent 配置都保留。 */
 export async function deleteAssistant(assistantId: string): Promise<void> {
   await djangoClient.delete(`/ai/assistants/${assistantId}/`)
 }
 
-/** 编辑名片：PATCH 同一张卡片；头像三态由 clearAvatar / avatar 决定。 */
 export async function updateAssistant(
   assistantId: string,
   payload: {
@@ -154,7 +151,6 @@ export async function createSopWorkflow(payload: {
   return data.data
 }
 
-/** 编辑工作流：三字段整幅回写，编号与创建时间不变。 */
 export async function updateSopWorkflow(
   workflowId: number,
   payload: {
@@ -173,7 +169,6 @@ export async function updateSopWorkflow(
   return data.data
 }
 
-/** 删除工作流：只删记录，助手名片与历史任务不受影响。 */
 export async function deleteSopWorkflow(workflowId: number): Promise<void> {
   await djangoClient.delete(`/ai/sop-workflows/${workflowId}/`)
 }
@@ -264,7 +259,6 @@ export async function cancelThread(threadId: string): Promise<void> {
   await djangoClient.delete(`/ai/assistants/threads/${threadId}/`)
 }
 
-/** 重命名对话栏；空标题表示回到前端默认的「对话 N」。 */
 export async function renameThread(
   threadId: string,
   title: string,
@@ -277,7 +271,6 @@ export async function renameThread(
   return data.data
 }
 
-/** 删除对话栏及其消息（不是取消）。 */
 export async function deleteThread(threadId: string): Promise<void> {
   await djangoClient.post(`/ai/assistants/threads/${threadId}/delete/`)
 }

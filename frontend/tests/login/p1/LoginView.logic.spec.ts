@@ -1,8 +1,3 @@
-/**
- * [P1] 建议测 — LoginView.logic 编排层
- * 子 composable 已在 P0 覆盖；这里测编排独有行为（切模式清表单、提交前校验）。
- * 目录：tests/login/p1/
- */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ElMessage } from "element-plus"
 import { login } from "@/shared/api/auth"

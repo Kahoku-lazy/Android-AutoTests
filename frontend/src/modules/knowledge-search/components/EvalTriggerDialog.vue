@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** EvalTriggerDialog — 发起评测：选模块 / chat 模型 / 题量，展示预估 token。 */
 import { computed, reactive, ref, watch } from "vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
 import { fetchEvalModelConfigs } from "../api"

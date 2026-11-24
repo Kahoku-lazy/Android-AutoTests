@@ -1,7 +1,3 @@
-/**
- * [P0] AppCard — 钉板壳 / tone·tilt / pin / 旧 color 回退
- * el-card 用透传 stub：VTU 默认 stub 会吞掉内部图钉节点，改断言 --pin class + CSS 变量。
- */
 import { describe, expect, it } from "vitest"
 import { mount } from "@vue/test-utils"
 import { h, defineComponent } from "vue"

@@ -1,7 +1,3 @@
-/**
- * [P0] 必测 — 记住账号 localStorage 读写
- * 目录：tests/login/p0/
- */
 import { beforeEach, describe, expect, it } from "vitest"
 import { useSavedUsername } from "@/views/composables/useSavedUsername"
 

@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ AI 任务后台线程：装配引擎、落进度与终态 🏁
-Python 调试：➡️ python -m backend.apps.task_list.task_runner 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（经 task_list 的功能用例间接覆盖，未直接 import 本模块）
-🏁
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -24,16 +15,13 @@ from utils.logs import backend_log
 from . import api
 from .models import Task
 
-# 引擎终态 → 任务终态。收尾映射集中一处，供回归测试校验状态常量完整。
 RESULT_STATUS_MAP = {
     "success": TaskStatus.COMPLETED,
     "cancelled": TaskStatus.CANCELLED,
 }
 
-# 取消兜底：工作线程超时仍未退出时强制放行设备，避免线程挂死把设备永久占住。
 CANCEL_RELEASE_SECONDS = 60
 
-# 正在跑任务的工作线程、取消兜底计时器、心跳计时器，都按任务 id 登记。
 _workers: dict[int, threading.Thread] = {}
 _release_timers: dict[int, threading.Timer] = {}
 _heartbeat_timers: dict[int, threading.Timer] = {}
@@ -41,14 +29,12 @@ HEARTBEAT_SECONDS = 15
 
 
 def _failure_status(exc: Exception) -> str:
-    """预算超限是中断，其余抛错是失败。"""
     if isinstance(exc, BudgetExceeded):
         return TaskStatus.INTERRUPTED
     return TaskStatus.FAILED
 
 
 def _failure_kind(exc: Exception) -> str:
-    """按异常类型分成模型、设备、平台。预算超限不进失败类别。"""
     if isinstance(exc, BudgetExceeded):
         return ""
     if type(exc).__name__ == "AdbError":
@@ -59,15 +45,6 @@ def _failure_kind(exc: Exception) -> str:
 
 
 def _failure_payload(exc: Exception, failed_steps: list | None = None) -> dict:
-    """给人读的短原因。堆栈只留日志，不进结果。
-
-    Args:
-        exc: 工作线程抛出的异常。
-        failed_steps: 抛错前已经没通过的步骤；有则保留，避免只剩一句类别。
-
-    Returns:
-        可合并进任务结果的字典。预算超限不含失败步骤。
-    """
     if isinstance(exc, BudgetExceeded):
         return {"status": "interrupted", "cause": "budget", "reason": "运行超出预算"}
     kind = _failure_kind(exc)
@@ -89,14 +66,6 @@ def _failure_payload(exc: Exception, failed_steps: list | None = None) -> dict:
 
 
 def _usage_totals(tokens: dict) -> dict:
-    """把 SOP 汇总的四类 token 收成任务用量字段。
-
-    Args:
-        tokens: `SopRunResult.tokens`，键为 input / output / cache_hit / cache_creation。
-
-    Returns:
-        写入任务的用量字典。
-    """
     return {
         "input_tokens": int(tokens.get("input") or 0),
         "output_tokens": int(tokens.get("output") or 0),
@@ -107,7 +76,6 @@ def _usage_totals(tokens: dict) -> dict:
 
 
 def _record_task_usages(outcome, task_id: int) -> None:
-    """把本次运行的逐次用量写入账本。入账失败不阻断收口。"""
     from backend.apps.usage_ledger.api import record_run_usages
 
     try:
@@ -122,14 +90,6 @@ def _record_task_usages(outcome, task_id: int) -> None:
 
 
 def _price_call_costs(usages: list[dict]) -> tuple[dict, list[str]]:
-    """按每次调用自己的模型名计价后相加。
-
-    Args:
-        usages: 逐次调用明细；每条可带 `model`。
-
-    Returns:
-        费用字典，以及模型名缺失的说明。缺失的该次记 0。
-    """
     from decimal import Decimal
 
     from backend.apps.usage_ledger.pricing import price_usage
@@ -160,15 +120,6 @@ def _price_call_costs(usages: list[dict]) -> tuple[dict, list[str]]:
 
 
 def _price_costs(usages: list[dict], model: str) -> dict:
-    """按价目表把逐次用量算成任务费用。
-
-    Args:
-        usages: `SopRunResult.usages`，逐次调用的用量明细。
-        model: 本次运行的模型名；价目表按模型名匹配。
-
-    Returns:
-        含四类费用的字典，金额为 Decimal，保留价目表精度。
-    """
     from decimal import Decimal
 
     from backend.apps.usage_ledger.pricing import price_usage
@@ -194,14 +145,6 @@ def _price_costs(usages: list[dict], model: str) -> dict:
 
 
 def _report_locator(report_path) -> dict:
-    """把报告绝对路径拆成「运行目录 + 文件名」，前端据此拼读取地址。
-
-    Args:
-        report_path: 本次运行的 HTML 报告路径；没有报告时为 None。
-
-    Returns:
-        含 report_run / report_name / report_path 的字典；没有报告时为空字典。
-    """
     from engines.backend_bridge.reports import REPORT_ROOT
 
     if not report_path:
@@ -219,7 +162,6 @@ def _report_locator(report_path) -> dict:
 
 
 def _workflow_id(task: Task) -> int:
-    """从任务结果里取出工作流编号。没有时抛 ValueError。"""
     import json
 
     try:
@@ -232,7 +174,6 @@ def _workflow_id(task: Task) -> int:
 
 
 def _binding(side: dict):
-    """把解析结果收成引擎绑定。"""
     from engines.backend_bridge.workflow.bound_roles import RoleBinding
 
     return RoleBinding(
@@ -247,7 +188,6 @@ def _binding(side: dict):
 
 
 def _resolve_assistant_sop(task: Task) -> tuple[dict, str]:
-    """在事件循环外解析名片并取出里程碑正文。失败时由调用方写成任务失败。"""
     from backend.apps.ai_assistant import api as assistant_api
 
     if task.release_version:
@@ -264,17 +204,6 @@ def _resolve_assistant_sop(task: Task) -> tuple[dict, str]:
 
 
 async def _run_assistant_sop(task: Task, task_id: int, resolved: dict, yaml_text: str):
-    """用已经解析好的名片跑一次绑定 SOP。
-
-    Args:
-        task: 要执行的 assistant_sop 任务。
-        task_id: 平台任务 id，用于挂取消令牌。
-        resolved: 两侧名片的运行参数。
-        yaml_text: 已在事件循环外读出的里程碑正文。
-
-    Returns:
-        运行结果，以及本次实际使用的两侧名片。
-    """
     import tempfile
 
     from pathlib import Path
@@ -307,7 +236,6 @@ async def _run_assistant_sop(task: Task, task_id: int, resolved: dict, yaml_text
 
 
 def _beat(task_id: int) -> None:
-    """心跳回调。任务已终态就停，否则 15 秒后再写一次。"""
     close_old_connections()
     try:
         api.touch_heartbeat(task_id)
@@ -327,7 +255,6 @@ def _beat(task_id: int) -> None:
 
 
 def start_heartbeat(task_id: int) -> None:
-    """立刻写一拍，再每 15 秒刷新。已有计时器则不重复挂。"""
     if task_id in _heartbeat_timers:
         return
     api.touch_heartbeat(task_id)
@@ -338,7 +265,6 @@ def start_heartbeat(task_id: int) -> None:
 
 
 def stop_heartbeat(task_id: int) -> None:
-    """工作线程退出时停掉心跳，避免终态之后还在写。"""
     timer = _heartbeat_timers.pop(task_id, None)
     if timer is not None:
         timer.cancel()
@@ -351,17 +277,6 @@ def schedule_cancel_release(
     *,
     timeout: float = CANCEL_RELEASE_SECONDS,
 ) -> None:
-    """关闭任务后登记兜底放行：工作线程超时未退出时强制放行并留痕。
-
-    Args:
-        task_id: 被关闭的任务 id。
-        serial: 该任务的设备 serial；空串表示不占设备，直接跳过。
-        agent_id: 任务所属智能体 id，写告警事件时使用。
-        timeout: 兜底等待秒数。
-
-    Returns:
-        None。计时器为 daemon 线程，不阻塞调用方。
-    """
     if not (serial or "").strip():
         return
     timer = threading.Timer(timeout, _force_release_device, args=(task_id, serial, agent_id))
@@ -371,15 +286,6 @@ def schedule_cancel_release(
 
 
 def release_device_now(task_id: int, serial: str) -> None:
-    """工作线程退出时放行设备槽：撤掉兜底计时器并拉起同设备下一条任务。
-
-    Args:
-        task_id: 刚结束的任务 id。
-        serial: 该任务的设备 serial；空串表示不占设备。
-
-    Returns:
-        None。
-    """
     timer = _release_timers.pop(task_id, None)
     if timer is not None:
         timer.cancel()
@@ -390,16 +296,6 @@ def release_device_now(task_id: int, serial: str) -> None:
 
 
 def _force_release_device(task_id: int, serial: str, agent_id: int) -> None:
-    """兜底计时器回调：工作线程仍存活时写告警事件，然后强制放行设备。
-
-    Args:
-        task_id: 被关闭的任务 id。
-        serial: 该任务的设备 serial。
-        agent_id: 任务所属智能体 id。
-
-    Returns:
-        None。任何异常只记日志，不影响设备放行。
-    """
     try:
         close_old_connections()
         thread = _workers.get(task_id)
@@ -414,17 +310,6 @@ def _force_release_device(task_id: int, serial: str, agent_id: int) -> None:
 
 
 def _record_cancel_timeout(task_id: int, agent_id: int) -> None:
-    """把「关闭后工作线程超时未退出」写进后端日志，供排障查看。
-
-    任务不再落事件明细（见 retire-engines-agents），这条告警只留日志。
-
-    Args:
-        task_id: 被关闭的任务 id。
-        agent_id: 任务所属智能体 id。
-
-    Returns:
-        None。
-    """
     backend_log.warning(
         "取消超时：关闭后 %s 秒工作线程仍未退出，已强制放行设备 task_id=%s agent_id=%s",
         CANCEL_RELEASE_SECONDS,
@@ -434,11 +319,6 @@ def _record_cancel_timeout(task_id: int, agent_id: int) -> None:
 
 
 def _finish_goal(task: Task, task_id: int) -> None:
-    """用例编写：按工作流的两侧名片跑目标流水线。
-
-    验收通过才算完成。产物是验收说明，不是带步骤与断言的用例行，
-    因此这里不写用例库，避免把说明伪装成用例入库。
-    """
     from backend.apps.ai_assistant import api as assistant_api
     from engines.backend_bridge.workflow.bound_goal import run_bound_goal
 
@@ -467,7 +347,6 @@ def _finish_goal(task: Task, task_id: int) -> None:
 
 
 def _finish_team(task: Task, task_id: int) -> None:
-    """需求拆解：按工作流的队长与成员跑团队流水线，再校验模块边界。"""
     from backend.apps.ai_assistant import api as assistant_api
     from engines.backend_bridge.workflow.bound_team import run_bound_team
     from engines.backend_bridge.workflow.team_breakdown import run_team_breakdown
@@ -493,7 +372,6 @@ def _finish_team(task: Task, task_id: int) -> None:
 
 
 def run_task_async(task_id: int, agent_id: int) -> None:
-    """后台线程入口：启动平台 SOP，并把终态与报告定位写回任务。"""
     from engines.backend_bridge.workflow.cancel import bind_cancel, clear_cancel
 
     close_old_connections()
@@ -594,13 +472,11 @@ def run_task_async(task_id: int, agent_id: int) -> None:
             Path(yaml_path).unlink(missing_ok=True)
         clear_cancel(task_id)
         stop_heartbeat(task_id)
-        # 设备槽只在这里放行：取消路径不提前放行，避免两条任务抢同一台手机
         release_device_now(task_id, serial)
         close_old_connections()
 
 
 def spawn_task_thread(task_id: int, agent_id: int) -> None:
-    """启动 daemon 线程执行任务，并登记线程供取消兜底判断是否已退出。"""
     thread = threading.Thread(
         target=run_task_async,
         args=(task_id, agent_id),

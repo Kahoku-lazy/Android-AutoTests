@@ -1,8 +1,3 @@
-"""Replace directory/file cases with one sheet per project.
-
-旧用例、目录和文件不再使用。本迁移只清空并删除旧表，不回填。
-"""
-
 from django.db import migrations, models
 
 

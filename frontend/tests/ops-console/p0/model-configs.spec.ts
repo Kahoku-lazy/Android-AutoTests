@@ -1,11 +1,3 @@
-/**
- * [P0] 必测 — 运营模型配置的类型 / 厂商映射与表单联动（spec: ops-model-config）
- *
- * 目录：tests/ops-console/p0/
- * 断言：① 聊天三家、实时语音与语音合成只有 dashscope；② 默认厂商与安全回退；
- * ③ 模型类型列排在模型名称之前；④ 切类型后厂商与密钥变量同步、仍受支持的厂商不被重置；
- * ⑤ 实时语音 / 语音合成只保留一个名称且音色在名称之后；⑥ 语音合成不填地址也能保存。
- */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { flushPromises, mount } from "@vue/test-utils"
 import type { DOMWrapper } from "@vue/test-utils"

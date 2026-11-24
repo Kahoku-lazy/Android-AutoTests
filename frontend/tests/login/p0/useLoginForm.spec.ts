@@ -1,7 +1,3 @@
-/**
- * [P0] 必测 — 登录/注册表单校验（纯逻辑，无副作用）
- * 目录：tests/login/p0/
- */
 import { ref } from "vue"
 import { describe, expect, it } from "vitest"
 import { useLoginForm } from "@/shared/composables/useLoginForm"

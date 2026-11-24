@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 知识库只读检索桥：局部可选导入引擎、多库合并、预建索引与用量入账 🏁
-Python 调试：➡️ python -m backend.apps.knowledge_search.retrieval 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（经 knowledge_search 的功能用例间接覆盖，未直接 import 本模块）
-🏁
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -17,7 +8,6 @@ from pathlib import Path
 
 from utils.logs import backend_log
 
-# 局部可选导入：只吞知识库模块自身的缺失，内部写错仍要抛。
 try:
     from engines.ae_harness.knowledge.config import INDEX_DIR, build_config
     from engines.ae_harness.knowledge.service import KnowledgeRetriever
@@ -28,18 +18,11 @@ except ModuleNotFoundError as exc:  # pragma: no cover - 引擎缺失分支由�
     build_config = None
     KnowledgeRetriever = None
 
-# 进程级 per-base 锁：检索器锁是实例级，挡不住跨请求并发首问重复建索引。
 _BASE_LOCKS: dict[str, threading.Lock] = {}
 _LOCKS_GUARD = threading.Lock()
 
 
 def engine_available() -> bool:
-    """
-    引擎知识库是否可导入。
-
-    Returns:
-        可用为真；整目录删除后为假。
-    """
     return KnowledgeRetriever is not None
 
 
@@ -50,18 +33,6 @@ def search(
     top_k: int | None = None,
     execution_id: str = "",
 ) -> dict:
-    """
-    多选模块检索：逐库检索、按相似度合并排序、用量入账。
-
-    Args:
-        question: 检索问题。
-        bases: 勾选的库名列表。
-        top_k: 返回条数上限；None 用配置默认。
-        execution_id: 入账执行 ID；空时生成。
-
-    Returns:
-        {result: ok/no_hit/unavailable, hits: 命中字典列表, errors: 逐库错误}。
-    """
     text = str(question or "").strip()
     if not text:
         return {"result": "unavailable", "hits": [], "errors": ["检索问题不能为空"]}
@@ -80,16 +51,6 @@ def search(
 
 
 def index_module(*, name: str, execution_id: str = "") -> dict:
-    """
-    预建索引：同步重建单库增量索引。
-
-    Args:
-        name: 库名。
-        execution_id: 入账执行 ID；空时生成。
-
-    Returns:
-        {status: 成败, error: 可读原因, reindexed: 本次重建文件数}。
-    """
     if not engine_available():
         return {"status": False, "error": "检索不可用：引擎知识库模块缺失", "reindexed": 0}
     execution_id = execution_id or uuid.uuid4().hex
@@ -102,18 +63,11 @@ def index_module(*, name: str, execution_id: str = "") -> dict:
 
 
 def _base_lock(base: str) -> threading.Lock:
-    """取一个库的进程级锁；不存在时创建。"""
     with _LOCKS_GUARD:
         return _BASE_LOCKS.setdefault(base, threading.Lock())
 
 
 def _platform_config():
-    """
-    用平台检索配置与模块登记组装引擎配置。
-
-    Returns:
-        引擎知识库配置；缺配置或参数非法时返回可读原因字符串。
-    """
     from .api import get_retrieval_settings, list_modules
 
     settings_row = get_retrieval_settings()
@@ -154,12 +108,10 @@ def _platform_config():
 
 
 def _epoch_path(base: str) -> Path:
-    """一个库的索引版本标记文件。"""
     return Path(INDEX_DIR) / f"{base}.epoch"
 
 
 def _epoch_matches(base: str, epoch: int) -> bool:
-    """标记文件内容与当前 epoch 一致才算索引可用。"""
     try:
         recorded = _epoch_path(base).read_text(encoding="utf-8").strip()
     except OSError:
@@ -168,20 +120,12 @@ def _epoch_matches(base: str, epoch: int) -> bool:
 
 
 def mark_indexed(base: str, epoch: int) -> None:
-    """
-    预建索引成功后记下当前 epoch。
-
-    Args:
-        base: 库名。
-        epoch: 本次建索引使用的检索配置版本。
-    """
     target = _epoch_path(base)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(str(epoch), encoding="utf-8")
 
 
 async def _search_async(question: str, names: list[str], top_k: int | None, config) -> dict:
-    """逐库检索并合并；单库失败只记错误，不拖垮其它库。"""
     epoch = config.index_epoch
     stale = [name for name in names if not _epoch_matches(name, epoch)]
     if stale:
@@ -213,7 +157,6 @@ async def _search_async(question: str, names: list[str], top_k: int | None, conf
 
 
 async def _index_async(name: str, config) -> dict:
-    """重建单库索引；成功后写下当前 epoch，失败给可读原因。"""
     retriever = KnowledgeRetriever(config)
     with _base_lock(name):
         count = await retriever.ensure_index(name)
@@ -226,7 +169,6 @@ async def _index_async(name: str, config) -> dict:
 
 
 def _record_usage(events: list[dict], execution_id: str) -> None:
-    """在同步上下文里经账本 api 入账；失败只记日志，不阻断检索。"""
     if not events:
         return
     try:

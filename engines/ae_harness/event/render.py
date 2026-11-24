@@ -1,29 +1,3 @@
-"""
-文件名: ➡️ render.py 🏁
-路径: ➡️ engines/ae_harness/event/render.py 🏁
-模块功能：➡️ 把一轮运行记录渲染成 Doodle Craft 风格的 HTML 报告 🏁
-Python 调试：➡️ python -m engines.ae_harness.event.render 🏁
-时间：➡️ 2026-11-13 🏁
-作者：➡️ kahoku 🏁
-版本：➡️ 3.0.0 🏁
-修改时间: ➡️ 2026-11-13 🏁
-类型: ➡️ Agent 能力模块 🏁
-简介说明：➡️
-1. 三个区块：报告（按阶段分组）、轨迹（时间轴 + 调用列表）、原始事件。
-2. 视觉走 Doodle Craft：暖白纸面、2.5px 墨线、硬偏移阴影、卡片微倾。
-3. 令牌抄自 frontend/src/shared/styles/tokens.css，未声明的 var() 不得出现。
-4. step_extras: 按工具名注册额外展示片段；echarts_src: 时间轴脚本地址。
-5. 排版三档：时间/日期 12、正文 14、标题与小标题 16；品牌字体内联，侧栏默认三成宽可拖。
-🏁
-关联模块：➡️
-1. engines.ae_harness.event.record: 消费 RunRecord / StepRecord。
-2. .agents/skills/doodle-craft: 令牌与组件配方来源。
-🏁
-测试：➡️
-1. 见 engines.ae_harness.assistant.agent_executor。
-🏁
-"""
-
 from __future__ import annotations
 
 import base64
@@ -38,23 +12,12 @@ from .record import RunRecord, StepRecord
 
 __all__ = ["HtmlReportRenderer"]
 
-# 仓库根与平台品牌资源；报告直接内联图标、按相对路径引字体。
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _BRAND_MARK = _REPO_ROOT / "frontend" / "public" / "brand" / "ai-mark.png"
 _BRAND_FONT = _REPO_ROOT / "frontend" / "public" / "fonts" / "ziku-feiyang.ttf"
 
 
 def _relpath(target: Path, start: Path) -> str:
-    """
-    算目标相对起点的路径，统一成正斜杠。
-
-    Args:
-        target: 目标文件。
-        start: 起点目录。
-
-    Returns:
-        可放进 HTML 的相对路径。
-    """
     try:
         return os.path.relpath(target, start).replace("\\", "/")
     except ValueError:
@@ -62,19 +25,6 @@ def _relpath(target: Path, start: Path) -> str:
 
 
 def _brand_font_src(fallback: str) -> str:
-    """
-    把平台品牌字体读成内联 data URI，供 `@font-face` 使用。
-
-    报告常以 `blob:`（前端三处 createObjectURL）或 `file://` 打开，这两种文档都解析不了
-    文件系统相对路径，相对路径会让字体静默 404、标题回落成系统黑体；内联后任何打开方式
-    拿到的都是同一支字体。与 `_brand_mark` 内联品牌图同一套做法。
-
-    Args:
-        fallback: 字体文件读不到时回落的相对路径。
-
-    Returns:
-        `src` 取值：优先 `data:font/ttf;base64,...`，读文件失败时返回 fallback。
-    """
     try:
         data = _BRAND_FONT.read_bytes()
     except OSError:
@@ -83,7 +33,6 @@ def _brand_font_src(fallback: str) -> str:
     return f"data:font/ttf;base64,{encoded}"
 
 
-# 事件类型到「样式类 + 中文标签」的映射，用于日志视图着色。
 _EVENT_KIND = {
     "reply_start": ("log-start", "开始"),
     "phase": ("log-start", "阶段"),
@@ -101,16 +50,12 @@ _EVENT_KIND = {
     "summary": ("log-end", "汇总"),
 }
 
-# 卡片微倾角度轮转，按序号取，避免整页都是 0deg。
 _TILTS = ("-.6deg", ".8deg", "-1.1deg", "1.2deg", "-.4deg", "1deg")
 
-# 折叠标题行左侧的箭头；展开态由脚本换成 ▾，这里只放收起态。
 _CARET = '<span class="caret" aria-hidden="true">▸</span>'
 
-# 子目标序号：SVG 手绘笔画（参考需求方给的手绘 AE 图），01 起，上限 99。
 _ORDINAL_MAX = 99
 
-# 0-9 的单笔画路径，坐标系 0..20 × 0..30；线宽、粗糙边缘与红→橙渐变在样式里给。
 _ORDINAL_GLYPHS: dict[str, str] = {
     "0": "M13.5 4 C7 4 4 9.5 4 15.5 C4 22 7.5 27 13 27 C18.5 27 21.5 21.5 21.5 15.5 C21.5 9 18.5 4 13.5 4 Z",
     "1": "M9 10 L13.5 4.5 L13.5 27.5 M8 27.5 L19 27.5",
@@ -128,8 +73,6 @@ _ORDINAL_GLYPHS: dict[str, str] = {
     "9": "M7 27.5 C14 27 18.5 21.5 18.5 13.5 C18.5 7.5 15.5 3.5 11.5 3.5 C7.5 3.5 4.5 6.5 4.5 10.5 C4.5 14 7 17 11 17 C15.5 17 18.5 14 18.5 10",
 }
 
-# 序号共用一份 defs：左数字红、右数字蓝，各自浓度 45% → 30%，再叠湍流位移滤镜（蜡笔毛边）。
-# 只发一次，避免每个序号重复定义。
 _ORDINAL_DEFS = """<svg class="ord-defs" width="0" height="0" aria-hidden="true" focusable="false">
   <defs>
     <linearGradient id="ord-grad-red" gradientUnits="userSpaceOnUse" x1="4" y1="0" x2="24" y2="0">
@@ -149,26 +92,14 @@ _ORDINAL_DEFS = """<svg class="ord-defs" width="0" height="0" aria-hidden="true"
 
 
 def _ordinal_svg(value: int) -> str:
-    """
-    把一个序号画成手绘风格的双位数字（描边路径 + 蜡笔滤镜）。
-
-    Args:
-        value: 子目标序号，从 1 开始。
-
-    Returns:
-        内联 SVG；超过 99 时封顶在 99。
-    """
     number = min(max(value, 1), _ORDINAL_MAX)
     shapes: list[str] = []
     for slot, digit in enumerate(f"{number:02d}"):
         path = _ORDINAL_GLYPHS[digit]
         shift = 3 + slot * 24
-        # 两位数字各歪一点、歪的方向相反：手写体不会笔直对齐，参考图里的 A 与 E 也是这样。
         tilt = -2.6 if slot == 0 else 1.8
         placement = f"translate({shift} 3) rotate({tilt} 10 15)"
-        # 左位红、右位蓝，各自从 45% 淡到 30%；一个序号就是一支「红蓝混色」。
         hue = "ord-red" if slot == 0 else "ord-blue"
-        # 先画一层更粗更淡的蜡迹，再压一遍主笔画：边缘参差靠滤镜，层次靠这层淡墨。
         shapes.append(f'<path class="ord-soft {hue}" d="{path}" transform="{placement}"></path>')
         shapes.append(f'<path class="ord-ink {hue}" d="{path}" transform="{placement}"></path>')
     drawn = "".join(shapes)
@@ -720,17 +651,6 @@ initSplitter();
 
 
 def _thumb_base64(raw: str, long_side: int, quality: int) -> str:
-    """
-    把 PNG 的 base64 压成 JPEG 缩略图。
-
-    Args:
-        raw: 原始 PNG 的 base64 文本。
-        long_side: 缩略图长边上限。
-        quality: JPEG 质量。
-
-    Returns:
-        JPEG 的 base64；缺 Pillow 或解码失败时原样返回。
-    """
     try:
         import base64
 
@@ -758,12 +678,6 @@ def _thumb_base64(raw: str, long_side: int, quality: int) -> str:
 
 
 class HtmlReportRenderer:
-    """
-    把 RunRecord 渲染成 Doodle Craft 风格的自包含 HTML。
-
-    工具特有的展示通过 step_extras 注册，本类不认识任何具体工具。
-    """
-
     def __init__(
         self,
         *,
@@ -771,25 +685,11 @@ class HtmlReportRenderer:
         thumb_quality: int = 85,
         step_extras: dict[str, Callable[[StepRecord], str]] | None = None,
     ) -> None:
-        """
-        配置缩略图与步骤扩展。
-
-        Args:
-            thumb_long_side: 缩略图长边上限。
-            thumb_quality: JPEG 质量。
-            step_extras: 工具名到「额外 HTML 片段」的映射；片段已转义。
-        """
         self.thumb_long_side = thumb_long_side
         self.thumb_quality = thumb_quality
         self.step_extras = dict(step_extras or {})
 
     def _brand_mark(self) -> str:
-        """
-        读平台品牌图并内联成 base64。
-
-        Returns:
-            img 标签；缺文件时退回一个占位方块。
-        """
         try:
             data = _BRAND_MARK.read_bytes()
         except OSError:
@@ -807,15 +707,6 @@ class HtmlReportRenderer:
         )
 
     def _sidebar(self, record: RunRecord) -> str:
-        """
-        渲染左侧导航、统计与 token 消耗。
-
-        Args:
-            record: 本轮记录。
-
-        Returns:
-            侧边栏 HTML。
-        """
         summary = record.summary
         by_tool = "".join(
             f"<li><span>{html.escape(name)}</span><b>{count}</b></li>"
@@ -858,18 +749,6 @@ class HtmlReportRenderer:
   </aside>"""
 
     def _report(self, record: RunRecord) -> str:
-        """
-        渲染报告区：按 SOP 步骤分组，没有步骤时退回阶段分组。
-
-        组内再按执行者 / 验收者分成两个视觉块。三层（子目标 / 角色块 / 工具卡）默认全部收起：
-        长报告先给结构，细节逐层点开。子目标标题前带手绘序号（01 起、封顶 99）。
-
-        Args:
-            record: 本轮记录。
-
-        Returns:
-            报告区 HTML。
-        """
         groups: list[tuple[str, list[StepRecord]]] = []
         for step in record.steps:
             key = step.sop_step or step.phase or "未分组"
@@ -888,7 +767,6 @@ class HtmlReportRenderer:
                 f"<em>{len(steps)} 次调用</em></div>"
             )
             body.append('<div class="phase-b fold-b">')
-            # 组内按角色切块：同一角色的连续步骤合成一块。
             blocks: list[tuple[str, list[StepRecord]]] = []
             for step in steps:
                 role = step.agent_role or ""
@@ -920,17 +798,6 @@ class HtmlReportRenderer:
         return "\n".join(body)
 
     def _step(self, step: StepRecord) -> str:
-        """
-        渲染单个步骤卡片，按序号轮转微倾角度。
-
-        标题行常显（序号 + 工具名 + 耗时），正文（意图 / 入参 / 结果 / 截图）默认收起。
-
-        Args:
-            step: 步骤记录。
-
-        Returns:
-            步骤 HTML。
-        """
         note = " ".join(step.note.split())
         tilt = _TILTS[(step.index - 1) % len(_TILTS)]
         parts: list[str] = [
@@ -968,16 +835,6 @@ class HtmlReportRenderer:
         return "\n".join(parts)
 
     def _trace_detail(self, step: StepRecord, record: RunRecord) -> str:
-        """
-        渲染一步的详情面板：概述 / 参数 / 结果 / Schema。
-
-        Args:
-            step: 步骤记录。
-            record: 本轮记录，用于取 schema。
-
-        Returns:
-            详情 HTML。
-        """
         schema = record.schemas.get(step.tool)
         note = " ".join(step.note.split())
         overview = (
@@ -1006,15 +863,6 @@ class HtmlReportRenderer:
     </div>"""
 
     def _timeline(self, record: RunRecord) -> str:
-        """
-        用百分比定位画时间轴：模型与工具各一行，x 轴取事件 t_ms。
-
-        Args:
-            record: 本轮记录。
-
-        Returns:
-            时间轴 HTML；没有 span 时返回提示。
-        """
         if not record.spans:
             return '<p class="tip">本轮没有可展示的调用。</p>'
 
@@ -1058,15 +906,6 @@ class HtmlReportRenderer:
     </div>"""
 
     def _trace(self, record: RunRecord) -> str:
-        """
-        渲染轨迹列表：每个 span 一行，工具行可展开详情。
-
-        Args:
-            record: 本轮记录。
-
-        Returns:
-            轨迹列表 HTML。
-        """
         steps = {step.index: step for step in record.steps}
         parts: list[str] = ['<div class="calls">']
         for index, span in enumerate(record.spans):
@@ -1097,15 +936,6 @@ class HtmlReportRenderer:
         return "\n".join(parts)
 
     def _log(self, record: RunRecord) -> str:
-        """
-        渲染事件日志区。
-
-        Args:
-            record: 本轮记录。
-
-        Returns:
-            日志区 HTML。
-        """
         rows: list[str] = []
         for item in record.events:
             kind = str(item.get("event", ""))
@@ -1136,15 +966,6 @@ class HtmlReportRenderer:
         return "\n".join(rows)
 
     def render(self, record: RunRecord) -> str:
-        """
-        渲染完整页面。
-
-        Args:
-            record: 本轮记录。
-
-        Returns:
-            完整 HTML 文本。
-        """
         ok = record.summary.get("failed", 0) == 0
         verdict = "通过" if ok else f"失败 {record.summary.get('failed', 0)} 次"
         pill_bg = "var(--app-status-success-bg)" if ok else "var(--app-status-danger-bg)"
@@ -1229,16 +1050,6 @@ class HtmlReportRenderer:
 """
 
     def save(self, record: RunRecord, path: Path | None = None) -> Path:
-        """
-        渲染并写入磁盘。
-
-        Args:
-            record: 本轮记录。
-            path: 目标路径；不传时用记录里的 html_path。
-
-        Returns:
-        实际写入的路径。
-        """
         target = path or record.html_path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(self.render(record), encoding="utf-8")

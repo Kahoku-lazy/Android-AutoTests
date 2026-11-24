@@ -1,5 +1,3 @@
-"""task-list file upload — POST /api/tasks/upload-file/."""
-
 import base64
 import uuid
 
@@ -33,8 +31,8 @@ DOCUMENT_EXTENSIONS = {
 }
 IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "gif"}
 ALLOWED_EXTENSIONS = DOCUMENT_EXTENSIONS | IMAGE_EXTENSIONS
-MAX_UPLOAD_SIZE = 20 * 1024 * 1024  # 20MB documents
-MAX_IMAGE_UPLOAD_SIZE = 5 * 1024 * 1024  # 5MB images
+MAX_UPLOAD_SIZE = 20 * 1024 * 1024
+MAX_IMAGE_UPLOAD_SIZE = 5 * 1024 * 1024
 
 
 def _image_media_type(ext: str) -> str:
@@ -91,8 +89,6 @@ def _parse_markdown(filepath: str) -> str:
 
 
 class UploadFileAPIView(APIView):
-    """POST /api/ai/upload-file — multipart 文件上传并解析。"""
-
     @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         uploaded = request.FILES.get("file")

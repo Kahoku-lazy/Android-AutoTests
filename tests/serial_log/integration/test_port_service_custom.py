@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ port_service 自定义端口编排：增量生效 / 上限 / 失败细化 / 双轨列表 / 本机 IP 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/serial_log/integration/test_port_service_custom.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/serial_log、utils/logs.py
-🏁
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -23,8 +14,6 @@ CONFIG_SOURCES = '{"7005": {"sku": "H6810", "baud": 921600}}'
 
 
 class _FakeSwitch:
-    """记录 open/close 的替身：fail_ports 里的端口模拟绑定失败（open 后不监听）。"""
-
     def __init__(self, fail_ports: set[int] | None = None):
         self.opened: set[int] = set()
         self.closed: list[int] = []
@@ -60,11 +49,11 @@ def fake_switch(monkeypatch):
 
 @override_settings(DEVICE_LOG_SOURCES=CONFIG_SOURCES)
 def test_create_listens_incrementally_without_touching_others(fake_switch):
-    fake_switch.opened.add(7005)  # 既有配置端口正在监听
+    fake_switch.opened.add(7005)
     payload = port_service.create_port(7008, "H717D", 115200)
     assert payload["origin"] == "custom"
     assert payload["enabled"] is True and payload["listening"] is True
-    assert fake_switch.closed == []  # 新增不得 close 任何其它端口
+    assert fake_switch.closed == []
     assert 7005 in fake_switch.opened and 7008 in fake_switch.opened
     assert LogPort.objects.get(port=7008).origin == LogPort.ORIGIN_CUSTOM
 
@@ -75,7 +64,7 @@ def test_create_rejects_duplicate_and_invalid_fields(fake_switch):
     with pytest.raises(port_service.LogPortInvalid, match="7008"):
         port_service.create_port(7008, "X", 9600)
     with pytest.raises(port_service.LogPortInvalid, match="7005"):
-        port_service.create_port(7005, "X", 9600)  # 配置端口同号
+        port_service.create_port(7005, "X", 9600)
     for bad in (0, 70000, "abc", None):
         with pytest.raises(port_service.LogPortInvalid):
             port_service.create_port(bad, "X", 9600)
@@ -87,7 +76,7 @@ def test_create_rejects_duplicate_and_invalid_fields(fake_switch):
 
 @override_settings(DEVICE_LOG_SOURCES=CONFIG_SOURCES)
 def test_create_refused_at_cap(fake_switch):
-    fake_switch.opened.update(range(7000, 7010))  # 10 个在监听
+    fake_switch.opened.update(range(7000, 7010))
     with pytest.raises(port_service.LogPortCapReached):
         port_service.create_port(7099, "X", 9600)
     assert not LogPort.objects.filter(port=7099).exists()
@@ -101,7 +90,6 @@ def test_create_failure_note_occupied(fake_switch, monkeypatch):
     payload = port_service.create_port(7008, "H717D", 115200)
     assert payload["listening"] is False
     assert "监听失败" in payload["note"] and "占用" in payload["note"]
-    # 失败保留登记，可直接重试
     row = LogPort.objects.get(port=7008)
     assert row.enabled is True and row.origin == LogPort.ORIGIN_CUSTOM
 
@@ -175,14 +163,14 @@ def test_read_lines_supports_custom_port(fake_switch):
     port_service.create_port(7008, "H717D", 115200)
     payload = port_service.read_lines(7008)
     assert payload["sku"] == "H717D"
-    assert payload["conclusion"] in ("no_log", "ok")  # 不是 port_not_configured
+    assert payload["conclusion"] in ("no_log", "ok")
 
 
 @override_settings(DEVICE_LOG_SOURCES='{"7008": {"sku": "LATER-CONFIG", "baud": 9600}}')
 def test_merge_prefers_custom_when_config_adds_same_port_later(fake_switch):
     api.create_custom_port(7008, "H717D", 115200)
     specs = {int(spec.port): spec for spec in port_service.sources.source_specs()}
-    assert specs[7008].sku == "H717D"  # 同号时自定义行优先，配置同步跳过
+    assert specs[7008].sku == "H717D"
 
 
 @override_settings(DEVICE_LOG_SOURCES=CONFIG_SOURCES, DEVICE_LOG_ENABLED=True)
@@ -193,4 +181,4 @@ def test_reconcile_restores_custom_ports(fake_switch):
     fake_switch.opened.clear()
     started = port_service.reconcile()
     assert 7005 in started and 7008 in started
-    assert 7009 not in started  # 关闭的自定义端口不恢复
+    assert 7009 not in started

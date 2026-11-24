@@ -1,9 +1,3 @@
-/**
- * [P0] 必测 — 登录/注册 API 编排（mock 后端）
- * 目录：tests/login/p0/
- *
- * 表单校验在 LoginView.logic（调用方）；本文件只测网络层与副作用。
- */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ElMessage } from "element-plus"
 import { login, register } from "@/shared/api/auth"

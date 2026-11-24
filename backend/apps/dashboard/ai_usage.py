@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ Dashboard AI 用量聚合 — 只读小时用量表 🏁
-Python 调试：➡️ python -m backend.apps.dashboard.ai_usage 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. tests/dashboard/api/test_dashboard_agent_usage.py: 覆盖本模块
-🏁
-"""
-
 from datetime import timedelta
 from decimal import Decimal
 
@@ -23,7 +14,6 @@ from backend.models.constants import TaskKind
 
 
 def _task_qs(user_id, agents=None):
-    """已登录用户可见的工作流任务。已退役的设备执行与用例编写不计入。"""
     del agents
     if not user_id:
         return Task.objects.none()
@@ -31,14 +21,6 @@ def _task_qs(user_id, agents=None):
 
 
 def workflow_task_counts(user_id) -> dict:
-    """工作流任务的累计、今日、执行中与排队数。
-
-    Args:
-        user_id: 当前用户 id；空值时四项都是 0。
-
-    Returns:
-        `{total, today, running, pending}`。
-    """
     empty = {"total": 0, "today": 0, "running": 0, "pending": 0}
     if not user_id:
         return empty
@@ -58,17 +40,14 @@ def workflow_task_counts(user_id) -> dict:
 
 
 def _ledger_qs():
-    """平台全部逐次账。账单只读这里，不读小时表。"""
     return ModelUsage.objects.all()
 
 
 def _priced(qs):
-    """费用合计只取已计价行。"""
     return qs.exclude(pricing_status="unpriced")
 
 
 def _unpriced_tokens(qs) -> int:
-    """未计价行的输入加输出。这些 token 不进费用。"""
     try:
         row = qs.filter(pricing_status="unpriced").aggregate(
             inp=Sum("input_tokens"),
@@ -80,7 +59,6 @@ def _unpriced_tokens(qs) -> int:
 
 
 def _archived_hourly_cost() -> float:
-    """切换点之前的小时表合计。只作归档，不并入平台费用。"""
     try:
         row = TaskUsageHourly.objects.aggregate(cost=Sum("cost_total"))
     except (OperationalError, ProgrammingError):
@@ -94,7 +72,6 @@ def _money(value) -> float:
 
 
 def _sum_usage(qs):
-    """小时用量合计：输入、输出、缓存命中、总费用。"""
     try:
         row = _priced(qs).aggregate(
             inp=Sum("input_tokens"),
@@ -113,28 +90,16 @@ def _sum_usage(qs):
 
 
 def _agg_by_role(qs):
-    """逐次账没有角色列。角色拆分已退出账单，这里固定返回空。"""
     del qs
     return {}
 
 
 def _agent_usage(agents):
-    """智能体已下线，不再按智能体拆账单。"""
     del agents
     return []
 
 
 def ai_usage_stats(user_id, agents=None):
-    """AI 用量聚合（今日/累计），含 DeepSeek 费用。
-
-    用量与费用取平台全部小时用量，任务数取当前用户可见任务。
-    返回：任务数量、输入/输出 token、缓存命中 token/命中率、平均每任务 token、
-    DeepSeek 费用，各指标分 today / total 两组口径。
-
-    Args:
-        user_id: 当前用户 id。
-        agents: 已装载的可见智能体；None 时自行装载（避免重复读取大字段）。
-    """
     today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
     del agents
     tasks = workflow_task_counts(user_id)
@@ -149,7 +114,6 @@ def ai_usage_stats(user_id, agents=None):
     in_d, out_d, hit_d, cost_d = _sum_usage(today_hourly)
 
     def rate(hit, inp):
-        # 缓存命中率 = 命中 token / 输入 token，返回百分比（0-100，1 位小数）
         return round(hit / inp * 100, 1) if inp else 0.0
 
     def avg(inp, out, cnt):
@@ -185,7 +149,6 @@ _SERIES_LIMIT = 5
 
 
 def _bucket_series(rows, days, start_date, key_name):
-    """把按日分组的行收成对齐的序列。超过 5 条的尾部并入「其他」。"""
     buckets = {}
     for row in rows:
         stat_date = row["stat_date"]
@@ -217,7 +180,6 @@ def _bucket_series(rows, days, start_date, key_name):
 
 
 def _daily_rows(start_date, source=""):
-    """按模型与日期分组。source 为空时含全部来源。"""
     qs = _priced(_ledger_qs()).filter(occurred_at__date__gte=start_date)
     if source:
         qs = qs.filter(source=source)
@@ -234,11 +196,6 @@ def _daily_rows(start_date, source=""):
 
 
 def ai_daily_series(user_id, days=7):
-    """近 N 天逐日：总 token、缓存命中 token、DeepSeek 费用。
-
-    按平台全部小时用量分桶；`user_id` 保留在签名里仅为与其它统计入口一致。
-    返回 {labels, total_tokens, cache_tokens, deepseek_cost}，labels 与执行趋势同口径。
-    """
     first_day = (timezone.now() - timedelta(days=days - 1)).replace(
         hour=0, minute=0, second=0, microsecond=0
     )
@@ -276,7 +233,6 @@ def ai_daily_series(user_id, days=7):
         by_model = _bucket_series(_daily_rows(start_date), days, start_date, "model")
         voice_by_model = _bucket_series(_daily_rows(start_date, "voice"), days, start_date, "model")
     except (OperationalError, ProgrammingError):
-        # 统计表缺失或迁移未完成时返回空数据，不阻断仪表盘
         by_model = []
         voice_by_model = []
 
@@ -290,19 +246,10 @@ def ai_daily_series(user_id, days=7):
     }
 
 
-# ── 当日用量 ──
-# 数据按小时落桶（库里就是小时粒度）；横轴刻度每 4 小时一个，由前端按 0–24 渲染。
 _HOURS_PER_DAY = 24
 
 
 def ai_today_usage_slots(user_id, now=None):
-    """当天逐小时的 token 与费用消耗（按时间进度出数）。
-
-    取平台全部小时用量，`user_id` 保留在签名里仅为与其它统计入口一致。
-    `tokens[h]` 是第 h 小时（[h:00, h+1:00)）的用量：该小时走完才给值，
-    没走完或还没开始时为 None。进行中的那一小时由 `current` 单独返回，
-    MUST NOT 提前出数。
-    """
     now = now or timezone.now()
     now_hour = min(24.0, round(now.hour + now.minute / 60 + now.second / 3600, 2))
     today = now.date()
@@ -324,12 +271,10 @@ def ai_today_usage_slots(user_id, now=None):
             moment = row["stat_hour"]
             hour = moment.hour if hasattr(moment, "hour") else int(moment or 0)
             if not 0 <= hour < _HOURS_PER_DAY:
-                # stat_hour 脏数据（<0 或 >23）丢弃，不让分桶越界
                 continue
             hourly_tokens[hour] += int(row["inp"] or 0) + int(row["out"] or 0)
             hourly_cost[hour] += Decimal(row["spent"] or 0)
     except (OperationalError, ProgrammingError):
-        # 统计表缺失或迁移未完成时返回空序列，不阻断仪表盘
         pass
 
     tokens = []
@@ -356,13 +301,11 @@ def ai_today_usage_slots(user_id, now=None):
     }
 
 
-# 助手任务卡：成功 / 失败（与前端 TaskBoard taskStatusTone 对齐）
 _TASK_SUCCESS = ("completed", "success")
 _TASK_FAILED = ("failed",)
 
 
 def _panel_status(raw: str) -> str:
-    """列表 status → 仪表盘结果面板图标档。中断与取消不收成未执行。"""
     key = (raw or "").lower()
     if key in _TASK_SUCCESS:
         return "success"
@@ -374,7 +317,6 @@ def _panel_status(raw: str) -> str:
 
 
 def _day_labels(days: int):
-    """近 N 日标签与首日 00:00（与 ai_daily_series 同口径）。"""
     first_day = (timezone.now() - timedelta(days=days - 1)).replace(
         hour=0, minute=0, second=0, microsecond=0
     )
@@ -385,13 +327,6 @@ def _day_labels(days: int):
 
 
 def ai_task_daily_execution(user_id, days=7, agents=None):
-    """近 N 日按 created_at 分桶的助手任务卡成功 / 失败柱。
-
-    Args:
-        user_id: 当前用户 id。
-        days: 天数窗口。
-        agents: 已装载的可见智能体；None 时自行装载。
-    """
     first_day, labels = _day_labels(days)
     success = [0] * days
     failed = [0] * days
@@ -416,12 +351,6 @@ def ai_task_daily_execution(user_id, days=7, agents=None):
 
 
 def ai_task_execution_summary(user_id, agents=None):
-    """可见助手任务卡的成功 / 失败总数。
-
-    Args:
-        user_id: 当前用户 id。
-        agents: 已装载的可见智能体；None 时自行装载。
-    """
     qs = _task_qs(user_id, agents)
 
     def safe_count(filtered):
@@ -437,13 +366,6 @@ def ai_task_execution_summary(user_id, agents=None):
 
 
 def ai_recent_tasks(user_id, limit=8, agents=None):
-    """最近助手任务卡（结果面板行）。
-
-    Args:
-        user_id: 当前用户 id。
-        limit: 条数。
-        agents: 已装载的可见智能体；None 时自行装载。
-    """
     try:
         rows = list(
             _task_qs(user_id, agents)
@@ -468,22 +390,10 @@ def ai_recent_tasks(user_id, limit=8, agents=None):
     return items
 
 
-# 活动时间线合并窗口：各源最多取 WINDOW，合并排序后再截 WINDOW，分页在窗口内切片
 _ACTIVITY_WINDOW = 100
 
 
 def platform_activities(user_id, *, limit=10, offset=0, agents=None):
-    """平台活动时间线：只列工作流任务，按 time 倒序。
-
-    最多取 _ACTIVITY_WINDOW 条，再按 offset/limit 切片。不查询已删除的
-    TestRunRecord，也不再返回已下线智能体的更新。
-
-    Args:
-        user_id: 当前用户 id。
-        limit: 返回条数。
-        offset: 分页偏移。
-        agents: 兼容旧调用；工作流任务不再按智能体过滤。
-    """
     del agents
     items = []
 

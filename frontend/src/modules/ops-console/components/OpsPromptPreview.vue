@@ -1,11 +1,4 @@
 <script setup lang="ts">
-/**
- * 系统提示词全文预览：长 Markdown 在弹窗里滚动阅读，可整段复制。
- *
- * 业务：
- * - 展示：名称 + 字数/行数摘要 + 保留换行的全文（等宽字体、限高滚动）
- * - 复制：整段写入剪贴板，失败时提示手动选中
- */
 import { computed, ref } from "vue"
 import { ElMessage } from "element-plus"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
@@ -19,7 +12,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{ "update:modelValue": [value: boolean] }>()
 
-/** el-dialog 的 v-model：开合权归调用方，组件只把关闭动作抛回去 */
 const open = computed({
   get: () => props.modelValue,
   set: (value: boolean) => emit("update:modelValue", value),
@@ -27,14 +19,12 @@ const open = computed({
 
 const copied = ref(false)
 
-/** 摘要：字数 + 行数，让「这是不是完整的一份」一眼可判 */
 const summary = computed(() => {
   const text = props.prompt
   if (!text) return "未填写"
   return `${text.length} 字符 · ${text.split("\n").length} 行`
 })
 
-/** 关闭即复位，下次打开不会残留「已复制」 */
 function onClosed(): void {
   copied.value = false
 }
@@ -95,7 +85,6 @@ async function copy(): Promise<void> {
   color: var(--app-text-secondary);
 }
 
-/* 全文区：保留换行的等宽文本，限高滚动；正文可选中，直接框选即可复制 */
 .ops-prompt-dialog__body {
   margin: 0;
   padding: var(--app-space-md);

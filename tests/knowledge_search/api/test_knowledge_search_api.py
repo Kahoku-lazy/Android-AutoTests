@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 知识库检索接口契约：鉴权、权限、信封、尾斜杠与三态结果 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/knowledge_search/api/test_knowledge_search_api.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/knowledge_search、backend/gateway/middleware.py、engines/ae_harness
-🏁
-"""
-
 from __future__ import annotations
 
 import json
@@ -51,8 +42,6 @@ def data_dir(tmp_path):
 
 
 class _FakeRetriever:
-    """替身检索器：no_hit 结果，不联网。"""
-
     def __init__(self, config):
         self.config = config
 
@@ -71,7 +60,6 @@ class _FakeRetriever:
 
 @pytest.fixture
 def fake_retriever(monkeypatch, tmp_path):
-    """替身检索器，并放一行检索配置、把索引标记目录指到临时路径。"""
     from backend.apps.ai_assistant.models import AIModelConfig
     from backend.apps.knowledge_search.models import RetrievalSettings
 
@@ -102,7 +90,6 @@ def _call(
     data=None,
     **url_kwargs,
 ):
-    """请求工厂直调视图：模拟网关注入 user_id。"""
     factory = APIRequestFactory()
     request = getattr(factory, method)(path, data or {}, format="json")
     if user is not None:

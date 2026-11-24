@@ -13,12 +13,7 @@ export interface MountComposableOptions {
   routes?: RouteRecordRaw[]
   initialPath?: string
   initialQuery?: Record<string, string>
-  /**
-   * 把探针组件放进 `<KeepAlive>` 里挂载。
-   *
-   * 打开后可通过返回的 `deactivate()` / `activate()` 模拟路由切走与切回——
-   * 这正是 `App.vue` 的真实结构：切页只触发 `onDeactivated`，不触发 `onUnmounted`。
-   */
+
   keepAlive?: boolean
 }
 
@@ -26,13 +21,12 @@ export interface MountComposableResult<T> {
   result: T
   wrapper: VueWrapper
   router: Router
-  /** 仅 `keepAlive: true` 时有意义：把探针组件切出视图（触发 `onDeactivated`） */
+
   deactivate?: () => Promise<void>
-  /** 仅 `keepAlive: true` 时有意义：把探针组件切回视图（触发 `onActivated`） */
+
   activate?: () => Promise<void>
 }
 
-/** 挂载一个空组件以触发 onMounted，并拿到 setup 里 composable 的返回值 */
 export async function mountComposable<T>(
   factory: () => T,
   options: MountComposableOptions = {},

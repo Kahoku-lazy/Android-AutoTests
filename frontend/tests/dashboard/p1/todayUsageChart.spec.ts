@@ -1,7 +1,3 @@
-/**
- * [P1] 建议测 — 今日用量折线点序列 + 跨零点自动刷新
- * 目录：tests/dashboard/p1/
- */
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { mount } from "@vue/test-utils"
 import { defineComponent, h } from "vue"

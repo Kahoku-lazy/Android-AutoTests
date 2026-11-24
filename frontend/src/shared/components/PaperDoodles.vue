@@ -1,9 +1,4 @@
-<script setup lang="ts">
-/**
- * PaperDoodles — 主内容区稀疏手绘涂鸦层（纸面水印）
- * 图形来自 temps/hand-drawn-doodle-sidebar.html 的 .bg-doodles；不拦截指针事件。
- */
-</script>
+<script setup lang="ts"></script>
 
 <template>
   <div class="paper-doodles" aria-hidden="true">
@@ -264,11 +259,10 @@
 
 <style scoped>
 .paper-doodles {
-  /* 涂鸦笔触色（SVG 图形绘制色，登记例外：色相固定、保留字面量） */
-  --paper-mark-brown: var(--comp-paper-mark-brown); /* 圆圈 / 圆环 */
-  --paper-mark-yellow: var(--comp-paper-mark-yellow); /* 星形 / 螺旋 */
-  --paper-mark-red: var(--comp-paper-mark-red); /* 箭头 / 波浪 */
-  --paper-mark-teal: var(--comp-paper-mark-teal); /* 波浪 */
+  --paper-mark-brown: var(--comp-paper-mark-brown);
+  --paper-mark-yellow: var(--comp-paper-mark-yellow);
+  --paper-mark-red: var(--comp-paper-mark-red);
+  --paper-mark-teal: var(--comp-paper-mark-teal);
 
   position: absolute;
   inset: 0;

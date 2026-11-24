@@ -1,9 +1,3 @@
-"""device-pool DRF HTTP 入口 — 10 个端点（薄层：解析 → 调 manager 四类 → 封信封）。
-
-写操作经 registry / state_machine，本文件不直接 ORM 写。
-响应经 EnvelopeJSONRenderer 统一为 {status, data} / {status, message}。
-"""
-
 import re
 import time
 
@@ -23,22 +17,15 @@ from .pool import device as device_pool
 
 
 def _device(serial: str) -> Device:
-    """取设备记录，不存在抛 404。"""
     try:
         return Device.objects.get(serial=serial)
     except Device.DoesNotExist as exc:
         raise DeviceError(f"设备 {serial} 未注册", status_code=404) from exc
 
 
-# ═══════════════════════════════════════════════
-# 设备列表 / 当前 / 激活
-# ═══════════════════════════════════════════════
-
-
 @extend_schema(responses=OpenApiTypes.OBJECT)
 @api_view(["GET"])
 def list_devices(request):
-    """GET /api/devices/ — 设备列表 + 当前设备（含状态同步 + 可见性过滤）。"""
     try:
         state_machine.update_device_status()
 
@@ -58,12 +45,10 @@ def list_devices(request):
                 device_pool.switch_to(first.serial)
                 current_serial = first.serial
 
-        # 当前设备指针是全局的，可能指向本用户不可见的设备 → 响应置 None（不改全局指针）
         visible_serials = {d.serial for d in devices}
         if current_serial not in visible_serials:
             current_serial = None
 
-        # 锁定者/配置者存数字 ID，展示层转用户名（批量查询，避免 N+1）
         owner_ids = (
             {d.locked_by for d in devices if d.locked_by}
             | {d.added_by for d in devices if d.added_by}
@@ -90,11 +75,6 @@ def list_devices(request):
 @extend_schema(responses=OpenApiTypes.OBJECT)
 @api_view(["GET"])
 def device_current(request):
-    """GET /api/devices/current — 当前活动设备信息。
-
-    读分辨率与前台应用需要连一次 ADB；同一设备 10 秒内复用上次结果，
-    避免轮询式调用把请求线程拖在 shell 上。
-    """
     current_serial = device_pool.current_serial
     info: dict = {}
     app: dict = {}
@@ -136,7 +116,6 @@ _current_probe_cache: dict[str, tuple[float, dict, dict]] = {}
 
 
 def _probe_current_device(serial: str, dev: Device) -> tuple[dict, dict]:
-    """读取当前设备分辨率与前台应用；10 秒内复用缓存。"""
     now = time.monotonic()
     cached = _current_probe_cache.get(serial)
     if cached is not None and now - cached[0] < _CURRENT_PROBE_TTL_SECONDS:
@@ -163,7 +142,6 @@ def _probe_current_device(serial: str, dev: Device) -> tuple[dict, dict]:
 @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def activate_device(request, serial):
-    """POST /api/devices/{serial}/activate — 切换当前活动设备。"""
     try:
         dev = Device.objects.get(serial=serial)
     except Device.DoesNotExist:
@@ -178,15 +156,9 @@ def activate_device(request, serial):
     return Response({"current": serial})
 
 
-# ═══════════════════════════════════════════════
-# 扫描 / 连接 / 断开
-# ═══════════════════════════════════════════════
-
-
 @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def scan_device(request):
-    """POST /api/devices/scan — ADB 扫描注册（全量 / USB / WiFi）。"""
     target = (request.data.get("target") or "").strip()
     user_id = getattr(request, "user_id", "")
 
@@ -241,7 +213,7 @@ def scan_device(request):
             try:
                 dev, created = registry.register_device(addr, user_id)
             except DeviceError:
-                continue  # 无线设备未就绪（拿不到序列号），跳过本轮
+                continue
             if created:
                 newly_added += 1
             devices_out.append(serializer.device_to_dict(dev, device_pool.current_serial))
@@ -257,7 +229,7 @@ def scan_device(request):
             }
         )
     except DeviceError:
-        raise  # 交给 DRF 异常处理器返回具体 message（如无法解析序列号）
+        raise
     except AdbUnavailableError as exc:
         return Response({"message": str(exc)}, status=503)
     except Exception:
@@ -268,7 +240,6 @@ def scan_device(request):
 @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def connect_device(request, serial):
-    """POST /api/devices/{serial} — 连接 + 采集信息 + 自动激活（observe 模式置使用中）。"""
     activate = request.data.get("activate", True)
     mode = request.data.get("mode", "")
     user_id = getattr(request, "user_id", "") or ""
@@ -277,11 +248,9 @@ def connect_device(request, serial):
     if dev.status == DeviceStatus.BUSY:
         raise DeviceError("设备正在使用中，无法连接", status_code=409)
 
-    # 连接地址：无线设备用 connection_addr（IP:port / mDNS），USB 用序列号本身
     addr = dev.connection_addr or serial
     ct = ConnectionType.WIFI if detector.is_wireless(addr) else ConnectionType.USB
 
-    # 连接设备（无线 adb connect + u2 探活，逻辑在 detector.connect）
     detector.connect(addr)
 
     registry.set_connection_state(dev, ct)
@@ -308,7 +277,6 @@ def connect_device(request, serial):
 @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def disconnect_device(request, serial):
-    """POST /api/devices/{serial}/disconnect — 删除设备（在线可删、使用中置灰、USB 无删除键）。"""
     dev = _device(serial)
 
     if dev.connection_type != ConnectionType.WIFI:
@@ -325,7 +293,6 @@ def disconnect_device(request, serial):
 @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def disconnect_observe(request, serial):
-    """POST /api/devices/{serial}/disconnect-observe — 轻量断开（不删记录，释放观察占用为 ONLINE）。"""
     device_pool.remove_device(serial)
     try:
         dev = Device.objects.get(serial=serial)
@@ -335,15 +302,9 @@ def disconnect_observe(request, serial):
     return Response({"serial": serial, "message": "设备观察连接已断开"})
 
 
-# ═══════════════════════════════════════════════
-# 锁定 / 释放 / 心跳
-# ═══════════════════════════════════════════════
-
-
 @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def lock_device(request, serial):
-    """POST /api/devices/{serial}/lock — 锁定 / 公开切换（可见性）。"""
     locked = request.data.get("locked", True)
     user_id = getattr(request, "user_id", "") or request.data.get("user_id", "")
 
@@ -354,7 +315,6 @@ def lock_device(request, serial):
 @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
 @api_view(["POST"])
 def release_device(request, serial):
-    """POST /api/devices/{serial}/release — 释放设备检查器占用。"""
     dev = _device(serial)
     return Response(state_machine.release_occupy(dev))
 
@@ -362,5 +322,4 @@ def release_device(request, serial):
 @extend_schema(responses=OpenApiTypes.OBJECT)
 @api_view(["GET"])
 def heartbeat(request):
-    """GET /api/devices/heartbeat — 心跳同步。"""
     return Response(state_machine.heartbeat_sync())

@@ -2,7 +2,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("task_list", "0006_retire_aiagent_link_role_model"),
     ]

@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 运营后台：停用 / 启用的幂等与四条边界 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ops_console/api/test_ops_user_toggle.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/ops_console、backend/apps/accounts
-🏁
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -20,7 +11,6 @@ pytestmark = [pytest.mark.django_db, pytest.mark.api]
 
 
 def test_disable_normal_user(operator_user, other_user):
-    """运营停用普通用户：状态落库，响应回带最新状态。"""
     response = call(OpsUserDisableView, method="post", user=operator_user, user_id=other_user.id)
     assert response.status_code == 200
     assert response.data["user"]["is_active"] is False
@@ -29,7 +19,6 @@ def test_disable_normal_user(operator_user, other_user):
 
 
 def test_disable_is_idempotent(operator_user, other_user):
-    """重复停用不报错，状态保持停用。"""
     call(OpsUserDisableView, method="post", user=operator_user, user_id=other_user.id)
     response = call(OpsUserDisableView, method="post", user=operator_user, user_id=other_user.id)
     assert response.status_code == 200
@@ -38,7 +27,6 @@ def test_disable_is_idempotent(operator_user, other_user):
 
 
 def test_enable_restores_user(operator_user, other_user):
-    """启用把停用账号恢复回来。"""
     other_user.is_active = False
     other_user.save(update_fields=["is_active"])
 
@@ -50,7 +38,6 @@ def test_enable_restores_user(operator_user, other_user):
 
 
 def test_operator_cannot_disable_superuser(operator_user, admin_user):
-    """运营停用超管：403，目标状态不变。"""
     response = call(OpsUserDisableView, method="post", user=operator_user, user_id=admin_user.id)
     assert response.status_code == 403
     admin_user.refresh_from_db()
@@ -58,7 +45,6 @@ def test_operator_cannot_disable_superuser(operator_user, admin_user):
 
 
 def test_operator_cannot_disable_other_operator(operator_user, operator_group):
-    """运营停用另一个运营：403，目标状态不变。"""
     peer = get_user_model().objects.create_user(username="peer", password="pass-123456")
     peer.groups.add(operator_group)
 
@@ -69,7 +55,6 @@ def test_operator_cannot_disable_other_operator(operator_user, operator_group):
 
 
 def test_operator_cannot_disable_self(operator_user):
-    """运营停用自己：403，自己仍可登录。"""
     response = call(OpsUserDisableView, method="post", user=operator_user, user_id=operator_user.id)
     assert response.status_code == 403
     operator_user.refresh_from_db()
@@ -77,13 +62,11 @@ def test_operator_cannot_disable_self(operator_user):
 
 
 def test_disable_unknown_target_returns_404(operator_user):
-    """目标不存在：404。"""
     response = call(OpsUserDisableView, method="post", user=operator_user, user_id=999999)
     assert response.status_code == 404
 
 
 def test_superuser_cannot_disable_operator(admin_user, operator_group):
-    """超管也不能停用运营：运营与超管一样不可停用。"""
     peer = get_user_model().objects.create_user(username="peer2", password="pass-123456")
     peer.groups.add(operator_group)
 
@@ -94,7 +77,6 @@ def test_superuser_cannot_disable_operator(admin_user, operator_group):
 
 
 def test_disabled_user_cannot_login(operator_user, other_user):
-    """停用即时阻断登录：原密码在 authenticate 上已经过不去（登录接口因此返回 401）。"""
     from django.contrib.auth import authenticate
 
     assert authenticate(username="other", password="pass-123456") is not None
@@ -105,7 +87,6 @@ def test_disabled_user_cannot_login(operator_user, other_user):
 
 
 def test_disable_writes_user_revocation_and_enable_keeps_it(operator_user, other_user):
-    """停用写入账号档；启用不删该档，旧令牌仍按签发时间作废。"""
     from backend.apps.accounts.models import TokenRevocation
 
     call(OpsUserDisableView, method="post", user=operator_user, user_id=other_user.id)
@@ -120,7 +101,6 @@ def test_disable_writes_user_revocation_and_enable_keeps_it(operator_user, other
 
 
 def test_repeated_disable_keeps_one_revocation_row(operator_user, other_user):
-    """重复停用覆盖同一行，不堆记录。"""
     from backend.apps.accounts.models import TokenRevocation
 
     call(OpsUserDisableView, method="post", user=operator_user, user_id=other_user.id)
@@ -134,7 +114,6 @@ def test_repeated_disable_keeps_one_revocation_row(operator_user, other_user):
 
 
 def test_enabled_again_can_login(operator_user, other_user):
-    """恢复启用后原密码重新可用。"""
     from django.contrib.auth import authenticate
 
     call(OpsUserDisableView, method="post", user=operator_user, user_id=other_user.id)

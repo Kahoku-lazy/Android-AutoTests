@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 按 .linting 反向生成 tach.toml / .importlinter，供第三方工具复跑 🏁
-Python 调试：➡️ python -m utils.linting.export 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无
-🏁
-"""
-
 from __future__ import annotations
 
 import json
@@ -17,7 +8,6 @@ from utils.linting.model import Config
 
 
 def render_tach_toml(config: Config) -> str:
-    """按 .linting 生成 tach.toml。"""
     lines = ["exclude = " + toml_list(config.exclude_raw), ""]
     lines.append("source_roots = " + toml_list(rels(config)))
     lines.append("forbid_circular_dependencies = false")
@@ -38,7 +28,6 @@ def render_tach_toml(config: Config) -> str:
 
 
 def render_importlinter(config: Config) -> str:
-    """按 .linting 生成 .importlinter。"""
     lines = ["[importlinter]", "root_packages ="]
     lines += [f"    {name}" for name in config.root_packages]
     lines.append(f"include_external_packages = {config.include_external}")
@@ -62,17 +51,14 @@ def render_importlinter(config: Config) -> str:
 
 
 def toml_list(values: list[str] | set[str]) -> str:
-    """行内字符串数组。"""
     return "[" + ", ".join(json.dumps(item, ensure_ascii=False) for item in values) + "]"
 
 
 def rels(config: Config) -> list[str]:
-    """source_roots 转回相对项目根的写法。"""
     return [root.relative_to(config.root).as_posix() for root in config.source_roots]
 
 
 def export(config: Config, out_dir: Path) -> list[Path]:
-    """把两份工具配置写到 out_dir；不删除、不修改 .linting。"""
     out_dir.mkdir(parents=True, exist_ok=True)
     written = []
     for name, text in (

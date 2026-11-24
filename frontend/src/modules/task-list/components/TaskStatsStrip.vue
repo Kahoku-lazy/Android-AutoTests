@@ -1,10 +1,4 @@
 <script setup lang="ts">
-/**
- * TaskStatsStrip — 任务清单页的三项统计（总任务 / 成功率 / 执行中）。
- *
- * 数据来自后端统计接口（列表只返回最近 100 条，前端不能自行求和）；
- * 加载中且没有旧值时用共享骨架，不渲染 0 值假数据。
- */
 import KpiCard from "@/shared/components/KpiCard.vue"
 import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
 import { successRateText } from "../helpers/task-stats"
@@ -15,7 +9,6 @@ defineProps<{
   loading: boolean
 }>()
 
-/** 三张卡的微倾角：按序号轮转，悬停回正 */
 const TILTS = [-0.8, 0.6, -0.5]
 </script>
 

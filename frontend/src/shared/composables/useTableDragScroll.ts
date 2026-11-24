@@ -1,9 +1,3 @@
-/**
- * 表格左键长按后拖拽横向滑动 — 共享件（L4 数据面通用）。
- * 用法：把返回值接到承载横向滚动的外层容器上（ref + @pointerdown），
- * 该容器需 CSS `overflow-x: auto`，并关掉 el-table 自身的横向滚动，避免双滚动条。
- * 当前消费方：设备管理页（.device-table-wrapper）与设备检查器（.sap-table-body）。
- */
 import { ref, onBeforeUnmount, type Ref } from "vue"
 
 const INTERACTIVE = "button, a, input, textarea, select, .el-button, .el-switch, .el-checkbox"
@@ -14,8 +8,6 @@ export function useTableDragScroll(external?: Ref<HTMLElement | null>): {
   tableWrapRef: Ref<HTMLElement | null>
   onTablePointerDown: (e: PointerEvent) => void
 } {
-  // 默认自带 ref（模板 ref 绑定）；传入 external 时作用在调用方指定的滚动容器上
-  // （例如 el-table 自身的横向滚动容器，由 EP 同步表头）
   const tableWrapRef = external ?? ref<HTMLElement | null>(null)
 
   let pointerId: number | null = null
@@ -62,16 +54,11 @@ export function useTableDragScroll(external?: Ref<HTMLElement | null>): {
     el.classList.add("is-dragging", "is-pan-ready")
   }
 
-  /** 只有真正开始横移才捕获指针：
-   *  pointerdown（或仅长按不动）就捕获，会把随后的 click / dblclick 重定向到
-   *  本容器，使 el-table 挂在外层行上的 row-click / row-dblclick 永远收不到。 */
   function capturePointer(el: HTMLElement) {
     if (pointerId == null) return
     try {
       el.setPointerCapture(pointerId)
-    } catch {
-      /* ignore */
-    }
+    } catch {}
   }
 
   function onMove(e: PointerEvent) {
@@ -81,7 +68,6 @@ export function useTableDragScroll(external?: Ref<HTMLElement | null>): {
 
     const dx = e.clientX - startX
     if (!panReady && Math.abs(dx) >= MOVE_ACTIVATE_PX) {
-      // 按住并滑动一小段也进入拖拽（不必干等满长按）
       clearTimer()
       activatePan(el)
     }
@@ -99,7 +85,6 @@ export function useTableDragScroll(external?: Ref<HTMLElement | null>): {
   }
 
   function onTablePointerDown(e: PointerEvent) {
-    // 仅鼠标左键 / 触控主指针
     if (e.pointerType === "mouse" && e.button !== 0) return
     const el = tableWrapRef.value
     if (!el) return

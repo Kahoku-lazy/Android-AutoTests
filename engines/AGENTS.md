@@ -44,22 +44,21 @@
 
 | 场景 | 技能 | 命令（cd 到技能目录） |
 | --- | --- | --- |
-| **读代码前**先取注释看全貌 | [`engines-docstring-check`](../.agents/skills/engines-docstring-check/SKILL.md) | `python -m scripts.docstrings read --changed`（或 `--path engines/...`） |
-| **改完代码**自检注释/docstring 合规 | 同上 | `python -m scripts.docstrings check`（默认只查 git 改动行） |
+| **读代码前**取签名与结构 | [`engines-docstring-check`](../.agents/skills/engines-docstring-check/SKILL.md) | `python -m scripts.docstrings read --changed`（或 `--path engines/...`） |
+| **改完代码**自检工具函数 docstring | 同上 | `python -m scripts.docstrings check`（默认只查 git 改动行） |
 | 命名 / 禁 import / 门禁机械化项 | [`engines-agents-style-check`](../.agents/skills/engines-agents-style-check/SKILL.md) | `python -m scripts.check_engines_agents_style` |
 
-技能是**辅助**：注释是否可信、设计是否合理仍要人判断，过检 ≠ 整份规范合规。
+技能是**辅助**：设计是否合理仍要人判断，过检 ≠ 整份规范合规。
 
-**注释正文位置（2026-11-24 变更）**：模块头 4 字段方案已推广到全仓 Python 代码，正文在
-[`.agents/rules/python-docstring-style.md`](../.agents/rules/python-docstring-style.md)；本文档链到的
-[`.agents/rules/engines-code-style.md`](../.agents/rules/engines-code-style.md) §2 已改为指向该文件，
-engines 只在 §6 保留「`engines/ae_harness/tools/**` 工具函数必须写首行摘要 + `Args:`」这条追加条款
+**注释规则位置（2026-11-24 变更）**：全仓代码不写注释，正文在
+[`.agents/rules/python-docstring-style.md`](../.agents/rules/python-docstring-style.md)；engines 只在
+[`.agents/rules/engines-code-style.md`](../.agents/rules/engines-code-style.md) §6 保留「`engines/ae_harness/tools/**` 工具函数必须写首行摘要 + `Args:`」这条追加条款
 （那是交给模型的工具说明，不得删减）。检查命令不变，见上表。
 
 1. **任何时候进入 engines 任务**：先读本 `engines/AGENTS.md`（职责 + 红线 + 本流程）。
-2. **即将编写或修改 `engines/**` 代码时**（含补 docstring、改工具、改 role、改设备/串口/视觉等）：  
+2. **即将编写或修改 `engines/**` 代码时**（含补工具函数 docstring、改工具、改 role、改设备/串口/视觉等）：  
    **必须先阅读** [`.agents/rules/engines-code-style.md`](../.agents/rules/engines-code-style.md) 全文（或至少与本次改动相关的章节），**禁止**未读规范就写代码。
-3. **只做只读分析 / 解释 / 排障且不改 `engines/**` 代码时**：可以不读 `.agents/rules/engines-code-style.md`；但**读代码前建议先用 `engines-docstring-check read`** 拿模块字段 + 签名 + 段清单，比逐行读实现省一个量级（也顺带看出注释是否可信）。
+3. **只做只读分析 / 解释 / 排障且不改 `engines/**` 代码时**：可以不读 `.agents/rules/engines-code-style.md`；但**读代码前建议先用 `engines-docstring-check read`** 拿签名与结构清单（代码里已无注释可读），比逐行读实现省一个量级。
 4. **需要检查代码是否符合可自动化的规范条目时**（用户要求检查、改完自检、准备宣称合规、门禁 `engines-agents-style` 告警）：  
    **必须使用项目技能**：注释/docstring 用 [`engines-docstring-check`](../.agents/skills/engines-docstring-check/SKILL.md)（按其 `SKILL.md` 运行 `python -m scripts.docstrings check`）；命名 / 禁 import / `tool_*.py` 段序另用 [`engines-agents-style-check`](../.agents/skills/engines-agents-style-check/SKILL.md)：
    ```text

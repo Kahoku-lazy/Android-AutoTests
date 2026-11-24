@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 端口来源登记 —— 配置解析 + 自定义行双轨合并成日志来源列表 🏁
-Python 调试：➡️ python -m backend.apps.serial_log.sources 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（经 serial_log 的功能用例间接覆盖，未直接 import 本模块）
-🏁
-"""
-
 from __future__ import annotations
 
 import json
@@ -33,7 +24,6 @@ def _int_or(value: object, default: int = 0) -> int:
 
 
 def _specs_from_mapping(data: dict) -> list[LogSourceSpec]:
-    """`DEVICE_LOG_SOURCES` 的 JSON → 来源登记列表；端口非数字的条目记录错误后跳过。"""
     specs: list[LogSourceSpec] = []
     for key, value in data.items():
         port = _int_or(key, 0)
@@ -51,13 +41,6 @@ def _specs_from_mapping(data: dict) -> list[LogSourceSpec]:
 
 
 def config_specs() -> list[LogSourceSpec]:
-    """「端口 → 来源登记」的配置轨：优先 `settings.DEVICE_LOG_SOURCES`（JSON），否则按单端口合成。
-
-    支持两种 JSON 形态：
-
-    - 显式：`{"7005": {"sku": "H6810", "baud": 921600}}`
-    - 简写：`{"7005": "H6810"}`（波特率取 `DEVICE_LOG_SOURCE_BAUD`）
-    """
     raw = str(getattr(settings, "DEVICE_LOG_SOURCES", "") or "").strip()
     if raw:
         try:
@@ -74,11 +57,6 @@ def config_specs() -> list[LogSourceSpec]:
 
 
 def source_specs() -> list[LogSourceSpec]:
-    """双轨合并：配置登记 + 自定义行（经 api 读库），按端口排序。
-
-    同号时自定义行优先——配置同步会跳过被自定义占用的端口（见 api.ensure_log_ports），
-    该端口按自定义登记管理。
-    """
     merged = {int(spec.port): spec for spec in config_specs()}
     for spec in api.list_custom_port_specs():
         merged[int(spec.port)] = spec

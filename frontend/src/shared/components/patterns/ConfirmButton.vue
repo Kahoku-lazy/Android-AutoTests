@@ -1,5 +1,4 @@
 <template>
-  <!-- doodle：涂鸦危险按钮外观；默认仍走 el-button -->
   <DoodleBtn v-if="doodle" tone="danger" :disabled="disabled" @click.stop="handleClick">
     <slot />
   </DoodleBtn>
@@ -15,15 +14,14 @@ import DoodleBtn from "@/shared/components/DoodleBtn.vue"
 defineOptions({ inheritAttrs: false })
 
 const props = defineProps({
-  /** Confirmation message shown in the dialog */
   message: { type: String, required: true },
-  /** Dialog title */
+
   title: { type: String, default: "确认操作" },
-  /** Text for the confirm button */
+
   confirmText: { type: String, default: "确定" },
-  /** MessageBox type: 'warning' | 'error' | 'info' */
+
   type: { type: String, default: "warning" },
-  /** 使用 DoodleBtn danger 外观（任务卡删除等） */
+
   doodle: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
 })

@@ -1,9 +1,3 @@
-/**
- * [P1] 建议测 — 设备池状态写操作联动（mock 整个 api 模块，不断真网络）
- * 目录：tests/device-pool/p1/
- *
- * useDevicePoolState：do* 成功联动 fetchDevices 刷新、doHeartbeat 吞异常仅 warn。
- */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import * as dpApi from "@/modules/device-pool/api"
 import {

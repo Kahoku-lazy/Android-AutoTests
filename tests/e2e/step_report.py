@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 端到端步骤报告：每步一张带标注截图，汇总成 HTML 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/e2e/step_report.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 被 tests/<模块>/e2e 用例共用（无独立用例）
-🏁
-"""
-
 from __future__ import annotations
 
 import functools
@@ -26,10 +17,9 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 DEFAULT_OUT_DIR = Path("tests/reports/e2e")
-THUMB_WIDTH = 1100  # 写进报告的图片最大宽度：既要看得清，也要报告不臃肿
+THUMB_WIDTH = 1100
 JPEG_QUALITY = 82
 
-# ── 配色与报告规范同源（.agents/skills/html-report · animal-island-ui）──
 INK = "#794f27"
 PAPER = "#f8f8f0"
 TEAL = "#19c8b9"
@@ -49,7 +39,6 @@ _FONT_CANDIDATES = (
 
 @functools.lru_cache(maxsize=16)
 def _font(size: int):
-    """中文字体：系统字体逐个探测，全失败才退回 PIL 位图字体（中文会显示成方块）。"""
     for path in _FONT_CANDIDATES:
         if os.path.exists(path):
             try:
@@ -65,17 +54,14 @@ def _clip(text: str, limit: int = 26) -> str:
 
 @dataclass
 class Mark:
-    """截图上的一个标注：这一步对「哪里」做了什么。"""
-
     kind: str
     label: str = ""
-    bbox: tuple | None = None  # (x1, y1, x2, y2)
-    point: tuple | None = None  # (x, y) 动作点
-    scroll: tuple | None = None  # (dx, dy) 滚动量
+    bbox: tuple | None = None
+    point: tuple | None = None
+    scroll: tuple | None = None
 
 
 def _draw_tag(draw, anchor, text, color, font, scale):
-    """在目标矩形上方贴一个实心标签；贴到顶就改画在矩形内侧。"""
     x, y = anchor
     width = draw.textlength(text, font=font)
     height = int(font.size * 1.7)
@@ -88,7 +74,6 @@ def _draw_tag(draw, anchor, text, color, font, scale):
 
 
 def _draw_scroll(draw, size, mark, color, line, scale):
-    """滚动方向箭头：画在视口中线，长度随滚动量增长。"""
     width, height = size
     center_x = width // 2
     _, dy = mark.scroll
@@ -113,7 +98,6 @@ def _draw_scroll(draw, size, mark, color, line, scale):
 
 
 def _draw_caption(draw, size, index, caption, font, failed):
-    """顶部说明条：第几步 + 做了什么（光看图也能读懂）。"""
     width, _ = size
     text = f"步骤 {index} · {'失败 · ' if failed else ''}{_clip(caption, 46)}"
     available = width - font.size * 1.8
@@ -127,10 +111,8 @@ def _draw_caption(draw, size, index, caption, font, failed):
 def annotate(
     png: bytes, index: int, caption: str, marks: list, failed: bool = False
 ) -> Image.Image:
-    """把动作标注与说明条画到截图上。"""
     image = Image.open(io.BytesIO(png)).convert("RGB")
     draw = ImageDraw.Draw(image, "RGBA")
-    # 说明条与标注按图宽等比缩放：局部小图不能套用整屏的字号，否则说明条会盖住被断言的元素
     scale = max(0.6, image.width / 1280)
     line = max(3, int(4 * scale))
     font = _font(max(15, int(21 * scale)))
@@ -169,7 +151,6 @@ def annotate(
 
 
 def _target(locator):
-    """动作前测得的元素矩形与中心点（截图为动作后，原地动作两者一致）。"""
     box = locator.bounding_box()
     if not box:
         return None, None
@@ -179,7 +160,6 @@ def _target(locator):
 
 
 def _shift(marks: list, clip: dict | None) -> list:
-    """局部截图要把标注坐标平移到裁剪坐标系。"""
     if not clip:
         return marks
     ox, oy = clip["x"], clip["y"]
@@ -203,7 +183,7 @@ class Step:
     caption: str
     duration: float = 0.0
     shot: str | None = None
-    status: str = "ok"  # ok / failed
+    status: str = "ok"
     detail: str = ""
     crop: bool = False
 
@@ -214,7 +194,7 @@ class CaseRecord:
     title: str
     nodeid: str
     steps: list = field(default_factory=list)
-    status: str = "unknown"  # passed / failed / unknown
+    status: str = "unknown"
     duration: float = 0.0
     error: str = ""
 
@@ -224,8 +204,6 @@ class CaseRecord:
 
 
 class StepReport:
-    """一次会话内的步骤报告：收集用例 → 落盘图片 → 渲染单个 HTML。"""
-
     def __init__(self, out_dir: Path | str = DEFAULT_OUT_DIR):
         self.out_dir = Path(out_dir)
         self.shots_dir = self.out_dir / "shots"
@@ -242,15 +220,12 @@ class StepReport:
         self.cases.append(case)
 
     def save_image(self, image: Image.Image, slug: str, index: int) -> str:
-        """缩放并存成 JPEG，返回相对 index.html 的路径。"""
         if image.width > THUMB_WIDTH:
             ratio = THUMB_WIDTH / image.width
             image = image.resize((THUMB_WIDTH, int(image.height * ratio)), Image.LANCZOS)
         name = f"{slug}_{index:02d}.jpg"
         image.save(self.shots_dir / name, "JPEG", quality=JPEG_QUALITY, optimize=True)
         return f"shots/{name}"
-
-    # ── 渲染 ──
 
     def render(self) -> Path:
         self.out_dir.mkdir(parents=True, exist_ok=True)
@@ -393,24 +368,15 @@ def _case_html(case: CaseRecord, order: int) -> list:
 
 
 class StepRecorder:
-    """用例级记录器：动作仍由 Playwright 原生 API 完成，这里负责标注与留痕。"""
-
     def __init__(self, page, case: CaseRecord, report: StepReport):
         self.page = page
         self.case = case
         self.report = report
 
-    # ── 只留痕的动作 ──
-
     def shot(self, caption: str) -> None:
-        """整屏截图，无坐标标注 —— 用于「打开页面」「跳转完成」这类状态。"""
         self._record(caption, [])
 
     def inspect(self, locator, caption: str, pad: float = 24) -> None:
-        """元素局部放大截图 —— 断言用，比整屏更容易看清按钮态与文案。
-
-        顶部多留 56px 给说明条，避免它压住被断言的元素本身。
-        """
         box = locator.bounding_box()
         if not box:
             self._record(caption, [])
@@ -424,8 +390,6 @@ class StepRecorder:
         }
         bbox = (box["x"], box["y"], box["x"] + box["width"], box["y"] + box["height"])
         self._record(caption, [Mark("assert", "", bbox)], clip=clip)
-
-    # ── 带标注的动作 ──
 
     def click(self, locator, caption: str, *, force: bool = False, timeout: float | None = None):
         bbox, point = _target(locator)
@@ -472,10 +436,7 @@ class StepRecorder:
         self._record(caption, [Mark("scroll", "", scroll=(dx, dy))], time.time() - started)
 
     def fail(self, caption: str, detail: str = "") -> None:
-        """由 pytest 钩子在用例失败时调用，补一张失败现场截图。"""
         self._record(caption, [], status="failed", detail=detail)
-
-    # ── 内部 ──
 
     def _record(
         self,
@@ -507,7 +468,6 @@ _REPORT: StepReport | None = None
 
 
 def get_report() -> StepReport:
-    """进程内单例：夹具与会话钩子共用同一个报告对象。"""
     global _REPORT
     if _REPORT is None:
         _REPORT = StepReport(Path(os.environ.get("E2E_REPORT_DIR", DEFAULT_OUT_DIR)))

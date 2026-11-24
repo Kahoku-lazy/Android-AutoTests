@@ -1,5 +1,3 @@
-"""给 Task 增加任务类型快照，区分设备执行与用例编写。"""
-
 from django.db import migrations, models
 
 

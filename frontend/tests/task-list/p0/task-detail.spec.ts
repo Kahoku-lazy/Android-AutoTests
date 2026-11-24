@@ -225,7 +225,7 @@ describe("taskStepBlocks", () => {
     expect(blocks[0].attempts[0].verifierLogInfo).toBe("switch_on")
     expect(blocks[0].attempts[0].verifierScreenshotPath).toBe("ai_tasks/8/s1_verify.jpg")
     expect(blocks[0].attempts[0].actual).toBe("截图显示灯已亮")
-    // 存量旧记录：布尔结果仍归一化为 pass，新两件为空串
+
     expect(blocks[0].attempts[1].verifierResult).toBe("pass")
     expect(blocks[0].attempts[1].verifierLogTimer).toBe("")
     expect(blocks[0].attempts[1].verifierScreenshotPath).toBe("")
@@ -266,7 +266,7 @@ describe("taskStepBlocks", () => {
     expect(blocks[0].attempts[0].executorClickTimer).toBe("2026-09-28 17:01:12.645")
     expect(blocks[0].attempts[0].executorScreenshotPath).toBe("ai_tasks/7/s1_l1.jpg")
     expect(blocks[0].attempts[0].executorScreenshotUrl).toBe("/media/ai_tasks/7/s1_l1.jpg")
-    // 存量旧记录：新两件为空串，说明文字照旧带出
+
     expect(blocks[0].attempts[1].executorClickTimer).toBe("")
     expect(blocks[0].attempts[1].executorScreenshotPath).toBe("")
     expect(blocks[0].attempts[1].executorScreenshotUrl).toBe("")

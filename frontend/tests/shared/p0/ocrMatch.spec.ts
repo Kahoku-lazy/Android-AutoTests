@@ -1,19 +1,12 @@
-/**
- * [P0] 必测 — OCR ↔ dump 元素几何匹配（中心点包含 + 最小面积）
- * 目录：tests/shared/p0/
- *
- * 覆盖：嵌套容器选最具体叶子元素 / 精确坐标全等兼容 / 零尺寸跳过 /
- *       一对一先到先得 / 未命中 / 边界闭区间命中。
- */
 import { describe, expect, it } from "vitest"
 import { matchOcrToElements } from "@/shared/ocrMatch"
 
 describe("[P0] shared/ocrMatch", () => {
   it("嵌套容器：同一 OCR 中心点落在多层 bounds 内，选面积最小元素", () => {
     const elements = [
-      { x: 0, y: 0, width: 1440, height: 2872 }, // 整屏容器
-      { x: 0, y: 110, width: 1440, height: 321 }, // viewBarrier
-      { x: 77, y: 110, width: 144, height: 211 }, // tvTabLayout（最具体）
+      { x: 0, y: 0, width: 1440, height: 2872 },
+      { x: 0, y: 110, width: 1440, height: 321 },
+      { x: 77, y: 110, width: 144, height: 211 },
     ]
     const texts = [{ text: "设备", x: 64, y: 170, width: 169, height: 96 }]
 
@@ -74,7 +67,7 @@ describe("[P0] shared/ocrMatch", () => {
 
   it("边界：OCR 中心点恰在元素边界上，闭区间仍命中", () => {
     const elements = [{ x: 0, y: 0, width: 100, height: 100 }]
-    const texts = [{ text: "t", x: 50, y: 50, width: 100, height: 100 }] // 中心 (100,100)
+    const texts = [{ text: "t", x: 50, y: 50, width: 100, height: 100 }]
 
     const { byElement } = matchOcrToElements(elements, texts)
 

@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ CSRF 保护与 JWT 豁免契约（D0 安全配置 + D1 通道） 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_csrf_protection.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/shared/auth
-🏁
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -18,24 +9,21 @@ from backend.shared.auth.jwt_auth import create_access_token
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit, pytest.mark.auth]
 
-POST_PATH = "/api/auth/logout/"  # DRF 受保护端点：JWT 请求必须绕过 CSRF 校验直达视图
+POST_PATH = "/api/auth/logout/"
 
 
 @pytest.fixture
 def user():
-    """令牌的 sub 必须指向真实用户：DRF 认证会按 sub 查 auth_user。"""
     return User.objects.create_user(username="csrf_probe", password="pw123456")
 
 
 @pytest.fixture
 def client():
-    """默认客户端（Django 默认不强制 CSRF 校验）。"""
     return Client()
 
 
 @pytest.fixture
 def strict_client():
-    """强制 CSRF 校验的客户端 —— 只有它能证明保护真的生效。"""
     return Client(enforce_csrf_checks=True)
 
 
@@ -44,33 +32,28 @@ def _jwt_header(user_id: str) -> dict:
 
 
 def test_jwt_request_is_not_csrf_blocked(strict_client, user):
-    """强制 CSRF 下，有效 JWT 的 POST 仍必须到达视图（200，非 403）。"""
     resp = strict_client.post(POST_PATH, **_jwt_header(str(user.id)))
     assert resp.status_code == 200, resp.content[:200]
     assert resp.json()["status"] is True
 
 
 def test_unauthenticated_post_rejected_by_jwt_before_csrf(strict_client):
-    """无令牌的 POST 由 JWT 中间件先行 401（不会走到 CSRF 检查）。"""
     resp = strict_client.post(POST_PATH)
     assert resp.status_code == 401
 
 
 def test_invalid_jwt_rejected_without_csrf_403(strict_client):
-    """非法令牌同样先被 JWT 中间件拒绝，不产生 403。"""
     resp = strict_client.post(POST_PATH, HTTP_AUTHORIZATION="Bearer not-a-real-token")
     assert resp.status_code == 401
 
 
 def test_admin_login_without_csrf_token_is_rejected(strict_client):
-    """后台是 session 表单面：缺 CSRF token 的登录 POST 必须 403。"""
     resp = strict_client.post("/admin/login/", {"username": "nobody", "password": "bad"})
     assert resp.status_code == 403
 
 
 def test_admin_login_with_csrf_token_passes_csrf_check(strict_client):
-    """带页面下发的 csrfmiddlewaretoken 时通过 CSRF 校验（凭证错误 → 重新渲染登录页）。"""
-    strict_client.get("/admin/login/")  # 取得 csrftoken cookie
+    strict_client.get("/admin/login/")
     token = strict_client.cookies["csrftoken"].value
     resp = strict_client.post(
         "/admin/login/",
@@ -80,7 +63,6 @@ def test_admin_login_with_csrf_token_passes_csrf_check(strict_client):
 
 
 def test_cors_preflight_not_csrf_blocked(strict_client):
-    """CORS 预检（OPTIONS）不应被 CSRF 中间件拦截。"""
     resp = strict_client.options(
         POST_PATH,
         HTTP_ORIGIN="http://localhost:5173",

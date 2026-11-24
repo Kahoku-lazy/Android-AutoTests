@@ -1,11 +1,3 @@
-/**
- * 停用账号的 10 秒退出。
- *
- * 业务：
- * 1. 识别后端专用拒绝码，不把它当成登录过期。
- * 2. 展示固定文案并倒计时，到点清空会话、回到登录页。
- * 3. 倒计时已经在走时，重复响应不重置。
- */
 import {
   ACCOUNT_DISABLED_CODE,
   ACCOUNT_DISABLED_MESSAGE,
@@ -14,7 +6,6 @@ import {
 
 let countdownStarted = false
 
-/** 该响应是否为停用专用拒绝。 */
 export function isAccountDisabled(data: unknown): boolean {
   return (
     typeof data === "object" &&
@@ -23,7 +14,6 @@ export function isAccountDisabled(data: unknown): boolean {
   )
 }
 
-/** 开始 10 秒退出。已经在倒计时时直接返回。 */
 export function startAccountDisabledCountdown(
   clearToken: () => void,
   redirectToLogin: () => void,
@@ -37,7 +27,6 @@ export function startAccountDisabledCountdown(
   }, ACCOUNT_DISABLED_SECONDS * 1000)
 }
 
-/** 仅测试用：重置「已经在倒计时」标记。 */
 export function resetAccountDisabledCountdown(): void {
   countdownStarted = false
   document.getElementById("account-disabled-notice")?.remove()

@@ -1,10 +1,3 @@
-/**
- * [P0] 必测 — 媒体路径拼接的唯一登记处
- * 目录：tests/shared/p0/
- *
- * 原实现分散在设备检查器 store / 元素定位 elementPresentation / AI 助手 task-detail，
- * 本用例锁定收敛后的口径：有相对路径才产出 `/media/` URL，空路径产空串。
- */
 import { describe, expect, it } from "vitest"
 import { mediaUrl } from "@/shared/helpers/mediaUrl"
 

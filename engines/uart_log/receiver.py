@@ -1,27 +1,3 @@
-"""
-文件名: ➡ receiver.py 🏁
-路径: ➡ engines/uart_log/receiver.py 🏁
-模块功能：➡ 单端口接收线程：绑定、多连接、按行切开 🏁
-Python 调试：➡ python -m engines.uart_log.receiver 🏁
-时间：➡ 2026-10-20 🏁
-作者：➡ kahoku 🏁
-版本：➡ 1.0.0 🏁
-修改时间: ➡ 2026-11-02 🏁
-类型: ➡ 工具模块 🏁
-简介说明：➡
-1. PortReceiver: 一个端口一条线程；绑定后接受多连接并按行交给 CaptureWriter
-🏁
-关联模块：➡
-1. engines.uart_log.detect: PortDetector
-2. engines.uart_log.params: PortParams
-3. engines.uart_log.writer: CaptureWriter
-4. utils.logs: serial_log
-🏁
-测试：➡
-1. 暂无专门单测
-🏁
-"""
-
 from __future__ import annotations
 
 import socket
@@ -35,8 +11,6 @@ from .writer import CaptureWriter
 
 
 class _LineSplitter:
-    """字节流切成整行。超过单行上限时先交出已截断的一段，再继续收后面的字节。"""
-
     def __init__(self, limit: int) -> None:
         self._buffer = bytearray()
         self._limit = max(1, int(limit))
@@ -72,8 +46,6 @@ class _LineSplitter:
 
 
 class PortReceiver(threading.Thread):
-    """监听一个 TCP 端口并按行把非空内容交给写入器。"""
-
     def __init__(self, params: PortParams, writer: CaptureWriter | None = None) -> None:
         super().__init__(name=f"uart-log-{int(params.port)}", daemon=True)
         self.params = params
@@ -85,12 +57,10 @@ class PortReceiver(threading.Thread):
 
     @property
     def listening(self) -> bool:
-        """是否已处于监听状态。"""
         with self._listen_lock:
             return self._listening
 
     def stop(self) -> None:
-        """停止监听并关掉套接字，让端口可以马上被别人绑定。"""
         self._stop.set()
         self._mark(False)
         server = self._server
@@ -106,7 +76,6 @@ class PortReceiver(threading.Thread):
         self.join(timeout=2.0)
 
     def run(self) -> None:
-        """线程入口：探测端口、绑定并接受连接，按行写入 CaptureWriter。"""
         if not PortDetector().available(self.params):
             return
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -132,8 +101,7 @@ class PortReceiver(threading.Thread):
                 try:
                     client, _peer = server.accept()
                 except TimeoutError:
-                    # accept 超时属正常轮询，继续等待新连接
-                    continue
+                    continue  # silent-except
                 except OSError as exc:
                     if self._stop.is_set():
                         break
@@ -161,8 +129,7 @@ class PortReceiver(threading.Thread):
                 try:
                     data = client.recv(4096)
                 except TimeoutError:
-                    # recv 超时属正常轮询，继续读取数据
-                    continue
+                    continue  # silent-except
                 except OSError as exc:
                     serial_log.warning("uart recv failed: %s", exc)
                     break

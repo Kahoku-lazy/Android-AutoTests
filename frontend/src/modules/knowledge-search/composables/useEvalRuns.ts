@@ -1,4 +1,3 @@
-/** useEvalRuns — 评测运行列表、触发与进度轮询（2s，终态停，卸载清理）。 */
 import { onScopeDispose, ref } from "vue"
 import { formatApiError } from "@/shared/api-client"
 import { fetchEvalRun, fetchEvalRuns, triggerEval } from "../api"
@@ -64,9 +63,7 @@ export function useEvalRuns() {
           stopPolling()
           await load()
         }
-      } catch {
-        // 轮询失败保留上次详情，下一轮再试
-      }
+      } catch {}
     }, KS_EVAL_POLL_MS)
   }
 

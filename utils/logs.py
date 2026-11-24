@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 平台日志设施：四个记录器、文件轮转、串口按 SKU 与端口落盘 🏁
-Python 调试：➡️ python -m utils.logs 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. tests/serial_log/integration/test_port_service_custom.py: 串口日志按 SKU 与端口落盘
-🏁
-"""
-
 from __future__ import annotations
 
 import logging
@@ -24,7 +15,6 @@ _FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 
 def logging_now_stamp() -> str:
-    """本地当前时间，格式与 logging 的 asctime 相同：`YYYY-MM-DD HH:MM:SS,mmm`。"""
     now = time.time()
     text = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
     millis = int((now - int(now)) * 1000)
@@ -32,12 +22,6 @@ def logging_now_stamp() -> str:
 
 
 def build_logger(name: str, path: Path) -> logging.Logger:
-    """创建一个记录器：DEBUG 写入文件，WARNING 及以上同时打到控制台。
-
-    Args:
-        name: 记录器名称，出现在每一行里。
-        path: 日志文件路径。
-    """
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
     logger.propagate = False
@@ -67,27 +51,20 @@ def build_logger(name: str, path: Path) -> logging.Logger:
 
 
 def safe_sku(value: str) -> str:
-    """SKU 写入文件名和记录器名之前去掉路径字符。"""
     text = str(value or "").strip() or "unknown"
     return re.sub(r"[^0-9A-Za-z_.-]", "_", text)
 
 
 def capture_file_name(sku: str, port: int) -> str:
-    """抓取日志文件名：`{SKU}_{端口}.log`。"""
     return f"{safe_sku(sku)}_{int(port)}.log"
 
 
 def capture_file_path(sku: str, port: int, directory: Path | None = None) -> Path:
-    """抓取日志路径。缺省目录是 `logs/serial_logs/`。"""
     root = _LOG_DIR / "serial_logs" if directory is None else Path(directory)
     return root / capture_file_name(sku, port)
 
 
 def uart_capture_logger(sku: str, port: int, *, directory: Path | None = None) -> logging.Logger:
-    """按 SKU 与端口取得抓取记录器。名称 `uart.{SKU}.{端口}`，格式与轮转跟 `build_logger` 相同。
-
-    同一个名称如果已经绑了别的路径，先卸掉再按这次的路径重建，避免测试和换目录后仍写进旧文件。
-    """
     safe = safe_sku(sku)
     name = f"uart.{safe}.{int(port)}"
     path = capture_file_path(sku, port, directory)

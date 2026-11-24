@@ -1,16 +1,10 @@
 <script setup lang="ts">
-/**
- * 列显示菜单：一个按钮 + 复选清单，替代原来 8 个「隐藏X」按钮。
- *
- * 隐藏列仍走个人视图的 hidden_columns，协议不变。
- */
 import { computed } from "vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
 
 const props = defineProps<{
-  /** 当前隐藏的列 key */
   hidden: string[]
-  /** 全部列（含 label） */
+
   columns: { key: string; label: string }[]
 }>()
 
@@ -77,8 +71,6 @@ function toggle(key: string, checked: boolean) {
   font-weight: var(--app-font-weight-bold);
 }
 
-/* 浮层皮肤：实线墨边 + 硬影（模糊半径 0），与表纸同一套语言。
-   用 :global 是因为 popper 可能被 EP 移出组件子树；case-col-pop 是本组件独占类名。 */
 :global(.el-popover.case-col-pop) {
   border: 1.5px solid var(--ink);
   border-radius: var(--app-radius-sm);

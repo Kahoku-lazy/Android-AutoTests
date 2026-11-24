@@ -1,4 +1,3 @@
-/** useDashboardStats — 仪表盘数据获取与状态管理 composable */
 import { ref, type Ref } from "vue"
 import { fetchDashboardStats, fetchRecentActivities } from "../api"
 import type {
@@ -17,8 +16,6 @@ import type {
   UsageSummary,
 } from "@/shared/types/dashboard"
 
-// ── 返回类型接口 ──
-
 export interface UseDashboardStatsReturn {
   loading: Ref<boolean>
   refreshing: Ref<boolean>
@@ -35,11 +32,9 @@ export interface UseDashboardStatsReturn {
   activities: Ref<ActivityItem[]>
   loadData: () => Promise<void>
   refreshData: () => Promise<void>
-  /** 轮询用：刷新成功才写数据，不动 loading / refreshing，失败保留上次成功数据 */
+
   refreshSilently: () => Promise<void>
 }
-
-// ── 默认值 ──
 
 const zeroMetric = (): AiUsageMetric => ({ today: 0, total: 0 })
 const toMetric = (m?: AiUsageMetric): AiUsageMetric => m ?? zeroMetric()
@@ -102,8 +97,6 @@ const DEFAULT_TODAY_USAGE_CHART: TodayUsageChart = {
   current: null,
 }
 
-// ── 映射函数 ──
-
 interface MappedData {
   stats: DashboardStats
   executionChart: ExecutionChart
@@ -116,7 +109,6 @@ interface MappedData {
   systemStatus: string
 }
 
-/** 将后端 API 响应映射为前端 dashboard 状态结构 */
 export function mapStatsResponse(raw: DashboardRawData): MappedData {
   return {
     stats: {
@@ -197,8 +189,6 @@ export function mapStatsResponse(raw: DashboardRawData): MappedData {
   }
 }
 
-// ── Composable ──
-
 export function useDashboardStats(): UseDashboardStatsReturn {
   const loading = ref(true)
   const refreshing = ref(false)
@@ -215,13 +205,8 @@ export function useDashboardStats(): UseDashboardStatsReturn {
   const systemStatus = ref("normal")
   const activities = ref<ActivityItem[]>([])
 
-  /**
-   * 上一次成功应用的数据指纹。
-   * 5 秒静默轮询只在指纹变化时写状态：数据没变就什么都不做，
-   * 「最近更新」时间也不会被无意义的轮询刷新。
-   */
   let lastSignature = ""
-  // 静默刷新在途标记：轮询与可见性回调撞车时只保留一个请求
+
   let silentInFlight = false
 
   async function _fetchAndMap(
@@ -257,7 +242,6 @@ export function useDashboardStats(): UseDashboardStatsReturn {
         error.value = "活动记录加载失败，请检查网络连接"
       }
 
-      // 指纹不含 lastUpdated：时间戳每轮都会变，但数据本身可能没变
       const signature = JSON.stringify({
         stats: mapped?.stats ?? null,
         executionChart: mapped?.executionChart ?? null,
@@ -282,12 +266,11 @@ export function useDashboardStats(): UseDashboardStatsReturn {
         recentTasks.value = mapped.recentTasks
         lastUpdated.value = mapped.lastUpdated
         systemStatus.value = mapped.systemStatus
-        // 统计成功但活动失败时保留活动错误，不被这一行覆盖
+
         if (!activitiesFailed) error.value = null
       }
       if (nextActivities) activities.value = nextActivities
     } catch {
-      // 静默轮询失败时保留上一次成功的数据，不把错误态盖到已展示的统计上
       if (!silent) error.value = "仪表盘数据加载失败，请稍后重试"
     } finally {
       if (!silent) setLoadingFlag(false)
@@ -307,7 +290,6 @@ export function useDashboardStats(): UseDashboardStatsReturn {
   }
 
   async function refreshSilently() {
-    // 可见性补刷与定时器可能同一瞬间触发：已有静默请求在跑就跳过，避免慢请求叠加
     if (silentInFlight) return
     silentInFlight = true
     try {

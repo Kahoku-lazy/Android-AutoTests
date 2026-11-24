@@ -1,5 +1,3 @@
-/* Serial Log 页面壳：卡头放 Tab（模块私有手稿 chip），卡内放面板 */
-
 .serial-log-workbench {
   display: flex;
   flex-direction: column;
@@ -16,8 +14,6 @@
 }
 
 .serial-log-section {
-  /* 卡片是 .doc-body 的纵向 flex 子项：默认会被压缩，配合 overflow:hidden 直接裁掉超长表格。
-     flex-shrink:0 让卡片按内容长高，滚动交给 .doc-body。 */
   flex-shrink: 0;
   background: var(--app-bg-card);
   border: 2px solid var(--ink);
@@ -26,7 +22,6 @@
   overflow: hidden;
 }
 
-/* 卡头：只放 Tab，与面板头用同一条墨线分隔 */
 .serial-log-section__head {
   display: flex;
   align-items: center;

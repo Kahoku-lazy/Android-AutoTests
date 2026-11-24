@@ -1,6 +1,3 @@
-/**
- * [P0] DoodleNote — 变体 / 装饰 / 插槽
- */
 import { describe, expect, it } from "vitest"
 import { mount } from "@vue/test-utils"
 import DoodleNote from "@/shared/components/DoodleNote.vue"
@@ -43,7 +40,7 @@ describe("[P0] DoodleNote", () => {
     const wrapper = mount(DoodleNote, { props: { tape: true } })
     const tape = wrapper.find(".doodle-note__tape")
     expect(tape.exists()).toBe(true)
-    // 样式在 scoped CSS 中声明；此处断言装饰节点存在且为 span（aria-hidden）
+
     expect(tape.attributes("aria-hidden")).toBe("true")
   })
 })

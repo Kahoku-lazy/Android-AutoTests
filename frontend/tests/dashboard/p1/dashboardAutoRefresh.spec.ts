@@ -1,7 +1,3 @@
-/**
- * [P1] 建议测 — 仪表盘静默轮询（30 秒）：到点刷新、慢请求不叠加、隐藏暂停、回到可见立即刷新、卸载停止
- * 目录：tests/dashboard/p1/
- */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { flushPromises, mount } from "@vue/test-utils"
 import { defineComponent, h, KeepAlive, nextTick, ref } from "vue"
@@ -29,7 +25,6 @@ function mountAuto(refresh: () => Promise<void>) {
   return mount(Comp)
 }
 
-/** 按 App.vue 的真实结构挂载：KeepAlive 缓存，切走只失活不卸载 */
 function mountAutoKeepAlive(refresh: () => Promise<void>) {
   const visible = ref(true)
   const Comp = defineComponent({
@@ -162,18 +157,15 @@ describe("[P1] useDashboardAutoRefresh", () => {
     const refresh = vi.fn().mockResolvedValue(undefined)
     const { wrapper, deactivate, activate } = mountAutoKeepAlive(refresh)
 
-    // 切走后 3 个周期内不请求（页面被缓存，组件未卸载）
     await deactivate()
     vi.advanceTimersByTime(DASHBOARD_REFRESH_MS * 3)
     await nextTick()
     expect(refresh).not.toHaveBeenCalled()
 
-    // 回到页面：立即补一次，不等 30 秒
     await activate()
     await flushPromises()
     expect(refresh).toHaveBeenCalledTimes(1)
 
-    // 定时器已恢复
     vi.advanceTimersByTime(DASHBOARD_REFRESH_MS)
     await flushPromises()
     expect(refresh).toHaveBeenCalledTimes(2)

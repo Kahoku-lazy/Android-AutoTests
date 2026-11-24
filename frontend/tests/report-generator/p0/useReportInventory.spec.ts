@@ -1,6 +1,3 @@
-/**
- * [P0] 报告台账列表：加载、来源筛选计数、关键字参数与错误态
- */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { flushPromises } from "@vue/test-utils"
 import * as reportApi from "@/modules/report-generator/api"

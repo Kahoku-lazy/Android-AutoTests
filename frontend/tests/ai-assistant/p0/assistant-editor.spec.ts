@@ -20,7 +20,6 @@ vi.mock("element-plus", () => ({
   ElMessageBox: { confirm: () => confirm() },
 }))
 
-/** 按按钮文字找，不靠位置：删除按钮靠左，创建/保存靠右。 */
 function button(wrapper: ReturnType<typeof mount>, label: string) {
   const found = wrapper.findAll("button").find((node) => node.text() === label)
   if (!found) throw new Error(`找不到按钮：${label}`)

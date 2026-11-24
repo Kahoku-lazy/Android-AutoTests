@@ -1,10 +1,3 @@
-/**
- * [P0] 必测 — 执行引擎占用判定（前缀清单唯一登记处）
- * 目录：tests/shared/p0/
- *
- * 两种粒度都要锁定：设备卡 / 操作列只看前缀（isRunnerOccupied），
- * 状态列与设备检查器还要求 status=BUSY（isExecutionOccupied）。
- */
 import { describe, expect, it } from "vitest"
 import {
   RUNNER_OCCUPIED_PREFIXES,

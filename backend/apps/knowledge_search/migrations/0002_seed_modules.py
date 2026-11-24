@@ -1,5 +1,3 @@
-"""空表时从引擎自带库目录导入初始模块登记（幂等，只读 yaml，不 import engines）。"""
-
 from pathlib import Path
 
 import yaml
@@ -8,7 +6,6 @@ from django.db import migrations
 
 
 def seed_modules(apps, schema_editor):
-    """表为空时把引擎 knowledge_bases.yaml 的既有登记导入为初始模块。"""
     module_model = apps.get_model("knowledge_search", "KnowledgeModule")
     if module_model.objects.exists():
         return
@@ -45,7 +42,6 @@ def seed_modules(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("knowledge_search", "0001_initial"),
     ]

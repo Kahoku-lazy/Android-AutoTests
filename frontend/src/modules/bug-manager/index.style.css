@@ -1,4 +1,3 @@
-/* Doodle Craft — BUG 单管理：纸面工作台 + 表格 + 详情抽屉 */
 .doc-page {
   display: flex;
   flex-direction: column;
@@ -26,12 +25,9 @@
 }
 
 .bug-table-section {
-  /* 表格四周留白：不再贴分区边缘 */
   padding: 0 var(--app-space-md) var(--app-space-md);
 }
 
-/* 控制区一行：分类 chip 最左，其后搜索 / 状态（带字段标题），最后同步键。
-   align-items: flex-end 让没有标题的 chip 与输入框底边对齐。 */
 .filter-bar {
   display: flex;
   align-items: flex-end;
@@ -53,14 +49,13 @@
   width: 100%;
 }
 
-/* 表格上方工具条：显示行数 + 分页文案 + 翻页键 + 同步键，一行内左右分布 */
 .table-toolbar {
   display: flex;
   align-items: center;
   gap: var(--app-space-sm);
   flex-wrap: wrap;
   padding: var(--app-space-sm) 0 0;
-  /* 与表格的间距加倍：--app-space-md（16px） */
+
   margin-bottom: var(--app-space-md);
 }
 
@@ -111,9 +106,6 @@
   gap: var(--app-space-sm);
 }
 
-/* ── 翻页键：可点＝浅绿填充，不可点＝灰填充 ──
-   与设备页操作胶囊同一套硬边几何（墨边 + 位移硬影），只换底色语义。
-   选择器用双类名抬特异性，压过 kit 的描边态（.sketch-kit .doodle-btn.doodle-btn）。 */
 .bug-page-nav :deep(.doodle-btn.doodle-btn) {
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-sm);
@@ -127,7 +119,6 @@
   box-shadow: 3px 3px 0 0 var(--ink);
 }
 
-/* 不可点：灰底、撤影，与可点态一眼可分 */
 .bug-page-nav :deep(.doodle-btn.doodle-btn:disabled),
 .bug-page-nav :deep(.doodle-btn.doodle-btn.is-disabled) {
   background: var(--app-bg-subtle);
@@ -137,7 +128,6 @@
   transform: none;
 }
 
-/* ── 同步历史错误：紫色渐变填充键，落在翻页键右侧同一行右端 ── */
 .table-toolbar :deep(.doodle-btn.bug-sync-btn) {
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-sm);
@@ -172,8 +162,6 @@
   cursor: pointer;
 }
 
-/* 表纸底：天蓝**纵向渐变**（上 10% → 下 5%，色相取 --c-workflow，混纸色降饱和）。
-   渐变必须画在表纸容器上：画在单元格上会变成「每格一段」的横向条纹。 */
 .bug-workbench :deep(.sketch-sheet) {
   background: linear-gradient(
     180deg,
@@ -182,7 +170,6 @@
   ) !important;
 }
 
-/* 表体与单元格透明，让表纸那层渐变透出来（全局 td 底色带 !important，需同级覆盖） */
 .bug-workbench :deep(.el-table),
 .bug-workbench :deep(.el-table__inner-wrapper),
 .bug-workbench :deep(.el-table tr),
@@ -191,7 +178,6 @@
   background: transparent !important;
 }
 
-/* 表头只留墨色分栏线与文字，底色交给渐变；字号 16px 与单行由全局 `.el-table th` 唯一定义 */
 .bug-workbench :deep(.el-table__header th.el-table__cell) {
   color: var(--app-text-primary) !important;
   font-weight: var(--app-font-weight-bold) !important;
@@ -201,12 +187,10 @@
   padding: 12px 16px !important;
 }
 
-/* 悬停：叠一层墨色浅罩，不改渐变方向，保证「悬停更重」而不是更亮 */
 .bug-workbench :deep(.el-table__body tr:hover > td.el-table__cell) {
   background: color-mix(in srgb, var(--ink) 6%, transparent) !important;
 }
 
-/* 行高留白：单元格 16px 内边距，正文保持 14px 可读字号 */
 .bug-workbench :deep(.el-table__body td.el-table__cell) {
   padding: 16px !important;
   font-size: var(--app-size-sm) !important;
@@ -217,7 +201,6 @@
   border-bottom: 1px solid var(--el-border-color-light) !important;
 }
 
-/* 分类筛选：淡色底 + 墨框选中 */
 .bug-category-tabs :deep(.filter-tab) {
   display: inline-flex;
   align-items: center;
@@ -249,18 +232,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  /* 标题是行主内容：与首列 BUG 编号同档 16px */
+
   font-size: var(--app-size-md);
 }
 
-/* ── 表纸：无影变体（本页登记页，与设备管理页同口径） ──
-   共享皮肤 `.wb-shell .sketch-sheet` 的 `--c-runner` 位移硬影在这里去掉；
-   描边宽度/颜色/圆角仍取 `--comp-sheet-*`，共享文件不动（报告等页仍靠它）。 */
 .bug-workbench :deep(.sketch-sheet) {
   box-shadow: none;
 }
 
-/* 表头图标：与列名同源渲染，只做扫读加速，不参与列宽计算 */
 .bug-workbench .th-ico {
   margin-right: 4px;
   font-weight: var(--app-font-weight-heavy);

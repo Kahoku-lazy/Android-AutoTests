@@ -1,10 +1,4 @@
 <script setup lang="ts">
-/**
- * SketchCard — 共享撕纸入口卡（Hand-Drawn Doodle）
- *
- * 对齐 page-principles 撕纸卡：虚线边 / 近直角 / 硬偏移色阴影 / 色块图标 / 微倾。
- * accent 与 tilt 由父级按列表 index 注入（cycle），组件自身不猜配色。
- */
 import { computed, nextTick, onMounted, onUpdated } from "vue"
 
 const props = withDefaults(
@@ -12,11 +6,11 @@ const props = withDefaults(
     title: string
     description?: string
     meta?: string
-    /** Lucide 名，须已在 lucide-registry 登记 */
+
     icon?: string
-    /** CSS 色或 var(--c-*) */
+
     tone?: string
-    /** 微倾角度（deg） */
+
     tilt?: number
     deletable?: boolean
     deleteLabel?: string

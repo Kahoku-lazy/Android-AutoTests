@@ -1,12 +1,3 @@
-"""
-python -m 调试路径: backend.apps.case_manager.models
-
-本模块的业务功能如下：
-1. CaseProject: 一个项目对应一张用例表，创建时锁定库类型。
-2. AutomationCase / FunctionalCase: 两种用例分表存放，行直接属于项目。
-3. CaseSheetView: 登录用户在某个项目上的个人视图。
-"""
-
 from django.db import models
 
 LIBRARY_AUTOMATION = "automation"
@@ -40,8 +31,6 @@ CASE_ROW_LIMIT = 999
 
 
 class CaseProject(models.Model):
-    """一个用例项目，库类型创建后不可改。"""
-
     name = models.CharField(max_length=200)
     description = models.TextField(default="", blank=True)
     library_kind = models.CharField(max_length=16, choices=LIBRARY_KIND_CHOICES)
@@ -65,8 +54,6 @@ class CaseProject(models.Model):
 
 
 class CaseRow(models.Model):
-    """两种用例行的共同字段。具体表由子类声明。"""
-
     id = models.CharField(max_length=200, primary_key=True)
     project = models.ForeignKey(CaseProject, on_delete=models.CASCADE)
     title = models.CharField(max_length=500)
@@ -88,8 +75,6 @@ class CaseRow(models.Model):
 
 
 class AutomationCase(CaseRow):
-    """自动化用例行。"""
-
     project = models.ForeignKey(
         CaseProject,
         on_delete=models.CASCADE,
@@ -109,8 +94,6 @@ class AutomationCase(CaseRow):
 
 
 class FunctionalCase(CaseRow):
-    """功能用例行。"""
-
     project = models.ForeignKey(
         CaseProject,
         on_delete=models.CASCADE,
@@ -130,8 +113,6 @@ class FunctionalCase(CaseRow):
 
 
 class StepRow(models.Model):
-    """用例步骤的共同字段。"""
-
     sort_order = models.PositiveIntegerField(default=1)
     action = models.TextField(default="", blank=True)
     assertion = models.TextField(default="", blank=True)
@@ -143,8 +124,6 @@ class StepRow(models.Model):
 
 
 class AutomationStep(StepRow):
-    """自动化步骤，可带页面锚点与日志证据。"""
-
     case = models.ForeignKey(
         AutomationCase,
         on_delete=models.CASCADE,
@@ -167,8 +146,6 @@ class AutomationStep(StepRow):
 
 
 class FunctionalStep(StepRow):
-    """功能步骤，不保存执行提示。"""
-
     case = models.ForeignKey(
         FunctionalCase,
         on_delete=models.CASCADE,
@@ -189,8 +166,6 @@ class FunctionalStep(StepRow):
 
 
 class CaseSheetView(models.Model):
-    """一个用户在一个项目上的表格视图。"""
-
     project = models.ForeignKey(
         CaseProject,
         on_delete=models.CASCADE,

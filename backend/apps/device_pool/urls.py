@@ -1,5 +1,3 @@
-"""device-pool URL routing — 10 endpoints under /api/devices/."""
-
 from django.urls import path
 
 from .views import (

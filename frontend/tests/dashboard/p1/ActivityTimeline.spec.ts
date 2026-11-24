@@ -1,7 +1,3 @@
-/**
- * [P1] 建议测 — 最近活动时间线（十条槽 / 历史弹层 / 条目渲染）
- * 目录：tests/dashboard/p1/
- */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { flushPromises, mount } from "@vue/test-utils"
 import ActivityTimeline from "@/modules/dashboard/components/ActivityTimeline.vue"

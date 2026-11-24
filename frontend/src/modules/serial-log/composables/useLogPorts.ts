@@ -1,8 +1,3 @@
-/** useLogPorts — 无线端口管理（列表 / 开关 / 当前日志文件读取）的 HTTP 编排
- *
- * 组件只渲染：这里负责取数、开关二次确认、日志抽屉的刷新与自动刷新定时器。
- * 日志行的合并与排序一律由服务端完成（见 helpers/log-port-lines.ts 的口径说明）。
- */
 import { onBeforeUnmount, ref } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import { fetchLogPortLines, fetchLogPorts, toggleLogPort } from "../api"
@@ -22,7 +17,6 @@ export function useLogPorts() {
   const loadError = ref("")
   const togglingPort = ref<number | null>(null)
 
-  /** 日志抽屉 */
   const drawerVisible = ref(false)
   const activePort = ref<LogPortRow | null>(null)
   const lines = ref<LogPortLine[]>([])
@@ -53,7 +47,6 @@ export function useLogPorts() {
     }
   }
 
-  /** 开关：只有人能操作；关闭前明确告知 AI 验收会降级 */
   async function setEnabled(row: LogPortRow, enabled: boolean): Promise<void> {
     if (togglingPort.value === row.port) return
     if (!enabled) {
@@ -76,7 +69,6 @@ export function useLogPorts() {
         row.listening = updated.listening
         row.note = updated.note
         if (updated.enabled && !updated.listening) {
-          // 开启但未监听 = 监听失败：必须错误提示，不得显示为成功
           ElMessage.error(updated.note || `端口 ${row.port} 监听失败`)
         } else {
           ElMessage.success(
@@ -95,7 +87,6 @@ export function useLogPorts() {
     }
   }
 
-  /** 复制本机监听 IP（串口盒侧配置用）；剪贴板不可用时给可读错误。 */
   async function copyIp(): Promise<void> {
     if (!listenIp.value) return
     try {
@@ -109,7 +100,7 @@ export function useLogPorts() {
   async function refreshLines(): Promise<void> {
     const row = activePort.value
     if (!row) return
-    // 自动刷新在上一轮未返回时直接跳过，避免 5 秒轮询叠加
+
     if (linesLoading.value) return
     linesLoading.value = true
     try {

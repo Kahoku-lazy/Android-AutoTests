@@ -1,6 +1,3 @@
-/**
- * [P0] 打开报告：SOP 走正文 blob，智能体走一次性 ticket；缺失给可读提示
- */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ElMessage } from "element-plus"
 import * as assistantApi from "@/modules/ai-assistant/api/assistants"

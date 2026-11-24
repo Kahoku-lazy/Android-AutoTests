@@ -1,9 +1,3 @@
-"""
-Clear legacy four-type case data then reshape schema for project-based document cases.
-
-WARNING: Deletes all rows in cm_* case tables. Irreversible without backup.
-"""
-
 from django.db import migrations, models
 import django.db.models.deletion
 
@@ -56,7 +50,6 @@ class Migration(migrations.Migration):
                 name="unique_project_owner_name",
             ),
         ),
-        # CaseDirectory: drop old constraint/fields, add project
         migrations.RemoveConstraint(
             model_name="casedirectory",
             name="unique_directory_parent_name_type",
@@ -80,7 +73,6 @@ class Migration(migrations.Migration):
                 name="unique_directory_project_parent_name",
             ),
         ),
-        # TestDefinition reshape
         migrations.RemoveConstraint(
             model_name="testdefinition",
             name="unique_directory_title",

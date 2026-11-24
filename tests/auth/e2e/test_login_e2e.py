@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 登录页端到端用例 — Playwright 真实浏览器（黑盒）+ 每步带标注的截图报告 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/auth/e2e/test_login_e2e.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/accounts（账号与会话）
-🏁
-"""
-
 import re
 import time
 
@@ -21,7 +12,6 @@ WRONG_PASSWORD = "definitely-wrong-password"
 
 
 def _login_button(page):
-    """登录提交按钮（el-button 渲染成原生 button）。"""
     return page.get_by_test_id(S.LOGIN_SUBMIT).locator("button").first
 
 
@@ -30,7 +20,6 @@ def _register_button(page):
 
 
 def _input(page, testid):
-    """testid 挂在原生包裹层，输入框要再取一层 input。"""
     return page.get_by_test_id(testid).locator("input").first
 
 
@@ -40,7 +29,6 @@ def _fill_login(steps, page, account, user_caption: str = "输入账号") -> Non
 
 
 def _login_via_ui(steps, page, account) -> None:
-    """走界面完成一次成功登录，停在 /dashboard。"""
     steps.shot("打开 /login，登录页渲染完成")
     _fill_login(steps, page, account)
     steps.inspect(_login_button(page), "断言：账号与密码都合格后「登录」按钮点亮")
@@ -50,7 +38,6 @@ def _login_via_ui(steps, page, account) -> None:
 
 
 def _logout_via_ui(steps, page) -> None:
-    """走界面完成一次登出，停在 /login。"""
     steps.click(page.get_by_test_id(S.SIDEBAR_LOGOUT), "点击侧栏底部的「退出」")
     page.wait_for_url("**/login**", timeout=20000)
     page.get_by_test_id(S.LOGIN_PAGE).wait_for(timeout=15000)
@@ -261,7 +248,6 @@ def test_e2e_009_remember_username_round_trip(login_page, e2e_account, e2e_servi
     assert login_page.evaluate("localStorage.getItem('saved_username')") == e2e_account["username"]
     steps.shot("断言：登录成功后 localStorage.saved_username 记录了本次账号")
 
-    # 已登录时 /login 会被路由守卫送回 /dashboard，所以先登出，再重新打开登录页看预填效果
     _logout_via_ui(steps, login_page)
     steps.shot("准备重新打开登录页：/login")
     login_page.goto(f"{frontend}/login", wait_until="domcontentloaded")

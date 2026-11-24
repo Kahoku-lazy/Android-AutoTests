@@ -1,11 +1,4 @@
 <script setup lang="ts">
-/**
- * 平台用例选择器：项目栏 + 搜索 + 按项目分组的复选列表。
- *
- * 只做渲染与事件：过滤、分组、计数、提示文案与摘要全部走 `helpers/case-picker.ts`。
- * 已选由父级持有（v-model），**切项目不清空**；只有父级切「用例来源」或这里点「清空」才清。
- * 数据一次性来自 `GET /cases/projects/automation/`，本组件不发请求。
- */
 import { computed, ref } from "vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
@@ -20,9 +13,8 @@ import {
 } from "../helpers/case-picker"
 
 const props = defineProps<{
-  /** 全部自动化项目及其用例 */
   projects: CaseProjectGroup[]
-  /** 已选用例编号 */
+
   modelValue: string[]
   loading: boolean
   error: string
@@ -33,7 +25,6 @@ const emit = defineEmits<{
   "retry": []
 }>()
 
-/** 当前项目范围：`all` 或某个项目编号。 */
 const scope = ref<"all" | number>("all")
 const query = ref("")
 
@@ -61,7 +52,6 @@ const hitbar = computed(() => {
   })
 })
 
-/** 项目栏：全部项目用总条数（搜索时用总命中数），各项目用自身条数。 */
 const railItems = computed(() => {
   const keyword = query.value.trim()
   const allCount = keyword ? countHitCases(allHitGroups.value) : totalCases.value

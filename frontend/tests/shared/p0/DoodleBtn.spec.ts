@@ -1,6 +1,3 @@
-/**
- * [P0] DoodleBtn — tone / click / disabled
- */
 import { describe, expect, it, vi } from "vitest"
 import { mount } from "@vue/test-utils"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"

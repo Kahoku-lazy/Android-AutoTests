@@ -1,6 +1,3 @@
-/**
- * [P1] 任务执行结果面板 — 助手任务卡摘要 / 状态 / 跳转
- */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { mount } from "@vue/test-utils"
 import TaskResultPanel from "@/modules/dashboard/components/TaskResultPanel.vue"

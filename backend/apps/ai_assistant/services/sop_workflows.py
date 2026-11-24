@@ -1,17 +1,7 @@
-"""
-模块功能：➡️ 工作流：登记编排、种类与名片引用，运行时现读名片 🏁
-Python 调试：➡️ python -m backend.apps.ai_assistant.services.sop_workflows 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（经 ai_assistant 的功能用例间接覆盖，未直接 import 本模块）
-🏁
-"""
-
 from __future__ import annotations
 
 from backend.apps.ai_assistant.models import AIAssistant, AIRole, AISopWorkflow
 
-# 工作流表允许写入的列。解析出的提示词与工具不得写回。
 WORKFLOW_FIELDS = (
     "name",
     "orchestration",
@@ -31,7 +21,6 @@ KIND_UI = "ui_automation"
 KIND_CASE = "case_authoring"
 KIND_REQUIREMENT = "requirement_breakdown"
 
-# 编排与种类只能成对出现。交叉组合在创建和编辑时拒绝。
 ALLOWED_PAIRS = {
     (ORCHESTRATION_SOP, KIND_UI),
     (ORCHESTRATION_GOAL, KIND_CASE),
@@ -40,28 +29,24 @@ ALLOWED_PAIRS = {
 
 
 class WorkflowNameError(Exception):
-    """名称为空。"""
+    pass
 
 
 class WorkflowAssistantMissingError(Exception):
-    """某一侧的名片不存在。"""
-
     def __init__(self, side: str):
         self.side = side
         super().__init__(f"{side}名片不存在")
 
 
 class WorkflowPairError(Exception):
-    """编排与种类不是允许的一对。"""
+    pass
 
 
 class WorkflowBindingError(Exception):
-    """Team 绑定缺成员、重名或说明为空。"""
+    pass
 
 
 class WorkflowRoleMissingError(Exception):
-    """名片仍在，但其引用的 Agent 配置已不存在。"""
-
     def __init__(self, side: str):
         self.side = side
         super().__init__(f"{side}引用的 Agent 配置不存在")
@@ -79,7 +64,6 @@ def _side_label(side: str) -> str:
 
 
 def _require_name(name: str) -> str:
-    """去空白后确认名称非空。"""
     clean = (name or "").strip()
     if not clean:
         raise WorkflowNameError("名称不能为空")
@@ -87,7 +71,6 @@ def _require_name(name: str) -> str:
 
 
 def _require_card(assistant_id: str, side: str) -> AIAssistant:
-    """按编号取名片。不存在时说明是哪一侧。"""
     card = AIAssistant.objects.filter(assistant_id=assistant_id).first()
     if card is None:
         raise WorkflowAssistantMissingError(_side_label(side))
@@ -95,7 +78,6 @@ def _require_card(assistant_id: str, side: str) -> AIAssistant:
 
 
 def _pair(orchestration: str, kind: str) -> tuple[str, str]:
-    """确认编排与种类是允许的一对。"""
     pair = ((orchestration or "").strip(), (kind or "").strip())
     if pair not in ALLOWED_PAIRS:
         raise WorkflowPairError("该编排与种类不能组合")
@@ -103,7 +85,6 @@ def _pair(orchestration: str, kind: str) -> tuple[str, str]:
 
 
 def _members(raw: list[dict] | None, leader_id: str) -> list[dict]:
-    """校验 Team 成员：至少两名、说明非空、编号不重复且不与队长相同。"""
     rows = list(raw or [])
     if len(rows) < 2:
         raise WorkflowBindingError("团队至少需要两名成员")
@@ -131,26 +112,6 @@ def prepare_workflow(
     leader_assistant_id: str = "",
     members: list[dict] | None = None,
 ) -> dict:
-    """校验名称、组合与绑定，返回待写入的字段。不写库。
-
-    Args:
-        name: 工作流名称。
-        orchestration: sop、goal 或 team。
-        kind: 与编排成对的种类。
-        executor_assistant_id: SOP 与 Goal 的执行名片。
-        verifier_assistant_id: SOP 与 Goal 的验收名片。
-        leader_assistant_id: Team 的队长名片。
-        members: Team 成员，每项含 assistant_id 与 description。
-
-    Returns:
-        只含名称、组合与名片引用的字段字典。
-
-    Raises:
-        WorkflowNameError: 名称为空。
-        WorkflowPairError: 编排与种类不能组合。
-        WorkflowAssistantMissingError: 绑定名片不存在。
-        WorkflowBindingError: Team 成员不合法。
-    """
     pair = _pair(orchestration, kind)
     fields = {
         "name": _require_name(name),
@@ -172,21 +133,14 @@ def prepare_workflow(
 
 
 def list_workflows() -> list[AISopWorkflow]:
-    """按创建顺序返回全部工作流。"""
     return list(AISopWorkflow.objects.order_by("id"))
 
 
 def get_workflow(workflow_id: int) -> AISopWorkflow:
-    """按主键取工作流。不存在时抛 DoesNotExist。"""
     return AISopWorkflow.objects.get(pk=workflow_id)
 
 
 def _resolve_side(card: AIAssistant, side: str) -> dict:
-    """把一张名片展开成运行参数。不写库。
-
-    Raises:
-        WorkflowRoleMissingError: 名片引用的 Agent 配置不存在。
-    """
     role = AIRole.objects.select_related("model_config").filter(role_id=card.role_id).first()
     if role is None:
         raise WorkflowRoleMissingError(_side_label(side))
@@ -204,21 +158,6 @@ def _resolve_side(card: AIAssistant, side: str) -> dict:
 
 
 def resolve_workflow(workflow: AISopWorkflow) -> dict:
-    """现读工作流两侧名片与其引用的 Agent 配置。
-
-    两侧显示名相同时，验收侧运行名追加自己的 assistant_id，避免用量按角色名叠成一条。
-    本函数不写工作流表。
-
-    Args:
-        workflow: 已存在的工作流记录。
-
-    Returns:
-        含 executor / verifier 两侧运行参数的字典。
-
-    Raises:
-        WorkflowAssistantMissingError: 任一侧名片已被删除。
-        WorkflowRoleMissingError: 任一侧引用的 Agent 配置已不存在。
-    """
     if workflow.orchestration == ORCHESTRATION_TEAM:
         leader = _resolve_side(_require_card(workflow.leader_assistant_id, "leader"), "leader")
         member_rows = []

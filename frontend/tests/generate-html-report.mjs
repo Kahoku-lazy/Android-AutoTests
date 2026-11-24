@@ -1,14 +1,5 @@
 #!/usr/bin/env node
-/**
- * 静态 HTML 测试报告生成器 — 解析 vitest JSON reporter 输出，按模块分组渲染。
- * 纯 Node 无依赖，产物为自包含单文件 HTML（内联 CSS，可直接分发）。
- *
- * 用法（在 frontend 目录）:
- *   node tests/generate-html-report.mjs [input.json] [output.html]
- *   默认: input=tests/reports/report.json, output=tests/reports/html/index.html
- *
- * 注意: 必须用 fs.readFileSync(path, 'utf8') 读取；PowerShell Get-Content 默认编码会乱码。
- */
+
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -40,7 +31,11 @@ export function buildSummary(report) {
     if (m) {
       const [_, name, prio] = m
       if (!modules.has(name)) {
-        modules.set(name, { name, p0: { files: 0, total: 0, passed: 0, failed: 0, duration: 0 }, p1: { files: 0, total: 0, passed: 0, failed: 0, duration: 0 } })
+        modules.set(name, {
+          name,
+          p0: { files: 0, total: 0, passed: 0, failed: 0, duration: 0 },
+          p1: { files: 0, total: 0, passed: 0, failed: 0, duration: 0 },
+        })
       }
       entry = modules.get(name)[prio]
     } else {
@@ -66,7 +61,10 @@ export function buildSummary(report) {
 }
 
 function esc(s) {
-  return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))
+  return String(s ?? "").replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
+  )
 }
 
 function prioSection(prio, stat, files) {
@@ -76,7 +74,9 @@ function prioSection(prio, stat, files) {
     .flatMap((f) =>
       (f.assertionResults ?? []).map((a) => {
         const failed = a.status === "failed"
-        const msg = failed ? (a.failureMessages?.[0] ?? "").split("\n").slice(0, 3).map(esc).join("<br>") : ""
+        const msg = failed
+          ? (a.failureMessages?.[0] ?? "").split("\n").slice(0, 3).map(esc).join("<br>")
+          : ""
         return `<tr class="${failed ? "row-failed" : ""}">
           <td class="td-name" title="${esc(a.fullName)}">${esc(a.title)}</td>
           <td class="td-file">${esc((f.name ?? "").split(/[\\/]/).pop())}</td>
@@ -151,7 +151,6 @@ ${moduleSections}
 </html>`
 }
 
-// 保留文件列表供分优先级渲染：模块名 → 该模块全部 testResults
 function summaryFilesForModule(summary, name) {
   const files = []
   for (const f of summary._files ?? []) {
@@ -164,7 +163,7 @@ function summaryFilesForModule(summary, name) {
 export function generateReport(inputPath = DEFAULT_INPUT, outputPath = DEFAULT_OUTPUT) {
   const report = parseReport(inputPath)
   const summary = buildSummary(report)
-  // renderHtml 依赖 _files 渲染模块用例表；勿直接以 buildSummary 输出调用 renderHtml（会静默空表）
+
   summary._files = report.testResults ?? []
   const html = renderHtml(summary)
   mkdirSync(dirname(outputPath), { recursive: true })
@@ -172,13 +171,14 @@ export function generateReport(inputPath = DEFAULT_INPUT, outputPath = DEFAULT_O
   return summary
 }
 
-// 直接执行：node tests/generate-html-report.mjs [input] [output]
-if (process.argv[1] && fileURLToPath(import.meta.url).replace(/\\/g, "/") === process.argv[1].replace(/\\/g, "/")) {
+if (
+  process.argv[1] &&
+  fileURLToPath(import.meta.url).replace(/\\/g, "/") === process.argv[1].replace(/\\/g, "/")
+) {
   const [input, output] = process.argv.slice(2)
-  const summary = generateReport(
-    input || DEFAULT_INPUT,
-    output || DEFAULT_OUTPUT,
+  const summary = generateReport(input || DEFAULT_INPUT, output || DEFAULT_OUTPUT)
+  console.log(
+    `模块 ${summary.kpi.modules} 个 · 用例 ${summary.kpi.total} · 通过 ${summary.kpi.passed} · 失败 ${summary.kpi.failed}`,
   )
-  console.log(`模块 ${summary.kpi.modules} 个 · 用例 ${summary.kpi.total} · 通过 ${summary.kpi.passed} · 失败 ${summary.kpi.failed}`)
   console.log(`HTML 报告: ${output || DEFAULT_OUTPUT}`)
 }

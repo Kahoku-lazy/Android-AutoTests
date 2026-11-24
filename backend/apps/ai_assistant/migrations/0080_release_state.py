@@ -1,10 +1,7 @@
-# Draft state and immutable releases. Existing rows become the first published version.
-
 from django.db import migrations, models
 
 
 def publish_existing(apps, schema_editor):
-    """把上线前已存在的助手和工作流标为已发布，并各生成一个初始版本。"""
     Assistant = apps.get_model("ai_assistant", "AIAssistant")
     Workflow = apps.get_model("ai_assistant", "AISopWorkflow")
     Role = apps.get_model("ai_assistant", "AIRole")
@@ -37,7 +34,6 @@ def clear_existing(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ai_assistant", "0079_model_use_grant"),
     ]

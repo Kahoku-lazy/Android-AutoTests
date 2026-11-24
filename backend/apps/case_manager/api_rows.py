@@ -1,14 +1,3 @@
-"""
-python -m 调试路径: backend.apps.case_manager.api_rows
-
-本模块的业务功能如下：
-1. list_rows: 读取一个项目的全部用例行。
-2. create_row / update_row: 写入用例行，并在同一事务里守住 999 上限。
-3. import_yaml_text: 按字段追加 YAML，整份成功或整份失败。
-4. compile_automation_cases: 把自动化行编译成里程碑文本。
-5. automation_case_identity: 按选择顺序读取提交当时的项目名与标题。
-"""
-
 from __future__ import annotations
 
 from typing import Any
@@ -84,7 +73,6 @@ def _serialize_steps(obj, project: CaseProject) -> list[dict[str, Any]]:
 
 
 def serialize_row(obj, project: CaseProject) -> dict[str, Any]:
-    """把一行用例序列化成表格字段。"""
     steps = _serialize_steps(obj, project)
     return {
         "id": obj.id,
@@ -217,7 +205,6 @@ def _replace_steps(obj, project: CaseProject, steps: list[dict[str, Any]]) -> No
 
 
 def _visible_project(*, project_id: int, user_id: str) -> CaseProject:
-    """登录用户可读项目表。写操作仍由调用方校验归属。"""
     del user_id
     project = CaseProject.objects.filter(id=project_id).first()
     if project is None:
@@ -226,7 +213,6 @@ def _visible_project(*, project_id: int, user_id: str) -> CaseProject:
 
 
 def get_sheet(*, project_id: int, user_id: str) -> dict[str, Any]:
-    """读取项目表和当前用户的个人视图。"""
     project = _visible_project(project_id=project_id, user_id=user_id)
     model = project_case_model(project)
     rows = list(
@@ -260,7 +246,6 @@ def create_row(
     source_case_id: str = "",
     source_task_id: str = "",
 ) -> dict[str, Any]:
-    """新增一行。达到 999 时拒绝，不写入。"""
     project = get_project(project_id=project_id, user_id=user_id)
     if project is None:
         raise LookupError("项目不存在")
@@ -296,7 +281,6 @@ def create_row(
 
 
 def update_row(*, project_id: int, case_id: str, user_id: str, **fields: Any) -> dict[str, Any]:
-    """更新一行。步骤按提交内容整段替换。"""
     project = get_project(project_id=project_id, user_id=user_id)
     if project is None:
         raise LookupError("项目不存在")
@@ -320,7 +304,6 @@ def update_row(*, project_id: int, case_id: str, user_id: str, **fields: Any) ->
 
 
 def delete_row(*, project_id: int, case_id: str, user_id: str) -> None:
-    """删除一行。"""
     project = get_project(project_id=project_id, user_id=user_id)
     if project is None:
         raise LookupError("项目不存在")
@@ -328,7 +311,6 @@ def delete_row(*, project_id: int, case_id: str, user_id: str) -> None:
 
 
 def default_view() -> dict[str, Any]:
-    """没有保存过视图时的默认看法。"""
     return {
         "hidden_columns": [],
         "filters": {},
@@ -338,7 +320,6 @@ def default_view() -> dict[str, Any]:
 
 
 def save_sheet_view(*, project_id: int, user_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-    """保存个人视图。未知列名或分组字段会被拒绝。"""
     project = _visible_project(project_id=project_id, user_id=user_id)
     if not isinstance(payload, dict):
         raise ValueError("视图必须是对象")
@@ -384,7 +365,6 @@ def _parse_case_yaml(text: str) -> list[dict[str, Any]]:
 
 
 def import_yaml_text(*, project_id: int, user_id: str, text: str) -> dict[str, Any]:
-    """追加导入。任一失败或超限都整份回滚。"""
     project = get_project(project_id=project_id, user_id=user_id)
     if project is None:
         raise LookupError("项目不存在")
@@ -450,7 +430,6 @@ def import_yaml_text(*, project_id: int, user_id: str, text: str) -> dict[str, A
 
 
 def list_automation_projects(*, user_id: str) -> list[dict[str, Any]]:
-    """只列出当前用户的自动化项目及其行。"""
     projects = CaseProject.objects.filter(
         created_by=user_id,
         library_kind=LIBRARY_AUTOMATION,
@@ -469,19 +448,6 @@ def list_automation_projects(*, user_id: str) -> list[dict[str, Any]]:
 
 
 def automation_case_identity(*, case_ids: list[str], user_id: str) -> list[dict[str, str]]:
-    """按选择顺序取出自动化行的提交时身份。不写库。
-
-    Args:
-        case_ids: 前端选中的行编号，顺序即执行顺序。
-        user_id: 当前用户，用来拒绝他人项目。
-
-    Returns:
-        每行含 project、id、title。标题是提交当时的值。
-
-    Raises:
-        LookupError: 行不存在、不属于当前用户，或属于功能项目。
-        ValueError: 没有选择任何行。
-    """
     return [
         {
             "project": " ".join(str(row.project.name or "").split())[:200],
@@ -493,11 +459,6 @@ def automation_case_identity(*, case_ids: list[str], user_id: str) -> list[dict[
 
 
 def compile_automation_cases(*, case_ids: list[str], user_id: str) -> str:
-    """按选择顺序把自动化行编译成里程碑文本。
-
-    Raises:
-        LookupError: 行不存在、不属于当前用户，或属于功能项目。
-    """
     steps = []
     for row in _automation_rows(case_ids, user_id):
         for index, step in enumerate(row.steps.all(), start=1):
@@ -523,12 +484,6 @@ def compile_automation_cases(*, case_ids: list[str], user_id: str) -> str:
 
 
 def _automation_rows(case_ids: list[str], user_id: str) -> list[AutomationCase]:
-    """按选择顺序读取当前用户的自动化行。
-
-    Raises:
-        LookupError: 行不存在、不属于当前用户，或属于功能项目。
-        ValueError: 没有选择任何行。
-    """
     if not case_ids:
         raise ValueError("请至少选择 1 条自动化用例")
     rows = []
@@ -547,7 +502,6 @@ def _automation_rows(case_ids: list[str], user_id: str) -> list[AutomationCase]:
 
 
 def _functional_case_exists(case_id: str) -> bool:
-    """判断编号是否落在功能表，用于给出更准确的拒绝原因。"""
     from .models import FunctionalCase
 
     return FunctionalCase.objects.filter(id=case_id).exists()

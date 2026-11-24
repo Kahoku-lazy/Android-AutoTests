@@ -1,7 +1,3 @@
-/* Doodle Craft — 运营后台 · 用户管理：纸面工作台
-   表格皮肤（表纸无影 / 表头 16 / 正文 14 / 次级 12 / chip / 时间双行）统一在 table.style.css，
-   这里只管页面骨架与两行控制区。 */
-
 .doc-page {
   display: flex;
   flex-direction: column;
@@ -18,7 +14,6 @@
   gap: var(--app-space-md);
 }
 
-/* 分区不再套 .doc-section 外框：表纸是页面里唯一的框 */
 .ops-section {
   display: flex;
   flex-direction: column;
@@ -26,7 +21,6 @@
   min-width: 0;
 }
 
-/* ── 控制区行 1：批量动作在左，计数在右 ── */
 .ops-toolbar {
   display: flex;
   align-items: center;
@@ -35,7 +29,6 @@
   flex-shrink: 0;
 }
 
-/* ── 控制区行 2：页码文案 + 筛选 + 搜索 + 翻页 ── */
 .ops-controls {
   display: flex;
   align-items: center;
@@ -52,7 +45,6 @@
   white-space: nowrap;
 }
 
-/* 控制区整行统一 14px：FilterTabs 与输入框由共享件给 12px，这里只在运营作用域内提到正文档 */
 .ops-controls :deep(.filter-tab),
 .ops-controls :deep(.el-input__wrapper),
 .ops-controls :deep(.el-input__inner) {
@@ -70,7 +62,6 @@
   margin-left: auto;
 }
 
-/* 控制区里靠右的单个动作键（模型配置页的「新建模型」） */
 .ops-controls__push {
   margin-left: auto;
 }

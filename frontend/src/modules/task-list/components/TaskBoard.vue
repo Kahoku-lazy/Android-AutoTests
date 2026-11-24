@@ -1,9 +1,4 @@
 <script setup lang="ts">
-/**
- * 工作流任务表。
- *
- * 分类按现存工作流，执行状态单独下拉。表格沿用设备管理表纸：实线、无阴影、表头图标。
- */
 import { computed, ref } from "vue"
 import { ElMessage } from "element-plus"
 import AppTable from "@/shared/components/AppTable.vue"
@@ -76,7 +71,7 @@ const visibleTasks = computed(() =>
     return workflowOk && statusOk
   }),
 )
-// 每页行数由 constants 提供（固定 10，不渲染选择器）
+
 const { currentPage, totalPages, pagedItems, goPage } = usePagination(visibleTasks, {
   pageSize: TASK_DEFAULT_PAGE_SIZE,
   options: TASK_PAGE_SIZE_OPTIONS,
@@ -243,7 +238,7 @@ async function openReport(task: TaskRecord) {
   gap: var(--app-space-sm);
   flex-wrap: wrap;
 }
-/* 两行工具栏与表格之间都留出明显间距 */
+
 .task-toolbar {
   margin-bottom: var(--app-space-md);
 }
@@ -272,7 +267,7 @@ async function openReport(task: TaskRecord) {
   font-weight: var(--app-font-weight-bold);
   box-shadow: 2px 2px 0 0 var(--ink);
 }
-/* 不可点：灰底灰边 + 撤影，与可点态一眼可分 */
+
 .page-nav-btn:disabled {
   background: var(--app-bg-subtle);
   border-color: var(--app-border-strong);
@@ -288,7 +283,6 @@ async function openReport(task: TaskRecord) {
   margin-right: 4px;
 }
 .status-pill {
-  /* 每个 tone 只声明 --sp-color，基类统一产出：状态色描边 + 20%→5% 纵向渐变 + 深色文字 */
   --sp-color: var(--app-border-strong);
   display: inline-flex;
   align-items: center;
@@ -305,7 +299,7 @@ async function openReport(task: TaskRecord) {
   font-weight: var(--app-font-weight-bold);
   white-space: nowrap;
 }
-/* 七态色相：全部取已登记令牌，不新增颜色原子 */
+
 .status-pill.is-pending {
   --sp-color: var(--c-dashboard);
 }

@@ -1,16 +1,3 @@
-"""ai-assistant DRF 视图 — 角色注册表。
-
-路径：
-  GET    /api/ai/roles/             列表
-  POST   /api/ai/roles/             创建
-  GET    /api/ai/roles/{role_id}/   详情
-  PATCH  /api/ai/roles/{role_id}/   部分更新
-  DELETE /api/ai/roles/{role_id}/   删除
-
-鉴权：JWT 中间件已先校验并注入 request.user_id；DRF 全局 IsAuthenticated 兜底。
-写库：全部经 api.py。成功信封由 EnvelopeJSONRenderer 统一包裹。
-"""
-
 from django.db import IntegrityError
 from drf_spectacular.utils import OpenApiTypes, extend_schema
 from rest_framework import status, viewsets
@@ -35,7 +22,6 @@ from .serializers import (
 
 
 def _user_id(request) -> str:
-    """用户 id：优先中间件注入的 request.user_id，回退 DRF request.user.id。"""
     uid = getattr(request, "user_id", None)
     if uid is not None:
         return str(uid)
@@ -46,8 +32,6 @@ def _user_id(request) -> str:
 
 
 class ModelConfigDiscoverView(APIView):
-    """POST /api/ai/model-configs/discover/ — 向厂商查询模型名，不写库。"""
-
     @extend_schema(request=ModelConfigSerializer, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         if not is_operator(_user_id(request)):
@@ -65,8 +49,6 @@ class ModelConfigDiscoverView(APIView):
 
 
 class ModelConfigViewSet(viewsets.ModelViewSet):
-    """模型配置 — /api/ai/model-configs/。登录可读，运营可写。"""
-
     queryset = AIModelConfig.objects.all()
     serializer_class = ModelConfigSerializer
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
@@ -75,7 +57,6 @@ class ModelConfigViewSet(viewsets.ModelViewSet):
         return api.list_model_configs()
 
     def list(self, request, *args, **kwargs):
-        # 运营维护配置时仍看全部。主动选择只看自己的名单。
         if request.query_params.get("selectable") == "1":
             configs = api.list_selectable_model_configs(_user_id(request))
         else:
@@ -120,8 +101,6 @@ class ModelConfigViewSet(viewsets.ModelViewSet):
 
 
 class RoleViewSet(viewsets.ModelViewSet):
-    """角色增删改查 — /api/ai/roles/ 与 /api/ai/roles/{role_id}/。"""
-
     queryset = AIRole.objects.all()
     lookup_field = "role_id"
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
@@ -174,7 +153,6 @@ class RoleViewSet(viewsets.ModelViewSet):
         serializer = RoleInputSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         data = dict(serializer.validated_data)
-        # 缺省＝不改动类型；显式 [] ＝置为未分类。
         kinds = data.pop("kinds", None)
         if "model_config_id" in data and not api.can_select_model(
             _user_id(request), data["model_config_id"]
@@ -198,8 +176,6 @@ class RoleViewSet(viewsets.ModelViewSet):
 
 
 class AssistantViewSet(viewsets.ModelViewSet):
-    """助手名片 — /api/ai/assistants/ 与 /api/ai/assistants/{assistant_id}/。"""
-
     queryset = AIAssistant.objects.all()
     lookup_field = "assistant_id"
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
@@ -296,8 +272,6 @@ class AssistantViewSet(viewsets.ModelViewSet):
 
 
 class AssistantThreadView(APIView):
-    """测试对话栏：建栏、列表、发送、轮询、取消。发送只落库并排队，不在请求里跑模型。"""
-
     @extend_schema(operation_id="ai_assistant_threads_list", responses=OpenApiTypes.OBJECT)
     def get(self, request, assistant_id: str):
         return Response(
@@ -325,8 +299,6 @@ class AssistantThreadView(APIView):
 
 
 class AssistantThreadLogView(APIView):
-    """列出该栏日志，或用 ticket 打开一份 HTML。report_id 为空时只列目录。"""
-
     def get_permissions(self):
         if self.kwargs.get("report_id"):
             return [AllowAny()]
@@ -349,8 +321,6 @@ class AssistantThreadLogView(APIView):
 
 
 class AssistantThreadLogFileView(APIView):
-    """用一次性 ticket 打开一份已写完的 HTML 日志。只挂带 report_id 的路径。"""
-
     permission_classes = [AllowAny]
 
     @extend_schema(
@@ -389,8 +359,6 @@ class AssistantThreadLogFileView(APIView):
 
 
 class AssistantThreadDetailView(APIView):
-    """GET 轮询消息；POST 发送；PATCH 重命名；DELETE 取消。"""
-
     @extend_schema(operation_id="ai_assistant_thread_detail", responses=OpenApiTypes.OBJECT)
     def get(self, request, thread_id: str):
         thread = api.get_thread(thread_id)
@@ -448,11 +416,6 @@ class AssistantThreadDetailView(APIView):
 
 
 class AssistantThreadDeleteView(APIView):
-    """POST /api/ai/assistants/threads/{thread_id}/delete/ — 删除对话栏与其消息。
-
-    进行中的轮次先请求取消，再删记录；后台线程写回时发现栏已不存在会跳过。
-    """
-
     @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def post(self, request, thread_id: str):
         thread = api.get_thread(thread_id)
@@ -466,7 +429,6 @@ class AssistantThreadDeleteView(APIView):
 
 
 def _sop_workflow_or_404(workflow_id: int):
-    """按主键取工作流；不存在时抛 404。"""
     try:
         return api.get_sop_workflow(workflow_id)
     except api.AISopWorkflow.DoesNotExist as exc:
@@ -474,8 +436,6 @@ def _sop_workflow_or_404(workflow_id: int):
 
 
 class LiveEvalDetailView(APIView):
-    """GET /api/ai/evals/runs/{run_id}/ — 一次评测的进度与逐条过程。"""
-
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request, run_id: int):
         _require_author(request)
@@ -486,8 +446,6 @@ class LiveEvalDetailView(APIView):
 
 
 class EvalRunView(APIView):
-    """POST /api/ai/evals/run/ — 作者选择一条助手或工作流后自测。"""
-
     @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         _require_author(request)
@@ -508,8 +466,6 @@ class EvalRunView(APIView):
 
 
 class AssistantPublishView(APIView):
-    """POST /api/ai/assistants/{assistant_id}/publish/ — 发布当前草稿。"""
-
     serializer_class = None
 
     @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
@@ -529,8 +485,6 @@ class AssistantPublishView(APIView):
 
 
 class WorkflowPublishView(APIView):
-    """POST /api/ai/sop-workflows/{workflow_id}/publish/ — 发布当前草稿。"""
-
     serializer_class = None
 
     @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
@@ -551,8 +505,6 @@ class WorkflowPublishView(APIView):
 
 
 class AgentReportView(APIView):
-    """GET /api/ai/agent-reports/{run}/{name}/ — 只读平台报告正文。"""
-
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request, run: str, name: str):
         from engines.backend_bridge.reports import REPORT_ROOT
@@ -569,8 +521,6 @@ class AgentReportView(APIView):
 
 
 class SopWorkflowView(APIView):
-    """GET/POST /api/ai/sop-workflows/ — 列出与创建 SOP 工作流。"""
-
     @extend_schema(responses=SopWorkflowOutputSerializer(many=True))
     def get(self, request):
         rows = api.list_sop_workflows()
@@ -605,12 +555,6 @@ class SopWorkflowView(APIView):
 
 
 class SopWorkflowDetailView(APIView):
-    """PATCH/DELETE /api/ai/sop-workflows/{workflow_id}/ — 编辑或删除一条工作流。
-
-    编辑与创建共用同一份入参与校验；删除只删工作流记录，
-    名片、Agent 配置与历史任务都不受影响。
-    """
-
     @extend_schema(request=SopWorkflowInputSerializer, responses=SopWorkflowOutputSerializer)
     def patch(self, request, workflow_id: int):
         _require_author(request)
@@ -645,8 +589,6 @@ class SopWorkflowDetailView(APIView):
 
 
 class ToolCatalogView(APIView):
-    """GET /api/ai/tool-catalog/ — 只读工具目录，不含实现。"""
-
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         from engines.ae_harness.tools import list_tool_catalog
@@ -655,8 +597,6 @@ class ToolCatalogView(APIView):
 
 
 class AssistantAvatarView(APIView):
-    """GET /api/ai/assistants/{assistant_id}/avatar/ — 只返回压缩后的头像正文。"""
-
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request, assistant_id: str):
         card = api.get_assistant(assistant_id)
@@ -666,13 +606,11 @@ class AssistantAvatarView(APIView):
 
 
 def _require_author(request) -> None:
-    """助手与工作流的写操作只允许助手作者。运营身份本身不够。"""
     if not is_assistant_author(_user_id(request)):
         raise PermissionDenied("Forbidden")
 
 
 def _assistant_payload(request) -> dict:
-    """表单里的 tools 是 JSON 字符串，先解开再交给序列化器。"""
     data = request.data.dict() if hasattr(request.data, "dict") else dict(request.data)
     raw_tools = data.get("tools")
     if isinstance(raw_tools, str) and raw_tools:
@@ -681,7 +619,6 @@ def _assistant_payload(request) -> dict:
 
 
 def _avatar_bytes(request) -> bytes | None:
-    """从表单文件读取头像；没有文件时返回 None。"""
     upload = request.FILES.get("avatar")
     if upload is None:
         return None

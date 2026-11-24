@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ linting 命令行：检查、导出，以及两个只用于审计的覆盖开关 🏁
-Python 调试：➡️ python -m utils.linting.cli 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无
-🏁
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -28,13 +19,11 @@ EXIT_CONFIG_ERROR = 2
 
 
 def emit(text: str, *, err: bool = False) -> None:
-    """写一行到标准输出 / 标准错误，统一走 write 便于被当库引用时改向。"""
     stream = sys.stderr if err else sys.stdout
     stream.write(text + "\n")
 
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
-    """命令行参数：检查模式或导出模式。"""
     parser = argparse.ArgumentParser(description="一份 .linting 驱动的模块依赖检查")
     parser.add_argument("--root", default=".", help="项目根目录（默认当前目录）")
     parser.add_argument("--config", default="", help=f"配置文件路径（默认 <root>/{CONFIG_NAME}）")
@@ -56,7 +45,6 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 
 def apply_audit_overrides(config: Config, args: argparse.Namespace) -> Config:
-    """按审计开关临时覆盖配置；只影响本次运行，不写回 .linting。"""
     forbids = config.forbids
     if args.strict_indirect:
         forbids = [replace(contract, allow_indirect=False) for contract in forbids]
@@ -68,7 +56,6 @@ def apply_audit_overrides(config: Config, args: argparse.Namespace) -> Config:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """入口：读配置 → 检查或导出 → 按结果给退出码。"""
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")

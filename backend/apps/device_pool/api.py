@@ -1,9 +1,3 @@
-"""device-pool 跨模块写操作白名单。
-
-共享给其他模块（如 ai_assistant）。
-遵循防火墙 #2：跨 App 写操作必须走本 api；本模块写逻辑下沉到 service.py。
-"""
-
 __all__ = [
     "acquire_device",
     "device",
@@ -33,18 +27,10 @@ from .pool import device
 
 
 def get_online_devices():
-    """返回所有在线设备（status=ONLINE）。"""
     return list(Device.objects.filter(status=DeviceStatus.ONLINE))
 
 
 def list_devices(user_id: str = "") -> list[dict]:
-    """设备管理口径的全量设备列表（只读快照，供 AI 助手 list_devices 工具调用）。
-
-    与 GET /api/devices/ 同一套可见性规则（is_device_visible）与序列化口径
-    （device_to_dict：status/occupied_by/remaining/last_seen 等），包含使用中
-    （BUSY）设备。不做 ADB 状态同步——工具保持只读无副作用，状态由 heartbeat /
-    设备管理页列表刷新。
-    """
     admin_ids = serializer.resolve_admin_ids(settings.ADMIN_USERS)
     devices = [
         d for d in Device.objects.all() if serializer.is_device_visible(d, user_id, admin_ids)
@@ -62,7 +48,6 @@ def list_devices(user_id: str = "") -> list[dict]:
 
 
 def ensure_device(serial, name=""):
-    """Get or create 设备记录（向后兼容）。"""
     obj, _ = Device.objects.get_or_create(
         serial=serial,
         defaults={
@@ -75,10 +60,6 @@ def ensure_device(serial, name=""):
 
 @transaction.atomic
 def acquire_device(serial, user_id, timeout=300):
-    """锁定设备（进程占用，供 AgentScope 调用）。
-
-    select_for_update() 保证多进程并发下不重复通过 BUSY 检查。
-    """
     device_obj = Device.objects.select_for_update().get(serial=serial)
 
     if device_obj.status == DeviceStatus.BUSY:
@@ -90,8 +71,6 @@ def acquire_device(serial, user_id, timeout=300):
             .first()
         )
         if active_lock and not active_lock.is_expired:
-            # occupied_by 为 CharField，调用方 user_id 多为 int——统一按字符串比较，
-            # 避免同一用户（AI 先 acquire 后执行）被误判为他人占用。
             if str(device_obj.occupied_by) != str(user_id):
                 raise ValueError(
                     f"设备已被 {device_obj.occupied_by or 'unknown'} 占用，"
@@ -121,20 +100,17 @@ def acquire_device(serial, user_id, timeout=300):
 
 
 def release_device(serial, reason=LockReleaseReason.MANUAL):
-    """释放锁定设备（保留锁审计，触发队列自动分配）。"""
     try:
         dev = Device.objects.get(serial=serial)
         if dev.status == DeviceStatus.BUSY:
             state_machine.release_internal(dev, reason=reason)
             return True
     except Device.DoesNotExist:
-        # 明确忽略：设备不存在即视为释放失败并返回 False，属契约内的正常分支
         pass
     return False
 
 
 def release_device_locks_for_device(device_obj, reason=LockReleaseReason.DISCONNECT):
-    """批量释放设备的活跃进程锁（崩溃恢复 / 孤儿清理入口）。"""
     return DeviceLock.objects.filter(
         device=device_obj, lock_type="process", status=LockStatus.ACTIVE
     ).update(
@@ -145,7 +121,6 @@ def release_device_locks_for_device(device_obj, reason=LockReleaseReason.DISCONN
 
 
 def _resolve_device(serial: str) -> Device:
-    """校验设备存在 + 执行引擎占用，返回设备记录（含连接地址）。"""
     if not serial:
         raise ValueError("未选择设备，请先连接设备")
     try:
@@ -161,7 +136,6 @@ def _resolve_device(serial: str) -> Device:
 
 
 def use_device(serial: str) -> None:
-    """切到目标设备 + 可用性/执行引擎占用校验（跨 App 统一入口）。"""
     _resolve_device(serial)
     if device.current_serial != serial:
         device.switch_to(serial)

@@ -1,7 +1,3 @@
-/**
- * [P0] 必测 — 单账号会话存储
- * 目录：tests/login/p0/
- */
 import { beforeEach, describe, expect, it } from "vitest"
 import {
   clearSession,
@@ -31,7 +27,7 @@ describe("[P0] token-storage 单账号会话", () => {
     expect(getUsername()).toBe("bob")
     expect(getToken()).toBe("a2")
     expect(getRefreshToken()).toBe("r2")
-    // 单账号：本地不存在账号列表结构
+
     expect(Object.keys(localStorage).sort()).toEqual(["access_token", "refresh_token", "username"])
   })
 

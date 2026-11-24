@@ -1,26 +1,3 @@
-"""
-文件名: ➡️ indexer.py 🏁
-路径: ➡️ engines/ae_harness/knowledge/indexer.py 🏁
-模块功能：➡️ 按库增量建索引：只扫 .md/.txt，未变化文件不重复嵌入 🏁
-Python 调试：➡️ python -m engines.ae_harness.knowledge.indexer 🏁
-时间：➡️ 2026-11-24 🏁
-作者：➡️ kahoku 🏁
-版本：➡️ 1.0.0 🏁
-修改时间: ➡️ 2026-11-15 🏁
-类型: ➡️ Harness 配置模块 🏁
-简介说明：➡️
-1. KnowledgeIndexer: 扫描一个库的资料目录，解析、切块并写入该库的 KnowledgeBase。
-2. ensure_index(): 用修改时间、大小与切块版本判断是否需要重建；删除的文件同步清理。
-🏁
-关联模块：➡️
-1. engines.ae_harness.knowledge.config: 库规格与切块参数。
-2. agentscope.rag: TextParser / ApproxTokenChunker / KnowledgeBase。
-🏁
-测试：➡️
-1. 暂无
-🏁
-"""
-
 from __future__ import annotations
 
 import hashlib
@@ -38,22 +15,12 @@ __all__ = ["CHUNKER_VERSION", "KnowledgeIndexer"]
 
 _LOG = logging.getLogger(__name__)
 
-# 写入 index_state；切块策略变化时强制全量重建。
 CHUNKER_VERSION: Final[str] = "approx_token_v1"
 _SUFFIXES: Final[tuple[str, ...]] = (".md", ".txt")
 _STATE_FILE: Final[str] = "index_state.json"
 
 
 class KnowledgeIndexer:
-    """
-    一个本地库的增量索引器。
-
-    Attributes:
-        spec: 当前索引的库。
-        knowledge_base: 已绑定嵌入模型、向量库和该库 collection 的句柄。
-        index_dir: 索引状态根目录。
-    """
-
     def __init__(
         self,
         spec: KnowledgeBaseSpec,
@@ -63,16 +30,6 @@ class KnowledgeIndexer:
         chunk_size: int,
         chunk_overlap: int,
     ) -> None:
-        """
-        保存库规格、句柄与切块参数。
-
-        Args:
-            spec: 当前索引的库。
-            knowledge_base: 该库的 KnowledgeBase 句柄。
-            index_dir: 索引状态根目录。
-            chunk_size: 每块近似 token 数。
-            chunk_overlap: 相邻块重叠 token 数。
-        """
         self.spec = spec
         self.knowledge_base = knowledge_base
         self._state_path = index_dir / "collections" / spec.name / _STATE_FILE
@@ -85,15 +42,6 @@ class KnowledgeIndexer:
         )
 
     async def ensure_index(self) -> int:
-        """
-        确保索引与资料目录一致。
-
-        Returns:
-            本次重新索引的文件数；目录不存在时为 0。
-
-        Raises:
-            RuntimeError: 资料目录不存在。
-        """
         if not self.spec.data_dir.exists():
             raise RuntimeError(f"知识库资料目录不存在：{self.spec.name}: {self.spec.data_dir}")
         self._state_path.parent.mkdir(parents=True, exist_ok=True)
@@ -127,7 +75,6 @@ class KnowledgeIndexer:
             state[relative] = signature
             reindexed += 1
 
-        # 以向量库里实际存在的文档为准清理，不依赖状态文件：状态文件丢失时也能删掉残留。
         stale = {item.document_id for item in documents.values()} - {
             _document_id(relative) for relative in current
         }
@@ -140,7 +87,6 @@ class KnowledgeIndexer:
         return reindexed
 
     def _load_state(self) -> dict[str, list[int | str]]:
-        """读取索引状态；文件缺失或损坏时按空状态处理。"""
         if not self._state_path.exists():
             return {}
         try:
@@ -157,14 +103,12 @@ class KnowledgeIndexer:
                 mtime = int(value[0])
                 size = int(value[1])
             except (TypeError, ValueError):
-                # 状态文件里的非法条目视为已损坏，跳过该文件；下次索引会按缺失重建
-                continue
+                continue  # silent-except
             version = str(value[2]) if len(value) >= 3 else ""
             loaded[str(key)] = [mtime, size, version]
         return loaded
 
     def _write_state(self, state: dict[str, list[int | str]]) -> None:
-        """写索引状态；失败不影响本次索引结果。"""
         try:
             self._state_path.write_text(
                 json.dumps(state, ensure_ascii=False, indent=2),
@@ -175,6 +119,5 @@ class KnowledgeIndexer:
 
 
 def _document_id(relative_path: str) -> str:
-    """按相对路径生成稳定的 document_id。"""
     digest = hashlib.sha1(relative_path.encode("utf-8")).hexdigest()[:16]
     return f"doc_{digest}"

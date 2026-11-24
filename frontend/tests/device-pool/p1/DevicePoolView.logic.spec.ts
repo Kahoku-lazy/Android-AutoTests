@@ -1,9 +1,3 @@
-/**
- * [P1] 建议测 — 设备池页面编排器（mock 三个子 composable，挂载触发 onMounted）
- * 目录：tests/device-pool/p1/
- *
- * useDevicePoolView：设备列表收缩时页码越界收敛、名称搜索命中口径、搜索与筛选取交集。
- */
 import { ref, nextTick } from "vue"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
@@ -102,7 +96,6 @@ describe("[P1] DevicePoolView.logic", () => {
   })
 
   it("设备列表收缩：currentPage 越界收敛到 totalPages", async () => {
-    // 每页 7 行：20 台 = 3 页
     poolStub.devices.value = Array.from({ length: 20 }, (_, i) => makeDevice(`D${i + 1}`))
 
     const { result } = await mountComposable(() => useDevicePoolView())

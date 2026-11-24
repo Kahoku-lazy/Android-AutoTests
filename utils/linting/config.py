@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 读取并校验仓库根的 .linting：不认识的键一律报错，不静默忽略 🏁
-Python 调试：➡️ python -m utils.linting.config 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无
-🏁
-"""
-
 from __future__ import annotations
 
 import tomllib
@@ -42,7 +33,6 @@ FORBID_KEYS = {
 
 
 def load_config(config_path: Path) -> Config:
-    """读 .linting；文件缺失、键未知、字段类型不对都抛 ValueError。"""
     if not config_path.is_file():
         raise ValueError(f"找不到配置文件：{config_path}")
 
@@ -74,7 +64,6 @@ def load_config(config_path: Path) -> Config:
 
 
 def _load_modules(entries: list[dict]) -> dict[str, dict]:
-    """校验 [[modules]] 并把 path 抽成键。"""
     modules: dict[str, dict] = {}
     for entry in entries:
         path = entry.get("path")
@@ -92,7 +81,6 @@ def _load_modules(entries: list[dict]) -> dict[str, dict]:
 
 
 def _load_forbids(entries: list[dict]) -> list[Forbid]:
-    """校验 [[forbid]] 并转成 Forbid。"""
     forbids: list[Forbid] = []
     for entry in entries:
         extra = set(entry) - FORBID_KEYS
@@ -122,16 +110,10 @@ def _load_forbids(entries: list[dict]) -> list[Forbid]:
 
 
 def is_str_list(value: object) -> bool:
-    """判断是否为「全是字符串」的列表。"""
     return isinstance(value, list) and all(isinstance(item, str) for item in value)
 
 
 def expand_patterns(patterns: list[str]) -> set[str]:
-    """把 exclude 模式补成 fnmatch 能用的形态。
-
-    fnmatch 不把 `**` 当特殊符号，而 glob 语义里 `**/x` 能匹配顶层的 `x`，
-    末尾的 `/` 也只表示目录，所以额外补「去掉前导 **/」「去掉末尾 /」两种写法。
-    """
     expanded: set[str] = set()
     for pattern in patterns:
         trimmed = pattern.rstrip("/")

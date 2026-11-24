@@ -1,11 +1,3 @@
-"""
-python -m 调试路径: backend.apps.case_manager.api_projects
-
-本模块的业务功能如下：
-1. create_project: 创建项目并锁定库类型。
-2. update_project: 只改名称和描述，拒绝改库类型。
-"""
-
 from __future__ import annotations
 
 from typing import Any
@@ -31,8 +23,6 @@ _KINDS = {item[0] for item in LIBRARY_KIND_CHOICES}
 
 
 class ConflictError(Exception):
-    """名称冲突或库类型被修改。"""
-
     def __init__(self, message: str):
         self.log = backend_log
         self.message = message
@@ -49,7 +39,6 @@ def _case_count(obj: CaseProject) -> int:
 
 
 def serialize_project(obj: CaseProject) -> dict[str, Any]:
-    """把项目序列化成接口字段。"""
     return {
         "id": obj.id,
         "name": obj.name,
@@ -64,7 +53,6 @@ def serialize_project(obj: CaseProject) -> dict[str, Any]:
 
 
 def list_projects(*, user_id: str) -> list[dict[str, Any]]:
-    """列出当前用户的项目，并带上对应表的行数。"""
     qs = (
         CaseProject.objects.filter(created_by=user_id)
         .annotate(case_count=Count("automation_cases") + Count("functional_cases"))
@@ -74,7 +62,6 @@ def list_projects(*, user_id: str) -> list[dict[str, Any]]:
 
 
 def get_project(*, project_id: int, user_id: str) -> CaseProject | None:
-    """按归属取项目。不存在时返回 None。"""
     return CaseProject.objects.filter(id=project_id, created_by=user_id).first()
 
 
@@ -85,12 +72,6 @@ def create_project(
     description: str = "",
     user_id: str,
 ) -> dict[str, Any]:
-    """创建项目。库类型只能是自动化或功能。
-
-    Raises:
-        ValueError: 名称为空或库类型非法。
-        ConflictError: 同一用户下同名。
-    """
     name = (name or "").strip()
     if not name:
         raise ValueError("项目名称不能为空")
@@ -117,13 +98,6 @@ def update_project(
     description: str | None = None,
     library_kind: str | None = None,
 ) -> dict[str, Any]:
-    """更新名称或描述。传入不同的库类型时拒绝。
-
-    Raises:
-        LookupError: 项目不存在。
-        ConflictError: 同名，或试图修改库类型。
-        ValueError: 名称为空。
-    """
     obj = get_project(project_id=project_id, user_id=user_id)
     if obj is None:
         raise LookupError("项目不存在")
@@ -144,11 +118,6 @@ def update_project(
 
 
 def delete_project(*, project_id: int, user_id: str) -> None:
-    """删除项目及其用例行。
-
-    Raises:
-        LookupError: 项目不存在。
-    """
     obj = get_project(project_id=project_id, user_id=user_id)
     if obj is None:
         raise LookupError("项目不存在")
@@ -156,7 +125,6 @@ def delete_project(*, project_id: int, user_id: str) -> None:
 
 
 def project_case_model(project: CaseProject):
-    """返回该项目对应的用例模型。"""
     from .models import AutomationCase, FunctionalCase
 
     if project.library_kind == LIBRARY_AUTOMATION:

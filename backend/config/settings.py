@@ -1,35 +1,26 @@
-"""
-Django settings for Android-AutoTests — pure API server, no frontend serving.
-"""
-
 import os
 
 from pathlib import Path
 
 from backend.config.env import load_dotenv
 
-# django-stubs：让 QuerySet/Manager 等在类型检查下更准确
 try:
     import django_stubs_ext
 
     django_stubs_ext.monkeypatch()
 except ImportError:
-    # 明确忽略：django-stubs-ext 为可选开发期依赖，未安装不影响运行
     pass
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 REPO_ROOT = BASE_DIR.parent
 
 
-# ── Load .env into os.environ（单一实现在 backend/config/env.py；manage.py 不会自动加载）──
 load_dotenv()
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
 
 DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in ("true", "1", "yes")
 
-# Fail fast if SECRET_KEY is not set in production (DEBUG=False).
-# Encryption, JWT signing, and session security all depend on a strong secret.
 if not SECRET_KEY:
     if DEBUG:
         import warnings
@@ -44,38 +35,27 @@ if not SECRET_KEY:
             "when DEBUG=False (production mode)."
         )
 
-# 开发（DEBUG=True）默认放宽为 "*"；生产（DEBUG=False）默认只接受本机回环。
-# 对外提供服务时必须显式设 DJANGO_ALLOWED_HOSTS（逗号分隔）——显式值始终优先。
 ALLOWED_HOSTS = os.environ.get(
     "DJANGO_ALLOWED_HOSTS", "*" if DEBUG else "127.0.0.1,localhost"
 ).split(",")
 
-# 设备管理管理员白名单（逗号分隔的用户名）。命中者全局查看所有设备（含锁定）。
-# 默认空 = 无管理员，仅公开/自身设备可见。示例：ADMIN_USERS=admin,ops
 ADMIN_USERS = {u.strip() for u in os.environ.get("ADMIN_USERS", "").split(",") if u.strip()}
 
-# ── Application definition ──
 INSTALLED_APPS = [
-    # Admin theme (must be before django.contrib.admin)
     "jazzmin",
-    # Django built-in
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # Third-party
     "corsheaders",
     "channels",
     "rest_framework",
     "drf_spectacular",
-    # Swagger UI 静态资产（SIDECAR 来源；离线/内网环境不依赖 CDN）
     "drf_spectacular_sidecar",
-    # Framework
     "backend.gateway",
     "backend.shared",
-    # Django Apps（12 个；test_runner、evaluator、workflow 已退役，卸载迁移随 app 一并删除）
     "backend.apps.device_pool",
     "backend.apps.case_manager",
     "backend.apps.report_generator",
@@ -97,9 +77,6 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "backend.gateway.middleware.JWTAuthenticationMiddleware",
-    # CSRF 保护：必须排在 JWTAuthenticationMiddleware 之后——有效 JWT 的请求由该中间件
-    # 置 request._dont_enforce_csrf_checks 豁免（浏览器无法跨站携带自定义 Authorization 头），
-    # 后台 /admin/ 等 session 面则正常受保护。
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -108,14 +85,10 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "backend.config.urls"
 
-# 路径约定：全部 /api/ 路由以 / 结尾（openspec/specs/api-path-convention）。
-# 关闭 APPEND_SLASH，使缺失尾斜杠得到**确定的 404**，而不是 CommonMiddleware 的 301
-# （301 会丢 Authorization 头 → 误报 401；可能把 POST 降级为 GET；且被浏览器长期缓存）。
 APPEND_SLASH = False
 
 ASGI_APPLICATION = "backend.config.asgi.application"
 
-# Templates — Django Admin + drf-spectacular Swagger UI 主题覆盖（templates/drf_spectacular/）
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -131,9 +104,6 @@ TEMPLATES = [
     },
 ]
 
-# ── CORS — 开发放行前端 dev server；生产默认只放行白名单 ──
-# 开发（DEBUG=True）默认放开全部来源；生产（DEBUG=False）默认关闭 allow-all，
-# 改由 CORS_ALLOWED_ORIGINS（逗号分隔）精确控制。显式环境变量始终优先。
 CORS_ALLOW_ALL_ORIGINS = os.environ.get(
     "CORS_ALLOW_ALL_ORIGINS", "True" if DEBUG else "False"
 ).lower() in (
@@ -148,8 +118,6 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 
-# ── 安全加固（生产显式开启；默认值不改变本地/现有 HTTP 部署的行为）──
-# HSTS：确认全站 HTTPS 后再设置（例如 31536000 = 1 年）；0 = 关闭
 SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get(
     "SECURE_HSTS_INCLUDE_SUBDOMAINS", "False"
@@ -159,17 +127,13 @@ SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD", "False").lower() in 
     "1",
     "yes",
 )
-# HTTPS 跳转：仅供「Django 直接终止 TLS」的部署开启；
-# 反向代理已终止 TLS 时必须保持 False，否则会 301 循环
 SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "False").lower() in (
     "true",
     "1",
     "yes",
 )
-# 反向代理场景：信任 X-Forwarded-Proto 以还原原始协议
 if os.environ.get("SECURE_PROXY_SSL_HEADER", "").lower() in ("true", "1", "yes"):
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-# Cookie 安全标志：生产（DEBUG=False）默认开启，本地 HTTP 开发自动关闭
 SESSION_COOKIE_SECURE = os.environ.get(
     "SESSION_COOKIE_SECURE", "False" if DEBUG else "True"
 ).lower() in ("true", "1", "yes")
@@ -179,15 +143,9 @@ CSRF_COOKIE_SECURE = os.environ.get("CSRF_COOKIE_SECURE", "False" if DEBUG else 
     "yes",
 )
 
-# ── Database ──
 DB_ENGINE = os.environ.get("DB_ENGINE", "mysql")
 
-# ── 设备引擎（L1c 可替换插槽）──
-# 上层经 engines.device.action.open_device 打开设备。
-# 注：设备交互无中间层（原 L2 会话层已于 2026-09-03 扁平化删除）。
 DEVICE_ENGINE = os.environ.get("DEVICE_ENGINE", "u2")
-
-# 控制设备任务由 engines.backend_bridge 的 SOP 执行，不再按引擎名加载实现。
 
 
 if DB_ENGINE == "mysql":
@@ -201,15 +159,15 @@ if DB_ENGINE == "mysql":
             "PORT": os.environ.get("DB_PORT", "3306"),
             "OPTIONS": {
                 "charset": "utf8mb4",
-                "connect_timeout": 5,  # Fail fast on dead MySQL (was OS default 30s)
+                "connect_timeout": 5,
                 "init_command": (
                     "SET sql_mode='STRICT_TRANS_TABLES', "
                     "character_set_connection=utf8mb4, "
                     "collation_connection=utf8mb4_unicode_ci"
                 ),
             },
-            "CONN_MAX_AGE": 30,  # Keep connections alive 30s (was 600 — too many sleeping connections)
-            "CONN_HEALTH_CHECKS": True,  # Auto-detect and replace dead connections
+            "CONN_MAX_AGE": 30,
+            "CONN_HEALTH_CHECKS": True,
         },
     }
 elif DB_ENGINE == "sqlite":
@@ -222,65 +180,39 @@ elif DB_ENGINE == "sqlite":
 else:
     raise RuntimeError(f"不支持的 DB_ENGINE={DB_ENGINE!r}，仅支持 mysql / sqlite")
 
-# ── Channels layer ──
-# 单进程 Daphne + 无跨进程广播：固定用内存实现。Redis 已随 db-backed-token-revocation 退役，
-# 平台不再有外部 KV 依赖（见 openspec/changes/retire-redis）。
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels.layers.InMemoryChannelLayer",
     },
 }
 
-# ── JWT ──
-JWT_ACCESS_TTL = int(os.environ.get("JWT_ACCESS_TTL", "3600"))  # 1 hour
-JWT_REFRESH_TTL = int(os.environ.get("JWT_REFRESH_TTL", "604800"))  # 7 days
+JWT_ACCESS_TTL = int(os.environ.get("JWT_ACCESS_TTL", "3600"))
+JWT_REFRESH_TTL = int(os.environ.get("JWT_REFRESH_TTL", "604800"))
 
-# 截图直链签名：缺省回退 DJANGO_SECRET_KEY；换密钥会让已签发的链接立即失效。
 MEDIA_LINK_SECRET = os.environ.get("MEDIA_LINK_SECRET", "").strip() or SECRET_KEY
 MEDIA_LINK_TTL_SECONDS = int(os.environ.get("MEDIA_LINK_TTL_SECONDS", "900"))
 
-# ── 设备日志证据（设备动作 → 日志证据窗口 → 验收模型）──
-# 采集常驻，不随动作开关；时间戳一律北京时间毫秒（固定 UTC+8，不依赖 tzdata）。
 DEVICE_LOG_ENABLED = os.environ.get("DEVICE_LOG_ENABLED", "1") not in ("0", "false", "False", "")
 DEVICE_LOG_TCP_HOST = os.environ.get("DEVICE_LOG_TCP_HOST", "0.0.0.0")
-# 端口管理页展示的对外 IP：留空自动探测出站局域网 IP（utils.netinfo）；多网卡 / 容器
-# 部署时人工指定设备侧可达的 IP。只影响展示，不改监听绑定地址（仍 DEVICE_LOG_TCP_HOST）。
 DEVICE_LOG_ADVERTISE_HOST = os.environ.get("DEVICE_LOG_ADVERTISE_HOST", "").strip()
-DEVICE_LOG_TCP_PORT = int(os.environ.get("DEVICE_LOG_TCP_PORT", "7005"))  # 0 = 不监听网络来源
-# 该日志来源对应的被测设备 SKU（APP 里显示的型号，如 H6810）：日志按此名分通道，
-# 验收证据里也会标出来源，便于判断「这条日志是不是当前在测的设备打的」。
+DEVICE_LOG_TCP_PORT = int(os.environ.get("DEVICE_LOG_TCP_PORT", "7005"))
 DEVICE_LOG_SOURCE_SKU = os.environ.get("DEVICE_LOG_SOURCE_SKU", "H6810")
-# 无线串口盒串口侧的波特率：**仅作端口管理页展示**，不参与采集（采集走 TCP 监听）。
 DEVICE_LOG_SOURCE_BAUD = int(os.environ.get("DEVICE_LOG_SOURCE_BAUD", "921600"))
-# 日志来源登记（JSON：端口 → 通道）：只读查询工具按端口反查通道；留空则按上面两项
-# 组成单端口单通道（现场即 {"7005": "H6810"}）。多台灯 / 多端口时在此登记。
 DEVICE_LOG_SOURCES = os.environ.get("DEVICE_LOG_SOURCES", "")
-DEVICE_LOG_SERIAL_PORT = os.environ.get("DEVICE_LOG_SERIAL_PORT", "")  # 空 = 不采集串口
+DEVICE_LOG_SERIAL_PORT = os.environ.get("DEVICE_LOG_SERIAL_PORT", "")
 DEVICE_LOG_SERIAL_BAUD = int(os.environ.get("DEVICE_LOG_SERIAL_BAUD", "115200"))
-DEVICE_LOG_BUFFER_SECONDS = int(
-    os.environ.get("DEVICE_LOG_BUFFER_SECONDS", "600")
-)  # 缓冲保留 10 分钟
-DEVICE_LOG_BUFFER_MAX_LINES = int(
-    os.environ.get("DEVICE_LOG_BUFFER_MAX_LINES", "20000")
-)  # 单设备上限
-DEVICE_LOG_WINDOW_SECONDS = float(
-    os.environ.get("DEVICE_LOG_WINDOW_SECONDS", "5")
-)  # 动作后取证阈值
-DEVICE_LOG_BASELINE_SECONDS = float(
-    os.environ.get("DEVICE_LOG_BASELINE_SECONDS", "30")
-)  # 动作前基线窗口
+DEVICE_LOG_BUFFER_SECONDS = int(os.environ.get("DEVICE_LOG_BUFFER_SECONDS", "600"))
+DEVICE_LOG_BUFFER_MAX_LINES = int(os.environ.get("DEVICE_LOG_BUFFER_MAX_LINES", "20000"))
+DEVICE_LOG_WINDOW_SECONDS = float(os.environ.get("DEVICE_LOG_WINDOW_SECONDS", "5"))
+DEVICE_LOG_BASELINE_SECONDS = float(os.environ.get("DEVICE_LOG_BASELINE_SECONDS", "30"))
 DEVICE_LOG_KEYWORD_FILE = os.environ.get(
     "DEVICE_LOG_KEYWORD_FILE", str(BASE_DIR / "config" / "device_log_keywords.json")
 )
-# ── 无线串口日志文件（不写库，只落本地文件，见 device-log-file-archive）──
-# 目录默认项目根目录 logs/；单文件上限 50MB，写满改名存档为 `{SKU}_{端口}_{YYYYMMDD}.log`。
 DEVICE_LOG_LOG_DIR = os.environ.get("DEVICE_LOG_LOG_DIR", str(REPO_ROOT / "logs"))
 DEVICE_LOG_FILE_MAX_BYTES = int(os.environ.get("DEVICE_LOG_FILE_MAX_BYTES", str(50 * 1024 * 1024)))
-# 端口管理页日志窗口默认读取的尾部行数与允许的上限。
 DEVICE_LOG_TAIL_LINES = int(os.environ.get("DEVICE_LOG_TAIL_LINES", "2000"))
 DEVICE_LOG_TAIL_LINES_MAX = int(os.environ.get("DEVICE_LOG_TAIL_LINES_MAX", "20000"))
 
-# ── Django REST Framework ──
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "backend.shared.auth.drf_auth.JWTAuthentication",
@@ -288,7 +220,6 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
-    # BrowsableAPIRenderer 只在 DEBUG 下注册：生产不需要 HTML 可浏览 API（JSON 契约不变）
     "DEFAULT_RENDERER_CLASSES": [
         "backend.shared.renderers.EnvelopeJSONRenderer",
         *(["rest_framework.renderers.BrowsableAPIRenderer"] if DEBUG else []),
@@ -297,7 +228,6 @@ REST_FRAMEWORK = {
     "UNAUTHENTICATED_USER": None,
 }
 
-# ── drf-spectacular (OpenAPI 3.0 schema + Swagger UI) ──
 SPECTACULAR_SETTINGS = {
     "TITLE": "Android-AutoTests API",
     "DESCRIPTION": (
@@ -305,19 +235,12 @@ SPECTACULAR_SETTINGS = {
         "串口日志、测试报告与仪表盘。"
     ),
     "VERSION": "2.0.0",
-    # 固定 API 路径前缀：否则新增非 /api 路由（如 /media 签名直链）会让
-    # drf-spectacular 重新推断公共前缀，连带改写所有 operationId 与 tag。
     "SCHEMA_PATH_PREFIX": "/api",
-    # 厂商改名 openai 后，provider 与 api_protocol 的取值集完全相同；
-    # 不钉名字会让同一集合生成两个枚举名触发告警（门禁 --fail-on-warn 失败）。
-    # 统一收敛到既有的 ApiProtocolEnum，前端不按枚举名引用，契约取值不变。
     "ENUM_NAME_OVERRIDES": {
         "ApiProtocolEnum": ["deepseek", "dashscope", "openai"],
     },
-    # 文档页资产随包分发（drf-spectacular-sidecar）：断网环境仍可渲染
     "SWAGGER_UI_DIST": "SIDECAR",
     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
-    # 分组中文说明：取代原手写文档的模块描述（顺序即 Swagger 分组顺序）
     "TAGS": [
         {"name": "dashboard", "description": "仪表盘：全平台只读聚合统计"},
         {"name": "devices", "description": "设备管理：扫描 / 连接 / 断开 / 激活 / 心跳 / 占用释放"},
@@ -339,52 +262,37 @@ SPECTACULAR_SETTINGS = {
     ],
 }
 
-# Chat upload temp files — cleanup_uploads management command
 UPLOAD_CLEANUP_MAX_AGE_DAYS = int(os.environ.get("UPLOAD_CLEANUP_MAX_AGE_DAYS", "7"))
 
-# AI 对话发图：5MB 图片 base64 约 6.7MB，须大于 Django 默认 2.5MB 请求体上限，
-# 否则 chat_stream 读 body 时抛 RequestDataTooBig（超限图片由应用层 5MB 校验拦截）
 DATA_UPLOAD_MAX_MEMORY_SIZE = 16 * 1024 * 1024
 
-# ── Project-specific configuration ──
 DEVICE_SERIAL = os.environ.get("DEVICE_SERIAL", "")
 SERVER_PORT = int(os.environ.get("SERVER_PORT", "8766"))
 
-# ADB server 地址（容器内连接宿主机 ADB daemon）：由 .env / 环境变量直接对 adb 与
-# uiautomator2 生效（两者原生读取该环境变量），无需在 settings 里二次转发。
 
-# Paths
-# 数据根目录：.env 的 DATA_DIR 可指向外部盘/卷（如 D:\Govee\data）；留空用仓库根 data/。
-# 相对值按 REPO_ROOT 解析，避免随进程 CWD 漂移。
 _data_dir_env = os.environ.get("DATA_DIR", "").strip()
 DATA_DIR = Path(_data_dir_env) if _data_dir_env else REPO_ROOT / "data"
 if not DATA_DIR.is_absolute():
     DATA_DIR = REPO_ROOT / DATA_DIR
 
 SCREENSHOT_DIR = DATA_DIR / "screenshots"
-# 任务截图（WebP）落盘目录；可由 .env 的 TASK_MEDIA_DIR 覆盖，便于换盘/备份。
 TASK_MEDIA_DIR = Path(os.environ.get("TASK_MEDIA_DIR", "").strip() or DATA_DIR / "task_media")
 EXPORT_DIR = REPO_ROOT / "exports"
 LOG_DIR = REPO_ROOT / "logs"
 
-# Internationalization
 LANGUAGE_CODE = "zh-hans"
 TIME_ZONE = "Asia/Shanghai"
 USE_TZ = False
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# ── Static files (Django Admin + jazzmin theme) ──
-# Django 5.1+ 默认 STATIC_URL=None，必须显式设置，否则 Admin 无样式
 STATIC_URL = "/static/"
 STATIC_ROOT = REPO_ROOT / "staticfiles"
-STATICFILES_DIRS = [BASE_DIR / "static"]  # 项目自定义静态文件源目录
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
-# ── Media files (uploads) ──
 MEDIA_URL = "/media/"
 MEDIA_ROOT = DATA_DIR / "uploads"
 
-# ── Jazzmin Admin Theme ──
 JAZZMIN_SETTINGS = {
     "site_title": "Android-AutoTests",
     "site_header": "AutoTests",
@@ -405,7 +313,6 @@ JAZZMIN_SETTINGS = {
     "default_icon_children": "fas fa-circle",
 }
 
-# ── Jazzmin Theme 主题更换 ──
 JAZZMIN_UI_TWEAKS = {
     "navbar_small_text": False,
     "footer_small_text": False,
@@ -416,8 +323,6 @@ JAZZMIN_UI_TWEAKS = {
 }
 
 
-# ── Logging — 始终配置 ──
-# 框架日志只留控制台。业务代码日志由 utils.logs 写入 logs/backend.log 等四组文件。
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 
 _LOG_HANDLERS = {

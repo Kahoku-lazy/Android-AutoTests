@@ -1,6 +1,3 @@
-/**
- * [P0] useProjects — 空项目列表态
- */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { flushPromises } from "@vue/test-utils"
 import * as caseApi from "@/modules/case-manager/api"

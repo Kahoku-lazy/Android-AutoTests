@@ -1,4 +1,3 @@
-/** Dashboard API — 仪表盘统计数据 HTTP 调用 */
 import client, { type DjangoResponse } from "@/shared/api-client"
 import type { DashboardRawData, ActivityItem } from "@/shared/types/dashboard"
 

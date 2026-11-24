@@ -1,10 +1,4 @@
 <script setup lang="ts">
-/**
- * 本栏运行日志面板：一轮一张手绘虚线卡（顶部胶带），纯渲染，取数与打开由 chat.vue 负责。
- *
- * 进行中的一轮只显示「还在写」，不打开半份文件，也不伪造时间。
- * 面板本身不描边、不滚；卡片在本面板内堆叠，滚动交给 `.doc-body`。
- */
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
@@ -18,12 +12,10 @@ const emit = defineEmits<{
   close: []
 }>()
 
-/** 卡片上的时间：有消息时间用消息时间，老数据回落编号；进行中给占位符。 */
 function cardTime(item: ThreadLog): string {
   return logCardTime(item.created_at, item.report_id) || "—"
 }
 
-/** 卡片正文：进行中的一轮不重复后端那句「还在写」。 */
 function cardSummary(item: ThreadLog): string {
   if (item.writing) return "这一轮还在跑"
   return item.summary || "无摘要"
@@ -113,7 +105,6 @@ function cardSummary(item: ThreadLog): string {
   outline-offset: 2px;
 }
 
-/* 卡片列表：卡片顶部胶带外挑 8px，间距留给它 */
 .thread-log__list {
   display: flex;
   flex-direction: column;
@@ -127,7 +118,6 @@ function cardSummary(item: ThreadLog): string {
   position: relative;
 }
 
-/* 一轮一张手绘虚线卡：虚线框 + 顶部胶带 + 硬影；按需求不倾斜 */
 .thread-log__card {
   position: relative;
   display: flex;
@@ -159,7 +149,6 @@ function cardSummary(item: ThreadLog): string {
   outline-offset: 2px;
 }
 
-/* 进行中：虚线框转浅墨、去硬影，卡片不可点 */
 .thread-log__card:disabled {
   border-color: color-mix(in srgb, var(--ink) 22%, transparent);
   background: var(--app-bg-subtle);
@@ -168,7 +157,6 @@ function cardSummary(item: ThreadLog): string {
   cursor: not-allowed;
 }
 
-/* 顶部居中胶带：卡片的装饰，不拦点击 */
 .thread-log__tape {
   position: absolute;
   top: -8px;

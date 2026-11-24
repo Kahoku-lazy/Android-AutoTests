@@ -1,14 +1,4 @@
 <script setup lang="ts">
-/**
- * 卡片两种形体，同在一个文件里（虚线白名单按文件判定，所以两张卡必须同源）：
- *
- * 1. 助手颜料片：纸底 + 2.5px 墨色虚线框 + 该助手笔色硬影 + 图钉 + 头像或笔色圆。
- * 2. 工作流便签卡（Tape Strip）：白卡 + 1.5px 浅墨虚线框 + 顶部半透明笔色胶带，
- *    左对齐放名称与「执行 → 验收」，底部一排是「配置 / 任务」两枚文字按钮
- *    外加一块纯色占位块（只占位，不带功能）。
- *
- * 视觉登记在 doodle-craft `references/components/assistant-marker-card.md`。
- */
 import { computed, onMounted, ref } from "vue"
 import { avatarUrl } from "../api/assistants"
 import { markerVars } from "../helpers/marker"
@@ -31,7 +21,6 @@ const detail = computed(() =>
     : `${props.item.card.executor_name} → ${props.item.card.verifier_name}`,
 )
 
-/** 便签卡正文分三行：名称、执行者、验收者；助手卡片用不到这两行。 */
 const executorLine = computed(() => {
   if (props.item.kind !== "workflow") return ""
   if (props.item.card.orchestration === "team") return `队长：${props.item.card.leader_name}`
@@ -44,10 +33,8 @@ const verifierLine = computed(() => {
   return `验收者：${props.item.card.verifier_name}`
 })
 
-/** 第二枚动作：助手是进对话，工作流是开任务弹窗。 */
 const secondaryLabel = computed(() => (props.item.kind === "assistant" ? "对话" : "任务"))
 
-/** 只有助手名片有头像；工作流一律用笔色。 */
 const avatar = computed(() => (props.item.kind === "assistant" ? src.value : ""))
 
 onMounted(async () => {
@@ -121,10 +108,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* ── 助手颜料片 ─────────────────────────────────────── */
-
 .assistant-card {
-  /* 由行内 --assistant-marker 现算：同一份声明在不同卡片上得到各自的深浅 */
   --assistant-marker-soft: color-mix(in srgb, var(--assistant-marker) 34%, var(--paper));
   --assistant-marker-tint: color-mix(in srgb, var(--assistant-marker) 10%, var(--paper));
 
@@ -143,7 +127,6 @@ onMounted(async () => {
     box-shadow var(--app-duration) var(--app-ease);
 }
 
-/* 上边沿中心那枚笔色图钉：跨在虚线上，纸色描边把虚线断开，读作"钉在板上" */
 .assistant-card__pin {
   position: absolute;
   top: -6px;
@@ -199,7 +182,6 @@ onMounted(async () => {
   object-fit: cover;
 }
 
-/* 无头像：该助手笔色的深到浅；圆内不写字 */
 .assistant-card__swatch {
   background: linear-gradient(
     165deg,
@@ -247,8 +229,6 @@ onMounted(async () => {
   box-shadow: 2px 2px 0 0 var(--assistant-marker);
 }
 
-/* 动作底色：语义渐变（纵向 20% → 5%，混纸色）。
-   配置 = 天蓝、对话 = 薄荷绿；hover 不再换底色（换了会冲掉渐变），只位移 + 硬影。 */
 .assistant-card__action--config {
   background: linear-gradient(
     180deg,
@@ -275,10 +255,7 @@ onMounted(async () => {
   outline-offset: 2px;
 }
 
-/* ── 工作流便签卡（Tape Strip） ──────────────────────── */
-
 .sop-card {
-  /* 与颜料片同一套派生色：按钮 hover 的浅底与占位色块都用它 */
   --assistant-marker-soft: color-mix(in srgb, var(--assistant-marker) 34%, var(--paper));
   --assistant-marker-tint: color-mix(in srgb, var(--assistant-marker) 10%, var(--paper));
 
@@ -296,7 +273,6 @@ onMounted(async () => {
     box-shadow var(--app-duration) var(--app-ease);
 }
 
-/* 胶带：顶中跨在边框上，半透明笔色自浅向下渐隐；无描边，读作胶带而不是贴纸 */
 .sop-card__tape {
   position: absolute;
   top: -12px;
@@ -331,7 +307,6 @@ onMounted(async () => {
   white-space: nowrap;
 }
 
-/* 执行者 / 验收者各占一行 */
 .sop-card__line {
   margin: 0;
   max-width: 100%;
@@ -343,7 +318,6 @@ onMounted(async () => {
   white-space: nowrap;
 }
 
-/* 底部一排：两枚上色按钮，第三块与按钮同尺寸、同样式，只占位不响应 */
 .sop-card__trail {
   display: flex;
   align-items: center;
@@ -351,7 +325,6 @@ onMounted(async () => {
   margin-top: var(--app-space-md);
 }
 
-/* 平涂色块口径：细描边、无硬影、圆润一点；可点感由 hover 的浅影补回来 */
 .sop-card__action,
 .sop-card__block {
   display: inline-flex;
@@ -378,7 +351,6 @@ onMounted(async () => {
     box-shadow var(--app-duration-fast) var(--app-ease);
 }
 
-/* 配置 = 天蓝渐变、任务 = 薰衣草紫渐变（纵向 20% → 5%，与助手卡动作键同口径） */
 .sop-card__action--config {
   background: linear-gradient(
     180deg,
@@ -410,7 +382,6 @@ onMounted(async () => {
   outline-offset: 2px;
 }
 
-/* 占位块：尺寸、圆角、描边槽位都与按钮一致，但没有文字、边框透明、不可点 */
 .sop-card__block {
   border-color: transparent;
   background: color-mix(in srgb, var(--assistant-marker) 30%, var(--paper));

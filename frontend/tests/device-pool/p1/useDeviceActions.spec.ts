@@ -1,9 +1,3 @@
-/**
- * [P1] 建议测 — 设备操作消息分支（池对象桩注入，不 mock api）
- * 目录：tests/device-pool/p1/
- *
- * useDeviceActions：各 handler 成功/失败 ElMessage 文案、锁定/公开切换、释放、删除。
- */
 import { ref } from "vue"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ElMessage } from "element-plus"

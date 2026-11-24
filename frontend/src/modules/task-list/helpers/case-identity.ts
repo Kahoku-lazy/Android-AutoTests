@@ -1,5 +1,3 @@
-/** 用例列悬停：多条才展开「项目 / 标题」，一条不重复标题。 */
-
 export interface CaseIdentityRow {
   project?: string
   title?: string

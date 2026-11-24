@@ -1,6 +1,3 @@
-/**
- * 模块色相分配：按首次出现顺序取色，同表内不撞色；搜索过滤不改变配色。
- */
 import { describe, expect, it } from "vitest"
 import {
   MODULE_COLOR_TOKENS,

@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 冻结快照一致性与迁移行为（集成）：DB 条目 == JSON 原表、幂等、reverse 可回退 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/serial_log/integration/test_keyword_snapshot.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/serial_log
-🏁
-"""
-
 from __future__ import annotations
 
 import importlib
@@ -32,7 +23,6 @@ snapshot_migration = importlib.import_module(
 
 
 def _expected_from_json() -> list[tuple]:
-    """JSON 原表顺序的 (keyword, feature_id, module, feature) 期望序列。"""
     data = json.loads(JSON_CATALOG.read_text(encoding="utf-8"))
     return [
         (keyword, item["id"], item["module"], item["feature"])
@@ -42,7 +32,6 @@ def _expected_from_json() -> list[tuple]:
 
 
 def test_snapshot_matches_json_catalog_row_by_row():
-    """迁入后 DB 与 JSON 原表逐行一致：67 关键词 / 70 行 / 56 功能点 / 全通用。"""
     snapshot_migration.forwards(django_apps, None)
     rows = api.list_keyword_rows()
     actual = [(row.keyword, row.feature_id, row.module, row.feature) for row in rows]
@@ -50,12 +39,10 @@ def test_snapshot_matches_json_catalog_row_by_row():
     assert all(row.scope == LogKeyword.SCOPE_GENERAL for row in rows)
     assert len({row.keyword for row in rows}) == 67
     assert len({(row.module, row.feature_id, row.feature) for row in rows}) == 56
-    # 行序以 10 为步长，保持原表先后
     assert [row.sort_order for row in rows] == [(i + 1) * 10 for i in range(len(rows))]
 
 
 def test_forwards_is_idempotent_and_keeps_existing_edits():
-    """重复执行不产生第二行，也不覆盖已有行的维护改动。"""
     snapshot_migration.forwards(django_apps, None)
     row = LogKeyword.objects.get(keyword="switch_on", feature_id=0, scope="*")
     row.feature = "打开设备成功（维护改）"
@@ -66,8 +53,6 @@ def test_forwards_is_idempotent_and_keeps_existing_edits():
 
 
 def test_forwards_does_not_need_data_file(monkeypatch):
-    """全新安装不依赖数据文件：禁止任何 Path 文本读取后仍能迁入（冻结字面量）。"""
-
     def _no_read(*args, **kwargs):
         raise AssertionError("迁移不得读取数据文件")
 
@@ -78,7 +63,6 @@ def test_forwards_does_not_need_data_file(monkeypatch):
 
 
 def test_reverse_empties_table():
-    """reverse 清空本表行（表本身由 0004 的 reverse 删除）。"""
     snapshot_migration.forwards(django_apps, None)
     snapshot_migration.backwards(django_apps, None)
     assert LogKeyword.objects.count() == 0

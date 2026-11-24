@@ -1,4 +1,3 @@
-/** useProjects — 项目列表与创建 */
 import { ref, computed } from "vue"
 import { ElMessage } from "element-plus"
 import { formatApiError } from "@/shared/api-client"

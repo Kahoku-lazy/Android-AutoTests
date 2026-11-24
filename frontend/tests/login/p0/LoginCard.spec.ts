@@ -1,11 +1,3 @@
-/**
- * [P0] 必测 — 登录卡片交互（提交/禁用/记住账号/去注册）
- * 目录：tests/login/p0/
- */
-/**
- * [P0] 必测 — 登录卡主交互（提交 / 禁用 / 记住账号 / 去注册）
- * 目录：tests/login/p0/
- */
 import { describe, expect, it } from "vitest"
 import { mount } from "@vue/test-utils"
 import LoginCard from "@/views/components/LoginCard.vue"

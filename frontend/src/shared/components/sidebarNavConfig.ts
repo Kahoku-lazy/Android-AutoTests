@@ -2,9 +2,9 @@ export interface NavItem {
   path: string
   icon: string
   label: string
-  /** 开发中的条目：右侧显示红色「开发中」标签 */
+
   isDev?: boolean
-  /** 自定义标签文案（缺省「开发中」） */
+
   badge?: string
   badgeClass?: string
   children?: NavItem[]
@@ -14,7 +14,7 @@ export interface NavCategory {
   key: string
   label: string
   items: NavItem[]
-  /** 仅运营/超管可见的分组：为真时按当前用户身份过滤 */
+
   requiresOperator?: boolean
 }
 
@@ -26,7 +26,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
   },
   {
     key: "ai",
-    // 本组不显示分组标题：入口直接跟在仪表盘之后，靠图标与组间距区分
+
     label: "",
     items: [{ path: "/ai-assistant", icon: "bot", label: "平台助手" }],
   },
@@ -61,8 +61,6 @@ export const NAV_CATEGORIES: NavCategory[] = [
   },
 ]
 
-// ── Doodle Craft 协调：path → 模块色（active 书签条 + 图标底色），与主区模块色同源 ──
-// 同一分组内的入口 MUST NOT 同色：数据组的设备/串口、AI任务组的任务/用例/BUG、运营组的三项各自区分。
 export const MOD_COLORS = {
   "/dashboard": "var(--c-dashboard)",
   "/devices": "var(--c-device)",

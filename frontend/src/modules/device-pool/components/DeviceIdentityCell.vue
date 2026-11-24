@@ -1,9 +1,4 @@
 <script setup lang="ts">
-/**
- * 设备身份单元 — 首列：图标圆 + 状态点 + 型号 / 「序列号 · 地址」双行
- *
- * 组件只做渲染：型号与地址的格式化仍走 `../helpers` 的纯函数，不在此重复实现。
- */
 import { computed } from "vue"
 import type { DeviceRecord } from "@/shared/types/device"
 import { IconDevice } from "@/shared/icons/index"
@@ -11,11 +6,10 @@ import { displayModel, deviceAddress } from "../helpers"
 
 const props = defineProps<{
   device: DeviceRecord
-  /** 行是否被选中：只影响图标圆描边，选中底色由共享行规则承担 */
+
   selected?: boolean
 }>()
 
-/** 状态点色调：在线绿 / 使用中黄 / 其余灰 */
 const tone = computed(() => {
   if (props.device.status === "ONLINE") return "online"
   if (props.device.status === "BUSY") return "busy"
@@ -51,7 +45,6 @@ const address = computed(() => deviceAddress(props.device))
   text-align: left;
 }
 
-/* 图标圆：等价于「头像位」，色只做浅底装饰（--c-device 系），不承载状态语义 */
 .dev-id__badge {
   position: relative;
   display: grid;
@@ -65,7 +58,6 @@ const address = computed(() => deviceAddress(props.device))
   background: color-mix(in srgb, var(--c-device) 24%, var(--app-bg-card));
 }
 
-/* 选中态只加 0 模糊外环（G12：模糊半径必须为 0） */
 .dev-id.is-selected .dev-id__badge {
   box-shadow: 0 0 0 2px var(--c-device);
 }
@@ -80,7 +72,6 @@ const address = computed(() => deviceAddress(props.device))
   opacity: 0.8;
 }
 
-/* 状态点：与「状态」列同源，只作辅助，不替代状态列 */
 .dev-id__dot {
   position: absolute;
   right: -2px;

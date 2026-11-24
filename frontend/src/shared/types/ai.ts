@@ -1,15 +1,10 @@
-/** AI 助手模块共享类型 — 智能体、线路配置、工具与任务发布 DTO */
-
-// ── 字面量联合类型 ──
-
 export type AgentStatus = "active" | "paused" | "error"
 
-// ── Agent ──
 export interface AgentRecord {
   id: number
   name: string
   status: AgentStatus
-  /** 任务类型：device_control=设备执行；case_authoring=家电测试用例编写 */
+
   task_kind?: string
   model_name?: string
   model_provider?: string
@@ -24,7 +19,6 @@ export interface AgentRecord {
   route_configs?: RouteConfigMap
 }
 
-// ── 多线路模型配置 ──
 export interface RouteModelConfig {
   provider?: string
   model_name?: string
@@ -47,7 +41,6 @@ export interface RouteConfigMap {
 
 export type AgentRoute = "device_control"
 
-// ── 任务发布 ──
 export interface TaskRecord {
   id: number
   title: string
@@ -56,27 +49,27 @@ export interface TaskRecord {
   status: string
   result?: string
   device_serial?: string
-  /** 卡片展示用设备名（型号）；空则前端回退 serial */
+
   device_label?: string
-  /** 指定用例标题；空串/缺省=全部用例 */
+
   case_title?: string
-  /** 冻结身份算出的一句文案；空表示旧任务 */
+
   case_label?: string
-  /** 悬停用的冻结行，顺序与提交一致 */
+
   case_rows?: { project: string; id: string; title: string }[]
-  /** 当前线路助手名（实时派生，随改名同步） */
+
   assistant_name?: string
-  /** 附件原始文件名（仅文件名，正文只在详情下发） */
+
   attachment_filename?: string
-  /** 全部附件文件名；列表不下发正文 */
+
   attachment_names?: string[]
   created_at?: string
   started_at?: string
   finished_at?: string
   deepseek_cost?: number
-  /** 本次运行的报告目录名（backend_bridge 报告根下的时间戳目录）；没有报告时为空 */
+
   report_run?: string
-  /** 本次运行的报告文件名；没有报告时为空 */
+
   report_name?: string
   workflow_id?: number | null
   workflow_name?: string
@@ -102,7 +95,6 @@ export interface TaskListResponse {
   message?: string
 }
 
-/** 任务状态统计（GET /api/tasks/stats/）；成功率口径 = 成功 ÷ 已结束 */
 export interface TaskStats {
   total: number
   running: number
@@ -113,11 +105,10 @@ export interface TaskStats {
   cancelled: number
   finished: number
   success_rate: number
-  /** 分智能体统计：每个可见智能体一项，没有任务的智能体给全 0 */
+
   agents?: TaskAgentStats[]
 }
 
-/** 单个智能体的任务统计（字段与总体统计同口径） */
 export interface TaskAgentStats extends Omit<TaskStats, "agents"> {
   id: number
   name: string
@@ -137,7 +128,6 @@ export interface TaskFailedItem {
   actual?: string
 }
 
-/** 规划步骤：一步一操作 + 一步一断言 */
 export interface TaskRunStep {
   action: string
   assert: string
@@ -145,46 +135,43 @@ export interface TaskRunStep {
 
 export interface TaskRunExecutorOut {
   result?: string
-  /** 点击前的时间戳（新执行契约；存量旧记录没有该键） */
+
   click_timer?: string
-  /** 点击后截图的相对路径（新执行契约；无截图时为空串） */
+
   screenshot?: string
-  /** 存量旧记录：执行的操作 */
+
   action?: string
-  /** 存量旧记录：模型写的说明文字 */
+
   message?: string
 }
 
 export interface TaskRunVerifierOut {
-  /** 验收结论：新契约为 PASS/FAIL 字符串，存量旧记录为 boolean */
   result?: boolean | string
-  /** 点击前的时间戳（新验收契约；存量旧记录没有该键） */
+
   click_timer?: string
-  /** 检测到日志关键词的时间戳（新验收契约；未检测到为空串） */
+
   logAssertionTimer?: string
-  /** 本轮检查的日志关键词（新验收契约；平台按检查工具调用自动填） */
+
   logAssertionInfo?: string
-  /** 验证截图的相对路径（新验收契约；未取到路径为空串） */
+
   screenshot?: string
-  /** 实际结果说明（截图里真实看到了什么） */
+
   actual?: string
-  /** 存量旧记录：被验证的操作 */
+
   action?: string
-  /** 存量旧记录：断言 */
+
   assert?: string
   summary?: string
   completed?: string[]
   failed?: TaskFailedItem[]
 }
 
-/** 设备日志证据：命中的功能点（关键词 → 功能模块 / 功能点） */
 export interface TaskLogFeature {
   id?: number
   module?: string
   feature?: string
 }
 
-/** 设备日志证据：某个关键词的一次出现（那一刻的原文） */
 export interface TaskLogOccurrence {
   timestamp?: string
   source?: string
@@ -192,7 +179,6 @@ export interface TaskLogOccurrence {
   grade?: string
 }
 
-/** 设备日志证据：窗口原始日志行（同毫秒已合并，text 内保留换行） */
 export interface TaskLogLine {
   timestamp?: string
   source?: string
@@ -200,10 +186,9 @@ export interface TaskLogLine {
   port?: number
 }
 
-/** 设备日志证据：某个关键词的命中块 */
 export interface TaskLogEvidenceHit {
   keyword?: string
-  /** strong（强证据）/ periodic（疑似周期，不能单独作为通过依据）/ before_action / out_of_window */
+
   grade?: string
   count?: number
   timestamps?: string[]
@@ -212,7 +197,6 @@ export interface TaskLogEvidenceHit {
   baseline_occurrences?: Array<{ timestamp?: string; text?: string }>
 }
 
-/** 设备日志证据：某步的验收取证块（引擎写入过程记录，页面只读展示） */
 export interface TaskLogEvidence {
   channel?: string
   window_id?: string
@@ -222,7 +206,7 @@ export interface TaskLogEvidence {
   threshold_seconds?: number
   baseline_seconds?: number
   window_line_count?: number
-  /** hit / no_hit / no_log / out_of_window */
+
   conclusion?: string
   hits?: TaskLogEvidenceHit[]
   before_action?: Array<{ keyword?: string; timestamp?: string; text?: string; grade?: string }>
@@ -233,37 +217,34 @@ export interface TaskLogEvidence {
     grade?: string
     delta_seconds?: number
   }>
-  /** 窗口原始日志（服务端已按「同毫秒合并 + 最新在上」排好，前端 MUST NOT 再排序） */
+
   lines?: TaskLogLine[]
 }
 
-/** 执行侧点击证据：一次副作用点击（点击前时间点 + 点击后截图路径，未截图时为空串） */
 export interface TaskLogCheckClick {
   action_time?: string
   screenshot_path?: string
 }
 
-/** 执行侧点击证据块（引擎写入过程记录；log 只在「本步断言需日志核对」时非空） */
 export interface TaskLogCheck {
   clicks?: TaskLogCheckClick[]
-  /** 与该步验收证据同源的 5 秒窗口证据（不需日志核对的步骤为空） */
+
   log?: TaskLogEvidence | null
 }
 
-/** 过程日志：一步一次重试 */
 export interface TaskRunLogEntry {
   action?: string
   assert?: string
   loop: number
   executor?: string | TaskRunExecutorOut
   verifier?: TaskRunVerifierOut
-  /** 验收证据截图（相对 MEDIA，如 ai_tasks/12/s2_l1.jpg） */
+
   screenshot?: string
-  /** 本步的验收设备日志证据（老任务 / 未采集时缺省） */
+
   log_evidence?: TaskLogEvidence
-  /** 本步执行侧的点击证据（老任务 / 本步无点击且不需日志时缺省） */
+
   executor_log_check?: TaskLogCheck
-  /** @deprecated 旧协议按目标聚合 */
+
   goal?: string
   steps?: Array<string | TaskRunStep>
   verification?: string
@@ -271,10 +252,9 @@ export interface TaskRunLogEntry {
 }
 
 export interface TaskRunPlan {
-  /** 规划输出已不再回述目标；存量记录里该键仍可能存在，故为可选 */
   goal?: string
   steps?: Array<string | TaskRunStep>
-  /** @deprecated 旧协议目标级验收 */
+
   verification?: string
 }
 
@@ -302,15 +282,15 @@ export interface TaskDetail {
   device_label?: string
   assistant_name?: string
   attachment_filename?: string
-  /** 附件解析后的 Markdown 正文全文；无附件为空串 */
+
   attachment?: string
-  /** 引擎实际交给规划模型的四键 JSON 原文（与装配同源派生） */
+
   planner_input?: string
-  /** 配置加载结论：配置加载成功 / 加载失败 */
+
   load_message?: string
-  /** 配置 YAML 原文 */
+
   yaml_body?: string
-  /** 文档附件的解析正文 */
+
   documents?: { filename: string; body: string }[]
   created_at?: string
   started_at?: string
@@ -332,26 +312,20 @@ export interface TaskDetailResponse {
   message?: string
 }
 
-// ── 任务详情报告（GET /api/tasks/{id}/report/）──
-// 只读展示：轮次按 step_seq 归到用例步骤，页面不再自行拼接轮次标题。
-
-/** 报告轮次里的一个阶段块 */
 export interface TaskReportBlock {
-  /** 开始 / 推理 / 执行 / 结束 */
   phase?: string
-  /** 块标题（后端已转中文） */
+
   title?: string
   items?: TaskReportBlockItem[]
 }
 
-/** 阶段块里的一条事件 */
 export interface TaskReportBlockItem {
   seq: number
   event_type?: string
   label?: string
   detail?: string
   time?: string
-  /** 连续同类增量的合并条数 */
+
   count?: number
   step_seq?: number | null
   attempt?: number | null
@@ -359,80 +333,75 @@ export interface TaskReportBlockItem {
   role_kind?: string
   model?: string
   status?: string
-  /** 截图编号；图片字节走 /tasks/{id}/media/{media_id}/ */
+
   media_id?: number | null
   handover?: string
   verdict?: TaskReportRoundVerdict | null
 }
 
-/** 一次验收判决 */
 export interface TaskReportRoundVerdict {
   passed?: boolean | null
   message?: string
 }
 
-/** 一轮：一条 ReplyStartEvent 或一条 SOP 步骤起点开启 */
 export interface TaskReportRound {
   round_id: number
-  /** 角色名（徽章文本），存量数据可能为空 */
+
   role?: string
   role_name?: string
-  /** executor / verifier / planner 等 */
+
   role_kind?: string
   model?: string
   step_seq?: number | null
-  /** 该步第几次尝试 */
+
   attempt?: number | null
-  /** 该轮要做的动作或要达成的结果 */
+
   subject?: string
   duty?: string
   handover?: string
   verdict?: TaskReportRoundVerdict | null
   blocks?: TaskReportBlock[]
-  /** 该轮模型调用时长（毫秒）：只统计 ModelCallEndEvent，未结束为已发生的部分 */
+
   model_ms?: number
-  /** 该轮尚未结束（缺少结束事件） */
+
   running?: boolean
 }
 
-/** 用例步骤：动作、预期与结果（结果由后端算好） */
 export interface TaskReportStep {
   seq: number
   action?: string
   expected?: string
-  /** PASS / FAIL / 未完成 / 未执行 */
+
   outcome?: string
-  /** 该步墙钟耗时（毫秒），含重试与验收；无时间戳为 0 */
+
   duration_ms?: number
-  /** 该步模型调用合计（毫秒） */
+
   model_ms?: number
-  /** 该步工具返回合计（毫秒） */
+
   tool_ms?: number
-  /** 该步空档：墙钟减去模型与工具，不为负（毫秒） */
+
   idle_ms?: number
-  /** 该步被引擎打断的原因（例如设备日志为空）；没有打断时为空串 */
+
   interrupt?: string
-  /** 中断类别：log 证据不可用 / exception 执行层异常；没有中断时为空串 */
+
   interrupt_kind?: string
-  /** 导致中断的工具名；不是工具导致时为空串 */
+
   interrupt_tool?: string
-  /** 该步仍有未结束的轮次 */
+
   running?: boolean
 }
 
-/** 一条用例：步骤轴 + 轮次引用 */
 export interface TaskReportCase {
   title?: string
   outcome?: string
   steps?: TaskReportStep[]
   round_ids?: number[]
-  /** 该用例墙钟耗时（毫秒）；无时间戳为 0 */
+
   duration_ms?: number
-  /** 该用例仍有未结束的轮次 */
+
   running?: boolean
 }
 
-/** 报告里的任务摘要（字段比 TaskDetail 窄） */
 export interface TaskReportTask {
   id?: number
   title?: string
@@ -447,7 +416,6 @@ export interface TaskReportTask {
   result?: string
 }
 
-/** 报告里的最终判决 */
 export interface TaskReportConclusion {
   outcome?: string
   delivery?: string
@@ -460,7 +428,6 @@ export interface TaskReportConclusion {
   }>
 }
 
-/** 用例编写任务的模型事件行 */
 export interface TaskReportEvent {
   seq?: number
   time?: string
@@ -474,7 +441,6 @@ export interface TaskReportEvent {
   count?: number
 }
 
-/** 用例编写任务的三段式产物计数 */
 export interface TaskArtifactSummary {
   counts?: {
     states?: number
@@ -485,25 +451,23 @@ export interface TaskArtifactSummary {
   diagram?: string
 }
 
-/** 用例编写任务的事实预检摘要 */
 export interface TaskFactsSummary {
   blocking?: number
   warnings?: number
 }
 
-/** 报告负载：data 字段 */
 export interface TaskReportPayload {
   task?: TaskReportTask
   rounds?: TaskReportRound[]
   cases?: TaskReportCase[]
   conclusion?: TaskReportConclusion | null
-  /** 用例编写任务的事件流 */
+
   events?: TaskReportEvent[]
-  /** 用例编写任务的入库结果 */
+
   case_import?: Record<string, unknown> | null
-  /** 用例编写任务的三段式产物计数 */
+
   artifact?: TaskArtifactSummary | null
-  /** 用例编写任务的事实预检摘要 */
+
   facts?: TaskFactsSummary | null
 }
 
@@ -524,8 +488,6 @@ export interface TaskSubmitResponse {
   message?: string
 }
 
-// ── API 响应（宽松 interface — strict:false 下字面量判别属性会被拓宽，union 窄化失效）
-// Agents 组（Batch 1 已迁 DRF）：信封 {status, data}。
 export interface AgentListResponse {
   status?: boolean
   data?: { agents: AgentRecord[] }

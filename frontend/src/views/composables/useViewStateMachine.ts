@@ -1,10 +1,3 @@
-/**
- * 登录页在「登录」和「注册」之间切换。
- *
- * 业务：
- * - 打开页面时停在登录
- * - 切到另一侧时清掉当前的服务端错误提示
- */
 import { ref, type Ref } from "vue"
 import type { ViewState } from "@/shared/types/auth"
 

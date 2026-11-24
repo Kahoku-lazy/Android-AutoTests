@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 关键词维护写库口（create_keyword / update_keyword）集成测试 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/serial_log/integration/test_keyword_crud.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/serial_log
-🏁
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -18,7 +9,6 @@ pytestmark = [pytest.mark.django_db, pytest.mark.integration]
 
 
 def _create(keyword="switch_on", **kwargs):
-    """新建一条通用条目（默认字段齐全）。"""
     defaults = {"module": "设备开关", "feature": "打开设备成功", "feature_id": 0}
     defaults.update(kwargs)
     return api.create_keyword(keyword, **defaults)

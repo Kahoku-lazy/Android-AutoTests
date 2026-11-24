@@ -1,10 +1,7 @@
-# Generated for assistant-author. Grants are separate from the operator group.
-
 from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ai_assistant", "0077_workflow_orchestration_kind"),
     ]

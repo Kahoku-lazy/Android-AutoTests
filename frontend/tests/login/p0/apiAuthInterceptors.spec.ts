@@ -1,7 +1,3 @@
-/**
- * [P0] 必测 — api-client 鉴权拦截器（并发 refresh / 重试 / 续期失败）
- * 目录：tests/login/p0/
- */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { AxiosError, InternalAxiosRequestConfig } from "axios"
 import { createAuthInterceptors } from "@/shared/api-auth-interceptors"

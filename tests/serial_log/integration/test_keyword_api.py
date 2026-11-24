@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 关键词对照表写库口（api.py）集成测试：并集口径、upsert 唯一键、续编与行序 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/serial_log/integration/test_keyword_api.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/serial_log、engines/device
-🏁
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -19,7 +10,6 @@ pytestmark = [pytest.mark.django_db, pytest.mark.integration]
 
 
 def _seed_general(keyword="switch_on", feature_id=0, feature="打开设备成功"):
-    """登记一条通用条目。"""
     return api.upsert_keyword(
         keyword, module="设备开关", feature=feature, feature_id=feature_id, scope="*"
     )
@@ -50,7 +40,7 @@ def test_specific_does_not_override_general():
     )
     mapping = api.keyword_mapping_for_sku("H6601")
     features = [item["feature"] for item in mapping["switch_on"]]
-    assert features == ["打开设备成功", "H6601打开设备成功"]  # 通用仍在，专用追加
+    assert features == ["打开设备成功", "H6601打开设备成功"]
     assert len(mapping["switch_on"]) == 2
 
 
@@ -95,6 +85,5 @@ def test_mapping_injectable_into_keyword_index():
     hits = index.match("[light_switch][I]: h6601_boot done")
     assert [keyword for keyword, _ in hits] == ["h6601_boot"]
     assert hits[0][1][0]["id"] == 56
-    # 其它型号看不到专用词
     other = KeywordIndex(api.keyword_mapping_for_sku("H2234"))
     assert other.match("h6601_boot") == []

@@ -1,6 +1,3 @@
-/** 知识库检索页 DTO：与后端 apps/knowledge_search 契约对齐（snake_case）。 */
-
-/** 模块登记行 */
 export interface KnowledgeModuleRow {
   id: number
   name: string
@@ -11,7 +8,6 @@ export interface KnowledgeModuleRow {
   updated_at: string
 }
 
-/** 一条未经改写的检索命中 */
 export interface KnowledgeHit {
   base: string
   source: string
@@ -23,14 +19,12 @@ export interface KnowledgeHit {
 
 export type QueryResultStatus = "ok" | "no_hit" | "unavailable"
 
-/** 提问结果：三态 + 命中 + 逐库错误 */
 export interface QueryResult {
   result: QueryResultStatus
   hits: KnowledgeHit[]
   errors: string[]
 }
 
-/** 全局检索配置：全库共用一份。 */
 export interface RetrievalSettings {
   configured: boolean
   embedding_model_id: number | null
@@ -42,7 +36,6 @@ export interface RetrievalSettings {
   reindex_required: boolean
 }
 
-/** 新增/编辑模块入参 */
 export interface ModulePayload {
   name: string
   description: string
@@ -50,16 +43,12 @@ export interface ModulePayload {
   enabled?: boolean
 }
 
-/** 预建索引结果 */
 export interface IndexOutcome {
   ok: boolean
   error: string
   reindexed: number
 }
 
-// ── 自动评测 ──
-
-/** 评测指标（后端 eval_metrics.summarize 形状） */
 export interface EvalMetrics {
   n_pos: number
   n_neg: number
@@ -70,7 +59,6 @@ export interface EvalMetrics {
   false_hit_rate: number
 }
 
-/** 评测运行 */
 export interface EvalRun {
   id: number
   run_id: string
@@ -99,7 +87,6 @@ export interface EvalRun {
   updated_at: string
 }
 
-/** 评测逐题明细 */
 export interface EvalQuery {
   id: number
   kind: "positive" | "negative"
@@ -113,12 +100,10 @@ export interface EvalQuery {
   is_hit: boolean
 }
 
-/** 运行详情（含逐题） */
 export interface EvalRunDetail extends EvalRun {
   queries: EvalQuery[]
 }
 
-/** 运营模型配置（只读引用，chat 类用于出题） */
 export interface EvalModelConfig {
   id: number
   provider: string
@@ -128,7 +113,6 @@ export interface EvalModelConfig {
   base_url: string
 }
 
-/** 触发评测入参 */
 export interface EvalTriggerPayload {
   module_id: number
   model_config_id: number

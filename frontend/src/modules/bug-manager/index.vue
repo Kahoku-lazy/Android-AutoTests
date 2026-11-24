@@ -152,7 +152,6 @@ function errorMessage(error: unknown, fallback: string): string {
       </section>
 
       <section class="doc-section bug-table-section">
-        <!-- 控制区一行：分类 chip 在最左，其后是手稿皮肤搜索 / 状态，最后是同步键 -->
         <div class="filter-bar sketch-kit">
           <FilterTabs class="bug-category-tabs" :tabs="categoryTabs" v-model="category" />
           <div class="sketch-field bug-field">
@@ -227,7 +226,6 @@ function errorMessage(error: unknown, fallback: string): string {
           class="bug-table"
           @row-click="openDetail"
         >
-          <!-- 表头图标与列名同源（列配置的 icon / title），纯文字列名不受影响 -->
           <template
             v-for="col in columns"
             :key="`head-${col.dataIndex}`"

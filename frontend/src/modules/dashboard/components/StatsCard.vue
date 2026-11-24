@@ -1,8 +1,4 @@
 <script setup lang="ts">
-/**
- * StatsCard — 仪表盘统计入口（薄包装共享 KpiCard entry）
- * 保留 count-up / loading / path 路由 / live / trend；视觉壳交给 KpiCard。
- */
 import { ref, computed, watch } from "vue"
 import { useRouter } from "vue-router"
 import { countUpFormatted, formatSignificant } from "@/shared/animations"
@@ -15,12 +11,12 @@ export interface StatsCardProps {
   prefix?: string
   suffix?: string
   desc?: string
-  /** sage | gray | rose | deep | cream | dust */
+
   color?: string
   path?: string
   loading?: boolean
   decimals?: number
-  /** 大于 0 时按有效数字显示，不再补固定小数位 */
+
   significantDigits?: number
   live?: boolean
   trend?: number
@@ -156,8 +152,7 @@ function navigate() {
 
 <style scoped>
 .stats-card {
-  /* 趋势文字兜底色：全局 --app-status-success-text 缺省时的后备（tokens.css 无同值令牌）*/
-  --stats-card-trend-text: var(--color-teal-29) /* -> --color-teal-29 */;
+  --stats-card-trend-text: var(--color-teal-29);
   width: 100%;
   min-width: 0;
 }

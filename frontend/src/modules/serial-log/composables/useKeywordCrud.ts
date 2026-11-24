@@ -1,8 +1,3 @@
-/** useKeywordCrud — 关键词新建 / 编辑 / 删除的 HTTP 编排（镜像 useCustomPorts 范式）
- *
- * 组件只渲染：这里负责弹窗开合、校验兜底、CRUD 请求与结果提示。
- * 成功后刷新目录拿最新表；删除走二次确认。
- */
 import { ref } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import { createLogKeyword, deleteLogKeyword, updateLogKeyword } from "../api"
@@ -35,7 +30,6 @@ export function useKeywordCrud(reload: () => Promise<void>) {
     formError.value = ""
   }
 
-  /** 弹窗已完成本地校验；这里再校验一次兜底，然后发请求。 */
   async function submit(payload: KeywordFormPayload): Promise<void> {
     if (saving.value) return
     const editing = editRow.value
@@ -70,7 +64,6 @@ export function useKeywordCrud(reload: () => Promise<void>) {
     }
   }
 
-  /** 删除关键词：二次确认 → 删登记 → 刷新目录（日志文件不受影响）。 */
   async function remove(row: LogKeywordRow): Promise<void> {
     try {
       await ElMessageBox.confirm(KEYWORD_DELETE_WARNING, KEYWORD_DELETE_TITLE, {

@@ -1,11 +1,3 @@
-"""
-python -m 调试路径: backend.apps.task_list.media_views
-
-本模块的业务功能如下：
-1. TaskMediaLinkAPIView: 登录用户为可见截图签发短时直链。
-2. SignedTaskMediaAPIView: 按签名与过期时间直接返回截图字节（无需 JWT）。
-"""
-
 from __future__ import annotations
 
 from django.http import HttpResponse
@@ -20,7 +12,6 @@ from backend.apps.task_list import api, media_links
 
 
 def media_response(request, media: dict) -> HttpResponse:
-    """截图字节响应：与 JWT 取图共用同一组缓存头。"""
     etag = f'"{media["sha256"]}"'
     if request.headers.get("If-None-Match") == etag:
         response = HttpResponse(status=304)
@@ -32,8 +23,6 @@ def media_response(request, media: dict) -> HttpResponse:
 
 
 class TaskMediaLinkAPIView(APIView):
-    """POST /api/tasks/{task_id}/media/{media_id}/link — 签发短时直链。"""
-
     @extend_schema(
         tags=["tasks"],
         request=None,
@@ -49,8 +38,6 @@ class TaskMediaLinkAPIView(APIView):
 
 
 class SignedTaskMediaAPIView(APIView):
-    """GET /media/signed/{task_id}/{media_id}/{expires}/{signature} — 签名直链字节。"""
-
     permission_classes = [AllowAny]
 
     @extend_schema(

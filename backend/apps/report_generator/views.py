@@ -1,11 +1,3 @@
-"""report-generator HTTP routes — endpoints under /api/reports/*.
-
-列表是已生成报告的台账（SOP + 智能体两来源），只读聚合走 report_inventory。
-旧 csv/md 文件下载/查看端点已随旧执行引擎遗产退役。
-
-成功响应统一走全局 `{status, data}` 信封（`shared/renderers.EnvelopeJSONRenderer`）。
-"""
-
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.response import Response
@@ -33,8 +25,6 @@ LIST_PARAMETERS = [
 
 
 class ReportListAPIView(APIView):
-    """GET /api/reports — 当前用户可见的已生成报告台账 / 报告数量统计。"""
-
     @extend_schema(
         tags=[REPORT_TAG],
         operation_id="report_list",

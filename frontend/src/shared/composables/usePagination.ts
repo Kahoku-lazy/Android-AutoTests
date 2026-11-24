@@ -1,33 +1,5 @@
 import { ref, computed, watch } from "vue"
 
-/**
- * Standard pagination for a filtered reactive list.
- *
- * @param {import('vue').Ref<Array>} source — reactive data source to paginate
- * @param {{ pageSize?: number, options?: number[] }} [opts]
- * @param {number} [opts.pageSize=10] — items per page
- * @param {number[]} [opts.options=[10,30,50]] — available page size choices
- * @returns {{
- *   PAGE_SIZE_OPTIONS: number[],
- *   pageSize: import('vue').Ref<number>,
- *   currentPage: import('vue').Ref<number>,
- *   totalPages: import('vue').ComputedRef<number>,
- *   pagedItems: import('vue').ComputedRef<Array>,
- *   setPageSize: (size: number) => void,
- *   goPage: (page: number) => void,
- * }}
- *
- * @example
- *   const { pageSize, currentPage, totalPages, pagedItems, setPageSize, goPage }
- *     = usePagination(filteredSource, { pageSize: 20, options: [10, 20, 50, 100] })
- *
- * @example
- *   // In template:
- *   <button v-for="n in PAGE_SIZE_OPTIONS" :key="n" @click="setPageSize(n)">{{ n }}</button>
- *   第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ source.length }} 条
- *   <el-button size="small" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">上一页</el-button>
- *   <el-button size="small" :disabled="currentPage >= totalPages" @click="goPage(currentPage + 1)">下一页</el-button>
- */
 export function usePagination(source, { pageSize = 10, options = [10, 30, 50] } = {}) {
   const PAGE_SIZE_OPTIONS = options
   const size = ref(pageSize)
@@ -40,8 +12,6 @@ export function usePagination(source, { pageSize = 10, options = [10, 30, 50] } 
     return source.value.slice(start, start + size.value)
   })
 
-  // 数据源缩小导致页数减少时夹取页码：否则分页会切出空片
-  // （各页不必再各写一遍 watch；「筛选变化回第 1 页」仍属页面语义，由页面自行声明）
   watch(totalPages, (tp) => {
     if (current.value > tp) current.value = tp
   })

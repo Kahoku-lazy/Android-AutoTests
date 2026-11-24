@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 认证令牌类接口测试 — refresh / logout / me 的单请求用例 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/auth/api/test_auth_tokens.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/accounts（账号与会话）
-🏁
-"""
-
 import pytest
 
 from tests.api_kit.loader import execute_case, load_cases
@@ -30,7 +21,6 @@ def _token_ctx(tokens: dict) -> dict:
 @pytest.mark.api
 @pytest.mark.auth
 def test_auth_tokens_unauthenticated(base_url, api_session, admin_login, case):
-    """不带 Authorization 头：refresh 系列与「未带令牌登出」。"""
     _, tokens = admin_login
     execute_case(base_url, api_session, case, _token_ctx(tokens))
 
@@ -39,6 +29,5 @@ def test_auth_tokens_unauthenticated(base_url, api_session, admin_login, case):
 @pytest.mark.api
 @pytest.mark.auth
 def test_auth_tokens_authenticated(base_url, admin_login, case):
-    """带 Authorization 头：正常登出与读取身份。"""
     session, tokens = admin_login
     execute_case(base_url, session, case, _token_ctx(tokens))

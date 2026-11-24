@@ -1,10 +1,3 @@
-/**
- * [P0] 必测 — 设备列表心跳轮询（fake timers，不真实等待 30s）
- * 目录：tests/device-pool/p0/
- *
- * useHeartbeat：startHeartbeat 按 HEARTBEAT_INTERVAL 周期调用 tick、
- * 重复 start 不产生双定时器、组件卸载后 onUnmounted 停止轮询。
- */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { useHeartbeat } from "@/modules/device-pool/composables/useHeartbeat"
 import { HEARTBEAT_INTERVAL } from "@/modules/device-pool/constants"

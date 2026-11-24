@@ -190,8 +190,6 @@
 </template>
 
 <script setup lang="ts">
-/** WifiPortPanel — 串口日志页「无线端口」Tab：本机 IP 条 + 五列表格 + 自定义端口增删改
- *  + 只看监听中筛选 + 分页 + 原始日志抽屉；监听失败红色胶囊与重试。 */
 import { computed, onMounted, ref } from "vue"
 import AppTable from "@/shared/components/AppTable.vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
@@ -232,7 +230,6 @@ import type { LogPortRow } from "../api"
 
 const props = defineProps<{ canManage?: boolean }>()
 
-/** 五列：前三列只读展示，后两列是操作（开关 / 日志查看）；列头带图标 */
 const COLUMNS = [
   { dataIndex: "port", title: "端口", icon: "🔌", minWidth: 200 },
   { dataIndex: "sku", title: "SKU名称", icon: "▣", minWidth: 160 },
@@ -266,7 +263,6 @@ const {
   onAutoRefreshChange,
 } = useLogPorts()
 
-/** 自定义端口增删改：弹窗开合 / 校验兜底 / CRUD 编排都在 composable */
 const {
   dialogVisible,
   editRow,
@@ -279,7 +275,6 @@ const {
   remove,
 } = useCustomPorts(ports, loadPorts)
 
-/** 只看监听中：本地筛选，不发请求 */
 const onlyListening = ref(false)
 const filteredPorts = computed(() =>
   onlyListening.value ? ports.value.filter((row) => row.enabled) : ports.value,
@@ -300,7 +295,6 @@ function toggleOnlyListening(): void {
   goPage(1)
 }
 
-/** 服务端已按「同毫秒合并、最新在上」排好：这里只做装饰，不再排序 */
 const decorated = computed(() => decorateLogLines(lines.value))
 
 const portsWithNote = computed(() => ports.value.filter((row) => Boolean(row.note)))
@@ -315,7 +309,6 @@ const emptyText = computed(
   () => logConclusionText(conclusion.value, activePort.value?.port || 0) || "当前日志文件暂无内容",
 )
 
-/** 状态胶囊色相：监听中绿 / 监听失败红 / 已停止灰 */
 function statusTone(row: LogPortRow): string {
   if (!row.enabled) return "is-off"
   return row.listening ? "is-on" : "is-fail"

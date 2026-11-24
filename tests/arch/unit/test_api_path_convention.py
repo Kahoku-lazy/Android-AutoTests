@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ API 路径约定：全部 /api/ 路由以尾斜杠结尾，缺失即 404 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_api_path_convention.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/shared/auth
-🏁
-"""
-
 from __future__ import annotations
 
 import json
@@ -38,11 +29,6 @@ def authed():
 
 
 def test_every_api_route_ends_with_slash():
-    """路由表内不得存在无尾斜杠的 /api/ 路由。
-
-    DRF router 还会生成 ".json" 格式后缀分支（形如 ^x 加上可选的 format 捕获组），
-    那是另一个特性，不计入尾斜杠判定。
-    """
     bad = []
     for route, pattern in _walk(get_resolver().url_patterns):
         if not route.startswith("api/"):
@@ -56,34 +42,26 @@ def test_every_api_route_ends_with_slash():
 
 
 def test_public_path_without_slash_returns_404():
-    """公开前缀不含尾斜杠 ⇒ 缺失尾斜杠会走到路由解析，得到确定的 404。"""
     assert Client().get("/api/auth/login").status_code == 404
 
 
 @pytest.mark.parametrize("path", ["/api/auth/me", "/api/schema", "/api/devices/scan"])
 def test_authenticated_missing_slash_returns_404(authed, path: str):
-    """已鉴权下，任何缺失尾斜杠的路径都必须是 404（不再被重定向或改写）。"""
     assert authed.get(path).status_code == 404
 
 
 @pytest.mark.parametrize("path", ["/api/schema", "/api/swagger"])
 def test_slashed_public_prefix_without_slash_is_401(path: str):
-    """公开前缀带尾斜杠 ⇒ 无斜杠形式匹配不到该前缀，被 JWT 中间件先行拦下（401）。
-
-    401 只说明"未获授权"，**不能**用来推断路径是否存在 —— 这正是上面的已鉴权用例存在的理由。
-    """
     assert Client().get(path).status_code == 401
 
 
 @pytest.mark.parametrize("path", ["/api/auth/login", "/api/devices/scan", "/api/auth/me"])
 def test_missing_slash_never_redirects(path: str):
-    """不得出现 3xx —— 301 会丢 Authorization 头，且可能把 POST 降级为 GET。"""
     resp = Client().post(path, data=json.dumps({}), content_type="application/json")
     assert not (300 <= resp.status_code < 400), f"{path} 出现重定向 {resp.status_code}"
 
 
 def test_trailing_slash_form_hits_the_view(authed):
-    """带尾斜杠是唯一正确写法：空 body 得到 400（已命中视图），而不是 404。"""
     resp = authed.post("/api/auth/login/", data=json.dumps({}), content_type="application/json")
     assert resp.status_code == 400
     assert authed.get("/api/auth/me/").status_code == 200

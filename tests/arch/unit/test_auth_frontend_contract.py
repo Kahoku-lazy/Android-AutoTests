@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 前端认证契约与后端事实的对拍：响应字段、公开端点清单 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_auth_frontend_contract.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/gateway/middleware.py
-🏁
-"""
-
 from __future__ import annotations
 
 import ast
@@ -24,7 +15,6 @@ INTERCEPTORS = REPO_ROOT / "frontend/src/shared/api-auth-interceptors.ts"
 BACKEND_VIEWS = REPO_ROOT / "backend/apps/accounts/views.py"
 BACKEND_JWT = REPO_ROOT / "backend/shared/auth/jwt_auth.py"
 
-# 错误响应的唯一 key；除它之外的 Response 就是成功响应
 ERROR_KEY_SET = {"detail"}
 
 
@@ -33,7 +23,6 @@ def _read(path: pathlib.Path) -> str:
 
 
 def _interface_fields(path: pathlib.Path, name: str) -> set[str]:
-    """读出某个 interface 声明的顶层字段名。"""
     fields: set[str] = set()
     inside = False
     for line in _read(path).splitlines():
@@ -58,7 +47,6 @@ def _call_name(node: ast.AST) -> str:
 
 
 def _token_pair_keys() -> set[str]:
-    """后端 create_token_pair() 返回的 key 集合。"""
     tree = ast.parse(_read(BACKEND_JWT))
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef) and node.name == "create_token_pair":
@@ -69,7 +57,6 @@ def _token_pair_keys() -> set[str]:
 
 
 def _response_key_sets(class_name: str, method: str) -> list[set[str]]:
-    """某视图方法里每个 Response({...}) 的顶层 key集合；★★tokens 展开为 create_token_pair 的 key。"""
     tokens = _token_pair_keys()
     out: list[set[str]] = []
     tree = ast.parse(_read(BACKEND_VIEWS))
@@ -90,7 +77,7 @@ def _response_key_sets(class_name: str, method: str) -> list[set[str]]:
                 keys: set[str] = set()
                 for index, key in enumerate(call.args[0].keys):
                     if key is None:
-                        keys |= tokens  # **tokens
+                        keys |= tokens
                     elif isinstance(key, ast.Constant):
                         keys.add(str(key.value))
                 out.append(keys)
@@ -98,7 +85,6 @@ def _response_key_sets(class_name: str, method: str) -> list[set[str]]:
 
 
 def _success_keys(class_name: str, method: str) -> set[str]:
-    """成功响应的 key 集合（排除 {detail} 形式的错误响应）。"""
     for keys in _response_key_sets(class_name, method):
         if keys != ERROR_KEY_SET:
             return keys
@@ -106,7 +92,6 @@ def _success_keys(class_name: str, method: str) -> set[str]:
 
 
 def _me_user_keys() -> set[str]:
-    """MeView 成功响应里嵌套 user 对象的 key。"""
     tree = ast.parse(_read(BACKEND_VIEWS))
     for node in ast.walk(tree):
         if not (isinstance(node, ast.ClassDef) and node.name == "MeView"):
@@ -133,14 +118,12 @@ def _me_user_keys() -> set[str]:
 
 
 def _interceptor_public_paths() -> set[str]:
-    """前端拦截器声明的公开端点（相对 baseURL）。"""
     text = _read(INTERCEPTORS)
     match = re.search(r"PUBLIC_AUTH_PATHS\s*=\s*\[([^\]]*)\]", text)
     return set(re.findall(r"['\"]([^'\"]+)['\"]", match.group(1))) if match else set()
 
 
 def _gateway_public_auth_paths() -> set[str]:
-    """网关 PUBLIC_PREFIXES 中 /api/auth/ 的那一部分（去掉 /api 前缀以便对拍）。"""
     from backend.gateway.middleware import PUBLIC_PREFIXES
 
     return {p[len("/api") :] for p in PUBLIC_PREFIXES if p.startswith("/api/auth/")}
@@ -152,7 +135,6 @@ REFRESH_KEYS = _success_keys("RefreshView", "post")
 
 
 def test_extraction_finds_the_expected_sides():
-    """两边都必须真的读到东西，否则子集断言会因为空集合而空跑通过。"""
     actual = {
         "登录响应 key": LOGIN_KEYS,
         "注册响应 key": REGISTER_KEYS,
@@ -169,7 +151,6 @@ def test_extraction_finds_the_expected_sides():
 
 
 def test_token_dto_fields_are_returned_by_both_endpoints():
-    """`AuthTokenData` 被 login 与 register 共用：它声明的每个字段都必须被两者返回。"""
     declared = _interface_fields(AUTH_TYPES, "AuthTokenData")
     both = LOGIN_KEYS & REGISTER_KEYS
     extra = sorted(declared - both)
@@ -185,7 +166,6 @@ def test_token_dto_fields_are_returned_by_both_endpoints():
 
 
 def test_refresh_dto_fields_are_returned_by_refresh():
-    """`AuthRefreshData` 声明的字段必须都在 refresh 响应里。"""
     declared = _interface_fields(AUTH_TYPES, "AuthRefreshData")
     extra = sorted(declared - REFRESH_KEYS)
     assert extra == [], (
@@ -198,7 +178,6 @@ def test_refresh_dto_fields_are_returned_by_refresh():
 
 
 def test_me_dto_fields_match_me_response_user():
-    """`MeUser` 与 `/api/auth/me/` 响应中 user 对象的 key 必须完全一致。"""
     declared = _interface_fields(AUTH_API, "MeUser")
     actual = _me_user_keys()
     assert declared == actual, (
@@ -210,7 +189,6 @@ def test_me_dto_fields_match_me_response_user():
 
 
 def test_interceptor_public_paths_match_gateway():
-    """拦截器的公开端点清单必须与网关的 /api/auth/* 部分逐项相等。"""
     frontend = _interceptor_public_paths()
     backend = _gateway_public_auth_paths()
     assert frontend == backend, (

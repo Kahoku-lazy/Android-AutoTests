@@ -1,21 +1,8 @@
-"""
-模块功能：➡️ device-pool 数据契约 — 检测/设备信息与 dp_devices 表一一对应 🏁
-Python 调试：➡️ python -m backend.apps.device_pool.contracts 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. tests/device/integration/test_device_registry.py: 覆盖本模块
-🏁
-"""
-
 from dataclasses import dataclass
 from datetime import datetime
 
-# 枚举唯一真相源在 models/（D4 契约：设计方案-Django设计系统分层 行 269/331/375）；
-# 本模块只转发导出，不重复定义，避免同值枚举出现第二份。
 from backend.models.constants import ConnectionType, DeviceStatus, LockReleaseReason, LockStatus
 
-# 本模块是设备域「数据契约」的唯一进口：显式声明对外转发面，
-# 既让 F401 不把未在本文件使用的转发名当死 import 删掉，也说明这些名字是契约的一部分。
 __all__ = [
     "RUNNER_OCCUPIED_PREFIXES",
     "ConnectionType",
@@ -25,35 +12,26 @@ __all__ = [
     "LockStatus",
 ]
 
-# 执行引擎占用前缀：强制释放/设备动作受保护，不与执行引擎抢设备
 RUNNER_OCCUPIED_PREFIXES = ("ai_agent", "runner-", "task-", "run-")
 
 
 @dataclass
 class DeviceInfo:
-    """一台设备的完整数据契约 —— 字段与 Device 模型（dp_devices 表）一一对应。
-
-    检测（detect）产出 serial / connection_type / connection_addr；信息（get_info）
-    补全 model / brand / screen_w / screen_h / android_version；生命周期方法维护
-    status / locked_* / occupied_* / connected_at / added_by；last_seen / created_at
-    由 ORM 自动维护。
-    """
-
-    serial: str = ""  # 设备序列号（唯一身份，无线为真实串号）
-    name: str = ""  # 设备名称
-    model: str = ""  # 型号
-    brand: str = ""  # 品牌
-    screen_w: int = 0  # 屏幕宽度（px）
-    screen_h: int = 0  # 屏幕高度（px）
-    android_version: str = ""  # Android 版本（SDK int）
-    connection_type: ConnectionType = ConnectionType.USB  # 连接方式：USB / WIFI
-    connection_addr: str = ""  # 无线连接地址（IP:port / mDNS），USB 为空
-    status: DeviceStatus = DeviceStatus.ONLINE  # 权威状态：ONLINE / BUSY
-    locked_by: str = ""  # 锁定者用户 ID，空 = 公开
-    locked_at: datetime | None = None  # 锁定时间
-    occupied_by: str = ""  # 进程占用者（检查器 / 执行引擎）
-    occupied_at: datetime | None = None  # 占用时间
-    connected_at: datetime | None = None  # 首次连接时间点
-    added_by: str = ""  # 添加人用户 ID
-    last_seen: datetime | None = None  # 最后在线时间（ORM auto_now 维护）
-    created_at: datetime | None = None  # 创建时间（ORM auto_now_add 维护）
+    serial: str = ""
+    name: str = ""
+    model: str = ""
+    brand: str = ""
+    screen_w: int = 0
+    screen_h: int = 0
+    android_version: str = ""
+    connection_type: ConnectionType = ConnectionType.USB
+    connection_addr: str = ""
+    status: DeviceStatus = DeviceStatus.ONLINE
+    locked_by: str = ""
+    locked_at: datetime | None = None
+    occupied_by: str = ""
+    occupied_at: datetime | None = None
+    connected_at: datetime | None = None
+    added_by: str = ""
+    last_seen: datetime | None = None
+    created_at: datetime | None = None

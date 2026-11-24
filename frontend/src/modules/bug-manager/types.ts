@@ -1,5 +1,3 @@
-/** BUG 单管理 DTO — 与 /api/bugs/* 的 snake_case 契约一致 */
-
 export type BugCategory = "ui_automation" | "case_authoring"
 export type BugStatus = "open" | "resolved" | "ignored"
 

@@ -1,5 +1,3 @@
-"""ASGI config — HTTP + WebSocket via Channels."""
-
 import os
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.config.settings")

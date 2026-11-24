@@ -1,44 +1,29 @@
-/*
- * 用例表页面级样式增量。
- *
- * 表纸（.sketch-sheet）、列头 16 / 正文 14 / 次行 12 三档字号、hover 与斑马纹
- * 都来自 shared/styles/workbench-theme.css；单元格读态文案在 SheetTable.vue 自己的 scoped 块里。
- * 本文件只处理「表纸内部的行级状态」与页面说明文字。
- */
-
-/* ── 1. 行高：控件换成 chip 后，去掉全局给输入件留的上下留白 ── */
 .case-sheet-page :deep(.ac-table td.el-table__cell) {
   padding: var(--app-space-sm) 0;
 }
 
-/* 行可点（开抽屉）；组头行不可点 */
 .case-sheet-page :deep(.el-table__body tr.el-table__row:not(.is-case-group)) {
   cursor: pointer;
 }
 
-/* 行尾操作列：按钮不顶到表纸边线 */
 .case-sheet-page :deep(.ac-table td.el-table__cell:last-child .cell) {
   padding-right: var(--app-space-sm);
 }
 
-/* ── 2. 组头行（span-method 合并后的首列） ── */
 .case-sheet-page :deep(.el-table__body tr.is-case-group > td.el-table__cell) {
   padding: var(--app-space-xs) 0;
   background: var(--app-bg-subtle) !important;
   border-top: 1.5px solid var(--ink);
 }
 
-/* hover 不改变组头底色：它不可编辑，不该有行反馈 */
 .case-sheet-page :deep(.el-table__body tr.is-case-group:hover > td.el-table__cell) {
   background: var(--app-bg-subtle) !important;
 }
 
-/* ── 3. 未保存行：首列一条黄油笔边（硬影，模糊半径 0） ── */
 .case-sheet-page :deep(.el-table__body tr.is-case-dirty > td.el-table__cell:first-child) {
   box-shadow: inset 3px 0 0 0 var(--c-dashboard);
 }
 
-/* ── 4. 分组说明 ── */
 .case-sheet-note {
   font-size: var(--app-size-xs);
   color: var(--app-text-secondary);

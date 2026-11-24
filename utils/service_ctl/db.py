@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 数据库前置检查与连接清理：启动前确认库可用，停机后清理空闲连接 🏁
-Python 调试：➡️ python -m utils.service_ctl.db 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. tests/arch/unit/test_run_db_preflight.py: 连接参数、可达性判定与连接清理
-🏁
-"""
-
 from __future__ import annotations
 
 import os
@@ -24,8 +15,6 @@ SERVICE_START_TIMEOUT_SECONDS = 60
 
 @dataclass(frozen=True)
 class DbConfig:
-    """数据库连接参数；预检、状态行与空闲连接清理共用同一份取值。"""
-
     engine: str
     host: str
     port: int
@@ -36,7 +25,6 @@ class DbConfig:
 
     @classmethod
     def from_env(cls) -> "DbConfig":
-        """从环境变量读取连接参数（`.env` 已由入口加载）。"""
         return cls(
             engine=os.environ.get("DB_ENGINE", "mysql").strip().lower(),
             host=os.environ.get("DB_HOST", "127.0.0.1").strip(),
@@ -49,16 +37,10 @@ class DbConfig:
 
 
 def is_loopback(host: str) -> bool:
-    """数据库地址是否为本机。"""
     return host.strip().lower() in DB_LOOPBACK
 
 
 def reachable(cfg: DbConfig) -> tuple[bool, str]:
-    """用真实连接验证数据库（网络 + 账号 + 库名一次过）；sqlite 直接视为可用。
-
-    Returns:
-        tuple[bool, str]: (是否连通, 失败原因摘要)。
-    """
     if cfg.engine == "sqlite":
         return True, ""
     try:
@@ -79,7 +61,6 @@ def reachable(cfg: DbConfig) -> tuple[bool, str]:
 
 
 def status_line() -> str:
-    """`status` 命令里的数据库描述；永不抛异常。"""
     cfg = DbConfig.from_env()
     if cfg.engine == "sqlite":
         return "SQLite  (DB_ENGINE=sqlite)"
@@ -88,7 +69,6 @@ def status_line() -> str:
 
 
 def start_local_service(cfg: DbConfig) -> tuple[bool, str]:
-    """按平台启动本机数据库服务；返回 (是否成功, 原始输出)。"""
     service = cfg.service
     if IS_WIN:
         command = ["sc.exe", "start", service]
@@ -109,7 +89,6 @@ def start_local_service(cfg: DbConfig) -> tuple[bool, str]:
 
 
 def elevation_hint(cfg: DbConfig) -> str:
-    """给出当前平台启动数据库服务的提权命令。"""
     service = cfg.service
     if IS_WIN:
         return f"net start {service}   （以管理员身份运行）"
@@ -119,7 +98,6 @@ def elevation_hint(cfg: DbConfig) -> str:
 
 
 def ensure(cfg: DbConfig, allow_autostart: bool) -> bool:
-    """启动后端前的数据库检查：可达即通过；本机可尝试拉起服务；否则报错中止。"""
     ok, detail = reachable(cfg)
     if ok:
         print(f"  Database         : {cfg.host}:{cfg.port}  ONLINE")
@@ -147,7 +125,6 @@ def ensure(cfg: DbConfig, allow_autostart: bool) -> bool:
 
 
 def cleanup_idle_connections(cfg: DbConfig) -> None:
-    """清理本平台账号下空闲的 Sleep 连接（best-effort：失败只提示，不阻断停机）。"""
     if cfg.engine == "sqlite":
         return
     try:

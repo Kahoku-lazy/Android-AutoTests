@@ -1,10 +1,3 @@
-/**
- * [P0] 必测 — 串口日志页（spec: serial-log-page）
- *
- * 断言：① 默认选中无线端口，且页面标题为「串口日志」；
- * ② 切到日志关键词后只渲染关键词面板；③ 权限随 is_superuser 传入端口面板；
- * ④ 切 Tab 不触发任何 toggle 写请求。
- */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { mount } from "@vue/test-utils"
 

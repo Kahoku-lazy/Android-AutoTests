@@ -1,10 +1,4 @@
 <script setup lang="ts">
-/**
- * 助手配置表单：名称、头像、Agent 配置、工具域。空工具允许提交。
- *
- * 只出表单本体，弹窗外壳（遮罩 / Esc / 焦点陷阱）由 `index.vue` 的 el-dialog 提供。
- * 传入 `card` 即编辑：字段预填，保存走 PATCH 回写同一张名片。
- */
 import { computed, onMounted, onUnmounted, ref } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
@@ -39,7 +33,7 @@ const error = ref("")
 const editing = computed(() => Boolean(props.card))
 const preview = computed(() => pickedUrl.value || (clearAvatar.value ? "" : existingAvatar.value))
 const swatchVars = computed(() => markerVars(props.card?.marker || "teal"))
-/* 新建时笔色要等创建后按序分配，提示文案分开写，避免说成「该助手的笔色」 */
+
 const avatarHint = computed(() =>
   editing.value ? "不上传就显示该助手的笔色渐变圆" : "不上传就显示创建时分配的笔色渐变圆",
 )
@@ -57,7 +51,6 @@ onUnmounted(() => {
   if (pickedUrl.value) URL.revokeObjectURL(pickedUrl.value)
 })
 
-/** 选图：只在本机预览，提交时才上传。 */
 function onFile(event: Event): void {
   const file = (event.target as HTMLInputElement).files?.[0] || null
   if (pickedUrl.value) URL.revokeObjectURL(pickedUrl.value)
@@ -66,7 +59,6 @@ function onFile(event: Event): void {
   pickedUrl.value = file ? URL.createObjectURL(file) : ""
 }
 
-/** 移除头像：保存后该卡片回到笔色渐变圆。 */
 function removeAvatar(): void {
   if (pickedUrl.value) URL.revokeObjectURL(pickedUrl.value)
   pickedUrl.value = ""
@@ -75,7 +67,6 @@ function removeAvatar(): void {
   existingAvatar.value = ""
 }
 
-/** 删除前二次确认：只删名片，对话记录与历史任务都还在。被工作流占用时直接拒绝。 */
 async function remove(): Promise<void> {
   if (!props.card) return
   const usedBy = workflowsUsingAssistant(props.card.assistant_id, props.workflows || [])
@@ -246,12 +237,9 @@ async function save(): Promise<void> {
   padding-top: var(--app-space-sm);
 }
 
-/* 删除靠左，取消与保存靠右：删除不与保存相邻，避免误点 */
 .assistant-editor__spacer {
   flex: 1;
 }
-
-/* 字段 / 输入框 / 下拉的皮肤在模块级 `editor-form.css`（与工作流弹窗共用） */
 
 .assistant-avatar {
   display: flex;

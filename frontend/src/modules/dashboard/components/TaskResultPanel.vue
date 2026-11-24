@@ -114,7 +114,6 @@ function openTask(task: RecentTask) {
 </template>
 
 <style scoped>
-/* 任务结果面板 — 纯净卡片风 */
 .task-result-panel {
   display: flex;
   flex-direction: column;

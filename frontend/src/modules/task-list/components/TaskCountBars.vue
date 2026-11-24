@@ -1,10 +1,4 @@
 <script setup lang="ts">
-/**
- * TaskCountBars — 一张小柱状图卡（四根柱：成功 / 失败 / 中断 / 取消）。
- *
- * 只负责渲染：标题、副标题与四类数据由父级按「总体」或「某个智能体」给出，
- * 新增智能体时父级多渲染一张，本组件不需要知道有多少智能体。
- */
 import AppCard from "@/shared/components/AppCard.vue"
 import { useECharts } from "@/shared/composables/useECharts"
 import type { OutcomeSlice } from "../helpers/task-stats"
@@ -20,9 +14,6 @@ interface BarLabelParams {
   value?: number
 }
 
-// ⚠️ ECharts 渲染在 Canvas 上，不支持 CSS 变量，此处保留色值字面量。
-//    token 对照：#1e1e24=--ink · #e8ecf1=--app-border-light · #f0ede8=--app-border-lighter
-//    #999=--app-text-secondary；柱色由 helpers/task-stats 按令牌同值给出。
 function buildOption() {
   return {
     animation: true,

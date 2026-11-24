@@ -1,14 +1,5 @@
-"""verifier 提示词补「设备日志证据」使用口径。
-
-设备执行链路的验收模型从本次变更（add-device-log-evidence）起会收到日志证据块
-（动作发出时间 + 取证阈值 + 窗口内命中与原始日志）。本迁移给存量库的 prompt_verifier
-插入该证据的解读与**从严采信**规则：**仅当字段仍含平台原文锚点、且尚未出现该指引时**
-才插入；管理员已改写过的提示词一律不动（与 0041 同一口径）。
-"""
-
 from django.db import migrations
 
-# 平台原文「验收时」第 4 条，作为插入锚点
 _ANCHOR = "- 重点对比 assert（断言/期望结果）与截图的真实状态，判断操作是否成功。"
 _GUIDANCE = (
     "- 输入里可能带有「设备日志证据」块（含动作发出时间、取证阈值、窗口内命中与原始日志）："
@@ -23,14 +14,12 @@ _MARKER = "设备日志证据"
 
 
 def with_log_evidence_guidance(text: str) -> str:
-    """含锚点且尚无该指引时插入；否则原样返回。"""
     if _MARKER in text or _ANCHOR not in text:
         return text
     return text.replace(_ANCHOR, f"{_ANCHOR}\n{_GUIDANCE}", 1)
 
 
 def without_log_evidence_guidance(text: str) -> str:
-    """反向：删掉本迁移插入的那一段。"""
     return text.replace(f"\n{_GUIDANCE}", "", 1)
 
 

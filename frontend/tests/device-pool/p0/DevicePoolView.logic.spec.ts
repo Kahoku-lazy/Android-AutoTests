@@ -1,9 +1,3 @@
-/**
- * [P0] 必测 — 设备池页面编排器（mock 三个子 composable，挂载触发 onMounted）
- * 目录：tests/device-pool/p0/
- *
- * useDevicePoolView：KPI 按状态聚合、切换筛选过滤并重置页码、挂载联动 loadDevices/startHeartbeat。
- */
 import { ref, nextTick } from "vue"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import {

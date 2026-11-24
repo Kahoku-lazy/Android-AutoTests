@@ -66,7 +66,6 @@ SKIP_DIR_NAMES = frozenset({"__pycache__", ".venv", "venv"})
 # Same idea as ruff.toml: vendored skill-creator under engines/agents/skills
 SKILL_CREATOR_MARKER = ("engines", "agents", "skills")
 
-RULE_MODULE_DOC = "module-docstring"
 RULE_TOOL_NAME = "tool-naming"
 RULE_NO_DJANGO = "no-django-apps-import"
 
@@ -114,43 +113,6 @@ def iter_py_files(base: Path) -> list[Path]:
             continue
         out.append(path)
     return out
-
-
-def _module_docstring(tree: ast.Module) -> str | None:
-    return ast.get_docstring(tree, clean=False)
-
-
-def _body_without_doc(tree: ast.Module) -> list[ast.stmt]:
-    body = list(tree.body)
-    if (
-        body
-        and isinstance(body[0], ast.Expr)
-        and isinstance(getattr(body[0], "value", None), ast.Constant)
-    ):
-        if isinstance(body[0].value.value, str):
-            return body[1:]
-    return body
-
-
-def check_module_docstring(path: Path, tree: ast.Module) -> list[Violation]:
-    rel = _rel(path)
-    if path.name == "__init__.py":
-        stmts = _body_without_doc(tree)
-        has_defs = any(
-            isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) for n in tree.body
-        )
-        if not has_defs and len(stmts) <= 2:
-            return []
-    if _module_docstring(tree) is None or not str(_module_docstring(tree)).strip():
-        return [
-            Violation(
-                RULE_MODULE_DOC,
-                rel,
-                1,
-                "missing module docstring (.agents/rules/engines-code-style.md §2)",
-            )
-        ]
-    return []
 
 
 def _under_agents_tools(path: Path) -> bool:
@@ -287,7 +249,6 @@ def scan_file(path: Path) -> list[Violation]:
     if not isinstance(tree, ast.Module):
         return violations
 
-    violations.extend(check_module_docstring(path, tree))
     violations.extend(check_no_django_apps_import(path, tree))
     return violations
 

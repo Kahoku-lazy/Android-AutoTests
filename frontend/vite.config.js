@@ -1,69 +1,62 @@
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import { fileURLToPath, URL } from 'node:url'
-import { scanModules } from './tests/module-scan.mjs'
-import { proxyOnError } from './vite-proxy.js'
-import AutoImport from 'unplugin-auto-import/vite'
-import Components from 'unplugin-vue-components/vite'
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import { defineConfig } from "vite"
+import vue from "@vitejs/plugin-vue"
+import { fileURLToPath, URL } from "node:url"
+import { scanModules } from "./tests/module-scan.mjs"
+import { proxyOnError } from "./vite-proxy.js"
+import AutoImport from "unplugin-auto-import/vite"
+import Components from "unplugin-vue-components/vite"
+import { ElementPlusResolver } from "unplugin-vue-components/resolvers"
 
 const isTest = !!process.env.VITEST
 
 export default defineConfig({
   plugins: [
     vue(),
-    // 单测用 stub 替换 el-*，避免 Element Plus 按需 CSS 拖垮 Vitest
+
     ...(!isTest
       ? [
-          // importStyle: false —— EP 样式统一由 main.ts 全量引入（原因见 main.ts 注释：
-          // 显式 import 的 ElMessageBox 等函数式 API 拿不到 resolver 注入的按需样式），
-          // 关掉按需注入后组件样式只下发一份，不会与全量样式重复。
           AutoImport({
             resolvers: [ElementPlusResolver({ importStyle: false })],
-            dts: 'src/auto-imports.d.ts',
+            dts: "src/auto-imports.d.ts",
           }),
           Components({
             resolvers: [ElementPlusResolver({ importStyle: false })],
-            dts: 'src/components.d.ts',
+            dts: "src/components.d.ts",
           }),
         ]
       : []),
   ],
   resolve: {
     alias: {
-      // ESM-safe：package.json "type":"module" 下无 __dirname
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
   test: {
-    // Vitest UI 按 project 分栏：每模块 × 优先级（login/p0、login/p1…），
-    // 由 module-scan.mjs 扫描 tests/ 生成，新增模块零配置
     projects: scanModules().flatMap((m) =>
       m.prios.map((prio) => ({
         extends: true,
         test: {
           name: `${m.name}/${prio}`,
           include: [`tests/${m.name}/${prio}/**/*.{test,spec}.{js,ts}`],
-          environment: 'jsdom',
+          environment: "jsdom",
           css: false,
         },
       })),
     ),
   },
   server: {
-    host: '0.0.0.0',
+    host: "0.0.0.0",
     port: 5173,
     proxy: {
-      // 后端热重载空窗期回 503 + JSON，避免前端把连接失败显示成业务 500。
-      '/api': {
+      "/api": {
         target: `http://localhost:${process.env.SERVER_PORT || 8766}`,
         configure: proxyOnError,
       },
-      '/media': {
+      "/media": {
         target: `http://localhost:${process.env.SERVER_PORT || 8766}`,
         configure: proxyOnError,
       },
-      '/ws': {
+      "/ws": {
         target: `ws://localhost:${process.env.SERVER_PORT || 8766}`,
         ws: true,
       },
@@ -72,14 +65,13 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // ── vendor 分包：让浏览器并行下载，登录页不被全量库拖累 ──
         manualChunks: {
-          'element-plus': ['element-plus'],
-          'vendor': ['vue', 'vue-router', 'axios', 'animejs'],
+          "element-plus": ["element-plus"],
+          "vendor": ["vue", "vue-router", "axios", "animejs"],
         },
       },
     },
-    // 中文字体文件较大，调高警告阈值避免噪音
+
     chunkSizeWarningLimit: 1500,
   },
 })

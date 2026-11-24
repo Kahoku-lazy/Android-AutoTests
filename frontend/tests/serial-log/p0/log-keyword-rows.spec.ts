@@ -1,12 +1,3 @@
-/**
- * [P0] 必测 — 日志关键词表格行与搜索 / 范围筛选（spec: device-log-keyword-catalog）
- *
- * 目录：tests/serial-log/p0/
- * 断言：① 表内顺序（关键词按表内先后、功能点按表内先后，前端不重排）；
- * ② 一个关键词对应多个功能点 → 多行；③ 计数口径（关键词去重、功能点按模块+编号+名称去重，范围不参与去重）；
- * ④ 搜索覆盖关键词 / 模块 / 功能点，清空回全量；⑤ 缺名占位不丢行；
- * ⑥ 范围：缺省按通用、行标识含范围、范围筛选与搜索叠加、选项派生通用恒首。
- */
 import { describe, expect, it } from "vitest"
 import {
   SCOPE_FILTER_ALL,
@@ -97,7 +88,6 @@ describe("[P0] filterKeywordRows", () => {
   })
 })
 
-/** 带范围的条目构造器（api.ts 契约补 scope 前的过渡类型） */
 function entry(keyword: string, features: LogKeywordScopedFeature[]): LogKeywordEntry {
   return { keyword, features }
 }
@@ -169,7 +159,7 @@ describe("[P0] 范围（scope）", () => {
       { value: "H2234", label: "H2234专用" },
     ]
     expect(scopeOptions(rows)).toEqual(expected)
-    // 选项恒从全量行派生（面板接线口径）：搜索把行收窄后，选项仍按全量行取
+
     expect(filterKeywordRows(rows, "H6601").length).toBe(1)
     expect(scopeOptions(rows)).toEqual(expected)
   })

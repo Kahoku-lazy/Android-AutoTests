@@ -1,10 +1,3 @@
-/**
- * [P0] 必测 — 设备操作 handler（池对象桩注入，不 mock api，校验短路逻辑）
- * 目录：tests/device-pool/p0/
- *
- * useDeviceActions：他人锁定仅弹 warning 不发请求、scanning/loading 中刷新短路、
- * runner 前缀占用拒绝释放、空 target 网络连接短路。
- */
 import { ref } from "vue"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ElMessage } from "element-plus"

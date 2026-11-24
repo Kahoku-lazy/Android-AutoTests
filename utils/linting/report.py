@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 把检查结果渲染成人类可读文本或 JSON 🏁
-Python 调试：➡️ python -m utils.linting.report 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无
-🏁
-"""
-
 from __future__ import annotations
 
 import json
@@ -15,7 +6,6 @@ from utils.linting.model import Report
 
 
 def render_text(report: Report) -> str:
-    """人类可读输出：逐条列链 / 逐条列违规，最后给汇总。"""
     lines = [f"linting：扫描 {report.files_scanned} 个文件，{len(report.contracts)} 条禁止合同"]
 
     for contract in report.contracts:
@@ -45,7 +35,6 @@ def render_text(report: Report) -> str:
 
 
 def render_json(report: Report) -> str:
-    """给门禁 / CI 消费的 JSON。"""
     payload = {
         "ok": report.ok,
         "files_scanned": report.files_scanned,

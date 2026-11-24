@@ -1,15 +1,4 @@
 <script setup lang="ts">
-/**
- * DoodleBtn — 涂鸦操作按钮
- *
- * tone:
- * - danger：删除（马克笔红）
- * - teal：校验 / 详情（青绿，非冷蓝）
- * - yellow：配置（柠黄）
- * - paper：中性纸色（可选）
- *
- * 视觉 DNA：墨色描边 / 近直角 / 硬偏移阴影；对齐 hand-drawn-doodle `#comp-buttons`
- */
 const props = withDefaults(
   defineProps<{
     tone?: "danger" | "teal" | "yellow" | "paper"
@@ -47,7 +36,6 @@ function onClick(e: MouseEvent) {
 
 <style scoped>
 .doodle-btn {
-  /* 禁用态灰阶（本组件专用色值登记处；tokens.css 无同值令牌） */
   --dbtn-disabled-bg: var(--comp-dbtn-disabled-bg);
   --dbtn-disabled-ink: var(--comp-dbtn-disabled-ink);
 

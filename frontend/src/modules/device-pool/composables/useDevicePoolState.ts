@@ -1,4 +1,3 @@
-/** useDevicePoolState — 设备池状态管理 composable（替代 Pinia store） */
 import { ref, computed, type Ref, type ComputedRef } from "vue"
 import {
   apiListDevices,
@@ -12,25 +11,22 @@ import {
 } from "../api"
 import type { DeviceRecord, ScanResponse, DeviceOpResponse } from "@/shared/types/device"
 
-// ── 返回类型接口 ──
-
 export interface UseDevicePoolStateReturn {
-  // state
   devices: Ref<DeviceRecord[]>
   currentSerial: Ref<string>
   loading: Ref<boolean>
   selectedSerial: Ref<string | null>
   scanning: Ref<boolean>
   error: Ref<string | null>
-  /** 开发调试：是否注入模拟设备（开关按钮） */
+
   devMockEnabled: Ref<boolean>
-  // getters
+
   selectedDevice: ComputedRef<DeviceRecord | undefined>
   onlineDevices: ComputedRef<DeviceRecord[]>
   hasDevices: ComputedRef<boolean>
-  // actions
+
   fetchDevices: () => Promise<void>
-  /** 开发调试：开关模拟设备（60 条），开关时刷新列表 */
+
   toggleDevMock: (enabled: boolean) => Promise<void>
   doScan: (
     target?: string,
@@ -45,10 +41,7 @@ export interface UseDevicePoolStateReturn {
   selectDevice: (serial: string) => void
 }
 
-// ── Composable ──
-
 export function useDevicePoolState(): UseDevicePoolStateReturn {
-  // ── State ──
   const devices = ref<DeviceRecord[]>([])
   const currentSerial = ref("")
   const loading = ref(false)
@@ -57,16 +50,12 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
   const error = ref<string | null>(null)
   const devMockEnabled = ref(false)
 
-  // ── Getters ──
   const selectedDevice = computed(() =>
     devices.value.find((d) => d.serial === selectedSerial.value),
   )
   const onlineDevices = computed(() => devices.value.filter((d) => d.status === "ONLINE"))
   const hasDevices = computed(() => devices.value.length > 0)
 
-  // ── Actions ──
-
-  /** 开发调试：生成 N 条模拟设备，验证分页/横向滚动。由 VITE_DEVICE_MOCK='1' 开启，生产可关 */
   function makeMockDevices(count: number): DeviceRecord[] {
     const models = ["SM-G973F", "PIXEL_7", "MI-13", "ONE_PLUS_11", "HONOR_90", "VIVO_X90"]
     const brands = ["samsung", "google", "xiaomi", "oneplus", "honor", "vivo"]
@@ -98,7 +87,7 @@ export function useDevicePoolState(): UseDevicePoolStateReturn {
   async function fetchDevices() {
     loading.value = true
     error.value = null
-    // 开发调试开关开启时注入模拟设备（测分页/横向滚动），否则拉取真实后端
+
     if (devMockEnabled.value) {
       devices.value = makeMockDevices(60)
       currentSerial.value = devices.value[0]?.serial || ""

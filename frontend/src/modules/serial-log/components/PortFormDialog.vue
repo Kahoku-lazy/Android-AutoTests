@@ -1,9 +1,4 @@
 <script setup lang="ts">
-/** PortFormDialog — 新增 / 编辑自定义端口（el-dialog 全局皮肤 + sketch-kit 表单）
- *
- * 组件只渲染与本地表单态：校验走 helpers/port-form，HTTP 编排走 useCustomPorts。
- * 编辑模式端口号禁改；打开时按 editRow 重置表单（清表单）。
- */
 import { reactive, ref, watch } from "vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
 import { validatePortForm } from "../helpers/port-form"
@@ -49,7 +44,6 @@ const form = reactive({
 })
 const localError = ref("")
 
-/** 打开即清表单 / 回填编辑行 */
 watch(
   () => props.visible,
   (open) => {

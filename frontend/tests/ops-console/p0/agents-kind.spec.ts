@@ -1,10 +1,3 @@
-/**
- * [P0] 必测 — Agent 配置「类型」列与保存契约（spec: ops-agent-config / ai-role-registry）
- *
- * 目录：tests/ops-console/p0/
- * 断言：① 「类型」列紧跟在「名称」后；② chip 三种状态（有类型 / 多值 / 未分类）；
- * ③ 草稿 ↔ 接口入参互转与提交前校验（未选类型被拦）。
- */
 import { mount } from "@vue/test-utils"
 import { describe, expect, it } from "vitest"
 import OpsAgentKindTags from "@/modules/ops-console/components/OpsAgentKindTags.vue"

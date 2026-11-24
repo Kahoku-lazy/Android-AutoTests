@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 模型配置接口：语音合成免地址、聊天空地址拒绝、语音合成再次编辑保存 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ai_assistant/api/test_model_configs.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/ai_assistant
-🏁
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -24,7 +15,6 @@ _PATH = "/api/ai/model-configs/"
 
 @pytest.fixture
 def call(db):
-    """直调视图：超管身份，绕过网关中间件。"""
     admin = get_user_model().objects.create_user(
         username="model-config-admin", password="pass", is_superuser=True, is_staff=True
     )

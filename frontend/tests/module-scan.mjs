@@ -1,8 +1,3 @@
-/**
- * 测试模块扫描 — vite.config.js 与 run.mjs 共用的模块清单来源
- * 模块判据：tests/ 下一级目录，含 p0/p1 子目录且其中存在 *.spec|*.test 文件。
- * helpers/、reports/ 因无 p0/p1 自动排除，无需维护白名单。
- */
 import { existsSync, readdirSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"

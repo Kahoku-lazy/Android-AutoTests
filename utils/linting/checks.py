@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 两套判定：允许清单（每个包能依赖谁）与禁止合同（谁绝不许依赖谁） 🏁
-Python 调试：➡️ python -m utils.linting.checks 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无
-🏁
-"""
-
 from __future__ import annotations
 
 from utils.linting.graph import (
@@ -30,7 +21,6 @@ from utils.linting.scan import collect_edges, nearest_module
 def check_allow_list(
     config: Config, edges: list[Edge]
 ) -> tuple[list[AllowViolation], list[tuple[str, str]]]:
-    """按声明模块的 depends_on / cannot_depend_on / utility 裁决，并统计多余依赖。"""
     violations: list[AllowViolation] = []
     used: dict[str, set[str]] = {module_path: set() for module_path in config.modules}
 
@@ -74,7 +64,6 @@ def check_allow_list(
 
 
 def check_forbid(config: Config, edges: list[Edge]) -> tuple[list[ContractResult], list[str]]:
-    """逐条执行禁止合同：删 ignored 边 → 展开模块 → 直接边或最短链。"""
     results: list[ContractResult] = []
     warnings: list[str] = []
     adjacency = build_adjacency(edges)
@@ -102,7 +91,6 @@ def check_forbid(config: Config, edges: list[Edge]) -> tuple[list[ContractResult
 
 
 def _ancestors(node: str) -> set[str]:
-    """a.b.c → {a, a.b}，让 `backend.apps` 这类父包能作为节点被匹配。"""
     parts = node.split(".")
     return {".".join(parts[:depth]) for depth in range(1, len(parts))}
 
@@ -113,7 +101,6 @@ def _chains_for_pair(
     targets: set[str],
     contract: Forbid,
 ) -> list[list[tuple[str, str, int]]]:
-    """一对 source/forbidden 表达式之间的违规链；allow_indirect 时只看直接边。"""
     found: list[list[tuple[str, str, int]]] = []
 
     if contract.allow_indirect:
@@ -135,7 +122,6 @@ def _chains_for_pair(
 
 
 def check(config: Config) -> Report:
-    """跑完整检查：先抽事实，再分别做允许清单与禁止合同。"""
     edges, scanned = collect_edges(config)
     report = Report(files_scanned=scanned)
     report.allow_violations, report.unused = check_allow_list(config, edges)

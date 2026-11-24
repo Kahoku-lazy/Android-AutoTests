@@ -1,10 +1,3 @@
-"""
-python -m 调试路径: backend.apps.case_manager.views_drf
-
-本模块的业务功能如下：
-1. CaseProjectViewSet: 项目与项目表的读写、导入和个人视图。
-"""
-
 from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -44,8 +37,6 @@ def _raise_or_conflict(exc: Exception) -> Response:
     destroy=extend_schema(responses=OpenApiTypes.OBJECT),
 )
 class CaseProjectViewSet(viewsets.ViewSet):
-    """项目列表、项目表、导入与个人视图。"""
-
     queryset = CaseProject.objects.none()
 
     def list(self, request):

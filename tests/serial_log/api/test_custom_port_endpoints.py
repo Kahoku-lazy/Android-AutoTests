@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 自定义端口 HTTP 契约：201/200/400/403、信封字段与路径解析 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/serial_log/api/test_custom_port_endpoints.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/serial_log
-🏁
-"""
-
 from __future__ import annotations
 
 import pytest

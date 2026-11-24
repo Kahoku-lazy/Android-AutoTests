@@ -1,4 +1,3 @@
-/** 运营后台的常量与文案（用户管理 / 智能体 / 模型配置；唯一真相源）。 */
 import type { OpsAgentKind, OpsIdentity, OpsModelKind, OpsStatusFilter } from "./types"
 
 export const OPS_PAGE_TITLE = "用户管理"
@@ -7,7 +6,6 @@ export const OPS_PAGE_ICON = "users"
 export const OPS_PAGE_ICON_GRADIENT =
   "linear-gradient(135deg,var(--c-ops),var(--app-status-danger))"
 
-/** 状态筛选页签：key 直接对应 composable 的筛选状态 */
 export const OPS_FILTER_TABS: { key: OpsStatusFilter; label: string }[] = [
   { key: "all", label: "全部" },
   { key: "active", label: "启用" },
@@ -22,7 +20,6 @@ export const OPS_IDENTITY_LABELS: Record<OpsIdentity, string> = {
   user: "普通用户",
 }
 
-/** 每页固定 10 条：行数选择已下线（与设备 / 任务 / BUG 页同一口径）。 */
 export const OPS_DEFAULT_PAGE_SIZE = 10
 export const OPS_KEYWORD_DEBOUNCE_MS = 300
 
@@ -94,33 +91,29 @@ export const OPS_AGENT_PAGE_TITLE = "Agent配置"
 export const OPS_AGENT_PAGE_SUBTITLE = "只登记名称、一条模型配置和系统提示词"
 export const OPS_AGENT_EMPTY = "还没有 Agent 配置"
 export const OPS_AGENT_DELETE_HINT = "删除后不可恢复。"
-/** Agent 配置列表每页固定 10 条（与用户管理同口径，翻页键常驻） */
+
 export const OPS_AGENT_PAGE_SIZE = 10
-/** Agent 配置的类型：执行者 / 验收者 / 规划者。与后端 `kinds` 取值一一对应。 */
+
 export const OPS_AGENT_KIND_OPTIONS: { value: OpsAgentKind; label: string }[] = [
   { value: "executor", label: "执行者" },
   { value: "verifier", label: "验收者" },
   { value: "planner", label: "规划者" },
 ]
-/** 类型 → 中文名；由 options 派生，避免两处维护同一份文案 */
+
 export const OPS_AGENT_KIND_LABELS = Object.fromEntries(
   OPS_AGENT_KIND_OPTIONS.map((item) => [item.value, item.label]),
 ) as Record<OpsAgentKind, string>
-/** 存量配置还没打类型时的占位文案 */
+
 export const OPS_AGENT_KIND_UNSET = "未分类"
 export const OPS_AGENT_COLUMNS = [
   { label: "名称", prop: "name", minWidth: 160 },
   { label: "类型", prop: "kinds", width: 130 },
   { label: "模型配置", prop: "model_name", minWidth: 200 },
-  /**
-   * 系统提示词是一份几千字的 Markdown：单元格只放一行摘要 + 「查看」，全文交给弹窗。
-   * 关掉 EP 溢出 tooltip —— 它会把整段原文塞进一个按内容撑开的深色浮层，超出屏幕即被切掉。
-   * 用固定 width 而不是 minWidth：摘要是被裁切的一行，按内容量宽度只会越分越窄。
-   */
+
   { label: "系统提示词", prop: "system_prompt", width: 340, showOverflowTooltip: false },
   { label: "操作", prop: "actions", width: 160, align: "right" },
 ]
-/** 模型配置列表每页固定 10 条（与用户管理 / Agent 配置同口径，翻页键常驻） */
+
 export const OPS_MODEL_PAGE_SIZE = 10
 export const OPS_MODEL_COLUMNS = [
   {
@@ -158,7 +151,7 @@ export const OPS_MODEL_COLUMNS = [
   },
   { label: "操作", prop: "actions", icon: "⚙", width: 150, align: "right", headerAlign: "center" },
 ]
-/** 新建模型时的默认类型：与后端 `model_kind` 默认值一致。 */
+
 export const OPS_DEFAULT_MODEL_KIND: OpsModelKind = "chat"
 export const OPS_MODEL_KIND_OPTIONS: { value: OpsModelKind; label: string }[] = [
   { value: "chat", label: "聊天" },
@@ -232,7 +225,7 @@ export const OPS_PROTOCOL_OPTIONS = [
   { value: "dashscope", label: "DashScope" },
   { value: "openai", label: "OpenAI 兼容" },
 ]
-/** 厂商选项：`kinds` 声明该厂商真实支持的模型类型，页面据此过滤。 */
+
 export interface OpsProviderOption {
   value: string
   label: string
@@ -250,43 +243,15 @@ export const OPS_PROVIDER_OPTIONS: OpsProviderOption[] = [
   { value: "openai", label: "openai", key: "OPENAI_API_KEY", kinds: ["chat"] },
 ]
 
-/**
- * 某个模型类型下真正可选的厂商。
- *
- * Args:
- *   kind: 模型类型；缺省按聊天处理。
- *
- * Returns:
- *   按 `OPS_PROVIDER_OPTIONS` 原顺序过滤后的厂商列表。
- */
 export function providersForKind(kind?: string): OpsProviderOption[] {
   const target = kind || OPS_DEFAULT_MODEL_KIND
   return OPS_PROVIDER_OPTIONS.filter((item) => item.kinds.includes(target as OpsModelKind))
 }
 
-/**
- * 某个模型类型的默认厂商（列表第一项）。
- *
- * Args:
- *   kind: 模型类型；缺省按聊天处理。
- *
- * Returns:
- *   默认厂商值；该类型没有厂商时返回空串。
- */
 export function defaultProviderForKind(kind?: string): string {
   return providersForKind(kind)[0]?.value ?? ""
 }
 
-/**
- * 把厂商归一到该模型类型受支持的值：受支持则原样返回，否则回退默认厂商。
- *
- * Args:
- *   kind: 模型类型；缺省按聊天处理。
- *   provider: 待归一的厂商值。
- *
- * Returns:
- *   受支持的厂商值。
- */
 export function normalizeProvider(kind?: string, provider?: string): string {
   const allowed = providersForKind(kind)
   return allowed.some((item) => item.value === provider)
@@ -294,28 +259,10 @@ export function normalizeProvider(kind?: string, provider?: string): string {
     : defaultProviderForKind(kind)
 }
 
-/**
- * 厂商对应的密钥环境变量名。
- *
- * Args:
- *   provider: 厂商值。
- *
- * Returns:
- *   环境变量名；未知厂商返回空串。
- */
 export function keyForProvider(provider?: string): string {
   return OPS_PROVIDER_OPTIONS.find((item) => item.value === provider)?.key ?? ""
 }
 
-/**
- * 模型类型的中文标签。
- *
- * Args:
- *   kind: 模型类型；缺失或未知按聊天处理。
- *
- * Returns:
- *   中文标签。
- */
 export function modelKindLabel(kind?: string): string {
   const matched = OPS_MODEL_KIND_OPTIONS.find(
     (item) => item.value === (kind || OPS_DEFAULT_MODEL_KIND),
@@ -326,12 +273,10 @@ export function modelKindLabel(kind?: string): string {
 export const OPS_GRANT_HINT = "对方将能进入运营后台，查看账号并停用、重置普通用户。"
 export const OPS_REVOKE_HINT = "对方将失去运营入口；已打开的页面会在下一次操作时失效。"
 
-/** 身份标签的样式类后缀 */
 export function identityClass(identity: OpsIdentity): string {
   return `ops-identity ops-identity--${identity}`
 }
 
-/** 模型类型 chip 的类名：缺失或未知类型按聊天处理（与 `modelKindLabel` 同一口径）。 */
 export function modelKindClass(kind?: OpsModelKind): string {
   const normalized = kind === "tts" || kind === "realtime" || kind === "embedding" ? kind : "chat"
   return `ops-kind ops-kind--${normalized}`

@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 实时屏幕镜像（只读）：uiautomator2 / adb 取帧；q 退出、f 切缩放、h HUD、s 存帧 🏁
-Python 调试：➡️ python -m utils.live_screen --list 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无
-🏁
-"""
-
 import argparse
 import subprocess
 import sys
@@ -22,13 +13,7 @@ TEMP_DIR = REPO_ROOT / "temps"
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
 
-# ═══════════════════════════════════════════
-# 基础工具
-# ═══════════════════════════════════════════
-
-
 def _fix_console_encoding() -> None:
-    """Windows 控制台默认 GBK，中文/特殊字符会炸，统一改 UTF-8 并逐行刷新"""
     for stream in (sys.stdout, sys.stderr):
         try:
             stream.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
@@ -37,14 +22,12 @@ def _fix_console_encoding() -> None:
 
 
 def adb_path() -> str:
-    """返回与平台一致的 adb 路径（ADB_PATH → 项目内 → adbutils 内置，不回退 PATH）。"""
     from utils.adb import adb_binary
 
     return adb_binary()
 
 
 def adb_devices(adb: str) -> list[tuple[str, str, str]]:
-    """返回 [(serial, state, 描述), ...]"""
     try:
         proc = subprocess.run([adb, "devices", "-l"], capture_output=True, text=True, timeout=15)
     except (OSError, subprocess.SubprocessError) as exc:
@@ -73,7 +56,6 @@ def print_devices(adb: str) -> None:
 
 
 def screen_size() -> tuple[int, int]:
-    """桌面分辨率，用于计算默认窗口尺寸；失败退回保守值"""
     try:
         import tkinter
 
@@ -86,14 +68,7 @@ def screen_size() -> tuple[int, int]:
         return (1280, 800)
 
 
-# ═══════════════════════════════════════════
-# 取帧后端（均为只读）
-# ═══════════════════════════════════════════
-
-
 class AdbFrameSource:
-    """adb exec-out screencap -p：不依赖 atx-agent，纯读取"""
-
     name = "adb screencap"
 
     def __init__(self, adb: str, serial: str) -> None:
@@ -115,8 +90,6 @@ class AdbFrameSource:
 
 
 class U2FrameSource:
-    """uiautomator2 截图：帧率更高，但会连接/拉起 atx-agent"""
-
     name = "uiautomator2"
 
     def __init__(self, serial: str) -> None:
@@ -153,22 +126,12 @@ def build_source(backend: str, adb: str, serial: str):
     return source
 
 
-# ═══════════════════════════════════════════
-# 显示
-# ═══════════════════════════════════════════
-
-
 def text_width(text: str, scale: float, thickness: int) -> int:
     (width, _), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, scale, thickness)
     return width
 
 
 def draw_hud(frame: np.ndarray, lines: list[str]) -> None:
-    """就地写 HUD；cv2 只能渲染 ASCII，勿传中文
-
-    窗口通常被缩放到 0.3~0.5 倍，字号需按帧宽放大，否则显示出来看不清；
-    放大后再按最长行反算收缩系数，保证右侧不被裁掉。
-    """
     frame_width = frame.shape[1]
     scale = max(0.6, frame_width / 640.0)
     thickness = max(2, int(round(scale * 2)))
@@ -180,7 +143,6 @@ def draw_hud(frame: np.ndarray, lines: list[str]) -> None:
         thickness = max(2, int(round(scale * 2)))
         padding = int(round(16 * scale))
     line_height = int(round(40 * scale))
-    # 贴左下角显示：避开手机自身的状态栏（时间/电量），只压住底部手势条
     y = frame.shape[0] - padding - line_height * (len(lines) - 1) - int(round(10 * scale))
     for idx, text in enumerate(lines):
         color = (0, 0, 255) if idx == 0 and text.startswith("NO SIGNAL") else (0, 255, 0)
@@ -208,7 +170,6 @@ def draw_hud(frame: np.ndarray, lines: list[str]) -> None:
 
 
 def fit_size(width: int, height: int) -> tuple[int, int]:
-    """按桌面高度 85% 计算适配尺寸"""
     _, screen_height = screen_size()
     ratio = min(1.0, max(0.2, screen_height * 0.85 / height))
     return max(1, int(width * ratio)), max(1, int(height * ratio))
@@ -279,7 +240,7 @@ def run_viewer(args: argparse.Namespace) -> int:
             if fresh is not None:
                 frame = fresh
                 fails = 0
-                height, width = frame.shape[:2]  # 手机旋转时同步刷新
+                height, width = frame.shape[:2]
             else:
                 fails += 1
             elapsed = time.perf_counter() - began

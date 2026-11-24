@@ -1,20 +1,6 @@
-"""重塑用例表单字段：系统/类型拆维、优先级、步骤子表。
-
-旧字段到新字段的折叠规则（见 ``proposal.md`` / ``design.md``）：
-
-- ``test_type`` → ``system`` + ``case_type``：app→ANDROID+AUTO、web→WEB+FUNC、
-  api→WEB+AUTO、func→ANDROID+FUNC；
-- 旧 ``steps`` 纯文本 → 该用例的**唯一一条**步骤的 ``action``（空则填占位）；
-- 旧 ``expected_result`` 内容丢弃，断言统一填 ``（待补充断言）``。
-
-WARNING: 反向迁移不重建 ``test_type`` / ``steps`` / ``expected_result``，
-数据折叠不可逆；需要回滚时用迁移前的数据库备份恢复。
-"""
-
 import django.db.models.deletion
 from django.db import migrations, models
 
-#: 旧测试类型 → (system, case_type)
 LEGACY_TYPE_MAP = {
     "app": ("ANDROID", "AUTO"),
     "web": ("WEB", "FUNC"),
@@ -22,20 +8,12 @@ LEGACY_TYPE_MAP = {
     "func": ("ANDROID", "FUNC"),
 }
 
-#: 旧用例无步骤描述时的动作占位，保证「步骤至少 1 条」在迁移后自洽
 EMPTY_ACTION_PLACEHOLDER = "（原用例无步骤描述）"
 
-#: 断言占位文案，必须与运行时 ``api_definitions.STEPS_PLACEHOLDER_ASSERTION`` 一致
 ASSERTION_PLACEHOLDER = "（待补充断言）"
 
 
 def fold_legacy_cases(apps, schema_editor):
-    """把旧字段折叠成新两维 + 单条步骤；空表直接跳过，重复执行不重复建步骤。
-
-    这里刻意只用 ``values_list`` / ``update`` 读取旧字段而不实例化
-    ``TestDefinition``：迁移状态里旧字段 ``steps``（TextField）与新表
-    ``CaseStep`` 的反向关系 ``steps`` 同名，实例化会撞上反向关系描述器而报错。
-    """
     TestDefinition = apps.get_model("case_manager", "TestDefinition")
     CaseStep = apps.get_model("case_manager", "CaseStep")
     if not TestDefinition.objects.exists():

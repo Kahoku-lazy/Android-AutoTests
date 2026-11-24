@@ -1,12 +1,6 @@
-/** Device-Pool 模块共享类型 — 设备管理 */
-
-// ── 枚举类型 ──
-
 export type DeviceStatus = "ONLINE" | "BUSY" | "OFFLINE" | "DISCONNECTED"
 export type ConnectionType = "USB" | "WIFI"
 export type DeviceFilterKey = "all" | "online" | "busy"
-
-// ── 核心数据 ──
 
 export interface DeviceRecord {
   serial: string
@@ -24,8 +18,6 @@ export interface DeviceRecord {
   added_by?: string
   last_seen: string
 }
-
-// ── UI 状态 ──
 
 export interface DeviceKpiStats {
   online: number
@@ -47,37 +39,31 @@ export interface NetworkDialogState {
   loading: boolean
 }
 
-// ── 显示辅助 ──
-
 export interface DeviceStatusMeta {
   type: "success" | "warning" | "info" | "danger"
   text: string
 }
 
-/** 设备状态 → 展示 meta 映射表 */
 export type DeviceStatusMap = Record<string, DeviceStatusMeta>
 
-/** 连接类型 → 中文标签映射表 */
 export type ConnectionTypeLabelMap = Record<string, string>
-
-// ── 配置类型 ──
 
 export interface FilterTabConfig {
   key: DeviceFilterKey
   label: string
-  /** 可选数量角标（如全部 / 在线 / 使用中） */
+
   count?: number
 }
 
 export interface ColumnConfig {
   dataIndex: string
   title: string
-  /** 表头图标（emoji）：只进表头，不进列名与数据单元格 */
+
   icon?: string
   minWidth?: number
   width?: number
   align?: string
-  /** 表头对齐；缺省跟 align */
+
   headerAlign?: string
   fixed?: string
   showOverflowTooltip?: boolean
@@ -89,8 +75,6 @@ export interface DevicePageHeader {
   icon: string
   iconGradient: string
 }
-
-// ── API 响应（DRF 信封 {status, data}） ──
 
 export interface DeviceListResponse {
   status: boolean

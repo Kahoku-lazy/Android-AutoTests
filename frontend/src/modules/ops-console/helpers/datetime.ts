@@ -1,23 +1,5 @@
-/**
- * 运营表格的时间格式化 — 纯函数，两个列表页共用。
- *
- * 业务功能：
- * 1. formatRelativeTime: 把时间点转成「刚刚 / N 分钟前 / N 小时前 / 日期」。
- * 2. formatDateTime: 把时间点转成 `YYYY-MM-DD HH:mm`，作为相对时间的副行。
- */
-
-/** 空值与非法时间统一显示为占位符，避免表格里出现 `Invalid Date`。 */
 const EMPTY = "—"
 
-/**
- * 相对时间的口语写法。
- *
- * Args:
- *   value: 后端返回的时间字符串（ISO 或 `YYYY-MM-DD HH:mm`），可为空。
- *
- * Returns:
- *   「刚刚」/「N 分钟前」/「N 小时前」/「YYYY/M/D」；空或非法时间返回 `—`。
- */
 export function formatRelativeTime(value: string): string {
   if (!value) return EMPTY
   const time = new Date(value).getTime()
@@ -33,15 +15,6 @@ export function formatRelativeTime(value: string): string {
   return `${Math.floor(days / 365)} 年前`
 }
 
-/**
- * 绝对时间：`YYYY-MM-DD HH:mm`。
- *
- * Args:
- *   value: 后端返回的时间字符串，可为空。
- *
- * Returns:
- *   格式化后的本地时间；空或非法时间返回 `—`。
- */
 export function formatDateTime(value: string): string {
   if (!value) return EMPTY
   const date = new Date(value)

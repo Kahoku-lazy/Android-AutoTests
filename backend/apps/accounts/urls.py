@@ -1,7 +1,3 @@
-"""
-认证接口路径，挂在 /api/auth/ 下：登录、注册、续期、登出、当前用户。路径都带尾斜杠。
-"""
-
 from django.urls import path
 
 from .views import LoginView, LogoutView, MeView, RefreshView, RegisterView

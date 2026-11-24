@@ -1,10 +1,4 @@
 <script setup lang="ts">
-/**
- * 用例表控制区：上排视图（分组 / 筛选 / 列显示），下排写操作（新增 / 导入 / 保存）。
- *
- * 控件一律走共享件：FilterTabs + .sketch-kit 表单件 + DoodleBtn + CaseChip，
- * 页面里不再出现原生 select / input / button。
- */
 import { ref } from "vue"
 import FilterTabs from "@/shared/components/FilterTabs.vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
@@ -37,7 +31,6 @@ const emit = defineEmits<{
 
 const fileInput = ref<HTMLInputElement | null>(null)
 
-/** 选完文件立刻清空，否则同一个文件第二次选不触发 change */
 function onFile(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]

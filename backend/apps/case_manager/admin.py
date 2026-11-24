@@ -1,5 +1,3 @@
-"""case-manager admin registrations."""
-
 from django.contrib import admin
 
 from .models import AutomationCase, CaseProject, FunctionalCase

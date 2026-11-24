@@ -771,7 +771,8 @@ def check_file(path: Path) -> list[Violation]:
 
     raw = ast.get_docstring(tree, clean=False) or ""
     out: list[Violation] = []
-    out.extend(_module_rules(rel, tree, raw))
+    if raw.strip() and not rel.startswith("engines/ae_harness/tools/"):
+        out.extend(_module_rules(rel, tree, raw))
     _walk_defs(tree.body, rel, out, _tool_function_names(tree))
     return out
 

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** DisconnectDialog — 删除局域网设备确认弹窗 */
 const props = withDefaults(
   defineProps<{
     visible?: boolean

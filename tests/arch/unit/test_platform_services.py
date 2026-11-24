@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ `utils.service_ctl.services` 的行为契约：拉起/停机顺序、排空短路、超时名单落盘 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_platform_services.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 utils/service_ctl
-🏁
-"""
-
 from __future__ import annotations
 
 import json
@@ -20,8 +11,6 @@ pytestmark = [pytest.mark.unit]
 
 
 class _Resp:
-    """urllib 响应替身。"""
-
     def __init__(self, payload: bytes):
         self._payload = payload
 
@@ -36,7 +25,6 @@ class _Resp:
 
 
 def test_start_service_ready(monkeypatch, capsys):
-    """就绪：打印启动/就绪行，命令、日志名、工作目录与附加环境变量都按注册表。"""
     spec = build_registry()["backend"]
     captured = {}
 
@@ -56,7 +44,6 @@ def test_start_service_ready(monkeypatch, capsys):
 
 
 def test_start_service_timeout(monkeypatch, capsys):
-    """超时：返回 False，并指向对应日志文件。"""
     spec = build_registry()["frontend"]
     monkeypatch.setattr(services_mod, "spawn", lambda *a, **k: None)
     monkeypatch.setattr(services_mod, "wait_http", lambda url, timeout: False)
@@ -66,7 +53,6 @@ def test_start_service_timeout(monkeypatch, capsys):
 
 
 def test_stop_service_drains_backend_then_kills(monkeypatch):
-    """backend 停机顺序：排空 → 清理数据库空闲连接 → 杀端口。"""
     spec = build_registry()["backend"]
     events: list[str] = []
     monkeypatch.setattr(services_mod, "drain_backend", lambda port: events.append("drain"))
@@ -81,7 +67,6 @@ def test_stop_service_drains_backend_then_kills(monkeypatch):
 
 
 def test_stop_service_frontend_skips_drain(monkeypatch):
-    """frontend 停机不需要排空，也不清理数据库。"""
     spec = build_registry()["frontend"]
     events: list[str] = []
     monkeypatch.setattr(services_mod, "drain_backend", lambda port: events.append("drain"))
@@ -96,7 +81,6 @@ def test_stop_service_frontend_skips_drain(monkeypatch):
 
 
 def test_drain_returns_immediately_when_nothing_running(monkeypatch):
-    """没有运行中的任务：只发一次查询请求，不进入等待循环。"""
     calls: list[str] = []
 
     def _urlopen(*_args, **_kwargs):
@@ -111,7 +95,6 @@ def test_drain_returns_immediately_when_nothing_running(monkeypatch):
 
 
 def test_write_stop_timeout_mark(tmp_path, monkeypatch):
-    """超时名单落盘：编号与时间戳写入约定文件；空名单不写。"""
     mark = tmp_path / "stop-timeout-tasks.json"
     monkeypatch.setattr(services_mod, "STOP_TIMEOUT_MARK", mark)
 

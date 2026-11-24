@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 认证端点的鉴权姿态不变量：AllowAny 当且仅当 authentication_classes 为空 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_auth_endpoint_declaration.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 前端与后端源码的一致性面（只读源码断言）
-🏁
-"""
-
 from __future__ import annotations
 
 from typing import Any, Iterator
@@ -35,7 +26,6 @@ def _iter_url_patterns(patterns: Any, prefix: str = "") -> Iterator[tuple[str, A
 
 
 def _mounted_auth_views() -> dict[str, type]:
-    """从 URL conf 取出 `/api/auth/` 下每个叶子路由实际挂载的视图类：{path: view_class}。"""
     views: dict[str, type] = {}
     for route, _pattern in _iter_url_patterns(get_resolver().url_patterns):
         if not route.startswith(AUTH_ROUTE_PREFIX):
@@ -49,13 +39,11 @@ AUTH_VIEWS = _mounted_auth_views()
 
 
 def test_scanner_covers_every_session_endpoint():
-    """认证模块至少应有 5 个端点；扫不到就说明解析失效，后面的断言会空跑。"""
     assert len(AUTH_VIEWS) >= 5, f"只找到 {len(AUTH_VIEWS)} 个认证端点：{sorted(AUTH_VIEWS)}"
 
 
 @pytest.mark.parametrize("path", PUBLIC_PATHS)
 def test_public_endpoint_pairs_allow_any_with_empty_authentication(path: str):
-    """公开端点：AllowAny 与空 authentication_classes 必须成对。"""
     view_class = AUTH_VIEWS[path]
     assert AllowAny in view_class.permission_classes, (
         f"{path} → {view_class.__name__} 未声明 AllowAny"
@@ -68,7 +56,6 @@ def test_public_endpoint_pairs_allow_any_with_empty_authentication(path: str):
 
 @pytest.mark.parametrize("path", PROTECTED_PATHS)
 def test_protected_endpoint_pairs_non_public_with_authentication(path: str):
-    """需要身份的端点：非 AllowAny 与非空 authentication_classes 必须成对。"""
     view_class = AUTH_VIEWS[path]
     assert AllowAny not in view_class.permission_classes, (
         f"{path} → {view_class.__name__} 意外地对任何人开放"
@@ -79,7 +66,6 @@ def test_protected_endpoint_pairs_non_public_with_authentication(path: str):
 
 
 def test_invariant_holds_for_every_mounted_auth_view():
-    """穷举形式：未来新增第六个认证端点时自动被覆盖。"""
     violations = []
     for path, view_class in sorted(AUTH_VIEWS.items()):
         allow_any = AllowAny in view_class.permission_classes

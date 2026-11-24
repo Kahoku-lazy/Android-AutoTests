@@ -1,8 +1,4 @@
 <script setup lang="ts">
-/**
- * 零件卡编号徽标：SVG 数字图标（圆角方框 + 数字），颜色取卡片 accent。
- * 替代纯文本的 00 / 01 / 02，放在卡片标题前。
- */
 defineProps<{ value: string }>()
 </script>
 

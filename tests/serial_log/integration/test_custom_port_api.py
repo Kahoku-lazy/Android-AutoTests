@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 自定义端口写库口（api.py）与双轨配置同步的集成测试 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/serial_log/integration/test_custom_port_api.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/serial_log、engines/device
-🏁
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -22,7 +13,7 @@ def test_ensure_creates_config_rows_with_origin():
     rows = api.ensure_log_ports([LogSourceSpec(port=7005, sku="H6810", baud=921600)])
     assert [row.port for row in rows] == [7005]
     assert rows[0].origin == LogPort.ORIGIN_CONFIG
-    assert rows[0].enabled is True  # 无记录＝开启
+    assert rows[0].enabled is True
 
 
 def test_ensure_refreshes_three_cols_but_not_switch():
@@ -37,7 +28,7 @@ def test_ensure_does_not_touch_custom_rows():
     api.create_custom_port(7008, "H717D", 115200)
     api.set_log_port_enabled(7008, False)
     rows = api.ensure_log_ports([LogSourceSpec(port=7008, sku="OTHER", baud=9600)])
-    assert rows == []  # custom 行不属于配置同步结果
+    assert rows == []
     row = LogPort.objects.get(port=7008)
     assert (row.sku, row.baud, row.enabled, row.origin) == (
         "H717D",
@@ -63,7 +54,6 @@ def test_create_custom_port_defaults_and_duplicate_guard():
     assert (row.origin, row.enabled) == (LogPort.ORIGIN_CUSTOM, True)
     with pytest.raises(ValueError, match="7008"):
         api.create_custom_port(7008, "X", 9600)
-    # 配置端口同号也被拒
     api.ensure_log_ports([LogSourceSpec(port=7005, sku="H6810", baud=921600)])
     with pytest.raises(ValueError, match="7005"):
         api.create_custom_port(7005, "X", 9600)

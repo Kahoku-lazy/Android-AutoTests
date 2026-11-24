@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 管理命令：清理 data/uploads 下的过期上传文件（默认 7 天，支持 --dry-run） 🏁
-Python 调试：➡️ python -m backend.apps.task_list.management.commands.cleanup_uploads 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（管理命令，无自动化用例）
-🏁
-"""
-
 from django.core.management.base import BaseCommand
 
 from backend.apps.task_list.upload_cleanup import cleanup_upload_dir

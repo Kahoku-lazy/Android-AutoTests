@@ -1,10 +1,3 @@
-/**
- * [P0] 必测 — 自定义端口 CRUD 编排（spec: device-log-port-console 自定义端口登记 / 监听失败显式提示）
- * 目录：tests/serial-log/p0/
- *
- * 断言：新增失败 → 错误提示 + 刷新；成功 → 成功提示；重号短路不发请求；
- * 删除二次确认取消不发请求。
- */
 import { ref } from "vue"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ElMessage, ElMessageBox } from "element-plus"

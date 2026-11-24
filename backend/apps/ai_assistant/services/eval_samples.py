@@ -1,15 +1,5 @@
-"""
-模块功能：➡️ 评测样本。页面自测与 pytest 都从这里读取 🏁
-Python 调试：➡️ python -m backend.apps.ai_assistant.services.eval_samples 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（经 ai_assistant 的功能用例间接覆盖，未直接 import 本模块）
-🏁
-"""
-
 from __future__ import annotations
 
-# 发布样本只含会真跑的探针。故意写坏的轨迹留在尺子单测，不挡发布。
 GATE_IDS = ("A1", "S1", "S2", "S3")
 
 SAMPLES = (
@@ -98,7 +88,6 @@ SAMPLES = (
 
 
 def load_samples(*, enabled_only: bool = True) -> list[dict]:
-    """返回样本副本。停用的样本在 enabled_only 时不参加新自测。"""
     rows = [dict(item) for item in SAMPLES]
     if enabled_only:
         return [item for item in rows if item["enabled"]]
@@ -106,5 +95,4 @@ def load_samples(*, enabled_only: bool = True) -> list[dict]:
 
 
 def sample_ids() -> list[str]:
-    """当前启用的发布样本。页面自测与发布认账读这一份。"""
     return [item["id"] for item in load_samples() if item["id"] in GATE_IDS]

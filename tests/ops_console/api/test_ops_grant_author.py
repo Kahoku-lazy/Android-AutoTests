@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 助手作者授予接口：超管可授，作者不能转授，自己不能授给自己 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ops_console/api/test_ops_grant_author.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/ai_assistant、backend/apps/ops_console
-🏁
-"""
-
 from __future__ import annotations
 
 import pytest

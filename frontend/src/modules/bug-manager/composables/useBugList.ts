@@ -1,4 +1,3 @@
-/** BUG 单列表状态：服务端过滤、统计、分页与历史同步。 */
 import { computed, onMounted, onUnmounted, ref, watch } from "vue"
 import { ElMessage } from "element-plus"
 import { usePagination } from "@/shared/composables/usePagination"

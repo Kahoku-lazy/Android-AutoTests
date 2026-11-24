@@ -1,7 +1,3 @@
-/**
- * useSidebarResize — 侧边栏宽度拖拽缩放 + 折叠状态
- * Extracted from AppSidebar.vue
- */
 import { ref } from "vue"
 
 const SIDEBAR_WIDTH_KEY = "app-sidebar-width"

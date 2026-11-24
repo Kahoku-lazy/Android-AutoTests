@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 关键词目录组装（keywords.collect_keywords）集成测试：行序、计数口径、空态 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/serial_log/integration/test_keyword_catalog.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/serial_log
-🏁
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -37,14 +28,12 @@ def test_rows_keep_registration_order_and_scope():
 
 
 def test_counts_dedupe_by_keyword_and_feature_not_scope():
-    # 同关键词同功能点跨两个范围：关键词计 1、功能点计 1
     api.upsert_keyword(
         "switch_on", module="设备开关", feature="打开设备成功", feature_id=0, scope="*"
     )
     api.upsert_keyword(
         "switch_on", module="设备开关", feature="打开设备成功", feature_id=0, scope="H6601"
     )
-    # 同关键词挂第二个功能点：关键词仍计 1、功能点计 2
     api.upsert_keyword(
         "switch_on", module="设备开关", feature="打开设备成功（分段）", feature_id=17, scope="*"
     )

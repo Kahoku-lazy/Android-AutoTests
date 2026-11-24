@@ -1,8 +1,3 @@
-/**
- * [P1] 建议测 — DashboardView.logic 编排层
- * 数据获取已在 P0 覆盖；这里测编排独有行为（挂载自动加载、项目卡映射、元素分项）。
- * 目录：tests/dashboard/p1/
- */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { flushPromises } from "@vue/test-utils"
 import { fetchDashboardStats, fetchRecentActivities } from "@/modules/dashboard/api"
@@ -15,7 +10,6 @@ vi.mock("@/modules/dashboard/api", () => ({
   fetchRecentActivities: vi.fn(),
 }))
 
-/** AI 用量本文件不参与断言：零值补齐 DashboardRawData 的必填字段 */
 const ZERO_METRIC = { today: 0, total: 0 }
 const ZERO_AI_USAGE: DashboardRawData["ai_usage"] = {
   task_count: ZERO_METRIC,

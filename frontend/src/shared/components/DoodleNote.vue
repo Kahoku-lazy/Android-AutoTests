@@ -1,32 +1,20 @@
 <script setup lang="ts">
-/**
- * DoodleNote — 共享内容卡（Hand-Drawn Doodle）
- *
- * variant:
- * - note：胶带 deco-card（小助手线路卡等）
- * - sticky：Do/Dont 便利贴（任务卡等）
- *
- * sticky status → 底色 / 阴影：
- * - ok：青绿 Do
- * - fail：浅红 Dont
- * - run / wait：纸色偏暖 / 中性
- */
 import { computed } from "vue"
 
 const props = withDefaults(
   defineProps<{
     variant?: "note" | "sticky"
-    /** sticky 状态底色 */
+
     status?: "ok" | "run" | "fail" | "wait"
-    /** 硬阴影强调色；不传则按 variant/status 默认 */
+
     accent?: string
-    /** 顶中胶带 */
+
     tape?: boolean
-    /** 胶带色（CSS 色或 var） */
+
     tapeColor?: string
-    /** 微倾角度（deg） */
+
     tilt?: number
-    /** 根节点标签 */
+
     as?: "article" | "div" | "section"
   }>(),
   {
@@ -104,11 +92,11 @@ const rootStyle = computed(() => {
   --note-tape: var(--comp-note-tape);
   --note-tilt: var(--comp-note-tilt);
   --note-radius: var(--comp-note-radius);
-  /* sticky 状态底色（本组件专用色值登记处；原 --ai-sticky-bg 借用已改引 --paper） */
+
   --note-status-ok-bg: var(--comp-note-status-ok-bg);
   --note-status-fail-bg: var(--comp-note-status-fail-bg);
   --note-status-run-bg: var(--comp-note-status-run-bg);
-  /* 胶带描边（rgba 装饰绘制色登记处） */
+
   --note-tape-border: var(--comp-note-tape-border);
   position: relative;
   display: flex;
@@ -132,7 +120,6 @@ const rootStyle = computed(() => {
   box-shadow: 5px 5px 0 0 var(--note-accent);
 }
 
-/* 胶带：不拦截点击 */
 .doodle-note__tape {
   position: absolute;
   z-index: var(--z-raised);
@@ -168,12 +155,10 @@ const rootStyle = computed(() => {
   border-top: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
 }
 
-/* note：纸色 deco-card */
 .doodle-note--note {
   background: var(--paper);
 }
 
-/* sticky：Do / Dont / run / wait */
 .doodle-note--sticky.doodle-note--status-ok {
   background: var(--note-status-ok-bg);
 }

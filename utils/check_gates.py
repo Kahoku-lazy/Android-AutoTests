@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 本地质量门禁执行器：与 ci-phase1.yml 同一批检查，按阻塞 / 告警分级 🏁
-Python 调试：➡️ python -m utils.check_gates 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. tests/arch/unit/test_business_asset_gate.py: 业务资产门禁的判定口径
-🏁
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -27,7 +18,6 @@ IS_WIN = sys.platform == "win32"
 NPM = "npm.cmd" if IS_WIN else "npm"
 NPX = "npx.cmd" if IS_WIN else "npx"
 
-# CI 中 ruff 的作用域（既有拦截型步骤）
 PY_SCOPES = [
     "backend/apps/",
     "backend/config/",
@@ -35,10 +25,7 @@ PY_SCOPES = [
     "backend/shared/",
     "backend/models/",
 ]
-# ruff 门禁专用范围：平台目录 + tests/（2026-11-19 经需求方确认纳入）。
-# 不复用 PY_SCOPES：凭据扫描门禁按位置取 PY_SCOPES[:-1]，往其中追加会改变其语义。
 RUFF_SCOPES = [*PY_SCOPES, "tests/"]
-# 走查文件时跳过的目录：不改变判定口径，只是避免扫进依赖与缓存
 SKIP_DIRS = {"node_modules", "__pycache__", ".venv", "venv", "dist", ".git", ".pytest_cache"}
 
 TAIL_LINES = 20
@@ -47,16 +34,11 @@ INLINE_STYLE_LIMIT = 120
 
 @dataclass(frozen=True)
 class Gate:
-    """一项检查。run() 返回 (是否通过, 输出行)。"""
-
     name: str
     desc: str
     blocking: bool
     run: Callable[[], "tuple[bool, list[str]]"]
     always_show: bool = False
-
-
-# ── 执行器 ────────────────────────────────────────────────────
 
 
 def _env(extra: dict[str, str] | None = None) -> dict[str, str]:
@@ -76,7 +58,6 @@ def cmd_gate(
     cwd: Path = ROOT,
     env: dict[str, str] | None = None,
 ) -> Gate:
-    """按外部命令判定：退出码 0 为通过。命令不存在按失败处理（不静默跳过）。"""
 
     def _run() -> tuple[bool, list[str]]:
         try:
@@ -121,11 +102,6 @@ def grep_gate(
     blocking: bool = True,
     always_show: bool = False,
 ) -> Gate:
-    """按 CI 内联 grep -rnE 的口径走查：命中且不在排除清单中即为违规。
-
-    excludes 为子串排除（对应 CI 的 `grep -v "xxx"`）；
-    exclude_patterns 为行级正则排除（对应 CI 的 `grep -vE "xxx"`）。
-    """
 
     rx = re.compile(pattern, re.ASCII)
     exclude_rx = [re.compile(p, re.ASCII) for p in exclude_patterns]
@@ -143,17 +119,13 @@ def grep_gate(
                     continue
                 hits.append(f"{path.relative_to(ROOT).as_posix()}:{lineno}:{line.strip()}")
         if always_show:
-            # CI 中这类检查只提示、不置违规（如规则 3），故恒为通过
             return True, hits
         return not hits, hits
 
     return Gate(name, desc, blocking, _run, always_show)
 
 
-# ── 静默吞异常（AST 检查，非 CI 内联项） ─────────────────────
-
 LOG_METHODS = {"debug", "info", "warning", "warn", "error", "exception", "critical", "log"}
-# 供应商产物：与 ruff.toml 的 exclude 一致，改了会在下次 skill 更新时丢失
 VENDORED = ()
 
 
@@ -166,19 +138,14 @@ def _has_log_call(node: ast.AST) -> bool:
     return False
 
 
-def _handler_has_comment(lines: list[str], node: ast.ExceptHandler) -> bool:
+def _handler_has_marker(lines: list[str], node: ast.ExceptHandler) -> bool:
     ends = [n.end_lineno for n in ast.walk(node) if getattr(n, "end_lineno", None)]
     start = node.lineno - 1
     end = max(ends) if ends else start + 1
-    return any("#" in line for line in lines[start:end])
+    return any("silent-except" in line or "noqa" in line for line in lines[start:end])
 
 
 def silent_except_gate() -> Gate:
-    """禁止「捕获后什么都不做」：处理器体只有 pass/continue/break，且无 raise、无日志、无注释。
-
-    明确选择忽略的情形以注释表达（见 AGENTS.md：错误不应默默忽略，除非明确地选择忽略）。
-    """
-
     def _run() -> tuple[bool, list[str]]:
         findings: list[str] = []
         for path in _iter_files(["apps", "config", "gateway", "shared", "engines"], {".py"}):
@@ -186,7 +153,6 @@ def silent_except_gate() -> Gate:
             if rel.startswith(VENDORED):
                 continue
             if "migrations" in path.parts:
-                # 历史迁移不可改（与 ruff.toml 的 exclude 一致）
                 continue
             text = path.read_text(encoding="utf-8", errors="replace")
             lines = text.splitlines()
@@ -202,7 +168,7 @@ def silent_except_gate() -> Gate:
                     continue
                 if any(isinstance(n, ast.Raise) for n in ast.walk(node)):
                     continue
-                if _has_log_call(node) or _handler_has_comment(lines, node):
+                if _has_log_call(node) or _handler_has_marker(lines, node):
                     continue
                 findings.append(f"{rel}:{node.lineno}: {lines[node.lineno - 1].strip()}")
         return not findings, findings
@@ -216,8 +182,6 @@ def silent_except_gate() -> Gate:
 
 
 def inline_style_gate() -> Gate:
-    """CI 内联 Python 的等价实现：单文件 <style> 块超过阈值即提示（CI 中不拦截）。"""
-
     def _run() -> tuple[bool, list[str]]:
         issues: list[str] = []
         for path in _iter_files(["frontend/src/modules"], {".vue"}):
@@ -245,12 +209,8 @@ def inline_style_gate() -> Gate:
     )
 
 
-# ── OpenAPI 契约（生成 + 校验 + 基线漂移） ────────────────────
-
 OPENAPI_BASELINE = ROOT / "openspec" / "openapi.yaml"
 OPENAPI_GENERATED = ROOT / "temps" / "openapi.generated.yaml"
-# 占位值只满足「导入期不缺变量」。模型在调用时才读密钥，检查本身不连模型。
-# 名字与 engines/ae_harness/agents/models.py 的三把钥匙一致，不再使用已退役的 OPENAI_API_KEY。
 MODEL_KEY_ENV = {
     "DEEPSEEK_API_KEY": "local-collect-placeholder",
     "DASHSCOPE_API_KEY": "local-collect-placeholder",
@@ -263,11 +223,6 @@ OPENAPI_ENV = {
 
 
 def openapi_schema_gate() -> Gate:
-    """生成 OpenAPI 并与仓库基线对齐：schema 必须可校验，且与基线条目一致。
-
-    接口增删改后没更新基线时失败；更新命令写在失败信息里。
-    """
-
     def _run() -> tuple[bool, list[str]]:
         OPENAPI_GENERATED.parent.mkdir(parents=True, exist_ok=True)
         proc = subprocess.run(
@@ -308,34 +263,18 @@ def openapi_schema_gate() -> Gate:
 
 
 def _openapi_text(path: Path) -> str:
-    """读 schema 文本并归一化换行：CRLF 与 LF 视为同一内容（跨平台检出差异不算漂移）。"""
     return path.read_text(encoding="utf-8").replace("\r\n", "\n")
 
 
-# ── 检查清单（CI 的 python / frontend 两个 job 都从这里点名） ──
-
-
-# 受管业务资产目录：平台主干不得在此存放客户专项业务资料
 BUSINESS_ASSET_DIRS = (ROOT / "engines" / "agents" / "config" / "data" / "app_info",)
-# 已禁用业务资产路径：被清除后不得重新引入
 FORBIDDEN_ASSET_PATHS = (
     "engines/agents/config/data/app_info/govee_home.md",
     "engines/ae_harness/workflow/sop/steps/govee_widget.yaml",
 )
-# 受限厂商标识，大小写不敏感
 RESTRICTED_VENDOR_TOKENS = ("govee",)
 
 
 def business_asset_gate() -> Gate:
-    """
-    业务资产门禁：受管目录不得出现厂商标识，已禁用路径不得复活。
-
-    只扫受管目录，平台代码里的厂商包名、模型别名、流程键不受影响。
-
-    Returns:
-        Gate: 门禁对象；run() 返回 (是否通过, 输出行)。
-    """
-
     def run() -> "tuple[bool, list[str]]":
         lines: list[str] = []
         for rel in FORBIDDEN_ASSET_PATHS:
@@ -350,7 +289,6 @@ def business_asset_gate() -> Gate:
                 try:
                     rel = path.relative_to(ROOT).as_posix()
                 except ValueError:
-                    # 受管目录不在仓库内时（例如单测的临时目录）退回绝对路径，仍能报出命中项
                     rel = path.as_posix()
                 body = path.read_text(encoding="utf-8", errors="ignore").lower()
                 for token in RESTRICTED_VENDOR_TOKENS:
@@ -367,18 +305,10 @@ def business_asset_gate() -> Gate:
     )
 
 
-# ── 唯一 Agent 构造点 ──────────────────────────────────────────
-
-# 平台角色只能经 create_agent 创建。agentscope.agent.Agent 的直接构造只允许这一处。
 AGENT_CONSTRUCTOR_FILE = "engines/ae_harness/agents/creator.py"
 
 
 def single_agent_constructor_gate() -> Gate:
-    """engines 里直接构造 Agent 的位置只能有 creator.py 一处。
-
-    看 AST 调用，不看字符串。测试里的 `_Agent()` 名字不同，不会命中。
-    """
-
     def _run() -> tuple[bool, list[str]]:
         hits: list[str] = []
         for path in _iter_files(["engines"], {".py"}):
@@ -408,16 +338,9 @@ def single_agent_constructor_gate() -> Gate:
     )
 
 
-# ── engines/agents 退役 ────────────────────────────────────────
-
-# 退役进度开关：每批完成把对应项改为 True，检查随之收紧；关闭时该条不检查（对应批次尚未执行）。
-# 见 openspec/changes/retire-engines-agents。
 RETIRE_PHASE = {
-    # 2.1 / 2.2 完成后：底座包不得依赖 Agent 包
     "reverse_dependency": True,
-    # B1 完成后：知识助手产品面必须不存在
     "knowledge_assistant": True,
-    # B4 完成后：engines/agents 必须不存在，且全仓不得再导入它
     "agents_package": True,
 }
 
@@ -433,7 +356,6 @@ KNOWLEDGE_ASSISTANT_PATHS = (
 
 
 def _import_hits(root: str, pattern: re.Pattern[str]) -> "list[str]":
-    """在某个目录下逐行匹配 import 语句，返回违规行。"""
     hits: list[str] = []
     for path in _iter_files([root], {".py"}):
         rel = path.relative_to(ROOT).as_posix()
@@ -445,16 +367,6 @@ def _import_hits(root: str, pattern: re.Pattern[str]) -> "list[str]":
 
 
 def engines_agents_retirement_gate() -> Gate:
-    """
-    Agent 退役门禁：底座不反向依赖、下线面无残留、旧包不复活。
-
-    检查项随 `RETIRE_PHASE` 逐批收紧；开关关闭时该项不参与判定，
-    因此退役进行中也能保持全绿，完成后转为强制拦截。
-
-    Returns:
-        Gate: 门禁对象；run() 返回 (是否通过, 输出行)。
-    """
-
     def run() -> "tuple[bool, list[str]]":
         lines: list[str] = []
         if RETIRE_PHASE["reverse_dependency"]:
@@ -482,7 +394,6 @@ def engines_agents_retirement_gate() -> Gate:
 def build_gates() -> list[Gate]:
     py = sys.executable
     return [
-        # Job 1 backend-check
         cmd_gate(
             "django-check",
             "Django 系统检查",
@@ -502,7 +413,6 @@ def build_gates() -> list[Gate]:
             [py, "-m", "ruff", "check", *RUFF_SCOPES],
             blocking=True,
         ),
-        # pytest 收集门禁：不跑用例，只保证整套测试可导入（防再积压失效测试）
         cmd_gate(
             "makemigrations-check",
             "迁移与模型一致（makemigrations --check）",
@@ -528,7 +438,6 @@ def build_gates() -> list[Gate]:
             blocking=True,
             env=OPENAPI_ENV,
         ),
-        # Job 2 frontend-check
         cmd_gate("vitest", "前端单元测试（P0/P1）", [NPM, "test"], blocking=True, cwd=FRONTEND),
         cmd_gate("vite-build", "前端构建", [NPX, "vite", "build"], blocking=True, cwd=FRONTEND),
         cmd_gate(
@@ -538,7 +447,6 @@ def build_gates() -> list[Gate]:
             blocking=True,
             cwd=FRONTEND,
         ),
-        # Job 6 static-checks（原告警项，2026-09-23 起转为拦截）
         cmd_gate(
             "ruff-engines-format",
             "Python 格式（engines/）",
@@ -552,7 +460,6 @@ def build_gates() -> list[Gate]:
             blocking=True,
         ),
         cmd_gate("eslint", "前端代码检查（eslint）", [NPM, "run", "lint"], True, FRONTEND),
-        # 线型白名单：虚线只属于 KpiCard / AgentRouteCard（规则见 .agents/skills/doodle-craft/SKILL.md）
         cmd_gate(
             "dashed-whitelist",
             "前端线型（虚线白名单）",
@@ -581,7 +488,6 @@ def build_gates() -> list[Gate]:
             blocking=True,
             cwd=FRONTEND,
         ),
-        # Job 3 security-scan（规则 3 在 CI 中仅提示，不置违规）
         grep_gate(
             "cred-password",
             "硬编码密码",
@@ -622,11 +528,8 @@ def build_gates() -> list[Gate]:
             {".js", ".vue", ".ts"},
             r"(api_key|password|token|secret)\s*[=:]\s*['\"]\w{8,}",
             excludes=("node_modules", ".test."),
-            # 排除 Vue 属性绑定（v-model:password / :token）与属性访问、连字符命名前缀，
-            # 与 CI security-scan 规则 5 的 `grep -vE` 保持同一口径
             exclude_patterns=(r"[:.\-](api_key|password|token|secret)\s*[=:]",),
         ),
-        # Job 4 boundary-check
         cmd_gate(
             "boundary",
             "模块边界检查（防火墙 #1/#2，import 方向见 linting）",
@@ -640,7 +543,6 @@ def build_gates() -> list[Gate]:
             [py, "-m", "utils.linting"],
             blocking=True,
         ),
-        # Job 5 frontend-quality
         cmd_gate(
             "vue-file-size",
             "Vue 文件体积（<500 行）",
@@ -655,35 +557,21 @@ def build_gates() -> list[Gate]:
             r"ref\(\s*\[\s*\{[^}]*id:",
         ),
         inline_style_gate(),
-        # 本次新增（不在 CI 内联项中）
         silent_except_gate(),
         business_asset_gate(),
         engines_agents_retirement_gate(),
         single_agent_constructor_gate(),
-        # engines 风格检查（告警项：先看效果，暂不阻塞；正文 .agents/rules/engines-code-style.md，流程 engines/AGENTS.md）
         cmd_gate(
             "engines-agents-style",
-            "engines 风格（module-docstring / tool 命名 / 禁 django·apps import；见 engines-code-style.md）",
+            "engines 风格（tool 命名 / 禁 django·apps import；见 engines-code-style.md）",
             [py, "-m", "scripts.check_engines_agents_style"],
             blocking=False,
             cwd=ROOT / ".agents" / "skills" / "engines-agents-style-check",
         ),
-        # 全仓模块 docstring（告警项：存量迁移中，先看计数不拦；正文 .agents/rules/python-docstring-style.md）
-        cmd_gate(
-            "python-module-docstring",
-            "全仓模块 docstring（4 字段模板 / 工具函数 Args；见 python-docstring-style.md）",
-            [py, "-m", "scripts.docstrings", "check", "--all", "--summary"],
-            blocking=False,
-            cwd=ROOT / ".agents" / "skills" / "engines-docstring-check",
-        ),
     ]
 
 
-# ── 主流程 ────────────────────────────────────────────────────
-
-
 def main() -> int:
-    # Windows 控制台默认 GBK，而被检查工具会输出非 GBK 字符（如 vitest 的 ❯）→ 统一切到 UTF-8
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="replace")
@@ -744,7 +632,6 @@ def main() -> int:
 
 
 def exit_code(results: "list[tuple[Gate, bool, list[str]]]") -> int:
-    """退出码只由阻塞项决定：有阻塞项失败返回 1，否则返回 0。"""
     return 1 if any(gate.blocking and not ok for gate, ok, _ in results) else 0
 
 

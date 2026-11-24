@@ -1,5 +1,3 @@
-"""给 Task 增加发起人快照，供用例入库按用户隔离。"""
-
 from django.db import migrations, models
 
 

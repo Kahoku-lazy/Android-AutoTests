@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** RetrievalSettingsCard — 全局检索配置：向量模型、返回条数、阈值与切块。仅超管可改。 */
 import { onMounted, ref } from "vue"
 import { ElMessage } from "element-plus"
 import AppCard from "@/shared/components/AppCard.vue"

@@ -1,10 +1,4 @@
 <script setup lang="ts">
-/**
- * SerialLogTabs — 串口日志页的模块私有手稿 Tab（两枚 chip）
- *
- * 为什么不用共享 `AppTabs`：那是 Element Plus `el-tabs`，选中态是蓝色下划线，
- * 与整页手稿语言不符；共享件另有页面在用，不为本页改皮肤。
- */
 defineProps<{
   items: { key: string; label: string }[]
   modelValue: string

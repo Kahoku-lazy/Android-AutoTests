@@ -27,10 +27,9 @@ import {
   displayModel,
   connectionLabel,
   deviceAddress,
-  formatDateTime,
-  formatRelativeTime,
   statusTag,
 } from "./helpers"
+import { formatDateTime, formatRelativeTime } from "@/shared/helpers/datetime"
 import { useTableDragScroll } from "@/shared/composables/useTableDragScroll"
 
 // ── 返回类型接口 ──

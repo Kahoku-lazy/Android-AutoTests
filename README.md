@@ -121,8 +121,8 @@ Django 锁在 6.0.x：6.1 的模型字段检查会在没有数据库时连 MySQL
 |------|---------|---------|
 | Python | 3.13 | `python --version` |
 | Node.js | 20 | `node --version` |
-| MySQL | 默认引擎；也可 `DB_ENGINE=sqlite` | `python run.py status` 的 Database 行；`start` 会检测并尝试启动本机服务，远程库只检测 |
-| ADB | `python run.py setup` 安装到 `tools/platform-tools/`；也可用 `ADB_PATH` 指向已有 adb | `python run.py setup --check` |
+| MySQL | 默认引擎；也可 `DB_ENGINE=sqlite` | `python -m run status` 的 Database 行；`start` 会检测并尝试启动本机服务，远程库只检测 |
+| ADB | `python -m run setup` 安装到 `tools/platform-tools/`；也可用 `ADB_PATH` 指向已有 adb | `python -m run setup --check` |
 
 > adb 起不来并报 `cannot open ...\adb.log: Permission denied` 时，是 adb 37 在部分 Windows 上写 daemon 日志被拒；
 > 平台已自动把 `ANDROID_ADB_LOG_PATH` 指向 `NUL` 规避，无需手工处理。
@@ -141,14 +141,14 @@ pip install -r requirements.txt
 cd frontend && npm install && cd ..
 
 # 安装项目内 adb（官方 platform-tools；首次/换机时执行，唯一会联网的命令）
-python run.py setup
+python -m run setup
 
 cp .env.example .env
 # 至少改：DJANGO_SECRET_KEY、DB_*，以及实际要用的密钥
 # DEEPSEEK_API_KEY / DASHSCOPE_API_KEY / OPENAI_API_KEY 按模型配置填写；不把密钥写进页面或仓库
 
-python manage.py migrate
-python manage.py shell -c "
+python -m manage migrate
+python -m manage shell -c "
 from django.contrib.auth.models import User
 User.objects.filter(username='admin').exists() or User.objects.create_superuser('admin','admin@local','admin123')
 "
@@ -161,18 +161,18 @@ User.objects.filter(username='admin').exists() or User.objects.create_superuser(
 ### 启动
 
 ```bash
-python run.py setup      # 首次/换机：安装项目内 platform-tools（唯一会联网的命令）
-python run.py start      # 先检测数据库 → Daphne(:8766) + Vite(:5173)
-python run.py stop       # 停后端前先排空运行中任务
-python run.py restart
-python run.py status     # 服务、数据库、adb 状态
-python run.py logs       # 各服务日志尾部
-python run.py check      # 本地质量门禁（与 CI 同一批检查，不跑全量回归）
+python -m run setup      # 首次/换机：安装项目内 platform-tools（唯一会联网的命令）
+python -m run start      # 先检测数据库 → Daphne(:8766) + Vite(:5173)
+python -m run stop       # 停后端前先排空运行中任务
+python -m run restart
+python -m run status     # 服务、数据库、adb 状态
+python -m run logs       # 各服务日志尾部
+python -m run check      # 本地质量门禁（与 CI 同一批检查，不跑全量回归）
 ```
 
-`start` 会先用 `.env` 的 `DB_*` 真实连一次数据库：本机不可达时尝试启动服务（`DB_SERVICE_NAME`，失败会打印提权命令并中止）；远程库只检测不启动。库由外部管理或 CI 环境可用 `python run.py start --no-db` 跳过检查（`DB_AUTOSTART=0` 则只关自动启动、仍检测）。
+`start` 会先用 `.env` 的 `DB_*` 真实连一次数据库：本机不可达时尝试启动服务（`DB_SERVICE_NAME`，失败会打印提权命令并中止）；远程库只检测不启动。库由外部管理或 CI 环境可用 `python -m run start --no-db` 跳过检查（`DB_AUTOSTART=0` 则只关自动启动、仍检测）。
 
-也可以只操作其中一个：`python run.py start backend`。后端端口由 `SERVER_PORT` 控制，默认 8766；前端固定 5173。`run.py stop` 等待运行中任务结束，上限 `STOP_DRAIN_TIMEOUT`（默认 180 秒），超时后强制停。
+也可以只操作其中一个：`python -m run start backend`。后端端口由 `SERVER_PORT` 控制，默认 8766；前端固定 5173。`python -m run stop` 等待运行中任务结束，上限 `STOP_DRAIN_TIMEOUT`（默认 180 秒），超时后强制停。
 
 ### 访问地址
 
@@ -203,7 +203,7 @@ python run.py check      # 本地质量门禁（与 CI 同一批检查，不跑�
 | `dev_docs/DEV_TEST/` | 设计方案、分析报告、接口说明 |
 | `data/` | **运行时数据根**，已 gitignore。截图、上传、任务媒体都在这里。可用 `DATA_DIR` 指到仓库外 |
 | `temps/` | **临时沙箱**，已 gitignore。探针、调试截图、门禁产物放这里。可以整目录清空 |
-| `tools/platform-tools/` | **本地 adb**，已 gitignore。由 `python run.py setup` 安装；也可用 `ADB_PATH` 指向其它 adb |
+| `tools/platform-tools/` | **本地 adb**，已 gitignore。由 `python -m run setup` 安装；也可用 `ADB_PATH` 指向其它 adb |
 | `logs/` | 运行日志。平台 Agent 报告在 `logs/agents/backend_bridge/` |
 
 ### `temps/` 与 `data/` 的边界
@@ -242,14 +242,14 @@ python run.py check      # 本地质量门禁（与 CI 同一批检查，不跑�
 
 - 长期分支只有 `Kahoku`。Conventional Commits：`{type}({scope}): {描述}`，type 取 `feat` / `fix` / `refactor` / `docs` / `test` / `chore` / `style` / `security`。
 - 一次提交只做一件事。逐文件 `git add`，不要 `git add -A`。禁止对 `Kahoku` 强推。
-- 提交前跑 `python run.py check`。推送后确认 `ci-phase1.yml` 的 `python` 与 `frontend` 两个 job 全绿。
+- 提交前跑 `python -m run check`。推送后确认 `ci-phase1.yml` 的 `python` 与 `frontend` 两个 job 全绿。
 
 ---
 
 ## ✅ 质量门禁
 
 ```bash
-python run.py check      # 本地门禁，阻塞项失败则退出码 1
+python -m run check      # 本地门禁，阻塞项失败则退出码 1
 python -m pytest -c tests/pytest.ini   # 全量用例；check 不会跑这个
 ```
 

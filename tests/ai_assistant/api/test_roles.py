@@ -14,13 +14,15 @@ import re
 import pytest
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.test import RequestFactory
 from django.urls import Resolver404, resolve
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from backend.apps.ai_assistant.models import AIRole
+from backend.apps.ai_assistant.models import AIRole, ModelUseGrant
 from backend.apps.ai_assistant.views_drf import RoleViewSet
 from backend.gateway.middleware import JWTAuthenticationMiddleware
+from backend.shared.users import OPERATOR_GROUP
 
 pytestmark = [pytest.mark.django_db, pytest.mark.api]
 
@@ -35,6 +37,7 @@ _FIELDS = {
     "base_url",
     "api_protocol",
     "system_prompt",
+    "kinds",
     "created_at",
     "updated_at",
 }
@@ -42,7 +45,25 @@ _FIELDS = {
 
 @pytest.fixture
 def user(db):
-    return get_user_model().objects.create_user(username="role-user", password="pass")
+    """运营账号：角色写操作要求 is_operator（超管天然算运营）。"""
+    user = get_user_model().objects.create_user(username="role-user", password="pass")
+    user.groups.add(Group.objects.get_or_create(name=OPERATOR_GROUP)[0])
+    return user
+
+
+def _config(user) -> int:
+    """建一份模型配置并把使用名单授权给该用户（空名单对任何模型都为 False）。"""
+    from backend.apps.ai_assistant.models import AIModelConfig
+
+    config = AIModelConfig.objects.create(
+        provider="deepseek",
+        api_key_env="DEEPSEEK_API_KEY",
+        api_protocol="deepseek",
+        model_name="deepseek-flash",
+        base_url="https://api.deepseek.com",
+    )
+    ModelUseGrant.objects.create(user_id=user.id, model_config=config)
+    return config.id
 
 
 def call(user, method, path, data=None, **url_kwargs):
@@ -128,7 +149,12 @@ def test_create_returns_201_and_full_record(user):
         user,
         "post",
         "/api/ai/roles/",
-        {"name": "页面执行", "model_name": "deepseek-flash", "system_prompt": "你是执行者"},
+        {
+            "name": "页面执行",
+            "model_config_id": _config(user),
+            "system_prompt": "你是执行者",
+            "kinds": ["executor"],
+        },
     )
     assert response.status_code == 201
     body = {"status": True, "data": response.data}
@@ -140,8 +166,11 @@ def test_create_returns_201_and_full_record(user):
 
 
 def test_list_orders_newest_first(user):
+    config_id = _config(user)
     for index in range(3):
-        AIRole.objects.create(role_id=f"20261115a0{index}", name=f"角色{index}", model_name="m")
+        AIRole.objects.create(
+            role_id=f"20261115a0{index}", name=f"角色{index}", model_config_id=config_id
+        )
     response = call(user, "get", "/api/ai/roles/")
     assert response.status_code == 200
     names = [row["name"] for row in response.data]
@@ -149,29 +178,40 @@ def test_list_orders_newest_first(user):
 
 
 def test_partial_update_changes_only_submitted_field(user):
+    config_id = _config(user)
     created = call(
         user,
         "post",
         "/api/ai/roles/",
-        {"name": "页面执行", "model_name": "m1", "system_prompt": "原文"},
+        {
+            "name": "页面执行",
+            "model_config_id": config_id,
+            "system_prompt": "原文",
+            "kinds": ["executor"],
+        },
     ).data
     response = call(
         user,
         "patch",
         f"/api/ai/roles/{created['role_id']}/",
-        {"model_name": "m2"},
+        {"system_prompt": "新文"},
         role_id=created["role_id"],
     )
     assert response.status_code == 200
     data = response.data
-    assert data["model_name"] == "m2"
+    assert data["system_prompt"] == "新文"
     assert data["name"] == "页面执行"
-    assert data["system_prompt"] == "原文"
+    assert data["model_config_id"] == config_id
     assert data["role_id"] == created["role_id"]
 
 
 def test_delete_then_detail_is_404(user):
-    created = call(user, "post", "/api/ai/roles/", {"name": "待删", "model_name": "m"}).data
+    created = call(
+        user,
+        "post",
+        "/api/ai/roles/",
+        {"name": "待删", "model_config_id": _config(user), "kinds": ["executor"]},
+    ).data
     deleted = call(
         user, "delete", f"/api/ai/roles/{created['role_id']}/", role_id=created["role_id"]
     )
@@ -187,7 +227,7 @@ def test_unknown_role_id_is_404(user):
 
 
 def test_duplicate_name_is_409(user):
-    payload = {"name": "页面执行", "model_name": "m"}
+    payload = {"name": "页面执行", "model_config_id": _config(user), "kinds": ["executor"]}
     assert call(user, "post", "/api/ai/roles/", payload).status_code == 201
     duplicate = call(user, "post", "/api/ai/roles/", payload)
     assert duplicate.status_code == 409
@@ -195,12 +235,25 @@ def test_duplicate_name_is_409(user):
 
 
 def test_blank_fields_are_400(user):
-    response = call(user, "post", "/api/ai/roles/", {"name": "   ", "model_name": ""})
+    response = call(user, "post", "/api/ai/roles/", {"name": "   "})
     assert response.status_code == 400
     assert AIRole.objects.count() == 0
 
 
-def test_arbitrary_model_name_is_accepted(user):
-    response = call(user, "post", "/api/ai/roles/", {"name": "随便", "model_name": "不存在的模型"})
-    assert response.status_code == 201
-    assert response.data["model_name"] == "不存在的模型"
+def test_model_outside_grant_is_403(user):
+    """未进入本人使用名单的模型不能拿来建角色（名单为空即全部为 False）。"""
+    from backend.apps.ai_assistant.models import AIModelConfig
+
+    config = AIModelConfig.objects.create(
+        provider="deepseek",
+        api_key_env="DEEPSEEK_API_KEY",
+        model_name="未授权模型",
+    )
+    response = call(
+        user,
+        "post",
+        "/api/ai/roles/",
+        {"name": "随便", "model_config_id": config.id, "kinds": ["executor"]},
+    )
+    assert response.status_code == 403
+    assert AIRole.objects.count() == 0

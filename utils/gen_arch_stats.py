@@ -1229,7 +1229,7 @@ if __name__ == "__main__":
             sys.exit(0)
     elif "--check-md" in sys.argv:
         if "--doc" not in sys.argv or sys.argv.index("--doc") + 1 >= len(sys.argv):
-            print("用法: python utils/gen_arch_stats.py --check-md --doc <架构文档路径>")
+            print("用法: python -m utils.gen_arch_stats --check-md --doc <架构文档路径>")
             sys.exit(2)
         result = check_drift(Path(sys.argv[sys.argv.index("--doc") + 1]))
         if result["status"] == "drift":

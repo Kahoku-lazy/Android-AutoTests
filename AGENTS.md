@@ -28,7 +28,7 @@
 2. 设计方案与报告，接口文档在 `dev_docs\DEV_TEST`目录中，文件名举例：XXX.md/XXX.html
 3. 需求文档与架构文档放在 `dev_docs\ARCH_PRD` 中，文件名举例：ARCH-XXX.md/ARCH-XXX.html 或 PRD-XXX.md/PRD-XXX.html
 4. 项目全局的Python代码编写规则文档在`.agents\docs\Python代码规则.md`
-5. 全仓 Python 注释（模块头 4 字段：模块功能 / Python 调试 / 时间 / 测试）规范在`.agents\rules\python-docstring-style.md`；Django 固定脚手架（models/views/api/serializers/admin/urls/apps/migrations 等）不适用
+5. 全仓 Python 注释（模块头 4 字段：模块功能 / Python 调试 / 时间 / 测试）规范在`.agents\rules\python-docstring-style.md`；Django 固定脚手架（models/views/api/serializers/admin/urls/apps/migrations 等）不适用; `engines\ae_harness\tools`这个模块不在全仓 Python 注释范围内。
 
 
 ### 项目工具

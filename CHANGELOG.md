@@ -9,6 +9,7 @@
 ### Changed
 
 - AgentScope 下限由 2.0.9 提到 2.0.12。本地向量库 `delete` 接受可选 `metadata_filter`，与该版 `VectorStoreBase` 对齐
+- 运行方式统一为 `python -m`：`python -m run`、`python -m utils.check_gates`、`python -m utils.gen_arch_stats`、`python -m manage`；`ci-phase1.yml`、`utils/service_ctl/commands.py` 与门禁执行器同步改用模块调用
 
 ### Added
 

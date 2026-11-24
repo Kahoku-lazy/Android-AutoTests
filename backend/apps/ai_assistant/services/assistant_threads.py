@@ -95,13 +95,23 @@ def thread_log_dir(assistant_id: str, thread_id: str):
     return ASSISTANT_LOG_ROOT / assistant_id / thread_id
 
 
+def is_safe_report_id(report_id: str) -> bool:
+    """报告编号只能是单层目录名：非空、不是 . 或 ..、且不含路径分隔。"""
+    from pathlib import Path
+
+    if not report_id:
+        return False
+    stamp = Path(report_id).name
+    return stamp != "" and stamp not in {".", ".."} and stamp == report_id
+
+
 def resolve_thread_report(thread: AIAssistantThread, report_id: str):
     """把报告编号解析成栏目录内的 HTML。跳出目录则返回 None。"""
     from pathlib import Path
 
-    stamp = Path(report_id).name
-    if not stamp or stamp in {".", ".."} or stamp != report_id:
+    if not is_safe_report_id(report_id):
         return None
+    stamp = Path(report_id).name
     root = thread_log_dir(thread.assistant_id, thread.thread_id).resolve()
     folder = (root / stamp).resolve()
     if root not in folder.parents:

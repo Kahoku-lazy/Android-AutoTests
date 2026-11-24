@@ -134,6 +134,24 @@ body { margin: 0; font-family: var(--app-font); font-size: var(--app-size-sm);
 
 **弹窗**：`border: 2.5px dashed var(--ink); border-radius: 6px 10px 6px 10px; box-shadow: 4px 4px 0 0 var(--ink); background: #fff;`
 
+**口径提示（`?` 收起的说明文字）**：标题旁一枚 20×20 的圆形问号，点开才显示原本压在图上/标题下的说明段落（「数什么 / 从哪来 / 不证明什么」这类口径文字）。这个圆是**真实圆形**例外（20×20 配 `50%`），不是大圆角卡片；描边 2px 墨、硬影 `2px 2px 0 0 var(--c-element)`、展开态换 `--c-dashboard` 底；展开后的说明只在左侧加一道 3px 柠黄竖条，不套卡片。
+
+```css
+.has-hint { display: flex; align-items: center; gap: var(--app-space-sm); }
+.hint-toggle { display: inline-flex; align-items: center; justify-content: center;
+               width: 20px; height: 20px; padding: 0;
+               font: 800 var(--app-size-xs)/1 var(--app-font); color: var(--ink);
+               background: var(--app-bg-card); border: 2px solid var(--ink); border-radius: 50%;
+               box-shadow: 2px 2px 0 0 var(--c-element); cursor: pointer; }
+.hint-toggle:hover { background: color-mix(in srgb, var(--c-dashboard) 35%, var(--app-bg-card)); }
+.hint-toggle[aria-expanded="true"] { background: var(--c-dashboard); box-shadow: 2px 2px 0 0 var(--ink); }
+.hint-panel:not([hidden]) { padding-left: var(--app-space-sm); border-left: 3px solid var(--c-dashboard); }
+```
+
+三条硬要求：① 按钮带 `aria-expanded` + `aria-controls`（指向说明的 `id`），说明用 `hidden` 属性收起，不要在 HTML 里写死隐藏；② 挂按钮的脚本放在页面自己的 JS **之后**（Vue 已挂载、DOM 是渲染后的树），写在前面会挂到随后被替换掉的模板节点上；③ 图例（颜色 chips）和图注不收起——收了图就看不懂了。
+
+参考落点：`dev_docs/project-viz/hint-toggle.js` + `styles.css`。
+
 **收尾**：动 `transform` 的类统一加降级块。
 
 ```css

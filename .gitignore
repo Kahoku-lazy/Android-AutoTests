@@ -130,7 +130,6 @@ demo_test_*.yaml
 # ── Dev docs debug/design reports (HTML/PPT/生成的脚本等) ──
 dev_docs/**/*.html
 !dev_docs/project-viz/index.html
-!dev_docs/project-viz/html/*.html
 dev_docs/**/*.pptx
 dev_docs/**/gen_ppt*.py
 dev_docs/**/闂璁板綍.md

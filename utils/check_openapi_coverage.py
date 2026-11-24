@@ -83,7 +83,7 @@ def main() -> int:
     if not BASELINE.exists():
         print(f"缺少基线：{BASELINE.relative_to(ROOT)}", file=sys.stderr)
         print(
-            "生成：python manage.py spectacular --file openspec/openapi.yaml --validate",
+            "生成：python -m manage spectacular --file openspec/openapi.yaml --validate",
             file=sys.stderr,
         )
         return 1
@@ -95,7 +95,7 @@ def main() -> int:
         for path in missing:
             print(f"  - {path}", file=sys.stderr)
         print(
-            "更新基线：python manage.py spectacular --file openspec/openapi.yaml --validate",
+            "更新基线：python -m manage spectacular --file openspec/openapi.yaml --validate",
             file=sys.stderr,
         )
         return 1

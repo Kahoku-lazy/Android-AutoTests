@@ -51,9 +51,9 @@ cd Android-AutoTests
 pip install -r requirements.txt
 cd frontend && npm install && cd ..
 cp .env.example .env        # then fill in your model API keys
-python run.py setup         # installs project-local adb (first run)
-python run.py start         # start the platform; status / stop also available
-python run.py check         # local quality gates (same checks as CI)
+python -m run setup         # installs project-local adb (first run)
+python -m run start         # start the platform; status / stop also available
+python -m run check         # local quality gates (same checks as CI)
 ```
 
 ## Contributing

@@ -1,4 +1,4 @@
-/** 助手名片与测试对话。任务清单仍走 api/agents.ts，不经过这里。 */
+/** 助手名片与测试对话。任务清单走 task-list 模块的 api/tasks.ts，不经过这里。 */
 import djangoClient from "@/shared/api-client"
 import type { DjangoResponse } from "@/shared/api-client"
 import type {

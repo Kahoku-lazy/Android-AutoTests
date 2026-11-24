@@ -1,36 +1,28 @@
 /**
- * 运营表格的时间格式化 — 纯函数，两个列表页共用。
+ * 运营台表格的时间格式化 — 薄包装，唯一实现见 `@/shared/helpers/datetime`。
  *
- * 业务功能：
- * 1. formatRelativeTime: 把时间点转成「刚刚 / N 分钟前 / N 小时前 / 日期」。
- * 2. formatDateTime: 把时间点转成 `YYYY-MM-DD HH:mm`，作为相对时间的副行。
+ * 本模块的业务功能如下：
+ * 1. formatRelativeTime: 相对时间；运营台要「天 / 月 / 年」三档，故固定 `granularity: "long"`。
+ * 2. formatDateTime: 绝对时间作为相对时间的副行，只到分（`precision: "minute"`）。
+ *
+ * 保留本文件是为了让页面侧 import 与断言口径不变（见设计 D9）；不要在别处再写一份实现。
  */
-
-/** 空值与非法时间统一显示为占位符，避免表格里出现 `Invalid Date`。 */
-const EMPTY = "—"
+import {
+  formatDateTime as formatDateTimeShared,
+  formatRelativeTime as formatRelativeTimeShared,
+} from "@/shared/helpers/datetime"
 
 /**
- * 相对时间的口语写法。
+ * 相对时间的口语写法（含天 / 月 / 年）。
  *
  * Args:
  *   value: 后端返回的时间字符串（ISO 或 `YYYY-MM-DD HH:mm`），可为空。
  *
  * Returns:
- *   「刚刚」/「N 分钟前」/「N 小时前」/「YYYY/M/D」；空或非法时间返回 `—`。
+ *   「刚刚」/「N 分钟前」/「N 小时前」/「N 天前」/「N 个月前」/「N 年前」；空或非法返回 `—`。
  */
 export function formatRelativeTime(value: string): string {
-  if (!value) return EMPTY
-  const time = new Date(value).getTime()
-  if (Number.isNaN(time)) return EMPTY
-  const seconds = Math.floor((Date.now() - time) / 1000)
-  if (seconds < 60) return "刚刚"
-  if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟前`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)} 小时前`
-  const days = Math.floor(seconds / 86400)
-  if (days < 30) return `${days} 天前`
-  const months = Math.floor(days / 30)
-  if (months < 12) return `${months} 个月前`
-  return `${Math.floor(days / 365)} 年前`
+  return formatRelativeTimeShared(value, { granularity: "long" })
 }
 
 /**
@@ -40,12 +32,8 @@ export function formatRelativeTime(value: string): string {
  *   value: 后端返回的时间字符串，可为空。
  *
  * Returns:
- *   格式化后的本地时间；空或非法时间返回 `—`。
+ *   格式化后的本地时间；空或非法返回 `—`。
  */
 export function formatDateTime(value: string): string {
-  if (!value) return EMPTY
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return EMPTY
-  const pad = (n: number): string => String(n).padStart(2, "0")
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+  return formatDateTimeShared(value, { precision: "minute" })
 }

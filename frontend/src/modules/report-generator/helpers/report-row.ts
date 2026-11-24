@@ -1,4 +1,5 @@
 /** 报告行的展示派生 — 纯函数，无状态无副作用 */
+import { formatMonthDayTime } from "@/shared/helpers/datetime"
 import type { ReportRow } from "../types"
 
 /** 行唯一键：来源 + 报告定位，两来源合表不撞键。 */
@@ -37,13 +38,8 @@ export function reportMoment(row: ReportRow): string {
   return row.source === "sop" ? row.finished_at || row.started_at : row.created_at
 }
 
-/** 本地时间展示：月-日 时:分；空值给「—」。 */
+/** 本地时间展示：月-日 时:分；空值给「—」，无法解析时原样返回。 */
 export function formatReportTime(iso: string): string {
   if (!iso) return "—"
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  const pad = (value: number) => String(value).padStart(2, "0")
-  return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(
-    date.getMinutes(),
-  )}`
+  return formatMonthDayTime(iso) ?? iso
 }

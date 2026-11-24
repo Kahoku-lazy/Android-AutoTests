@@ -22,40 +22,6 @@
   color: var(--el-button-hover-text-color);
 }
 
-/* 加载三点 */
-.wb-loader {
-  /* 加载三点第三点灰绿（本组件专用色值登记处；tokens.css 无同值令牌） */
-  --wb-loader-dot-3: #e2ece9;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: var(--app-space-xs) 2px;
-}
-.wb-loader .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: block;
-}
-.wb-loader .dot:nth-child(1) {
-  background: var(--c-workflow);
-}
-.wb-loader .dot:nth-child(2) {
-  background: var(--c-element);
-}
-.wb-loader .dot:nth-child(3) {
-  background: var(--wb-loader-dot-3);
-}
-
-/* 选中描边 */
-.wb-select-ring {
-  /* 选中态描边（rgba 绘制色登记处；tokens.css 无同值令牌） */
-  --wb-select-ring-color: rgba(162, 210, 255, 0.72);
-  outline: 2px solid var(--wb-select-ring-color) !important;
-  outline-offset: 3px;
-  transition: outline-color var(--app-duration) var(--app-ease);
-}
-
 /* 路由切换淡入：时长/缓动/位移全部走设计令牌 */
 .fade-slide-enter-active,
 .fade-slide-leave-active {

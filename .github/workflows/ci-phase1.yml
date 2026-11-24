@@ -47,7 +47,7 @@ jobs:
           gates="$gates,single-agent-constructor"
           gates="$gates,cred-password,cred-apikey,cred-secret"
           gates="$gates,boundary,linting,vue-file-size,mock-data"
-          python utils/check_gates.py --only "$gates"
+          python -m utils.check_gates --only "$gates"
 
   frontend:
     runs-on: ubuntu-latest
@@ -78,4 +78,4 @@ jobs:
         run: |
           gates=vitest,vite-build,prettier,eslint,dashed-whitelist
           gates="$gates,vue-tsc,prettier-ts,style-gates,cred-frontend"
-          python utils/check_gates.py --only "$gates"
+          python -m utils.check_gates --only "$gates"

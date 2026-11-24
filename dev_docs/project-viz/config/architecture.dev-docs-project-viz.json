@@ -1,0 +1,155 @@
+{
+  "schema": 1,
+  "target": "dev_docs/project-viz",
+  "slug": "dev-docs-project-viz",
+  "title": "project-viz 自身的数据流水线",
+  "note": "人工语义：这张图画的是本目录自己怎么产出一张图。代码检测不出来谁读谁，所以由 Agent 手写。",
+  "components": [
+    {
+      "id": "rules",
+      "type": "security",
+      "label": "AGENTS.md / README",
+      "sublabel": "红线 · 口径 · 版式",
+      "tag": "约束来源",
+      "row": 0,
+      "col": 0
+    },
+    {
+      "id": "gen",
+      "type": "backend",
+      "label": "gen_viz_data.py",
+      "sublabel": "扫目录 · 算依赖 · 写产物",
+      "tag": "tools/",
+      "row": 0,
+      "col": 1
+    },
+    {
+      "id": "fe",
+      "type": "backend",
+      "label": "count_frontend.mjs",
+      "sublabel": "TS 语法树 · HTTP 边计数",
+      "tag": "tools/",
+      "row": 0,
+      "col": 2
+    },
+    {
+      "id": "repo",
+      "type": "external",
+      "label": "仓库代码",
+      "sublabel": "任意 --target 目录",
+      "tag": "只读输入",
+      "row": 2,
+      "col": 3
+    },
+    {
+      "id": "cfg",
+      "type": "security",
+      "label": "architecture.<slug>.json",
+      "sublabel": "本层级架构 · 手写",
+      "tag": "config/",
+      "row": 1,
+      "col": 3
+    },
+    {
+      "id": "csv",
+      "type": "database",
+      "label": "code-stats.csv",
+      "sublabel": "模块级 loc/files/units",
+      "tag": "data/",
+      "row": 1,
+      "col": 0
+    },
+    {
+      "id": "deps",
+      "type": "database",
+      "label": "dependencies.json",
+      "sublabel": "依赖边 + 快照时间",
+      "tag": "data/",
+      "row": 1,
+      "col": 1
+    },
+    {
+      "id": "docsjs",
+      "type": "database",
+      "label": "docs.js",
+      "sublabel": "58 篇全文 + 三类关系",
+      "tag": "data/",
+      "row": 1,
+      "col": 2
+    },
+    {
+      "id": "vizjs",
+      "type": "backend",
+      "label": "viz.js",
+      "sublabel": "1–3 节合成 __VIZ__",
+      "tag": "data/",
+      "row": 2,
+      "col": 0
+    },
+    {
+      "id": "page",
+      "type": "frontend",
+      "label": "index.html",
+      "sublabel": "四节 · 手写 SVG + ECharts",
+      "tag": "唯一页面",
+      "row": 2,
+      "col": 1
+    },
+    {
+      "id": "reader",
+      "type": "external",
+      "label": "读者 / 浏览器",
+      "sublabel": "file:// 双击 · 断网可读",
+      "tag": "本地打开",
+      "row": 2,
+      "col": 2
+    }
+  ],
+  "connections": [
+    { "from": "rules", "to": "gen", "label": "口径与红线", "variant": "emphasis" },
+    { "from": "fe", "to": "gen", "label": "node 调用", "variant": "default" },
+    { "from": "repo", "to": "gen", "label": "遍历文件", "variant": "default" },
+    { "from": "cfg", "to": "gen", "label": "读入架构", "variant": "default" },
+    { "from": "gen", "to": "csv", "label": "写指标", "variant": "default" },
+    { "from": "gen", "to": "deps", "label": "写依赖", "variant": "default" },
+    { "from": "gen", "to": "docsjs", "label": "扫全仓文档", "variant": "default" },
+    { "from": "gen", "to": "vizjs", "label": "内联三节", "variant": "emphasis" },
+    { "from": "vizjs", "to": "page", "label": "window.__VIZ__", "variant": "default" },
+    { "from": "docsjs", "to": "page", "label": "window.__DOCS__", "variant": "default" },
+    { "from": "page", "to": "reader", "label": "渲染", "variant": "default" }
+  ],
+  "boundaries": [
+    {
+      "label": "tools/ · 唯一的生成器",
+      "wraps": ["gen", "fe"],
+      "pad": 22
+    }
+  ],
+  "cards": [
+    {
+      "title": "一条命令",
+      "items": [
+        "gen_viz_data.py --target <目录> 一次写完 4 份产物",
+        "页面不扫仓库、不 fetch，只读 data/*.js",
+        "换层级 = 换 --target，覆盖同一套产物"
+      ]
+    },
+    {
+      "title": "四份产物各管什么",
+      "items": [
+        "csv：第 3 节唯一的数字源，也是唯一能直接改的表",
+        "deps.json：第 2 节的 7 条目录依赖",
+        "docs.js：第 4 节的 58 篇文档全文 + 64 条关系",
+        "config/*.json：第 1 节架构，只能手写，代码检测不出来"
+      ]
+    },
+    {
+      "title": "为什么页面这么薄",
+      "items": [
+        "页面 449 行只管排版与配色，没有任何数据判断",
+        "口径变更一律改生成器，不改页面",
+        "断网 + file:// 双击是硬约束，所以数据必须内联"
+      ]
+    }
+  ]
+}

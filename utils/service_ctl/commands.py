@@ -52,7 +52,7 @@ def adb_status_line() -> str:
 
     info = adb_tools.adb_status()
     if not info["path"]:
-        return "MISSING  (run: python run.py setup)"
+        return "MISSING  (run: python -m run setup)"
     version = ""
     try:
         result = subprocess.run(
@@ -95,7 +95,7 @@ def cmd_setup(check_only: bool = False, force: bool = False, from_file: str | No
         if info["installed"]:
             print(f"  ADB: platform 已安装（{info['version']}）{info['path']}")
             sys.exit(0)
-        print(f"  ADB: 未安装（当前来源：{info['source']}）。运行 python run.py setup 安装。")
+        print(f"  ADB: 未安装（当前来源：{info['source']}）。运行 python -m run setup 安装。")
         sys.exit(1)
 
     platform_tools.install(force=force, archive=from_file)
@@ -191,5 +191,5 @@ def cmd_logs(services: list[str]) -> None:
 
 def cmd_check() -> None:
     """跑本地质量门禁；检查内容与 CI 一一对应，见 utils/check_gates.py。"""
-    result = subprocess.run([sys.executable, str(ROOT / "utils" / "check_gates.py")], cwd=str(ROOT))
+    result = subprocess.run([sys.executable, "-m", "utils.check_gates"], cwd=str(ROOT))
     sys.exit(result.returncode)

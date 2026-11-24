@@ -25,8 +25,8 @@ git clone https://github.com/Kahoku-lazy/Android-AutoTests.git   # 外部贡献�
 cd Android-AutoTests
 pip install -r requirements.txt
 cd frontend && npm install && cd ..
-python run.py setup      # 首次/换机：安装项目内 adb（唯一会联网的命令）
-python run.py start      # 启动平台；status 查看状态；stop 停止
+python -m run setup      # 首次/换机：安装项目内 adb（唯一会联网的命令）
+python -m run start      # 启动平台；status 查看状态；stop 停止
 ```
 
 ## 开发流程（PR 是唯一入口）
@@ -35,7 +35,7 @@ python run.py start      # 启动平台；status 查看状态；stop 停止
 
 1. **开分支**：从最新 `Kahoku` 拉特性分支，如 `feat/xxx`、`fix/xxx`（外部贡献者在自己的 fork 上操作）。
 2. **大功能先立项**：涉及新功能 / 结构性改动，先走 OpenSpec 规范驱动流程（`openspec/changes/` 下 explore → propose → apply → archive），小修复可直接改。
-3. **本地门禁**：提交前必须跑 `python run.py check`（与 CI 同一批检查），阻塞项失败先修复。
+3. **本地门禁**：提交前必须跑 `python -m run check`（与 CI 同一批检查），阻塞项失败先修复。
 4. **逐文件暂存**：`git add <具体文件>`，**禁止 `git add -A`**（历史教训：曾把未申报的改动一起带进提交）。
 5. **提交规范**：Conventional Commits，`{type}({scope}): {描述}`；type 取 `feat` / `fix` / `refactor` / `docs` / `test` / `chore` / `style` / `security`；一次提交只做一件事。
 6. **提 PR**：`gh pr create --base Kahoku`（或网页端），按 PR 模板填写。

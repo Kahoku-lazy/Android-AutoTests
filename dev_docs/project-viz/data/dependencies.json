@@ -1,0 +1,61 @@
+{
+  "target": ".",
+  "slug": "repo-root",
+  "generated_at": "2026-11-24 14:50",
+  "edges": [
+    {
+      "from": "frontend",
+      "to": "backend",
+      "kind": "http",
+      "count": 98
+    },
+    {
+      "from": "tests",
+      "to": "backend",
+      "kind": "import",
+      "count": 55
+    },
+    {
+      "from": "backend",
+      "to": "utils",
+      "kind": "import",
+      "count": 23
+    },
+    {
+      "from": "backend",
+      "to": "engines",
+      "kind": "import",
+      "count": 17
+    },
+    {
+      "from": "engines",
+      "to": "utils",
+      "kind": "import",
+      "count": 10
+    },
+    {
+      "from": "tests",
+      "to": "utils",
+      "kind": "import",
+      "count": 7
+    },
+    {
+      "from": "tests",
+      "to": "engines",
+      "kind": "import",
+      "count": 4
+    },
+    {
+      "from": "run.py",
+      "to": "backend",
+      "kind": "import",
+      "count": 1
+    },
+    {
+      "from": "run.py",
+      "to": "utils",
+      "kind": "import",
+      "count": 1
+    }
+  ]
+}

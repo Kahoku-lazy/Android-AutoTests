@@ -363,6 +363,8 @@ class AssistantThreadLogFileView(APIView):
             return Response({"message": "对话栏不存在"}, status=status.HTTP_404_NOT_FOUND)
         if thread.status == "running":
             return Response({"message": "还在写"}, status=status.HTTP_409_CONFLICT)
+        if not api.is_safe_report_id(report_id):
+            return Response({"message": "日志不存在"}, status=status.HTTP_404_NOT_FOUND)
         from backend.apps.ai_assistant.services.log_ticket import LogTicketError, consume_log_ticket
 
         try:

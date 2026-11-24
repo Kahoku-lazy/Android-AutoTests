@@ -67,25 +67,6 @@ export function validateLanConnect(fields: LanConnectFields): {
   return { ok: true, errors, payload }
 }
 
-export function formatRelativeTime(iso: string): string {
-  if (!iso) return "—"
-  const diff = Date.now() - new Date(iso).getTime()
-  const sec = Math.floor(diff / 1000)
-  if (sec < 60) return "刚刚"
-  if (sec < 3600) return `${Math.floor(sec / 60)} 分钟前`
-  if (sec < 86400) return `${Math.floor(sec / 3600)} 小时前`
-  return new Date(iso).toLocaleDateString("zh-CN")
-}
-
-export function formatDateTime(iso: string): string {
-  // 绝对时间：YYYY-MM-DD HH:mm:ss（设备连接时间点）
-  if (!iso) return "—"
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return "—"
-  const pad = (n: number) => String(n).padStart(2, "0")
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
-}
-
 export function displayModel(device: DeviceRecord): string {
   const parts: string[] = []
   if (device.brand) parts.push(device.brand)

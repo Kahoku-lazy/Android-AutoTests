@@ -2,7 +2,6 @@
 import djangoClient from "@/shared/api-client"
 import type {
   TaskDeleteResponse,
-  TaskDetailResponse,
   TaskListResponse,
   TaskStatsResponse,
   TaskSubmitResponse,
@@ -54,12 +53,6 @@ export async function clearTasks(): Promise<TaskDeleteResponse & { data?: { dele
   const { data } = await djangoClient.post<TaskDeleteResponse & { data?: { deleted?: number } }>(
     "/tasks/clear/",
   )
-  return data
-}
-
-/** 任务详情（过程日志） */
-export async function getTask(taskId: number): Promise<TaskDetailResponse> {
-  const { data } = await djangoClient.get<TaskDetailResponse>(`/tasks/${taskId}/`)
   return data
 }
 

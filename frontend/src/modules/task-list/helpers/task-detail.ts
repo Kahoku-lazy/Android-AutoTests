@@ -8,6 +8,7 @@ import type {
   TaskRunExecutorOut,
   TaskRunVerifierOut,
 } from "@/shared/types/ai"
+import { formatIsoNaive } from "@/shared/helpers/datetime"
 import { mediaUrl } from "@/shared/helpers/mediaUrl"
 
 export type TaskStepPhase = "pending" | "running" | "pass" | "fail"
@@ -61,8 +62,7 @@ export function isTaskTerminal(status?: string): boolean {
 }
 
 export function formatTaskTime(raw?: string): string {
-  if (!raw) return ""
-  return raw.replace("T", " ").slice(0, 16)
+  return formatIsoNaive(raw)
 }
 
 export function formatTaskDuration(start?: string, end?: string): string {

@@ -1,96 +1,112 @@
 # 项目可视化
 
-把**这个仓库**画出来：有哪些模块、谁依赖谁、每块多少代码。静态快照、免构建、断网可开。
+把**任意一个目录**画出来：平台架构、目录依赖、代码量分布、AGENTS 文档关系。**1 个页面、4 节、双击即开、断网可用。**
 
-数据由 [`tools/gen_board_data.py`](tools/gen_board_data.py) 扫描生成，页面只读快照，不调任何接口。
+一次只维护**一个层级**：`--target` 决定"模块"是谁，生成器按这个层级覆盖 `data/`，页面刷新即变；文档关系（第 4 节）是**全仓**的，不随 target 变。
 
 ## 打开
 
-直接双击根目录的 [`index.html`](index.html)（入口），或起一个本地服务（推荐，避免浏览器缓存 CSS）：
+**双击 [`index.html`](index.html) 即可**（数据打包在 `data/viz.js` 与 `data/docs.js`，`file://` 下不用起服务）。
+
+也可以走 HTTP：
 
 ```bash
 python -m http.server 8811 --directory dev_docs/project-viz
 # http://127.0.0.1:8811/index.html
 ```
 
-**入口页在项目根，其余 26 个页面在 [`html/`](html/)**：入口页的资源引用是同级（`styles.css` / `data/` …），其余页面的资源引用是 `../`；侧栏链接已按两套目录分别生成。
+## 四个视图（四个问题）
 
-页面清单：
+| 节 | 内容 | 数据源 | 回答什么 |
+| --- | --- | --- | --- |
+| 1. 平台架构 | 运行时组件 + 带协议/动作的连线 + 边界 + 结论卡 | `config/architecture.<slug>.json` | 系统由什么组成、一次请求怎么走 |
+| 2. 目录依赖 | 模块节点 + import 实线 / 前端→后端 HTTP 橙虚线 | `data/dependencies.json` | 谁引用谁、谁调谁 |
+| 3. 代码量分布 | 横向条形（降序）+ 占比环形 + 明细表 | `data/code-stats.csv` | 哪块最大、各占多少 |
+| 4. 文档关系 | AGENTS 约束树：层级 / 管辖目录 / 引用的模块文档；点节点看全文 | `data/docs.js` | 改这块之前该读哪几篇、谁管哪里 |
 
-- [index.html](index.html) —— **入口 / 总览**：1.1 平台架构（运行时组件与调用链）+ 1.2 实际代码依赖（仓库一级目录的 import 次数）
-- [html/frontend.html](html/frontend.html) —— **前端**：`frontend/src/modules/` 下 10 个业务目录
-- **22 个模块页**（都在 `html/`）—— 前端 10 个（如 [html/frontend-ops-console.html](html/frontend-ops-console.html)）+ 后端 12 个（如 [html/backend-task_list.html](html/backend-task_list.html)），每个业务模块一页，三节与主页面同构：单元引用关系图 / 单元依赖（图+表）+ 代码量饼图 / 单元三次对比
-- [html/backend.html](html/backend.html) —— **后端**：`backend/apps/` 下 12 个 Django app
-- [html/agents.html](html/agents.html) —— **引擎**：`engines/` 下 6 个顶层目录
-- [html/ae-harness.html](html/ae-harness.html) —— **原型链路**：`engines/ae_harness/` 下 7 个原语模块 + 一条「外部装配方」
+## 模块是什么（`--target`）
 
-## 每个页面都是三节
+**模块 = 目标目录展开的首层条目（目录或代码文件），只展开这一级。**
 
-| 节 | 内容 | 回答什么 |
+| 命令 | 模块集合 |
+| --- | --- |
+| `--target .`（默认） | 仓库首层有代码的条目：`frontend` / `backend` / `engines` / `tests` / `utils` / `run.py` / `run_daphne.py` / `manage.py` |
+| `--target engines` | `engines` 首层（`ae_harness` 就是其中一个模块） |
+| `--target engines/ae_harness` | 7 个原语模块：agents / tools / knowledge / assistant / workflow / event / middleware |
+| `--target backend/apps` | 12 个 Django app |
+
+## 更新数据（一条命令）
+
+```bash
+.venv\Scripts\python.exe dev_docs/project-viz/tools/gen_viz_data.py --target .
+.venv\Scripts\python.exe dev_docs/project-viz/tools/gen_viz_data.py --target engines/ae_harness
+.venv\Scripts\python.exe dev_docs/project-viz/tools/gen_viz_data.py --check      # 只比对是否过期
+```
+
+> 必须用 `.venv` 的 Python：系统 `python` 缺 `tzdata`，`ZoneInfo("Asia/Shanghai")` 会抛错。
+> 生成器**一次写完三份产物**，不需要第二步内联。
+
+## 产物
+
+| 路径 | 内容 | 谁用 |
 | --- | --- | --- |
-| 1. 项目架构 → 实际代码依赖 | **两套本体**：1.1 平台架构（**运行时组件**：浏览器 / SPA / ASGI / DRF / 数据库 / 线程 / 引擎原语 / 外部系统，10 条带协议或动作的连线 + `engines/` 边界 + 3 张结论卡）；1.2 实际代码依赖（**目录**怎么切 + 7 条边 + import/HTTP 次数，点节点高亮） | 先看系统**由什么组成、一次请求怎么走**，再看**代码切成几块、谁引用谁多少次** |
-| 2. 模块依赖关系 × 模块代码量 | 左：依赖图 / import 次数表（两个 tab）；右：代码量饼图 | 谁引用谁、各占多少 |
-| 3. 各模块单元代码量 | 每模块一张三系列柱状图（本次 / 最近一次 / 最近两次） | 每块代码在长还是在缩 |
+| `data/code-stats.csv` | 模块级 `module,loc,files,units`（文件模块的 units 留空，页面显示「—」） | 第 3 节图表与明细表 |
+| `data/dependencies.json` | `{target, slug, generated_at, edges}` | 第 2 节依赖图；`--check` 比对 |
+| `data/viz.js` | 前两份 + 架构 JSON 合成 `window.__VIZ__` | **第 1–3 节的数据入口**（`file://` 可加载） |
+| `data/docs.js` | 58 篇文档的**全文** + 层级/管辖/引用三类边 = `window.__DOCS__` | 第 4 节文档图与正文面板 |
+| `config/architecture.<slug>.json` | 架构（人工语义，代码检测不出来，由 Agent 维护） | 第 1 节架构图 |
 
-第 1 节的两张图**不同源、不能互相验证**：1.1 来自 `dev_docs/ARCH_PRD/ARCH-平台架构图.spec.json`（人工语义，经 `tools/gen_arch_data.py` 转快照），1.2 来自 `tools/gen_board_data.py` 的 AST 解析。图形语言取自 `.agents/skills/arch-diagram-lite`，只用平台令牌落地，不引任何 viewer。
+`slug` 由 target 派生：`.` → `repo-root`，`engines/ae_harness` → `engines-ae-harness`。
 
-三个数字口径（模块 / 单元 / 依赖）每页不同，见 [`AGENTS.md`](AGENTS.md) 的「指标口径」一节——**五页数字不可横向相加**。
+> `docs.js` 约 200KB（全部 markdown 内联）。这是**故意**的：`file://` 下不能 `fetch`，不内联就没法在页面里读原文。它不随 `--target` 变。
 
-## 目录
+## 文档关系（第 4 节）
+
+- **节点**：所有 `AGENTS.md`（含 `.agents/AGENTS.md` 与 `dev_docs/project-viz/AGENTS.md`）+ `.agents/docs/**/*.md`，共 58 篇。
+- **三类边**：
+  - 实线 **层级**：父 AGENTS.md → 子 AGENTS.md（按目录就近取父级）；
+  - 虚线 **管辖**：AGENTS.md → 它所在目录（根文档管整仓）；
+  - 实线 **引用**：AGENTS.md 里 markdown 链接指向的模块文档。
+- **点任意节点**：右侧显示标题、路径、大小、管辖目录、出链/入链，再接**全文**（等宽，可滚动）。
+- 管辖目录按**文档所在位置**取，不解析正文里的反引号路径——那些既可能是仓库相对也可能是文档相对，还混着 `<模块>` / `{app}` 占位符，解出来只会把图撑满噪声节点。
+
+## 架构 JSON（手写，每层级一份）
+
+```jsonc
+{
+  "title": "…",
+  "components": [
+    { "id": "api", "type": "backend", "label": "Django + DRF",
+      "sublabel": "12 个 App · /api", "tag": "backend/", "row": 0, "col": 3 }
+  ],
+  "connections": [ { "from": "spa", "to": "asgi", "label": "axios · /api", "variant": "default" } ],
+  "boundaries":  [ { "label": "engines/ · 零 django 依赖", "wraps": ["support", "harness", "bridge"], "pad": 22 } ],
+  "cards":       [ { "title": "三层分工", "items": ["…"] } ]
+}
+```
+
+- 坐标只写 `row` / `col`（0 起）；页面用固定间距排版，`row/col` 缺省时按顺序自动铺。
+- `type` 取 `frontend` / `backend` / `database` / `security` / `external`，决定节点色条与图例。
+- 该层级没有配置文件时，第 1 节显示空态并提示要写的文件路径——**不编造架构**。
+
+## 文件
 
 | 路径 | 职责 |
 | --- | --- |
-| `index.html` · `overview.js` | **入口页**（总览，数据键 `projectModules`），资源引用是同级（`styles.css` / `data/` / `vendor/` …） |
-| `html/` | **其余 26 个页面**（4 个分类页 + 22 模块页）；资源引用一律 `../`，指向入口写 `../index.html` |
-| `html/frontend.html` · `frontend.js` | 前端页（`frontendModules`） |
-| `html/frontend-<key>.html`（10）+ `html/backend-<key>.html`（12）· `module.js` | 模块页（每个业务模块一页） |
-| `html/backend.html` · `backend.js` | 后端页（`backendModules`） |
-| `html/agents.html` · `agents.js` | 引擎页（`engineModules`） |
-| `html/ae-harness.html` · `ae-harness.js` | 原型链路页（`ae_harness`） |
-| `styles.css` | 五页共用：令牌子集 + 骨架 + 组件配方 |
-| `markdown.js` | AGENTS.md 弹层用的极简 markdown 渲染（共享） |
-| `charts/chart-framework.js` | 图表底层：生命周期 + 令牌 + `<viz-chart>` |
-| `charts/board-options.js` | 纯函数 option 构造器（`depGraph` / `modulePie` / `unitTrendColumn` …） |
-| `data/board.js` · `board.json` | 代码快照（`window.__BOARD__` / 机器可读） |
-| `data/architecture.js` · `architecture.json` | 平台架构快照（`window.__ARCH__`，由 `ARCH-平台架构图.spec.json` 转出） |
-| `data/history.json` · `history.js` | 历史快照（生成器追加，数值没变不追加） |
-| `tools/gen_board_data.py` | 生成器：扫仓库 → 写 `board.*` 与 `history.*` |
-| `tools/gen_arch_data.py` | 生成器：读架构 spec → 写 `architecture.*`（校验 + 转格式，不改写语义） |
-| `tools/gen_module_pages.py` | 按模板批量生成 22 个模块页到 `html/` |
-| `tools/sync_sidebar.py` | 按 `data/board.json` 刷新侧栏（根入口 + 4 个分类页 + 模块页模板） |
-| `tools/count_frontend.mjs` | 前端计数（本地 TypeScript 语法树，无网络） |
-| `vendor/` | Vue 3.5.44 全局构建 + ECharts 5.6.0 完整构建（本地化） |
+| [`index.html`](index.html) | 唯一页面（内联 CSS + JS，无构建） |
+| `tools/gen_viz_data.py` | 生成器：扫目标目录 + 全仓文档 → 写 4 份产物 |
+| `tools/count_frontend.mjs` | 前端计数（供生成器判断前后端并存时的 HTTP 边） |
+| `config/` | 每层级一份手写架构 JSON |
+| `data/` | 生成器的输出（4 份），页面只读 |
+| `vendor/echarts.min.js` | 本地 ECharts，只给第 3 节两张图用 |
 
-## 数据怎么来
+规则、口径与踩坑记录见 [`AGENTS.md`](AGENTS.md)。
 
-```bash
-.venv\Scripts\python.exe dev_docs/project-viz/tools/gen_board_data.py          # 代码快照（1.2 / 第 2、3 节）
-.venv\Scripts\python.exe dev_docs/project-viz/tools/gen_board_data.py --check  # 比对，过期退出码 1
-.venv\Scripts\python.exe dev_docs/project-viz/tools/gen_arch_data.py           # 架构快照（1.1）
-.venv\Scripts\python.exe dev_docs/project-viz/tools/gen_arch_data.py --check   # 比对，过期退出码 1
-```
+## 边界
 
-> 必须用 `.venv` 的 Python：系统 `python` 缺 `tzdata`（`ZoneInfo("Asia/Shanghai")` 会抛错）。
-> `data/*.json` 由上一次生成它的解释器持有 ACL，换解释器写会 `PermissionError` —— 详见 [`AGENTS.md`](AGENTS.md)「已知坑」。
-
-- **1.1 平台架构是人工语义**：组件、连线、标签全部来自 `ARCH-平台架构图.spec.json`（已评审），
-  `gen_arch_data.py` 只做校验 + 转格式；**页面不许改写、补全、推断**，改架构先改 spec 再重跑。
-- **1.2 的依赖**来自 AST 解析的 `import`：只证明"引用了谁"，**不证明运行期谁调谁**。
-- **前端 → 后端**是另一类关系：`count_frontend.mjs` 采集的 api-client 调用（图上橙色虚线、按「处」计），不是 import。
-- **三层对比**靠历史累积：每次生成追加一条，页面取最近三次；历史里没有的位显示「待记录」，不补零。
-- **页面不 fetch**：`file://` 下会被 CORS 拦，所以两个生成器都额外写一份 `window.__XXX__ = …` 的 `.js`。
-
-## 已定 / 未定
-
-**已定**：五页三节结构、每页的模块与单元口径、总览第 1 节的两套本体（1.1 平台架构 = 运行时组件 + 协议/动作连线 + 边界 + 3 张结论卡；1.2 实际代码依赖 = 目录切块 + import/HTTP 次数）、依赖图与饼图、三次对比、AGENTS.md 弹层、ae_harness 页的「外部装配方」表。
-
-**未定**：历史趋势的更长视图（现在只到三次）、跨页跳转（点模块跳到对应页）。
-
-## 约束（改这个目录前先看）
-
-1. 视觉只取 [doodle-craft](../../.agents/skills/doodle-craft/SKILL.md) 的令牌，不写色值字面量。
-2. 架构图（第 1 节）按 [arch-diagram-lite](../../.agents/skills/arch-diagram-lite/SKILL.md) 的语法画：分层行 / 三行节点卡 / 角色图例 / 区域边界 / 正交布线 / 边标签。**不引 archify viewer**（815 KB，多了主题/导出/雷达等本项目不要的能力）。
-3. 图表必须走 `<viz-chart>`，禁止页面里直接 `echarts.init`；自绘 SVG 的架构图例外（它本来就是手绘示意图）。
-4. 不引 CDN、不写网络字体；新增依赖先进 `vendor/`。
-5. 数字必须能追到生成器的某段口径；解释不了的不上表。
-6. 改完跑 `node --check` 六个 js + 两个生成器的 `--check` + Playwright 打开五页截图，确认零 console 错误、版式不裁剪。
+- **目录级视图只画代码**：`.md` / `.json` / `.csv` 不算代码行，`data/` 与 `vendor/` 不进模块。所以像本目录这种"文档级目录"，第 2、3 节只会出现 `tools/` 与 `index.html` 两个模块——这是**有意的边界**，不是漏算。
+- **一次一个层级**：`--target` 覆盖同一份 `data/`，不保留多层级快照（文档图例外：它始终是全仓）。
+- **依赖只证明"引用了谁"**：不证明运行期调用顺序。
+- **架构是人工语义**：来自 `config/`，不是 AST 解析，也不与依赖数字互相验证。
+- **文档图不判断"该不该读"**：它只画仓库里写明的层级与链接关系；哪些是红线、哪些过时，还得看原文。
+- **旧版 27 页看板**已归档到 `temps/project-viz_view/`；旧 spec（`dev_docs/ARCH_PRD/ARCH-平台架构图.spec.json`）与 `gen_arch_data.py` 已废弃，架构以 `config/` 为准。

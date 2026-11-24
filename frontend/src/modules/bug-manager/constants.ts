@@ -1,4 +1,5 @@
 /** BUG 单管理常量 — 分类、状态、列定义、文案与路由的唯一真相源 */
+import { formatDateTime } from "@/shared/helpers/datetime"
 import type { BugCategory, BugStatus } from "./types"
 
 export const BUG_PAGE_HEADER = {
@@ -96,11 +97,8 @@ export function bugTaskStatusLabel(status: string): string {
 }
 
 export function formatBugTime(iso: string): string {
+  // 空值给「—」；无法解析时原样返回（BUG 单历史口径，见 D5 限定，不统一成「—」）。
   if (!iso) return "—"
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  const pad = (value: number) => String(value).padStart(2, "0")
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(
-    date.getHours(),
-  )}:${pad(date.getMinutes())}`
+  const text = formatDateTime(iso, { precision: "minute" })
+  return text === "—" ? iso : text
 }

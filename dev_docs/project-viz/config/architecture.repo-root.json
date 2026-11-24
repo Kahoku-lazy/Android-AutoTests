@@ -1,0 +1,153 @@
+{
+  "schema": 1,
+  "target": ".",
+  "slug": "repo-root",
+  "title": "Android-AutoTests 平台架构",
+  "note": "人工语义：组件、连线、标签都是人写的，代码检测不出来。改这张图就改这个文件。",
+  "components": [
+    {
+      "id": "users",
+      "type": "external",
+      "label": "浏览器",
+      "sublabel": "运营 / 测试人员",
+      "tag": "登录态 JWT",
+      "row": 0,
+      "col": 0
+    },
+    {
+      "id": "spa",
+      "type": "frontend",
+      "label": "Vue 3.5 SPA",
+      "sublabel": "Pinia · 10 个业务模块",
+      "tag": "Vite :5173",
+      "row": 0,
+      "col": 1
+    },
+    {
+      "id": "asgi",
+      "type": "security",
+      "label": "Daphne ASGI",
+      "sublabel": "JWT · CSRF · 协议路由",
+      "tag": ":8766",
+      "row": 0,
+      "col": 2
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Django + DRF",
+      "sublabel": "12 个 App · /api",
+      "tag": "backend/",
+      "row": 0,
+      "col": 3
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "MySQL / SQLite",
+      "sublabel": "任务 · 用量 · 吊销表",
+      "tag": "ORM",
+      "row": 0,
+      "col": 4
+    },
+    {
+      "id": "support",
+      "type": "backend",
+      "label": "硬件支撑引擎",
+      "sublabel": "device · uart_log · vision",
+      "tag": "engines/",
+      "row": 1,
+      "col": 0
+    },
+    {
+      "id": "harness",
+      "type": "backend",
+      "label": "ae_harness",
+      "sublabel": "tools · knowledge · event",
+      "tag": "engines/",
+      "row": 1,
+      "col": 1
+    },
+    {
+      "id": "bridge",
+      "type": "backend",
+      "label": "backend_bridge",
+      "sublabel": "角色装配 · SOP · 计费",
+      "tag": "engines/",
+      "row": 1,
+      "col": 2
+    },
+    {
+      "id": "runner",
+      "type": "backend",
+      "label": "task_runner",
+      "sublabel": "线程 · 心跳 15s · 取消",
+      "tag": "backend/",
+      "row": 1,
+      "col": 3
+    },
+    {
+      "id": "hardware",
+      "type": "external",
+      "label": "Android 设备 / 串口源",
+      "sublabel": "USB · ADB · TCP 日志",
+      "tag": "真机",
+      "row": 2,
+      "col": 0
+    },
+    {
+      "id": "llm",
+      "type": "external",
+      "label": "LLM 模型 API",
+      "sublabel": "create_model · 密钥在 .env",
+      "tag": "OpenAI 兼容",
+      "row": 2,
+      "col": 1
+    }
+  ],
+  "connections": [
+    { "from": "users", "to": "spa", "label": "HTTPS", "variant": "emphasis" },
+    { "from": "spa", "to": "asgi", "label": "axios · /api", "variant": "default" },
+    { "from": "asgi", "to": "api", "label": "鉴权放行", "variant": "default" },
+    { "from": "api", "to": "db", "label": "ORM 读写", "variant": "default" },
+    { "from": "api", "to": "runner", "label": "submit", "variant": "emphasis" },
+    { "from": "runner", "to": "bridge", "label": "注入配置", "variant": "default" },
+    { "from": "bridge", "to": "harness", "label": "create_agent", "variant": "default" },
+    { "from": "harness", "to": "support", "label": "tool 调用", "variant": "default" },
+    { "from": "harness", "to": "llm", "label": "推理请求", "variant": "default" },
+    { "from": "support", "to": "hardware", "label": "ADB / 串口", "variant": "default" }
+  ],
+  "boundaries": [
+    {
+      "label": "engines/ · 零 django / apps.* 依赖",
+      "wraps": ["support", "harness", "bridge"],
+      "pad": 22
+    }
+  ],
+  "cards": [
+    {
+      "title": "三层分工",
+      "items": [
+        "frontend/ 只展示：任务、花费、能力与运行状态",
+        "backend/ 只做通道与记账：鉴权、下发、落库",
+        "engines/ 承载全部可执行能力，零 django 依赖"
+      ]
+    },
+    {
+      "title": "执行闭环",
+      "items": [
+        "submit → task_runner 装配角色与 SOP",
+        "backend_bridge 造 Agent、挂工具、跑流程",
+        "事件与用量回传 → 任务详情 / 报告 / 看板"
+      ]
+    },
+    {
+      "title": "当前边界",
+      "items": [
+        "无 WS 生产路由：进度走 HTTP 轮询",
+        "engines 与 ASGI 同进程，只注入配置",
+        "唯一写库口在各 App 的 api.py"
+      ]
+    }
+  ]
+}

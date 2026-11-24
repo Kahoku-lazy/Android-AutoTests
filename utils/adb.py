@@ -22,7 +22,7 @@ _IS_WINDOWS = os.name == "nt"
 _ADB_NAME = "adb.exe" if _IS_WINDOWS else "adb"
 
 _MISSING_MESSAGE = (
-    "未找到可用的 adb：请运行 `python run.py setup` 安装平台自带 platform-tools，"
+    "未找到可用的 adb：请运行 `python -m run setup` 安装平台自带 platform-tools，"
     "或设置 ADB_PATH 指向已有 adb。"
 )
 

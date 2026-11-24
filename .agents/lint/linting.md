@@ -87,8 +87,8 @@ depends_on 没写？      → 放行（本仓库每个模块都写了）
 ```bash
 python -m utils.linting                    # 全量检查（19 个模块的允许清单 + 16 条红线）
 python -m utils.linting --json             # 机器可读，便于 CI 或脚本消费
-python utils/check_gates.py --only linting # 只跑这一条门禁
-python utils/check_gates.py --only boundary,linting  # 与边界检查一起跑
+python -m utils.check_gates --only linting # 只跑这一条门禁
+python -m utils.check_gates --only boundary,linting  # 与边界检查一起跑
 ```
 
 退出码：`0` 通过；`1` 有违规或多写的依赖；`2` 配置错误（含白名单表达式没匹配到任何 import）。
@@ -110,7 +110,7 @@ python utils/check_gates.py --only boundary,linting  # 与边界检查一起跑
 **① 常规全绿**
 
 ```bash
-python utils/check_gates.py --only linting   # 期望 PASS，退出码 0
+python -m utils.check_gates --only linting   # 期望 PASS，退出码 0
 ```
 
 **② 确认每条红线都真的在检查（防“空展开”假绿）**

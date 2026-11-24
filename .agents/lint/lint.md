@@ -9,7 +9,7 @@
 ## 怎么跑
 
 ```text
-python run.py check
+python -m run check
 ```
 
 本地跑 `utils/check_gates.py` 里登记的全部 32 条。退出码只看阻塞项。
@@ -102,7 +102,7 @@ OpenSpec 这两份不在 `check_gates.py` 里，也不在 CI 里。只有跑 Ope
 | 跨 App 只能碰对方公开模块 | `.linting` 的 `ignore_imports` 白名单 | 白名单命中不到真实 import 会报错，白名单不会越积越多 |
 | 跨 App 写库、`.u2` 句柄、五个具名内部模块 | `boundary` | 前两件不是 import 关系；五个模块名是行首文本规则 |
 
-两边本地都已跑过：`python -m utils.linting` 通过（19 个模块、16 条红线），`python utils/check_gates.py --only boundary,linting` 2/2 通过。
+两边本地都已跑过：`python -m utils.linting` 通过（19 个模块、16 条红线），`python -m utils.check_gates --only boundary,linting` 2/2 通过。
 
 ## 改一条检查时改哪里
 

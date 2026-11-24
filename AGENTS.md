@@ -18,6 +18,8 @@
 
 5. GitHub 版本提交前 **必须遵循** 项目制订的规则，规则文件路径 `.agents\docs\github.md`.
 
+6. 使用`python -m` 方式运行Python文件
+
 ## 文档与工具说明
 
 ### 项目文档
@@ -26,10 +28,11 @@
 2. 设计方案与报告，接口文档在 `dev_docs\DEV_TEST`目录中，文件名举例：XXX.md/XXX.html
 3. 需求文档与架构文档放在 `dev_docs\ARCH_PRD` 中，文件名举例：ARCH-XXX.md/ARCH-XXX.html 或 PRD-XXX.md/PRD-XXX.html
 4. 项目全局的Python代码编写规则文档在`.agents\docs\Python代码规则.md`
+5. 全仓 Python 注释（模块头 4 字段：模块功能 / Python 调试 / 时间 / 测试）规范在`.agents\rules\python-docstring-style.md`；Django 固定脚手架（models/views/api/serializers/admin/urls/apps/migrations 等）不适用
 
 
 ### 项目工具
 
-1. 启动/停止/检查平台： `python run.py start / stop / status`
-2. 本地质量门禁： `python run.py check` 
+1. 启动/停止/检查平台： `python -m run start / stop / status`
+2. 本地质量门禁： `python -m run check`
 3. 测试统一入口： `python -m pytest -c tests/pytest.ini` — 测试资产全部在 `tests/` 下（`pytest.ini` / `test_settings.py` / 用例）。

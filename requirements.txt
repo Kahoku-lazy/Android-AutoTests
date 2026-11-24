@@ -52,6 +52,6 @@ ruff==0.17.3
 agentscope>=2.0.12
 # 国务院节假日安排。DeepSeek 高峰在法定假日取消；未收录的年份退回周一至周五
 chinesecalendar>=1.12.1
-fastapi>=0.109.0
+fastapi>=0.165.0
 uvicorn[standard]>=0.27.0
 pyjwt>=2.8.0

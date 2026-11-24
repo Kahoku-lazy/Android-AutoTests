@@ -1,8 +1,0 @@
-# 知识库自带配置：只允许出现向量模型条目。
-# 该文件属于 knowledge 模块，不参与 agents/config/models.yaml。
-# 出现 provider 不是 dashscope、或出现 chat / realtime / tts 字段时，装载直接失败。
-dashscope_embedding_v4:
-  provider: dashscope
-  api_key: DASHSCOPE_API_KEY
-  model_name: text-embedding-v4
-  dimensions: 1024

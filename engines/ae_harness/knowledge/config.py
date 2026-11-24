@@ -1,7 +1,7 @@
 """
 文件名: ➡️ config.py 🏁
 路径: ➡️ engines/ae_harness/knowledge/config.py 🏁
-模块功能：➡️ 读知识库自带的两份 yaml：向量模型配置与库目录 🏁
+模块功能：➡️ 校验调用方传入的向量模型参数、库列表与检索参数 🏁
 Python 调试：➡️ python -m engines.ae_harness.knowledge.config 🏁
 时间：➡️ 2026-11-15 🏁
 作者：➡️ kahoku 🏁
@@ -12,11 +12,11 @@ Python 调试：➡️ python -m engines.ae_harness.knowledge.config 🏁
 1. EmbeddingModelSpec: 一条向量模型配置；禁止出现 chat / realtime / tts 字段。
 2. KnowledgeBaseSpec: 一个本地知识库的名称、说明、只读资料目录与启用状态。
 3. KnowledgeConfig: 向量模型 + 库目录 + 检索与切块参数。
-4. load_config(): 读两份 yaml 并校验字段、库名与资料目录隔离。
+4. build_config(): 校验调用方传入的向量模型、库列表与检索参数。
 5. load_secret(): 按环境变量名取密钥，先查仓库根 .env 再查进程环境。
 🏁
 关联模块：➡️
-1. 无 Harness 内依赖：只依赖 yaml、dotenv 与标准库，保证本模块可整目录删除。
+1. 无 Harness 内依赖：只依赖 dotenv 与标准库，保证本模块可整目录删除。
 🏁
 测试：➡️
 1. tests/engines/ae_harness/unit/test_knowledge_config.py: 向量模型字段、库目录隔离与密钥取值
@@ -33,37 +33,26 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Final, Literal, Mapping
 
-import yaml
-
 from dotenv import dotenv_values
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 _HERE: Final[Path] = Path(__file__).resolve().parent
-CONFIG_DIR: Final[Path] = _HERE / "config"
-MODELS_PATH: Final[Path] = CONFIG_DIR / "models.yaml"
-BASES_PATH: Final[Path] = CONFIG_DIR / "knowledge_bases.yaml"
 INDEX_DIR: Final[Path] = _HERE / "index"
 # 仓库根 .env：knowledge/config.py 往上三级。
 ENV_PATH: Final[Path] = _HERE.parents[2] / ".env"
-DEFAULT_EMBEDDING: Final[str] = "dashscope_embedding_v4"
 DEFAULT_TOP_K: Final[int] = 4
 DEFAULT_SCORE_THRESHOLD: Final[float] = 0.55
 DEFAULT_CHUNK_SIZE: Final[int] = 400
 DEFAULT_CHUNK_OVERLAP: Final[int] = 60
 _NAME_RE: Final[re.Pattern[str]] = re.compile(r"^[a-z][a-z0-9_]*$")
-_DEFAULTS_KEY: Final[str] = "defaults"
 
 __all__ = [
-    "BASES_PATH",
-    "CONFIG_DIR",
-    "DEFAULT_EMBEDDING",
     "ENV_PATH",
     "INDEX_DIR",
-    "MODELS_PATH",
     "EmbeddingModelSpec",
     "KnowledgeBaseSpec",
     "KnowledgeConfig",
-    "load_config",
+    "build_config",
     "load_secret",
 ]
 
@@ -122,6 +111,7 @@ class KnowledgeConfig:
         score_threshold: 余弦相似度下限。
         chunk_size: 每块近似 token 数。
         chunk_overlap: 相邻块重叠 token 数。
+        index_epoch: 调用方的索引版本；切块参数变化时由调用方加一。
     """
 
     embedding: EmbeddingModelSpec
@@ -130,6 +120,7 @@ class KnowledgeConfig:
     score_threshold: float = DEFAULT_SCORE_THRESHOLD
     chunk_size: int = DEFAULT_CHUNK_SIZE
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP
+    index_epoch: int = 0
 
     def enabled_bases(self) -> tuple[KnowledgeBaseSpec, ...]:
         """
@@ -156,46 +147,53 @@ class KnowledgeConfig:
         return None
 
 
-def load_config(
+def build_config(
+    embedding: Mapping[str, object],
+    bases: list[Mapping[str, object]],
     *,
-    models_path: str | Path | None = None,
-    bases_path: str | Path | None = None,
+    top_k: int = DEFAULT_TOP_K,
+    score_threshold: float = DEFAULT_SCORE_THRESHOLD,
+    chunk_size: int = DEFAULT_CHUNK_SIZE,
+    chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
+    index_epoch: int = 0,
 ) -> KnowledgeConfig:
     """
-    装载向量模型与库目录。
+    用调用方传入的参数组装知识库配置。本模块不读配置文件。
 
     Args:
-        models_path: 向量模型配置文件；None 时用模块自带的 config/models.yaml。
-        bases_path: 库目录文件；None 时用模块自带的 config/knowledge_bases.yaml。
+        embedding: 向量模型参数，只允许 provider / api_key / model_name / dimensions。
+        bases: 库列表，每项含 name / description / data_dir / enabled。
+        top_k: 默认返回条数。
+        score_threshold: 余弦相似度下限。
+        chunk_size: 每块近似 token 数。
+        chunk_overlap: 相邻块重叠 token 数。
+        index_epoch: 调用方的索引版本，随配置原样带回。
 
     Returns:
-        合并后的知识库配置。
+        校验后的知识库配置。
 
     Raises:
-        ValueError: 文件结构不合法、库名非法、字段未知，或两个启用库的资料目录冲突。
-        ValidationError: 向量模型条目校验不通过。
+        ValueError: 库名非法、字段未知，或两个启用库的资料目录冲突。
+        ValidationError: 向量模型参数含未知字段、厂商不受支持或缺字段。
     """
-    models_raw = _read_mapping(models_path, MODELS_PATH)
-    bases_raw = _read_mapping(bases_path, BASES_PATH)
-    defaults = _parse_defaults(bases_raw.get(_DEFAULTS_KEY))
-    embedding_name = str(defaults.get("embedding") or DEFAULT_EMBEDDING)
-    raw_model = models_raw.get(embedding_name)
-    if not isinstance(raw_model, dict):
-        choices = ", ".join(sorted(models_raw)) or "无"
-        raise ValueError(f"未知向量模型 {embedding_name!r}；可选：{choices}")
-    candidates = tuple(
-        _parse_base(str(name), value, Path(bases_path or BASES_PATH).parent)
-        for name, value in bases_raw.items()
-        if name != _DEFAULTS_KEY
-    )
+    try:
+        spec = EmbeddingModelSpec.model_validate(dict(embedding))
+    except ValidationError as exc:
+        raise ValueError(_embedding_error(exc)) from exc
+    candidates = tuple(_parse_base(item) for item in bases)
     _reject_overlapping_dirs(candidates)
+    if top_k < 1 or chunk_size < 1 or chunk_overlap < 0 or chunk_overlap >= chunk_size:
+        raise ValueError("检索参数不合法：top_k 与切块大小须为正整数，重叠须小于切块大小")
+    if not 0 <= float(score_threshold) <= 1:
+        raise ValueError("相似度阈值必须在 0 到 1 之间")
     return KnowledgeConfig(
-        embedding=EmbeddingModelSpec.model_validate(raw_model),
+        embedding=spec,
         bases=candidates,
-        top_k=int(defaults.get("top_k", DEFAULT_TOP_K)),
-        score_threshold=float(defaults.get("score_threshold", DEFAULT_SCORE_THRESHOLD)),
-        chunk_size=int(defaults.get("chunk_size", DEFAULT_CHUNK_SIZE)),
-        chunk_overlap=int(defaults.get("chunk_overlap", DEFAULT_CHUNK_OVERLAP)),
+        top_k=int(top_k),
+        score_threshold=float(score_threshold),
+        chunk_size=int(chunk_size),
+        chunk_overlap=int(chunk_overlap),
+        index_epoch=int(index_epoch),
     )
 
 
@@ -225,61 +223,18 @@ def _dotenv() -> dict[str, str]:
     return {str(key): str(value or "") for key, value in dotenv_values(ENV_PATH).items()}
 
 
-def _read_mapping(path: str | Path | None, default: Path) -> dict:
-    """
-    读一份 yaml 映射。
-
-    Args:
-        path: 显式路径；None 时用 default。
-        default: 模块自带的默认路径。
-
-    Returns:
-        yaml 顶层映射。
-
-    Raises:
-        ValueError: 文件不存在、顶层不是非空映射。
-    """
-    target = Path(path) if path is not None else default
-    if not target.exists():
-        raise ValueError(f"知识库配置不存在：{target}")
-    raw = yaml.safe_load(target.read_text(encoding="utf-8"))
-    if not isinstance(raw, dict) or not raw:
-        raise ValueError(f"知识库配置必须是非空映射：{target}")
-    return raw
+def _embedding_error(exc: ValidationError) -> str:
+    """把向量模型校验错误收成一句可读原因，指出违规字段。"""
+    fields = ", ".join(str(part) for error in exc.errors() for part in error["loc"]) or "字段"
+    return f"向量模型参数不合法：{fields}"
 
 
-def _parse_defaults(raw: object) -> dict:
-    """
-    解析 defaults 段。
-
-    Args:
-        raw: defaults 段的原始值。
-
-    Returns:
-        参数字典；缺失时为空字典。
-
-    Raises:
-        ValueError: defaults 不是映射，或出现未知键。
-    """
-    if raw is None:
-        return {}
-    if not isinstance(raw, dict):
-        raise ValueError("defaults 必须是映射")
-    allowed = {"embedding", "top_k", "score_threshold", "chunk_size", "chunk_overlap"}
-    unknown = set(raw) - allowed
-    if unknown:
-        raise ValueError(f"defaults 未知字段：{', '.join(sorted(unknown))}")
-    return raw
-
-
-def _parse_base(name: str, raw: object, base_dir: Path) -> KnowledgeBaseSpec:
+def _parse_base(raw: Mapping[str, object]) -> KnowledgeBaseSpec:
     """
     解析一个库条目。
 
     Args:
-        name: 库名。
-        raw: 库表中的原始条目。
-        base_dir: 相对资料目录的解析基准。
+        raw: 含 name / description / data_dir / enabled 的映射。
 
     Returns:
         库规格。
@@ -287,13 +242,12 @@ def _parse_base(name: str, raw: object, base_dir: Path) -> KnowledgeBaseSpec:
     Raises:
         ValueError: 库名、字段或资料目录不合法。
     """
+    unknown = set(raw) - {"name", "description", "data_dir", "enabled"}
+    if unknown:
+        raise ValueError(f"未知字段 {', '.join(sorted(unknown))}")
+    name = str(raw.get("name") or "").strip()
     if not _NAME_RE.fullmatch(name):
         raise ValueError(f"知识库名不合法：{name}")
-    if not isinstance(raw, dict):
-        raise ValueError(f"{name}: 库条目必须是映射")
-    unknown = set(raw) - {"description", "data_dir", "enabled"}
-    if unknown:
-        raise ValueError(f"{name}: 未知字段 {', '.join(sorted(unknown))}")
     description = str(raw.get("description") or "").strip()
     data_dir = str(raw.get("data_dir") or "").strip()
     if not description or not data_dir:
@@ -303,7 +257,7 @@ def _parse_base(name: str, raw: object, base_dir: Path) -> KnowledgeBaseSpec:
         raise ValueError(f"{name}: enabled 必须是布尔值")
     path = Path(data_dir)
     if not path.is_absolute():
-        path = base_dir / path
+        raise ValueError(f"{name}: 资料目录必须是绝对路径")
     return KnowledgeBaseSpec(
         name=name,
         description=description,
@@ -335,4 +289,8 @@ def _contains(left: Path, right: Path) -> bool:
 
 
 if __name__ == "__main__":
-    print(load_config())  # noqa: T201 - 模块自测：确认两份 yaml 能装载
+    sample = build_config(
+        {"provider": "dashscope", "model_name": "text-embedding-v4", "dimensions": 1024},
+        [],
+    )
+    print(sample.embedding.model_name)  # noqa: T201 - 模块自测：确认参数能组装

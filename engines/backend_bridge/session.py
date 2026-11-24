@@ -29,8 +29,7 @@ import time
 
 from pathlib import Path
 
-from agentscope.message import UserMsg
-
+from engines.ae_harness.agents.messages import user_message
 from engines.ae_harness.event import AgentEventRecorder, HtmlReportRenderer, summarize
 from engines.backend_bridge import event_log
 from engines.backend_bridge.agents import UI_EXECUTOR_ROLE, build_ui_executor
@@ -123,7 +122,7 @@ class UiExecutorSession:
         turn_log = event_log.TurnLogger()
         begin = time.perf_counter()
         try:
-            async for event in agent.reply_stream(UserMsg(name="user", content=prompt)):
+            async for event in agent.reply_stream(user_message(prompt)):
                 recorder.on_event(event)
                 line = turn_log.feed(event)
                 if line:

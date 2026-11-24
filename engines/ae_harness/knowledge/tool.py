@@ -30,46 +30,12 @@ from datetime import datetime
 from agentscope.permission import PermissionBehavior, PermissionDecision
 from agentscope.tool import FunctionTool
 
-from .service import KnowledgeRetriever, Retrieval
+from .service import KnowledgeRetriever
 
 __all__ = ["build_knowledge_tools"]
 
 # 只读检索，不需要逐次确认。
 _ALLOW = PermissionDecision(behavior=PermissionBehavior.ALLOW, message="知识库只读检索，允许执行")
-
-
-class _LazyRetriever:
-    """
-    首次调用检索时才装载配置并创建检索器。
-
-    这样 import 与挂载都不碰 yaml；配置写坏只会让工具返回「检索不可用」，
-    不会把调用方的入口一起炸掉。
-    """
-
-    def __init__(self) -> None:
-        self._retriever: KnowledgeRetriever | None = None
-
-    async def retrieve(
-        self,
-        query: str,
-        *,
-        base: str | None = None,
-        top_k: int | None = None,
-    ) -> Retrieval:
-        """
-        转调真实检索器，首次调用时创建。
-
-        Args:
-            query: 检索问题。
-            base: 指定库名；None 表示全部启用库。
-            top_k: 覆盖返回条数。
-
-        Returns:
-            检索结果。
-        """
-        if self._retriever is None:
-            self._retriever = KnowledgeRetriever.from_config()
-        return await self._retriever.retrieve(query, base=base, top_k=top_k)
 
 
 def _stamp() -> str:
@@ -111,20 +77,20 @@ def _fail(error: str) -> str:
     )
 
 
-def build_knowledge_tools(retriever: KnowledgeRetriever | None = None) -> list[FunctionTool]:
+def build_knowledge_tools(retriever: KnowledgeRetriever) -> list[FunctionTool]:
     """
     产出知识库检索工具。
 
-    只返回工具对象：不读配置、不连库、不建索引。真正的初始化发生在第一次调用时。
-    不传 retriever 时用一个惰性检索器：首次调用才装载配置，配置写坏也只降级成工具报错。
+    只返回工具对象：不读配置、不连库、不建索引。向量模型与库列表由调用方
+    先组装成检索器再传入，本模块没有自带配置。
 
     Args:
-        retriever: 已建好的检索器；None 时用惰性检索器。
+        retriever: 已建好的检索器。
 
     Returns:
         只含一个只读工具的列表。
     """
-    service = retriever if retriever is not None else _LazyRetriever()
+    service = retriever
 
     async def search_knowledge(query: str, base: str = "", top_k: int = 0) -> str:
         """

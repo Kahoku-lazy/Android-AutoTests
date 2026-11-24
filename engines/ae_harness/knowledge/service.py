@@ -36,7 +36,7 @@ from typing import Literal
 
 from agentscope.rag import KnowledgeBase
 
-from .config import INDEX_DIR, KnowledgeBaseSpec, KnowledgeConfig, load_config
+from .config import INDEX_DIR, KnowledgeBaseSpec, KnowledgeConfig
 from .indexer import KnowledgeIndexer
 from .models import CreatedEmbedding, create_embedding_model
 from .store import SQLiteVectorStore
@@ -130,19 +130,6 @@ class KnowledgeRetriever:
         self._ready: set[str] = set()
         self._errors: dict[str, str] = {}
         self._counts: dict[str, int] = {}
-
-    @classmethod
-    def from_config(cls, **kwargs: object) -> "KnowledgeRetriever":
-        """
-        用模块自带的配置创建检索器。
-
-        Args:
-            **kwargs: 透传给 load_config 的路径覆盖参数。
-
-        Returns:
-            未初始化的检索器。
-        """
-        return cls(load_config(**kwargs))  # type: ignore[arg-type]
 
     def error(self, base: str) -> str:
         """

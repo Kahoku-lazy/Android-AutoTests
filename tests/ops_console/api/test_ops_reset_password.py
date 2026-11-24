@@ -1,4 +1,11 @@
-"""运营后台：重置密码的一次性语义与三条边界。"""
+"""
+模块功能：➡️ 运营后台：重置密码的一次性语义与三条边界 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ops_console/api/test_ops_reset_password.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/ops_console
+🏁
+"""
 
 from __future__ import annotations
 

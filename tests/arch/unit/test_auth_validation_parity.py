@@ -1,15 +1,10 @@
-"""登录/注册表单的校验文案与数值阈值：前后端两侧必须一致。
-
-为什么对拍而不是合并
---------------------
-前端 `useLoginForm.ts` 负责即时反馈，后端 `serializers.py` 是唯一权威，
-两份实现各有其位。但没有任何东西保证它们继续一致：
-改一侧文案、把某个数字从 20 调成 30，另一侧不会有任何反应，
-用户会在“前端放行、后端拒绝”时看到一句和前端提示不同的话。
-
-本模块把“两侧用户看到同一句话、同一个数字”变成被断言的不变量。
-边界（见 tests/AGENTS.md §契约对拍测试）：只读源码、只做一致性断言、零外部依赖。
-规格：`openspec/specs/auth-form-validation`。
+"""
+模块功能：➡️ 登录/注册表单的校验文案与数值阈值：前后端两侧必须一致 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_auth_validation_parity.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/accounts
+🏁
 """
 
 from __future__ import annotations

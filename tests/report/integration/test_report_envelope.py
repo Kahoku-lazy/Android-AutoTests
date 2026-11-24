@@ -1,4 +1,11 @@
-"""报告台账接口契约：标准信封、鉴权与退役端点 404。"""
+"""
+模块功能：➡️ 报告台账接口契约：标准信封、鉴权与退役端点 404 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/report/integration/test_report_envelope.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/ai_assistant、backend/apps/task_list、backend/models/constants.py
+🏁
+"""
 
 from __future__ import annotations
 

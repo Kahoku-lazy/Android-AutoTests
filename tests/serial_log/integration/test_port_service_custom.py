@@ -1,6 +1,10 @@
-"""port_service 自定义端口编排：增量生效 / 上限 / 失败细化 / 双轨列表 / 本机 IP。
-
-TCP 监听用假 switch 替身；占用探测与等待绑定用 monkeypatch 替身，零真实网络。
+"""
+模块功能：➡️ port_service 自定义端口编排：增量生效 / 上限 / 失败细化 / 双轨列表 / 本机 IP 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/serial_log/integration/test_port_service_custom.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/serial_log、utils/logs.py
+🏁
 """
 
 from __future__ import annotations

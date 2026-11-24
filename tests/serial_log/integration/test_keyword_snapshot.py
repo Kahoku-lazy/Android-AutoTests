@@ -1,13 +1,10 @@
-"""冻结快照一致性与迁移行为（集成）：DB 条目 == JSON 原表、幂等、reverse 可回退。
-
-覆盖规格 serial-log-module「迁移保留存量关键词条目」：
-- 快照与 JSON 原表逐行一致（关键词 / 编号 / 模块 / 名称 / 行序 / 范围全通用）；
-- 全新安装不依赖数据文件在场（forwards 只读冻结字面量）；
-- 重复执行不覆盖已有行（幂等）；reverse 清空本表。
-
-说明：原 tests/serial_log/unit/test_log_keyword_catalog.py 校验的按 SKU md 目录
-已随 engines/agents 退役（其存在断言经需求方确认退役）；本单把一致性口径改为
-「DB == 冻结快照 == JSON 原表」，因依赖 ORM 按 tests/AGENTS 约定放集成层。
+"""
+模块功能：➡️ 冻结快照一致性与迁移行为（集成）：DB 条目 == JSON 原表、幂等、reverse 可回退 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/serial_log/integration/test_keyword_snapshot.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/serial_log
+🏁
 """
 
 from __future__ import annotations

@@ -1,4 +1,11 @@
-"""运营后台：仅超管可授予/取消运营，四条边界与幂等。"""
+"""
+模块功能：➡️ 运营后台：仅超管可授予/取消运营，四条边界与幂等 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ops_console/api/test_ops_grant_operator.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/ops_console、backend/shared/users.py
+🏁
+"""
 
 from __future__ import annotations
 

@@ -1,7 +1,10 @@
-"""关键词目录组装（keywords.collect_keywords）集成测试：行序、计数口径、空态。
-
-覆盖规格 device-log-keyword-catalog「表格内容与数据库关键词表一致」与
-serial-log-module「关键词对照表由串口日志模块从数据库组装」。
+"""
+模块功能：➡️ 关键词目录组装（keywords.collect_keywords）集成测试：行序、计数口径、空态 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/serial_log/integration/test_keyword_catalog.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/serial_log
+🏁
 """
 
 from __future__ import annotations

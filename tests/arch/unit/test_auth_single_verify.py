@@ -1,8 +1,10 @@
-"""受保护请求只解析一次令牌（网关中间件与 DRF 认证不重复验签）。
-
-对应变更 db-backed-token-revocation 的 D5：中间件已经验签并把 user_id 注入
-request，DRF 认证类直接复用；令牌解析次数是可观察的性能/一致性不变量，
-用计数锁住，避免以后又被加回去。
+"""
+模块功能：➡️ 受保护请求只解析一次令牌（网关中间件与 DRF 认证不重复验签） 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_auth_single_verify.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/gateway、backend/shared、backend/shared/auth
+🏁
 """
 
 from __future__ import annotations

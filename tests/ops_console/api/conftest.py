@@ -1,7 +1,10 @@
-"""运营后台接口测试的共用夹具。
-
-直调视图而不起 live server：与 `tests/serial_log/api` 同一范式——网关注入的
-`user_id` 与 DRF 认证都用请求属性模拟，断言落库仍走真实 `accounts.api`。
+"""
+模块功能：➡️ 运营后台接口用例的共用夹具：超管、运营与普通用户 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ops_console/api/conftest.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 被 tests/ops_console/api 用例共用（无独立用例）
+🏁
 """
 
 from __future__ import annotations

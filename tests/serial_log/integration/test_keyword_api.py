@@ -1,8 +1,10 @@
-"""关键词对照表写库口（api.py）集成测试：并集口径、upsert 唯一键、续编与行序。
-
-覆盖规格 serial-log-module「串口日志拥有关键词对照表数据」：
-通用对所有型号生效、专用是增量不覆盖通用、重复登记不产生第二行、
-mapping 可注入 engines 的 KeywordIndex。
+"""
+模块功能：➡️ 关键词对照表写库口（api.py）集成测试：并集口径、upsert 唯一键、续编与行序 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/serial_log/integration/test_keyword_api.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/serial_log、engines/device
+🏁
 """
 
 from __future__ import annotations

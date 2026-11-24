@@ -1,4 +1,11 @@
-"""运营后台：访问控制、列表筛选与出参形状。"""
+"""
+模块功能：➡️ 运营后台：访问控制、列表筛选与出参形状 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ops_console/api/test_ops_user_access.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/ops_console、backend/gateway/middleware.py
+🏁
+"""
 
 from __future__ import annotations
 

@@ -1,8 +1,10 @@
-"""角色注册表接口契约：五个方法的状态码、信封、字段集合与错误码。
-
-旧 AIAgent / AgentViewSet 用例已删除（2026-11-19）：模型与视图已演进为
-AIAssistant / AssistantViewSet（路由 /api/ai/assistants/），旧用例引用已退役
-名字，执行必 NameError；经需求方确认按失效用例删除，不改写。
+"""
+模块功能：➡️ 角色注册表接口契约：五个方法的状态码、信封、字段集合与错误码 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ai_assistant/api/test_roles.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/ai_assistant、backend/gateway/middleware.py
+🏁
 """
 
 from __future__ import annotations

@@ -1,4 +1,11 @@
-"""运营后台：除批量注销端点外，不注册按 id 删除的路径。"""
+"""
+模块功能：➡️ 运营后台：除批量注销端点外，不注册按 id 删除的路径 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ops_console/api/test_ops_no_delete.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/ops_console
+🏁
+"""
 
 from __future__ import annotations
 

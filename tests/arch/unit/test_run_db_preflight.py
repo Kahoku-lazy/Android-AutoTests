@@ -1,6 +1,10 @@
-"""`utils.service_ctl.db` 的数据库前置检查：探测、本机服务启动、失败中止与开关。
-
-只测启动编排里的数据库部分，不真连数据库：MySQLdb 与 subprocess 都用替身。
+"""
+模块功能：➡️ `utils.service_ctl.db` 的数据库前置检查：探测、本机服务启动、失败中止与开关 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_run_db_preflight.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 utils/service_ctl
+🏁
 """
 
 from __future__ import annotations

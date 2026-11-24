@@ -1,12 +1,10 @@
-"""通信通道架构契约测试 — 单文件，按类区分四条通道。
-
-校验「四条内部通信通道」的结构不变量：
-  - ① HTTP REST + JWT：前端唯一出口 baseURL、后端业务路由挂 /api/、JWT 白名单无业务路由
-  - ② WebSocket + JWT：路由真相源当前 1 个生产点（知识库助手语音；编辑锁已下线）
-  - ③ AgentScope 进程内：无 adapters/；rag/ 允许且位于引擎根
-  - ④ 引擎中转：上层（apps/gateway）不直触引擎库/具体实现
-
-运行：pytest tests/arch/test_channels.py -v   或   pytest -m arch -v
+"""
+模块功能：➡️ 通信通道架构契约测试 — 单文件，按类区分四条通道 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_channels.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/gateway/middleware.py、backend/gateway/routing.py
+🏁
 """
 
 import re

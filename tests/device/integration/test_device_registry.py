@@ -1,11 +1,10 @@
-"""灰盒·集成测试 — 设备注册落库（DeviceRegistry）。
-
-业务场景：
-- 场景一：新设备接入登记（注册 + 自动采集型号/分辨率）
-- 场景二：重复扫描不重复登记（幂等）
-- 边界：无线设备拿不到序列号时抛错、不登记
-
-django_db（SQLite :memory:）+ 注入 mock detector（隔离真实 ADB）。
+"""
+模块功能：➡️ 灰盒·集成测试 — 设备注册落库（DeviceRegistry） 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/device/integration/test_device_registry.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/device_pool
+🏁
 """
 
 import pytest

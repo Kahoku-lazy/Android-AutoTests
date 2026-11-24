@@ -1,7 +1,10 @@
-"""关键词维护写库口（create_keyword / update_keyword）集成测试。
-
-覆盖规格 serial-log-module「关键词维护接口（仅超管）」的数据侧口径：
-重复新建拒绝、缺省通用与续编追加、部分更新、唯一键撞车守卫、不存在条目。
+"""
+模块功能：➡️ 关键词维护写库口（create_keyword / update_keyword）集成测试 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/serial_log/integration/test_keyword_crud.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/serial_log
+🏁
 """
 
 from __future__ import annotations

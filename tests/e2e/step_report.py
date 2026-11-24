@@ -1,11 +1,10 @@
-"""端到端步骤报告 — 每一步一张带标注的截图，最后汇总成一个 HTML。
-
-为什么自己画标注：Playwright 没有「带标注的截图」这类 API，而往被测页面里注入高亮层会污染页面
-本身（截图里会多出不属于产品的元素，还可能挡住所点的按钮）。所以统一走「先截图、再用 Pillow 画注」：
-目标矩形 + 动作点/方向 + 序号徽标 + 顶部说明条 —— 看图片就知道这一步点了哪里、输了什么。
-
-产物：tests/reports/e2e/index.html + tests/reports/e2e/shots/*.jpg（都在 gitignore 的 tests/reports/ 下，
-属可随时重新生成的产物）。报告里图片按列宽缩放显示，点击可看大图。
+"""
+模块功能：➡️ 端到端步骤报告：每步一张带标注截图，汇总成 HTML 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/e2e/step_report.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 被 tests/<模块>/e2e 用例共用（无独立用例）
+🏁
 """
 
 from __future__ import annotations

@@ -1,13 +1,10 @@
-"""D4 SSOT 枚举基类门禁：`models/` 的枚举必须用 `StrEnum`。
-
-背景（实测 Python 3.13.14）：
-  `class X(str, Enum)` 的 `str(member)` / `f"{member}"` 返回**限定名**
-  （`'LockStatus.ACTIVE'`），而 `enum.StrEnum` 返回**取值**（`'active'`）。
-
-危害路径：`CharField.get_prep_value(member)` 不强制 `str()`，落库值交给 DB 驱动 ——
-MySQL 的 `%s` 参数化会写入 `"DeviceStatus.ONLINE"`；文案 / 日志同理。
-
-本用例**动态发现** SSOT 模块内的枚举子类并逐个钉住不变量，新增枚举自动纳入门禁。
+"""
+模块功能：➡️ D4 SSOT 枚举基类门禁：`models/` 的枚举必须用 `StrEnum` 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_ssot_enum_strenum.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/models
+🏁
 """
 
 from __future__ import annotations

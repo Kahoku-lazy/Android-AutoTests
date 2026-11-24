@@ -1,12 +1,10 @@
-"""登录页端到端用例 — Playwright 真实浏览器（黑盒）+ 每步带标注的截图报告。
-
-编号 E2E-### 与业务功能用例编号（BF-## / TC-BF-UI-### / TC-SESSION-###）一一对应，
-映射写在每个用例的 docstring 里。
-
-每一步都通过 steps 夹具执行：动作照旧是 Playwright 原生 API，夹具负责截图并在图上标注
-「点了哪里 / 输了什么 / 滑了多远」，最后汇总成 tests/reports/e2e/index.html。
-
-运行：python -m pytest tests/e2e -q   （前后端需已启动；无需任何密钥）
+"""
+模块功能：➡️ 登录页端到端用例 — Playwright 真实浏览器（黑盒）+ 每步带标注的截图报告 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/auth/e2e/test_login_e2e.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/accounts（账号与会话）
+🏁
 """
 
 import re

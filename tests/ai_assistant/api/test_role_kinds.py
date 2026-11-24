@@ -1,4 +1,11 @@
-"""Agent 配置类型标签的接口契约：建 / 改 / 清空 / 级联 / 列表下发。"""
+"""
+模块功能：➡️ Agent 配置类型标签的接口契约：建 / 改 / 清空 / 级联 / 列表下发 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ai_assistant/api/test_role_kinds.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/ai_assistant
+🏁
+"""
 
 from __future__ import annotations
 

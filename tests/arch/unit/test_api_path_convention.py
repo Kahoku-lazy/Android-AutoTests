@@ -1,14 +1,10 @@
-"""API 路径约定：全部 /api/ 路由以尾斜杠结尾，缺失即 404。
-
-取代原「尾斜杠双向容错」用例 —— 容错中间件已随本变更删除。
-
-两个容易误判的点，都在下面的用例里显式断言：
-
-1. 受保护路径在**未鉴权**时会先被 JWT 中间件拦成 401，走不到路由解析 ——
-   所以「缺失尾斜杠 → 404」用已鉴权客户端断言，不能用 401 反推"路径不存在"。
-2. PUBLIC_PREFIXES 是**前缀匹配**：/api/auth/login（不带斜杠）能匹配无斜杠形式，
-   于是缺失尾斜杠时会落到路由解析得到 404；而 /api/schema/（带斜杠）匹配不到
-   /api/schema，所以它缺失尾斜杠时是 401。这是既有行为，与路由是否存在无关。
+"""
+模块功能：➡️ API 路径约定：全部 /api/ 路由以尾斜杠结尾，缺失即 404 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_api_path_convention.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/shared/auth
+🏁
 """
 
 from __future__ import annotations

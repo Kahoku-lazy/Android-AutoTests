@@ -1,7 +1,10 @@
-"""注册用户名唯一性契约（OpenSpec: fix-register-duplicate-race）。
-
-唯一性以**数据库唯一约束**为权威：写口把 IntegrityError 翻译为 ConflictError，视图映射 409。
-输入校验层不做唯一性保证，因此顺序重名与并发重名走同一条路径。
+"""
+模块功能：➡️ 注册用户名唯一性契约（OpenSpec: fix-register-duplicate-race） 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_register_uniqueness.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/accounts
+🏁
 """
 
 from __future__ import annotations

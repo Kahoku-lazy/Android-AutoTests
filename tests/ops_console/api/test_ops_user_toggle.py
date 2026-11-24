@@ -1,4 +1,11 @@
-"""运营后台：停用 / 启用的幂等与四条边界。"""
+"""
+模块功能：➡️ 运营后台：停用 / 启用的幂等与四条边界 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ops_console/api/test_ops_user_toggle.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 backend/apps/ops_console、backend/apps/accounts
+🏁
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,11 @@
-"""运营后台接口测试的视图直调助手。"""
+"""
+模块功能：➡️ 运营后台接口用例的视图直调助手 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ops_console/api/_helpers.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 被 tests/ops_console/api 用例共用（无独立用例）
+🏁
+"""
 
 from __future__ import annotations
 

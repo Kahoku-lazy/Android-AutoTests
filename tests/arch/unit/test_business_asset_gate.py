@@ -1,12 +1,10 @@
-"""架构契约测试 — business-asset 门禁口径（变更 purge-govee-business-assets）。
-
-断言门禁的四个可观测口径：
-1. 受管目录覆盖 `app_info` 业务资产目录；`sop/steps` 已随示例步骤删除；
-2. 禁用路径清单登记被移除的两个资产；
-3. 门禁是阻塞项，且名字稳定（CI 以 `--only business-asset` 调用）；
-4. 干净树通过、受管目录命中失败、禁用路径复活失败，三种情形分别断言。
-
-用例不写厂商标识字面量，一律从门禁自身的清单派生，避免用例成为新的泄露面。
+"""
+模块功能：➡️ 架构契约测试 — business-asset 门禁口径（变更 purge-govee-business-assets） 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_business_asset_gate.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 utils/check_gates.py
+🏁
 """
 
 from __future__ import annotations

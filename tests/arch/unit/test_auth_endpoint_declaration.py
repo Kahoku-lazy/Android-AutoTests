@@ -1,15 +1,10 @@
-"""认证端点的鉴权姿态不变量：AllowAny 当且仅当 authentication_classes 为空。
-
-为什么需要这条
---------------
-认证模块里三种姿态共存：公开端点显式置空 `authentication_classes`，
-需要身份的端点继承 `REST_FRAMEWORK` 默认的 `shared.auth.drf_auth.JWTAuthentication`。
-“允许任何人”与“不做 DRF 鉴权”必须成对出现 —— 只写一半会造成两种危险：
-公开端点误继承鉴权类（鉴权失败在前）、受保护端点被误开放。
-
-视图类经 URL conf 解析取得，不直接 import `apps.accounts.views`：
-断言的是实际挂载的视图，而不是源码里定义了却没挂上的类。
-规格：`openspec/specs/auth-session`。
+"""
+模块功能：➡️ 认证端点的鉴权姿态不变量：AllowAny 当且仅当 authentication_classes 为空 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_auth_endpoint_declaration.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 前端与后端源码的一致性面（只读源码断言）
+🏁
 """
 
 from __future__ import annotations

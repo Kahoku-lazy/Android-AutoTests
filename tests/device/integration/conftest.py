@@ -1,6 +1,10 @@
-"""device_pool 集成测试共享 fixture — 组合注入隔离真实 ADB。
-
-真实写库（django_db），探测层用 mock 隔离，状态机与注册表真实协作。
+"""
+模块功能：➡️ device_pool 集成用例夹具：注入探测器、注册表与状态机，隔离真实 ADB 🏁
+Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/device/integration/conftest.py 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. 覆盖 被 tests/device/integration 用例共用（无独立用例）
+🏁
 """
 
 from unittest.mock import MagicMock

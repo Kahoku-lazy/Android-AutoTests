@@ -2,7 +2,7 @@
 
 ## Purpose
 
-约束平台 Agent 的实现落点：智能体只经 `ae_harness` 原语创建，角色与流程在 `backend_bridge` 装配。与 `engines/ae_harness/AGENTS.md`、`engines/backend_bridge/AGENTS.md`、`dev_docs/ARCH_PRD/GUIDE-创建Agent清单.md` 对齐。
+约束平台 Agent 的实现落点：智能体只经 `ae_harness` 原语创建，角色与流程在 `backend_bridge` 装配。与 `.agents/docs/engines/ae_harness/ae_harness_overview.md`、`.agents/docs/engines/backend_bridge/backend_bridge_role_assembly.md`、`dev_docs/ARCH_PRD/GUIDE-创建Agent清单.md` 对齐。
 
 ## Requirements
 

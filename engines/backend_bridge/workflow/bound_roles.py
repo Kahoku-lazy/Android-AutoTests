@@ -95,6 +95,49 @@ async def _mount(bundle: AgentBundle, tools: list) -> AgentBundle:
     return bundle
 
 
+async def build_bound_agent(
+    binding: RoleBinding,
+    *,
+    observer: ObservationMiddleware | None = None,
+    controls: list | None = None,
+    kind: str = "ui_automation",
+    readonly: bool = False,
+) -> tuple[AgentBundle, ObservationMiddleware]:
+    """
+    按一份绑定装配一个角色。
+
+    Args:
+        binding: 这一侧的运行参数。
+        observer: 观测中间件；不传则新建。
+        controls: 额外中间件；不传则只挂观测。
+        kind: 工作流类型，决定工具目录。
+        readonly: 为真时只挂勾选与只读目录的交集。
+
+    Returns:
+        角色 bundle 与实际使用的观测中间件。
+
+    Raises:
+        ValueError: 连接参数不合法，或系统提示词为空。
+        ToolSelectionError: 勾选含未知工具名。
+    """
+    watcher = observer if observer is not None else ObservationMiddleware()
+    bundle = create_agent(
+        binding.run_name,
+        system_prompt=binding.system_prompt,
+        provider=binding.provider,
+        api_key_env=binding.api_key_env,
+        model_name=binding.model_name,
+        base_url=binding.base_url,
+        observers=[watcher, *list(controls or [])],
+    )
+    tools = (
+        _readonly_intersection(binding.tools)
+        if readonly
+        else select_tools(list(binding.tools), kind=kind)
+    )
+    return await _mount(bundle, tools), watcher
+
+
 async def build_bound_roles(
     executor: RoleBinding,
     verifier: RoleBinding,
@@ -122,26 +165,10 @@ async def build_bound_roles(
         ValueError: 连接参数不合法，或系统提示词为空。
         ToolSelectionError: 任一侧勾选含未知工具名。
     """
-    watcher = observer if observer is not None else ObservationMiddleware()
-    extra = [watcher, *list(controls or [])]
-    executor_bundle = create_agent(
-        executor.run_name,
-        system_prompt=executor.system_prompt,
-        provider=executor.provider,
-        api_key_env=executor.api_key_env,
-        model_name=executor.model_name,
-        base_url=executor.base_url,
-        observers=extra,
+    executor_bundle, watcher = await build_bound_agent(
+        executor, observer=observer, controls=controls, kind=kind
     )
-    verifier_bundle = create_agent(
-        verifier.run_name,
-        system_prompt=verifier.system_prompt,
-        provider=verifier.provider,
-        api_key_env=verifier.api_key_env,
-        model_name=verifier.model_name,
-        base_url=verifier.base_url,
-        observers=extra,
+    verifier_bundle, _ = await build_bound_agent(
+        verifier, observer=watcher, controls=controls, kind=kind, readonly=True
     )
-    await _mount(executor_bundle, select_tools(list(executor.tools), kind=kind))
-    await _mount(verifier_bundle, _readonly_intersection(verifier.tools))
     return SopRoles(executor=executor_bundle, verifier=verifier_bundle, observer=watcher)

@@ -16,7 +16,6 @@ Python 调试：➡️ python -m engines.ae_harness.workflow.sop 🏁
 关联模块：➡️
 1. engines.ae_harness.workflow.sop.spec: 步骤模型与加载。
 2. engines.ae_harness.workflow.sop.runner: 编排实现。
-3. engines.ae_harness.workflow.sop.steps: 步骤 YAML。
 🏁
 测试：➡️
 1. python -m engines.ae_harness.workflow.sop_runner

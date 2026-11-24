@@ -9,8 +9,8 @@ Python 调试：➡️ python -m engines.ae_harness.knowledge.probe retrieve pro
 修改时间: ➡️ 2026-11-15 🏁
 类型: ➡️ 工具模块 🏁
 简介说明：➡️
-1. build_parser(): 两个子命令 index / retrieve。
-2. main(): 不创建 Agent、不调用聊天模型；配置错误返回 1，没命中返回 0。
+1. build_parser(): 两个子命令 index / retrieve，向量模型与库由参数显式传入。
+2. main(): 不创建 Agent、不调用聊天模型；缺参或配置错误返回 1，没命中返回 0。
 🏁
 关联模块：➡️
 1. engines.ae_harness.knowledge.service: KnowledgeRetriever。
@@ -26,7 +26,7 @@ import argparse
 import asyncio
 import sys
 
-from .config import load_config
+from .config import build_config
 from .service import KnowledgeRetriever
 
 __all__ = ["build_parser", "main"]
@@ -40,11 +40,15 @@ def build_parser() -> argparse.ArgumentParser:
         带 index / retrieve 两个子命令的解析器。
     """
     parser = argparse.ArgumentParser(prog="python -m engines.ae_harness.knowledge")
+    parser.add_argument("--model-name", required=True, help="向量模型名")
+    parser.add_argument("--dimensions", required=True, type=int, help="向量维度")
+    parser.add_argument("--api-key-env", required=True, help="密钥环境变量名")
+    parser.add_argument("--base", required=True, help="库名")
+    parser.add_argument("--data-dir", required=True, help="资料目录绝对路径")
+    parser.add_argument("--description", default="探针库", help="库说明")
     sub = parser.add_subparsers(dest="command", required=True)
-    index_cmd = sub.add_parser("index", help="对一个库增量建索引")
-    index_cmd.add_argument("base", help="库名")
+    sub.add_parser("index", help="对一个库增量建索引")
     retrieve_cmd = sub.add_parser("retrieve", help="检索一个库并打印原始命中")
-    retrieve_cmd.add_argument("base", help="库名")
     retrieve_cmd.add_argument("query", help="检索问题")
     retrieve_cmd.add_argument("--top-k", type=int, default=None, help="返回条数")
     return parser
@@ -60,9 +64,27 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         退出码：0 表示探针正常结束（含没命中），1 表示配置或参数有问题。
     """
-    args = build_parser().parse_args(argv)
     try:
-        config = load_config()
+        args = build_parser().parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code or 0)
+    try:
+        config = build_config(
+            {
+                "provider": "dashscope",
+                "api_key": args.api_key_env,
+                "model_name": args.model_name,
+                "dimensions": args.dimensions,
+            },
+            [
+                {
+                    "name": args.base,
+                    "description": args.description,
+                    "data_dir": args.data_dir,
+                    "enabled": True,
+                }
+            ],
+        )
     except ValueError as exc:
         print(f"配置错误：{exc}", file=sys.stderr)
         return 1

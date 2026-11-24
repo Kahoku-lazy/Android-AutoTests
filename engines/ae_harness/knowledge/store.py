@@ -6,11 +6,12 @@ Python 调试：➡️ python -m engines.ae_harness.knowledge.store 🏁
 时间：➡️ 2026-11-15 🏁
 作者：➡️ kahoku 🏁
 版本：➡️ 1.0.0 🏁
-修改时间: ➡️ 2026-11-15 🏁
+修改时间: ➡️ 2026-11-20 🏁
 类型: ➡️ 工具模块 🏁
 简介说明：➡️
 1. SQLiteVectorStore: AgentScope VectorStoreBase 的本地实现，余弦相似度全表扫描。
 2. 支持 create/delete/has_collection、insert/delete、search/list_documents。
+3. delete 接受可选 metadata_filter，非空时只删 metadata 全部匹配的块。
 3. 提供空的异步上下文，调用方统一用 async with 管理生命周期。
 🏁
 关联模块：➡️
@@ -222,19 +223,44 @@ class SQLiteVectorStore(VectorStoreBase):
                     ),
                 )
 
-    async def delete(self, collection: str, document_id: str) -> None:
+    async def delete(
+        self,
+        collection: str,
+        document_id: str,
+        metadata_filter: dict[str, Any] | None = None,
+    ) -> None:
         """
-        删除一个文档的全部块。
+        删除一个文档的块。
 
         Args:
             collection: 集合名。
             document_id: 文档编号。
+            metadata_filter: 非空时只删 metadata 全部匹配的块；空则删该文档全部块。
         """
         with self._connect() as connection:
-            connection.execute(
-                "DELETE FROM records WHERE collection = ? AND document_id = ?",
+            if not metadata_filter:
+                connection.execute(
+                    "DELETE FROM records WHERE collection = ? AND document_id = ?",
+                    (collection, document_id),
+                )
+                return
+            rows = connection.execute(
+                "SELECT chunk_index, metadata FROM records WHERE collection = ? AND document_id = ?",
                 (collection, document_id),
-            )
+            ).fetchall()
+            matched = [
+                int(row["chunk_index"])
+                for row in rows
+                if all(
+                    json.loads(row["metadata"] or "{}").get(key) == value
+                    for key, value in metadata_filter.items()
+                )
+            ]
+            for chunk_index in matched:
+                connection.execute(
+                    "DELETE FROM records WHERE collection = ? AND document_id = ? AND chunk_index = ?",
+                    (collection, document_id, chunk_index),
+                )
 
     async def search(
         self,

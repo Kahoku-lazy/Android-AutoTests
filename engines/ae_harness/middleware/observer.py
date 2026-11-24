@@ -143,7 +143,7 @@ class ObservationMiddleware(MiddlewareBase):
     """
     只读观测中间件：只在 hook 上采样，不改变任何行为。
 
-    准入边界见 `engines/ae_harness/agents/AGENTS.md` 的「观测中间件准入清单」。
+    准入边界见 `/.agents/docs/engines/ae_harness_agents/ae_harness_agents_agent_creation.md` 的「观测中间件准入清单」。
 
     Attributes:
         records: 未注入回调时存放观测记录；注入回调时保持为空。

@@ -41,7 +41,7 @@
 - **前端 API 层**：`frontend/src` 中作为 HTTP 调用参数的路径字面量
 - **测试调用面**：`tests/` 中的 HTTP 调用字面量，以及 `tests/api/case/*.yaml` 的 `path:` 字段
 
-该一致性 SHALL 由 `tests/graybox/unit` 下的默认单元测试断言，MUST NOT 依赖运行中的服务，
+该一致性 SHALL 由 `tests/arch/unit` 下的契约守护断言，MUST NOT 依赖运行中的服务，
 MUST NOT 依赖需要显式开启的环境变量或凭据。
 
 故意使用无尾斜杠的负向用例 SHALL 登记在守护测试的显式例外清单中并注明理由。
@@ -55,7 +55,7 @@ MUST NOT 依赖需要显式开启的环境变量或凭据。
 
 - **WHEN** 检查 `tests/` 中的 HTTP 调用字面量与 `tests/api/case/*.yaml` 的 `path:` 字段
 - **THEN** 每条 `/api/` 路径均以 `/` 结尾，且能命中后端路由
-- **AND** 该检查由默认单元套件执行，不需要启动前后端服务
+- **AND** 该检查由 `tests/arch/unit` 的契约守护执行，不需要启动前后端服务
 
 #### Scenario: 负向用例显式登记
 
@@ -68,7 +68,7 @@ MUST NOT 依赖需要显式开启的环境变量或凭据。
 `api-client` 的 `baseURL`（`/api`）后 SHALL 能在 Django 路由表中解析命中。
 仅指向前端自身路由的字面量（如 `/login`）不在本约束内。
 
-该一致性 SHALL 由 `tests/graybox/unit` 下的默认单元测试断言，MUST NOT 依赖运行中的前端或后端服务，
+该一致性 SHALL 由 `tests/arch/unit` 下的契约守护断言，MUST NOT 依赖运行中的前端或后端服务，
 MUST NOT 依赖需要显式开启的环境变量或凭据。
 
 #### Scenario: 前端路径字面量全部带尾斜杠
@@ -94,7 +94,7 @@ MUST NOT 依赖需要显式开启的环境变量或凭据。
 
 #### Scenario: 守护测试不依赖运行中的服务
 
-- **WHEN** 在未启动前端与后端、且未设置任何测试环境变量的环境中运行默认单元测试
+- **WHEN** 在未启动前端与后端、且未设置任何测试环境变量的环境中运行 `tests/arch/unit` 契约守护
 - **THEN** 该守护测试执行并通过，而不是被 skip
 
 ### Requirement: 调用面扫描的完整性与显式例外

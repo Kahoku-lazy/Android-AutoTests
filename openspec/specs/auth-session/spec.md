@@ -38,7 +38,7 @@ MUST NOT 触发令牌刷新，也 MUST NOT 因刷新失败而清除本地令牌�
 需要令牌的端点返回的 401 仍 SHALL 触发一次刷新并重试原请求（保持既有行为）。
 
 公开端点清单 SHALL 与网关公开路径清单中的 `/api/auth/*` 部分保持一致，
-且该一致性 SHALL 由 `tests/graybox/unit` 下的默认单元测试断言。
+且该一致性 SHALL 由 `tests/arch/unit` 下的契约守护断言。
 
 #### Scenario: 登录返回 401 时不刷新
 

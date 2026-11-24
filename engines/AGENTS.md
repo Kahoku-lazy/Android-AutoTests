@@ -1,7 +1,15 @@
 # engines AGENTS.md
-
-> 层级：根 `AGENTS.md` → **本文件** → `engines/**/AGENTS.md`。进入 engines 任务时**默认必读本文件**；子目录 AGENTS 写领域增量。**冲突时更具体子目录的领域规则优先**（本文件仍管跨包红线与阅读/检查流程）。  
+> **层级**：根 [AGENTS.md](../AGENTS.md) → 上级约束 `.agents/rules/engines-code-style.md`（风格正文）→ **本文件（索引）** → `.agents/docs/engines/**`（模块文档）
+> 本文件**不承载模块级细则**，只做导航；平台级红线与「AI 阅读与检查流程」仍在本文件上述两节，不外置到子模块。
+> **进入 engines 任务时默认必读本文件**；进某个模块改代码前，先读下表列出的文档——文档里的红线、契约、依赖方向效力等同模块级约束（更具体的模块文档优先，本文件仍管跨包红线与阅读/检查流程）。
 > 完整代码风格正文在 [`.agents/rules/engines-code-style.md`](../.agents/rules/engines-code-style.md)；**何时读规范、何时用检查技能以下方「AI 阅读与检查流程」为准**——勿跳过本流程直接改代码或忽略 rules。
+
+## 怎么用
+
+1. 先读本文件的「[职责](#职责)」「[红线（禁止）](#红线禁止)」「[AI 阅读与检查流程（必读）](#ai-阅读与检查流程必读)」——平台级约束不随模块外置。
+2. 定位要改的模块 → 读下表对应文档（一个模块一篇，按功能域分开）。
+3. 跨模块改动 → 两个模块的文档都要读；依赖方向以本文件「职责」与各模块文档为准。
+4. 规范原文与检查技能 → [`.agents/rules/engines-code-style.md`](../.agents/rules/engines-code-style.md) 与两个技能（见文末「相关路径速查」）。
 
 ## 职责
 
@@ -9,12 +17,12 @@
 - `engines/`：可替换引擎层——设备控制、串口日志、视觉 OCR、智能体（SOP / 角色 / 工具）运行时等。导入边界：零 `apps.*`、零 `django.*`（业务工具经注入）。
 - 一级子包（一句话）：
   - `ae_harness/`：**Agent 原语层**——`create_agent`、工具、事件记录与报告渲染、中间件、SOP 抽象、只读知识检索。不定义角色、不保存提示词、不保存流程；控制台入口已删除。
-  - `backend_bridge/`：**平台侧智能体角色的唯一落点**（后端任务 / 前端卡片用），在 `ae_harness` 原语上装配，并承接**事件落库、运行取消、报告与用量**。详见 [backend_bridge/AGENTS.md](backend_bridge/AGENTS.md)。
+  - `backend_bridge/`：**平台侧智能体角色的唯一落点**（后端任务 / 前端卡片用），在 `ae_harness` 原语上装配，并承接**事件落库、运行取消、报告与用量**。详见 [`backend_bridge_role_assembly.md`](../.agents/docs/engines/backend_bridge/backend_bridge_role_assembly.md)。
   - `device/`：设备引擎；对外入口是 `action`。
   - `uart_log/`：串口日志采集与处理。
   - `vision/`：页面文本识别（OCR）；主要供引擎侧工具调用。
 - **依赖方向只有一条**：`backend/` →（注入）→ `engines/backend_bridge/` → `engines/ae_harness/`。`device/`、`vision/`、`uart_log/` 是底座，**不得**反向依赖 `backend_bridge` 或 `ae_harness`；需要写过程日志时经 `utils.logs`。
-- 领域架构与目录细则见 [`ae_harness/AGENTS.md`](ae_harness/AGENTS.md)、[`backend_bridge/AGENTS.md`](backend_bridge/AGENTS.md) 等子文档，本文不展开。
+- 领域架构与目录细则见 [`ae_harness_overview.md`](../.agents/docs/engines/ae_harness/ae_harness_overview.md)、[`backend_bridge_role_assembly.md`](../.agents/docs/engines/backend_bridge/backend_bridge_role_assembly.md) 等子文档，本文不展开。
 - `engines/agents/` 正在退役（见 `openspec/changes/retire-engines-agents`）：删除前对它的任何改动**只允许**修退役相关缺陷，不得新增能力。
 
 ## 红线（禁止）
@@ -53,7 +61,33 @@
    python -m scripts.check_engines_agents_style
    ```
    两个检查器都只覆盖机械化子集；**过检 ≠ 整份规范合规**。
-5. **改 Agent 装配 / 目录职责时**：另读 [`engines/ae_harness/AGENTS.md`](ae_harness/AGENTS.md) 与 [`engines/backend_bridge/AGENTS.md`](backend_bridge/AGENTS.md)。涉及 device / uart_log / vision 时再读对应子目录 AGENTS（见速查）。
+5. **改 Agent 装配 / 目录职责时**：另读 [`ae_harness_overview.md`](../.agents/docs/engines/ae_harness/ae_harness_overview.md) 与 [`backend_bridge_role_assembly.md`](../.agents/docs/engines/backend_bridge/backend_bridge_role_assembly.md)。涉及 device / uart_log / vision 时再读对应模块文档（见速查）。
+
+## 模块 → 文档
+
+| 模块 | 文档 | 讲什么 |
+|------|------|--------|
+| backend_bridge | [backend_bridge_role_assembly.md](../.agents/docs/engines/backend_bridge/backend_bridge_role_assembly.md) | 平台角色唯一落点、SOP 与单角色分工、11 条红线、与后端分工、已定事项 |
+| ae_harness | [ae_harness_overview.md](../.agents/docs/engines/ae_harness/ae_harness_overview.md) | 原语层定位、AgentScope 2.0.12、禁止 import 外部功能模块 |
+| ae_harness/agents | [ae_harness_agents_agent_creation.md](../.agents/docs/engines/ae_harness_agents/ae_harness_agents_agent_creation.md) | `create_agent` 唯一出口、`AgentBundle`、角色只有三样、观测中间件准入清单 |
+| ae_harness/assistant | [ae_harness_assistant_console_retired.md](../.agents/docs/engines/ae_harness_assistant/ae_harness_assistant_console_retired.md) | 控制台入口已删、6 条红线、相关路径 |
+| ae_harness/event | [ae_harness_event_observation_and_report.md](../.agents/docs/engines/ae_harness_event/ae_harness_event_observation_and_report.md) | 事件记录与 HTML 报告、用量采集口径、全量模式、扩展点 |
+| ae_harness/knowledge | [ae_harness_knowledge_kb_retrieval.md](../.agents/docs/engines/ae_harness_knowledge/ae_harness_knowledge_kb_retrieval.md) | 只读检索、依赖边界的代价、未挂角色、接回 Agent 步骤、快速验证 |
+| ae_harness/middleware | [ae_harness_middleware_admission.md](../.agents/docs/engines/ae_harness_middleware/ae_harness_middleware_admission.md) | 三类中间件准入、硬性边界、两个异常口径、测试命令 |
+| ae_harness/tools | [ae_harness_tools_domain_tools.md](../.agents/docs/engines/ae_harness_tools/ae_harness_tools_domain_tools.md) | 按域分工具、目录准入门禁、返回契约、视觉定位精度 |
+| ae_harness/workflow | [ae_harness_workflow_sop_abstraction.md](../.agents/docs/engines/ae_harness_workflow/ae_harness_workflow_sop_abstraction.md) | SOP / goal / team 抽象、步骤 YAML 字段、6 条红线、已知限制 |
+| device | [device_control_engine.md](../.agents/docs/engines/device/device_control_engine.md) | `action` 对外入口、6 条红线、AI 阅读与检查流程 |
+| uart_log | [uart_log_serial_capture.md](../.agents/docs/engines/uart_log/uart_log_serial_capture.md) | 端口检测 / 接收 / 落盘 / 开关、`MAX_PORTS`、6 条红线 |
+| vision | [vision_ocr_engine.md](../.agents/docs/engines/vision/vision_ocr_engine.md) | cnocr 懒加载、坐标口径、调用面、5 条红线 |
+
+## 暂无模块文档的目录
+
+| 目录 | 现状 |
+|------|------|
+| `engines/utils` | 无模块文档（`io_files.py` 为通用文件 IO 辅助） |
+
+该目录下的改动，按本文件「职责」「红线」「AI 阅读与检查流程」执行；需沉淀模块口径时新增
+`.agents/docs/engines/{module}/{module}_{feature}.md` 并回到本表登记。
 
 ## 相关路径速查
 
@@ -63,10 +97,10 @@
 | 规范原文（风格正文） | [`.agents/rules/engines-code-style.md`](../.agents/rules/engines-code-style.md) |
 | 注释 / docstring 读写技能 | [`.agents/skills/engines-docstring-check/`](../.agents/skills/engines-docstring-check/) |
 | 风格检查技能 | [`.agents/skills/engines-agents-style-check/`](../.agents/skills/engines-agents-style-check/) |
-| Agent 原语层 | [`engines/ae_harness/AGENTS.md`](ae_harness/AGENTS.md) |
-| 平台角色落点 | [`engines/backend_bridge/AGENTS.md`](backend_bridge/AGENTS.md) |
-| 设备引擎 | [engines/device/AGENTS.md](device/AGENTS.md) |
-| 串口采集 | [engines/uart_log/AGENTS.md](uart_log/AGENTS.md) |
-| 视觉 OCR | [engines/vision/AGENTS.md](vision/AGENTS.md) |
+| Agent 原语层 | [`ae_harness_overview.md`](../.agents/docs/engines/ae_harness/ae_harness_overview.md) |
+| 平台角色落点 | [`backend_bridge_role_assembly.md`](../.agents/docs/engines/backend_bridge/backend_bridge_role_assembly.md) |
+| 设备引擎 | [device_control_engine.md](../.agents/docs/engines/device/device_control_engine.md) |
+| 串口采集 | [uart_log_serial_capture.md](../.agents/docs/engines/uart_log/uart_log_serial_capture.md) |
+| 视觉 OCR | [vision_ocr_engine.md](../.agents/docs/engines/vision/vision_ocr_engine.md) |
 | OpenSpec Harness | [openspec/specs/agent-harness/spec.md](../openspec/specs/agent-harness/spec.md) |
 | 门禁（非阻塞告警） | `python -m utils.check_gates --only engines-agents-style` |

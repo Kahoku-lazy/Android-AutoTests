@@ -618,32 +618,13 @@ def _iter_code_line_nos(content):
 def scan_engine_leak_violations():
     """Detect engine capability leak to upper layers (L1c boundary).
 
-    Rule (engine boundary): only `engines/` may import third-party
-    engine libs (uiautomator2) or touch concrete engine implementations.
-    Upper layers (backend/apps/, backend/gateway/) must consume device capability ONLY via
-    `engines.device.base.UiEngine` protocol (obtained through `engines.device.registry`).
-
-    Detects 3 leak categories:
-      - engine_lib:  backend/apps 或 backend/gateway importing uiautomator2 directly
-      - engine_impl: backend/apps 或 backend/gateway importing engines.device.android concrete implementation
-      - raw_handle:  backend/apps 或 backend/gateway accessing .u2 raw engine handles（仅代码行）
+    uiautomator2 与 engines.device.android 的 import 已交 .linting。
+    这里只留属性访问：backend/apps 与 backend/gateway 的代码行不得出现 .u2。
 
     Returns (new_violations, known_violations) — new violations fail CI.
     """
     scan_dirs = [APPS_DIR, GATEWAY_DIR]
     whitelist = _load_boundary_whitelist()
-
-    # 行首 import 模式：[ \t] 而非 \s，避免 \s 跨空行吞换行导致行号偏移
-    import_patterns = [
-        (
-            "engine_lib",
-            re.compile(r"^[ \t]*(?:import|from)[ \t]+(uiautomator2)\b", re.MULTILINE),
-        ),
-        (
-            "engine_impl",
-            re.compile(r"^[ \t]*(?:import|from)[ \t]+engines\.device\.android\b", re.MULTILINE),
-        ),
-    ]
     raw_handle_re = re.compile(r"\.u2\b")
 
     violations = []
@@ -659,19 +640,6 @@ def scan_engine_leak_violations():
             except Exception:
                 continue
             lines = content.split("\n")
-
-            for category, compiled in import_patterns:
-                for m in compiled.finditer(content):
-                    line_no = content[: m.start()].count("\n") + 1
-                    violations.append(
-                        {
-                            "file": rel_path,
-                            "line": line_no,
-                            "category": category,
-                            "snippet": lines[line_no - 1].strip()[:120],
-                        }
-                    )
-
             code_lines = _iter_code_line_nos(content)
             seen_raw = set()
             for m in raw_handle_re.finditer(content):
@@ -715,79 +683,7 @@ def scan_engine_leak_violations():
     return new, known
 
 
-# 底座包只提供设备、视觉、串口能力，不得反向依赖平台装配层或 Agent 原语层。
-# 与 engines/AGENTS.md 的依赖方向一致：backend → backend_bridge → ae_harness。
-ENGINE_BASE_PACKAGES = ("device", "vision", "uart_log")
-_ENGINE_REVERSE_IMPORT = re.compile(
-    r"^[ \t]*(?:import|from)[ \t]+engines\.(?:backend_bridge|ae_harness)\b",
-    re.MULTILINE,
-)
-# engines 全体不得认识 Django 或后端 App。业务工具由 backend 注入。
-_ENGINE_PLATFORM_IMPORT = re.compile(
-    r"^[ \t]*(?:import|from)[ \t]+(?:django|backend\.apps|apps)\b",
-    re.MULTILINE,
-)
-
-
-def scan_engine_dependency_violations():
-    """底座包不得反向依赖，engines 不得导入 Django 或后端 App。
-
-    两条都看行首 import：
-      - engine_reverse: device / vision / uart_log 导入 backend_bridge 或 ae_harness
-      - engine_platform: engines 下任意包导入 django、backend.apps 或 apps
-
-    Returns:
-        (new_violations, known_violations)。新违规让 --check-boundaries 失败。
-    """
-    engines_dir = PROJECT_ROOT / "engines"
-    whitelist = _load_boundary_whitelist()
-    violations = []
-    if not engines_dir.is_dir():
-        return [], []
-
-    for py_file in engines_dir.rglob("*.py"):
-        if "migrations" in py_file.parts or "__pycache__" in py_file.parts:
-            continue
-        rel_path = py_file.relative_to(PROJECT_ROOT).as_posix()
-        package = py_file.relative_to(engines_dir).parts[0]
-        try:
-            content = py_file.read_text(encoding="utf-8")
-        except OSError:
-            continue
-        lines = content.split("\n")
-        patterns = [("engine_platform", _ENGINE_PLATFORM_IMPORT)]
-        if package in ENGINE_BASE_PACKAGES:
-            patterns.append(("engine_reverse", _ENGINE_REVERSE_IMPORT))
-        for category, compiled in patterns:
-            for match in compiled.finditer(content):
-                line_no = content[: match.start()].count("\n") + 1
-                violations.append(
-                    {
-                        "file": rel_path,
-                        "line": line_no,
-                        "category": category,
-                        "snippet": lines[line_no - 1].strip()[:120],
-                    }
-                )
-
-    def _key(item):
-        return f"{item['file']}:{item['line']}:engine-dependency:{item['category']}"
-
-    whitelist_keys = set()
-    for entry in whitelist:
-        if entry.get("pattern") != "engine-dependency":
-            continue
-        whitelist_keys.add(
-            f"{entry.get('file', '')}:{entry.get('line', 0)}:engine-dependency:{entry.get('category', '')}"
-        )
-    known = []
-    new = []
-    for item in violations:
-        if _key(item) in whitelist_keys:
-            known.append(item)
-        else:
-            new.append(item)
-    return new, known
+# 引擎依赖方向（底座不反向依赖、engines 不导入 Django）已交 .linting。
 
 
 # ── 6. 设备状态 ──
@@ -1165,7 +1061,7 @@ def _setup_boundary_logger():
     return logger, str(log_path)
 
 
-def _known_debt_lines(orm_known, imp_known, eng_known, dep_known=()):
+def _known_debt_lines(orm_known, imp_known, eng_known):
     """返回已知技术债明细的文本行列表（--verbose 时打印 + 写日志）。"""
     notes = {}
     for w in _load_boundary_whitelist():
@@ -1213,17 +1109,6 @@ def _known_debt_lines(orm_known, imp_known, eng_known, dep_known=()):
                 ],
             )
         )
-    if dep_known:
-        sections.append(
-            (
-                "引擎依赖方向: 底座反向依赖或 engines 导入 Django",
-                [
-                    (f"  {v['file']}:{v['line']}  [{v['category']}]", v["snippet"], _note(v))
-                    for v in dep_known
-                ],
-            )
-        )
-
     if not sections:
         return []
     lines = ["── 已知技术债明细（白名单，不阻塞）──"]
@@ -1251,13 +1136,11 @@ if __name__ == "__main__":
         orm_new, orm_known = scan_orm_write_violations()
         # Firewall #1: Internal import violations
         imp_new, imp_known = scan_cross_app_internal_imports()
-        # L1c 引擎边界: 引擎能力泄露上层
+        # L1c 引擎边界只留 .u2 裸句柄。import 方向已交 .linting。
         eng_new, eng_known = scan_engine_leak_violations()
-        # 引擎依赖方向: 底座不反向依赖，engines 不导入 Django / 后端 App
-        dep_new, dep_known = scan_engine_dependency_violations()
 
-        total_new = len(orm_new) + len(imp_new) + len(eng_new) + len(dep_new)
-        total_known = len(orm_known) + len(imp_known) + len(eng_known) + len(dep_known)
+        total_new = len(orm_new) + len(imp_new) + len(eng_new)
+        total_known = len(orm_known) + len(imp_known) + len(eng_known)
 
         out = []  # 报告行（控制台打印 + 日志落盘）
 
@@ -1295,26 +1178,15 @@ if __name__ == "__main__":
                 )
                 out.append("")
 
-            if dep_new:
-                out.append("── 引擎依赖方向: 底座反向依赖或 engines 导入 Django ──")
-                for v in dep_new:
-                    out.append(f"  {v['file']}:{v['line']}  [{v['category']}]")
-                    out.append(f"    → {v['snippet']}")
-                out.append(
-                    "  修复: device/vision/uart_log 不得导入 backend_bridge 或 ae_harness；"
-                    "engines 不得导入 django 或 backend.apps"
-                )
-                out.append("")
-
             out.append("  如果是有意豁免，请添加到 utils/boundary-whitelist.json")
             if verbose and total_known:
-                out.extend(_known_debt_lines(orm_known, imp_known, eng_known, dep_known))
+                out.extend(_known_debt_lines(orm_known, imp_known, eng_known))
             exit_code = 1
         else:
             if total_known:
                 out.append(f"✅ 模块边界检查通过（已知 {total_known} 条技术债已登记）")
                 if verbose:
-                    out.extend(_known_debt_lines(orm_known, imp_known, eng_known, dep_known))
+                    out.extend(_known_debt_lines(orm_known, imp_known, eng_known))
             else:
                 out.append("✅ 模块边界检查通过 — 零违规")
             exit_code = 0

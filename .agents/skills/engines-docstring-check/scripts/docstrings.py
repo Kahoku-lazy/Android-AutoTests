@@ -1,7 +1,7 @@
 """engines docstring 读取与合规检查（单一脚本，两个子命令）。
 
 本模块的业务功能如下：
-1. check: 按 .agents/rules/engines-code-style.md §2/§5/§6 校验模块 / 类 / 函数 docstring。
+1. check: 按 .agents/rules/engines-code-style.md §2/§6 校验模块头 4 字段 + 工具函数摘要/Args。
 2. read: 抽取模块字段 + 类/函数签名与 docstring，用于「读代码前先看注释了解详情」。
 
 python -m 调试路径: scripts.docstrings
@@ -188,7 +188,7 @@ def baseline_keys(rel: str, base_ref: str = "HEAD") -> set[tuple[str, str, str]]
     raw = ast.get_docstring(tree, clean=False) or ""
     violations: list[Violation] = []
     violations.extend(_module_rules(rel, tree, raw))
-    _walk_defs(tree.body, rel, violations)
+    _walk_defs(tree.body, rel, violations, _tool_function_names(tree))
     return {violation_key(v) for v in violations}
 
 
@@ -198,8 +198,8 @@ def violation_key(violation: Violation) -> tuple[str, str, str]:
 
 
 # 「有 docstring 才成立」的规则：若该符号在 HEAD 里已经有了 docstring 问题，
-# 说明它本来就没达标，这次补注释又引出 Args/Returns 缺失，不算你引入的新问题。
-PRESENCE_RULES = frozenset({"module-docstring", "class-docstring", "def-docstring"})
+# 说明它本来就没达标，这次补注释又引出 Args 缺失，不算你引入的新问题。
+PRESENCE_RULES = frozenset({"module-docstring", "tool-docstring"})
 
 
 # --------------------------------------------------------------------------
@@ -229,23 +229,19 @@ class Violation:
 
 
 # 规则表：id -> (severity, 说明)。severity 决定退出码与默认可见性。
+# 2026-11-24 起：模块头 4 字段；普通函数/类不要求注释；只有 FunctionTool 注册的工具函数要摘要 + Args。
 RULES: dict[str, tuple[str, str]] = {
     "module-docstring": ("error", "缺少模块 docstring（§2.1）"),
     "module-fields": (
         "error",
-        "模块 docstring 模板字段不齐 / 类型非法 / 路径不符 / 调试入口格式错（§2）",
+        "模块头 4 字段不齐 / 时间或调试入口格式错（§2）",
     ),
     "module-summary": ("error", "模块功能字段写坏（编号开头、命令开头或为空）（§2）"),
-    "module-numbering": ("error", "编号列表不连续（§2 模板：➡️…🏁 内编号列表）"),
-    "class-docstring": ("error", "公开类缺少 docstring（§2.1）"),
-    "class-attributes": ("warn", "类字段未在 Attributes: 中列全（§2 类模板）"),
-    "def-docstring": ("error", "公开函数/方法缺少 docstring（§2.1）"),
-    "doc-summary": ("error", "docstring 缺少首行一句话摘要（§2.3）"),
-    "doc-args": ("error", "有参数但缺 Args: 段或漏列参数名（§2.3）"),
-    "doc-args-empty": ("warn", "Args: 条目缺说明文字（§2.3）"),
-    "doc-returns": ("error", "有返回值但缺 Returns: 段（§2.3）"),
-    "doc-raises": ("error", "有显式 raise 但缺 Raises: 段或漏列异常类型（§5.1）"),
-    "doc-order": ("error", "段序错误：必须 Args → Returns → Raises（§5.3 / §6.2）"),
+    "module-numbering": ("error", "测试 段编号不连续（§2 模板：➡️…🏁 内编号列表）"),
+    "tool-docstring": ("error", "工具函数缺少 docstring（模型侧读不到工具说明）（§2.3 / §6.1）"),
+    "tool-summary": ("error", "工具函数 docstring 缺少首行一句话摘要（§6.1）"),
+    "tool-args": ("error", "工具函数有参数但缺 Args: 段或漏列参数名（§6.1）"),
+    "tool-args-empty": ("warn", "Args: 条目缺说明文字（§2.3）"),
 }
 
 
@@ -502,7 +498,7 @@ def _module_rules(rel: str, tree: ast.Module, raw: str) -> list[Violation]:
             )
         )
 
-    for name in ("简介说明", "关联模块", "测试"):
+    for name in ("测试",):
         numbers = [int(m.group(1)) for m in NUMBERED_RE.finditer(fields.get(name) or "")]
         if numbers and numbers != list(range(1, len(numbers) + 1)):
             out.append(
@@ -518,78 +514,66 @@ def _module_rules(rel: str, tree: ast.Module, raw: str) -> list[Violation]:
     return out
 
 
-def _class_rules(rel: str, node: ast.ClassDef) -> list[Violation]:
-    """Class-level docstring rules (presence + Attributes coverage)."""
-    out: list[Violation] = []
-    doc = ast.get_docstring(node, clean=False) or ""
-    if not is_public(node.name):
-        return out
-    if not doc.strip():
-        out.append(
-            Violation(
-                "class-docstring",
-                _severity("class-docstring"),
-                rel,
-                node.lineno,
-                node.name,
-                f"公开类 {node.name} 缺少 docstring",
-            )
-        )
-        return out
+def _tool_function_names(tree: ast.Module) -> set[str]:
+    """Return function names registered via FunctionTool(...).
 
-    fields = [
-        s.target.id
-        for s in node.body
-        if isinstance(s, ast.AnnAssign) and isinstance(s.target, ast.Name)
-    ]
-    if not fields:
-        return out
-    sections = split_sections(doc)
-    if "Attributes" not in sections:
-        out.append(
-            Violation(
-                "class-attributes",
-                _severity("class-attributes"),
-                rel,
-                node.lineno,
-                node.name,
-                f"{node.name}: 有 {len(fields)} 个字段但没有 Attributes: 段",
-            )
-        )
-        return out
-    documented = {name.lstrip("*") for name, _ in args_entries(sections["Attributes"])}
-    missing = [f for f in fields if f not in documented]
-    if missing:
-        out.append(
-            Violation(
-                "class-attributes",
-                _severity("class-attributes"),
-                rel,
-                node.lineno,
-                node.name,
-                f"{node.name}: Attributes: 漏列字段 {missing}",
-            )
-        )
-    return out
+    Args:
+        tree: 模块 AST。
+
+    Returns:
+        被注册为工具的函数名集合（模型可见的工具说明来源）。
+    """
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not node.args:
+            continue
+        func = node.func
+        if isinstance(func, ast.Name):
+            callee = func.id
+        elif isinstance(func, ast.Attribute):
+            callee = func.attr
+        else:
+            continue
+        if callee != "FunctionTool":
+            continue
+        first = node.args[0]
+        if isinstance(first, ast.Name):
+            names.add(first.id)
+        elif isinstance(first, ast.Attribute):
+            names.add(first.attr)
+    return names
 
 
-def _function_rules(rel: str, node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[Violation]:
-    """Function/method docstring rules: presence, summary, Args, Returns, Raises, order."""
+def _function_rules(
+    rel: str,
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+    tool_names: set[str] | frozenset[str] = frozenset(),
+) -> list[Violation]:
+    """Tool-function docstring rules: presence, summary, Args coverage.
+
+    Args:
+        rel: 仓库相对路径。
+        node: 函数/方法节点。
+        tool_names: 被 FunctionTool 注册的函数名；不在其中的函数不查注释。
+
+    Returns:
+        违规列表（普通函数恒为空）。
+    """
     out: list[Violation] = []
     name = node.name
-    doc = ast.get_docstring(node, clean=False) or ""
-
-    if not is_public(name):
+    if name not in tool_names:
         return out
+
+    doc = ast.get_docstring(node, clean=False) or ""
     if not doc.strip():
         out.append(
             Violation(
-                "def-docstring",
-                _severity("def-docstring"),
+                "tool-docstring",
+                _severity("tool-docstring"),
                 rel,
                 node.lineno,
                 name,
-                f"公开函数 {name} 缺少 docstring",
+                f"工具函数 {name} 缺少 docstring（模型侧读不到工具说明）",
             )
         )
         return out
@@ -598,12 +582,12 @@ def _function_rules(rel: str, node: ast.FunctionDef | ast.AsyncFunctionDef) -> l
     if not summary or SECTION_RE.match(summary):
         out.append(
             Violation(
-                "doc-summary",
-                _severity("doc-summary"),
+                "tool-summary",
+                _severity("tool-summary"),
                 rel,
                 node.lineno,
                 name,
-                f"{name}: docstring 应以一句话摘要开头",
+                f"{name}: 工具 docstring 应以一句话摘要开头",
             )
         )
 
@@ -614,8 +598,8 @@ def _function_rules(rel: str, node: ast.FunctionDef | ast.AsyncFunctionDef) -> l
         if "Args" not in sections:
             out.append(
                 Violation(
-                    "doc-args",
-                    _severity("doc-args"),
+                    "tool-args",
+                    _severity("tool-args"),
                     rel,
                     node.lineno,
                     name,
@@ -629,8 +613,8 @@ def _function_rules(rel: str, node: ast.FunctionDef | ast.AsyncFunctionDef) -> l
             if missing:
                 out.append(
                     Violation(
-                        "doc-args",
-                        _severity("doc-args"),
+                        "tool-args",
+                        _severity("tool-args"),
                         rel,
                         node.lineno,
                         name,
@@ -641,8 +625,8 @@ def _function_rules(rel: str, node: ast.FunctionDef | ast.AsyncFunctionDef) -> l
             if empty:
                 out.append(
                     Violation(
-                        "doc-args-empty",
-                        _severity("doc-args-empty"),
+                        "tool-args-empty",
+                        _severity("tool-args-empty"),
                         rel,
                         node.lineno,
                         name,
@@ -650,98 +634,27 @@ def _function_rules(rel: str, node: ast.FunctionDef | ast.AsyncFunctionDef) -> l
                     )
                 )
 
-    returns = node.returns
-    returns_none = isinstance(returns, ast.Constant) and returns.value is None
-    needs_returns = (returns is not None and not returns_none) or has_return_value(node)
-    if (
-        needs_returns
-        and name != "__init__"
-        and not is_generator(node)
-        and "Returns" not in sections
-    ):
-        out.append(
-            Violation(
-                "doc-returns",
-                _severity("doc-returns"),
-                rel,
-                node.lineno,
-                name,
-                f"{name}: 有返回值但缺 Returns: 段",
-            )
-        )
-
-    raised = raise_types(node)
-    if raised:
-        if "Raises" not in sections:
-            out.append(
-                Violation(
-                    "doc-raises",
-                    _severity("doc-raises"),
-                    rel,
-                    node.lineno,
-                    name,
-                    f"{name}: raise {raised} 但缺 Raises: 段",
-                )
-            )
-        else:
-            documented_exc: set[str] = set()
-            for line in sections["Raises"]:
-                match = RAISES_ENTRY_RE.match(line.strip())
-                if match:
-                    documented_exc.add(match.group(1))
-                    documented_exc.add(match.group(1).rsplit(".", 1)[-1])
-            missing_exc = [e for e in raised if e not in documented_exc]
-            if missing_exc:
-                out.append(
-                    Violation(
-                        "doc-raises",
-                        _severity("doc-raises"),
-                        rel,
-                        node.lineno,
-                        name,
-                        f"{name}: Raises: 漏列异常 {missing_exc}",
-                    )
-                )
-
-    positions = section_offsets(doc)
-    present = [
-        name
-        for name, _ in sorted(positions.items(), key=lambda item: item[1])
-        if name in SECTION_ORDER
-    ]
-    canonical = [name for name in SECTION_ORDER if name in positions]
-    if present != canonical:
-        doc_line = node.lineno
-        body = node.body
-        if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant):
-            doc_line = body[0].lineno
-        out.append(
-            Violation(
-                "doc-order",
-                _severity("doc-order"),
-                rel,
-                doc_line,
-                name,
-                f"{name}: 段序应为 Args → Returns → Raises，实际 {' → '.join(present)}",
-            )
-        )
     return out
 
 
-def _walk_defs(body: list[ast.stmt], rel: str, out: list[Violation]) -> None:
+def _walk_defs(
+    body: list[ast.stmt],
+    rel: str,
+    out: list[Violation],
+    tool_names: set[str] | frozenset[str] = frozenset(),
+) -> None:
     """Walk module/class bodies (not function bodies) and collect violations."""
     for node in body:
         if isinstance(node, ast.ClassDef):
-            out.extend(_class_rules(rel, node))
-            _walk_defs(node.body, rel, out)
+            _walk_defs(node.body, rel, out, tool_names)
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            out.extend(_function_rules(rel, node))
+            out.extend(_function_rules(rel, node, tool_names))
         elif isinstance(node, (ast.If, ast.Try, ast.For, ast.While, ast.With, ast.AsyncWith)):
-            _walk_defs(node.body, rel, out)
-            _walk_defs(getattr(node, "orelse", []) or [], rel, out)
-            _walk_defs(getattr(node, "finalbody", []) or [], rel, out)
+            _walk_defs(node.body, rel, out, tool_names)
+            _walk_defs(getattr(node, "orelse", []) or [], rel, out, tool_names)
+            _walk_defs(getattr(node, "finalbody", []) or [], rel, out, tool_names)
             for handler in getattr(node, "handlers", []) or []:
-                _walk_defs(handler.body, rel, out)
+                _walk_defs(handler.body, rel, out, tool_names)
 
 
 def check_file(path: Path) -> list[Violation]:
@@ -770,7 +683,7 @@ def check_file(path: Path) -> list[Violation]:
     raw = ast.get_docstring(tree, clean=False) or ""
     out: list[Violation] = []
     out.extend(_module_rules(rel, tree, raw))
-    _walk_defs(tree.body, rel, out)
+    _walk_defs(tree.body, rel, out, _tool_function_names(tree))
     return out
 
 
@@ -879,11 +792,8 @@ def render_text(digest: dict[str, Any], *, full: bool = False, depth: str = "ful
     fields = digest["fields"]
     lines: list[str] = []
     header = [digest["file"]]
-    if fields:
-        header.append(f"[{fields.get('类型') or '?'}]")
-        header.append(f"v{fields.get('版本') or '?'}")
-        if fields.get("修改时间"):
-            header.append(f"改 {fields['修改时间']}")
+    if fields.get("时间"):
+        header.append(f"时间 {fields['时间']}")
     lines.append("=" * 78)
     lines.append(" ".join(header))
     lines.append("-" * 78)
@@ -934,12 +844,6 @@ def render_text(digest: dict[str, Any], *, full: bool = False, depth: str = "ful
                 lines.append(f"         段: {' → '.join(fn['sections'])}")
             if fn["raises"]:
                 lines.append(f"         抛出: {', '.join(fn['raises'])}")
-
-    if digest["undocumented"]:
-        lines.append("")
-        lines.append(f"⚠ 未写 docstring 的公开符号 ({len(digest['undocumented'])})")
-        for item in digest["undocumented"]:
-            lines.append(f"  L{item['lineno']:<5} {item['kind']} {item['name']}")
     return "\n".join(lines)
 
 
@@ -950,10 +854,7 @@ def render_md(digest: dict[str, Any]) -> str:
     if fields:
         out.append("")
         out.append(f"- **模块功能**：{fields.get('模块功能') or '-'}")
-        out.append(
-            f"- **类型**：{fields.get('类型') or '-'}　"
-            f"**版本**：{fields.get('版本') or '-'}　**修改**：{fields.get('修改时间') or '-'}"
-        )
+        out.append(f"- **时间**：{fields.get('时间') or '-'}")
         out.append(f"- **调试入口**：`{fields.get('Python 调试') or '-'}`")
         for label, key in (("简介说明", "简介说明"), ("关联模块", "关联模块"), ("测试", "测试")):
             body = (fields.get(key) or "").strip()
@@ -971,11 +872,6 @@ def render_md(digest: dict[str, Any]) -> str:
         for fn in digest["functions"]:
             extra = f"（段：{'/'.join(fn['sections'])}）" if fn["sections"] else ""
             out.append(f"- `L{fn['lineno']} {fn['signature']}` — {fn['summary']}{extra}")
-    if digest["undocumented"]:
-        out.append("")
-        out.append("### 未写 docstring 的公开符号")
-        for item in digest["undocumented"]:
-            out.append(f"- `L{item['lineno']} {item['kind']} {item['name']}`")
     return "\n".join(out)
 
 

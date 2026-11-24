@@ -1,7 +1,7 @@
 """架构契约测试 — business-asset 门禁口径（变更 purge-govee-business-assets）。
 
 断言门禁的四个可观测口径：
-1. 受管目录覆盖 `app_info` 与 `sop/steps` 两个业务资产目录；
+1. 受管目录覆盖 `app_info` 业务资产目录；`sop/steps` 已随示例步骤删除；
 2. 禁用路径清单登记被移除的两个资产；
 3. 门禁是阻塞项，且名字稳定（CI 以 `--only business-asset` 调用）；
 4. 干净树通过、受管目录命中失败、禁用路径复活失败，三种情形分别断言。
@@ -32,7 +32,7 @@ def test_gate_contract() -> None:
 
 
 def test_managed_dirs_cover_asset_roots() -> None:
-    assert {"app_info", "steps"} <= {directory.name for directory in BUSINESS_ASSET_DIRS}
+    assert {directory.name for directory in BUSINESS_ASSET_DIRS} == {"app_info"}
 
 
 def test_forbidden_paths_cover_removed_assets() -> None:

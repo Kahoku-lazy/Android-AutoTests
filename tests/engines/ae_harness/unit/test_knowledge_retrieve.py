@@ -7,10 +7,41 @@ from __future__ import annotations
 
 import pytest
 
-from engines.ae_harness.knowledge.config import load_config
+from engines.ae_harness.knowledge.config import build_config
 from engines.ae_harness.knowledge.service import KnowledgeHit, KnowledgeRetriever
 
 pytestmark = [pytest.mark.unit]
+
+_EMBEDDING = {
+    "provider": "dashscope",
+    "model_name": "text-embedding-v4",
+    "dimensions": 1024,
+}
+
+
+def _config(tmp_path):
+    """造一份含一个启用库与一个禁用库的配置。"""
+    docs = tmp_path / "docs"
+    nested = docs / "nested"
+    nested.mkdir(parents=True)
+    return build_config(
+        _EMBEDDING,
+        [
+            {
+                "name": "product_manuals",
+                "description": "启用库",
+                "data_dir": str(docs),
+                "enabled": True,
+            },
+            {
+                "name": "log_keywords",
+                "description": "禁用库",
+                "data_dir": str(nested),
+                "enabled": False,
+            },
+        ],
+        score_threshold=0.45,
+    )
 
 
 def _hit(base: str, score: float, index: int = 0) -> KnowledgeHit:
@@ -34,30 +65,30 @@ def _hit(base: str, score: float, index: int = 0) -> KnowledgeHit:
     )
 
 
-async def test_unknown_base_is_unavailable():
+async def test_unknown_base_is_unavailable(tmp_path):
     """库名不存在时降级为不可用。"""
-    result = await KnowledgeRetriever(load_config()).retrieve("问题", base="nope")
+    result = await KnowledgeRetriever(_config(tmp_path)).retrieve("问题", base="nope")
     assert result.status == "unavailable"
     assert "知识库不存在" in result.error
 
 
-async def test_disabled_base_is_unavailable():
+async def test_disabled_base_is_unavailable(tmp_path):
     """禁用的库不允许检索。"""
-    result = await KnowledgeRetriever(load_config()).retrieve("问题", base="log_keywords")
+    result = await KnowledgeRetriever(_config(tmp_path)).retrieve("问题", base="log_keywords")
     assert result.status == "unavailable"
     assert "已禁用" in result.error
 
 
-async def test_blank_query_is_unavailable():
+async def test_blank_query_is_unavailable(tmp_path):
     """空白问题不触发检索。"""
-    result = await KnowledgeRetriever(load_config()).retrieve("   ")
+    result = await KnowledgeRetriever(_config(tmp_path)).retrieve("   ")
     assert result.status == "unavailable"
     assert "不能为空" in result.error
 
 
-async def test_hits_are_merged_sorted_and_truncated(monkeypatch):
+async def test_hits_are_merged_sorted_and_truncated(monkeypatch, tmp_path):
     """命中按分数降序，并按 top_k 截断。"""
-    retriever = KnowledgeRetriever(load_config())
+    retriever = KnowledgeRetriever(_config(tmp_path))
 
     async def fake_search_one(base: str, query: str, top_k: int):
         """按库返回固定命中。"""
@@ -71,9 +102,9 @@ async def test_hits_are_merged_sorted_and_truncated(monkeypatch):
     assert [hit.score for hit in truncated.hits] == [0.9]
 
 
-async def test_no_hit_is_not_unavailable(monkeypatch):
+async def test_no_hit_is_not_unavailable(monkeypatch, tmp_path):
     """库可用但没命中时状态是 no_hit。"""
-    retriever = KnowledgeRetriever(load_config())
+    retriever = KnowledgeRetriever(_config(tmp_path))
 
     async def fake_search_one(base: str, query: str, top_k: int):
         """返回空命中。"""

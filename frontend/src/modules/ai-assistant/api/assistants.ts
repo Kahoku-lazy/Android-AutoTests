@@ -45,6 +45,11 @@ export async function createAssistant(payload: {
   return data.data
 }
 
+/** 删除助手名片。只删名片本身，对话记录、历史任务与 Agent 配置都保留。 */
+export async function deleteAssistant(assistantId: string): Promise<void> {
+  await djangoClient.delete(`/ai/assistants/${assistantId}/`)
+}
+
 /** 编辑名片：PATCH 同一张卡片；头像三态由 clearAvatar / avatar 决定。 */
 export async function updateAssistant(
   assistantId: string,

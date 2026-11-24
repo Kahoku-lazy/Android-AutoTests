@@ -4,6 +4,11 @@ GET  /api/ops/users/                              运营可读：分页账号列
 POST /api/ops/users/<int:user_id>/disable/        运营：停用普通账号
 POST /api/ops/users/<int:user_id>/enable/         运营：启用普通账号
 POST /api/ops/users/<int:user_id>/reset-password/ 运营：重置普通账号密码
+POST /api/ops/users/<int:user_id>/model-grants/    仅超管：改模型名单
+POST /api/ops/users/<int:user_id>/grant-author/    仅超管：授予助手作者
+POST /api/ops/users/<int:user_id>/revoke-author/   仅超管：收回助手作者
+POST /api/ops/users/<int:user_id>/grant-operator/  仅超管：设为运营
+POST /api/ops/users/<int:user_id>/revoke-operator/ 仅超管：取消运营
 POST /api/ops/users/disable/                       运营：本页批量停用
 POST /api/ops/users/purge/                         仅超管：批量注销（只删账号）
 

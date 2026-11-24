@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "28b904fd-1672-40a6-b0c8-2e592598e23c",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "D:\\Github\\Android-AutoTests\\dev_docs\\ARCH_PRD\\ARCH-平台架构图.spec.json",
+  "output": "D:\\Github\\Android-AutoTests\\dev_docs\\ARCH_PRD\\ARCH-平台架构图.html",
+  "specification": {
+    "sha256": "dcfbd93eff6d7dcff2061a049121a1761ae5ca8b4ef13ebc5085f3d74d0d3d68",
+    "bytes": 5630
+  },
+  "artifact": {
+    "sha256": "72f817df5b93b2df0b2e09bc37f811e2c1eca38dc01f2f9e82d6fe8d7db391e6",
+    "bytes": 830369
+  }
+}

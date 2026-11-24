@@ -6,22 +6,24 @@
  * 传入 `card` 即编辑：字段预填，保存走 PATCH 回写同一张名片。
  */
 import { computed, onMounted, onUnmounted, ref } from "vue"
-import { ElMessage } from "element-plus"
+import { ElMessage, ElMessageBox } from "element-plus"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
 import { formatApiError } from "@/shared/api-client"
 import {
   avatarUrl,
   createAssistant,
+  deleteAssistant,
   listRoleOptions,
   listToolCatalog,
   updateAssistant,
 } from "../api/assistants"
 import { blankForm, formFromCard, toToolSelection, type EditorForm } from "../helpers/editor-form"
+import { assistantInUseMessage, workflowsUsingAssistant } from "../helpers/assistant-usage"
 import { markerVars } from "../helpers/marker"
-import type { AssistantCard, RoleOption, ToolCatalogDomain } from "../types"
+import type { AssistantCard, RoleOption, SopWorkflow, ToolCatalogDomain } from "../types"
 
-const props = defineProps<{ card?: AssistantCard | null }>()
-const emit = defineEmits<{ close: []; saved: [] }>()
+const props = defineProps<{ card?: AssistantCard | null; workflows?: SopWorkflow[] }>()
+const emit = defineEmits<{ close: []; saved: []; deleted: [] }>()
 
 const form = ref<EditorForm>(props.card ? formFromCard(props.card) : blankForm())
 const roles = ref<RoleOption[]>([])
@@ -31,6 +33,7 @@ const clearAvatar = ref(false)
 const existingAvatar = ref("")
 const pickedUrl = ref("")
 const saving = ref(false)
+const deleting = ref(false)
 const error = ref("")
 
 const editing = computed(() => Boolean(props.card))
@@ -70,6 +73,40 @@ function removeAvatar(): void {
   avatar.value = null
   clearAvatar.value = true
   existingAvatar.value = ""
+}
+
+/** 删除前二次确认：只删名片，对话记录与历史任务都还在。被工作流占用时直接拒绝。 */
+async function remove(): Promise<void> {
+  if (!props.card) return
+  const usedBy = workflowsUsingAssistant(props.card.assistant_id, props.workflows || [])
+  if (usedBy.length) {
+    error.value = assistantInUseMessage(usedBy)
+    ElMessage.warning(error.value)
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      `删除「${props.card.display_name}」？名片从列表消失，已有的对话记录与历史任务不受影响。`,
+      "删除助手",
+      {
+        type: "warning",
+        confirmButtonText: "删除",
+        cancelButtonText: "取消",
+      },
+    )
+  } catch {
+    return
+  }
+  deleting.value = true
+  try {
+    await deleteAssistant(props.card.assistant_id)
+    ElMessage.success("助手已删除")
+    emit("deleted")
+  } catch (e) {
+    error.value = formatApiError(e as never, "删除失败")
+  } finally {
+    deleting.value = false
+  }
 }
 
 async function save(): Promise<void> {
@@ -179,6 +216,8 @@ async function save(): Promise<void> {
     <p v-if="error" class="assistant-editor__error">{{ error }}</p>
 
     <div class="assistant-editor__actions">
+      <DoodleBtn v-if="editing" tone="danger" :disabled="deleting" @click="remove">删除</DoodleBtn>
+      <span class="assistant-editor__spacer" />
       <DoodleBtn tone="paper" @click="emit('close')">取消</DoodleBtn>
       <DoodleBtn tone="yellow" :disabled="saving" @click="save">{{
         editing ? "保存" : "创建"
@@ -202,9 +241,14 @@ async function save(): Promise<void> {
 
 .assistant-editor__actions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
   gap: var(--app-space-sm);
   padding-top: var(--app-space-sm);
+}
+
+/* 删除靠左，取消与保存靠右：删除不与保存相邻，避免误点 */
+.assistant-editor__spacer {
+  flex: 1;
 }
 
 /* 字段 / 输入框 / 下拉的皮肤在模块级 `editor-form.css`（与工作流弹窗共用） */

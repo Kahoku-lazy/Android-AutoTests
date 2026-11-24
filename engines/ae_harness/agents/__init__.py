@@ -13,8 +13,7 @@ Python 调试：➡️ python -m engines.ae_harness.agents 🏁
 2. 不在此处再导出，避免把「读配置 → 造模型 → 拼 Agent」的依赖方向藏进包入口。
 🏁
 关联模块：➡️
-1. engines.ae_harness.agents.config: 读模型表与提示词正文。
-2. engines.ae_harness.agents.models: 按短名造聊天模型。
+1. engines.ae_harness.agents.models: 按调用方传入的连接参数造聊天模型。
 3. engines.ae_harness.agents.creator: create_agent，唯一装配出口。
 🏁
 测试：➡️

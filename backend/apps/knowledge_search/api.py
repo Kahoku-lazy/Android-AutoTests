@@ -11,8 +11,7 @@ import re
 
 from pathlib import Path
 
-from . import registry
-from .models import KnowledgeModule, KsEvalQuery, KsEvalRun
+from .models import KnowledgeModule, KsEvalQuery, KsEvalRun, RetrievalSettings
 
 _NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
@@ -68,9 +67,7 @@ def create_module(
     if KnowledgeModule.objects.filter(name=fields["name"]).exists():
         raise ValueError(f"库名已存在：{fields['name']}")
     _check_isolation(fields["name"], Path(fields["data_dir"]), fields["enabled"])
-    module = KnowledgeModule.objects.create(**fields)
-    registry.sync_yaml()
-    return module
+    return KnowledgeModule.objects.create(**fields)
 
 
 def update_module(module_id: int, **changes: object) -> KnowledgeModule:
@@ -109,7 +106,6 @@ def update_module(module_id: int, **changes: object) -> KnowledgeModule:
     for field, value in fields.items():
         setattr(module, field, value)
     module.save()
-    registry.sync_yaml()
     return module
 
 
@@ -127,7 +123,6 @@ def delete_module(module_id: int) -> bool:
     if module is None:
         return False
     module.delete()
-    registry.sync_yaml()
     return True
 
 
@@ -205,6 +200,84 @@ def _check_isolation(
             raise ValueError(f"启用库资料目录冲突：{name} 与 {other.name}")
 
 
+# ── 检索配置：全表一行，唯一写点 ──
+
+
+def get_retrieval_settings() -> RetrievalSettings | None:
+    """
+    取全局检索配置。
+
+    Returns:
+        唯一一行；尚未种入时为 None。
+    """
+    return RetrievalSettings.objects.order_by("id").first()
+
+
+def save_retrieval_settings(
+    *,
+    embedding_model_id: int,
+    top_k: int,
+    score_threshold: float,
+    chunk_size: int,
+    chunk_overlap: int,
+) -> tuple[RetrievalSettings, bool]:
+    """
+    保存全局检索配置。切块参数变化时 index_epoch 加一。
+
+    Args:
+        embedding_model_id: 向量模型配置主键，须存在且类型为 embedding。
+        top_k: 默认返回条数，正整数。
+        score_threshold: 相似度阈值，0 到 1。
+        chunk_size: 切块大小，正整数。
+        chunk_overlap: 切块重叠，须小于切块大小。
+
+    Returns:
+        (保存后的配置, 本次是否使索引失效)。
+
+    Raises:
+        ValueError: 引用的模型不存在或不是向量模型，或数值越界。
+    """
+    _require_embedding_model(embedding_model_id)
+    top_k = _positive_int(top_k, "top_k")
+    chunk_size = _positive_int(chunk_size, "chunk_size")
+    chunk_overlap = _positive_int(chunk_overlap, "chunk_overlap")
+    if not 0 <= float(score_threshold) <= 1:
+        raise ValueError("相似度阈值必须在 0 到 1 之间")
+    if chunk_overlap >= chunk_size:
+        raise ValueError("切块重叠必须小于切块大小")
+    current = get_retrieval_settings()
+    chunk_changed = current is None or (
+        current.chunk_size != chunk_size or current.chunk_overlap != chunk_overlap
+    )
+    if current is None:
+        current = RetrievalSettings(index_epoch=0)
+    current.embedding_model_id = int(embedding_model_id)
+    current.top_k = top_k
+    current.score_threshold = float(score_threshold)
+    current.chunk_size = chunk_size
+    current.chunk_overlap = chunk_overlap
+    if chunk_changed and current.pk is not None:
+        current.index_epoch += 1
+    current.save()
+    return current, chunk_changed and current.index_epoch > 0
+
+
+def _require_embedding_model(model_id: int) -> None:
+    """引用的模型必须存在且类型为向量。不 import 对方的写库函数。"""
+    from backend.apps.ai_assistant.models import AIModelConfig
+
+    config = AIModelConfig.objects.filter(pk=int(model_id)).first()
+    if config is None or config.model_kind != "embedding":
+        raise ValueError("检索配置只能引用向量模型")
+
+
+def _positive_int(value: object, name: str) -> int:
+    """收成正整数；布尔值与小数拒绝。"""
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(f"{name} 必须是正整数")
+    return value
+
+
 # ── 评测运行：唯一写点（运行器经此落库，不直接 ORM 写）──
 
 
@@ -214,6 +287,7 @@ def create_eval_run(
     module_snapshot: dict,
     model_config_id: int | None,
     model_snapshot: dict,
+    retrieval_snapshot: dict | None = None,
     pos_count: int,
     neg_count: int,
     seed: int,
@@ -227,6 +301,7 @@ def create_eval_run(
         module_snapshot: 模块登记快照。
         model_config_id: 运营模型配置主键（仅追溯用）。
         model_snapshot: 模型连接参数快照。
+        retrieval_snapshot: 触发时的检索配置快照；None 时不覆盖已有默认。
         pos_count: 正题数。
         neg_count: 负样本数。
         seed: 采样随机种子。
@@ -239,7 +314,7 @@ def create_eval_run(
         module_name=module_name,
         module_snapshot=module_snapshot,
         model_config_id=model_config_id,
-        model_snapshot=model_snapshot,
+        model_snapshot={**model_snapshot, "retrieval": retrieval_snapshot or {}},
         pos_count=pos_count,
         neg_count=neg_count,
         seed=seed,

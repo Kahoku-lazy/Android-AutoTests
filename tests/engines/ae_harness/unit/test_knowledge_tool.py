@@ -91,18 +91,8 @@ async def test_exception_is_converted_not_raised():
     assert "boom" in payload["error"]
 
 
-async def test_mounting_does_not_load_config(monkeypatch):
-    """挂载阶段不读配置：配置坏了只在调用时降级，不炸掉入口。"""
-
-    def _broken(**kwargs):
-        """模拟配置装载失败。"""
-        raise ValueError("配置坏了")
-
-    monkeypatch.setattr(
-        "engines.ae_harness.knowledge.service.load_config",
-        _broken,
-    )
-    tool = build_knowledge_tools()[0]
+async def test_mounting_does_not_touch_files(tmp_path):
+    """挂载只拿已建好的检索器，不读任何配置文件。"""
+    tool = build_knowledge_tools(_FakeRetriever(Retrieval("no_hit")))[0]
     payload = _payload(await tool.call(query="x"))
-    assert payload["status"] is False
-    assert "配置坏了" in payload["error"]
+    assert payload["status"] is True

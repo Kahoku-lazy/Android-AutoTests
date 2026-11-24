@@ -58,7 +58,7 @@ def test_stale_heartbeat_becomes_process_lost_and_starts_pending():
 
 
 def test_running_ids_extracted_from_drain_payload():
-    import run as run_mod
+    from utils.service_ctl import services as services_mod
 
     class _Resp:
         def __enter__(self):
@@ -71,9 +71,10 @@ def test_running_ids_extracted_from_drain_payload():
             return b'{"status": true, "data": {"running": 2, "running_ids": [3, "4", "x"]}}'
 
     with patch("urllib.request.urlopen", return_value=_Resp()):
-        assert run_mod._running_ids_from_drain("http://127.0.0.1/api/system/drain/") == [3, 4]
+        base = "http://127.0.0.1/api/system/drain/"
+        assert services_mod.running_ids_from_drain(base) == [3, 4]
     with patch("urllib.request.urlopen", side_effect=OSError("down")):
-        assert run_mod._running_ids_from_drain("http://127.0.0.1/api/system/drain/") == []
+        assert services_mod.running_ids_from_drain(base) == []
 
 
 def test_stop_timeout_mark_sets_cause_and_file_can_be_cleared(tmp_path, monkeypatch):

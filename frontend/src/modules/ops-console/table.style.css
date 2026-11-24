@@ -93,6 +93,11 @@
   color: var(--app-text-primary);
 }
 
+.ops-kind--embedding {
+  background: color-mix(in srgb, var(--c-element) 28%, var(--app-bg-card));
+  color: var(--app-text-primary);
+}
+
 .ops-identity--superuser {
   background: color-mix(in srgb, var(--c-element) 32%, var(--app-bg-card));
   color: var(--app-text-primary);

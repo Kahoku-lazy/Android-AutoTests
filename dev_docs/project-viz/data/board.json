@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-11-18 18:45",
+  "generated_at": "2026-11-23 17:35",
   "git": {
-    "commit": "a4cc01a0",
+    "commit": "2d185ee6",
     "dirty": true
   },
   "agents": {
@@ -20,10 +20,10 @@
       {
         "name": "ai-assistant",
         "features": 3,
-        "files": 25,
+        "files": 26,
         "classes": 0,
-        "methods": 108,
-        "loc": 3332
+        "methods": 112,
+        "loc": 3425
       },
       {
         "name": "ops-console",
@@ -31,7 +31,7 @@
         "files": 17,
         "classes": 0,
         "methods": 83,
-        "loc": 2616
+        "loc": 2646
       },
       {
         "name": "dashboard",
@@ -63,7 +63,15 @@
         "files": 16,
         "classes": 0,
         "methods": 72,
-        "loc": 1801
+        "loc": 1796
+      },
+      {
+        "name": "knowledge-search",
+        "features": 1,
+        "files": 19,
+        "classes": 0,
+        "methods": 49,
+        "loc": 1771
       },
       {
         "name": "case-manager",
@@ -72,14 +80,6 @@
         "classes": 0,
         "methods": 55,
         "loc": 1703
-      },
-      {
-        "name": "knowledge-search",
-        "features": 1,
-        "files": 18,
-        "classes": 0,
-        "methods": 45,
-        "loc": 1630
       },
       {
         "name": "bug-manager",
@@ -141,7 +141,7 @@
       {
         "from": "knowledge-search",
         "to": "共享层（shared/views/router）",
-        "count": 29
+        "count": 31
       },
       {
         "from": "ops-console",
@@ -264,7 +264,7 @@
         {
           "from": "components/",
           "to": "helpers/",
-          "count": 11
+          "count": 12
         },
         {
           "from": "components/",
@@ -294,7 +294,7 @@
         {
           "from": "helpers/",
           "to": "types.ts",
-          "count": 2
+          "count": 3
         },
         {
           "from": "helpers/",
@@ -609,7 +609,7 @@
         {
           "from": "components/",
           "to": "types.ts",
-          "count": 6
+          "count": 7
         },
         {
           "from": "components/",
@@ -619,7 +619,7 @@
         {
           "from": "components/",
           "to": "api.ts",
-          "count": 1
+          "count": 2
         },
         {
           "from": "composables/",
@@ -1070,10 +1070,10 @@
     },
     "totals": {
       "features": 16,
-      "files": 220,
+      "files": 222,
       "classes": 0,
-      "methods": 758,
-      "loc": 25334,
+      "methods": 766,
+      "loc": 25593,
       "modules": 11
     },
     "pages": [
@@ -1130,7 +1130,7 @@
           {
             "name": "index.vue",
             "path": "modules/ai-assistant/index.vue",
-            "loc": 128,
+            "loc": 140,
             "route": "/ai-assistant",
             "title": "平台助手",
             "shared": [
@@ -1160,6 +1160,11 @@
         ],
         "components": 9,
         "calls": [
+          {
+            "method": "DELETE",
+            "path": "/ai/assistants/${assistantId}/",
+            "count": 1
+          },
           {
             "method": "DELETE",
             "path": "/ai/assistants/threads/${threadId}/",
@@ -1610,7 +1615,7 @@
             "dialogs": 0
           }
         ],
-        "components": 8,
+        "components": 9,
         "calls": [
           {
             "method": "DELETE",
@@ -1638,6 +1643,11 @@
             "count": 1
           },
           {
+            "method": "GET",
+            "path": "/knowledge-search/settings/",
+            "count": 1
+          },
+          {
             "method": "PATCH",
             "path": "/knowledge-search/modules/${id}/",
             "count": 1
@@ -1661,6 +1671,11 @@
             "method": "POST",
             "path": "/knowledge-search/query/",
             "count": 1
+          },
+          {
+            "method": "PUT",
+            "path": "/knowledge-search/settings/",
+            "count": 1
           }
         ]
       },
@@ -1670,7 +1685,7 @@
           {
             "name": "model-configs.vue",
             "path": "modules/ops-console/model-configs.vue",
-            "loc": 420,
+            "loc": 440,
             "route": "/ops/model-configs",
             "title": "模型配置",
             "shared": [
@@ -1693,7 +1708,7 @@
               "抽屉/弹窗"
             ],
             "buttons": 10,
-            "inputs": 5,
+            "inputs": 6,
             "tables": 1,
             "dialogs": 1
           },
@@ -2102,19 +2117,19 @@
             "name": "api.py",
             "classes": 0,
             "methods": 36,
-            "loc": 608
+            "loc": 610
           },
           {
             "name": "views_drf.py",
             "classes": 18,
             "methods": 52,
-            "loc": 568
+            "loc": 574
           },
           {
             "name": "models.py",
             "classes": 26,
             "methods": 13,
-            "loc": 309
+            "loc": 311
           },
           {
             "name": "assistant_threads.py",
@@ -2129,28 +2144,28 @@
             "loc": 185
           },
           {
+            "name": "assistant_cards.py",
+            "classes": 5,
+            "methods": 10,
+            "loc": 166
+          },
+          {
+            "name": "serializers.py",
+            "classes": 7,
+            "methods": 9,
+            "loc": 152
+          },
+          {
             "name": "live_runner.py",
             "classes": 0,
             "methods": 11,
             "loc": 145
           },
           {
-            "name": "serializers.py",
-            "classes": 7,
-            "methods": 9,
-            "loc": 144
-          },
-          {
-            "name": "assistant_cards.py",
-            "classes": 4,
-            "methods": 8,
-            "loc": 132
-          },
-          {
             "name": "agent_configs.py",
             "classes": 2,
-            "methods": 7,
-            "loc": 96
+            "methods": 8,
+            "loc": 106
           },
           {
             "name": "eval_samples.py",
@@ -2167,14 +2182,14 @@
           {
             "name": "model_configs.py",
             "classes": 1,
-            "methods": 6,
-            "loc": 57
+            "methods": 7,
+            "loc": 68
           },
           {
             "name": "eval_rulers.py",
             "classes": 0,
             "methods": 2,
-            "loc": 48
+            "loc": 65
           },
           {
             "name": "assistant_id.py",
@@ -2249,9 +2264,9 @@
             "loc": 0
           }
         ],
-        "classes": 66,
-        "methods": 189,
-        "loc": 2976
+        "classes": 67,
+        "methods": 193,
+        "loc": 3066
       },
       {
         "name": "bug_manager",
@@ -2261,7 +2276,7 @@
             "name": "extract.py",
             "classes": 1,
             "methods": 24,
-            "loc": 384
+            "loc": 391
           },
           {
             "name": "api.py",
@@ -2332,7 +2347,7 @@
         ],
         "classes": 11,
         "methods": 50,
-        "loc": 912
+        "loc": 919
       },
       {
         "name": "case_manager",
@@ -2537,31 +2552,31 @@
       },
       {
         "name": "knowledge_search",
-        "features": 6,
+        "features": 7,
         "files": [
           {
             "name": "api.py",
             "classes": 0,
-            "methods": 16,
-            "loc": 276
+            "methods": 20,
+            "loc": 336
           },
           {
             "name": "eval_runner.py",
             "classes": 0,
             "methods": 8,
-            "loc": 227
+            "loc": 237
           },
           {
             "name": "views.py",
-            "classes": 7,
-            "methods": 12,
-            "loc": 176
+            "classes": 8,
+            "methods": 15,
+            "loc": 227
           },
           {
             "name": "retrieval.py",
             "classes": 0,
-            "methods": 9,
-            "loc": 168
+            "methods": 11,
+            "loc": 197
           },
           {
             "name": "eval_generation.py",
@@ -2570,28 +2585,22 @@
             "loc": 160
           },
           {
+            "name": "models.py",
+            "classes": 8,
+            "methods": 4,
+            "loc": 100
+          },
+          {
             "name": "eval_corpus.py",
             "classes": 0,
             "methods": 2,
             "loc": 93
           },
           {
-            "name": "models.py",
-            "classes": 6,
-            "methods": 3,
-            "loc": 79
-          },
-          {
-            "name": "registry.py",
-            "classes": 0,
-            "methods": 5,
-            "loc": 72
-          },
-          {
             "name": "serializers.py",
-            "classes": 10,
+            "classes": 11,
             "methods": 0,
-            "loc": 71
+            "loc": 80
           },
           {
             "name": "eval_metrics.py",
@@ -2603,7 +2612,7 @@
             "name": "urls.py",
             "classes": 0,
             "methods": 0,
-            "loc": 19
+            "loc": 21
           },
           {
             "name": "apps.py",
@@ -2618,9 +2627,9 @@
             "loc": 1
           }
         ],
-        "classes": 24,
-        "methods": 63,
-        "loc": 1391
+        "classes": 28,
+        "methods": 68,
+        "loc": 1501
       },
       {
         "name": "ops_console",
@@ -2630,13 +2639,13 @@
             "name": "api.py",
             "classes": 0,
             "methods": 18,
-            "loc": 363
+            "loc": 365
           },
           {
             "name": "views.py",
             "classes": 11,
             "methods": 19,
-            "loc": 231
+            "loc": 236
           },
           {
             "name": "urls.py",
@@ -2665,7 +2674,7 @@
         ],
         "classes": 13,
         "methods": 41,
-        "loc": 718
+        "loc": 725
       },
       {
         "name": "report_generator",
@@ -2789,13 +2798,13 @@
             "name": "api.py",
             "classes": 0,
             "methods": 61,
-            "loc": 1017
+            "loc": 1014
           },
           {
             "name": "task_runner.py",
             "classes": 0,
-            "methods": 26,
-            "loc": 519
+            "methods": 23,
+            "loc": 515
           },
           {
             "name": "views.py",
@@ -2949,8 +2958,8 @@
           }
         ],
         "classes": 32,
-        "methods": 188,
-        "loc": 3325
+        "methods": 185,
+        "loc": 3318
       },
       {
         "name": "usage_ledger",
@@ -3023,7 +3032,7 @@
             "name": "settings.py",
             "classes": 0,
             "methods": 0,
-            "loc": 408
+            "loc": 409
           },
           {
             "name": "jwt_auth.py",
@@ -3160,7 +3169,7 @@
         ],
         "classes": 22,
         "methods": 39,
-        "loc": 1206,
+        "loc": 1207,
         "shared": true
       }
     ],
@@ -3178,6 +3187,11 @@
       {
         "from": "dashboard",
         "to": "usage_ledger",
+        "count": 3
+      },
+      {
+        "from": "knowledge_search",
+        "to": "ai_assistant",
         "count": 3
       },
       {
@@ -3211,13 +3225,13 @@
         "count": 2
       },
       {
-        "from": "task_list",
-        "to": "case_manager",
-        "count": 2
-      },
-      {
         "from": "accounts",
         "to": "ai_assistant",
+        "count": 1
+      },
+      {
+        "from": "ai_assistant",
+        "to": "knowledge_search",
         "count": 1
       },
       {
@@ -3228,11 +3242,6 @@
       {
         "from": "dashboard",
         "to": "device_pool",
-        "count": 1
-      },
-      {
-        "from": "knowledge_search",
-        "to": "ai_assistant",
         "count": 1
       },
       {
@@ -3257,16 +3266,21 @@
       },
       {
         "from": "task_list",
+        "to": "case_manager",
+        "count": 1
+      },
+      {
+        "from": "task_list",
         "to": "device_pool",
         "count": 1
       }
     ],
     "totals": {
-      "features": 86,
-      "files": 167,
-      "classes": 243,
-      "methods": 870,
-      "loc": 16823,
+      "features": 87,
+      "files": 166,
+      "classes": 248,
+      "methods": 876,
+      "loc": 17031,
       "modules": 13
     },
     "internal": {
@@ -3276,7 +3290,7 @@
       "case_manager": 19,
       "dashboard": 2,
       "device_pool": 13,
-      "knowledge_search": 19,
+      "knowledge_search": 14,
       "ops_console": 4,
       "report_generator": 2,
       "serial_log": 16,
@@ -3355,8 +3369,18 @@
         "count": 1
       },
       {
+        "from": "knowledge_search.api.py",
+        "to": "ai_assistant.models.py",
+        "count": 1
+      },
+      {
         "from": "knowledge_search.eval_runner.py",
         "to": "usage_ledger.api.py",
+        "count": 1
+      },
+      {
+        "from": "knowledge_search.retrieval.py",
+        "to": "ai_assistant.models.py",
         "count": 1
       },
       {
@@ -3373,16 +3397,6 @@
         "from": "ops_console.api.py",
         "to": "accounts.api.py",
         "count": 1
-      },
-      {
-        "from": "ops_console.api.py",
-        "to": "ai_assistant.api.py",
-        "count": 1
-      },
-      {
-        "from": "report_generator.report_inventory.py",
-        "to": "ai_assistant.models.py",
-        "count": 1
       }
     ]
   },
@@ -3392,19 +3406,19 @@
         "key": "agents",
         "label": "创建智能体",
         "note": "创建智能体：模型配置 + 提示词 + create_agent",
-        "agentsDoc": "# engines/ae_harness/agents AGENTS.md\n\n## 职责\n\n本目录负责把「模型配置 + 提示词」变成一个可直接运行的**智能体角色**。\n\n一个角色由三样东西组成：\n\n| 组成 | 来源 |\n| --- | --- |\n| 模型 | `models.py` 按调用方传入的厂商、密钥名、地址、模型名造出实例 |\n| 系统提示词 | 调用方传入的正文 |\n| 角色名称 | 调用方传入 |\n\n```text\nagents/\n  config.py      load_log_keywords\n  models.py      校验连接参数 + 自己读 .env + create_model（交出密钥环境变量名）\n  creator.py     create_agent → AgentBundle\n  config/        log_keywords/<SKU>.md\n```\n\n`create_agent` 是唯一出口，返回 `AgentBundle`：`.agent` 是可运行智能体，`.api_key_env` 是本次使用的密钥环境变量名（只有名字，没有值）。\n\n```python\nfrom engines.ae_harness.agents.creator import create_agent\n\nbundle = create_agent(\n    \"ui_executor\",\n    \"你是 UI 执行者。\",\n    provider=\"govee\",\n    api_key_env=\"GOVEE_API_KEY\",\n    model_name=\"deepseek-flash\",\n    base_url=\"https://test-llm.lanjingerp.com/v1\",\n)\nagent = bundle.agent  # 挂工具、跑任务都从这里拿\nprint(bundle.api_key_env)  # GOVEE_API_KEY；用量记账按这个名字归组\n```\n\n**为什么多一个 `api_key_env`，这不违反红线 2**：红线 2 禁止的是给**角色**加第四样能力（工具、记忆、**能力型**中间件、路由、编排参数）。`api_key_env` 不是能力，而是「这次用的是哪把密钥」的回执——它不改变智能体行为，只让调用方不必再读配置表。返回结构变了两段，但角色本身仍只有名称、模型、系统提示词三样。\n\n**禁止**为了省事让 `create_agent` 返回单个 `Agent` 再让调用方自己解析密钥名——那等于把配置读取重新散到调用方。\n\n## 红线（AI 禁止事项）\n\n1. **禁止绕过 `create_agent` 造 Agent** —— 不得在别处直接 `Agent(...)`，不得新增第二种创建入口、注册表或工厂族。\n2. **禁止给角色加第四样东西（能力型）** —— 角色只有名称、模型、系统提示词；不得往 `create_agent` 里塞工具、记忆、**能力型中间件**、角色表、路由或编排参数。\n\n   **中间件准入分三类**，每类都有明确条款（详见 [`../middleware/AGENTS.md`](../middleware/AGENTS.md)）：\n\n| 类别 | 允许做什么 | 判据 |\n| --- | --- | --- |\n| 只读观测 | 看、记录、采样 | 去掉它，运行结果一模一样 |\n| 可靠性 | 失败时重试**同一动作** | 成功路径的调用次数与参数不变 |\n| 运行控制 | 按上限或外部信号**提前中止** | 只会更早结束，不会多做一件事 |\n\n三类都经创建时的显式入参传入（`observers=[...]`），默认一个都不挂。**能力型中间件（改变行为、扩展能力）一律禁止**，不论包装成什么名字。\n3. **禁止在本目录读取或保存角色提示词文件** —— `create_agent` 只收调用方传入的正文。聊天模型没有 `models.yaml`，连接参数由调用方传入。**其它子包自带的配置（例如 `knowledge/config/`）不属本条**，由该子包自己读、自己校验。\n4. **禁止 `creator.py` 自己构造模型客户端** —— 必须经 `models.create_model`，不得直接实例化 `DeepSeekChatModel` 之类的类。\n5. **禁止在 `create_agent` 里调用 `reply` / `reply_stream`** —— 只创建，不运行；何时开始对话由调用方决定。\n6. **禁止引入语音、TTS** —— 本目录只服务 chat 角色；遇到这类需求先上报，不要自行扩展。**知识库检索**由调用方把根级 `knowledge/` 的工具挂到角色上（工具不算角色第四要素），本目录**不感知、不 import**。\n7. **禁止把连接参数收成短名或配置文件** —— `name` 只收角色名称、`system_prompt` 只收提示词正文；模型必须由调用方显式传入 `provider`、`api_key_env`、`model_name`、`base_url`。不得恢复模型短名，不得让这四个参数兼容模型实例，不得再按文件名读提示词。\n8. **禁止在本目录新增第二套配置来源** —— 不得再加一个 `settings.py`、第二个 yaml 或另一个提示词目录。\n\n## 观测中间件准入清单\n\n背景：AgentScope 的中间件只能在 `Agent(...)` 构造时传入，而 `create_agent` 是唯一创建出口，所以「挂观测中间件」必然要经过本目录。为守住「角色只有三样东西」，边界按下面写死。\n\n### 允许（只读观测）\n\n1. **读取 hook 入参并计数、计时、采样**：模型名、token 数、消息内容、最终 system prompt、压缩前后的阈值与比例、工具名与执行结果。\n2. **通过注入的 `emit(record)` 回调投递记录**。投到哪、如何落盘、如何渲染，全由事件层决定；中间件不认识事件层，也不持有其容器。\n3. **对变换式 hook 原样透传**：读到值后一字不改地返回。\n\n### 禁止（按 hook 逐条）\n\n| hook | 形态 | 观测中间件可以做什么 | 绝对禁止 |\n| --- | --- | --- | --- |\n| `on_reply` | Onion | 包裹一次回复，读入参/出参 | 改输入或输出、吞异常、跳过 `next_handler` |\n| `on_reasoning` | Onion | 包裹一轮推理，计时 | 改输入、改返回、跳过 `next_handler` |\n| `on_acting` | Onion | 观察一次工具执行，记耗时与结果状态 | 改工具入参、改工具结果、跳过执行 |\n| `on_model_call` | Onion | 观测请求与响应，读 token 与模型名 | 改写 `kwargs`（含 `extra_body` / `tool_choice`）、换模型、跳过调用 |\n| `on_compress_context` | Onion | 观测是否压缩、压缩比例、注入的指令 | 改变压缩结果、改上下文 |\n| `on_system_prompt` | Transformer | **读到最终提示词后原样返回** | 改一个字符、注入任何指令（改了就是能力型） |\n| `on_check_permission` | Onion | 只读观测权限判定 | 改动判定结果（安全红线） |\n| `list_tools` | Tool source | —— | **完全禁止**：它直接扩展能力 |\n\n### 通用禁止\n\n1. **不得吞异常**：捕获后必须 `raise` 或交给下游，不得静默 `pass`。\n2. **不得写状态**：`agent.state`、`tool_context`、上下文消息一律只读。\n3. **不得做控制类行为**：重试、回退、缓存、并发控制、预算熔断、跳过步骤。\n4. **不得触碰外部资源**：不发网络请求、不读配置或密钥、不写文件（落盘归事件层）。\n5. **不得改变控制流**：提前 `return`、条件性跳过 `next_handler`、替换返回值。\n\n### 装配方式\n\n- 只允许在创建智能体时经**显式观测入参**传入：`create_agent(..., observers=[...])`。该入参与能力型中间件分开命名，**禁止**复用同一个参数名、禁止把观测中间件伪装成能力型中间件。\n- `create_agent` 只把 `observers` 透传给 `Agent(middlewares=...)`；本目录**不 import** `middleware`，不认识观测实现。\n- 一次运行**只挂一个**观测中间件；SOP 里两个角色可共用同一个实例，观测记录带 agent 名以区分归属。\n",
+        "agentsDoc": "",
         "files": [
           {
             "name": "models.py",
             "path": "engines/ae_harness/agents/models.py",
             "summary": "校验一条模型配置并创建聊天模型",
             "classes": 4,
-            "methods": 10,
-            "loc": 296,
+            "methods": 11,
+            "loc": 315,
             "trend": [
-              296,
-              160,
-              160
+              315,
+              315,
+              315
             ]
           },
           {
@@ -3412,52 +3426,52 @@
             "path": "engines/ae_harness/agents/creator.py",
             "summary": "输出一个智能体角色：模型 + 系统提示词 + 角色名称，并交出用的是哪把密钥",
             "classes": 1,
-            "methods": 2,
-            "loc": 126,
+            "methods": 1,
+            "loc": 93,
             "trend": [
-              126,
-              79,
-              79
+              93,
+              93,
+              93
             ]
           },
           {
-            "name": "config.py",
-            "path": "engines/ae_harness/agents/config.py",
-            "summary": "按型号读日志关键词目录",
+            "name": "messages.py",
+            "path": "engines/ae_harness/agents/messages.py",
+            "summary": "构造一轮发给智能体的用户消息",
             "classes": 0,
-            "methods": 2,
-            "loc": 58,
+            "methods": 1,
+            "loc": 32,
             "trend": [
-              58,
-              80,
-              60
+              32,
+              32,
+              32
             ]
           }
         ],
         "totals": {
           "files": 3,
           "classes": 5,
-          "methods": 14,
-          "loc": 480
+          "methods": 13,
+          "loc": 440
         }
       },
       {
         "key": "tools",
         "label": "智能体工具箱",
         "note": "智能体工具箱：给 Agent 提供工具（adb 设备动作 + 用例库 + 文档）",
-        "agentsDoc": "# engines/ae_harness/tools AGENTS.md\n\n## 职责\n\n本目录为 Agent 提供工具（tools）。\n\n当前只做 **Python 内置函数工具**：用 `agentscope.tool.FunctionTool` 包装普通 Python 函数，按域分子目录。\n\n```text\ntools/\n  catalog.py 只读目录：域、预设、函数名与一句说明；不含实现\n  adb/       设备操作：16 个函数 + build_adb_tools / build_adb_readonly_tools\n```\n\n`list_tool_catalog()` 只给配置页下拉用。勾选过滤在 `backend_bridge`，不在本目录。\n\n工具不属于角色三要素，`create_agent` 不接收。调用方先建 Agent，再挂工具：\n\n```python\nagent = create_agent(\n    \"ui_executor\",\n    \"你是 UI 执行者。\",\n    provider=\"govee\",\n    api_key_env=\"GOVEE_API_KEY\",\n    model_name=\"deepseek-flash\",\n).agent\nfor tool in build_adb_tools():\n    await agent.toolkit.add_tool(tool)\n```\n\n## 红线（AI 禁止事项）\n\n1. **禁止在本目录创建 Agent 或造模型** —— 不调 `Agent(...)`、不构造 `DeepSeekChatModel` 之类的客户端。\n2. **禁止在本目录读配置文件** —— 不 `import yaml`、不 `open()`、不读 `.env`；需要配置由调用方传入。\n3. **禁止在本目录发起回复** —— 不调 `reply` / `reply_stream`，工具只执行动作并返回结果。\n4. **禁止引入 MCP、Skill、外部执行工具** —— 当前只做 Python 函数工具；需要这些能力先上报，不要自行扩展。\n5. **禁止反向依赖 `agents/`** —— 工具不知道 Agent 存在，两者只在调用方汇合。\n6. **禁止工具之间互相调用来做编排** —— 每个工具只做一个动作；多步流程由 Agent 决策，不写进工具。\n7. **禁止改变返回结构的契约** —— `status`、`timestamp` 字段缺一不可，字段含义不得改名或复用。\n8. **禁止接受像素坐标** —— 参数只收归一化值，换算在工具内部完成。\n9. **禁止把工具文件堆在 `tools/` 根上** —— 新工具必须放进对应域的子目录。\n10. **目录准入门禁** —— 本目录只允许三种形态：**Python 内置函数工具**、**Skill**、**MCP**。自带配置、向量库或索引状态的模块（例如知识库）**不接受**，一律放 Harness 根级子包（知识库见 [`../knowledge/AGENTS.md`](../knowledge/AGENTS.md)）。\n\n## 实现约定\n\n1. **文本类工具返回 JSON 文本** —— 成功带 `timestamp`、`status: true` 与载荷字段；失败带 `timestamp`、`status: false` 与 `error`。时间戳格式固定为 `2026-11-13_10-53-12.321`（毫秒三位）。\n2. **截图返回图片块** —— `adb_screenshot` 返回 `ToolChunk`：一段 JSON 元信息 + `DataBlock`（PNG 的 base64）。`with_timing=True`（默认）时带 `cost_ms`；传 `marks` 时在图上画红圈加序号。\n3. **网格核对** —— `adb_screenshot_grid(nx, ny, size=3, step=0.03)` 以粗估点为中心撒网格，候选点画成十字加序号，元信息回传序号与坐标。3×3 可读；5×5 在 1568 长边下序号会糊成一团，**优先用两轮 3×3**（第二轮步长 0.012）。\n4. **只读与并发标记** —— 只读工具标 `is_read_only=True`，有副作用的标 `is_concurrency_safe=False`。\n5. **坐标一律归一化** —— 0~1，左上角 `(0,0)`，右下角 `(1,1)`，执行时按 `wm size` 换算。\n6. **截图不落盘** —— 只以 base64 随结果返回，长边压到 1568 以内，不写任何文件。\n\n## 已知限制\n\n### 视觉定位精度\n\n坐标用归一化值，换算本身不损失精度（4 位小数在 1440 宽屏上小于 1 像素）。真正的误差来自模型看图的视觉估计，实测为 **0.03~0.08 归一化值**。\n\n| 控件尺寸 | 归一化宽度 | 结果 |\n| --- | --- | --- |\n| ≥ 150 px | ≥ 0.10 | 可点中 |\n| 60 ~ 150 px | 0.04 ~ 0.10 | 有风险，必须走网格核对 |\n| < 60 px | < 0.04 | 不可靠，先换等价大目标 |\n\n实测（1440×3040 天气页）：居中的「更多」按钮纵向偏 90 px，右上角「+」偏 237 px，底部方框键只偏 17 px。\n",
+        "agentsDoc": "",
         "files": [
           {
             "name": "adb/tools.py",
             "path": "engines/ae_harness/tools/adb/tools.py",
             "summary": "adb 设备工具：16 个函数工具与列表装配",
             "classes": 0,
-            "methods": 30,
-            "loc": 857,
+            "methods": 31,
+            "loc": 870,
             "trend": [
-              857,
-              857,
-              857
+              870,
+              870,
+              870
             ]
           },
           {
@@ -3482,8 +3496,8 @@
             "loc": 77,
             "trend": [
               77,
-              null,
-              null
+              77,
+              77
             ]
           },
           {
@@ -3505,11 +3519,11 @@
             "summary": "用例库工具目录：保存一条用例，写入动作由调用方注入",
             "classes": 0,
             "methods": 4,
-            "loc": 46,
+            "loc": 49,
             "trend": [
-              46,
-              null,
-              null
+              49,
+              49,
+              49
             ]
           },
           {
@@ -3518,64 +3532,64 @@
             "summary": "只读文档工具：读取本次运行绑定的需求正文",
             "classes": 0,
             "methods": 4,
-            "loc": 43,
+            "loc": 46,
             "trend": [
-              43,
-              null,
-              null
+              46,
+              46,
+              46
             ]
           }
         ],
         "totals": {
           "files": 6,
           "classes": 2,
-          "methods": 47,
-          "loc": 1316
+          "methods": 48,
+          "loc": 1335
         }
       },
       {
         "key": "knowledge",
         "label": "知识检索",
         "note": "知识检索：向量模型配置、按库增量索引、只读检索工具（整目录可删）",
-        "agentsDoc": "# knowledge 模块 AGENTS.md\n\n> 层级：根 `AGENTS.md` → [`engines/AGENTS.md`](../../AGENTS.md) → [`engines/ae_harness/AGENTS.md`](../AGENTS.md) → **本文件**。本文件只写知识库领域增量；冲突时本文件的领域规则优先。\n\n## 职责\n\nHarness 内的**独立知识库模块**：自带向量模型配置与库目录，按库增量索引，以只读工具形态提供检索。它不生成答案、不改写命中，也不决定结果给哪个角色——挂不挂、挂给谁由调用方决定。\n\n| 文件 | 职责 |\n| --- | --- |\n| `config.py` | 读自带两份 yaml（向量模型、库目录），校验字段与资料目录隔离；密钥取值 |\n| `models.py` | 按配置创建 DashScope 嵌入模型，交出密钥环境变量名 |\n| `store.py` | `SQLiteVectorStore`：`VectorStoreBase` 的本地实现，余弦相似度 |\n| `indexer.py` | 只扫 `.md/.txt`，按修改时间/大小/切块版本增量重建 |\n| `service.py` | `KnowledgeRetriever.retrieve()`：懒初始化，失败降级为「检索不可用」；`usage_events()` 交出嵌入用量 |\n| `usage.py` | `UsageRecordingEmbedding`：透传嵌入调用并记录 token 用量事件；零 token 不产事件 |\n| `tool.py` | `build_knowledge_tools()`：产出只读 `search_knowledge` 工具 |\n| `probe.py` / `__main__.py` | 命令行探针 `index` / `retrieve`，不创建智能体、不调聊天模型 |\n| `config/models.yaml` | **只允许**向量模型条目 |\n| `config/knowledge_bases.yaml` | `defaults` + 各库 `description` / `data_dir` / `enabled` |\n| `index/` | 生成的索引（已 gitignore，可随时重建） |\n\n## 红线（禁止）\n\n1. **禁止被 ae_harness 内其它子包 import** —— 挂载到 Agent 的效果评测完成前，Harness 内部引用数为零，由 `tests/engines/ae_harness/unit/test_knowledge_independence.py` 守护。评测达标要接回角色时，只允许在目标入口加一处局部可选导入，并同一提交里更新该测试的期望引用清单。**平台 backend 例外**（2026-11-18 变更申请获批，见 `openspec/specs/knowledge-search-entry` 与 `harness-knowledge`）：backend 可经局部可选导入使用只读检索与用量出口，不计入 Harness 内部引用，不得使本模块反向依赖平台。\n2. **禁止 import Harness 其它子包** —— 不 import `agents/`、`assistant/`、`event/`、`middleware/`、`workflow/`、`tools/`。本模块要能整目录删除而不牵连任何一处。\n3. **禁止把知识库放进 `tools/`** —— `tools/` 只收 Python 内置函数工具、Skill、MCP；带配置与状态的模块一律留在根级子包。\n4. **`config/models.yaml` 只允许向量模型** —— 出现 chat / realtime / tts 字段即视为配置非法；不得改成「共用 agents 的模型表」。\n5. **禁止只读以外的动作** —— 不写资料目录、不落盘截图、不发文档上传或知识库写接口。\n6. **禁止把检索改写成生成** —— 工具只回片段与相似度，不做总结、不改写正文。\n7. **禁止静默失败** —— 「没命中」与「检索不可用」必须给出不同文案，不能都显示成「没查到」。\n\n## 依赖边界的代价（有意为之）\n\n密钥取值（仓库根 `.env` → 进程环境）与 `agents/config.load_secret` 重复约十余行。这是**故意**的：红线 2 要求本模块不依赖 `agents/`，用一份小重复换整目录可删。\n\n`.env` 全仓只有仓库根一份，本模块只读不写，也不得新增第二份 `.env`。\n\n## 当前状态：未挂角色，平台只读检索桥已放行\n\n**不接到任何角色**：只验证了能跑通（索引成功、命中字段齐全、三种返回文案正确），**准确率与召回率没测**。挂载到 Agent 前必须先过评测（Recall@k / MRR / 误命中率，评测能力见 `openspec/changes/add-knowledge-auto-eval`）。\n\n**平台 backend 只读检索桥已放行**（2026-11-18 变更申请获批）：`backend/apps/knowledge_search` 经局部可选导入直调 `KnowledgeRetriever`，返回检索原文并取 `usage_events()` 入账；不造 Agent、不生成答案。整目录删除后平台降级为「检索不可用」，不炸入口。\n\n## 如何接回 Agent（评测通过后再做）\n\n在目标入口 `assistant/agent_<role>.py` 的 `build_agent` 里加一处局部可选导入并挂载：\n\n```python\ntry:  # 知识库可选：整目录删除后自动跳过\n    from engines.ae_harness.knowledge import build_knowledge_tools\nexcept ModuleNotFoundError as exc:  # 只吞本模块的缺失，内部写错仍要抛\n    if not (exc.name or \"\").startswith(\"engines.ae_harness.knowledge\"):\n        raise\n    build_knowledge_tools = None\n\nif build_knowledge_tools is not None:\n    for tool in build_knowledge_tools():\n        await agent.toolkit.add_tool(tool)\n```\n\n同时把 `test_knowledge_independence.py` 的期望引用清单从 `[]` 改成该入口的相对路径——改动必须是**显式**的，不允许静默放开。\n\n## 快速验证\n\n```powershell\n# 配置装载\npython -c \"from engines.ae_harness.knowledge import build_knowledge_tools; print(len(build_knowledge_tools()))\"\n\n# 建索引（会现算嵌入，首次较慢）\npython -m engines.ae_harness.knowledge index product_manuals\n\n# 检索并打印原始命中\npython -m engines.ae_harness.knowledge retrieve product_manuals \"指示灯\"\n\n# 单测\npython -m pytest -c tests/pytest.ini tests/engines/ae_harness/unit/test_knowledge_*.py -q\n```\n\n## 相关路径\n\n| 用途 | 路径 |\n| --- | --- |\n| 上层 Harness 约束 | [`../AGENTS.md`](../AGENTS.md) |\n| 工具目录准入 | [`../tools/AGENTS.md`](../tools/AGENTS.md) |\n| 接回时的落点（当前未挂载） | [`../assistant/agent_executor.py`](../assistant/agent_executor.py) |\n| 风格规范 | [`.agents/rules/engines-code-style.md`](../../../.agents/rules/engines-code-style.md) |\n",
+        "agentsDoc": "",
         "files": [
-          {
-            "name": "service.py",
-            "path": "engines/ae_harness/knowledge/service.py",
-            "summary": "按库懒建索引并返回未经改写的检索命中，失败只降级不抛异常",
-            "classes": 3,
-            "methods": 15,
-            "loc": 294,
-            "trend": [
-              294,
-              null,
-              null
-            ]
-          },
           {
             "name": "store.py",
             "path": "engines/ae_harness/knowledge/store.py",
             "summary": "知识库本地 SQLite 向量库：集合与文档的建删查，实现 VectorStoreBase",
             "classes": 1,
             "methods": 12,
-            "loc": 285,
+            "loc": 331,
             "trend": [
-              285,
-              null,
-              null
+              331,
+              331,
+              331
+            ]
+          },
+          {
+            "name": "service.py",
+            "path": "engines/ae_harness/knowledge/service.py",
+            "summary": "按库懒建索引并返回未经改写的检索命中，失败只降级不抛异常",
+            "classes": 3,
+            "methods": 14,
+            "loc": 284,
+            "trend": [
+              284,
+              284,
+              284
             ]
           },
           {
             "name": "config.py",
             "path": "engines/ae_harness/knowledge/config.py",
-            "summary": "读知识库自带的两份 yaml：向量模型配置与库目录",
+            "summary": "校验调用方传入的向量模型参数、库列表与检索参数",
             "classes": 3,
-            "methods": 10,
-            "loc": 276,
+            "methods": 9,
+            "loc": 243,
             "trend": [
-              276,
-              null,
-              null
+              243,
+              243,
+              243
             ]
           },
           {
@@ -3587,8 +3601,8 @@
             "loc": 160,
             "trend": [
               160,
-              null,
-              null
+              160,
+              160
             ]
           },
           {
@@ -3597,24 +3611,11 @@
             "summary": "按库增量建索引：只扫 .md/.txt，未变化文件不重复嵌入",
             "classes": 1,
             "methods": 5,
-            "loc": 150,
+            "loc": 157,
             "trend": [
-              150,
-              null,
-              null
-            ]
-          },
-          {
-            "name": "tool.py",
-            "path": "engines/ae_harness/knowledge/tool.py",
-            "summary": "把知识库检索包成只读工具，返回结构化命中 JSON",
-            "classes": 1,
-            "methods": 7,
-            "loc": 126,
-            "trend": [
-              126,
-              null,
-              null
+              157,
+              157,
+              157
             ]
           },
           {
@@ -3623,11 +3624,24 @@
             "summary": "知识库探针：建索引或打印未经改写的检索命中，不创建智能体",
             "classes": 0,
             "methods": 2,
-            "loc": 79,
+            "loc": 101,
             "trend": [
-              79,
-              null,
-              null
+              101,
+              101,
+              101
+            ]
+          },
+          {
+            "name": "tool.py",
+            "path": "engines/ae_harness/knowledge/tool.py",
+            "summary": "把知识库检索包成只读工具，返回结构化命中 JSON",
+            "classes": 0,
+            "methods": 5,
+            "loc": 99,
+            "trend": [
+              99,
+              99,
+              99
             ]
           },
           {
@@ -3636,11 +3650,11 @@
             "summary": "按知识库自带配置创建向量模型，并交出用的是哪把密钥",
             "classes": 1,
             "methods": 1,
-            "loc": 75,
+            "loc": 78,
             "trend": [
-              75,
-              null,
-              null
+              78,
+              78,
+              78
             ]
           },
           {
@@ -3652,23 +3666,23 @@
             "loc": 25,
             "trend": [
               25,
-              null,
-              null
+              25,
+              25
             ]
           }
         ],
         "totals": {
           "files": 9,
-          "classes": 12,
-          "methods": 60,
-          "loc": 1470
+          "classes": 11,
+          "methods": 56,
+          "loc": 1478
         }
       },
       {
         "key": "assistant",
         "label": "运行骨架",
         "note": "运行骨架：控制台调试入口的运行时引导（编码 / 日志级别 / 汇总 / 异常包装）",
-        "agentsDoc": "# engines/ae_harness/assistant AGENTS.md\n\n> 层级：根 `AGENTS.md` → [`engines/AGENTS.md`](../../AGENTS.md) → [`engines/ae_harness/AGENTS.md`](../AGENTS.md) → **本文件**。\n\n## 1. 定位：只服务控制台调试\n\n本目录是**给人盯着终端看的入口**，不是库。每个文件都是一个可 `python -m` 运行的调试脚本：\n\n| 文件 | 入口 | 干什么 |\n| --- | --- | --- |\n| `_bootstrap.py` | —— | 控制台运行时骨架。单智能体调试入口已删除，不再作为使用入口。 |\n\n**平台（后端任务 / 前端卡片）使用的智能体角色不在这里**，一律走 [`engines/backend_bridge/`](../../backend_bridge/AGENTS.md)。\n\n## 2. 红线（AI 禁止事项）\n\n1. **禁止被平台调用** —— `backend/apps` 与 `backend_bridge` 不得 `import` 本目录任何模块，也不得 `subprocess` 调这些脚本。\n2. **禁止接收平台参数** —— 不接收 DB 里的 agent id、报告目录、token 上送、后端异常类型；那些属于平台入口。\n3. **禁止在这里实现平台报告路径或数据库写入** —— 报告目录 `logs/agents/backend_bridge/` 与用量上送是 `backend_bridge` 的事。\n4. **禁止把角色参数变成\"可配置\"** —— `PROVIDER` / `API_KEY_ENV` / `MODEL_NAME` / `BASE_URL` / `ROLE_KEY` / `PROMPT_NAME` 保持模块常量；要换模型就改常量或新建调试脚本，不要做成运行时选项（那是平台入口的形态）。\n5. **禁止自建模型或读提示词文件** —— 一律经 `create_agent`（见 [`../agents/AGENTS.md`](../agents/AGENTS.md)）。\n6. **禁止自己拼 HTML** —— 报告一律走 `event/`（[`../event/AGENTS.md`](../event/AGENTS.md)）的 `AgentEventRecorder` + `HtmlReportRenderer`。\n\n## 3. 判断口诀\n\n**要不要给人盯着终端看？要 → 放这里；不要，结果交给程序 → `engines/backend_bridge/`。**\n\n## 4. 相关路径\n\n| 用途 | 路径 |\n| --- | --- |\n| 上层规则（控制台 / 平台分工） | [`../AGENTS.md`](../AGENTS.md) |\n| 平台侧入口 | [`../../backend_bridge/AGENTS.md`](../../backend_bridge/AGENTS.md) |\n| 角色创建与红线 | [`../agents/AGENTS.md`](../agents/AGENTS.md) |\n| 事件记录与报告渲染 | [`../event/AGENTS.md`](../event/AGENTS.md) |\n",
+        "agentsDoc": "",
         "files": [
           {
             "name": "_bootstrap.py",
@@ -3695,7 +3709,7 @@
         "key": "workflow",
         "label": "工作流",
         "note": "工作流：SOP 抽象（步骤模型、加载、执行者 + 验收者编排）",
-        "agentsDoc": "# engines/ae_harness/workflow AGENTS.md\n\n## 定位：抽象层 + 一个控制台装配\n\n| 位置 | 是什么 | 谁能用 |\n| --- | --- | --- |\n| `sop/spec.py`、`sop/runner.py`、`sop/steps/*.yaml` | **通用的 SOP 抽象**：步骤模型、加载、编排执行、步骤 YAML | **任何调用方**——控制台、平台都从这里调用 |\n| `sop_runner.py` | **控制台装配**：读命令行、建两个角色、打印结论 | 只服务控制台调试 |\n\n`sop/` 不属于控制台，它是被复用的地基；换一个调用方（例如平台）只是换装配方式，不重写抽象。\n\n**平台（后端任务 / 前端卡片）用的执行 + 验收 SOP 在 [`engines/backend_bridge/workflow/`](../../backend_bridge/AGENTS.md) 新建装配**，由它调用本目录 `sop/` 的 `load_spec` / `run_sop`。\n\n判断：要人盯着终端看 → 用 `sop_runner.py`；结果是交给程序 → 在 `backend_bridge/workflow/` 自己装配，但**只调抽象、不复制实现**。\n\n## 职责\n\n把**多个角色**按流程串起来。当前只有 SOP 一条链路：\n\n```text\nworkflow/\n  sop/\n    spec.py           StepSpec / SopSpec / load_spec\n    runner.py         build_sop / run_sop / SopResult\n    steps/*.yaml      流程定义：步骤名 + 必须达成的结果 + 重试次数\n  sop_runner.py       命令行入口：读 YAML、建两个角色、跑流程、打印结论\n```\n\n调用方式：\n\n```python\nfrom engines.ae_harness.workflow.sop import load_spec, run_sop\n\nspec = load_spec(Path(\"steps/ui_task.yaml\"))\nresult = await run_sop(executor, verifier, spec, log_dir=LOG_DIR)\n```\n\n## 步骤 YAML\n\n```yaml\nname: ui-task\ndescription: 按里程碑推进手机 UI 任务。\ntask: 回到桌面，然后打开设置\n\nsteps:\n  - subject: 回到桌面\n    description: 设备停在桌面，能看见 dock 和桌面图标。\n    max_attempts: 3\n```\n\n| 字段 | 必填 | 说明 |\n| --- | --- | --- |\n| `name` | 是 | 流程名 |\n| `steps` | 是 | 非空列表，按顺序执行 |\n| `steps[].subject` | 是 | 步骤名 |\n| `steps[].description` | 是 | 这一步必须达成的结果，只写终点不写路线 |\n| `steps[].max_attempts` | 否 | 默认 3 |\n| `task` | 否 | 交给第一步的任务描述，不填则用 `name` |\n| `description` | 否 | 流程用途说明 |\n\n## 红线（AI 禁止事项）\n\n1. **禁止在 `workflow/` 建角色或挂工具** —— 执行者与验收者由调用方建好传入；本目录不调 `create_agent`、不 `add_tool`。\n2. **禁止绕过 `run_sop` 自己写编排循环** —— 步骤推进、重试预算、驳回记录都由 SOP 引擎负责，不要在别处重写一遍。\n3. **禁止把步骤写死在 Python 里** —— 步骤是数据，只放 `steps/*.yaml`；代码里只保留默认路径。\n4. **禁止在 `workflow/` 拼 HTML** —— 报告一律走 `event/` 的 `HtmlReportRenderer`。\n5. **禁止给验收者传带写操作的工具集** —— 验收侧必须是 `build_adb_readonly_tools()`。\n6. **禁止在 `workflow/` 读提示词** —— 提示词只能经 `agents/config.py`。聊天模型没有配置文件，连接参数由调用方传给 `create_agent`；步骤 YAML 属于流程数据，允许在本目录读。\n\n## 已知限制\n\n1. 步骤 YAML 目前手写，没有从任务文本自动拆分的逻辑。\n2. 报告里「执行者 / 验收者」的分块靠 reply 顺序推断（每步第一次 reply 是执行者，第二次是验收者），依赖 SOP 引擎当前「先执行后验收」的固定结构。\n3. SOP 模块在 AgentScope 2.0.9 里标为实验性，升级前需复核 `SOPStep.reply_stream` 的调用顺序。\n",
+        "agentsDoc": "",
         "files": [
           {
             "name": "sop/runner.py",
@@ -3703,11 +3717,11 @@
             "summary": "把执行者、验收者与步骤跑成一次 SOP，并产出记录与报告",
             "classes": 2,
             "methods": 4,
-            "loc": 205,
+            "loc": 210,
             "trend": [
-              205,
-              199,
-              199
+              210,
+              210,
+              210
             ]
           },
           {
@@ -3722,20 +3736,46 @@
               116,
               116
             ]
+          },
+          {
+            "name": "team.py",
+            "path": "engines/ae_harness/workflow/team.py",
+            "summary": "把队长与成员跑成一次团队流水线，并产出记录与报告",
+            "classes": 2,
+            "methods": 1,
+            "loc": 107,
+            "trend": [
+              107,
+              107,
+              107
+            ]
+          },
+          {
+            "name": "goal.py",
+            "path": "engines/ae_harness/workflow/goal.py",
+            "summary": "把执行者与验收者跑成一次目标流水线，并产出记录与报告",
+            "classes": 1,
+            "methods": 1,
+            "loc": 100,
+            "trend": [
+              100,
+              100,
+              100
+            ]
           }
         ],
         "totals": {
-          "files": 2,
-          "classes": 5,
-          "methods": 6,
-          "loc": 321
+          "files": 4,
+          "classes": 8,
+          "methods": 8,
+          "loc": 533
         }
       },
       {
         "key": "event",
         "label": "智能体事件",
         "note": "智能体事件：记录执行过程并渲染 HTML 报告（含用量汇总）",
-        "agentsDoc": "# engines/ae_harness/event AGENTS.md\n\n## 职责\n\n为任意智能体提供**运行观测**：把 `reply_stream` 的事件记成结构化数据，再渲染成统一格式的报告。\n\n```text\nevent/\n  record.py   AgentEventRecorder：事件 → RunRecord + JSONL\n  render.py   HtmlReportRenderer：RunRecord → HTML\n  usage.py    TokenUsage / UsageSummary / summarize：一次调用一条的用量记录\n```\n\n## 用量采集口径\n\n1. **一次模型调用一条**：每次模型调用结束产出一条 `TokenUsage`，同轮多次调用各自成条，**禁止**合并或加总。\n2. **缓存是输入的子集**：`cache_input_tokens` 已含在 `input_tokens` 里，汇总时**禁止**把两者相加；`cache_creation_input_tokens` 单独统计，不进其它三项。\n3. **密钥绑在角色上**：`role_api_keys` 是「agent 名 → 密钥环境变量名」的固定绑定；每次模型调用按 `reply_id` 反查它属于哪个角色，再取该角色的密钥。**禁止**按 reply 顺序猜角色、也**禁止**给整轮安一个标签。只记环境变量名，**禁止记录密钥明文**。\n4. **落盘可复算**：逐次调用的密钥名写进 `ModelCallEndEvent` 行，汇总行写 `api_key_env`（兜底值）与 `by_api_key_env`（实际分组）。只读 JSONL 就能按密钥复算，不必依赖内存对象。\n5. **本层不读配置**：绑定由创建层产出后传入，本层**禁止** import `agents` 或读配置文件（保持观测层零内部依赖）。角色未登记绑定时回落到兜底标签，其余照常产出。\n6. **时间不伪造**：绝对时刻由本轮起始墙钟加相对偏移算出；起点未知时给空串，**禁止**用当前时间冒充。\n\n每轮任务一个目录：\n\n```text\nlogs/20261113_143234/\n├── 20261113_143234_ui_executor.jsonl\n└── 20261113_143234_ui_executor.html\n```\n\n## 记录保真度（全量模式）\n\n`AgentEventRecorder(..., full=True)`，**默认开启**。全量模式 = **字段全 + 不截断 + 仍按块折叠**。\n\n| 项 | 全量模式 | 关闭后 |\n| --- | --- | --- |\n| 每条事件行 | 补 `created_at`（框架绝对时刻）、`event_id`；`metadata` 非空才写 | 不写 |\n| `ReplyStart` / `ReplyEnd` | 补 `session_id` | 不写 |\n| `HintBlockEvent` | 补 `source`，`hint` 不截断 | 只写 `hint`，截断 200 |\n| 思考块正文 | 不截断 | 截断 600 |\n| 工具入参 / 输出 | 不截断 | 截断 4000 |\n| 文本块文本 | 不截断 | 截断 4000 |\n| `*DeltaEvent` | **仍不落逐条**，只在内存累积成块级结果 | 同左 |\n| **关联键** | `tool_call_id`（调用行/结果行）、`block_id`（思考块/文本块行）**两种模式都写**，与开关无关 | 同左 |\n\n判断依据来自实测：一次普通任务 175 条事件里，思考增量占 **80%**，所以「全量」不等于「逐条落 delta」。取不到的字段**不写**，不写空串。\n\n关联键是**身份不是补充**：没有 `tool_call_id`，一次并发多工具的调用与结果只能靠顺序配对，会错配；没有 `block_id`，块无法回溯到框架事件。因此它们不受开关控制。\n\n## 红线（AI 禁止事项）\n\n1. **禁止引用任何具体工具名** —— 工具特有的展示只能由调用方通过 `step_extras` 注册，不得写进本目录。\n2. **禁止修改 Agent** —— 只读 `agent.state` 与事件流，不得调用 `reply` / `reply_stream` 之外的能力，也不得改变 Agent 行为。\n3. **禁止在 JSONL 里写图片 base64** —— 图片只在 `RunRecord.steps[].images` 里停留于内存，日志保持十几 KB。\n4. **禁止硬编码阶段标记** —— 正则必须可配置，本目录的默认值只服务一种约定。\n5. **禁止把报告路径写死** —— 目录由调用方传入，本目录不假设仓库结构。\n\n## 扩展点\n\n`HtmlReportRenderer(step_extras={工具名: 渲染函数})`，渲染函数签名：\n\n```python\ndef render_xxx(step: StepRecord) -> str: ...\n```\n\n返回值直接插入页面，函数内部自行转义。没注册的工具走默认展示。\n",
+        "agentsDoc": "",
         "files": [
           {
             "name": "render.py",
@@ -3746,8 +3786,8 @@
             "loc": 1150,
             "trend": [
               1150,
-              899,
-              899
+              1150,
+              1150
             ]
           },
           {
@@ -3756,11 +3796,11 @@
             "summary": "订阅 reply_stream 事件，产出一轮运行的结构化记录",
             "classes": 3,
             "methods": 13,
-            "loc": 600,
+            "loc": 617,
             "trend": [
-              600,
-              591,
-              591
+              617,
+              617,
+              617
             ]
           },
           {
@@ -3772,8 +3812,8 @@
             "loc": 136,
             "trend": [
               136,
-              132,
-              132
+              136,
+              136
             ]
           }
         ],
@@ -3781,14 +3821,14 @@
           "files": 3,
           "classes": 6,
           "methods": 31,
-          "loc": 1886
+          "loc": 1903
         }
       },
       {
         "key": "middleware",
         "label": "观测中间件",
         "note": "观测中间件：只读 hook、模型调用重试、预算与取消控制",
-        "agentsDoc": "# engines/ae_harness/middleware AGENTS.md\n\n> 层级：根 `AGENTS.md` → [`engines/AGENTS.md`](../../AGENTS.md) → [`engines/ae_harness/AGENTS.md`](../AGENTS.md) → **本文件**。\n\n## 职责\n\n中间件是**挂到角色上的横切能力**。本目录只放三类，每类准入条款在下表；**超出三类的想法一律拒绝**。\n\n| 类别 | 允许做什么 | 现有实现 | 判据 |\n| --- | --- | --- | --- |\n| **只读观测** | 看、记录、采样；不改变任何调用结果 | `observer.py` | 去掉它，运行结果必须一模一样 |\n| **可靠性** | 失败时**重试同一动作**；不换动作、不换模型 | `retry.py` | 成功路径上的调用次数与参数不变 |\n| **运行控制** | 按上限或外部信号**提前中止**；不扩展能力 | `control.py` | 只会让运行更早结束，不会让它多做一件事 |\n\n## 硬性边界\n\n1. **禁止能力型中间件** —— 不得借中间件给角色加工具、记忆、知识库、新技能或外部数据源。新能力只有一条路：改提示词、改工具配置，或另开变更新角色。\n2. **禁止在可靠性中间件里换动作** —— 重试必须重发**同一个请求**；备用模型切换属「换动作」，需单独立项。\n3. **禁止运行控制型中间件吞异常** —— 预算与取消必须抛出各自异常（`BudgetExceeded` / `RunCancelled`），让调用方能区分「中止」与「失败」。\n4. **禁止默认挂载** —— 三类中间件都由调用方显式传入；`create_agent` 不得内置任何一类。\n5. **禁止在中间件里读配置或建模型** —— 参数从构造函数进来，配置只经 `agents/config.py`。\n\n## 两个异常的使用口径\n\n| 异常 | 归属 | 调用方该记成 |\n| --- | --- | --- |\n| `BudgetExceeded` | 次数或时长超限 | **中止**（不是失败），报告与用量照常保留 |\n| `RunCancelled` | 外部置位取消 | **取消**，与失败分开统计 |\n\n两者都继承 `RuntimeError`，便于兜底 `except Exception`；但业务分支必须按具体类型区分。\n\n## 测试\n\n```bash\npython -m pytest -c tests/pytest.ini tests/engines/ae_harness/unit/test_observer.py tests/engines/ae_harness/unit/test_retry_middleware.py tests/engines/ae_harness/unit/test_run_control.py -q\n```\n",
+        "agentsDoc": "",
         "files": [
           {
             "name": "retry.py",
@@ -3796,11 +3836,11 @@
             "summary": "模型调用重试：错误分类、指数退避、流式不重放",
             "classes": 2,
             "methods": 9,
-            "loc": 238,
+            "loc": 239,
             "trend": [
-              238,
-              238,
-              238
+              239,
+              239,
+              239
             ]
           },
           {
@@ -3834,23 +3874,61 @@
           "files": 3,
           "classes": 10,
           "methods": 29,
-          "loc": 630
+          "loc": 631
         }
       }
     ],
     "relations": [
       {
         "from": "workflow",
+        "to": "agents",
+        "fromLabel": "工作流",
+        "toLabel": "创建智能体",
+        "count": 2,
+        "label": "user_message()",
+        "fromFiles": [
+          {
+            "name": "workflow/goal.py",
+            "summary": "把执行者与验收者跑成一次目标流水线，并产出记录与报告",
+            "loc": 100
+          },
+          {
+            "name": "workflow/team.py",
+            "summary": "把队长与成员跑成一次团队流水线，并产出记录与报告",
+            "loc": 107
+          }
+        ],
+        "toFiles": [
+          {
+            "name": "agents/messages.py",
+            "summary": "构造一轮发给智能体的用户消息",
+            "loc": 32
+          }
+        ],
+        "why": ""
+      },
+      {
+        "from": "workflow",
         "to": "event",
         "fromLabel": "工作流",
         "toLabel": "智能体事件",
-        "count": 1,
+        "count": 3,
         "label": "AgentEventRecorder · HtmlReportRenderer · RunRecord",
         "fromFiles": [
           {
+            "name": "workflow/goal.py",
+            "summary": "把执行者与验收者跑成一次目标流水线，并产出记录与报告",
+            "loc": 100
+          },
+          {
             "name": "workflow/sop/runner.py",
             "summary": "把执行者、验收者与步骤跑成一次 SOP，并产出记录与报告",
-            "loc": 205
+            "loc": 210
+          },
+          {
+            "name": "workflow/team.py",
+            "summary": "把队长与成员跑成一次团队流水线，并产出记录与报告",
+            "loc": 107
           }
         ],
         "toFiles": [
@@ -3868,7 +3946,7 @@
         {
           "name": "engines/backend_bridge",
           "label": "平台装配",
-          "calls": 20
+          "calls": 21
         },
         {
           "name": "backend/apps",
@@ -3877,6 +3955,21 @@
         }
       ],
       "edges": [
+        {
+          "to": "agents",
+          "count": 7,
+          "label": "AgentBundle · create_agent() · load_secret()",
+          "layers": [
+            {
+              "name": "平台装配",
+              "count": 6
+            },
+            {
+              "name": "后端 app",
+              "count": 1
+            }
+          ]
+        },
         {
           "to": "middleware",
           "count": 7,
@@ -3889,21 +3982,6 @@
             {
               "name": "后端 app",
               "count": 2
-            }
-          ]
-        },
-        {
-          "to": "agents",
-          "count": 6,
-          "label": "AgentBundle · create_agent() · load_secret()",
-          "layers": [
-            {
-              "name": "平台装配",
-              "count": 5
-            },
-            {
-              "name": "后端 app",
-              "count": 1
             }
           ]
         },
@@ -3923,9 +4001,9 @@
           ]
         },
         {
-          "to": "event",
+          "to": "workflow",
           "count": 4,
-          "label": "summarize() · AgentEventRecorder · HtmlReportRenderer",
+          "label": "GoalResult · run_goal() · SopSpec",
           "layers": [
             {
               "name": "平台装配",
@@ -3938,20 +4016,9 @@
           ]
         },
         {
-          "to": "knowledge",
+          "to": "event",
           "count": 3,
-          "label": "load_config() · KnowledgeRetriever · create_embedding_model()",
-          "layers": [
-            {
-              "name": "后端 app",
-              "count": 3
-            }
-          ]
-        },
-        {
-          "to": "workflow",
-          "count": 3,
-          "label": "run_sop() · load_spec() · SopSpec",
+          "label": "AgentEventRecorder · HtmlReportRenderer · summarize()",
           "layers": [
             {
               "name": "平台装配",
@@ -3962,26 +4029,42 @@
               "count": 1
             }
           ]
+        },
+        {
+          "to": "knowledge",
+          "count": 3,
+          "label": "INDEX_DIR · build_config() · KnowledgeRetriever",
+          "layers": [
+            {
+              "name": "后端 app",
+              "count": 3
+            }
+          ]
         }
       ],
-      "total": 29
+      "total": 30
     },
     "totals": {
-      "files": 27,
-      "loc": 6183,
-      "classes": 40,
-      "methods": 190
+      "files": 29,
+      "loc": 6400,
+      "classes": 42,
+      "methods": 188
     },
     "imports": {
       "edges": [
         {
           "from": "workflow",
           "to": "event",
-          "count": 1
+          "count": 3
+        },
+        {
+          "from": "workflow",
+          "to": "agents",
+          "count": 2
         }
       ],
       "internal": {
-        "agents": 2,
+        "agents": 1,
         "event": 5,
         "knowledge": 12,
         "middleware": 3,
@@ -3989,12 +4072,6 @@
         "workflow": 3
       },
       "pairs": [
-        {
-          "from": "agents/creator.py",
-          "to": "agents/config.py",
-          "fromGroup": "agents",
-          "toGroup": "agents"
-        },
         {
           "from": "agents/creator.py",
           "to": "agents/models.py",
@@ -4182,6 +4259,18 @@
           "toGroup": "tools"
         },
         {
+          "from": "workflow/goal.py",
+          "to": "agents/messages.py",
+          "fromGroup": "workflow",
+          "toGroup": "agents"
+        },
+        {
+          "from": "workflow/goal.py",
+          "to": "event/__init__.py",
+          "fromGroup": "workflow",
+          "toGroup": "event"
+        },
+        {
           "from": "workflow/sop/__init__.py",
           "to": "workflow/sop/runner.py",
           "fromGroup": "workflow",
@@ -4204,73 +4293,85 @@
           "to": "workflow/sop/spec.py",
           "fromGroup": "workflow",
           "toGroup": "workflow"
+        },
+        {
+          "from": "workflow/team.py",
+          "to": "agents/messages.py",
+          "fromGroup": "workflow",
+          "toGroup": "agents"
+        },
+        {
+          "from": "workflow/team.py",
+          "to": "event/__init__.py",
+          "fromGroup": "workflow",
+          "toGroup": "event"
         }
       ]
     },
     "note": "本包只出原语（agents / tools / knowledge / assistant / workflow / event / middleware），平台装配在 engines/backend_bridge 与 backend/apps。",
     "comparison": {
       "at": [
-        "2026-11-18 18:39",
-        "2026-11-15 19:54",
-        "2026-11-15 15:25"
+        "2026-11-23 17:35",
+        "2026-11-23 17:08",
+        "2026-11-23 17:06"
       ],
       "groups": {
         "agents": [
-          480,
-          319,
-          299
+          440,
+          440,
+          440
         ],
         "tools": [
-          1316,
-          1150,
-          1150
+          1335,
+          1335,
+          1335
         ],
         "knowledge": [
-          1470,
-          null,
-          null
+          1478,
+          1478,
+          1478
         ],
         "assistant": [
           80,
-          342,
-          342
+          80,
+          80
         ],
         "workflow": [
-          321,
-          443,
-          443
+          533,
+          533,
+          533
         ],
         "event": [
-          1886,
-          1622,
-          1622
+          1903,
+          1903,
+          1903
         ],
         "middleware": [
-          630,
-          630,
-          630
+          631,
+          631,
+          631
         ]
       },
       "files": {
         "agents/models.py": [
-          296,
-          160,
-          160
+          315,
+          315,
+          315
         ],
         "agents/creator.py": [
-          126,
-          79,
-          79
+          93,
+          93,
+          93
         ],
-        "agents/config.py": [
-          58,
-          80,
-          60
+        "agents/messages.py": [
+          32,
+          32,
+          32
         ],
         "tools/adb/tools.py": [
-          857,
-          857,
-          857
+          870,
+          870,
+          870
         ],
         "tools/adb/core.py": [
           233,
@@ -4279,8 +4380,8 @@
         ],
         "tools/catalog.py": [
           77,
-          null,
-          null
+          77,
+          77
         ],
         "tools/adb/render.py": [
           60,
@@ -4288,59 +4389,59 @@
           60
         ],
         "tools/case_library/tools.py": [
-          46,
-          null,
-          null
+          49,
+          49,
+          49
         ],
         "tools/document/tools.py": [
-          43,
-          null,
-          null
-        ],
-        "knowledge/service.py": [
-          294,
-          null,
-          null
+          46,
+          46,
+          46
         ],
         "knowledge/store.py": [
-          285,
-          null,
-          null
+          331,
+          331,
+          331
+        ],
+        "knowledge/service.py": [
+          284,
+          284,
+          284
         ],
         "knowledge/config.py": [
-          276,
-          null,
-          null
+          243,
+          243,
+          243
         ],
         "knowledge/usage.py": [
           160,
-          null,
-          null
+          160,
+          160
         ],
         "knowledge/indexer.py": [
-          150,
-          null,
-          null
-        ],
-        "knowledge/tool.py": [
-          126,
-          null,
-          null
+          157,
+          157,
+          157
         ],
         "knowledge/probe.py": [
-          79,
-          null,
-          null
+          101,
+          101,
+          101
+        ],
+        "knowledge/tool.py": [
+          99,
+          99,
+          99
         ],
         "knowledge/models.py": [
-          75,
-          null,
-          null
+          78,
+          78,
+          78
         ],
         "knowledge/__main__.py": [
           25,
-          null,
-          null
+          25,
+          25
         ],
         "assistant/_bootstrap.py": [
           80,
@@ -4348,34 +4449,44 @@
           80
         ],
         "workflow/sop/runner.py": [
-          205,
-          199,
-          199
+          210,
+          210,
+          210
         ],
         "workflow/sop/spec.py": [
           116,
           116,
           116
         ],
+        "workflow/team.py": [
+          107,
+          107,
+          107
+        ],
+        "workflow/goal.py": [
+          100,
+          100,
+          100
+        ],
         "event/render.py": [
           1150,
-          899,
-          899
+          1150,
+          1150
         ],
         "event/record.py": [
-          600,
-          591,
-          591
+          617,
+          617,
+          617
         ],
         "event/usage.py": [
           136,
-          132,
-          132
+          136,
+          136
         ],
         "middleware/retry.py": [
-          238,
-          238,
-          238
+          239,
+          239,
+          239
         ],
         "middleware/observer.py": [
           210,
@@ -4397,72 +4508,72 @@
         "key": "ae_harness",
         "label": "原型链路",
         "note": "Agent 原语层：agents / tools / knowledge / assistant / workflow / event / middleware",
-        "agentsDoc": "# engines/ae_harness AGENTS.md\n\n本目录是 `engines/` 下的**Agent 原语层**：只提供可复用的原语（角色创建、设备工具、事件记录与报告渲染、中间件、SOP 抽象、只读知识检索），不接后端、不写数据库。\n\n> 与 [`engines/backend_bridge/`](../backend_bridge/AGENTS.md) 的关系：本目录只出原语，**平台侧装配一律在 `backend_bridge`**。`backend_bridge` 的生产代码 import 本包的 `agents` / `tools` / `event` / `middleware` / `workflow.sop` 五个子包；`assistant/` 只服务控制台调试，平台不得引用。\n\n## 与控制台 / 平台的分工（红线）\n\n**`assistant/` 只服务控制台调试；平台使用的智能体角色一律走 [`engines/backend_bridge/`](../backend_bridge/AGENTS.md)。**\n\n| 谁 | 入口在哪 | 形态 | 产物落在 |\n| --- | --- | --- | --- |\n| **控制台**（开发者调试） | 本包 `assistant/*`，以及 `workflow/sop_runner.py` | CLI 脚本：读 `sys.argv`、打印汇总、交互循环 | 本包 `logs/` |\n| **平台**（后端任务 / 前端卡片） | `engines/backend_bridge/`（角色与编排装配都在那里） | 库函数：收参数、返回结构化结果 | `logs/agents/backend_bridge/` |\n\n**`workflow/sop/` 不属于控制台**：它是通用的 SOP 抽象（步骤模型、加载、编排执行、步骤 YAML），控制台与平台都从它调用。控制台侧的装配是 `workflow/sop_runner.py`；平台侧的装配在 `engines/backend_bridge/workflow/`。**两边都只调抽象，不复制实现。**\n\n本包只提供**原语**：`agents.create_agent`、`tools`、`event`（记录器与渲染器）、`middleware`（观测）。两份入口共享原语，各自装配。\n\n**禁止**：\n\n1. **禁止**让 `backend/apps` 或 `backend_bridge` 直接调用 `assistant/` 下的脚本入口（那是 CLI，不是库）。\n2. **禁止**把平台专用参数塞进 `assistant/` 的入口：DB 里的 agent id、报告目录、token 上报、后端异常类型。\n3. **禁止**在 `assistant/` 里实现平台报告路径或数据库写入；平台侧报告目录与用量上送归 `backend_bridge`。\n\n判断口诀：**要不要给人盯着终端看？要 → `assistant/`；不要，结果是交给程序的 → `backend_bridge/`。**\n\n## 目录结构\n\n```text\nae_harness/\n  agents/              角色定义：config → models → creator\n    config/log_keywords/ 按机型的日志关键词目录（供验收者核对日志证据）\n  assistant/           角色调试入口：建角色、挂工具、跑一轮、出报告\n    _bootstrap.py      入口运行时引导：编码 / 日志级别 / 汇总 / 异常包装\n  tools/adb/           adb 工具（16 个）+ 只读子集\n  tools/catalog.py     只读工具目录，不含实现\n  knowledge/           独立知识库模块：向量模型配置、索引、只读检索工具（整目录可删）\n  event/               事件记录与报告渲染（含用量记录、全量模式）\n  middleware/          三类中间件：只读观测、模型调用重试、运行控制（预算/取消）\n  workflow/            多智能体编排：sop/ 是 SOP 实现，steps/*.yaml 是步骤定义\n  logs/<时间戳>/        每轮一份 jsonl + html\n```\n\n## 各目录职责\n\n| 位置 | 负责 | 不负责 |\n| --- | --- | --- |\n| `agents/` | 模型配置、提示词、日志关键词目录、Agent 创建 | 跑任务、挂工具、出报告 |\n| `assistant/` | 某个角色的可运行入口；`_bootstrap.py` 提供运行时骨架 | 定义角色、造模型、渲染报告 |\n| `tools/adb/` | 设备动作与返回值 | 决策、编排、读配置 |\n| `knowledge/` | 向量模型配置、按库索引、只读检索工具 | 文档上传、知识库写接口、改 Agent、渲染报告 |\n| `event/` | 记录事件、渲染报告、用量记录与汇总 | 改 Agent、写业务逻辑 |\n| `middleware/` | 三类横切：只读观测、失败重试、预算/取消 | 扩展能力、换动作、落盘 |\n| `workflow/` | 多智能体编排（SOP）：步骤 YAML、执行者 + 验收者循环 | 建角色、造模型、渲染 HTML |\n\n## 红线（AI 禁止事项）\n\n### 一、放置\n\n1. **禁止在仓库根放脚本** —— 角色入口一律放 `assistant/`，工具一律放 `tools/<域>/`；**唯一例外**是知识库自带的检索工具，随 `knowledge/` 走（见第 11 条）。\n2. **禁止在 `ae_harness/` 根新增模块** —— 根目录只留 `__init__.py` 与 `AGENTS.md`；新能力进对应子目录。\n3. **禁止把工具文件堆在 `tools/` 根上** —— 必须进 `tools/<域>/`。\n4. **禁止在 `workflow/sop/` 以外的位置重写编排** —— 步骤推进、重试、驳回记录都由 `run_sop` 负责；新流程先扩展步骤 YAML，不要另写一套循环。\n\n### 二、职责\n\n5. **禁止绕过 `create_agent` 造 Agent** —— 不得在别处直接 `Agent(...)`，不得新增第二种创建入口。\n6. **禁止在 `agents/` 读角色提示词文件** —— 系统提示词由调用方传入正文，本目录不维护 `prompts/`。聊天模型不再有 `models.yaml`：连接参数由调用方传给 `create_model`，密钥由 `models.py` 自己读仓库根 `.env`。**豁免**：其它子包自带的配置（例如 `knowledge/config/`）由其自读自校验；`.env` 全仓只有仓库根一份，允许子包自带取值函数，但**不得新增第二份 `.env`**。\n7. **禁止在 `assistant/` 造模型或读提示词** —— 入口只调 `create_agent`，不自建客户端、不 `open()` 提示词文件。\n8. **禁止 `event/` 引用具体工具名** —— 工具特有展示由调用方通过 `step_extras` 注册。\n9. **禁止 `tools/` 反向依赖 `agents/`** —— 工具不知道 Agent 存在，两者只在入口汇合。\n10. **禁止在 `tools/` 里做决策或编排** —— 每个工具只做一个动作，多步流程由 Agent 决定。\n\n### 二之二、异常类登记（按 engines 红线先立项）\n\n新增自定义异常必须先在子 AGENTS 立项。当前只有两个，且只在运行控制里用：\n\n| 异常 | 位置 | 语义 | 调用方该记成 |\n| --- | --- | --- | --- |\n| `BudgetExceeded` | `middleware/control.py` | 模型调用次数或时长超限 | **中止**，不是失败 |\n| `RunCancelled` | `middleware/control.py` | 外部置位取消 | **取消**，与失败分开 |\n\n**禁止**再新增同类异常（例如 `TimeoutStop`、`UserAborted`），要区分新语义先改本表。\n\n### 三、能力边界\n\n11. **禁止引入串口、视觉、语音、TTS** —— 本目录只做「手机 UI 执行 + 验收」这一条链路。**知识库只允许只读检索**：模块放根级 `knowledge/`（**不进 `tools/`**），以只读工具形态由调用方挂载；禁止在本目录做文档上传、知识库写接口或任何文档库运营面。\n12. **禁止给验收角色挂写操作工具** —— 验收侧固定用 `build_adb_readonly_tools()`，从工具层杜绝改设备状态。\n\n## 新增一个角色的标准路径\n\n1. 系统提示词由调用方传入正文，不在本目录新增提示词文件。\n2. 在 `assistant/` 建 `agent_<role>.py`，照抄现有两个入口的骨架（`build_agent` / 主循环 / `_run`）。\n3. 角色定义只调 `create_agent`；工具用 `build_adb_tools()` 或 `build_adb_readonly_tools()` 逐个 `add_tool`。\n4. 运行骨架统一用 `assistant/_bootstrap.py`：`configure_runtime()` + `print_summary()` + `run_main()`。\n5. 报告统一用 `event/`：`AgentEventRecorder` + `HtmlReportRenderer`，不要自己拼 HTML。\n\n## 当前可运行入口\n\n```bash\n# 单角色调试\n# 控制台单智能体与 SOP 调试入口已删除，不再作为使用入口。\n```\n",
+        "agentsDoc": "",
         "units": [
           {
             "name": "event/",
             "kind": "dir",
             "files": 3,
-            "loc": 1886,
+            "loc": 1903,
             "trend": [
-              1886,
-              1622,
-              1622
+              1903,
+              1903,
+              1903
             ]
           },
           {
             "name": "knowledge/",
             "kind": "dir",
             "files": 9,
-            "loc": 1470,
+            "loc": 1478,
             "trend": [
-              1470,
-              1281,
-              1281
+              1478,
+              1478,
+              1478
             ]
           },
           {
             "name": "tools/",
             "kind": "dir",
             "files": 6,
-            "loc": 1316,
+            "loc": 1335,
             "trend": [
-              1316,
-              1150,
-              1150
+              1335,
+              1335,
+              1335
             ]
           },
           {
             "name": "middleware/",
             "kind": "dir",
             "files": 3,
-            "loc": 630,
+            "loc": 631,
             "trend": [
-              630,
-              630,
-              630
+              631,
+              631,
+              631
+            ]
+          },
+          {
+            "name": "workflow/",
+            "kind": "dir",
+            "files": 4,
+            "loc": 533,
+            "trend": [
+              533,
+              533,
+              533
             ]
           },
           {
             "name": "agents/",
             "kind": "dir",
             "files": 3,
-            "loc": 480,
+            "loc": 440,
             "trend": [
-              480,
-              319,
-              299
-            ]
-          },
-          {
-            "name": "workflow/",
-            "kind": "dir",
-            "files": 2,
-            "loc": 321,
-            "trend": [
-              321,
-              443,
-              443
+              440,
+              440,
+              440
             ]
           },
           {
@@ -4472,48 +4583,48 @@
             "loc": 80,
             "trend": [
               80,
-              342,
-              342
+              80,
+              80
             ]
           }
         ],
         "totals": {
           "units": 7,
-          "files": 27,
-          "loc": 6183
+          "files": 29,
+          "loc": 6400
         },
         "totalTrend": [
-          6183,
-          5787,
-          5767
+          6400,
+          6400,
+          6400
         ]
       },
       {
         "key": "backend_bridge",
         "label": "后端桥",
         "note": "给 Django 用的入口：智能体编排装配、报告与用量回写",
-        "agentsDoc": "# engines/backend_bridge AGENTS.md\n\n> 层级：根 `AGENTS.md` → [`engines/AGENTS.md`](../AGENTS.md) → **本文件**。本目录仍在 `engines/` 内，上层红线全部适用。\n> 目录现状：已是 Python 包；已有 `agents/`（角色）、`workflow/`（SOP 装配）、`events/`（事件落库）、`model_billing/`（模型费用）、`reports/`（报告路径）、`session.py`（会话）、`run.py`（入口）、`event_log.py`（事件面板）。\n\n## 1. 定位：平台侧智能体角色的唯一落点\n\n**平台（后端任务、前端卡片）使用的智能体角色，一律在本目录创建与运行；控制台调试入口在 [`engines/ae_harness/assistant/`](../ae_harness/AGENTS.md)。**\n\n| 谁 | 入口在哪 | 形态 | 报告落在 |\n| --- | --- | --- | --- |\n| **控制台**（开发者调试） | `engines/ae_harness/assistant/*`、`engines/ae_harness/workflow/sop_runner.py` | CLI 脚本：读 `sys.argv`、打印、交互循环 | `engines/ae_harness/logs/` |\n| **平台**（后端 / 前端卡片） | **本目录** | 库函数：收参数、返回结构化结果 | `logs/agents/backend_bridge/` |\n\n两者**只共享原语**：`ae_harness.agents.create_agent`、`ae_harness.tools`、`ae_harness.event`（记录器与渲染器）、`ae_harness.middleware`（观测）。各自装配，互不调用对方的入口。\n\n判断口诀：**要不要给人盯着终端看？要 → `ae_harness/assistant/`；不要，结果交给程序 → 本目录。**\n\n## 2. 目标结构（按需逐个落地，不预先铺空文件）\n\n```text\nbackend_bridge/\n  agents/            平台角色定义：调 create_agent 装配角色，挂工具与观测\n  workflow/          平台编排装配：调用 ae_harness 的 SOP 抽象（spec / runner / 步骤 YAML）\n  events/            事件落库：接收方绑定、运行上下文、预算计数、步骤中断、批量折叠\n  reports/           报告落盘：logs/agents/backend_bridge/<时间戳>_<role>.html\n  run.py             平台入口：跑一次 → 返回报告路径、token 汇总、逐次用量\n  token_usage/       用量形状与上送前置（当前为空目录）\n  model_billing/     模型费用计算：DeepSeek 价目、高峰倍率、8 位小数\n```\n\n## 2.1 SOP 与单角色的分工\n\n| 维度 | 单角色（`agents/`） | SOP（`workflow/`） |\n| --- | --- | --- |\n| 谁做 | 一个执行者 | 执行者动手 + 验收者核对 |\n| 完成判据 | 模型自己说做完 | 验收者逐条判「必须达成的结果」 |\n| 步骤来源 | 无步骤 | `ae_harness` 的 `steps/*.yaml`（**不自创步骤**） |\n| 会话语义 | 一次连接复用同一角色，多轮连续 | **不进对话页**：一次运行跑一条流程，跑完即弃 |\n\n**SOP 只允许「使用」，不允许「自创」**：`engines/ae_harness/workflow/sop/` 是**通用抽象**（步骤模型、加载、编排执行、步骤 YAML），不属于控制台，任何调用方都从它调用；只有 `ae_harness/workflow/sop_runner.py` 是控制台装配。\n\n平台侧的装配放在**本目录的 `workflow/`**：调用 `load_spec` / `run_sop`，只做三件事——装配两个角色、指定报告目录、把结果整理成返回值。**禁止**在本目录再写一套编排循环、另立步骤格式或新造验收逻辑。\n\n**SOP 不进 AI 助手对话页**：对话页的设计只有单角色。助手测试对话由 `agents/card_agent.py` 装配、`agents/thread_run.py` 按栏复用；SOP 由平台侧入口触发，不读对话栏 snapshot。\n\n助手名片的运营提示词由调用方传入，原样作为系统提示词。工具按「预设 + 例外」经 `agents/tool_selection.py` 过滤，仍走 `build_adb_tools()` / 只读子集。取消按 `thread_id` 登记，不写入任务号字典。\n\n## 3. 红线（AI 禁止事项）\n\n1. **禁止复用控制台入口** —— 不得 `import engines.ae_harness.assistant.*`，也不得用 `subprocess` 调它的脚本。\n2. **禁止绕过 `create_agent` 造角色** —— 不得在本目录直接 `Agent(...)`，角色装配只经 `ae_harness.agents.create_agent`。\n3. **禁止打印与交互** —— 本目录是库，不得 `print`、不得读 `sys.argv`、不得 `input()`；要给人看的信息通过返回值交给调用方。\n4. **禁止自定报告路径** —— 报告一律落 `logs/agents/backend_bridge/`；路径常量只在一处定义，禁止各处拼接。\n5. **禁止把控制台参数塞进来** —— `_bootstrap` 的运行时引导、汇总打印、交互循环属于控制台，不属于本目录。\n6. **禁止在未定事项上自行决策** —— 见第 5 节，动手前先问。\n7. **禁止自创 SOP** —— 步骤格式、重试、验收判定一律用 `ae_harness.workflow.sop` 的现成实现；本目录不得出现第二套编排循环或第二份步骤 YAML 格式。\n8. **禁止给验收角色挂写操作工具** —— 验收侧固定 `build_adb_readonly_tools()`。\n9. **事件落库只在本目录** —— 接收方绑定、运行上下文、预算计数、步骤中断与批量折叠归 `events/`；`ae_harness` 只写本地记录与报告，**禁止**在 `ae_harness` 写库或依赖后端事件类型。\n10. **运行取消归本目录** —— 取消置位、当前步骤中断与清理只在本目录实现，禁止在 `ae_harness` 或后端另立第二套取消。\n\n## 4. 与后端的分工\n\n- 本目录**负责**：建角色、跑一次、产 HTML 报告、把 token 用量整理成结构化数据返回、**任务事件落库前的绑定与折叠**、**运行取消**。\n- 后端**负责**：从 DB 取角色配置、调用本目录入口、把用量与事件写库、对外提供报告读取接口、前端契约。\n- 本目录**不负责**：DB 读写、Django 依赖、鉴权、HTTP 路由、前端。\n\n## 5. 已定事项（曾列为未定，现已拍板）\n\n| # | 未定 | 影响 |\n| --- | --- | --- |\n| 1 | 入账复用 `usage_ledger` 的 `ai_usage_records`，不新建表 | 本目录只产结构化用量，由后端写账 |\n| 2 | 本目录只产数据，后端写库 | 守住 `engines/` 零 `django.*` 红线 |\n| 3 | 平台角色的系统提示词由调用方传入正文 | 不在引擎里再放一份本地提示词 |\n| 4 | 报告读取走「列表 + 单文件 + 路径白名单」 | `reports/` 不需要索引文件 |\n\n以上 1–4 已落地；后续若出现新的未定项，仍按「先问再写」处理。\n",
+        "agentsDoc": "",
         "units": [
           {
             "name": "workflow/",
             "kind": "dir",
-            "files": 9,
-            "loc": 819,
+            "files": 11,
+            "loc": 839,
             "trend": [
-              819,
-              317,
-              227
+              839,
+              839,
+              839
             ]
           },
           {
             "name": "agents/",
             "kind": "dir",
             "files": 4,
-            "loc": 327,
+            "loc": 330,
             "trend": [
-              327,
-              76,
-              76
+              330,
+              330,
+              330
             ]
           },
           {
@@ -4523,8 +4634,8 @@
             "loc": 218,
             "trend": [
               218,
-              189,
-              189
+              218,
+              218
             ]
           },
           {
@@ -4545,8 +4656,8 @@
             "loc": 162,
             "trend": [
               162,
-              163,
-              163
+              162,
+              162
             ]
           },
           {
@@ -4556,8 +4667,8 @@
             "loc": 135,
             "trend": [
               135,
-              null,
-              null
+              135,
+              135
             ]
           },
           {
@@ -4567,8 +4678,8 @@
             "loc": 81,
             "trend": [
               81,
-              58,
-              58
+              81,
+              81
             ]
           },
           {
@@ -4589,70 +4700,70 @@
             "loc": 32,
             "trend": [
               32,
-              30,
-              30
+              32,
+              32
             ]
           }
         ],
         "totals": {
           "units": 9,
-          "files": 21,
-          "loc": 1989
+          "files": 23,
+          "loc": 2012
         },
         "totalTrend": [
-          1989,
-          1048,
-          958
+          2012,
+          2012,
+          2012
         ]
       },
       {
         "key": "device",
         "label": "设备",
         "note": "Android 设备连接、动作执行与日志",
-        "agentsDoc": "# device 模块 AGENTS.md\n\n> 层级：根 `AGENTS.md` → [`engines/AGENTS.md`](../AGENTS.md) → **本文件**。本文件只写设备引擎领域增量；**冲突时本文件的领域规则优先**。  \n> 风格与检查流程仍以上层「AI 阅读与检查流程」为准。\n\n## 职责\n\nAndroid 设备控制引擎：连接、只读信息、点击/长按/滑动/拖动/输入/应用控制等。**对外只使用 `action.py`**；Android 具体实现由 `action` 懒加载（`android/`），调用方不应直接依赖实现子包。\n\n| 路径 | 职责 |\n| --- | --- |\n| `action.py` | **对外入口**：连接 / 信息 / 控制抽象与统一动作名 |\n| `connection.py` | 连接辅助 |\n| `logbus.py` / `logfiles.py` | 设备侧日志总线与文件 |\n| `android/` | Android 实现；由 `action` 加载，非公共导入面 |\n\nHarness 侧经 `engines/agents/tools/tool_device.py` 暴露给角色，不由 Django View 直调底层。\n\n## 红线（禁止）\n\n1. **禁止**跳过本文件与上层流程直接改本包对外契约（尤其 `action` 动作名与语义）。\n2. **对外入口**：业务与工具只经 `action`（或经 agents 的 `tool_device`）；**禁止**上层 `import engines.device.android...` 绕过抽象。\n3. **零 Django**：禁止 `import apps.*` / `django.*` / `backend.apps.*`。\n4. **动作名统一**：三端实现 MUST NOT 自创别名；在 `action` 抽象层对齐。\n5. **不写业务库**：设备池台账、锁、任务表由 backend 管理；本包不写 ORM。\n6. **日志**：用 `utils.logs.device_log`（或既有设备日志约定），不把密钥写入日志。\n\n## AI 阅读与检查流程（必读）\n\n1. 先读 [`engines/AGENTS.md`](../AGENTS.md)。\n2. 改设备动作语义、连接模型、对外 API 时再读**本文件**。\n3. 写代码前按上层流程读 [`.agents/rules/engines-code-style.md`](../../.agents/rules/engines-code-style.md)。\n4. 自检：`cd .agents/skills/engines-agents-style-check` → `python -m scripts.check_engines_agents_style --path engines/device`。\n\n## 相关路径速查\n\n| 用途 | 路径 |\n|------|------|\n| 上层入口 | [`engines/AGENTS.md`](../AGENTS.md) |\n| Agent 工具封装 | `engines/agents/tools/tool_device.py` |\n| 风格检查技能 | [`.agents/skills/engines-agents-style-check/`](../../.agents/skills/engines-agents-style-check/) |",
+        "agentsDoc": "",
         "units": [
           {
             "name": "android/",
             "kind": "dir",
             "files": 2,
-            "loc": 834,
+            "loc": 941,
             "trend": [
-              834,
-              834,
-              828
+              941,
+              941,
+              941
             ]
           },
           {
             "name": "action.py",
             "kind": "file",
             "files": 1,
-            "loc": 322,
+            "loc": 369,
             "trend": [
-              322,
-              322,
-              322
+              369,
+              369,
+              369
             ]
           },
           {
             "name": "logbus.py",
             "kind": "file",
             "files": 1,
-            "loc": 110,
+            "loc": 134,
             "trend": [
-              110,
-              110,
-              110
+              134,
+              134,
+              134
             ]
           },
           {
             "name": "logfiles.py",
             "kind": "file",
             "files": 1,
-            "loc": 57,
+            "loc": 67,
             "trend": [
-              57,
-              57,
-              57
+              67,
+              67,
+              67
             ]
           },
           {
@@ -4670,19 +4781,19 @@
         "totals": {
           "units": 5,
           "files": 6,
-          "loc": 1370
+          "loc": 1558
         },
         "totalTrend": [
-          1370,
-          1370,
-          1364
+          1558,
+          1558,
+          1558
         ]
       },
       {
         "key": "uart_log",
         "label": "串口日志",
         "note": "串口检测、参数、接收、切换与落盘",
-        "agentsDoc": "# uart_log 模块 AGENTS.md\n\n> 层级：根 `AGENTS.md` → [`engines/AGENTS.md`](../AGENTS.md) → **本文件**。本文件只写串口日志采集领域增量；**冲突时本文件的领域规则优先**。\n\n## 职责\n\n设备串口 / TCP 日志采集：端口检测、按端口接收线程、落盘、开关。为验收证据与 Harness（如 `tool_serial`）提供日志数据面；**不**承担 Django 端口台账的最终真相（开关状态可与 `serial_log` App 配合，配置项以环境/设置为准）。\n\n| 路径 | 职责 |\n| --- | --- |\n| `detect.py` | 端口检测 |\n| `params.py` | 端口参数 |\n| `receiver.py` | 单端口接收线程、按行切开 |\n| `writer.py` | 采集写入 |\n| `switch.py` | 按端口开关监听；同时打开上限 `MAX_PORTS`（当前 10） |\n| `__init__.py` | 导出 `PortSwitch` / `get_port_switch` 等 |\n\n## 红线（禁止）\n\n1. **禁止**跳过本文件与上层流程直接改采集契约（行协议、落盘路径语义、开关上限行为）而不更新文档。\n2. **零 Django**：禁止 `import apps.*` / `django.*` / `backend.apps.*`。\n3. **并发上限**：尊重 `MAX_PORTS`；拒绝超限时必须可观测（日志），不得静默丢开关请求却假装成功（除非既有 API 已如此约定并写明）。\n4. **重复打开**：同一端口重复 open 不得再起一份监听（见 `PortSwitch`）。\n5. **不写业务库**：`sl_` 表与 API 在 backend；本包只做采集与文件/内存侧。\n6. **日志**：用 `utils.logs.serial_log`；原文与采集通道日志分离（见 ARCH 可观测节）。\n\n## AI 阅读与检查流程（必读）\n\n1. 先读 [`engines/AGENTS.md`](../AGENTS.md)。\n2. 改端口模型、接收/落盘、开关语义时再读**本文件**。\n3. 写代码前读 style rules；自检：`--path engines/uart_log`。\n\n## 相关路径速查\n\n| 用途 | 路径 |\n|------|------|\n| 上层入口 | [`engines/AGENTS.md`](../AGENTS.md) |\n| Agent 工具封装 | `engines/agents/tools/tool_serial.py` |\n| 后端开关 API | `backend/apps/serial_log` |\n| 风格检查 | [`.agents/skills/engines-agents-style-check/`](../../.agents/skills/engines-agents-style-check/) |",
+        "agentsDoc": "",
         "units": [
           {
             "name": "receiver.py",
@@ -4784,7 +4895,7 @@
         "key": "vision",
         "label": "视觉",
         "note": "截图 OCR 识别",
-        "agentsDoc": "# vision 模块 AGENTS.md\n\n> 层级：根 `AGENTS.md` → [`engines/AGENTS.md`](../AGENTS.md) → **本文件**。本文件只写 OCR 视觉领域增量；**冲突时本文件的领域规则优先**。\n\n## 职责\n\n页面文本识别（OCR）。**底座能力**：原调用方 `engines/agents/tools/tool_ocr.py` 随该包退役，当前无生产调用方；重依赖（cnocr）在本模块导入时加载，调用方须在函数内导入本模块，避免引擎启动即拉起重依赖。\n\n| 路径 | 职责 |\n| --- | --- |\n| `ocr.py` | `recognize(screenshot_path)`：整图 OCR，返回文本区域与设备像素坐标（与 dump 元素口径一致） |\n| `__init__.py` | 包导出 |\n\n## 红线（禁止）\n\n1. **禁止**在引擎启动路径顶层无条件 `import engines.vision.ocr`（或本包）导致强制加载 cnocr；工具侧保持函数内导入。\n2. **零 Django**：禁止 `import apps.*` / `django.*` / `backend.apps.*`。\n3. **调用面**：上层如需页面文字，经工具层（`ae_harness` 的 `tools/<域>/`）接入；不要在 View 里直接跑 OCR。\n4. **坐标口径**：`bounds` 与 dump 元素同格式；改坐标语义必须同步工具与验收逻辑。\n5. **引擎单例**：CnOcr 懒加载缓存；不要每次 recognize 新建引擎（除非刻意重置并写明）。\n\n## AI 阅读与检查流程（必读）\n\n1. 先读 [`engines/AGENTS.md`](../AGENTS.md)。\n2. 改 OCR 输出契约或加载策略时再读**本文件**。\n3. 写代码前读 style rules；自检：`--path engines/vision`。\n\n## 相关路径速查\n\n| 用途 | 路径 |\n|------|------|\n| 上层入口 | [`engines/AGENTS.md`](../AGENTS.md) |\n| 工具层接入点 | `engines/ae_harness/tools/<域>/` |\n| 风格检查 | [`.agents/skills/engines-agents-style-check/`](../../.agents/skills/engines-agents-style-check/) |",
+        "agentsDoc": "",
         "units": [
           {
             "name": "ocr.py",
@@ -4814,75 +4925,75 @@
       {
         "from": "backend_bridge",
         "to": "ae_harness",
-        "count": 12,
+        "count": 14,
         "kind": "import"
       }
     ],
     "totals": {
       "modules": 6,
       "units": 28,
-      "files": 61,
-      "loc": 10148
+      "files": 65,
+      "loc": 10576
     },
     "comparison": {
       "at": [
-        "2026-11-18 18:39",
-        "2026-11-15 19:54",
-        "2026-11-15 15:25"
+        "2026-11-23 17:35",
+        "2026-11-23 17:08",
+        "2026-11-23 17:06"
       ],
       "units": {
         "ae_harness": {
           "event/": [
-            1886,
-            1622,
-            1622
+            1903,
+            1903,
+            1903
           ],
           "knowledge/": [
-            1470,
-            1281,
-            1281
+            1478,
+            1478,
+            1478
           ],
           "tools/": [
-            1316,
-            1150,
-            1150
+            1335,
+            1335,
+            1335
           ],
           "middleware/": [
-            630,
-            630,
-            630
-          ],
-          "agents/": [
-            480,
-            319,
-            299
+            631,
+            631,
+            631
           ],
           "workflow/": [
-            321,
-            443,
-            443
+            533,
+            533,
+            533
+          ],
+          "agents/": [
+            440,
+            440,
+            440
           ],
           "assistant/": [
             80,
-            342,
-            342
+            80,
+            80
           ]
         },
         "backend_bridge": {
           "workflow/": [
-            819,
-            317,
-            227
+            839,
+            839,
+            839
           ],
           "agents/": [
-            327,
-            76,
-            76
+            330,
+            330,
+            330
           ],
           "session.py": [
             218,
-            189,
-            189
+            218,
+            218
           ],
           "event_log.py": [
             167,
@@ -4891,18 +5002,18 @@
           ],
           "model_billing/": [
             162,
-            163,
-            163
+            162,
+            162
           ],
           "models/": [
             135,
-            null,
-            null
+            135,
+            135
           ],
           "run.py": [
             81,
-            58,
-            58
+            81,
+            81
           ],
           "result.py": [
             48,
@@ -4911,30 +5022,30 @@
           ],
           "reports/": [
             32,
-            30,
-            30
+            32,
+            32
           ]
         },
         "device": {
           "android/": [
-            834,
-            834,
-            828
+            941,
+            941,
+            941
           ],
           "action.py": [
-            322,
-            322,
-            322
+            369,
+            369,
+            369
           ],
           "logbus.py": [
-            110,
-            110,
-            110
+            134,
+            134,
+            134
           ],
           "logfiles.py": [
-            57,
-            57,
-            57
+            67,
+            67,
+            67
           ],
           "connection.py": [
             47,
@@ -4986,19 +5097,19 @@
       },
       "totals": {
         "ae_harness": [
-          6183,
-          5787,
-          5767
+          6400,
+          6400,
+          6400
         ],
         "backend_bridge": [
-          1989,
-          1048,
-          958
+          2012,
+          2012,
+          2012
         ],
         "device": [
-          1370,
-          1370,
-          1364
+          1558,
+          1558,
+          1558
         ],
         "uart_log": [
           403,
@@ -5032,8 +5143,8 @@
             "loc": 269,
             "trend": [
               269,
-              110,
-              110
+              269,
+              269
             ]
           },
           {
@@ -5043,8 +5154,8 @@
             "loc": 211,
             "trend": [
               211,
-              186,
-              186
+              211,
+              211
             ]
           },
           {
@@ -5065,8 +5176,8 @@
             "loc": 43,
             "trend": [
               43,
-              40,
-              40
+              43,
+              43
             ]
           },
           {
@@ -5121,8 +5232,8 @@
         },
         "totalTrend": [
           613,
-          426,
-          426
+          613,
+          613
         ]
       },
       {
@@ -5133,55 +5244,55 @@
             "name": "services/",
             "kind": "dir",
             "files": 14,
-            "loc": 1235,
+            "loc": 1307,
             "trend": [
-              1235,
-              null,
-              null
+              1307,
+              1307,
+              1307
             ]
           },
           {
             "name": "api.py",
             "kind": "file",
             "files": 1,
-            "loc": 608,
+            "loc": 610,
             "trend": [
-              608,
-              190,
-              190
+              610,
+              610,
+              610
             ]
           },
           {
             "name": "views_drf.py",
             "kind": "file",
             "files": 1,
-            "loc": 568,
+            "loc": 574,
             "trend": [
-              568,
-              194,
-              225
+              574,
+              574,
+              574
             ]
           },
           {
             "name": "models.py",
             "kind": "file",
             "files": 1,
-            "loc": 309,
+            "loc": 311,
             "trend": [
-              309,
-              46,
-              46
+              311,
+              311,
+              311
             ]
           },
           {
             "name": "serializers.py",
             "kind": "file",
             "files": 1,
-            "loc": 144,
+            "loc": 152,
             "trend": [
-              144,
-              88,
-              88
+              152,
+              152,
+              152
             ]
           },
           {
@@ -5191,8 +5302,8 @@
             "loc": 89,
             "trend": [
               89,
-              28,
-              28
+              89,
+              89
             ]
           },
           {
@@ -5202,8 +5313,8 @@
             "loc": 15,
             "trend": [
               15,
-              4,
-              4
+              15,
+              15
             ]
           },
           {
@@ -5213,8 +5324,8 @@
             "loc": 6,
             "trend": [
               6,
-              7,
-              7
+              6,
+              6
             ]
           }
         ],
@@ -5227,7 +5338,7 @@
           {
             "from": "services/",
             "to": "models.py",
-            "count": 8
+            "count": 9
           },
           {
             "from": "views_drf.py",
@@ -5268,12 +5379,12 @@
         "totals": {
           "units": 8,
           "files": 21,
-          "loc": 2974
+          "loc": 3064
         },
         "totalTrend": [
-          2974,
-          557,
-          588
+          3064,
+          3064,
+          3064
         ]
       },
       {
@@ -5284,11 +5395,11 @@
             "name": "extract.py",
             "kind": "file",
             "files": 1,
-            "loc": 384,
+            "loc": 391,
             "trend": [
-              384,
-              292,
-              292
+              391,
+              391,
+              391
             ]
           },
           {
@@ -5298,8 +5409,8 @@
             "loc": 312,
             "trend": [
               312,
-              279,
-              279
+              312,
+              312
             ]
           },
           {
@@ -5320,8 +5431,8 @@
             "loc": 64,
             "trend": [
               64,
-              57,
-              57
+              64,
+              64
             ]
           },
           {
@@ -5331,8 +5442,8 @@
             "loc": 31,
             "trend": [
               31,
-              33,
-              33
+              31,
+              31
             ]
           },
           {
@@ -5420,12 +5531,12 @@
         "totals": {
           "units": 9,
           "files": 9,
-          "loc": 912
+          "loc": 919
         },
         "totalTrend": [
-          912,
-          782,
-          782
+          919,
+          919,
+          919
         ]
       },
       {
@@ -5439,8 +5550,8 @@
             "loc": 489,
             "trend": [
               489,
-              null,
-              null
+              489,
+              489
             ]
           },
           {
@@ -5450,8 +5561,8 @@
             "loc": 169,
             "trend": [
               169,
-              192,
-              192
+              169,
+              169
             ]
           },
           {
@@ -5461,8 +5572,8 @@
             "loc": 159,
             "trend": [
               159,
-              272,
-              317
+              159,
+              159
             ]
           },
           {
@@ -5472,8 +5583,8 @@
             "loc": 158,
             "trend": [
               158,
-              209,
-              209
+              158,
+              158
             ]
           },
           {
@@ -5483,8 +5594,8 @@
             "loc": 135,
             "trend": [
               135,
-              129,
-              129
+              135,
+              135
             ]
           },
           {
@@ -5494,8 +5605,8 @@
             "loc": 57,
             "trend": [
               57,
-              44,
-              44
+              57,
+              57
             ]
           },
           {
@@ -5505,8 +5616,8 @@
             "loc": 50,
             "trend": [
               50,
-              73,
-              77
+              50,
+              50
             ]
           },
           {
@@ -5516,8 +5627,8 @@
             "loc": 16,
             "trend": [
               16,
-              88,
-              88
+              16,
+              16
             ]
           },
           {
@@ -5527,8 +5638,8 @@
             "loc": 13,
             "trend": [
               13,
-              51,
-              51
+              13,
+              13
             ]
           },
           {
@@ -5538,8 +5649,8 @@
             "loc": 7,
             "trend": [
               7,
-              20,
-              22
+              7,
+              7
             ]
           },
           {
@@ -5648,8 +5759,8 @@
         },
         "totalTrend": [
           1258,
-          1083,
-          1134
+          1258,
+          1258
         ]
       },
       {
@@ -5663,8 +5774,8 @@
             "loc": 428,
             "trend": [
               428,
-              402,
-              402
+              428,
+              428
             ]
           },
           {
@@ -5674,8 +5785,8 @@
             "loc": 205,
             "trend": [
               205,
-              193,
-              193
+              205,
+              205
             ]
           },
           {
@@ -5720,8 +5831,8 @@
         },
         "totalTrend": [
           654,
-          616,
-          616
+          654,
+          654
         ]
       },
       {
@@ -5914,44 +6025,44 @@
             "name": "api.py",
             "kind": "file",
             "files": 1,
-            "loc": 276,
+            "loc": 336,
             "trend": [
-              276,
-              null,
-              null
+              336,
+              336,
+              336
             ]
           },
           {
             "name": "eval_runner.py",
             "kind": "file",
             "files": 1,
-            "loc": 227,
+            "loc": 237,
             "trend": [
-              227,
-              null,
-              null
+              237,
+              237,
+              237
             ]
           },
           {
             "name": "views.py",
             "kind": "file",
             "files": 1,
-            "loc": 176,
+            "loc": 227,
             "trend": [
-              176,
-              null,
-              null
+              227,
+              227,
+              227
             ]
           },
           {
             "name": "retrieval.py",
             "kind": "file",
             "files": 1,
-            "loc": 168,
+            "loc": 197,
             "trend": [
-              168,
-              null,
-              null
+              197,
+              197,
+              197
             ]
           },
           {
@@ -5961,8 +6072,19 @@
             "loc": 160,
             "trend": [
               160,
-              null,
-              null
+              160,
+              160
+            ]
+          },
+          {
+            "name": "models.py",
+            "kind": "file",
+            "files": 1,
+            "loc": 100,
+            "trend": [
+              100,
+              100,
+              100
             ]
           },
           {
@@ -5972,41 +6094,19 @@
             "loc": 93,
             "trend": [
               93,
-              null,
-              null
-            ]
-          },
-          {
-            "name": "models.py",
-            "kind": "file",
-            "files": 1,
-            "loc": 79,
-            "trend": [
-              79,
-              null,
-              null
-            ]
-          },
-          {
-            "name": "registry.py",
-            "kind": "file",
-            "files": 1,
-            "loc": 72,
-            "trend": [
-              72,
-              null,
-              null
+              93,
+              93
             ]
           },
           {
             "name": "serializers.py",
             "kind": "file",
             "files": 1,
-            "loc": 71,
+            "loc": 80,
             "trend": [
-              71,
-              null,
-              null
+              80,
+              80,
+              80
             ]
           },
           {
@@ -6016,19 +6116,19 @@
             "loc": 42,
             "trend": [
               42,
-              null,
-              null
+              42,
+              42
             ]
           },
           {
             "name": "urls.py",
             "kind": "file",
             "files": 1,
-            "loc": 19,
+            "loc": 21,
             "trend": [
-              19,
-              null,
-              null
+              21,
+              21,
+              21
             ]
           },
           {
@@ -6038,8 +6138,8 @@
             "loc": 7,
             "trend": [
               7,
-              null,
-              null
+              7,
+              7
             ]
           }
         ],
@@ -6065,8 +6165,8 @@
             "count": 1
           },
           {
-            "from": "registry.py",
-            "to": "models.py",
+            "from": "retrieval.py",
+            "to": "api.py",
             "count": 1
           },
           {
@@ -6086,14 +6186,14 @@
           }
         ],
         "totals": {
-          "units": 12,
-          "files": 12,
-          "loc": 1390
+          "units": 11,
+          "files": 11,
+          "loc": 1500
         },
         "totalTrend": [
-          1390,
-          null,
-          null
+          1500,
+          1500,
+          1500
         ]
       },
       {
@@ -6104,22 +6204,22 @@
             "name": "api.py",
             "kind": "file",
             "files": 1,
-            "loc": 363,
+            "loc": 365,
             "trend": [
-              363,
-              null,
-              null
+              365,
+              365,
+              363
             ]
           },
           {
             "name": "views.py",
             "kind": "file",
             "files": 1,
-            "loc": 231,
+            "loc": 236,
             "trend": [
-              231,
-              null,
-              null
+              236,
+              236,
+              231
             ]
           },
           {
@@ -6129,8 +6229,8 @@
             "loc": 61,
             "trend": [
               61,
-              null,
-              null
+              61,
+              61
             ]
           },
           {
@@ -6140,8 +6240,8 @@
             "loc": 53,
             "trend": [
               53,
-              null,
-              null
+              53,
+              53
             ]
           },
           {
@@ -6151,8 +6251,8 @@
             "loc": 10,
             "trend": [
               10,
-              null,
-              null
+              10,
+              10
             ]
           }
         ],
@@ -6171,12 +6271,12 @@
         "totals": {
           "units": 5,
           "files": 5,
-          "loc": 718
+          "loc": 725
         },
         "totalTrend": [
-          718,
-          null,
-          null
+          725,
+          725,
+          718
         ]
       },
       {
@@ -6190,8 +6290,8 @@
             "loc": 330,
             "trend": [
               330,
-              null,
-              null
+              330,
+              330
             ]
           },
           {
@@ -6201,8 +6301,8 @@
             "loc": 45,
             "trend": [
               45,
-              123,
-              123
+              45,
+              45
             ]
           },
           {
@@ -6212,8 +6312,8 @@
             "loc": 7,
             "trend": [
               7,
-              13,
-              13
+              7,
+              7
             ]
           },
           {
@@ -6234,8 +6334,8 @@
             "loc": 5,
             "trend": [
               5,
-              26,
-              26
+              5,
+              5
             ]
           },
           {
@@ -6245,8 +6345,8 @@
             "loc": 1,
             "trend": [
               1,
-              8,
-              8
+              1,
+              1
             ]
           }
         ],
@@ -6269,8 +6369,8 @@
         },
         "totalTrend": [
           393,
-          175,
-          175
+          393,
+          393
         ]
       },
       {
@@ -6284,8 +6384,8 @@
             "loc": 371,
             "trend": [
               371,
-              251,
-              251
+              371,
+              371
             ]
           },
           {
@@ -6295,8 +6395,8 @@
             "loc": 294,
             "trend": [
               294,
-              40,
-              40
+              294,
+              294
             ]
           },
           {
@@ -6306,8 +6406,8 @@
             "loc": 176,
             "trend": [
               176,
-              79,
-              79
+              176,
+              176
             ]
           },
           {
@@ -6317,8 +6417,8 @@
             "loc": 92,
             "trend": [
               92,
-              72,
-              72
+              92,
+              92
             ]
           },
           {
@@ -6328,8 +6428,8 @@
             "loc": 61,
             "trend": [
               61,
-              51,
-              51
+              61,
+              61
             ]
           },
           {
@@ -6339,8 +6439,8 @@
             "loc": 58,
             "trend": [
               58,
-              21,
-              21
+              58,
+              58
             ]
           },
           {
@@ -6361,8 +6461,8 @@
             "loc": 19,
             "trend": [
               19,
-              15,
-              15
+              19,
+              19
             ]
           }
         ],
@@ -6390,8 +6490,8 @@
         },
         "totalTrend": [
           1116,
-          574,
-          574
+          1116,
+          1116
         ]
       },
       {
@@ -6402,22 +6502,22 @@
             "name": "api.py",
             "kind": "file",
             "files": 1,
-            "loc": 1017,
+            "loc": 1014,
             "trend": [
-              1017,
-              767,
-              740
+              1014,
+              1014,
+              1014
             ]
           },
           {
             "name": "task_runner.py",
             "kind": "file",
             "files": 1,
-            "loc": 519,
+            "loc": 515,
             "trend": [
-              519,
-              252,
-              381
+              515,
+              515,
+              515
             ]
           },
           {
@@ -6427,8 +6527,8 @@
             "loc": 319,
             "trend": [
               319,
-              235,
-              332
+              319,
+              319
             ]
           },
           {
@@ -6438,8 +6538,8 @@
             "loc": 259,
             "trend": [
               259,
-              198,
-              199
+              259,
+              259
             ]
           },
           {
@@ -6460,8 +6560,8 @@
             "loc": 173,
             "trend": [
               173,
-              166,
-              166
+              173,
+              173
             ]
           },
           {
@@ -6493,8 +6593,8 @@
             "loc": 94,
             "trend": [
               94,
-              89,
-              89
+              94,
+              94
             ]
           },
           {
@@ -6526,8 +6626,8 @@
             "loc": 59,
             "trend": [
               59,
-              null,
-              null
+              59,
+              59
             ]
           },
           {
@@ -6548,8 +6648,8 @@
             "loc": 45,
             "trend": [
               45,
-              36,
-              36
+              45,
+              45
             ]
           },
           {
@@ -6559,8 +6659,8 @@
             "loc": 35,
             "trend": [
               35,
-              null,
-              null
+              35,
+              35
             ]
           },
           {
@@ -6571,7 +6671,7 @@
             "trend": [
               33,
               33,
-              35
+              33
             ]
           },
           {
@@ -6581,8 +6681,8 @@
             "loc": 31,
             "trend": [
               31,
-              null,
-              null
+              31,
+              31
             ]
           },
           {
@@ -6741,12 +6841,12 @@
         "totals": {
           "units": 22,
           "files": 24,
-          "loc": 3325
+          "loc": 3318
         },
         "totalTrend": [
-          3325,
-          2517,
-          2719
+          3318,
+          3318,
+          3318
         ]
       },
       {
@@ -6760,8 +6860,8 @@
             "loc": 619,
             "trend": [
               619,
-              529,
-              529
+              619,
+              619
             ]
           },
           {
@@ -6771,8 +6871,8 @@
             "loc": 203,
             "trend": [
               203,
-              145,
-              145
+              203,
+              203
             ]
           },
           {
@@ -6782,8 +6882,8 @@
             "loc": 68,
             "trend": [
               68,
-              null,
-              null
+              68,
+              68
             ]
           },
           {
@@ -6849,8 +6949,8 @@
         },
         "totalTrend": [
           971,
-          755,
-          755
+          971,
+          971
         ]
       }
     ],
@@ -6858,6 +6958,12 @@
       {
         "from": "bug_manager",
         "to": "task_list",
+        "count": 3,
+        "kind": "import"
+      },
+      {
+        "from": "knowledge_search",
+        "to": "ai_assistant",
         "count": 3,
         "kind": "import"
       },
@@ -6887,12 +6993,6 @@
       },
       {
         "from": "task_list",
-        "to": "case_manager",
-        "count": 2,
-        "kind": "import"
-      },
-      {
-        "from": "task_list",
         "to": "usage_ledger",
         "count": 2,
         "kind": "import"
@@ -6900,6 +7000,12 @@
       {
         "from": "accounts",
         "to": "ai_assistant",
+        "count": 1,
+        "kind": "import"
+      },
+      {
+        "from": "ai_assistant",
+        "to": "knowledge_search",
         "count": 1,
         "kind": "import"
       },
@@ -6924,12 +7030,6 @@
       {
         "from": "dashboard",
         "to": "task_list",
-        "count": 1,
-        "kind": "import"
-      },
-      {
-        "from": "knowledge_search",
-        "to": "ai_assistant",
         "count": 1,
         "kind": "import"
       },
@@ -6965,6 +7065,12 @@
       },
       {
         "from": "task_list",
+        "to": "case_manager",
+        "count": 1,
+        "kind": "import"
+      },
+      {
+        "from": "task_list",
         "to": "device_pool",
         "count": 1,
         "kind": "import"
@@ -6972,27 +7078,27 @@
     ],
     "totals": {
       "modules": 12,
-      "units": 106,
-      "files": 121,
-      "loc": 15613
+      "units": 105,
+      "files": 120,
+      "loc": 15820
     },
     "comparison": {
       "at": [
-        "2026-11-18 18:39",
-        "2026-11-15 19:54",
-        "2026-11-15 15:25"
+        "2026-11-23 17:35",
+        "2026-11-23 17:08",
+        "2026-11-23 17:06"
       ],
       "units": {
         "accounts": {
           "api.py": [
             269,
-            110,
-            110
+            269,
+            269
           ],
           "views.py": [
             211,
-            186,
-            186
+            211,
+            211
           ],
           "serializers.py": [
             70,
@@ -7001,8 +7107,8 @@
           ],
           "models.py": [
             43,
-            40,
-            40
+            43,
+            43
           ],
           "urls.py": [
             13,
@@ -7017,56 +7123,56 @@
         },
         "ai_assistant": {
           "services/": [
-            1235,
-            null,
-            null
+            1307,
+            1307,
+            1307
           ],
           "api.py": [
-            608,
-            190,
-            190
+            610,
+            610,
+            610
           ],
           "views_drf.py": [
-            568,
-            194,
-            225
+            574,
+            574,
+            574
           ],
           "models.py": [
-            309,
-            46,
-            46
+            311,
+            311,
+            311
           ],
           "serializers.py": [
-            144,
-            88,
-            88
+            152,
+            152,
+            152
           ],
           "urls.py": [
             89,
-            28,
-            28
+            89,
+            89
           ],
           "apps.py": [
             15,
-            4,
-            4
+            15,
+            15
           ],
           "admin.py": [
             6,
-            7,
-            7
+            6,
+            6
           ]
         },
         "bug_manager": {
           "extract.py": [
-            384,
-            292,
-            292
+            391,
+            391,
+            391
           ],
           "api.py": [
             312,
-            279,
-            279
+            312,
+            312
           ],
           "views.py": [
             72,
@@ -7075,13 +7181,13 @@
           ],
           "models.py": [
             64,
-            57,
-            57
+            64,
+            64
           ],
           "management/": [
             31,
-            33,
-            33
+            31,
+            31
           ],
           "serializers.py": [
             19,
@@ -7107,53 +7213,53 @@
         "case_manager": {
           "api_rows.py": [
             489,
-            null,
-            null
+            489,
+            489
           ],
           "models.py": [
             169,
-            192,
-            192
+            169,
+            169
           ],
           "views_drf.py": [
             159,
-            272,
-            317
+            159,
+            159
           ],
           "api_import.py": [
             158,
-            209,
-            209
+            158,
+            158
           ],
           "api_projects.py": [
             135,
-            129,
-            129
+            135,
+            135
           ],
           "api_ids.py": [
             57,
-            44,
-            44
+            57,
+            57
           ],
           "api.py": [
             50,
-            73,
-            77
+            50,
+            50
           ],
           "serializers.py": [
             16,
-            88,
-            88
+            16,
+            16
           ],
           "admin.py": [
             13,
-            51,
-            51
+            13,
+            13
           ],
           "urls.py": [
             7,
-            20,
-            22
+            7,
+            7
           ],
           "apps.py": [
             5,
@@ -7164,13 +7270,13 @@
         "dashboard": {
           "ai_usage.py": [
             428,
-            402,
-            402
+            428,
+            428
           ],
           "views.py": [
             205,
-            193,
-            193
+            205,
+            205
           ],
           "urls.py": [
             17,
@@ -7232,108 +7338,103 @@
         },
         "knowledge_search": {
           "api.py": [
-            276,
-            null,
-            null
+            336,
+            336,
+            336
           ],
           "eval_runner.py": [
-            227,
-            null,
-            null
+            237,
+            237,
+            237
           ],
           "views.py": [
-            176,
-            null,
-            null
+            227,
+            227,
+            227
           ],
           "retrieval.py": [
-            168,
-            null,
-            null
+            197,
+            197,
+            197
           ],
           "eval_generation.py": [
             160,
-            null,
-            null
+            160,
+            160
+          ],
+          "models.py": [
+            100,
+            100,
+            100
           ],
           "eval_corpus.py": [
             93,
-            null,
-            null
-          ],
-          "models.py": [
-            79,
-            null,
-            null
-          ],
-          "registry.py": [
-            72,
-            null,
-            null
+            93,
+            93
           ],
           "serializers.py": [
-            71,
-            null,
-            null
+            80,
+            80,
+            80
           ],
           "eval_metrics.py": [
             42,
-            null,
-            null
+            42,
+            42
           ],
           "urls.py": [
-            19,
-            null,
-            null
+            21,
+            21,
+            21
           ],
           "apps.py": [
             7,
-            null,
-            null
+            7,
+            7
           ]
         },
         "ops_console": {
           "api.py": [
-            363,
-            null,
-            null
+            365,
+            365,
+            363
           ],
           "views.py": [
-            231,
-            null,
-            null
+            236,
+            236,
+            231
           ],
           "urls.py": [
             61,
-            null,
-            null
+            61,
+            61
           ],
           "serializers.py": [
             53,
-            null,
-            null
+            53,
+            53
           ],
           "apps.py": [
             10,
-            null,
-            null
+            10,
+            10
           ]
         },
         "report_generator": {
           "report_inventory.py": [
             330,
-            null,
-            null
+            330,
+            330
           ],
           "views.py": [
             45,
-            123,
-            123
+            45,
+            45
           ],
           "urls.py": [
             7,
-            13,
-            13
+            7,
+            7
           ],
           "apps.py": [
             5,
@@ -7342,45 +7443,45 @@
           ],
           "models.py": [
             5,
-            26,
-            26
+            5,
+            5
           ],
           "admin.py": [
             1,
-            8,
-            8
+            1,
+            1
           ]
         },
         "serial_log": {
           "port_service.py": [
             371,
-            251,
-            251
+            371,
+            371
           ],
           "api.py": [
             294,
-            40,
-            40
+            294,
+            294
           ],
           "views.py": [
             176,
-            79,
-            79
+            176,
+            176
           ],
           "keywords.py": [
             92,
-            72,
-            72
+            92,
+            92
           ],
           "sources.py": [
             61,
-            51,
-            51
+            61,
+            61
           ],
           "models.py": [
             58,
-            21,
-            21
+            58,
+            58
           ],
           "apps.py": [
             45,
@@ -7389,30 +7490,30 @@
           ],
           "urls.py": [
             19,
-            15,
-            15
+            19,
+            19
           ]
         },
         "task_list": {
           "api.py": [
-            1017,
-            767,
-            740
+            1014,
+            1014,
+            1014
           ],
           "task_runner.py": [
-            519,
-            252,
-            381
+            515,
+            515,
+            515
           ],
           "views.py": [
             319,
-            235,
-            332
+            319,
+            319
           ],
           "attachments.py": [
             259,
-            198,
-            199
+            259,
+            259
           ],
           "media_storage.py": [
             185,
@@ -7421,8 +7522,8 @@
           ],
           "models.py": [
             173,
-            166,
-            166
+            173,
+            173
           ],
           "views_upload.py": [
             149,
@@ -7436,8 +7537,8 @@
           ],
           "serializers.py": [
             94,
-            89,
-            89
+            94,
+            94
           ],
           "media_links.py": [
             68,
@@ -7451,8 +7552,8 @@
           ],
           "case_identity.py": [
             59,
-            null,
-            null
+            59,
+            59
           ],
           "media_views.py": [
             57,
@@ -7461,23 +7562,23 @@
           ],
           "apps.py": [
             45,
-            36,
-            36
+            45,
+            45
           ],
           "sweep_mark.py": [
             35,
-            null,
-            null
+            35,
+            35
           ],
           "urls.py": [
             33,
             33,
-            35
+            33
           ],
           "workflow_snapshot.py": [
             31,
-            null,
-            null
+            31,
+            31
           ],
           "engine_adapter.py": [
             26,
@@ -7508,18 +7609,18 @@
         "usage_ledger": {
           "api.py": [
             619,
-            529,
-            529
+            619,
+            619
           ],
           "pricing.py": [
             203,
-            145,
-            145
+            203,
+            203
           ],
           "rates.py": [
             68,
-            null,
-            null
+            68,
+            68
           ],
           "models.py": [
             41,
@@ -7541,28 +7642,28 @@
       "totals": {
         "accounts": [
           613,
-          426,
-          426
+          613,
+          613
         ],
         "ai_assistant": [
-          2974,
-          557,
-          588
+          3064,
+          3064,
+          3064
         ],
         "bug_manager": [
-          912,
-          782,
-          782
+          919,
+          919,
+          919
         ],
         "case_manager": [
           1258,
-          1083,
-          1134
+          1258,
+          1258
         ],
         "dashboard": [
           654,
-          616,
-          616
+          654,
+          654
         ],
         "device_pool": [
           1289,
@@ -7570,34 +7671,34 @@
           1289
         ],
         "knowledge_search": [
-          1390,
-          null,
-          null
+          1500,
+          1500,
+          1500
         ],
         "ops_console": [
-          718,
-          null,
-          null
+          725,
+          725,
+          718
         ],
         "report_generator": [
           393,
-          175,
-          175
+          393,
+          393
         ],
         "serial_log": [
           1116,
-          574,
-          574
+          1116,
+          1116
         ],
         "task_list": [
-          3325,
-          2517,
-          2719
+          3318,
+          3318,
+          3318
         ],
         "usage_ledger": [
           971,
-          755,
-          755
+          971,
+          971
         ]
       },
       "scope": 3
@@ -7613,33 +7714,33 @@
             "name": "components/",
             "kind": "dir",
             "files": 9,
-            "loc": 2035,
+            "loc": 2088,
             "trend": [
-              2035,
-              326,
-              326
+              2088,
+              2088,
+              2088
             ]
           },
           {
             "name": "helpers/",
             "kind": "dir",
-            "files": 8,
-            "loc": 357,
+            "files": 9,
+            "loc": 381,
             "trend": [
-              357,
-              105,
-              105
+              381,
+              381,
+              381
             ]
           },
           {
             "name": "api/",
             "kind": "dir",
             "files": 2,
-            "loc": 273,
+            "loc": 277,
             "trend": [
-              273,
-              69,
-              69
+              277,
+              277,
+              277
             ]
           },
           {
@@ -7649,8 +7750,8 @@
             "loc": 253,
             "trend": [
               253,
-              null,
-              null
+              253,
+              253
             ]
           },
           {
@@ -7660,19 +7761,19 @@
             "loc": 176,
             "trend": [
               176,
-              null,
-              null
+              176,
+              176
             ]
           },
           {
             "name": "index.vue",
             "kind": "file",
             "files": 1,
-            "loc": 128,
+            "loc": 140,
             "trend": [
-              128,
-              265,
-              265
+              140,
+              140,
+              140
             ]
           },
           {
@@ -7682,8 +7783,8 @@
             "loc": 78,
             "trend": [
               78,
-              13,
-              13
+              78,
+              78
             ]
           },
           {
@@ -7693,8 +7794,8 @@
             "loc": 22,
             "trend": [
               22,
-              17,
-              17
+              22,
+              22
             ]
           },
           {
@@ -7704,8 +7805,8 @@
             "loc": 10,
             "trend": [
               10,
-              91,
-              91
+              10,
+              10
             ]
           }
         ],
@@ -7713,7 +7814,7 @@
           {
             "from": "components/",
             "to": "helpers/",
-            "count": 11
+            "count": 12
           },
           {
             "from": "components/",
@@ -7736,13 +7837,13 @@
             "count": 3
           },
           {
-            "from": "chat.vue",
-            "to": "components/",
-            "count": 2
-          },
-          {
             "from": "helpers/",
             "to": "types.ts",
+            "count": 3
+          },
+          {
+            "from": "chat.vue",
+            "to": "components/",
             "count": 2
           },
           {
@@ -7828,13 +7929,13 @@
         ],
         "totals": {
           "units": 9,
-          "files": 25,
-          "loc": 3332
+          "files": 26,
+          "loc": 3425
         },
         "totalTrend": [
-          3332,
-          886,
-          886
+          3425,
+          3425,
+          3425
         ]
       },
       {
@@ -7845,22 +7946,22 @@
             "name": "components/",
             "kind": "dir",
             "files": 5,
-            "loc": 534,
+            "loc": 541,
             "trend": [
-              534,
-              null,
-              null
+              541,
+              541,
+              541
             ]
           },
           {
             "name": "model-configs.vue",
             "kind": "file",
             "files": 1,
-            "loc": 420,
+            "loc": 440,
             "trend": [
-              420,
-              null,
-              null
+              440,
+              440,
+              440
             ]
           },
           {
@@ -7870,8 +7971,8 @@
             "loc": 379,
             "trend": [
               379,
-              null,
-              null
+              379,
+              379
             ]
           },
           {
@@ -7881,19 +7982,19 @@
             "loc": 377,
             "trend": [
               377,
-              null,
-              null
+              377,
+              377
             ]
           },
           {
             "name": "constants.ts",
             "kind": "file",
             "files": 1,
-            "loc": 321,
+            "loc": 322,
             "trend": [
-              321,
-              null,
-              null
+              322,
+              322,
+              322
             ]
           },
           {
@@ -7903,8 +8004,8 @@
             "loc": 228,
             "trend": [
               228,
-              null,
-              null
+              228,
+              228
             ]
           },
           {
@@ -7914,8 +8015,8 @@
             "loc": 138,
             "trend": [
               138,
-              null,
-              null
+              138,
+              138
             ]
           },
           {
@@ -7925,19 +8026,19 @@
             "loc": 105,
             "trend": [
               105,
-              null,
-              null
+              105,
+              105
             ]
           },
           {
             "name": "types.ts",
             "kind": "file",
             "files": 1,
-            "loc": 92,
+            "loc": 94,
             "trend": [
-              92,
-              null,
-              null
+              94,
+              94,
+              94
             ]
           },
           {
@@ -7947,8 +8048,8 @@
             "loc": 22,
             "trend": [
               22,
-              null,
-              null
+              22,
+              22
             ]
           }
         ],
@@ -8097,12 +8198,12 @@
         "totals": {
           "units": 10,
           "files": 17,
-          "loc": 2616
+          "loc": 2646
         },
         "totalTrend": [
-          2616,
-          null,
-          null
+          2646,
+          2646,
+          2646
         ]
       },
       {
@@ -8116,8 +8217,8 @@
             "loc": 1337,
             "trend": [
               1337,
-              1137,
-              1137
+              1337,
+              1337
             ]
           },
           {
@@ -8127,8 +8228,8 @@
             "loc": 418,
             "trend": [
               418,
-              396,
-              396
+              418,
+              418
             ]
           },
           {
@@ -8138,8 +8239,8 @@
             "loc": 411,
             "trend": [
               411,
-              390,
-              390
+              411,
+              411
             ]
           },
           {
@@ -8241,8 +8342,8 @@
         },
         "totalTrend": [
           2329,
-          2086,
-          2086
+          2329,
+          2329
         ]
       },
       {
@@ -8256,8 +8357,8 @@
             "loc": 903,
             "trend": [
               903,
-              292,
-              292
+              903,
+              903
             ]
           },
           {
@@ -8267,8 +8368,8 @@
             "loc": 461,
             "trend": [
               461,
-              212,
-              212
+              461,
+              461
             ]
           },
           {
@@ -8278,8 +8379,8 @@
             "loc": 313,
             "trend": [
               313,
-              105,
-              105
+              313,
+              313
             ]
           },
           {
@@ -8289,8 +8390,8 @@
             "loc": 160,
             "trend": [
               160,
-              84,
-              84
+              160,
+              160
             ]
           },
           {
@@ -8300,8 +8401,8 @@
             "loc": 131,
             "trend": [
               131,
-              40,
-              40
+              131,
+              131
             ]
           },
           {
@@ -8311,8 +8412,8 @@
             "loc": 45,
             "trend": [
               45,
-              42,
-              42
+              45,
+              45
             ]
           },
           {
@@ -8396,8 +8497,8 @@
         },
         "totalTrend": [
           2023,
-          785,
-          785
+          2023,
+          2023
         ]
       },
       {
@@ -8411,8 +8512,8 @@
             "loc": 595,
             "trend": [
               595,
-              768,
-              768
+              595,
+              595
             ]
           },
           {
@@ -8433,8 +8534,8 @@
             "loc": 258,
             "trend": [
               258,
-              249,
-              249
+              258,
+              258
             ]
           },
           {
@@ -8444,8 +8545,8 @@
             "loc": 229,
             "trend": [
               229,
-              274,
-              274
+              229,
+              229
             ]
           },
           {
@@ -8455,8 +8556,8 @@
             "loc": 145,
             "trend": [
               145,
-              132,
-              132
+              145,
+              145
             ]
           },
           {
@@ -8552,8 +8653,8 @@
         },
         "totalTrend": [
           1810,
-          2006,
-          2006
+          1810,
+          1810
         ]
       },
       {
@@ -8567,8 +8668,8 @@
             "loc": 861,
             "trend": [
               861,
-              1139,
-              1846
+              861,
+              861
             ]
           },
           {
@@ -8578,8 +8679,8 @@
             "loc": 483,
             "trend": [
               483,
-              498,
-              928
+              483,
+              483
             ]
           },
           {
@@ -8589,19 +8690,19 @@
             "loc": 219,
             "trend": [
               219,
-              625,
-              826
+              219,
+              219
             ]
           },
           {
             "name": "constants.ts",
             "kind": "file",
             "files": 1,
-            "loc": 120,
+            "loc": 115,
             "trend": [
-              120,
-              85,
-              89
+              115,
+              115,
+              115
             ]
           },
           {
@@ -8611,8 +8712,8 @@
             "loc": 84,
             "trend": [
               84,
-              98,
-              112
+              84,
+              84
             ]
           },
           {
@@ -8634,7 +8735,7 @@
             "trend": [
               10,
               10,
-              16
+              10
             ]
           }
         ],
@@ -8683,12 +8784,193 @@
         "totals": {
           "units": 7,
           "files": 16,
-          "loc": 1801
+          "loc": 1796
         },
         "totalTrend": [
-          1801,
-          2479,
-          3841
+          1796,
+          1796,
+          1796
+        ]
+      },
+      {
+        "key": "knowledge-search",
+        "label": "",
+        "units": [
+          {
+            "name": "components/",
+            "kind": "dir",
+            "files": 9,
+            "loc": 1109,
+            "trend": [
+              1109,
+              1109,
+              1109
+            ]
+          },
+          {
+            "name": "composables/",
+            "kind": "dir",
+            "files": 3,
+            "loc": 218,
+            "trend": [
+              218,
+              218,
+              218
+            ]
+          },
+          {
+            "name": "types.ts",
+            "kind": "file",
+            "files": 1,
+            "loc": 123,
+            "trend": [
+              123,
+              123,
+              123
+            ]
+          },
+          {
+            "name": "api.ts",
+            "kind": "file",
+            "files": 1,
+            "loc": 120,
+            "trend": [
+              120,
+              120,
+              120
+            ]
+          },
+          {
+            "name": "index.vue",
+            "kind": "file",
+            "files": 1,
+            "loc": 95,
+            "trend": [
+              95,
+              95,
+              95
+            ]
+          },
+          {
+            "name": "constants.ts",
+            "kind": "file",
+            "files": 1,
+            "loc": 64,
+            "trend": [
+              64,
+              64,
+              64
+            ]
+          },
+          {
+            "name": "helpers/",
+            "kind": "dir",
+            "files": 2,
+            "loc": 32,
+            "trend": [
+              32,
+              32,
+              32
+            ]
+          },
+          {
+            "name": "routes.ts",
+            "kind": "file",
+            "files": 1,
+            "loc": 10,
+            "trend": [
+              10,
+              10,
+              10
+            ]
+          }
+        ],
+        "edges": [
+          {
+            "from": "components/",
+            "to": "types.ts",
+            "count": 7
+          },
+          {
+            "from": "components/",
+            "to": "constants.ts",
+            "count": 6
+          },
+          {
+            "from": "components/",
+            "to": "helpers/",
+            "count": 4
+          },
+          {
+            "from": "index.vue",
+            "to": "components/",
+            "count": 4
+          },
+          {
+            "from": "composables/",
+            "to": "api.ts",
+            "count": 3
+          },
+          {
+            "from": "composables/",
+            "to": "types.ts",
+            "count": 3
+          },
+          {
+            "from": "components/",
+            "to": "api.ts",
+            "count": 2
+          },
+          {
+            "from": "components/",
+            "to": "composables/",
+            "count": 2
+          },
+          {
+            "from": "composables/",
+            "to": "constants.ts",
+            "count": 2
+          },
+          {
+            "from": "api.ts",
+            "to": "types.ts",
+            "count": 1
+          },
+          {
+            "from": "helpers/",
+            "to": "types.ts",
+            "count": 1
+          },
+          {
+            "from": "index.vue",
+            "to": "composables/",
+            "count": 1
+          },
+          {
+            "from": "index.vue",
+            "to": "constants.ts",
+            "count": 1
+          },
+          {
+            "from": "index.vue",
+            "to": "types.ts",
+            "count": 1
+          },
+          {
+            "from": "routes.ts",
+            "to": "index.vue",
+            "count": 1
+          }
+        ],
+        "totals": {
+          "units": 8,
+          "files": 19,
+          "loc": 1771
+        },
+        "totalTrend": [
+          1771,
+          1771,
+          1771
         ]
       },
       {
@@ -8702,8 +8984,8 @@
             "loc": 733,
             "trend": [
               733,
-              1123,
-              1320
+              733,
+              733
             ]
           },
           {
@@ -8713,8 +8995,8 @@
             "loc": 269,
             "trend": [
               269,
-              28,
-              28
+              269,
+              269
             ]
           },
           {
@@ -8724,8 +9006,8 @@
             "loc": 258,
             "trend": [
               258,
-              null,
-              null
+              258,
+              258
             ]
           },
           {
@@ -8735,8 +9017,8 @@
             "loc": 182,
             "trend": [
               182,
-              151,
-              151
+              182,
+              182
             ]
           },
           {
@@ -8746,8 +9028,8 @@
             "loc": 107,
             "trend": [
               107,
-              134,
-              134
+              107,
+              107
             ]
           },
           {
@@ -8757,8 +9039,8 @@
             "loc": 83,
             "trend": [
               83,
-              512,
-              512
+              83,
+              83
             ]
           },
           {
@@ -8768,8 +9050,8 @@
             "loc": 51,
             "trend": [
               51,
-              127,
-              143
+              51,
+              51
             ]
           },
           {
@@ -8779,8 +9061,8 @@
             "loc": 20,
             "trend": [
               20,
-              57,
-              57
+              20,
+              20
             ]
           }
         ],
@@ -8863,189 +9145,8 @@
         },
         "totalTrend": [
           1703,
-          2132,
-          2345
-        ]
-      },
-      {
-        "key": "knowledge-search",
-        "label": "",
-        "units": [
-          {
-            "name": "components/",
-            "kind": "dir",
-            "files": 8,
-            "loc": 997,
-            "trend": [
-              997,
-              null,
-              null
-            ]
-          },
-          {
-            "name": "composables/",
-            "kind": "dir",
-            "files": 3,
-            "loc": 218,
-            "trend": [
-              218,
-              null,
-              null
-            ]
-          },
-          {
-            "name": "types.ts",
-            "kind": "file",
-            "files": 1,
-            "loc": 112,
-            "trend": [
-              112,
-              null,
-              null
-            ]
-          },
-          {
-            "name": "api.ts",
-            "kind": "file",
-            "files": 1,
-            "loc": 102,
-            "trend": [
-              102,
-              null,
-              null
-            ]
-          },
-          {
-            "name": "index.vue",
-            "kind": "file",
-            "files": 1,
-            "loc": 95,
-            "trend": [
-              95,
-              null,
-              null
-            ]
-          },
-          {
-            "name": "constants.ts",
-            "kind": "file",
-            "files": 1,
-            "loc": 64,
-            "trend": [
-              64,
-              null,
-              null
-            ]
-          },
-          {
-            "name": "helpers/",
-            "kind": "dir",
-            "files": 2,
-            "loc": 32,
-            "trend": [
-              32,
-              null,
-              null
-            ]
-          },
-          {
-            "name": "routes.ts",
-            "kind": "file",
-            "files": 1,
-            "loc": 10,
-            "trend": [
-              10,
-              null,
-              null
-            ]
-          }
-        ],
-        "edges": [
-          {
-            "from": "components/",
-            "to": "constants.ts",
-            "count": 6
-          },
-          {
-            "from": "components/",
-            "to": "types.ts",
-            "count": 6
-          },
-          {
-            "from": "components/",
-            "to": "helpers/",
-            "count": 4
-          },
-          {
-            "from": "index.vue",
-            "to": "components/",
-            "count": 4
-          },
-          {
-            "from": "composables/",
-            "to": "api.ts",
-            "count": 3
-          },
-          {
-            "from": "composables/",
-            "to": "types.ts",
-            "count": 3
-          },
-          {
-            "from": "components/",
-            "to": "composables/",
-            "count": 2
-          },
-          {
-            "from": "composables/",
-            "to": "constants.ts",
-            "count": 2
-          },
-          {
-            "from": "api.ts",
-            "to": "types.ts",
-            "count": 1
-          },
-          {
-            "from": "components/",
-            "to": "api.ts",
-            "count": 1
-          },
-          {
-            "from": "helpers/",
-            "to": "types.ts",
-            "count": 1
-          },
-          {
-            "from": "index.vue",
-            "to": "composables/",
-            "count": 1
-          },
-          {
-            "from": "index.vue",
-            "to": "constants.ts",
-            "count": 1
-          },
-          {
-            "from": "index.vue",
-            "to": "types.ts",
-            "count": 1
-          },
-          {
-            "from": "routes.ts",
-            "to": "index.vue",
-            "count": 1
-          }
-        ],
-        "totals": {
-          "units": 8,
-          "files": 18,
-          "loc": 1630
-        },
-        "totalTrend": [
-          1630,
-          null,
-          null
+          1703,
+          1703
         ]
       },
       {
@@ -9070,8 +9171,8 @@
             "loc": 235,
             "trend": [
               235,
-              120,
-              120
+              235,
+              235
             ]
           },
           {
@@ -9081,8 +9182,8 @@
             "loc": 167,
             "trend": [
               167,
-              118,
-              118
+              167,
+              167
             ]
           },
           {
@@ -9103,8 +9204,8 @@
             "loc": 88,
             "trend": [
               88,
-              77,
-              77
+              88,
+              88
             ]
           },
           {
@@ -9114,8 +9215,8 @@
             "loc": 56,
             "trend": [
               56,
-              43,
-              43
+              56,
+              56
             ]
           },
           {
@@ -9225,8 +9326,8 @@
         },
         "totalTrend": [
           966,
-          778,
-          778
+          966,
+          966
         ]
       },
       {
@@ -9240,8 +9341,8 @@
             "loc": 209,
             "trend": [
               209,
-              735,
-              735
+              209,
+              209
             ]
           },
           {
@@ -9251,8 +9352,8 @@
             "loc": 143,
             "trend": [
               143,
-              null,
-              null
+              143,
+              143
             ]
           },
           {
@@ -9262,8 +9363,8 @@
             "loc": 69,
             "trend": [
               69,
-              152,
-              152
+              69,
+              69
             ]
           },
           {
@@ -9273,8 +9374,8 @@
             "loc": 42,
             "trend": [
               42,
-              null,
-              null
+              42,
+              42
             ]
           },
           {
@@ -9284,8 +9385,8 @@
             "loc": 38,
             "trend": [
               38,
-              null,
-              null
+              38,
+              38
             ]
           },
           {
@@ -9295,8 +9396,8 @@
             "loc": 14,
             "trend": [
               14,
-              52,
-              52
+              14,
+              14
             ]
           },
           {
@@ -9370,8 +9471,8 @@
         },
         "totalTrend": [
           525,
-          949,
-          949
+          525,
+          525
         ]
       }
     ],
@@ -9383,15 +9484,15 @@
         "shared": true
       },
       {
-        "from": "dashboard",
+        "from": "knowledge-search",
         "to": "共享层（shared/views/router）",
-        "count": 30,
+        "count": 31,
         "shared": true
       },
       {
-        "from": "knowledge-search",
+        "from": "dashboard",
         "to": "共享层（shared/views/router）",
-        "count": 29,
+        "count": 30,
         "shared": true
       },
       {
@@ -9458,130 +9559,130 @@
     "totals": {
       "modules": 10,
       "units": 79,
-      "files": 157,
-      "loc": 18735
+      "files": 159,
+      "loc": 18994
     },
     "comparison": {
       "at": [
-        "2026-11-18 18:39",
-        "2026-11-15 19:54",
-        "2026-11-15 15:25"
+        "2026-11-23 17:35",
+        "2026-11-23 17:08",
+        "2026-11-23 17:06"
       ],
       "units": {
         "ai-assistant": {
           "components/": [
-            2035,
-            326,
-            326
+            2088,
+            2088,
+            2088
           ],
           "helpers/": [
-            357,
-            105,
-            105
+            381,
+            381,
+            381
           ],
           "api/": [
-            273,
-            69,
-            69
+            277,
+            277,
+            277
           ],
           "chat.vue": [
             253,
-            null,
-            null
+            253,
+            253
           ],
           "evals.vue": [
             176,
-            null,
-            null
+            176,
+            176
           ],
           "index.vue": [
-            128,
-            265,
-            265
+            140,
+            140,
+            140
           ],
           "types.ts": [
             78,
-            13,
-            13
+            78,
+            78
           ],
           "routes.ts": [
             22,
-            17,
-            17
+            22,
+            22
           ],
           "constants.ts": [
             10,
-            91,
-            91
+            10,
+            10
           ]
         },
         "ops-console": {
           "components/": [
-            534,
-            null,
-            null
+            541,
+            541,
+            541
           ],
           "model-configs.vue": [
-            420,
-            null,
-            null
+            440,
+            440,
+            440
           ],
           "index.vue": [
             379,
-            null,
-            null
+            379,
+            379
           ],
           "agents.vue": [
             377,
-            null,
-            null
+            377,
+            377
           ],
           "constants.ts": [
-            321,
-            null,
-            null
+            322,
+            322,
+            322
           ],
           "composables/": [
             228,
-            null,
-            null
+            228,
+            228
           ],
           "helpers/": [
             138,
-            null,
-            null
+            138,
+            138
           ],
           "api.ts": [
             105,
-            null,
-            null
+            105,
+            105
           ],
           "types.ts": [
-            92,
-            null,
-            null
+            94,
+            94,
+            94
           ],
           "routes.ts": [
             22,
-            null,
-            null
+            22,
+            22
           ]
         },
         "dashboard": {
           "components/": [
             1337,
-            1137,
-            1137
+            1337,
+            1337
           ],
           "composables/": [
             418,
-            396,
-            396
+            418,
+            418
           ],
           "index.vue": [
             411,
-            390,
-            390
+            411,
+            411
           ],
           "DashboardView.logic.ts": [
             99,
@@ -9607,33 +9708,33 @@
         "serial-log": {
           "components/": [
             903,
-            292,
-            292
+            903,
+            903
           ],
           "composables/": [
             461,
-            212,
-            212
+            461,
+            461
           ],
           "helpers/": [
             313,
-            105,
-            105
+            313,
+            313
           ],
           "api.ts": [
             160,
-            84,
-            84
+            160,
+            160
           ],
           "constants.ts": [
             131,
-            40,
-            40
+            131,
+            131
           ],
           "index.vue": [
             45,
-            42,
-            42
+            45,
+            45
           ],
           "routes.ts": [
             10,
@@ -9644,8 +9745,8 @@
         "device-pool": {
           "components/": [
             595,
-            768,
-            768
+            595,
+            595
           ],
           "composables/": [
             437,
@@ -9654,18 +9755,18 @@
           ],
           "DevicePoolView.logic.ts": [
             258,
-            249,
-            249
+            258,
+            258
           ],
           "index.vue": [
             229,
-            274,
-            274
+            229,
+            229
           ],
           "constants.ts": [
             145,
-            132,
-            132
+            145,
+            145
           ],
           "helpers.ts": [
             97,
@@ -9686,28 +9787,28 @@
         "task-list": {
           "components/": [
             861,
-            1139,
-            1846
+            861,
+            861
           ],
           "helpers/": [
             483,
-            498,
-            928
+            483,
+            483
           ],
           "composables/": [
             219,
-            625,
-            826
+            219,
+            219
           ],
           "constants.ts": [
-            120,
-            85,
-            89
+            115,
+            115,
+            115
           ],
           "api/": [
             84,
-            98,
-            112
+            84,
+            84
           ],
           "index.vue": [
             24,
@@ -9717,91 +9818,91 @@
           "routes.ts": [
             10,
             10,
-            16
+            10
+          ]
+        },
+        "knowledge-search": {
+          "components/": [
+            1109,
+            1109,
+            1109
+          ],
+          "composables/": [
+            218,
+            218,
+            218
+          ],
+          "types.ts": [
+            123,
+            123,
+            123
+          ],
+          "api.ts": [
+            120,
+            120,
+            120
+          ],
+          "index.vue": [
+            95,
+            95,
+            95
+          ],
+          "constants.ts": [
+            64,
+            64,
+            64
+          ],
+          "helpers/": [
+            32,
+            32,
+            32
+          ],
+          "routes.ts": [
+            10,
+            10,
+            10
           ]
         },
         "case-manager": {
           "components/": [
             733,
-            1123,
-            1320
+            733,
+            733
           ],
           "helpers/": [
             269,
-            28,
-            28
+            269,
+            269
           ],
           "ProjectSheet.vue": [
             258,
-            null,
-            null
+            258,
+            258
           ],
           "ProjectList.vue": [
             182,
-            151,
-            151
+            182,
+            182
           ],
           "types.ts": [
             107,
-            134,
-            134
+            107,
+            107
           ],
           "composables/": [
             83,
-            512,
-            512
+            83,
+            83
           ],
           "api.ts": [
             51,
-            127,
-            143
+            51,
+            51
           ],
           "routes.ts": [
             20,
-            57,
-            57
-          ]
-        },
-        "knowledge-search": {
-          "components/": [
-            997,
-            null,
-            null
-          ],
-          "composables/": [
-            218,
-            null,
-            null
-          ],
-          "types.ts": [
-            112,
-            null,
-            null
-          ],
-          "api.ts": [
-            102,
-            null,
-            null
-          ],
-          "index.vue": [
-            95,
-            null,
-            null
-          ],
-          "constants.ts": [
-            64,
-            null,
-            null
-          ],
-          "helpers/": [
-            32,
-            null,
-            null
-          ],
-          "routes.ts": [
-            10,
-            null,
-            null
+            20,
+            20
           ]
         },
         "bug-manager": {
@@ -9812,13 +9913,13 @@
           ],
           "components/": [
             235,
-            120,
-            120
+            235,
+            235
           ],
           "helpers/": [
             167,
-            118,
-            118
+            167,
+            167
           ],
           "composables/": [
             121,
@@ -9827,13 +9928,13 @@
           ],
           "constants.ts": [
             88,
-            77,
-            77
+            88,
+            88
           ],
           "types.ts": [
             56,
-            43,
-            43
+            56,
+            56
           ],
           "api.ts": [
             25,
@@ -9849,33 +9950,33 @@
         "report-generator": {
           "index.vue": [
             209,
-            735,
-            735
+            209,
+            209
           ],
           "composables/": [
             143,
-            null,
-            null
+            143,
+            143
           ],
           "constants.ts": [
             69,
-            152,
-            152
+            69,
+            69
           ],
           "helpers/": [
             42,
-            null,
-            null
+            42,
+            42
           ],
           "types.ts": [
             38,
-            null,
-            null
+            38,
+            38
           ],
           "api.ts": [
             14,
-            52,
-            52
+            14,
+            14
           ],
           "routes.ts": [
             10,
@@ -9886,54 +9987,54 @@
       },
       "totals": {
         "ai-assistant": [
-          3332,
-          886,
-          886
+          3425,
+          3425,
+          3425
         ],
         "ops-console": [
-          2616,
-          null,
-          null
+          2646,
+          2646,
+          2646
         ],
         "dashboard": [
           2329,
-          2086,
-          2086
+          2329,
+          2329
         ],
         "serial-log": [
           2023,
-          785,
-          785
+          2023,
+          2023
         ],
         "device-pool": [
           1810,
-          2006,
-          2006
+          1810,
+          1810
         ],
         "task-list": [
-          1801,
-          2479,
-          3841
+          1796,
+          1796,
+          1796
+        ],
+        "knowledge-search": [
+          1771,
+          1771,
+          1771
         ],
         "case-manager": [
           1703,
-          2132,
-          2345
-        ],
-        "knowledge-search": [
-          1630,
-          null,
-          null
+          1703,
+          1703
         ],
         "bug-manager": [
           966,
-          778,
-          778
+          966,
+          966
         ],
         "report-generator": [
           525,
-          949,
-          949
+          525,
+          525
         ]
       },
       "scope": 3
@@ -9948,23 +10049,23 @@
           {
             "name": "apps/",
             "kind": "dir",
-            "files": 296,
-            "loc": 20822,
+            "files": 299,
+            "loc": 21177,
             "trend": [
-              20822,
-              17674,
-              19405
+              21177,
+              21177,
+              21166
             ]
           },
           {
             "name": "config/",
             "kind": "dir",
             "files": 5,
-            "loc": 496,
+            "loc": 497,
             "trend": [
-              496,
-              482,
-              488
+              497,
+              497,
+              497
             ]
           },
           {
@@ -9974,8 +10075,8 @@
             "loc": 463,
             "trend": [
               463,
-              414,
-              414
+              463,
+              463
             ]
           },
           {
@@ -9996,8 +10097,8 @@
             "loc": 127,
             "trend": [
               127,
-              85,
-              88
+              127,
+              127
             ]
           },
           {
@@ -10007,20 +10108,20 @@
             "loc": 120,
             "trend": [
               120,
-              118,
-              118
+              120,
+              120
             ]
           }
         ],
         "totals": {
           "units": 6,
-          "files": 320,
-          "loc": 22221
+          "files": 323,
+          "loc": 22577
         },
         "totalTrend": [
-          22221,
-          18966,
-          20706
+          22577,
+          22577,
+          22566
         ]
       },
       {
@@ -10030,34 +10131,34 @@
           {
             "name": "ae_harness/",
             "kind": "dir",
-            "files": 39,
-            "loc": 6532,
+            "files": 42,
+            "loc": 6795,
             "trend": [
-              6532,
-              6129,
-              6109
+              6795,
+              6795,
+              6795
             ]
           },
           {
             "name": "backend_bridge/",
             "kind": "dir",
-            "files": 28,
-            "loc": 2182,
+            "files": 30,
+            "loc": 2200,
             "trend": [
-              2182,
-              1210,
-              1120
+              2200,
+              2200,
+              2200
             ]
           },
           {
             "name": "device/",
             "kind": "dir",
             "files": 8,
-            "loc": 1415,
+            "loc": 1602,
             "trend": [
-              1415,
-              1415,
-              1409
+              1602,
+              1602,
+              1602
             ]
           },
           {
@@ -10074,12 +10175,12 @@
           {
             "name": "utils/",
             "kind": "dir",
-            "files": 1,
-            "loc": 126,
+            "files": 2,
+            "loc": 147,
             "trend": [
-              126,
-              126,
-              126
+              147,
+              147,
+              147
             ]
           },
           {
@@ -10096,13 +10197,13 @@
         ],
         "totals": {
           "units": 6,
-          "files": 84,
-          "loc": 10793
+          "files": 90,
+          "loc": 11282
         },
         "totalTrend": [
-          10793,
-          9418,
-          9302
+          11282,
+          11282,
+          11282
         ]
       },
       {
@@ -10112,34 +10213,34 @@
           {
             "name": "src/",
             "kind": "dir",
-            "files": 259,
-            "loc": 31582,
+            "files": 261,
+            "loc": 31845,
             "trend": [
-              31582,
-              29545,
-              34674
+              31845,
+              31845,
+              31845
             ]
           },
           {
             "name": "tests/",
             "kind": "dir",
             "files": 96,
-            "loc": 9529,
+            "loc": 9647,
             "trend": [
-              9529,
-              7522,
-              9785
+              9647,
+              9647,
+              9647
             ]
           },
           {
             "name": "eslint.config.js",
             "kind": "file",
             "files": 1,
-            "loc": 122,
+            "loc": 129,
             "trend": [
-              122,
-              122,
-              122
+              129,
+              129,
+              129
             ]
           },
           {
@@ -10149,8 +10250,8 @@
             "loc": 83,
             "trend": [
               83,
-              89,
-              89
+              83,
+              83
             ]
           },
           {
@@ -10178,13 +10279,13 @@
         ],
         "totals": {
           "units": 6,
-          "files": 359,
-          "loc": 41363
+          "files": 361,
+          "loc": 41751
         },
         "totalTrend": [
-          41363,
-          37325,
-          44717
+          41751,
+          41751,
+          41751
         ]
       },
       {
@@ -10194,45 +10295,45 @@
           {
             "name": "engines/",
             "kind": "dir",
-            "files": 47,
-            "loc": 3668,
+            "files": 56,
+            "loc": 4092,
             "trend": [
-              3668,
-              2769,
-              8065
+              4092,
+              4092,
+              4092
             ]
           },
           {
             "name": "ai_assistant/",
             "kind": "dir",
-            "files": 38,
-            "loc": 2626,
+            "files": 39,
+            "loc": 2599,
             "trend": [
-              2626,
-              1049,
-              1049
+              2599,
+              2599,
+              2599
             ]
           },
           {
             "name": "arch/",
             "kind": "dir",
-            "files": 21,
-            "loc": 1829,
+            "files": 25,
+            "loc": 2195,
             "trend": [
-              1829,
-              1835,
-              1842
+              2195,
+              2195,
+              2195
             ]
           },
           {
             "name": "task/",
             "kind": "dir",
             "files": 19,
-            "loc": 1537,
+            "loc": 1577,
             "trend": [
-              1537,
-              1076,
-              2892
+              1577,
+              1577,
+              1577
             ]
           },
           {
@@ -10242,30 +10343,30 @@
             "loc": 1038,
             "trend": [
               1038,
-              162,
-              162
+              1038,
+              1038
             ]
           },
           {
             "name": "knowledge_search/",
             "kind": "dir",
-            "files": 12,
-            "loc": 895,
+            "files": 13,
+            "loc": 1026,
             "trend": [
-              895,
-              null,
-              null
+              1026,
+              1026,
+              1026
             ]
           },
           {
             "name": "device/",
             "kind": "dir",
             "files": 16,
-            "loc": 709,
+            "loc": 706,
             "trend": [
-              709,
-              709,
-              709
+              706,
+              706,
+              706
             ]
           },
           {
@@ -10280,58 +10381,58 @@
             ]
           },
           {
+            "name": "bug_ticket/",
+            "kind": "dir",
+            "files": 7,
+            "loc": 600,
+            "trend": [
+              600,
+              600,
+              600
+            ]
+          },
+          {
             "name": "auth/",
             "kind": "dir",
             "files": 10,
             "loc": 590,
             "trend": [
               590,
-              444,
-              444
-            ]
-          },
-          {
-            "name": "bug_ticket/",
-            "kind": "dir",
-            "files": 7,
-            "loc": 585,
-            "trend": [
-              585,
-              508,
-              509
+              590,
+              590
             ]
           },
           {
             "name": "ops_console/",
             "kind": "dir",
             "files": 11,
-            "loc": 563,
+            "loc": 565,
             "trend": [
-              563,
-              null,
-              null
+              565,
+              565,
+              565
             ]
           },
           {
             "name": "dashboard/",
             "kind": "dir",
             "files": 12,
-            "loc": 514,
+            "loc": 510,
             "trend": [
-              514,
-              454,
-              454
+              510,
+              510,
+              510
             ]
           },
           {
             "name": "report/",
             "kind": "dir",
             "files": 5,
-            "loc": 308,
+            "loc": 312,
             "trend": [
-              308,
-              117,
-              226
+              312,
+              312,
+              312
             ]
           },
           {
@@ -10349,11 +10450,11 @@
             "name": "case/",
             "kind": "dir",
             "files": 9,
-            "loc": 245,
+            "loc": 254,
             "trend": [
-              245,
-              381,
-              2021
+              254,
+              254,
+              254
             ]
           },
           {
@@ -10385,8 +10486,8 @@
             "loc": 22,
             "trend": [
               22,
-              16,
-              16
+              22,
+              22
             ]
           },
           {
@@ -10408,7 +10509,7 @@
             "trend": [
               0,
               0,
-              246
+              0
             ]
           },
           {
@@ -10419,19 +10520,19 @@
             "trend": [
               0,
               0,
-              79
+              0
             ]
           }
         ],
         "totals": {
           "units": 21,
-          "files": 239,
-          "loc": 16242
+          "files": 254,
+          "loc": 17199
         },
         "totalTrend": [
-          16242,
-          10633,
-          19827
+          17199,
+          17199,
+          17199
         ]
       },
       {
@@ -10442,33 +10543,44 @@
             "name": "gen_arch_stats.py",
             "kind": "file",
             "files": 1,
-            "loc": 1098,
+            "loc": 1070,
             "trend": [
-              1098,
-              1099,
-              1099
+              1070,
+              1185,
+              1185
             ]
           },
           {
             "name": "check_gates.py",
             "kind": "file",
             "files": 1,
-            "loc": 587,
+            "loc": 659,
             "trend": [
-              587,
-              587,
-              528
+              659,
+              642,
+              642
+            ]
+          },
+          {
+            "name": "service_ctl/",
+            "kind": "dir",
+            "files": 6,
+            "loc": 645,
+            "trend": [
+              645,
+              645,
+              645
             ]
           },
           {
             "name": "module_docstring.py",
             "kind": "file",
             "files": 1,
-            "loc": 469,
+            "loc": 450,
             "trend": [
-              469,
-              469,
-              469
+              450,
+              450,
+              450
             ]
           },
           {
@@ -10511,8 +10623,8 @@
             "loc": 85,
             "trend": [
               85,
-              86,
-              86
+              85,
+              85
             ]
           },
           {
@@ -10533,20 +10645,20 @@
             "loc": 29,
             "trend": [
               29,
-              null,
-              null
+              29,
+              29
             ]
           }
         ],
         "totals": {
-          "units": 9,
-          "files": 9,
-          "loc": 3028
+          "units": 10,
+          "files": 15,
+          "loc": 3698
         },
         "totalTrend": [
-          3028,
-          3001,
-          2942
+          3698,
+          3796,
+          3796
         ]
       }
     ],
@@ -10554,19 +10666,19 @@
       {
         "from": "tests",
         "to": "backend",
-        "count": 110,
+        "count": 112,
         "kind": "import"
       },
       {
         "from": "frontend",
         "to": "backend",
-        "count": 95,
+        "count": 98,
         "kind": "http"
       },
       {
         "from": "tests",
         "to": "engines",
-        "count": 48,
+        "count": 55,
         "kind": "import"
       },
       {
@@ -10582,27 +10694,33 @@
         "kind": "import"
       },
       {
-        "from": "engines",
+        "from": "tests",
         "to": "utils",
         "count": 11,
         "kind": "import"
       },
       {
-        "from": "tests",
+        "from": "engines",
         "to": "utils",
-        "count": 5,
+        "count": 10,
         "kind": "import"
       }
     ],
     "http": {
-      "calls": 95,
-      "paths": 71,
+      "calls": 98,
+      "paths": 72,
       "byApp": [
         {
           "app": "ai_assistant",
           "prefix": "/ai",
-          "calls": 34,
+          "calls": 35,
           "paths": 21
+        },
+        {
+          "app": "knowledge_search",
+          "prefix": "/knowledge-search",
+          "calls": 11,
+          "paths": 7
         },
         {
           "app": "case_manager",
@@ -10627,12 +10745,6 @@
           "prefix": "/devices",
           "calls": 9,
           "paths": 8
-        },
-        {
-          "app": "knowledge_search",
-          "prefix": "/knowledge-search",
-          "calls": 9,
-          "paths": 6
         },
         {
           "app": "ops_console",
@@ -10662,32 +10774,32 @@
     },
     "totals": {
       "modules": 5,
-      "units": 48,
-      "files": 1011,
-      "loc": 93647
+      "units": 49,
+      "files": 1043,
+      "loc": 96507
     },
     "comparison": {
       "at": [
-        "2026-11-18 18:39",
-        "2026-11-15 19:54",
-        "2026-11-15 15:25"
+        "2026-11-23 17:35",
+        "2026-11-23 17:08",
+        "2026-11-23 17:06"
       ],
       "units": {
         "backend": {
           "apps/": [
-            20822,
-            17674,
-            19405
+            21177,
+            21177,
+            21166
           ],
           "config/": [
-            496,
-            482,
-            488
+            497,
+            497,
+            497
           ],
           "shared/": [
             463,
-            414,
-            414
+            463,
+            463
           ],
           "templates/": [
             193,
@@ -10696,30 +10808,30 @@
           ],
           "gateway/": [
             127,
-            85,
-            88
+            127,
+            127
           ],
           "models/": [
             120,
-            118,
-            118
+            120,
+            120
           ]
         },
         "engines": {
           "ae_harness/": [
-            6532,
-            6129,
-            6109
+            6795,
+            6795,
+            6795
           ],
           "backend_bridge/": [
-            2182,
-            1210,
-            1120
+            2200,
+            2200,
+            2200
           ],
           "device/": [
-            1415,
-            1415,
-            1409
+            1602,
+            1602,
+            1602
           ],
           "uart_log/": [
             439,
@@ -10727,9 +10839,9 @@
             439
           ],
           "utils/": [
-            126,
-            126,
-            126
+            147,
+            147,
+            147
           ],
           "vision/": [
             99,
@@ -10739,24 +10851,24 @@
         },
         "frontend": {
           "src/": [
-            31582,
-            29545,
-            34674
+            31845,
+            31845,
+            31845
           ],
           "tests/": [
-            9529,
-            7522,
-            9785
+            9647,
+            9647,
+            9647
           ],
           "eslint.config.js": [
-            122,
-            122,
-            122
+            129,
+            129,
+            129
           ],
           "vite.config.js": [
             83,
-            89,
-            89
+            83,
+            83
           ],
           "vite-proxy.js": [
             31,
@@ -10771,69 +10883,69 @@
         },
         "tests": {
           "engines/": [
-            3668,
-            2769,
-            8065
+            4092,
+            4092,
+            4092
           ],
           "ai_assistant/": [
-            2626,
-            1049,
-            1049
+            2599,
+            2599,
+            2599
           ],
           "arch/": [
-            1829,
-            1835,
-            1842
+            2195,
+            2195,
+            2195
           ],
           "task/": [
-            1537,
-            1076,
-            2892
+            1577,
+            1577,
+            1577
           ],
           "serial_log/": [
             1038,
-            162,
-            162
+            1038,
+            1038
           ],
           "knowledge_search/": [
-            895,
-            null,
-            null
+            1026,
+            1026,
+            1026
           ],
           "device/": [
-            709,
-            709,
-            709
+            706,
+            706,
+            706
           ],
           "e2e/": [
             705,
             705,
             705
           ],
+          "bug_ticket/": [
+            600,
+            600,
+            600
+          ],
           "auth/": [
             590,
-            444,
-            444
-          ],
-          "bug_ticket/": [
-            585,
-            508,
-            509
+            590,
+            590
           ],
           "ops_console/": [
-            563,
-            null,
-            null
+            565,
+            565,
+            565
           ],
           "dashboard/": [
-            514,
-            454,
-            454
+            510,
+            510,
+            510
           ],
           "report/": [
-            308,
-            117,
-            226
+            312,
+            312,
+            312
           ],
           "api_kit/": [
             281,
@@ -10841,9 +10953,9 @@
             281
           ],
           "case/": [
-            245,
-            381,
-            2021
+            254,
+            254,
+            254
           ],
           "usage_ledger/": [
             67,
@@ -10857,8 +10969,8 @@
           ],
           "conftest.py": [
             22,
-            16,
-            16
+            22,
+            22
           ],
           "test_settings.py": [
             19,
@@ -10868,29 +10980,34 @@
           "config/": [
             0,
             0,
-            246
+            0
           ],
           "models/": [
             0,
             0,
-            79
+            0
           ]
         },
         "utils": {
           "gen_arch_stats.py": [
-            1098,
-            1099,
-            1099
+            1070,
+            1185,
+            1185
           ],
           "check_gates.py": [
-            587,
-            587,
-            528
+            659,
+            642,
+            642
+          ],
+          "service_ctl/": [
+            645,
+            645,
+            645
           ],
           "module_docstring.py": [
-            469,
-            469,
-            469
+            450,
+            450,
+            450
           ],
           "live_screen.py": [
             293,
@@ -10909,8 +11026,8 @@
           ],
           "check_openapi_coverage.py": [
             85,
-            86,
-            86
+            85,
+            85
           ],
           "logs.py": [
             85,
@@ -10919,36 +11036,36 @@
           ],
           "netinfo.py": [
             29,
-            null,
-            null
+            29,
+            29
           ]
         }
       },
       "totals": {
         "backend": [
-          22221,
-          18966,
-          20706
+          22577,
+          22577,
+          22566
         ],
         "engines": [
-          10793,
-          9418,
-          9302
+          11282,
+          11282,
+          11282
         ],
         "frontend": [
-          41363,
-          37325,
-          44717
+          41751,
+          41751,
+          41751
         ],
         "tests": [
-          16242,
-          10633,
-          19827
+          17199,
+          17199,
+          17199
         ],
         "utils": [
-          3028,
-          3001,
-          2942
+          3698,
+          3796,
+          3796
         ]
       },
       "scope": 3

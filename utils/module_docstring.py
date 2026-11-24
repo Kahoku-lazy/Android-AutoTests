@@ -1,27 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-文件名：➡️ module_docstring.py 🏁
-路径：➡️ utils/module_docstring.py 🏁
 模块功能：➡️ 模块 docstring 字段解析、校验与按文件夹批量提取 🏁
-Python 调试：➡️ python -m utils.module_docstring 🏁
-时间：➡️ 2026-10-30 🏁
-作者：➡️ kahoku 🏁
-版本：➡️ 1.1.0 🏁
-修改时间: ➡️ 2026-10-30 🏁
-类型: ➡️ 工具模块 🏁
-简介说明：➡️
-1. parse_module_docstring: 从文本解析 ➡…🏁 字段为 dict（键齐全）
-2. validate_module_docstring: 校验必填/类型/路径等，返回 issues 列表
-3. read_module_docstring: 先校验后读取，返回 JSON 形字段 dict
-4. iter_python_modules: 遍历文件夹下 *.py（跳过 __pycache__ / skill-creator）
-5. extract_module_docstrings: 按文件夹批量 extract→parse→validate；strict=False 时收集 issues 不中断
-🏁
-关联模块：➡️ 1. （标准库）ast / pathlib / re / json / argparse: 解析与 CLI 🏁
-测试：➡️
+Python 调试：➡️python -m utils.module_docstring 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
 1. 暂无专门单测；python -m utils.module_docstring 可对样例冒烟
-2. 单文件: python -m utils.module_docstring engines/agents/config/config.py --repo-root .
-3. 批量文件夹: python -m utils.module_docstring engines/agents --repo-root . --out temps/agents_fields.json
-4. 批量严格: python -m utils.module_docstring engines/agents --repo-root . --strict
+2. 单文件: python -m utils.module_docstring engines/ae_harness/tools/document/tools.py --repo-root .
+3. 批量文件夹: python -m utils.module_docstring engines --repo-root . --out temps/engines_fields.json
 🏁
 """
 
@@ -36,36 +21,29 @@ import sys
 from pathlib import Path
 from typing import Any, Iterator
 
-MODULE_FIELDS: list[str] = [
-    "文件名",
-    "路径",
-    "模块功能",
-    "Python 调试",
-    "时间",
-    "作者",
-    "版本",
-    "类型",
-    "简介说明",
-    "关联模块",
-    "测试",
-    "修改时间",  # optional but always emitted
-]
-
+# 必填 4 字段：2026-11-24 起模块头只保留这些（.agents/rules/engines-code-style.md §2）。
 REQUIRED_FIELDS: list[str] = [
-    "文件名",
-    "路径",
     "模块功能",
     "Python 调试",
     "时间",
-    "作者",
-    "版本",
-    "类型",
-    "简介说明",
-    "关联模块",
     "测试",
 ]
 
-OPTIONAL_FIELDS: list[str] = ["修改时间"]
+# 兼容解析：历史文件仍带这些字段，读得到但不校验、也不要求新文件写。
+LEGACY_FIELDS: list[str] = [
+    "文件名",
+    "路径",
+    "作者",
+    "版本",
+    "修改时间",
+    "类型",
+    "简介说明",
+    "关联模块",
+]
+
+MODULE_FIELDS: list[str] = [*REQUIRED_FIELDS, *LEGACY_FIELDS]
+
+OPTIONAL_FIELDS: list[str] = list(LEGACY_FIELDS)
 
 ALLOWED_TYPES: frozenset[str] = frozenset(
     {
@@ -78,6 +56,8 @@ ALLOWED_TYPES: frozenset[str] = frozenset(
 
 ARROW = "\u27a1"  # U+27A1
 FLAG = "\U0001f3c1"  # U+1F3C1
+
+TIME_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 _FIELD_RE_CACHE: dict[str, re.Pattern[str]] = {}
 
@@ -162,6 +142,7 @@ def validate_module_docstring(
     require_allowed_type: bool = True,
     check_path_match: bool = True,
     check_python_debug_format: bool = True,
+    check_time_format: bool = True,
 ) -> list[str]:
     """Validate module docstring fields; return issue strings (empty = OK)."""
     if fields is None:
@@ -211,6 +192,10 @@ def validate_module_docstring(
     py_dbg = (fields.get("Python 调试") or "").strip()
     if check_python_debug_format and py_dbg and not looks_like_python_m(py_dbg):
         issues.append(f"Python 调试格式异常（期望 python -m …）：{py_dbg}")
+
+    when = (fields.get("时间") or "").strip()
+    if check_time_format and when and not TIME_RE.match(when):
+        issues.append(f"时间格式应为 YYYY-MM-DD：{when}")
 
     seen: set[str] = set()
     out: list[str] = []
@@ -270,7 +255,7 @@ def read_module_docstring(
 
 
 def is_compliant(fields: dict[str, str], rel_path: str | Path) -> bool:
-    """True when required fields, type, path/filename, and python -m look OK."""
+    """True when the 4 required fields and their formats look OK."""
     return not validate_module_docstring(fields, rel_path=rel_path)
 
 

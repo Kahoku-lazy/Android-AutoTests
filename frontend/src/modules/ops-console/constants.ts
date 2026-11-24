@@ -164,6 +164,7 @@ export const OPS_MODEL_KIND_OPTIONS: { value: OpsModelKind; label: string }[] = 
   { value: "chat", label: "聊天" },
   { value: "tts", label: "语音合成" },
   { value: "realtime", label: "实时语音" },
+  { value: "embedding", label: "向量" },
 ]
 export const OPS_TTS_VOICES = ["Cherry", "Serena", "Ethan", "Chelsie"]
 export const OPS_OMNI_VOICES = [
@@ -244,7 +245,7 @@ export const OPS_PROVIDER_OPTIONS: OpsProviderOption[] = [
     value: "dashscope",
     label: "dashscope",
     key: "DASHSCOPE_API_KEY",
-    kinds: ["chat", "realtime", "tts"],
+    kinds: ["chat", "realtime", "tts", "embedding"],
   },
   { value: "openai", label: "openai", key: "OPENAI_API_KEY", kinds: ["chat"] },
 ]
@@ -332,6 +333,6 @@ export function identityClass(identity: OpsIdentity): string {
 
 /** 模型类型 chip 的类名：缺失或未知类型按聊天处理（与 `modelKindLabel` 同一口径）。 */
 export function modelKindClass(kind?: OpsModelKind): string {
-  const normalized = kind === "tts" || kind === "realtime" ? kind : "chat"
+  const normalized = kind === "tts" || kind === "realtime" || kind === "embedding" ? kind : "chat"
   return `ops-kind ops-kind--${normalized}`
 }

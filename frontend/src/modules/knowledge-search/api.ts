@@ -9,6 +9,7 @@ import type {
   KnowledgeModuleRow,
   ModulePayload,
   QueryResult,
+  RetrievalSettings,
 } from "./types"
 
 export async function fetchKnowledgeModules(): Promise<{
@@ -59,6 +60,24 @@ export async function indexKnowledgeModule(id: number): Promise<{
   return data
 }
 
+/** 读取全局检索配置（仅超管）。 */
+export async function fetchRetrievalSettings(): Promise<{
+  status: boolean
+  data?: RetrievalSettings
+  message?: string
+}> {
+  const { data } = await djangoClient.get("/knowledge-search/settings/")
+  return data
+}
+
+/** 保存全局检索配置（仅超管）：改切块时响应标明需要重建索引。 */
+export async function saveRetrievalSettings(
+  payload: Omit<RetrievalSettings, "configured" | "index_epoch" | "reindex_required">,
+): Promise<{ status: boolean; data?: RetrievalSettings; message?: string }> {
+  const { data } = await djangoClient.put("/knowledge-search/settings/", payload)
+  return data
+}
+
 /** 勾选模块提问：返回检索原文与三态结果。 */
 export async function queryKnowledge(payload: {
   question: string
@@ -102,12 +121,13 @@ export async function triggerEval(payload: EvalTriggerPayload): Promise<{
   return data
 }
 
-/** 运营模型配置清单（只读引用）：出题模型下拉从这里来。 */
-export async function fetchEvalModelConfigs(): Promise<{
+/** 运营模型配置清单（只读引用）：可按类型过滤，出题取 chat、检索配置取 embedding。 */
+export async function fetchEvalModelConfigs(modelKind = ""): Promise<{
   status: boolean
   data?: { configs?: EvalModelConfig[] }
   message?: string
 }> {
-  const { data } = await djangoClient.get("/ai/model-configs/", { params: { selectable: 1 } })
+  const params: Record<string, string> = modelKind ? { model_kind: modelKind } : { selectable: "1" }
+  const { data } = await djangoClient.get("/ai/model-configs/", { params })
   return data
 }

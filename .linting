@@ -1,0 +1,217 @@
+source_roots = ["."]
+exclude = ["**/*__pycache__", "**/*egg-info", "**/migrations", "**/tests", "**/.venv"]
+exact = true
+forbid_circular_dependencies = false
+ignore_type_checking_imports = true
+
+root_packages = ["engines", "backend"]
+include_external_packages = true
+
+[[modules]]
+path = "utils"
+utility = true
+
+[[modules]]
+path = "backend.apps.accounts"
+depends_on = ["backend.apps.ai_assistant"]
+
+[[modules]]
+path = "backend.apps.ai_assistant"
+depends_on = ["backend.apps.knowledge_search", "backend.apps.usage_ledger", "engines.ae_harness", "engines.backend_bridge"]
+
+[[modules]]
+path = "backend.apps.bug_manager"
+depends_on = ["backend.apps.task_list"]
+
+[[modules]]
+path = "backend.apps.case_manager"
+depends_on = []
+
+[[modules]]
+path = "backend.apps.dashboard"
+depends_on = ["backend.apps.ai_assistant", "backend.apps.case_manager", "backend.apps.device_pool", "backend.apps.task_list", "backend.apps.usage_ledger"]
+
+[[modules]]
+path = "backend.apps.device_pool"
+depends_on = ["engines.device"]
+
+[[modules]]
+path = "backend.apps.knowledge_search"
+depends_on = ["backend.apps.ai_assistant", "backend.apps.usage_ledger", "engines.ae_harness"]
+
+[[modules]]
+path = "backend.apps.ops_console"
+depends_on = ["backend.apps.accounts", "backend.apps.ai_assistant"]
+
+[[modules]]
+path = "backend.apps.report_generator"
+depends_on = ["backend.apps.ai_assistant", "backend.apps.task_list"]
+
+[[modules]]
+path = "backend.apps.serial_log"
+depends_on = ["engines.device", "engines.uart_log"]
+
+[[modules]]
+path = "backend.apps.task_list"
+depends_on = ["backend.apps.ai_assistant", "backend.apps.bug_manager", "backend.apps.case_manager", "backend.apps.device_pool", "backend.apps.usage_ledger", "engines.ae_harness", "engines.backend_bridge", "engines.device"]
+
+[[modules]]
+path = "backend.apps.usage_ledger"
+depends_on = ["engines.backend_bridge"]
+
+[[modules]]
+path = "engines.ae_harness"
+depends_on = []
+
+[[modules]]
+path = "engines.backend_bridge"
+depends_on = ["engines.ae_harness"]
+
+[[modules]]
+path = "engines.device"
+depends_on = []
+
+[[modules]]
+path = "engines.uart_log"
+depends_on = []
+
+[[modules]]
+path = "engines.utils"
+depends_on = []
+
+[[modules]]
+path = "engines.vision"
+depends_on = []
+
+[[forbid]]
+slug = "engines-purity"
+name = "engines must not import django or backend apps"
+source = ["engines"]
+forbidden = ["django", "backend.apps", "apps"]
+unmatched_ignore_imports_alerting = "none"
+
+[[forbid]]
+slug = "engine-base-direction"
+name = "device vision uart_log must not depend on platform agent packages"
+source = ["engines.device", "engines.vision", "engines.uart_log"]
+forbidden = ["engines.backend_bridge", "engines.ae_harness"]
+unmatched_ignore_imports_alerting = "none"
+
+[[forbid]]
+slug = "no-device-implementation-leak"
+name = "backend apps and gateway must not import device implementation"
+source = ["backend.apps", "backend.gateway"]
+forbidden = ["uiautomator2", "engines.device.android"]
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = "none"
+
+[[forbid]]
+slug = "accounts-cross-app"
+name = "accounts may only use the public surface of other apps"
+source = ["backend.apps.accounts"]
+forbidden = ["backend.apps.ai_assistant.**", "backend.apps.bug_manager", "backend.apps.case_manager", "backend.apps.dashboard", "backend.apps.device_pool", "backend.apps.knowledge_search", "backend.apps.ops_console", "backend.apps.report_generator", "backend.apps.serial_log", "backend.apps.task_list", "backend.apps.usage_ledger"]
+ignore_imports = ["backend.apps.accounts.** -> backend.apps.ai_assistant.api"]
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = "error"
+
+[[forbid]]
+slug = "ai-assistant-cross-app"
+name = "ai_assistant may only use the public surface of other apps"
+source = ["backend.apps.ai_assistant"]
+forbidden = ["backend.apps.accounts", "backend.apps.bug_manager", "backend.apps.case_manager", "backend.apps.dashboard", "backend.apps.device_pool", "backend.apps.knowledge_search.**", "backend.apps.ops_console", "backend.apps.report_generator", "backend.apps.serial_log", "backend.apps.task_list", "backend.apps.usage_ledger.**"]
+ignore_imports = ["backend.apps.ai_assistant.** -> backend.apps.knowledge_search.models", "backend.apps.ai_assistant.** -> backend.apps.usage_ledger.api"]
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = "error"
+
+[[forbid]]
+slug = "bug-manager-cross-app"
+name = "bug_manager may only use the public surface of other apps"
+source = ["backend.apps.bug_manager"]
+forbidden = ["backend.apps.accounts", "backend.apps.ai_assistant", "backend.apps.case_manager", "backend.apps.dashboard", "backend.apps.device_pool", "backend.apps.knowledge_search", "backend.apps.ops_console", "backend.apps.report_generator", "backend.apps.serial_log", "backend.apps.task_list.**", "backend.apps.usage_ledger"]
+ignore_imports = ["backend.apps.bug_manager.** -> backend.apps.task_list.models", "backend.apps.bug_manager.** -> backend.apps.task_list.case_identity"]
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = "error"
+
+[[forbid]]
+slug = "case-manager-cross-app"
+name = "case_manager may not import other apps"
+source = ["backend.apps.case_manager"]
+forbidden = ["backend.apps.accounts", "backend.apps.ai_assistant", "backend.apps.bug_manager", "backend.apps.dashboard", "backend.apps.device_pool", "backend.apps.knowledge_search", "backend.apps.ops_console", "backend.apps.report_generator", "backend.apps.serial_log", "backend.apps.task_list", "backend.apps.usage_ledger"]
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = "none"
+
+[[forbid]]
+slug = "dashboard-cross-app"
+name = "dashboard may only use the public surface of other apps"
+source = ["backend.apps.dashboard"]
+forbidden = ["backend.apps.accounts", "backend.apps.ai_assistant.**", "backend.apps.bug_manager", "backend.apps.case_manager.**", "backend.apps.device_pool.**", "backend.apps.knowledge_search", "backend.apps.ops_console", "backend.apps.report_generator", "backend.apps.serial_log", "backend.apps.task_list.**", "backend.apps.usage_ledger.**"]
+ignore_imports = ["backend.apps.dashboard.** -> backend.apps.ai_assistant.models", "backend.apps.dashboard.** -> backend.apps.case_manager.api", "backend.apps.dashboard.** -> backend.apps.case_manager.models", "backend.apps.dashboard.** -> backend.apps.device_pool.models", "backend.apps.dashboard.** -> backend.apps.task_list.models", "backend.apps.dashboard.** -> backend.apps.task_list.case_identity", "backend.apps.dashboard.** -> backend.apps.usage_ledger.api", "backend.apps.dashboard.** -> backend.apps.usage_ledger.models", "backend.apps.dashboard.** -> backend.apps.usage_ledger.rates"]
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = "error"
+
+[[forbid]]
+slug = "device-pool-cross-app"
+name = "device_pool may not import other apps"
+source = ["backend.apps.device_pool"]
+forbidden = ["backend.apps.accounts", "backend.apps.ai_assistant", "backend.apps.bug_manager", "backend.apps.case_manager", "backend.apps.dashboard", "backend.apps.knowledge_search", "backend.apps.ops_console", "backend.apps.report_generator", "backend.apps.serial_log", "backend.apps.task_list", "backend.apps.usage_ledger"]
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = "none"
+
+[[forbid]]
+slug = "knowledge-search-cross-app"
+name = "knowledge_search may only use the public surface of other apps"
+source = ["backend.apps.knowledge_search"]
+forbidden = ["backend.apps.accounts", "backend.apps.ai_assistant.**", "backend.apps.bug_manager", "backend.apps.case_manager", "backend.apps.dashboard", "backend.apps.device_pool", "backend.apps.ops_console", "backend.apps.report_generator", "backend.apps.serial_log", "backend.apps.task_list", "backend.apps.usage_ledger.**"]
+ignore_imports = ["backend.apps.knowledge_search.** -> backend.apps.ai_assistant.models", "backend.apps.knowledge_search.** -> backend.apps.usage_ledger.api"]
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = "error"
+
+[[forbid]]
+slug = "ops-console-cross-app"
+name = "ops_console may only use the public surface of other apps"
+source = ["backend.apps.ops_console"]
+forbidden = ["backend.apps.accounts.**", "backend.apps.ai_assistant.**", "backend.apps.bug_manager", "backend.apps.case_manager", "backend.apps.dashboard", "backend.apps.device_pool", "backend.apps.knowledge_search", "backend.apps.report_generator", "backend.apps.serial_log", "backend.apps.task_list", "backend.apps.usage_ledger"]
+ignore_imports = ["backend.apps.ops_console.** -> backend.apps.accounts.api", "backend.apps.ops_console.** -> backend.apps.ai_assistant.api"]
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = "error"
+
+[[forbid]]
+slug = "report-generator-cross-app"
+name = "report_generator may only use the public surface of other apps"
+source = ["backend.apps.report_generator"]
+forbidden = ["backend.apps.accounts", "backend.apps.ai_assistant.**", "backend.apps.bug_manager", "backend.apps.case_manager", "backend.apps.dashboard", "backend.apps.device_pool", "backend.apps.knowledge_search", "backend.apps.ops_console", "backend.apps.serial_log", "backend.apps.task_list.**", "backend.apps.usage_ledger"]
+ignore_imports = ["backend.apps.report_generator.** -> backend.apps.ai_assistant.models", "backend.apps.report_generator.** -> backend.apps.task_list.models", "backend.apps.report_generator.** -> backend.apps.task_list.case_identity"]
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = "error"
+
+[[forbid]]
+slug = "serial-log-cross-app"
+name = "serial_log may not import other apps"
+source = ["backend.apps.serial_log"]
+forbidden = ["backend.apps.accounts", "backend.apps.ai_assistant", "backend.apps.bug_manager", "backend.apps.case_manager", "backend.apps.dashboard", "backend.apps.device_pool", "backend.apps.knowledge_search", "backend.apps.ops_console", "backend.apps.report_generator", "backend.apps.task_list", "backend.apps.usage_ledger"]
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = "none"
+
+[[forbid]]
+slug = "task-list-cross-app"
+name = "task_list may only use the public surface of other apps"
+source = ["backend.apps.task_list"]
+forbidden = ["backend.apps.accounts", "backend.apps.ai_assistant.**", "backend.apps.bug_manager.**", "backend.apps.case_manager.**", "backend.apps.dashboard", "backend.apps.device_pool.**", "backend.apps.knowledge_search", "backend.apps.ops_console", "backend.apps.report_generator", "backend.apps.serial_log", "backend.apps.usage_ledger.**"]
+ignore_imports = ["backend.apps.task_list.** -> backend.apps.ai_assistant.api", "backend.apps.task_list.** -> backend.apps.ai_assistant.models", "backend.apps.task_list.** -> backend.apps.bug_manager.api", "backend.apps.task_list.** -> backend.apps.case_manager.api", "backend.apps.task_list.** -> backend.apps.device_pool.api", "backend.apps.task_list.** -> backend.apps.usage_ledger.api", "backend.apps.task_list.** -> backend.apps.usage_ledger.pricing"]
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = "error"
+
+[[forbid]]
+slug = "usage-ledger-cross-app"
+name = "usage_ledger may not import other apps"
+source = ["backend.apps.usage_ledger"]
+forbidden = ["backend.apps.accounts", "backend.apps.ai_assistant", "backend.apps.bug_manager", "backend.apps.case_manager", "backend.apps.dashboard", "backend.apps.device_pool", "backend.apps.knowledge_search", "backend.apps.ops_console", "backend.apps.report_generator", "backend.apps.serial_log", "backend.apps.task_list"]
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = "none"
+
+[[forbid]]
+slug = "ae-harness-isolation"
+name = "ae_harness must not import other engine packages or root utils"
+source = ["engines.ae_harness"]
+forbidden = ["engines.backend_bridge", "engines.device", "engines.uart_log", "engines.utils", "engines.vision", "utils"]
+unmatched_ignore_imports_alerting = "none"

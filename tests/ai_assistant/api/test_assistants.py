@@ -119,6 +119,42 @@ def test_unknown_assistant_is_404():
     assert response.status_code == 404
 
 
+def test_delete_rejects_assistant_bound_by_workflow_and_names_it():
+    """被工作流占用时拒绝删除，提示点名到那条工作流，名片保持原样。"""
+    from backend.apps.ai_assistant.models import AIAssistant, AISopWorkflow
+
+    role = _role()
+    author = _author("author-delete-bound")
+    created = call(author, "post", {"display_name": "小助", "role_id": role.role_id, "tools": []})
+    assistant_id = created.data["assistant_id"]
+    AISopWorkflow.objects.create(
+        name="登录回归",
+        executor_assistant_id=assistant_id,
+        verifier_assistant_id=assistant_id,
+    )
+
+    response = call(author, "delete", assistant_id=assistant_id)
+
+    assert response.status_code == 400
+    assert "登录回归" in str(response.data)
+    assert AIAssistant.objects.filter(assistant_id=assistant_id).exists()
+
+
+def test_delete_removes_unbound_assistant():
+    """没有工作流引用时删除成功，名片不再存在。"""
+    from backend.apps.ai_assistant.models import AIAssistant
+
+    role = _role()
+    author = _author("author-delete-free")
+    created = call(author, "post", {"display_name": "小助", "role_id": role.role_id, "tools": []})
+    assistant_id = created.data["assistant_id"]
+
+    response = call(author, "delete", assistant_id=assistant_id)
+
+    assert response.status_code == 200
+    assert not AIAssistant.objects.filter(assistant_id=assistant_id).exists()
+
+
 def test_avatar_endpoint_returns_body():
     role = _role()
     created = call(

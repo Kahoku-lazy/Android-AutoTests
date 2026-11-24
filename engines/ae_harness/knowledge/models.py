@@ -89,6 +89,7 @@ def create_embedding_model(
 
 
 if __name__ == "__main__":
-    from .config import load_config
+    from .config import EmbeddingModelSpec
 
-    print(create_embedding_model(load_config().embedding).api_key_env)  # noqa: T201
+    spec = EmbeddingModelSpec(provider="dashscope", model_name="text-embedding-v4", dimensions=1024)
+    print(create_embedding_model(spec).api_key_env)  # noqa: T201

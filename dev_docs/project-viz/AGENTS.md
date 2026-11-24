@@ -17,7 +17,7 @@
 
 | 路径 | 职责 | 谁改 |
 | --- | --- | --- |
-| [`index.html`](index.html) · [`overview.js`](overview.js) | **入口 / 总览（首页）**：仓库一级目录的三节看板（关系图 / 依赖 + 代码量饼图 / 各目录单元代码量），数据来自 `projectModules`。**唯一在根目录的页面**，资源引用是同级 | 改总览口径时 |
+| [`index.html`](index.html) · [`overview.js`](overview.js) | **入口 / 总览（首页）**：三节看板（**1.1 平台架构（运行时）/ 1.2 实际代码依赖（目录）** / 依赖 + 代码量饼图 / 各目录单元代码量）；1.1 读 `__ARCH__`，其余读 `projectModules`。**唯一在根目录的页面**，资源引用是同级 | 改总览口径时 |
 | [`html/`](html/) | **其余 26 个页面（4 分类页 + 22 模块页）**：资源引用一律 `../`（`../styles.css` / `../data/board.js` / `../vendor/` / `../charts/` / `../<page>.js`），指向入口写 `../index.html`，页面之间互链是同级文件名 | 新增 / 删除页面时 |
 | [`html/agents.html`](html/agents.html) | **引擎模块页**（三节）：模块关系图 / 依赖关系 + 子单元代码量 / 各模块子单元条形图 | 改 engines 口径时 |
 | [`styles.css`](styles.css) | 两页共用：令牌子集 + 骨架样式 + 组件配方（图表卡 / 表纸 / 空态） | 只在需要新版式零件时改，且先回登记 doodle-craft |
@@ -27,9 +27,11 @@
 | [`html/backend.html`](html/backend.html) · [`backend.js`](backend.js) | **后端页**（三节）：模块关系图 / 依赖 + 模块代码量 / 各模块单元代码量；数据来自 `backendModules` | 改后端页时 |
 | [`html/ae-harness.html`](html/ae-harness.html) · [`ae-harness.js`](ae-harness.js) | **ae_harness 页**（三节）：架构关系图 / 左依赖图+右代码量卡片 / 每模块逐文件逐文件三次代码量 | 改 ae_harness 视图时 |
 | `data/board.json` | 看板 + 智能体快照（机器可读） | **只由生成器写**，不手改 |
+| `data/architecture.json` · `architecture.js` | 平台架构快照（`window.__ARCH__`，由 `ARCH-平台架构图.spec.json` 转出） | **只由生成器写**，不手改 |
 | `data/board.js` | 同一份快照的 `window.__BOARD__ = …` 形式（页面用） | **只由生成器写**，不手改 |
 | `data/history.json` · `data/history.js` | 智能体模块量的历史快照（生成器追加，数值没变不追加，保留 60 次） | **只由生成器写**，不手改 |
-| `tools/gen_board_data.py` | 生成器：扫仓库 → 写上面两个数据文件 | 改口径时改这里 |
+| `tools/gen_board_data.py` | 生成器：扫仓库 → 写 `board.*` 与 `history.*` | 改口径时改这里 |
+| `tools/gen_arch_data.py` | 生成器：读 `ARCH-平台架构图.spec.json` → 写 `architecture.*`（只校验 + 转格式，不改写语义） | spec 变了就重跑 |
 | `tools/count_frontend.mjs` | 前端计数 + 模块间 `edges` + **单元间 `unitEdges`**（本地 TypeScript 语法树，无网络） | 只在前端计数口径变化时改 |
 | `charts/` | **统一图表底层**：[`chart-framework.js`](charts/chart-framework.js)（生命周期 + 令牌 + `<viz-chart>`）、[`board-options.js`](charts/board-options.js)（纯函数 option）；契约见 [`charts/AGENTS.md`](charts/AGENTS.md) | 加图表时按契约改 |
 | `vendor/vue.global.prod.js` | Vue 3.5.44 全局构建（本地化，离线可开） | 只有升级 Vue 时替换 |
@@ -42,7 +44,7 @@
 
 | 页面 | 模块 = | 单元 = | 依赖 = |
 | --- | --- | --- | --- |
-| 总览 | 仓库一级目录（5 个工程目录） | 每个目录的第一层 | 目录间 Python import |
+| 总览 | 仓库一级目录（5 个工程目录） | 每个目录的第一层 | 目录间 Python import + 前端→后端 HTTP |
 | 前端 | `frontend/src/modules/` 下 10 个业务目录 | 目录的第一层（.vue/.ts） | TS AST import |
 | 后端 | `backend/apps/` 下 12 个 Django app | app 的第一层（.py） | app 间 Python import |
 | 智能体 | `engines/` 下 6 个顶层目录 | 目录的第一层（.py） | 目录间 Python import |
@@ -55,7 +57,7 @@
 - **代码行** = 非空物理行（前端 `.vue` 含 template/style）。
 - **文件** = 代码文件数；排除 `__init__.py`、`__pycache__`、`migrations/`、`vendor/`、`logs/`。
 - **历史对比** = 每次生成追加一条快照（数值没变不追加），页面取最近三次；缺的位显示「待记录」，不补零。
-- **重新生成**：`python dev_docs/project-viz/tools/gen_board_data.py`；提交前用 `--check` 比对。
+- **重新生成**：`.venv\Scripts\python.exe dev_docs/project-viz/tools/gen_board_data.py`；提交前用 `--check` 比对。
 
 ## 红线（违反即返工）
 
@@ -84,7 +86,10 @@
 - **纵向滚动在内层**：滚动条落在 `.main__body`（`flex: 1 1 0; min-height: 0; overflow-y: auto`）。截图脚本滚 `window` 是滚不动的，要 `document.querySelector('.main__body').scrollTop = y`。
 - **Vue 模板写在 HTML 里**：用的是带编译器的全局构建，所以 `vendor/` 里必须是 `vue.global.prod.js`；换成 `vue.runtime.global.prod.js` 会白屏。
 - **不能 `fetch` 本地数据**：页面是 `file://` 打开的，`fetch('data/board.json')` 会被 CORS 拦掉。所以生成器额外写一份 `data/board.js`（`window.__BOARD__ = …`），用 `<script>` 引入。
-- **快照会过期**：代码一改，看板数字就旧了。提交前跑 `python dev_docs/project-viz/tools/gen_board_data.py --check`（有差异退出码 1）。
+- **快照会过期**：代码一改，看板数字就旧了。提交前跑 `.venv\Scripts\python.exe dev_docs/project-viz/tools/gen_board_data.py --check`（有差异退出码 1）。
+- **重新生成必须用 `.venv` 的 Python**：系统 `python`（3.15）缺 `tzdata`，`ZoneInfo("Asia/Shanghai")` 直接抛 `ZoneInfoNotFoundError`。正确命令：`.venv\Scripts\python.exe dev_docs/project-viz/tools/gen_board_data.py`。
+- **`data/*.json` 会被上一次生成它的解释器“锁住”**：换一个 Python 写会 `PermissionError: [Errno 13]`（ACL 里那条 `S-1-4-…` 是 AppContainer 令牌，别的令牌只落到 `BUILTIN\Users` 的只读）。实测可用的解法：先用**要用的那个解释器**把旧文件读出来重建成新文件（或直接删掉重命名），再跑生成器——新文件由它自己创建，之后就能写。
+- **生成前确认没有人在改仓库**：2026-11-23 实测有并行会话在改 `backend/apps/ops_console/*.py`，两次生成之间总行数就从 96,594 变成 96,605，`--check` 会因此反复报“已过期”。要拿稳定快照，等那批改动落盘后再跑一次，`--check` 立刻为 0。
 - **口径要三处同步**：`tools/gen_board_data.py` 的模块 docstring、页面第 2 节、README 的口径表——改一处就要改全，否则数字和解释打架。
 - **数字要能解释**：看板上的每个数都能追到生成器里的某段口径；解释不了的数字宁可不上表。
 - **侧栏是"分组 + 链接"，且每页一份**：`视图`（总览）+ `前端` / `后端` / `引擎` / `ae_harness` 四组各一项。跨页链接按两套目录生成（入口页带 `html/` 前缀，`html/` 内页面指向入口用 `../index.html`，其余同级）；看板页内用 `#锚点`。因为页头吸顶，`.doc-section` 必须带 `scroll-margin-top: calc(var(--app-topbar-h) + var(--app-space-md))`，否则跳过去标题被页头盖住（踩过）。
@@ -95,14 +100,14 @@
 - **frontend 页（`frontend.html`）的「模块」= `frontend/src/modules/` 下 10 个业务目录**：共享层（`shared/`+`views/`+`router.ts`）不是业务模块，统计里不算，但**架构图上要画一个灰色虚框节点**——10 个模块都依赖它，不画就会变成 10 个孤立点。指向共享层的边在图上用虚线，表里也列出（标记 `shared`）。
 - **模块页的三节必须与主页面同构**：① 单元引用关系图（自绘 SVG，椭圆布局，点节点高亮）② 单元依赖（图/表 tab）+ 代码量饼图 ③ 单元三次对比。**不要**做成"饼图+明细表+柱"那套——结构不同用户会怀疑是不是同一个 skill 做的（踩过，返工一次）。
 - **模块页同时服务前端与后端**：同一份模板 + `module.js`，靠 `window.__MODULE_SCOPE__` 切数据键（`frontendModules` / `backendModules`）；路径前缀也随之变（`frontend/src/modules/` / `backend/apps/`）。新增 scope 要同时改 `module.js` 的 `SECTION`/`ROOT_LABEL` 与 `tools/gen_module_pages.py` 的 `GROUPS`。
-- **后端单元边支持两种 import 写法**：相对导入（`from .models import`）与绝对导入（`from backend.apps.<app>.<rest> import`），解析在生成器 `_unit_import_edges()`；**只认本 app 前缀**，`backend.apps.ai_assistant.*` 这种跨 app 引用不算单元边。12 个 app 合计 126 条（task_list 33 / ai_assistant 29 / case_manager 19 / device_pool 13）。
+- **后端单元边支持两种 import 写法**：相对导入（`from .models import`）与绝对导入（`from backend.apps.<app>.<rest> import`），解析在生成器 `_unit_import_edges()`；**只认本 app 前缀**，`backend.apps.ai_assistant.*` 这种跨 app 引用不算单元边。12 个 app 合计 90 条（task_list 19 / case_manager 17 / device_pool 13 / ai_assistant 9；数字随快照变，以 `board.json` 为准）。
 - **节点数多时节点宽与字号要缩**：单元 > 16 个时节点宽 92px、字号 9px（`task_list` 21 个单元），否则 150px 宽会在椭圆上叠起来。**字号必须用 inline style**——SVG 的 `font-size` 呈现属性会被 CSS 的 `.dep-node__title { font-size }` 覆盖（踩过，改了属性没生效）。
-- **单元间引用来自 `count_frontend.mjs` 的 `unitEdges`**：TS AST 解析 import，把目标路径映射到"单元"（模块内相对路径第一段）；**只算模块内部**，跨模块与 `shared` 不计入。10 个模块合计 261 条边（ai-assistant 50 / ops-console 37 / serial-log 37 / knowledge-search 37）。
+- **单元间引用来自 `count_frontend.mjs` 的 `unitEdges`**：TS AST 解析 import，把目标路径映射到"单元"（模块内相对路径第一段）；**只算模块内部**，跨模块与 `shared` 不计入。10 个模块合计 144 条边（ops-console 28 / ai-assistant 23 / knowledge-search 15 / bug-manager 15；数字随快照变）。
 - **单元关系图用椭圆布局 + 曲线**：单元数 5~11、边 3~22，手工坐标不可维护，所以按椭圆均匀分布；边用二次贝塞尔（控制点沿法线交替偏移），否则 22 条线全穿圆心堆成一团；**标签只在选中节点时显示**且按 `index % 4` 错开位置，否则同一节点的多条边数字会叠在一起。
 - **前端每个业务模块是一个独立页面**：`html/frontend-<key>.html`（10 个），共用 `module.js`，靠页面里一行 `window.__MODULE_KEY__ = "<key>"` 区分；**不要再改回 hash 切面**（试过，用户明确要独立页）。模板与生成脚本在 `tools/module-page.template.html` + `tools/gen_module_pages.py`，模块增减时跑一次脚本重新生成（旧页面要手动删）。
 - **5 个主页面 + 模板的侧栏都列 10 个前端模块项**：`.sidebar__nav-item--sub`（缩进 + 小字号），指向 `frontend-<key>.html`；模块清单由 [`tools/sync_sidebar.py`](tools/sync_sidebar.py)（读 `data/board.json`）统一刷 6 处侧栏，别手抄。
 - **前端模块名就是目录名，没有中文名**：生成器里 `label` 留空，否则卡片会显示「workflow workflow」。
-- **依赖图边宽要限幅**：`width: min(4, 0.8 + count * 0.12)`——共享层那条 40 次的边会把图糊成一把扇子。
+- **依赖图边宽要限幅**：`width: min(4, 0.8 + count * 0.12)`——共享层那条 42 次的边会把图糊成一把扇子。
 - **backend 页（`backend.html`）的「模块」= `backend/apps/` 下 12 个 Django app**：写在生成器 `BACKEND_MODULES`；单元口径与 engines 页一致（app 下的直接子目录整体算一个、直接 .py 各算一个，排除 `__init__.py`/`migrations/`）；`config`/`gateway`/`shared` 属基础设施，不计入跨模块关系。
 - **第 2 节必须有「模块依赖图 / import 关系」两个 tab**：agents 页与 backend 页都曾被删成只有表（同一个错误犯两次）。第 1 节的图看结构、第 2 节的图看次数，不是重复，不许省。
 - **第 2 节左栏 import 用表格、右栏模块代码量用饼图**：`import 次数表` tab 是 `.sheet-table` 三列（被调用方 / 调用方 / import 次数），**不要做成卡片**——两列数据逐行比较时表格的列对齐更好扫，卡片会把 8 条以后压成横带（踩过：做成卡片后用户反馈「效果不行」）。右栏是 `BoardOptions.modulePie()` 饼图，空心占外半径 **30%**（`radius: ["20.4%", "68%"]`；legend 带行数、tooltip 带百分比）。三页（agents / backend / frontend）保持一致。
@@ -151,7 +156,21 @@
 - **接口提取依赖 api-client 别名**：`client` / `djangoClient` 等别名不统一，采集器先解析 `import X from "@/shared/api-client"` 再按别名抓 `X.get(...)`；新增别名无需改代码，但直接 `fetch()` 的调用抓不到。
 - **`v-else` 只能有一个**：`agents.html` 曾把三个 `<section>` 都写成 `v-else`，Vue 报 `compiler-30` 整页白屏。多个兄弟块要共享条件时，用一个容器包起来（`<div v-else>…</div>`），或改用 `v-if`。
 - **总览 = 仓库一级目录的三节看板**（不再是"只放数字不画图"的结论页）：模块 = `backend` / `engines` / `frontend` / `tests` / `utils`，单元 = 每个目录的第一层（子目录整体算一个、代码文件各算一个），口径在 `collect_project_modules()`。
-- **前端 → 后端是 HTTP 调用，不是 import**：总览里 `frontend → backend` 那条边来自 `count_frontend.mjs` 采集的 api-client 调用（95 次 / 71 条路径），`kind: "http"`，图上用**橙色虚线**、「处」作量词，与紫色 import 边区分；表里多一列「类型」。图下方有图注说明两种虚线的含义——**图例必须写清**，否则用户会以为那是 import。
+- **总览第 1 节是两套本体、两张图**（图形语言来自 `.agents/skills/arch-diagram-lite`）：
+  - **1.1 平台架构 = 运行时组件**：11 个角色（浏览器 / SPA / ASGI / DRF / 数据库 / task_runner / backend_bridge / ae_harness / 硬件支撑引擎 / LLM / 设备），10 条带协议或动作的连线，`engines/` 虚线边界，图下 3 张结论卡（三层分工 / 执行闭环 / 当前边界）。
+  - **1.2 实际代码依赖 = 目录**：5 个一级目录 + 三层（入口 / 服务 / 底座，**人工划分**）+ 7 条边 + import/HTTP 次数，点节点高亮。
+  - **两者不同源、不能互相验证**：1.1 是**人工语义**（来自 `dev_docs/ARCH_PRD/ARCH-平台架构图.spec.json`），1.2 是 AST 静态解析。**不要**把 1.1 的节点换成目录，也不要拿 1.2 去"验证" 1.1。
+  - 旧实现（1.1 = 5 个目录 + 层间箭头 + 人工职责 `ROLES`）已废弃：它和 1.2 是同一本体，读者会问"这不就是同一张图吗"。
+- **1.1 的数据链是 spec → 快照 → 页面，页面不许加工语义**：`tools/gen_arch_data.py` 读 spec，只做「校验 id/连线/边界 + 转格式 + 附来源」，写 `data/architecture.json` 与 `data/architecture.js`（`window.__ARCH__`）。改架构**先改 spec 再重跑生成器**，不要在 `overview.js` 里加节点、改连线、换标签；`overview.js` 只负责 `ARCH_LAYOUT`（坐标）与直连布线（同行横线 / 跨行竖线）。
+- **1.1 的画布是 1560×600、节点 224×88、列 28/348/668/988/1308**：间隙 96 是量出来的（最宽的行内标签 `axios · /api`、`create_agent` 各 84px，留 12px 呼吸）；竖线靠同列对齐（api↔runner、harness↔llm、support↔hardware）。改节点宽/列距要先量标签，否则标签会压节点。
+- **两张图的 marker id 必须各自唯一**：1.1 用 `arch-arrow`，1.2 用 `eng-arrow` / `eng-arrow-active`；同 id 会在同一文档里互相抢，箭头颜色会莫名变掉。
+- **1.2 的坐标与走线写死在 `overview.js` 的 `LAYOUT` / `ROUTES`**：节点 240×88、行 y=50/210/370、列 x=200/760、底座居中 480；四种走法 `routeVertical` / `routeHdrop` / `routeZlr` / `routeSideWrap`；偏移量 `dx/sx/tx` 一律相对节点中心算，**不要写绝对坐标**（第一次就把 4 条边的符号写反，线全落到节点外）。改坐标必须重新看一遍走廊与标签。
+- **改这个目录的 JS / HTML 禁止用 PowerShell 的 `Get-Content -Raw` + `Set-Content`**：它按 GBK 解码 UTF-8 再以 UTF-8 写回，中文注释与字符串会变成乱码（`鍑哄簳` 这种），**且不可逆**（`→` 之类会丢成 `?`）。用 `edit` / `write` 工具，或 Python 显式 `encoding="utf-8"`（先 `.lstrip("\ufeff")` 防 BOM）。本次已踩过一次，`overview.js` 是整文件重写恢复的。
+- **走廊标签会贴住边界框时翻到线下**：`routeHdrop` 的 `labelBelow` 就是为此加的——`engines→utils` 的标签原来在走廊上方（y≈332），数据一变就贴住边界框底边（y=320），现在翻到 y≈354。
+- **区域边界框的标签不许被跨层竖线穿过**：`tests→engines` 的竖线在 x=940，而框内标签只能放到 x≈918 才安全，所以框上只写 `engines/ · 零 django 依赖`，`apps.*` 那半句放在下方图例里说全。要写长标签，先挪线或把标签右对齐到框外。
+- **`.dep-node__*` 是 27 个页面共用的类**：`.dep-node__title` 已从 15px（非刻度）收到 `--app-size-md`（16px），`.dep-node__sub` / `__meta` 统一到 `--app-size-xs`（12px，靠颜色分层，不再用 11px）。改这几个类要逐页截图——`knowledge_search` 这种 150px 长的名字仍要落在 200px 节点内（实测仍有 25px 余量）。
+- **不上 archify 的 viewer**：那张 `ARCH-平台架构图.html` 815 KB（viewer 452 KB + 两套主题全量 CSS + 内嵌字体），多主题/导出/雷达/引导故事本项目都不用；只借它的 6 条图形语法，落点见 `.agents/skills/arch-diagram-lite`。
+- **前端 → 后端是 HTTP 调用，不是 import**：总览里 `frontend → backend` 那条边来自 `count_frontend.mjs` 采集的 api-client 调用（98 处 / 72 条路径），`kind: "http"`，图上用**橙色虚线**、「处」作量词，与紫色 import 边区分；表里多一列「类型」。图下方有图注说明两种虚线的含义——**图例必须写清**，否则用户会以为那是 import。
 - **「怎么连接的」看接口明细表**：第 2 节主表下方挂一张「前端 → 后端：接口调用明细」（`http.byApp`），按 URL 前缀归到后端 app（`/cases` → case_manager 等，人工对照 `backend/apps/*/urls.py`，映射表在生成器 `HTTP_API_APPS`）。只连一条线不解决问题——用户要的是"前端调了哪些后端接口"。
 - **总览排除的目录要写清**：缓存（`.ruff_cache` / `.mypy_cache` / `__pycache__`）、临时（`temps` / `.pytest-tmp` / `.testtmp` / 时间戳目录）、第三方资产（`.agents/skills`，14 万行）、文档（`dev_docs`，含本看板自身）、运行数据（`data`）都不计入；新增排除项要同时改 `PROJECT_SKIP_DIRS` 与页面说明。
 - **历史趋势要靠时间攒**：`history.json` 只在数值变化时追加一条，`--check` 不写盘；不足 2 条时页面显示空态而不是画一个点——别为了"好看"塞假历史。
@@ -165,7 +184,8 @@ node --check dev_docs/project-viz/backend.js
 node --check dev_docs/project-viz/agents.js
 node --check dev_docs/project-viz/ae-harness.js
 node --check dev_docs/project-viz/module.js
-python dev_docs/project-viz/tools/gen_board_data.py --check   # 快照与代码一致
+.venv\Scripts\python.exe dev_docs/project-viz/tools/gen_board_data.py --check   # 代码快照与代码一致
+.venv\Scripts\python.exe dev_docs/project-viz/tools/gen_arch_data.py --check    # 架构快照与 spec 一致
 python -m http.server 8811 --directory dev_docs/project-viz   # 入口 http://127.0.0.1:8811/index.html（或直接双击根目录 index.html）
 ```
 

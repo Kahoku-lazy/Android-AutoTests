@@ -8,7 +8,7 @@
 [![Python](https://img.shields.io/badge/Python-3.13-blue.svg)](https://www.python.org/)
 [![Django](https://img.shields.io/badge/Django-6.0.6-green.svg)](https://www.djangoproject.com/)
 [![Vue](https://img.shields.io/badge/Vue-3.5-brightgreen.svg)](https://vuejs.org/)
-[![AgentScope](https://img.shields.io/badge/AgentScope-2.0.9%2B-orange.svg)](https://docs.agentscope.io/)
+[![AgentScope](https://img.shields.io/badge/AgentScope-2.0.12%2B-orange.svg)](https://docs.agentscope.io/)
 ![Theme](https://img.shields.io/badge/theme-Doodle%20Craft-f5a623.svg)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -71,7 +71,7 @@ Vue SPA :5173 ──HTTP(/api,/media)──▶ Vite 代理 ──▶ Daphne :876
 |----|------|------|
 | **前端** | Vue 3.5（声明 `^3.4`）+ Vite 5 + Element Plus + Pinia + TypeScript 5.4 | 10 个业务模块，Doodle Craft 手绘主题。HTTP 经各模块 `api.ts` 进入 `frontend/src/shared/api-client.ts` |
 | **后端** | Django 6.0.6 + DRF + Daphne | 12 个 App。自有业务表 33 张（另复用 Django `auth_user`）。契约基线 `openspec/openapi.yaml`，当前 81 条 path |
-| **AI 引擎** | AgentScope ≥ 2.0.9，跑在 Daphne 进程内 | 原语在 `ae_harness`；平台装配在 `backend_bridge`。角色只经 `create_agent` 创建 |
+| **AI 引擎** | AgentScope ≥ 2.0.12，跑在 Daphne 进程内 | 原语在 `ae_harness`；平台装配在 `backend_bridge`。角色只经 `create_agent` 创建 |
 | **设备控制** | ADB | 对外入口 `engines.device.action`。角色侧工具是 `ae_harness` 的 `build_adb_tools()`（16 个）与只读子集（5 个）。验收角色不得挂写操作 |
 | **数据** | MySQL（默认）/ SQLite | 自有表前缀 `acc_ ai_ bug_ cm_ dp_ ks_ sl_ task_`。`report_generator` 已无业务表。JWT 吊销记录落库（`acc_token_revocations`）。平台无外部 KV：Redis 已退役，channel layer 用内存实现 |
 | **实时性** | HTTP 轮询 | 没有 WebSocket 生产点。任务进度不得再接语音通道 |
@@ -253,7 +253,7 @@ python run.py check      # 本地门禁，阻塞项失败则退出码 1
 python -m pytest -c tests/pytest.ini   # 全量用例；check 不会跑这个
 ```
 
-- 检查清单以 `utils/check_gates.py` 的 `build_gates()` 为真相源。当前 31 项：29 个阻塞项；`cred-default-pwd`、`inline-style`、`engines-agents-style` 只告警，不影响退出码。
+- 检查清单以 `utils/check_gates.py` 的 `build_gates()` 为真相源。当前 32 项：29 个阻塞项；`cred-default-pwd`、`inline-style`、`engines-agents-style` 只告警，不影响退出码。模块依赖（每个包的允许清单 + 禁止合同，含间接链与第三方包）由 `linting` 一条门禁承担，配置是仓库根的 `.linting`，规则与红线见 `.agents/lint/linting.md`。
 - 覆盖：Django system check、ruff（平台范围、`tests/` 与 `engines/`，版本钉在 `requirements.txt`）、迁移与模型一致、pytest **收集**（不执行用例）、OpenAPI 契约与业务路径覆盖、前端 vitest / vite build / eslint / vue-tsc / prettier / 样式令牌、硬编码凭据（含 `engines/` 与 `.ts`）、模块边界（含底座包不得反向依赖）、Vue 文件体积、伪造数据、内联样式、静默吞异常、`engines/agents` 退役守门，以及 `Agent(...)` 只能出现在 `creator.py`。
 - 改接口必须同步 `openspec/openapi.yaml`，否则门禁失败。
 - CI 为 `.github/workflows/ci-phase1.yml` 的 2 个 job：`python` · `frontend`。判定调用 `utils/check_gates.py --only`，不在 workflow 里另写一套命令。只在推送 `Kahoku` 和指向 `Kahoku` 的 pull request 时跑。
@@ -281,8 +281,8 @@ python -m pytest -c tests/pytest.ini   # 全量用例；check 不会跑这个
 | 文档 | 位置 | 说明 |
 |------|------|------|
 | 平台总思路 | 根目录 `AGENTS.md` | 三层分工、OpenSpec、提交与 CI |
-| 引擎红线 | `engines/AGENTS.md`、`engines/ae_harness/AGENTS.md`、`engines/backend_bridge/AGENTS.md` | 原语与平台装配的边界 |
-| 后端 / 前端 | `backend/apps/AGENTS.md`、`frontend/AGENTS.md` | 分层、契约、模块结构 |
+| 引擎红线 | `engines/AGENTS.md`（红线 + 索引） | 原语与平台装配的边界；子模块细则见 `.agents/docs/engines/` |
+| 后端 / 前端 | `backend/AGENTS.md`、`frontend/AGENTS.md` | 分层、契约、模块结构 |
 | 能力规格 | `openspec/specs/` | 每个能力的可验收需求与场景 |
 | 变更记录 | `openspec/changes/archive/` | 已归档变更 |
 | 门禁清单 | `utils/check_gates.py` | 检查项与判定口径 |

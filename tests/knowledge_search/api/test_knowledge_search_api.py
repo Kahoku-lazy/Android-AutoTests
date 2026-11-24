@@ -27,12 +27,6 @@ from engines.ae_harness.knowledge.service import Retrieval
 pytestmark = [pytest.mark.django_db, pytest.mark.api]
 
 
-@pytest.fixture(autouse=True)
-def _bases_file(tmp_path, settings):
-    """派生 yaml 指到临时目录。"""
-    settings.KNOWLEDGE_SEARCH_BASES_FILE = tmp_path / "bases.yaml"
-
-
 @pytest.fixture
 def normal_user(db):
     return get_user_model().objects.create_user(username="normal", password="pass")
@@ -72,8 +66,27 @@ class _FakeRetriever:
 
 
 @pytest.fixture
-def fake_retriever(monkeypatch):
+def fake_retriever(monkeypatch, tmp_path):
+    """替身检索器，并放一行检索配置、把索引标记目录指到临时路径。"""
+    from backend.apps.ai_assistant.models import AIModelConfig
+    from backend.apps.knowledge_search.models import RetrievalSettings
+
+    model = AIModelConfig.objects.create(
+        provider="dashscope",
+        api_key_env="DASHSCOPE_API_KEY",
+        model_kind="embedding",
+        model_name="text-embedding-v4",
+        dimensions=1024,
+    )
+    RetrievalSettings.objects.create(
+        embedding_model_id=model.id,
+        top_k=4,
+        score_threshold=0.45,
+        chunk_size=400,
+        chunk_overlap=60,
+    )
     monkeypatch.setattr(retrieval, "KnowledgeRetriever", _FakeRetriever)
+    monkeypatch.setattr(retrieval, "INDEX_DIR", tmp_path / "index")
 
 
 def _call(
@@ -223,6 +236,7 @@ def test_query_validates_inputs(normal_user, fake_retriever):
 
 def test_query_returns_three_state_payload(normal_user, admin_user, data_dir, fake_retriever):
     _create_module(admin_user, data_dir)
+    retrieval.mark_indexed("kb_a", 0)
     response = _call(
         KnowledgeQueryAPIView,
         method="post",

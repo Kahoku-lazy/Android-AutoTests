@@ -1,5 +1,5 @@
-"""engines 风格检查：用 AST 扫描 docstring / Raises / tool 命名与段序 / engines 禁 django·apps import。
-风格正文：.agents/rules/engines-code-style.md（§§2、5、6 等可机械化子集）。
+"""engines 风格检查：用 AST 扫描 module-docstring 存在性 / tool 命名 / engines 禁 django·apps import。
+风格正文：.agents/rules/engines-code-style.md（§§2、3、6 等可机械化子集）。
 何时检查 / 流程入口：engines/AGENTS.md。仅依赖标准库。
 
 本模块的业务功能如下：
@@ -30,7 +30,6 @@ from __future__ import annotations
 import argparse
 import ast
 import json
-import re
 import sys
 
 from collections import Counter
@@ -68,13 +67,8 @@ SKIP_DIR_NAMES = frozenset({"__pycache__", ".venv", "venv"})
 SKILL_CREATOR_MARKER = ("engines", "agents", "skills")
 
 RULE_MODULE_DOC = "module-docstring"
-RULE_RAISES = "raises-doc"
 RULE_TOOL_NAME = "tool-naming"
-RULE_TOOL_ORDER = "tool-doc-order"
 RULE_NO_DJANGO = "no-django-apps-import"
-
-SECTION_RE = re.compile(r"^(Args|Returns|Raises|Yields|Note|Notes|Example|Examples):\s*$")
-RAISES_TYPE_RE = re.compile(r"^([A-Za-z_][\w.]*)\s*:")
 
 
 @dataclass(frozen=True)
@@ -138,20 +132,6 @@ def _body_without_doc(tree: ast.Module) -> list[ast.stmt]:
     return body
 
 
-def _has_defs(tree: ast.AST) -> bool:
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            # Skip nested? For __init__ skip decision, any top-level or nested counts
-            # as "has classes/functions"
-            if node is tree:
-                continue
-            return True
-    # walk includes the module itself only as Module, so FunctionDef/ClassDef are enough
-    return any(
-        isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) for n in ast.walk(tree)
-    )
-
-
 def check_module_docstring(path: Path, tree: ast.Module) -> list[Violation]:
     rel = _rel(path)
     if path.name == "__init__.py":
@@ -171,188 +151,6 @@ def check_module_docstring(path: Path, tree: ast.Module) -> list[Violation]:
             )
         ]
     return []
-
-
-def _looks_like_exc_type(name: str) -> bool:
-    """Heuristic: exception types are PascalCase / *Error / *Exception; skip vars like last_error."""
-    if name.endswith(("Error", "Exception", "Exit", "Warning")):
-        return True
-    return bool(name) and name[0].isupper() and "_" not in name
-
-
-def _exc_name_from_raise(node: ast.Raise) -> str | None:
-    """Return exception type name for `raise Name` / `raise Name(...)` / attr forms.
-
-    Bare `raise some_var` (stored instance) is ignored; `raise SomeError` / `raise SomeError(...)`
-    are checked.
-    """
-    exc = node.exc
-    if exc is None:
-        return None  # bare re-raise
-    if isinstance(exc, ast.Name):
-        return exc.id if _looks_like_exc_type(exc.id) else None
-    if isinstance(exc, ast.Attribute):
-        return exc.attr if _looks_like_exc_type(exc.attr) else None
-    if isinstance(exc, ast.Call):
-        func = exc.func
-        if isinstance(func, ast.Name):
-            return func.id
-        if isinstance(func, ast.Attribute):
-            return func.attr
-    return None
-
-
-def _doc_sections(doc: str) -> dict[str, tuple[int, str]]:
-    """Map section title → (1-based line offset within docstring, section body text)."""
-    lines = doc.splitlines()
-    sections: dict[str, tuple[int, str]] = {}
-    current: str | None = None
-    start = 0
-    buf: list[str] = []
-    for i, line in enumerate(lines):
-        stripped = line.strip()
-        m = SECTION_RE.match(stripped)
-        if m:
-            if current is not None:
-                sections[current] = (start, "\n".join(buf))
-            current = m.group(1)
-            start = i + 1  # 1-based within docstring
-            buf = []
-        elif current is not None:
-            buf.append(line)
-    if current is not None:
-        sections[current] = (start, "\n".join(buf))
-    return sections
-
-
-def _raises_types(raises_body: str) -> set[str]:
-    found: set[str] = set()
-    for line in raises_body.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            continue
-        m = RAISES_TYPE_RE.match(stripped)
-        if m:
-            name = m.group(1)
-            # Allow "pkg.Error" → also match leaf
-            found.add(name)
-            if "." in name:
-                found.add(name.rsplit(".", 1)[-1])
-    return found
-
-
-def _qualname(stack: list[str], name: str) -> str:
-    return ".".join([*stack, name]) if stack else name
-
-
-def check_raises_docs(path: Path, tree: ast.Module, source: str) -> list[Violation]:
-    """Each function/method with explicit named raise must document it under Raises:."""
-    rel = _rel(path)
-    violations: list[Violation] = []
-    source_lines = source.splitlines()
-
-    def visit_function(
-        node: ast.FunctionDef | ast.AsyncFunctionDef, class_stack: list[str]
-    ) -> None:
-        raised: dict[str, int] = {}
-        # Collect raises only in this function body, not nested functions
-        nested_defs = {
-            n
-            for n in ast.walk(node)
-            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda))
-            and n is not node
-        }
-
-        def in_nested(n: ast.AST) -> bool:
-            for nested in nested_defs:
-                for sub in ast.walk(nested):
-                    if sub is n:
-                        return True
-            return False
-
-        for child in ast.walk(node):
-            if not isinstance(child, ast.Raise):
-                continue
-            if in_nested(child):
-                continue
-            name = _exc_name_from_raise(child)
-            if name is None:
-                continue
-            raised.setdefault(name, child.lineno)
-
-        if not raised:
-            return
-
-        doc = ast.get_docstring(node, clean=False)
-        qname = _qualname(class_stack, node.name)
-        if doc is None or not doc.strip():
-            violations.append(
-                Violation(
-                    RULE_RAISES,
-                    rel,
-                    node.lineno,
-                    f"{qname}: has raise but missing docstring / Raises: "
-                    f"({', '.join(sorted(raised))})",
-                )
-            )
-            return
-
-        sections = _doc_sections(doc)
-        if "Raises" not in sections:
-            violations.append(
-                Violation(
-                    RULE_RAISES,
-                    rel,
-                    node.lineno,
-                    f"{qname}: has raise but docstring missing Raises: "
-                    f"({', '.join(sorted(raised))})",
-                )
-            )
-            return
-
-        documented = _raises_types(sections["Raises"][1])
-        for exc_name, lineno in sorted(raised.items(), key=lambda x: x[1]):
-            if exc_name not in documented and not any(
-                d == exc_name or d.endswith("." + exc_name) for d in documented
-            ):
-                # show a snippet of the raise line when available
-                snippet = ""
-                if 1 <= lineno <= len(source_lines):
-                    snippet = f" — `{source_lines[lineno - 1].strip()}`"
-                violations.append(
-                    Violation(
-                        RULE_RAISES,
-                        rel,
-                        lineno,
-                        f"{qname}: raise {exc_name} not listed in Raises:{snippet}",
-                    )
-                )
-
-    def walk_body(body: list[ast.stmt], class_stack: list[str]) -> None:
-        for stmt in body:
-            if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                visit_function(stmt, class_stack)
-                # nested functions
-                walk_body(stmt.body, [*class_stack, stmt.name])
-            elif isinstance(stmt, ast.ClassDef):
-                walk_body(stmt.body, [*class_stack, stmt.name])
-            elif isinstance(
-                stmt, (ast.If, ast.For, ast.While, ast.With, ast.AsyncWith, ast.AsyncFor)
-            ):
-                walk_body(stmt.body, class_stack)
-                for handler in getattr(stmt, "handlers", []) or []:
-                    walk_body(handler.body, class_stack)
-                walk_body(getattr(stmt, "orelse", []) or [], class_stack)
-                walk_body(getattr(stmt, "finalbody", []) or [], class_stack)
-            elif isinstance(stmt, ast.Try):
-                walk_body(stmt.body, class_stack)
-                for handler in stmt.handlers:
-                    walk_body(handler.body, class_stack)
-                walk_body(stmt.orelse, class_stack)
-                walk_body(stmt.finalbody, class_stack)
-
-    walk_body(tree.body, [])
-    return violations
 
 
 def _under_agents_tools(path: Path) -> bool:
@@ -383,81 +181,6 @@ def check_tool_naming(path: Path) -> list[Violation]:
             )
         ]
     return []
-
-
-def check_tool_doc_order(path: Path, tree: ast.Module) -> list[Violation]:
-    """For engines/agents/tools/tool_*.py: Raises after Returns; Raises not before Args."""
-    if not _under_agents_tools(path):
-        return []
-    if path.name == "__init__.py" or not path.name.startswith("tool_"):
-        return []
-
-    rel = _rel(path)
-    violations: list[Violation] = []
-
-    def check_doc(node: ast.AST, qname: str) -> None:
-        doc = ast.get_docstring(node, clean=False)
-        if not doc:
-            return
-        doc_lineno = getattr(node, "lineno", 1)
-        body = getattr(node, "body", None)
-        if body and isinstance(body[0], ast.Expr):
-            doc_lineno = body[0].lineno
-
-        positions: dict[str, int] = {}
-        for i, line in enumerate(doc.splitlines()):
-            m = SECTION_RE.match(line.strip())
-            if m and m.group(1) not in positions:
-                positions[m.group(1)] = i
-
-        if "Raises" not in positions:
-            return
-
-        raises_i = positions["Raises"]
-        abs_line = doc_lineno + raises_i
-
-        if "Args" in positions and raises_i < positions["Args"]:
-            violations.append(
-                Violation(
-                    RULE_TOOL_ORDER,
-                    rel,
-                    abs_line,
-                    f"{qname}: Raises: must not appear before Args: "
-                    "(.agents/rules/engines-code-style.md §6 — summary -> Args -> Raises)",
-                )
-            )
-        if "Returns" in positions and raises_i < positions["Returns"]:
-            violations.append(
-                Violation(
-                    RULE_TOOL_ORDER,
-                    rel,
-                    abs_line,
-                    f"{qname}: Raises: must appear after Returns: when Returns: exists",
-                )
-            )
-
-    def walk(body: list[ast.stmt], stack: list[str]) -> None:
-        for stmt in body:
-            if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                check_doc(stmt, _qualname(stack, stmt.name))
-                walk(stmt.body, [*stack, stmt.name])
-            elif isinstance(stmt, ast.ClassDef):
-                check_doc(stmt, _qualname(stack, stmt.name))
-                walk(stmt.body, [*stack, stmt.name])
-            elif isinstance(stmt, ast.Try):
-                walk(stmt.body, stack)
-                for h in stmt.handlers:
-                    walk(h.body, stack)
-                walk(stmt.orelse, stack)
-                walk(stmt.finalbody, stack)
-            elif isinstance(
-                stmt, (ast.If, ast.For, ast.While, ast.With, ast.AsyncWith, ast.AsyncFor)
-            ):
-                walk(stmt.body, stack)
-                walk(getattr(stmt, "orelse", []) or [], stack)
-
-    walk(tree.body, [])
-    return violations
 
 
 def check_no_django_apps_import(path: Path, tree: ast.Module) -> list[Violation]:
@@ -565,8 +288,6 @@ def scan_file(path: Path) -> list[Violation]:
         return violations
 
     violations.extend(check_module_docstring(path, tree))
-    violations.extend(check_raises_docs(path, tree, source))
-    violations.extend(check_tool_doc_order(path, tree))
     violations.extend(check_no_django_apps_import(path, tree))
     return violations
 

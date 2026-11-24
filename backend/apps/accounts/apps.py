@@ -1,4 +1,4 @@
-"""平台认证应用。用户存在 Django 内置用户表，本应用没有自有表。"""
+"""平台认证应用。用户存在 Django 内置用户表；本应用自有表只有 `acc_token_revocations`（`models.TokenRevocation`，登出吊销记录，落库不依赖 Redis）。"""
 
 from django.apps import AppConfig
 

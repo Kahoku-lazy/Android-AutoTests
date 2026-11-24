@@ -430,42 +430,56 @@ def _record_cancel_timeout(task_id: int, agent_id: int) -> None:
 
 
 def _finish_goal(task: Task, task_id: int) -> None:
-    """用例编写：材料通过后入库。不创建 SOP 任务。"""
-    from backend.apps.case_manager.api import import_case_rows
-    from engines.backend_bridge.workflow.goal_case import run_goal_case
+    """用例编写：按工作流的两侧名片跑目标流水线。
 
-    material = task.goal or task.attachment or ""
+    验收通过才算完成。产物是验收说明，不是带步骤与断言的用例行，
+    因此这里不写用例库，避免把说明伪装成用例入库。
+    """
+    from backend.apps.ai_assistant import api as assistant_api
+    from engines.backend_bridge.workflow.bound_goal import run_bound_goal
 
-    async def _attempt(prompt: str) -> dict:
-        del prompt
-        return {"passed": True, "rows": [{"title": task.title or "用例", "module": "默认"}]}
-
-    result = asyncio.run(
-        run_goal_case(
-            material,
-            _attempt,
-            lambda rows: import_case_rows(
-                user_id=task.created_by,
-                task_id=task_id,
-                task_title=task.title,
-                rows=rows,
-            ),
+    resolved = assistant_api.resolve_sop_workflow(_workflow_id(task))
+    outcome = asyncio.run(
+        run_bound_goal(
+            task.goal or task.attachment or task.title,
+            _binding(resolved["executor"]),
+            _binding(resolved["verifier"]),
+            task_id=task_id,
         )
     )
-    passed = bool(result.get("passed")) and (result.get("saved") or {}).get("status") != "failed"
     api.claim_terminal(
         task_id,
-        status=TaskStatus.COMPLETED if passed else TaskStatus.FAILED,
-        result=api.dump_task_run_payload({"status": "success" if passed else "fail", **result}),
+        status=TaskStatus.COMPLETED if outcome.passed else TaskStatus.FAILED,
+        result=api.dump_task_run_payload(
+            {
+                "status": "success" if outcome.passed else "fail",
+                "verdict": outcome.verdict,
+                "reason": outcome.message,
+                **_report_locator(outcome.record.html_path if outcome.record else None),
+            }
+        ),
         release_device=False,
     )
 
 
 def _finish_team(task: Task, task_id: int) -> None:
-    """需求拆解：只校验模块边界。不创建用例编写任务。"""
+    """需求拆解：按工作流的队长与成员跑团队流水线，再校验模块边界。"""
+    from backend.apps.ai_assistant import api as assistant_api
+    from engines.backend_bridge.workflow.bound_team import run_bound_team
     from engines.backend_bridge.workflow.team_breakdown import run_team_breakdown
 
-    result = run_team_breakdown(task.goal or task.attachment or "")
+    resolved = assistant_api.resolve_sop_workflow(_workflow_id(task))
+    members = [(_binding(item), str(item.get("description") or "")) for item in resolved["members"]]
+    outcome = asyncio.run(
+        run_bound_team(
+            task.goal or task.attachment or task.title,
+            _binding(resolved["leader"]),
+            members,
+            task_id=task_id,
+        )
+    )
+    result = run_team_breakdown(outcome.reply)
+    result.update(_report_locator(outcome.record.html_path if outcome.record else None))
     api.claim_terminal(
         task_id,
         status=TaskStatus.COMPLETED if result.get("passed") else TaskStatus.FAILED,

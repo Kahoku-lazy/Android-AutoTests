@@ -1520,20 +1520,22 @@ body {
 
 .dep-node__title {
   font-family: var(--app-font);
-  font-size: 15px;
+  font-size: var(--app-size-md);
   font-weight: 800;
   fill: var(--ink);
 }
 
+/* 节点卡第 2 行：组成（中文名 · 单元数） */
 .dep-node__sub {
   font-family: var(--app-font);
-  font-size: 12px;
+  font-size: var(--app-size-xs);
   fill: var(--app-stat-text);
 }
 
+/* 节点卡第 3 行：量化（.py 数 · 行数）；与第 2 行同字号，靠颜色分层 */
 .dep-node__meta {
   font-family: var(--app-font);
-  font-size: 11px;
+  font-size: var(--app-size-xs);
   fill: var(--app-text-secondary);
 }
 
@@ -3646,4 +3648,145 @@ body {
   padding-left: calc(var(--app-space-md) + var(--app-space-sm));
   font-size: var(--app-size-xs);
   font-weight: 400;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   分层架构图零件（.agents/skills/arch-diagram-lite）：层名槽 / 色条 /
+   区域边界 / 图例。总览第 1 节用；与 ae_harness 的 .dep-* 共用节点与边。
+   ══════════════════════════════════════════════════════════════════ */
+
+/* 层名槽：图左侧，层是人工划分的结构标注 */
+.dep-tier__label {
+  font-family: var(--app-font);
+  font-size: var(--app-size-xs);
+  fill: var(--app-text-secondary);
+  letter-spacing: 0.04em;
+}
+
+.dep-tier__rule {
+  stroke: var(--ink);
+  stroke-width: 1;
+  opacity: 0.16;
+}
+
+/* 节点卡左缘色条：模块色（与饼图 / 卡片同源） */
+.dep-node__stripe {
+  stroke: var(--ink);
+  stroke-width: 1.2;
+}
+
+/* 区域边界：虚线框表达的是纪律（不许反向依赖），不是分组 */
+.dep-boundary__box {
+  fill: color-mix(in srgb, var(--ink) 3%, transparent);
+  stroke: var(--ink);
+  stroke-width: 1.6;
+  stroke-dasharray: 8 4;
+  opacity: 0.8;
+}
+
+.dep-boundary__label {
+  font-family: var(--app-font);
+  font-size: var(--app-size-xs);
+  font-weight: 700;
+  fill: var(--app-stat-text);
+  paint-order: stroke;
+  stroke: var(--app-bg-card);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+/* 图例：层 + 节点数 + 成员（点 = 模块色） */
+.dep-legend {
+  margin-top: var(--app-space-sm);
+}
+
+.dep-legend .legend-chips {
+  margin: 0;
+}
+
+.dep-legend .dep-diagram__note {
+  margin: var(--app-space-xs) 0 0;
+}
+
+.dep-legend__keys {
+  font-weight: 400;
+  color: var(--app-text-secondary);
+}
+
+/* 第 1 节的两张图：1.1 框架（人工划分）/ 1.2 实际依赖（AST 次数） */
+.dep-figure {
+  margin: 0 0 var(--app-space-xl);
+}
+
+.dep-figure:last-child {
+  margin-bottom: 0;
+}
+
+.dep-figure .dep-diagram {
+  margin-bottom: 0;
+}
+
+.dep-figure__title {
+  margin: 0 0 var(--app-space-xs);
+  font-size: var(--app-size-md);
+  font-weight: 800;
+}
+
+.dep-figure__hint {
+  margin: 0 0 var(--app-space-sm);
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+/* 1.1 平台架构的连线：实线细墨线——架构图讲「谁连谁」，不是依赖强度 */
+.dep-edge--arch {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-dasharray: none;
+  opacity: 0.75;
+}
+
+.dep-arrowhead-ink {
+  fill: var(--ink);
+  opacity: 0.75;
+}
+
+/* 1.1 的第三行（运行标记）在灰底「外部系统」上会糊掉，整块图统一加深一档 */
+.dep-figure--platform .dep-node__meta {
+  fill: var(--color-ink-34);
+}
+
+/* 1.1 图下的三张结论卡（三层分工 / 执行闭环 / 当前边界，文案来自 spec） */
+.arch-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--app-space-md);
+  margin-top: var(--app-space-md);
+}
+
+.arch-card {
+  padding: var(--app-space-sm) var(--app-space-md);
+  background: var(--app-bg-card);
+  border: 2px solid var(--ink);
+  border-radius: 2px 6px 2px 4px;
+  box-shadow: 3px 3px 0 0 var(--c-element);
+}
+
+.arch-card__title {
+  margin: 0 0 var(--app-space-xs);
+  font-size: var(--app-size-sm);
+  font-weight: 800;
+}
+
+.arch-card__list {
+  margin: 0;
+  padding-left: var(--app-space-md);
+  font-size: var(--app-size-xs);
+  color: var(--app-text-secondary);
+}
+
+@media (max-width: 1180px) {
+  .arch-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

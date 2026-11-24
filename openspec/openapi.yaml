@@ -2006,6 +2006,49 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/knowledge-search/settings/:
+    get:
+      operationId: knowledge_search_settings_retrieve
+      description: GET / PUT 全局检索配置（仅超管）。
+      tags:
+      - knowledge-search
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    put:
+      operationId: knowledge_search_settings_update
+      description: GET / PUT 全局检索配置（仅超管）。
+      tags:
+      - knowledge-search
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetrievalSettings'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RetrievalSettings'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RetrievalSettings'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/ops/users/:
     get:
       operationId: ops_users_retrieve
@@ -3206,6 +3249,10 @@ components:
         voice:
           type: string
           maxLength: 64
+        dimensions:
+          type: integer
+          minimum: 1
+          nullable: true
         api_key_env:
           $ref: '#/components/schemas/ApiKeyEnvEnum'
         base_url:
@@ -3224,11 +3271,13 @@ components:
       - chat
       - tts
       - realtime
+      - embedding
       type: string
       description: |-
         * `chat` - chat
         * `tts` - tts
         * `realtime` - realtime
+        * `embedding` - embedding
     ModuleWrite:
       type: object
       description: 新增模块入参。
@@ -3290,6 +3339,10 @@ components:
         voice:
           type: string
           maxLength: 64
+        dimensions:
+          type: integer
+          minimum: 1
+          nullable: true
         api_key_env:
           $ref: '#/components/schemas/ApiKeyEnvEnum'
         base_url:
@@ -3399,6 +3452,41 @@ components:
         email:
           type: string
           default: ''
+    RetrievalSettings:
+      type: object
+      description: 检索配置入参与出参。
+      properties:
+        embedding_model_id:
+          type: integer
+          minimum: 1
+        top_k:
+          type: integer
+          minimum: 1
+        score_threshold:
+          type: number
+          format: double
+          maximum: 1
+          minimum: 0
+        chunk_size:
+          type: integer
+          minimum: 1
+        chunk_overlap:
+          type: integer
+          minimum: 1
+        index_epoch:
+          type: integer
+          readOnly: true
+        reindex_required:
+          type: boolean
+          readOnly: true
+      required:
+      - chunk_overlap
+      - chunk_size
+      - embedding_model_id
+      - index_epoch
+      - reindex_required
+      - score_threshold
+      - top_k
     RoleInput:
       type: object
       description: |-

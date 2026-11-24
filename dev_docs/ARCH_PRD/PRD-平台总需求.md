@@ -148,7 +148,7 @@ flowchart LR
 | 类别 | 约束 |
 |------|------|
 | 并发 | 单机；同一设备同一时刻至多一条执行任务，不同设备可并行 |
-| 实时性 | 无 WebSocket / SSE；任务进度与列表靠 HTTP 轮询。唯一例外：知识库助手走 `/ws/knowledge-assistant/?mode=voice|text`，该通道只承载语音音频、转写、打断、播放进度与文字提问，不承载平台写操作 |
+| 实时性 | 无 WebSocket / SSE；任务进度与列表靠 HTTP 轮询。知识助手的语音/文字实时通道已随 `retire-engines-agents` 下线，平台当前没有任何 WS 生产路由 |
 | 安全 | 全部 `/api/` 走 JWT；公开面仅登录/注册/刷新、Admin、静态资源、API 文档；AI 智能体写操作仅超管 |
 | 契约 | 响应信封 `{status, data}`；错误 `{status, message}` + HTTP 状态码；JSON snake_case；`/api/` 尾斜杠 |
 | 数据 | 表前缀 `acc_ ai_ cm_ dp_ rg_ sl_ task_ ks_`；SQLite（开发）/ MySQL（生产）；JWT 吊销记录落库（`acc_token_revocations`），平台无外部 KV 依赖 |

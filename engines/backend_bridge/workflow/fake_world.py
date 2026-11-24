@@ -24,9 +24,7 @@ from __future__ import annotations
 
 import json
 
-from agentscope.message import TextBlock
-from agentscope.tool import FunctionTool, ToolChunk
-
+from engines.ae_harness.tools.scripted import scripted_tool
 from engines.backend_bridge.agents.tool_selection import select_tools
 
 __all__ = ["scripted_tools"]
@@ -47,26 +45,18 @@ def scripted_tools(
     Returns:
         与勾选同名的假工具列表。
     """
-    fakes: list[FunctionTool] = []
+    fakes = []
     for real in select_tools(selections, kind=kind):
         fakes.append(_one(real.name, dict(real.input_schema or {}), script, calls))
     return fakes
 
 
-def _one(name: str, schema: dict, script: dict, calls: list[dict]) -> FunctionTool:
+def _one(name: str, schema: dict, script: dict, calls: list[dict]):
     """做一个只记账的假工具。名字写进默认参数，避免循环里串名。"""
 
-    async def respond(_tool_name: str = name, **kwargs) -> ToolChunk:
+    async def respond(_tool_name: str = name, **kwargs) -> str:
         calls.append({"tool": _tool_name, "input": kwargs})
         body = script.get(_tool_name) or "假世界：动作已记录，没有触达真实设备。"
-        return ToolChunk(
-            content=[
-                TextBlock(
-                    type="text", text=json.dumps({"status": True, "text": body}, ensure_ascii=False)
-                )
-            ]
-        )
+        return json.dumps({"status": True, "text": body}, ensure_ascii=False)
 
-    return FunctionTool(
-        respond, name=name, description=f"评测假世界：{name}", input_schema=schema or None
-    )
+    return scripted_tool(name, schema, respond)

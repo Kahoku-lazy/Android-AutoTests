@@ -80,6 +80,9 @@ class ModelConfigViewSet(viewsets.ModelViewSet):
             configs = api.list_selectable_model_configs(_user_id(request))
         else:
             configs = self.get_queryset()
+        kind = request.query_params.get("model_kind", "")
+        if kind:
+            configs = configs.filter(model_kind=kind)
         return Response({"configs": ModelConfigSerializer(configs, many=True).data})
 
     def create(self, request, *args, **kwargs):
@@ -157,7 +160,7 @@ class RoleViewSet(viewsets.ModelViewSet):
                 data.get("system_prompt", ""),
                 kinds=kinds,
             )
-        except api.ModelConfigMissingError as exc:
+        except (api.ModelConfigMissingError, ValueError) as exc:
             raise ValidationError(str(exc)) from exc
         except api.RoleConflictError as exc:
             return Response({"message": str(exc)}, status=status.HTTP_409_CONFLICT)
@@ -179,7 +182,7 @@ class RoleViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("不能使用该模型")
         try:
             role = api.update_role(self.get_object(), data, kinds)
-        except api.ModelConfigMissingError as exc:
+        except (api.ModelConfigMissingError, ValueError) as exc:
             raise ValidationError(str(exc)) from exc
         except api.RoleConflictError as exc:
             return Response({"message": str(exc)}, status=status.HTTP_409_CONFLICT)
@@ -273,7 +276,10 @@ class AssistantViewSet(viewsets.ModelViewSet):
         self._require_author(request)
         card = self.get_object()
         assistant_id = card.assistant_id
-        api.delete_assistant(card)
+        try:
+            api.delete_assistant(card)
+        except api.AssistantInUseError as exc:
+            raise ValidationError(str(exc)) from exc
         return Response({"assistant_id": assistant_id})
 
     def _names_for(self, cards) -> dict:

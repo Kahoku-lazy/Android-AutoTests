@@ -10,7 +10,7 @@ class KnowledgeModule(models.Model):
 
     一行 = 一个模块 = 一个服务器本地只读资料目录。库名即引擎向量集合名；
     资料目录只读，索引与检索仍在 engines/ae_harness/knowledge。
-    写库一律经本 App 的 api.py；检索库目录 yaml 由 registry.py 从本表派生。
+    写库一律经本 App 的 api.py；检索时由调用方把本表行组装成引擎参数。
     """
 
     name = models.CharField(max_length=64, unique=True)
@@ -28,6 +28,33 @@ class KnowledgeModule(models.Model):
 
     def __str__(self):
         return f"{self.name} [{'启用' if self.enabled else '禁用'}]"
+
+
+class RetrievalSettings(models.Model):
+    """知识库全局检索配置 → ks_retrieval_settings。
+
+    全表只应有一行：用哪条向量模型、默认返回条数、相似度阈值与切块参数。
+    embedding_model_id 指向 ai_model_configs.id，不建跨 App 外键；
+    删除保护由 ai_assistant 删除模型配置前只读本表完成。
+    index_epoch 在切块参数变化时加一，检索据此判断旧索引是否失效。
+    写库一律经本 App 的 api.py。
+    """
+
+    embedding_model_id = models.PositiveIntegerField()
+    top_k = models.PositiveIntegerField(default=4)
+    score_threshold = models.FloatField(default=0.45)
+    chunk_size = models.PositiveIntegerField(default=400)
+    chunk_overlap = models.PositiveIntegerField(default=60)
+    index_epoch = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "ks_retrieval_settings"
+        verbose_name = "知识库检索配置"
+        verbose_name_plural = "知识库检索配置"
+
+    def __str__(self):
+        return f"epoch {self.index_epoch} / top_k {self.top_k}"
 
 
 class KsEvalRun(models.Model):

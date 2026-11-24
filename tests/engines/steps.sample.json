@@ -2,8 +2,8 @@
   "serial": "R5CT62RH88F",
   "steps": [
     {
-      "action": "启动 govee 应用（com.govee.home）",
-      "assert": "前台应用为 govee APP主页（首页）",
+      "action": "启动 openai 应用（com.openai.home）",
+      "assert": "前台应用为 openai APP主页（首页）",
       "log_check": false
     },
     {

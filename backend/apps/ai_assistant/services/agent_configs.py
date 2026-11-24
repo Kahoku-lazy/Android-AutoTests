@@ -17,6 +17,19 @@ class RoleIdExhaustedError(Exception):
     """当日可用的短标识已耗尽。"""
 
 
+def _require_chat_model(model_config_id: int):
+    """Agent 配置只能绑定聊天模型。
+
+    Raises:
+        ModelConfigMissingError: 模型配置不存在。
+        ValueError: 模型类型不是聊天。
+    """
+    config = get_model_config(model_config_id)
+    if config.model_kind != "chat":
+        raise ValueError("Agent 配置只能绑定聊天模型")
+    return config
+
+
 def _role_id_taken(candidate: str) -> bool:
     """判断候选短标识是否已被占用。"""
     return AIRole.objects.filter(role_id=candidate).exists()
@@ -37,7 +50,7 @@ def prepare_role(name: str, model_config_id: int, system_prompt: str = "") -> di
         ModelConfigMissingError: 模型配置不存在。
         RoleIdExhaustedError: 当日短标识空间耗尽。
     """
-    get_model_config(model_config_id)
+    _require_chat_model(model_config_id)
     try:
         role_id = generate_unique_role_id(_role_id_taken)
     except RuntimeError as exc:
@@ -66,7 +79,7 @@ def update_role(role: AIRole, data: dict, kinds: list[str] | None = None) -> AIR
         RoleConflictError: 新名称已被占用。
     """
     if "model_config_id" in data:
-        get_model_config(data["model_config_id"])
+        _require_chat_model(data["model_config_id"])
     for field in ("name", "model_config_id", "system_prompt"):
         if field in data:
             setattr(role, field, data[field])

@@ -321,10 +321,7 @@ def _openapi_text(path: Path) -> str:
 
 
 # 受管业务资产目录：平台主干不得在此存放客户专项业务资料
-BUSINESS_ASSET_DIRS = (
-    ROOT / "engines" / "agents" / "config" / "data" / "app_info",
-    ROOT / "engines" / "ae_harness" / "workflow" / "sop" / "steps",
-)
+BUSINESS_ASSET_DIRS = (ROOT / "engines" / "agents" / "config" / "data" / "app_info",)
 # 已禁用业务资产路径：被清除后不得重新引入
 FORBIDDEN_ASSET_PATHS = (
     "engines/agents/config/data/app_info/govee_home.md",
@@ -637,10 +634,16 @@ def build_gates() -> list[Gate]:
         # Job 4 boundary-check
         cmd_gate(
             "boundary",
-            "模块边界检查（防火墙 #1/#2）",
+            "模块边界检查（防火墙 #1/#2，import 方向见 linting）",
             [py, "utils/gen_arch_stats.py", "--check-boundaries"],
             blocking=True,
             env={"DJANGO_SECRET_KEY": "local-check-key-not-for-prod"},
+        ),
+        cmd_gate(
+            "linting",
+            "模块依赖（.linting：19 个模块的允许清单 + 16 条禁止合同）",
+            [py, "-m", "utils.linting"],
+            blocking=True,
         ),
         # Job 5 frontend-quality
         cmd_gate(
@@ -665,7 +668,7 @@ def build_gates() -> list[Gate]:
         # engines 风格检查（告警项：先看效果，暂不阻塞；正文 .agents/rules/engines-code-style.md，流程 engines/AGENTS.md）
         cmd_gate(
             "engines-agents-style",
-            "engines 风格（docstring / Raises / tool 命名；见 engines-code-style.md）",
+            "engines 风格（module-docstring / tool 命名 / 禁 django·apps import；见 engines-code-style.md）",
             [py, "-m", "scripts.check_engines_agents_style"],
             blocking=False,
             cwd=ROOT / ".agents" / "skills" / "engines-agents-style-check",

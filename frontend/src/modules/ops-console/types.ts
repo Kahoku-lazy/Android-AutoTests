@@ -4,7 +4,7 @@
 export type OpsIdentity = "superuser" | "operator" | "user"
 
 /** 模型类型：与后端 `model_kind` 字段一一对应 */
-export type OpsModelKind = "chat" | "tts" | "realtime"
+export type OpsModelKind = "chat" | "tts" | "realtime" | "embedding"
 
 /** 一行账号 */
 export interface OpsUser {
@@ -81,6 +81,7 @@ export interface OpsModelConfig {
   api_protocol: string
   model_kind?: OpsModelKind
   voice?: string
+  dimensions?: number | null
   api_key_env: string
   base_url: string
   model_name: string
@@ -92,6 +93,7 @@ export interface OpsModelConfigInput {
   api_protocol: string
   model_kind?: OpsModelKind
   voice?: string
+  dimensions?: number | null
   api_key_env: string
   base_url: string
   model_name: string

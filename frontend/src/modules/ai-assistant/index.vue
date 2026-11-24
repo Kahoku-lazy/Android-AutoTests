@@ -15,7 +15,7 @@ import SopWorkflowSection from "./components/SopWorkflowSection.vue"
 import AssistantEditor from "./components/AssistantEditor.vue"
 import { useAuthUser } from "@/shared/composables/useAuthUser"
 import { listAssistants } from "./api/assistants"
-import type { AssistantCard } from "./types"
+import type { AssistantCard, SopWorkflow } from "./types"
 import "./tokens.css"
 import "./editor-form.css"
 
@@ -27,6 +27,7 @@ const loaded = ref(false)
 const error = ref("")
 const editorOpen = ref(false)
 const editing = ref<AssistantCard | null>(null)
+const workflows = ref<SopWorkflow[]>([])
 
 async function load(): Promise<void> {
   loading.value = true
@@ -114,7 +115,7 @@ onMounted(load)
           />
         </div>
         <SectionDivider class="ai-assistant-page__divider" />
-        <SopWorkflowSection :cards="cards" />
+        <SopWorkflowSection :cards="cards" @loaded="workflows = $event" />
       </template>
     </div>
 
@@ -126,7 +127,13 @@ onMounted(load)
       destroy-on-close
       @closed="editing = null"
     >
-      <AssistantEditor :card="editing" @close="closeEditor" @saved="onSaved" />
+      <AssistantEditor
+        :card="editing"
+        :workflows="workflows"
+        @close="closeEditor"
+        @saved="onSaved"
+        @deleted="onSaved"
+      />
     </el-dialog>
   </div>
 </template>

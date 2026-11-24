@@ -20,7 +20,7 @@ description: >-
 - 问 AgentScope 的**概念/设计**：Agent 装配、Context 压缩、SOP、Middleware、Permission、Workspace、Pipeline、A2A
 - 问**具体 API 怎么写**：`MCPClient`、`Toolkit(mcps=)`、`GoalPipeline`、`ReActConfig`、`list_models()`
 - 要**核对**仓库里的用法是不是官方姿势（例如 SOP 该不该替自研重试）
-- 需要**按版本**回答（我们锁 `agentscope>=2.0.9`，站点同时挂着 2.0.2 ~ 2.0.12dev）
+- 需要**按版本**回答（我们锁 `agentscope>=2.0.12`，站点同时挂着 2.0.2 ~ 2.0.13dev）
 
 ## 何时不用
 
@@ -34,9 +34,9 @@ description: >-
 python -c "import agentscope; print(agentscope.__version__)"
 ```
 
-- 文档路径带版本：`/zh/versions/2.0.9/...`、`/en/versions/2.0.9/...`
+- 文档路径带版本：`/zh/versions/2.0.12/...`、`/en/versions/2.0.12/...`
 - **1.x 与 2.x 的 API 不混用**（站点 `others/change-log` 是迁移说明）
-- 回答里写明「这是 2.0.9 文档的说法」；版本不一致时明确提示
+- 回答里写明「这是 2.0.12 文档的说法」；版本不一致时明确提示
 - 新项目参考 `stable`，存量项目按**已安装版本**
 
 ## 三条通道（按优先级）
@@ -63,11 +63,11 @@ DSH 已注册 `agentscope-docs`，直接调用这三个工具：
 ```bash
 cd .agents/skills/agentscope-docs
 python -m scripts.docs_mcp tools
-python -m scripts.docs_mcp search "SOP 执行者 验证者" --language zh --version 2.0.9
-python -m scripts.docs_mcp tree /zh/versions/2.0.9/building-blocks -L 1
+python -m scripts.docs_mcp search "SOP 执行者 验证者" --language zh --version 2.0.12
+python -m scripts.docs_mcp tree /zh/versions/2.0.12/building-blocks -L 1
 python -m scripts.docs_mcp rg "tool_result_limit" /
-python -m scripts.docs_mcp cat /zh/versions/2.0.9/building-blocks/model/overview.mdx
-python -m scripts.docs_mcp page https://docs.agentscope.io/zh/versions/2.0.9/building-blocks/sop
+python -m scripts.docs_mcp cat /zh/versions/2.0.12/building-blocks/model/overview.mdx
+python -m scripts.docs_mcp page https://docs.agentscope.io/zh/versions/2.0.12/building-blocks/sop
 ```
 
 **只用标准库**（`urllib`），不依赖 httpx/requests——本机 Python 站点包出问题时它照样能跑。端点可用 `AGENTSCOPE_DOCS_MCP` 覆盖。
@@ -75,7 +75,7 @@ python -m scripts.docs_mcp page https://docs.agentscope.io/zh/versions/2.0.9/bui
 ### ③ 纯网页（已知 URL）
 
 ```
-https://docs.agentscope.io/zh/versions/2.0.9/building-blocks/sop.md
+https://docs.agentscope.io/zh/versions/2.0.12/building-blocks/sop.md
 ```
 
 页 URL 后加 `.md` 拿纯 Markdown，比 HTML 干净。不确定路径时先看 `https://docs.agentscope.io/llms.txt`。
@@ -87,7 +87,7 @@ https://docs.agentscope.io/zh/versions/2.0.9/building-blocks/sop.md
 3. **读全文**：`cat <返回路径>.mdx`，或 `web_fetch` 该页 `.md`
 4. **引用**：给出去掉 `.mdx` 的 URL，并标明版本
 
-## 文档地图（2.0.9 中文站点）
+## 文档地图（2.0.12 中文站点）
 
 | 前缀 | 内容 |
 |---|---|
@@ -107,7 +107,7 @@ https://docs.agentscope.io/zh/versions/2.0.9/building-blocks/sop.md
 ## 输出纪律
 
 - **结论先行**：先一句话回答，再展开
-- **标版本**：说清是 2.0.9 还是 2.0.11 的说法
+- **标版本**：说清是 2.0.12 还是别的已发布版本的说法
 - **给链接**：引用到的每一页都给官方 URL
 - **分清来源**：文档原文 / 包内 docstring / 我的推断，三者不要混着说
 - **不夸大**：没查到的就说没查到，不要用先验知识补全

@@ -1,16 +1,10 @@
-"""本地质量门禁执行器。
-
-检查项与 `.github/workflows/ci-phase1.yml` 一一对应：让本地（或任何没有 CI 的环境）
-能跑完与 CI 同一批检查。命令、目录、分级均以 CI 原文为准。
-
-用法:
-    python run.py check          # 推荐入口
-    python utils/check_gates.py  # 直接运行
-    python utils/check_gates.py --only silent-except   # 只跑指定门禁（供 CI 调用）
-
-退出码:
-    0  全部阻塞项通过（告警项失败不影响退出码）
-    1  存在阻塞项失败
+"""
+模块功能：➡️ 本地质量门禁执行器：与 ci-phase1.yml 同一批检查，按阻塞 / 告警分级 🏁
+Python 调试：➡️ python -m utils.check_gates 🏁
+时间：➡️ 2026-11-24 🏁
+测试:➡️
+1. tests/arch/unit/test_business_asset_gate.py: 业务资产门禁的判定口径
+🏁
 """
 
 from __future__ import annotations
@@ -279,7 +273,8 @@ def openapi_schema_gate() -> Gate:
         proc = subprocess.run(
             [
                 sys.executable,
-                "manage.py",
+                "-m",
+                "manage",
                 "spectacular",
                 "--file",
                 str(OPENAPI_GENERATED),
@@ -299,12 +294,12 @@ def openapi_schema_gate() -> Gate:
         if not OPENAPI_BASELINE.exists():
             return False, [
                 f"缺少契约基线 {OPENAPI_BASELINE.relative_to(ROOT)}",
-                "首次生成：python manage.py spectacular --file openspec/openapi.yaml --validate --fail-on-warn",
+                "首次生成：python -m manage spectacular --file openspec/openapi.yaml --validate --fail-on-warn",
             ]
         if _openapi_text(OPENAPI_GENERATED) != _openapi_text(OPENAPI_BASELINE):
             return False, [
                 "OpenAPI 与基线不一致：接口改了但基线没更新",
-                "更新基线：python manage.py spectacular --file openspec/openapi.yaml --validate --fail-on-warn",
+                "更新基线：python -m manage spectacular --file openspec/openapi.yaml --validate --fail-on-warn",
                 "（基线变更要随本次接口改动一起提交）",
             ]
         return True, ["OpenAPI 与基线一致"]
@@ -491,7 +486,7 @@ def build_gates() -> list[Gate]:
         cmd_gate(
             "django-check",
             "Django 系统检查",
-            [py, "manage.py", "check"],
+            [py, "-m", "manage", "check"],
             blocking=True,
             env={"DJANGO_SECRET_KEY": "local-check-key-not-for-prod"},
         ),
@@ -511,7 +506,7 @@ def build_gates() -> list[Gate]:
         cmd_gate(
             "makemigrations-check",
             "迁移与模型一致（makemigrations --check）",
-            [py, "manage.py", "makemigrations", "--check", "--dry-run"],
+            [py, "-m", "manage", "makemigrations", "--check", "--dry-run"],
             blocking=True,
             env={"DJANGO_SECRET_KEY": "local-check-key-not-for-prod"},
         ),
@@ -529,7 +524,7 @@ def build_gates() -> list[Gate]:
         cmd_gate(
             "openapi-coverage",
             "OpenAPI 覆盖（业务路径必须全部已文档化）",
-            [py, "utils/check_openapi_coverage.py"],
+            [py, "-m", "utils.check_openapi_coverage"],
             blocking=True,
             env=OPENAPI_ENV,
         ),
@@ -635,7 +630,7 @@ def build_gates() -> list[Gate]:
         cmd_gate(
             "boundary",
             "模块边界检查（防火墙 #1/#2，import 方向见 linting）",
-            [py, "utils/gen_arch_stats.py", "--check-boundaries"],
+            [py, "-m", "utils.gen_arch_stats", "--check-boundaries"],
             blocking=True,
             env={"DJANGO_SECRET_KEY": "local-check-key-not-for-prod"},
         ),
@@ -649,7 +644,7 @@ def build_gates() -> list[Gate]:
         cmd_gate(
             "vue-file-size",
             "Vue 文件体积（<500 行）",
-            [py, "utils/gen_arch_stats.py", "--check-frontend"],
+            [py, "-m", "utils.gen_arch_stats", "--check-frontend"],
             blocking=True,
         ),
         grep_gate(
@@ -672,6 +667,14 @@ def build_gates() -> list[Gate]:
             [py, "-m", "scripts.check_engines_agents_style"],
             blocking=False,
             cwd=ROOT / ".agents" / "skills" / "engines-agents-style-check",
+        ),
+        # 全仓模块 docstring（告警项：存量迁移中，先看计数不拦；正文 .agents/rules/python-docstring-style.md）
+        cmd_gate(
+            "python-module-docstring",
+            "全仓模块 docstring（4 字段模板 / 工具函数 Args；见 python-docstring-style.md）",
+            [py, "-m", "scripts.docstrings", "check", "--all", "--summary"],
+            blocking=False,
+            cwd=ROOT / ".agents" / "skills" / "engines-docstring-check",
         ),
     ]
 

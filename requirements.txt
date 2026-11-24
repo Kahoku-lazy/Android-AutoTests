@@ -1,5 +1,5 @@
 # ── Security ──
-cryptography>=41.0
+cryptography>=50.0.2
 
 # ── Django Core ──
 # 固定 6.0.x：6.1 的模型字段检查会主动连接 MySQL 校验列类型，CI 无数据库时 check 直接失败；

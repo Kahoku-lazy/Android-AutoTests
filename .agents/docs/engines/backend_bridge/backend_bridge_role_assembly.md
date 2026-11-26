@@ -4,7 +4,7 @@
 > 上级约束：engines/AGENTS.md ｜ 模块索引：engines/AGENTS.md
 
 > 层级：根 `AGENTS.md` → [`engines/AGENTS.md`](../../../../engines/AGENTS.md) → **本文件**。本目录仍在 `engines/` 内，上层红线全部适用。
-> 目录现状：已是 Python 包；已有 `agents/`（角色）、`workflow/`（SOP 装配）、`events/`（事件落库）、`model_billing/`（模型费用）、`reports/`（报告路径）、`session.py`（会话）、`run.py`（入口）、`event_log.py`（事件面板）。
+> 目录现状：已是 Python 包；已有 `agents/`（角色）、`workflow/`（SOP 装配与运行取消）、`eval/`（评测用例与评分）、`models/`（模型目录与发现）、`model_billing/`（模型费用）、`reports/`（报告路径）、`token_usage/`（用量形状）、`event_log.py`（事件面板）、`device_guard.py`（执行前设备校验）、`session.py`（会话）、`run.py`（入口）、`result.py`（结果形状）。
 
 ## 1. 定位：平台侧智能体角色的唯一落点
 
@@ -21,12 +21,17 @@
 ```text
 backend_bridge/
   agents/            平台角色定义：调 create_agent 装配角色，挂工具与观测
-  workflow/          平台编排装配：用调用方给的步骤调 ae_harness 的 SOP 抽象
-  events/            事件落库：接收方绑定、运行上下文、预算计数、步骤中断、批量折叠
+  workflow/          平台编排装配与运行取消：bound_sop / bound_goal / bound_team / cancel
+  eval/              评测：用例运行与评分
+  models/            模型目录与模型名发现
   reports/           报告落盘：logs/agents/backend_bridge/<时间戳>_<role>.html
-  run.py             平台入口：跑一次 → 返回报告路径、token 汇总、逐次用量
-  token_usage/       用量形状与上送前置（当前为空目录）
+  token_usage/       用量形状与上送前置
   model_billing/     模型费用计算：DeepSeek 价目、高峰倍率、8 位小数
+  device_guard.py    执行前的设备校验（adb 可用 / 序列号存在 / 状态为 device）
+  event_log.py       事件落库：接收方绑定、运行上下文、预算计数、步骤中断、批量折叠
+  result.py          结果形状
+  run.py             平台入口：跑一次 → 返回报告路径、token 汇总、逐次用量
+  session.py         会话
 ```
 
 ## 2.1 SOP 与单角色的分工
@@ -56,7 +61,7 @@ backend_bridge/
 6. **禁止在未定事项上自行决策** —— 见第 5 节，动手前先问。
 7. **禁止自创 SOP** —— 步骤格式、重试、验收判定一律用 `ae_harness.workflow.sop` 的现成实现；本目录不得出现第二套编排循环或第二份步骤 YAML 格式。
 8. **禁止给验收角色挂写操作工具** —— 验收侧只取勾选与只读目录的交集。
-9. **事件落库只在本目录** —— 接收方绑定、运行上下文、预算计数、步骤中断与批量折叠归 `events/`；`ae_harness` 只写本地记录与报告，**禁止**在 `ae_harness` 写库或依赖后端事件类型。
+9. **事件落库只在本目录** —— 接收方绑定、运行上下文、预算计数、步骤中断与批量折叠归 `event_log.py`；`ae_harness` 只写本地记录与报告，**禁止**在 `ae_harness` 写库或依赖后端事件类型。
 10. **运行取消归本目录** —— 取消置位、当前步骤中断与清理只在本目录实现，禁止在 `ae_harness` 或后端另立第二套取消。
 11. **禁止直接引用 AgentScope** —— 本目录不得 `import agentscope`；框架的消息与工具类型经 `ae_harness` 的函数取得。
 

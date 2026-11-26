@@ -7,7 +7,7 @@
 
 ## 职责
 
-设备串口 / TCP 日志采集：端口检测、按端口接收线程、落盘、开关。为验收证据与 Harness（如 `tool_serial`）提供日志数据面；**不**承担 Django 端口台账的最终真相（开关状态可与 `serial_log` App 配合，配置项以环境/设置为准）。
+设备串口 / TCP 日志采集：端口检测、按端口接收线程、落盘、开关。为验收证据与 Harness 提供日志数据面；**不**承担 Django 端口台账的最终真相（开关状态可与 `serial_log` App 配合，配置项以环境/设置为准）。
 
 | 路径 | 职责 |
 | --- | --- |
@@ -38,6 +38,5 @@
 | 用途 | 路径 |
 |------|------|
 | 上层入口 | [`engines/AGENTS.md`](../../../../engines/AGENTS.md) |
-| Agent 工具封装 | `engines/agents/tools/tool_serial.py` |
 | 后端开关 API | `backend/apps/serial_log` |
 | 风格检查 | [`.agents/skills/engines-agents-style-check/`](../../../../.agents/skills/engines-agents-style-check/) |

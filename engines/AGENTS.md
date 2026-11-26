@@ -24,7 +24,7 @@
   - `vision/`：页面文本识别（OCR）；主要供引擎侧工具调用。
 - **依赖方向只有一条**：`backend/` →（注入）→ `engines/backend_bridge/` → `engines/ae_harness/`。`device/`、`vision/`、`uart_log/` 是底座，**不得**反向依赖 `backend_bridge` 或 `ae_harness`；需要写过程日志时经 `utils.logs`。
 - 领域架构与目录细则见 [`ae_harness_overview.md`](../.agents/docs/engines/ae_harness/ae_harness_overview.md)、[`backend_bridge_role_assembly.md`](../.agents/docs/engines/backend_bridge/backend_bridge_role_assembly.md) 等子文档，本文不展开。
-- `engines/agents/` 正在退役（见 `openspec/changes/retire-engines-agents`）：删除前对它的任何改动**只允许**修退役相关缺陷，不得新增能力。
+- `engines/agents/` 已于 **2026-11-17 退役**（`openspec/changes/archive/2026-11-17-retire-engines-agents`），目录不得重建；对应模块规则见 `.agents/docs/engines/**`。
 
 ## 红线（禁止）
 

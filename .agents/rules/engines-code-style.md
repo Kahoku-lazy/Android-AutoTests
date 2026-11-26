@@ -3,7 +3,7 @@
 本文是 engines 代码规范原文；**何时阅读由 `engines/AGENTS.md` 规定**，勿单独当作入口。
 
 > 本文约束 `engines/` 下全部代码的**通用编写风格**。  
-> 子目录若另有 `AGENTS.md`（如 `engines/agents/`、`engines/agents/rag/`），补充该领域规则。  
+> 子目录规则已外置到 `.agents/docs/engines/**`（`engines/agents/` 于 2026-11-17 退役，不再有子 `AGENTS.md`）。  
 > **冲突时以更具体目录的 AGENTS 为准**；命名等已被子文档明确的条目，以子文档为准。  
 > 写/改代码前的阅读与检查流程见 [`engines/AGENTS.md`](../../engines/AGENTS.md)；自动化检查用技能：注释/docstring → [`.agents/skills/engines-docstring-check/`](../skills/engines-docstring-check/)，命名 / 禁 import → [`.agents/skills/engines-agents-style-check/`](../skills/engines-agents-style-check/)。
 
@@ -32,9 +32,9 @@
 ## 3. 模块划分与单一职责
 
 1. **按业务域归文件**：同一业务能力放在同一个模块（`.py`）中，避免同域逻辑散落多处。  
-   - agents 工具命名与归位以 [`engines/agents/AGENTS.md`](../../engines/agents/AGENTS.md) 为准：文件名 `tool_xxx.py`（例如 `tool_device.py`、`tool_serial.py`），放在 `engines/agents/tools/`。  
+   - 工具命名与归位以 [`ae_harness_tools_domain_tools.md`](../docs/engines/ae_harness_tools/ae_harness_tools_domain_tools.md) 为准：文件名 `tool_xxx.py`（例如 `tool_device.py`），按域放在 `engines/ae_harness/tools/<域>/`。  
    - **禁止**再使用已废弃示例名 `test_device.py` / `test_serial.py`。
-2. **文件内再拆职责**：一个类 / 函数 / 组件只做一件事，内部元素紧密相关。可参考 `engines/agents/config.py`：模型配置、Agent 角色配置、创建模型功能分开，而不是堆进一个巨类。
+2. **文件内再拆职责**：一个类 / 函数 / 组件只做一件事，内部元素紧密相关。可参考 `engines/backend_bridge/models/`：模型目录（`catalog.py`）与模型名发现（`discover.py`）分开，而不是堆进一个巨类。
 3. **边界口诀**：  
    - 允许：一个 `.py` = 一个业务域，内部多个小类/函数各司其职。  
    - 禁止：无关业务塞进同一文件；禁止「为拆而拆」导致改一处要改十个文件。
@@ -69,7 +69,7 @@
 
 - **2026-11-24 注释方案全仓化**：模块头 4 字段模板正文迁至 [`python-docstring-style.md`](python-docstring-style.md)，适用范围从 `engines/**` 扩到全仓在册 Python 代码（排除 Django 固定脚手架与非产品代码）；本文 §2 变为指针，§6 范围由 `engines/agents/**` 更正为 `engines/ae_harness/tools/**`。变更单：`openspec/changes/repo-wide-python-docstring`。
 - **2026-11-24 注释收敛**：模块头只保留 4 字段（模块功能 / Python 调试 / 时间 / 测试），删除 `文件名`、`路径`、`作者`、`版本`、`修改时间`、`类型`、`简介说明`、`关联模块`；函数 / 类 / 行内注释默认不写，仅工具函数保留「首行摘要 + `Args:`」；`Raises:` 不再强制。存量代码不迁移，检查器只对新写 / 改动的文件生效。
-- 修正工具示例名为 `tool_device.py` / `tool_serial.py`，与 `engines/agents/AGENTS.md` 一致。  
+- 修正工具示例名为 `tool_device.py` / `tool_serial.py`，与当时的 `engines/agents/` 子索引一致（该目录已于 2026-11-17 退役，现行规则见外置模块文档）。  
 - 区分全 `engines` 通用规则与 `agents` 专规。  
 - 写明与子目录 `AGENTS.md` 的优先级。  
 - 澄清「一域一文件」与「单一职责」的边界，避免互相打架。  

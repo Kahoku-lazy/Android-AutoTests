@@ -39,7 +39,7 @@ Harness 内的**独立知识库模块**：向量模型与库列表由调用方�
 
 ## 当前状态：未挂角色，平台只读检索桥已放行
 
-**不接到任何角色**：只验证了能跑通（索引成功、命中字段齐全、三种返回文案正确），**准确率与召回率没测**。挂载到 Agent 前必须先过评测（Recall@k / MRR / 误命中率，评测能力见 `openspec/changes/add-knowledge-auto-eval`）。
+**不接到任何角色**：只验证了能跑通（索引成功、命中字段齐全、三种返回文案正确），**准确率与召回率没测**。挂载到 Agent 前必须先过评测（Recall@k / MRR / 误命中率，评测能力见 `openspec/changes/archive/2026-11-18-add-knowledge-auto-eval`）。
 
 **平台 backend 只读检索桥已放行**（2026-11-18 变更申请获批）：`backend/apps/knowledge_search` 经局部可选导入直调 `KnowledgeRetriever`，返回检索原文并取 `usage_events()` 入账；不造 Agent、不生成答案。整目录删除后平台降级为「检索不可用」，不炸入口。
 

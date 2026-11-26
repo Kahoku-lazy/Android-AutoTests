@@ -31,7 +31,7 @@ Doodle Craft 是本平台前端的**默认设计方案**：极简几何 · 粗�
 | 助手对话栏面板 | `AssistantLanePanel`（`.lane-panel`） | 对话页左栏：标题「对话栏」+ 笔色双波浪线 + 对话栏列表；外框 `1.5px dashed` 浅墨、**不倾斜**，见 [components/assistant-marker-card.md](references/components/assistant-marker-card.md) §5 |
 | 运行日志卡 | `ThreadLogPanel`（`.thread-log__card`） | 对话页日志：一轮一张，`1.5px dashed` 笔色 + 顶部居中胶带 + `4px 4px` 硬影，**0° 不倾斜**，见 [components/assistant-marker-card.md](references/components/assistant-marker-card.md) §5.2 |
 | 页面分区虚线 | `SectionDivider`（`.section-divider`） | 两段并列内容之间的一条 `1.5px dashed` 浅墨横线（`color-mix(ink 38%)`），**只做分区**；外边距由使用方给根节点加，组件不预设 |
-| 助手角色卡 | `AgentRouteCard`（`.route-card`，DoodleNote 皮） | 头像 + 职责 + 配置入口（助手看板 Agent-01 / Agent-02） |
+| 助手角色卡 | `AgentRouteCard`（`.route-card`） | 头像 + 职责 + 配置入口（助手看板 Agent-01 / Agent-02） |
 | 手稿控件皮肤 | `Sketched UI Kit`（`.sketch-kit` 作用域，`shared/styles/sketched-kit.css`） | 按钮描边态 + 输入框 / 多行框 / 下拉框边框，见 [components/sketched-ui-kit.md](references/components/sketched-ui-kit.md) |
 
 > **2026-11-09 变更**：`KpiCard`（核心指标卡 / 统计汇总卡）按需求由虚线改为**实线**，描边色 = 硬阴影色 `var(--kpi-accent)`（`2.5px solid var(--kpi-accent)`）。
@@ -63,7 +63,7 @@ Doodle Craft 是本平台前端的**默认设计方案**：极简几何 · 粗�
 
 **违规判定**：`grep -rn "dashed" frontend/src` 的结果里，只有 `AssistantCard.vue`、`AssistantLanePanel.vue`、`ThreadLogPanel.vue`、`AgentRouteCard.vue`、`SectionDivider.vue` 与 `shared/styles/sketched-kit.css` 可以出现 `dashed`（与门禁 `check-dashed-whitelist.mjs` 的 OWNERS 一一对应）；其它文件（含全局 `workbench-theme.css` / `style.css` / `tokens.css`）出现即违规。
 
-**存量待迁移**（规则已生效、代码尚未改完；动到下列文件时顺手改实线，不要新写虚线）：`workbench-theme.css` 的 `.wb-shell .ac-card` 全局虚线（连带 11 个 AppCard 实例）、`style.css` 的 `.el-dialog` / `.el-drawer`、`tokens.css` 的 `--comp-sheet-border` / `--comp-dialog-border`、`DoodleNote` 基类虚线（应下沉到 `AgentRouteCard` 自持，`TaskBoard` 的任务卡随之改实线）、`SketchCard`、`TaskMediaThumb`、`StepLogCheck`、`StepLogEvidence`、`TaskAttemptCard`、`CaseStepList`、`CaseImportCard`、`WorkflowDirTree`、`PageFlowNode`、`DashboardView`、`ActivityTimeline`、`DisconnectDialog`、`VoiceConsole`、`TranscriptPanel`、`CaseFileSheet`、`WifiPortPanel`、`LoginView` 内的本地 `dashed`。
+**存量待迁移**（规则已生效、代码尚未改完；动到下列文件时顺手改实线，不要新写虚线）：`workbench-theme.css` 的 `.wb-shell .ac-card` 全局虚线（连带 11 个 AppCard 实例）、`style.css` 的 `.el-dialog` / `.el-drawer`、`tokens.css` 的 `--comp-sheet-border` / `--comp-dialog-border`、`SketchCard`、`TaskMediaThumb`、`StepLogCheck`、`StepLogEvidence`、`TaskAttemptCard`、`CaseStepList`、`CaseImportCard`、`WorkflowDirTree`、`PageFlowNode`、`DashboardView`、`ActivityTimeline`、`DisconnectDialog`、`VoiceConsole`、`TranscriptPanel`、`CaseFileSheet`、`WifiPortPanel`、`LoginView` 内的本地 `dashed`。
 
 ## 先选场景
 
@@ -118,7 +118,7 @@ Doodle Craft 是本平台前端的**默认设计方案**：极简几何 · 粗�
 | --- | --- | --- |
 | 通用 | Button（EP + `wb-btn` 变体）、DoodleBtn、ConfirmButton、Tag | [general.md](references/components/general.md) |
 | 布局 | WorkbenchHeader、WorkbenchCrumbs、AppSidebar、`.doc-section`、AppTabs / FilterTabs | [layout.md](references/components/layout.md) |
-| 卡片 | AppCard 钉板卡、SketchCard 撕纸卡、KpiCard 指标卡、DoodleNote 涂鸦条目卡 | [cards.md](references/components/cards.md) |
+| 卡片 | AppCard 钉板卡、SketchCard 撕纸卡、KpiCard 指标卡 | [cards.md](references/components/cards.md) |
 | AI 助手（专有） | AssistantCard 颜料片、配置弹窗、测试对话页（一卡一色 + 笔色渐变） | [assistant-marker-card.md](references/components/assistant-marker-card.md) |
 | 表单控件 | Form / Input、Select、Cascader、el-switch、el-radio-button 分段控件 | [form-controls.md](references/components/form-controls.md) |
 | 手稿控件（分类） | **Sketched UI Kit**：按钮五态（Primary / Danger / Highlight / Disabled / Teal）+ 输入四态 + label，作用域 `.sketch-kit` | [sketched-ui-kit.md](references/components/sketched-ui-kit.md) |
@@ -135,7 +135,6 @@ Doodle Craft 是本平台前端的**默认设计方案**：极简几何 · 粗�
 | 可复用数据块（图表卡 / 表格卡 / 指标组） | `AppCard` | 裸 `el-card` |
 | 资源入口卡（用例） | `SketchCard` | 顶条彩色卡 |
 | 单个指标 | `KpiCard` | 自造清新风统计卡 |
-| 列表条目 / 线路卡 | `DoodleNote` | AppCard |
 | 多行多列列表 | `AppTable` | 原生 `el-table`、`el-card` 外套 |
 | 分页 | `usePagination` + 自绘控件 | EP 分页皮肤、自写状态机 |
 | 页头 | `WorkbenchHeader` | 第二套页头 |

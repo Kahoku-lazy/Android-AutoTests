@@ -73,7 +73,7 @@ L4 分页 MUST 由共享 `usePagination` composable 提供（`currentPage` / `to
 
 ### Requirement: Cards and grids reuse shared parts
 
-可复用数据块（图表卡 / 表格卡 / 指标卡 / 认证卡 / 条目卡）MUST 使用 shared 卡片零件（`AppCard` / `KpiCard` / `SketchCard` / `DoodleNote`）；卡片网格 MAY 由模块自建（`grid-template-columns`），SHALL NOT 为此抽出共享网格组件，也 SHALL NOT 另建与 shared 卡壳视觉不一致的私有默认卡样式。
+可复用数据块（图表卡 / 表格卡 / 指标卡 / 认证卡 / 条目卡）MUST 使用 shared 卡片零件（`AppCard` / `KpiCard` / `SketchCard`）；卡片网格 MAY 由模块自建（`grid-template-columns`），SHALL NOT 为此抽出共享网格组件，也 SHALL NOT 另建与 shared 卡壳视觉不一致的私有默认卡样式。
 
 #### Scenario: Metric row reuses the shared KPI card
 

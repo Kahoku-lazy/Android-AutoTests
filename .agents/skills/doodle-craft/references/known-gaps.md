@@ -18,7 +18,7 @@
 
 | 旧写法 | 现状 |
 |--------|------|
-| `.card` 拍立得卡片、`.card-info` 纸艺卡片 | **代码里已无实现**；现役是 `AppCard` / `SketchCard` / `KpiCard` / `DoodleNote` |
+| `.card` 拍立得卡片、`.card-info` 纸艺卡片 | **代码里已无实现**；现役是 `AppCard` / `SketchCard` / `KpiCard` |
 | 按钮"11px 字" | 违反最小 12px 硬规则；字号取 `--app-size-*` |
 | 表格 `1px dashed` 行分隔线 | 现行规范**不画网格线**，用 `transparent` 占位 |
 | 弹窗标题"Caveat 20px" | 无此字体也无此声明；标题排版走 EP 默认 + `--el-font-family` |

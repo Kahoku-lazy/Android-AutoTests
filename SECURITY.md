@@ -31,7 +31,13 @@
 ## 范围说明
 
 - **在范围内**：本仓库平台代码（backend / frontend / engines）的安全缺陷。
-- **不在范围内**：第三方依赖自身的漏洞（请报告给对应上游；Dependabot 会跟踪本仓库依赖更新）、用户自行部署配置不当（如把 `.env` 提交进仓库、生产环境开启 DEBUG）。
+- **不在范围内**：第三方依赖自身的漏洞（请报告给对应上游，本仓库的处理方式见下节「依赖更新策略」）、用户自行部署配置不当（如把 `.env` 提交进仓库、生产环境开启 DEBUG）。
+
+## 依赖更新策略
+
+- **安全更新自动开 PR**：仓库启用了 Dependabot security updates 与漏洞告警，出现已知 CVE 时会自动开修复 PR，仅针对有漏洞的依赖，不做常规版本追新。
+- **定期版本升级已停用**：`.github/dependabot.yml` 已于 2026-11-26 移除。它按 pip / npm / github-actions 三个生态每周批量开 PR，跨大版本（如 vitest 4→5、mermaid 11→12）需人工逐个判废，成本高于收益；依赖巡检改为**人工按需发起**：`pip list --outdated` / `npm outdated` 评估后再单独提交升级 PR。
+- **恢复自动追新**：从 git 历史取回配置即可 —— `git log -- .github/dependabot.yml` 找到删除前的提交，再 `git checkout <commit>^ -- .github/dependabot.yml`，下一个扫描周期生效。
 
 ## 密钥卫生（贡献者必读）
 

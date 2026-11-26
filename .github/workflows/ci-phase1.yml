@@ -76,6 +76,6 @@ jobs:
         env:
           DJANGO_SECRET_KEY: ci-not-for-prod
         run: |
-          gates=vitest,vite-build,prettier,eslint,dashed-whitelist
+          gates=vitest,vite-build,bundle-budget,prettier,eslint,dashed-whitelist
           gates="$gates,vue-tsc,prettier-ts,style-gates,cred-frontend"
           python utils/check_gates.py --only "$gates"

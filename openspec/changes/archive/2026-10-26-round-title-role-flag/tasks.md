@@ -14,7 +14,7 @@
 
 - [x] 3.1 `temps/round-title-preview.html` 按新格式重画（执行/验收 PASS/执行/验收 FAIL/重试/无判决/窄屏），`node temps/render-round-title.mjs` 出图。验证：`temps/round-title-preview.png` 目视通过。**验证结果**：紫/蓝两色徽章与 emoji 标记清晰可辨，窄屏折行自然。
 - [x] 3.2 门禁：`npm run typecheck` + `npx vitest run tests/task-list` + `npm run build` + `python run.py check`。验证：除既有 `openapi-schema` 外全绿。**验证结果**：typecheck 0、vitest 110 passed、build 16.1s 通过；`python run.py check` 阻塞项 21/22，唯一失败 `openapi-schema` 由工作区里先于本次的未提交后端改动引起（`backend/apps/*`、`openspec/openapi.yaml`）。首次跑 check 时 `vite-build` 报过一次失败，同目录再跑即通过，判断是与我并行的一次 `npm run build` 抢占 `dist/` 所致，与本改动无关。
-- [ ] 3.3 页面验收（用户侧）：刷新任务详情，确认执行轮带「1. ➡️」、验收轮以 ✅/❌ 开头且无序号、两角色徽章不同色、标题里不再有「执行模型/验收模型」。验证：用户目视确认。
+- 【已取消 · 人工验收不做】3.3 页面验收（用户侧）：刷新任务详情，确认执行轮带「1. ➡️」、验收轮以 ✅/❌ 开头且无序号、两角色徽章不同色、标题里不再有「执行模型/验收模型」。验证：用户目视确认。
 
 ## 4. 归档
 

@@ -13,7 +13,7 @@
 - [x] 2.3 `backend/apps/task_list/api.py` 的 `cancel_running_task` 通过函数内 import 调用 `schedule_cancel_release`；验证：取消接口返回 `{"id", "status": "cancelled"}` 且该调用不影响接口耗时（计时器为 daemon，不阻塞响应）。
 - [x] 2.4 `backend/apps/task_list/task_runner.py`：`run_task_async` 的 SOP 分支在 `finalize_task` 前 `refresh_from_db()`，状态已是 `cancelled` 时只回写用量；`finally` 里取消 2.2 的计时器并放行设备；验证：用例覆盖「取消后工作线程跑完→终态仍为 cancelled」「取消后工作线程异常→仍为 cancelled 且不写失败原因」。
 - [x] 2.5 后端门禁：`python manage.py check`、`ruff check backend/apps/task_list`、`python -m pytest -c tests/pytest.ini tests/api/test_task_cancel_dispatch.py tests/graybox/unit/test_case_run_continuity.py -q`；验证：全部通过，无 `makemigrations` 变更。
-- [ ] 2.6 `backend/apps/task_list/task_reports.py`：`_step_outcome` / `_case_outcome` 增加 `cancelled` 入参，`_flow_cases` 按 `task.status == "cancelled"` 传入；验证：`python -m pytest -c tests/pytest.ini tests/api/test_task_report_cancelled.py -q` 通过（当前步主动关闭、未开始步仍未执行、已判 FAIL 不改写）。
+- 【已取消 · 未做取消】2.6 `backend/apps/task_list/task_reports.py`：`_step_outcome` / `_case_outcome` 增加 `cancelled` 入参，`_flow_cases` 按 `task.status == "cancelled"` 传入；验证：`python -m pytest -c tests/pytest.ini tests/api/test_task_report_cancelled.py -q` 通过（当前步主动关闭、未开始步仍未执行、已判 FAIL 不改写）。
 - [x] 2.7 `frontend/src/modules/task-list/components/CaseStepList.vue` 的徽标与图标映射补「主动关闭」，复用既有中性色不新增 CSS；验证：`npm run typecheck` 与 `npx vitest run tests/task-list` 通过。
 
 ## 3. 回归与真机验收

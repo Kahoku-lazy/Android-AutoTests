@@ -19,4 +19,4 @@
 
 - [x] 4.1 后端关单：`python manage.py check`、`python manage.py makemigrations --check`、`ruff check apps/ai_assistant engines/ai`（相关路径）、`pytest tests/graybox/unit/test_ai_workflow_log_evidence.py tests/graybox/unit/test_ai_log_evidence_wiring.py tests/graybox/unit/test_ai_planner_log_check_guidance.py -q`。验证：全部通过。验证结果：`manage.py check` 无问题、`No changes detected`、`ruff check` + `ruff format --check` 全通过；相关后端用例 41 项通过（含 work_evidence 10 / wiring 12 / progress 2 / executor_log_check 13 / planner 指引 4）。
 - [x] 4.2 前端关单：改动文件 `npx prettier --check`、`npx eslint src/modules/ai-assistant src/shared/types` 无新增 error、`npx vue-tsc --noEmit`。验证：全部通过。验证结果：prettier 全通过；eslint 10 warning / 0 error（全为存量）；`vue-tsc` 退出码 0。
-- [ ] 4.3 页面验收（用户侧）：跑一条断言涉及开关日志的任务 —— 执行模型段应显示「点击前时间点 + 点击后截图路径 + 该时间点后 5 秒内日志（原始日志与命中标注）」；再跑一条纯页面断言的步骤，确认只显示时间点与截图。验证：用户目视确认。
+- 【已取消 · 人工验收不做】4.3 页面验收（用户侧）：跑一条断言涉及开关日志的任务 —— 执行模型段应显示「点击前时间点 + 点击后截图路径 + 该时间点后 5 秒内日志（原始日志与命中标注）」；再跑一条纯页面断言的步骤，确认只显示时间点与截图。验证：用户目视确认。

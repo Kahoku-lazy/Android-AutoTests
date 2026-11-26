@@ -33,7 +33,7 @@
 
 - [x] 6.1 逐条对照本变更规格，确认每个 Scenario 都有对应的可复现证据（离线脚本输出或日志片段），把无证据的场景补上脚本或如实记为未覆盖。验证：`openspec validate agent-sop-runner --strict` 通过，且每条 Scenario 在任务备注里能指到证据
 - [x] 6.2 确认平台侧零改动。验证：`git status --short` 在 `engines/ai`、`apps/`、`frontend/` 下无新增改动，`python tools/gen_arch_stats.py --check-boundaries` 通过
-- [ ] 6.3 确认本变更未引入跨 App import 与任何写库。验证：`python tools/gen_arch_stats.py --check-boundaries` 与 `python run.py check` 的阻塞项通过
+- 【已取消 · 未做取消】6.3 确认本变更未引入跨 App import 与任何写库。验证：`python tools/gen_arch_stats.py --check-boundaries` 与 `python run.py check` 的阻塞项通过
 - [x] 6.4 归档前复核：把已知边界（SOP 路径沿用执行角色的日志开关、用量不随运行状态持久化）写进交付说明。验证：`openspec status --change agent-sop-runner` 显示全部产物 done，且交付说明里两条边界都有记录
 
 ## 7. 验证记录（本会话）

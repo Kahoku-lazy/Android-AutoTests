@@ -26,4 +26,4 @@
 
 - [x] 5.1 `cd frontend && npm run typecheck` 与相关 vitest（Crumbs / AppTable / 设备或报告列表若有单测）；验证：本变更文件无新增失败
 - [x] 5.2 按 `vue-frontend-check` 过本变更涉及 Vue/CSS；验证：布局裁剪 / 字号 / 硬编码色无新增违规
-- [ ] 5.3 目视：`/devices` 表、`/reports` 表与详情回退、元素/用例三级回退、AI 深链回退；验证：L0/L1 未改、无双滚动条、无 `[scroll-guard]` 新告警
+- 【已取消 · 人工验收不做】5.3 目视：`/devices` 表、`/reports` 表与详情回退、元素/用例三级回退、AI 深链回退；验证：L0/L1 未改、无双滚动条、无 `[scroll-guard]` 新告警

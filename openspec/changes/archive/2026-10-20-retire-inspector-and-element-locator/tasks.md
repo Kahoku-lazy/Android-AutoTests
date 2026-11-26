@@ -35,7 +35,7 @@
 - [x] 6.1 本单 delta 覆盖 9 份整份退役与 4 份需求级修改。验证：`openspec validate retire-inspector-and-element-locator --strict`。**验证结果**：`Change 'retire-inspector-and-element-locator' is valid`。
 - [x] 6.2 归档时把 delta 并入主 specs，9 份退役能力的主规格 `## Requirements` 变空后删除对应 `spec.md`。验证：`openspec archive retire-inspector-and-element-locator` 后 `openspec validate --all`。**验证结果**：9 份主规格文件与空目录已删除（`ai-page-flow-capture`、`device-inspector-{page,snapshots,layers}`、`element-locator-{projects,page-workbench,element-fields}`、`inspector-save-to-elements`、`element-layering`）；4 份修改逐条合并（`page-flow-start-node` 2 条含新增起点契约、`ai-screen-vision` 4 条、`serial-log-page` 4 条、`dashboard-chapter-boards` 4 条）；`openspec validate --all` 83 passed / 0 failed；change 已移至 `openspec/changes/archive/2026-10-20-retire-inspector-and-element-locator`。
 - [x] 6.3 关单门禁：`python manage.py check`、`python -m ruff check`、`npm run build`、`python tools/gen_arch_stats.py --check-boundaries`。**验证结果**：`check` 无问题；`ruff check` All checks passed、`ruff format --check` 通过（dashboard 已格式化）；`npm run build` 成功；边界检查零违规。
-- [ ] 6.4 手工验收：登录后侧栏只剩「设备管理 / 页面流 / 串口日志」三个数据入口；打开一篇历史页面流文档能正常显示、保存；仪表盘「测试资产」章节不再出现「Android元素」。验证：逐条目视确认（需启动后端）
+- 【已取消 · 人工验收不做】6.4 手工验收：登录后侧栏只剩「设备管理 / 页面流 / 串口日志」三个数据入口；打开一篇历史页面流文档能正常显示、保存；仪表盘「测试资产」章节不再出现「Android元素」。验证：逐条目视确认（需启动后端）
 
 ## 7. 事后订正（2026-10-20）
 

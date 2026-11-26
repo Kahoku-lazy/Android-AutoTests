@@ -12,6 +12,6 @@
 
 - [x] 3.1 `tests/bug-manager/p0/bugDistribution.spec.ts`：状态/类型映射顺序、全零、圆心总数、series 与图例同源，共 5 条。验证：`npx vitest run tests/bug-manager` 通过。**验证结果**：2 文件 10 passed。
 - [x] 3.2 门禁：`npx vue-tsc --noEmit`、`npm run build:check`、`npm run lint:styles`、`npm run lint:lines`。验证：全绿。**验证结果**：tsc 0；build 41.8s；批 2 通过（批 3 仍 50 处既有）；虚线 0 处。
-- [ ] 3.3 目视：环形图与条形图随筛选变化、窄屏不重叠。验证：用户确认。
+- 【已取消 · 人工验收不做】3.3 目视：环形图与条形图随筛选变化、窄屏不重叠。验证：用户确认。
 
 > **2026-11-17 归档**：按需求方决定，剩余未完成项（人工验收 / 目视确认 / 门禁复核）不再执行——实现已完成或已被后续主题取代，本变更直接归档。

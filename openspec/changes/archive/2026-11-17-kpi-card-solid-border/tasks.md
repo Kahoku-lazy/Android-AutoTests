@@ -8,7 +8,7 @@
 - [x] 2.1 `doodle-craft/SKILL.md` §线型规则：白名单表只留助手角色卡，补 2026-11-09 变更说明与回退路径。验证：文档表格与 OWNERS 一致。**验证结果**：已改。
 - [x] 2.2 `references/components/cards.md`：顶部线型提示与 §3 KpiCard 规格改为实线描述。验证：不再声称 KpiCard 可声明 dashed。**验证结果**：已改。
 - [x] 2.3 门禁：`npx vue-tsc --noEmit`、`npm run build:check`、`npx vitest run tests/shared tests/dashboard`、`npm run lint:styles`、`npm run lint:lines`。验证：全绿。**验证结果**：tsc 0；lint:lines 通过（0 处）。
-- [ ] 2.4 目视：仪表盘 / 报告页 / BUG 概览三处统计卡描边与阴影同色。验证：用户确认。
+- 【已取消 · 人工验收不做】2.4 目视：仪表盘 / 报告页 / BUG 概览三处统计卡描边与阴影同色。验证：用户确认。
 
 ## 4. 去阴影（2026-11-09 追加）
 

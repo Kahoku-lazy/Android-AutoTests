@@ -13,4 +13,4 @@
 - [x] 2.3 `python -c "import engines.agents.realtime_vocie.pipeline"` → 导入通过
 - [x] 2.4 `ruff format` / `ruff check`（`engines/agents/realtime_vocie`、`engines/agents/middleware`、新测试）→ 通过
 - [x] 2.5 `npx openspec validate move-voice-pipeline-to-agent --strict` 通过
-- [ ] 2.6 真机验收：语音链路需要真实麦克风与 DashScope 密钥，单测覆盖不到音质与时延 —— 留待你在本机连一次 pipeline 模式确认
+- 【已取消 · 人工验收不做】2.6 真机验收：语音链路需要真实麦克风与 DashScope 密钥，单测覆盖不到音质与时延 —— 留待你在本机连一次 pipeline 模式确认

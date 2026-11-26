@@ -10,7 +10,7 @@
 ## 3. 门禁
 
 - [x] 3.1 `npx vue-tsc --noEmit`、`npm run build:check`、`npx vitest run tests/shared`、`npm run lint:lines`。验证：全绿。**验证结果**：tsc 0；build 46.7s；11 文件 49 passed；虚线 0 处。
-- [ ] 3.2 目视：展开/折叠/选中三态。验证：用户确认。
+- 【已取消 · 人工验收不做】3.2 目视：展开/折叠/选中三态。验证：用户确认。
 
 ## 4. 折叠态底部控件统一
 

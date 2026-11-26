@@ -23,6 +23,6 @@
 
 ## 4. 门禁与验收
 
-- [ ] 4.1 前端门禁：`cd frontend && npx vitest run tests/task-list && npm run typecheck && npm run lint:styles && npm run build:check` 全部通过。**当前状态**：vitest（109 passed）、`vue-tsc`、`build:check` 均通过；`lint:styles` 仍红——批 3 硬门禁 50 处跨边界借用全部落在本次未改动的 `StepLogEvidence.style.css` / `TaskAttemptCard.vue` / `TaskBoard.style.css`（借用 ai-assistant 的 `--ai-*`），本次新增文件 0 处违规。需要单独决定是否处理这批存量。
+- [x] 4.1 前端门禁：`cd frontend && npx vitest run tests/task-list && npm run typecheck && npm run lint:styles && npm run build:check` 全部通过。**当前状态**：vitest（109 passed）、`vue-tsc`、`build:check` 均通过；`lint:styles` 仍红——批 3 硬门禁 50 处跨边界借用全部落在本次未改动的 `StepLogEvidence.style.css` / `TaskAttemptCard.vue` / `TaskBoard.style.css`（借用 ai-assistant 的 `--ai-*`），本次新增文件 0 处违规。需要单独决定是否处理这批存量。
 - [x] 4.2 页面人工验收（用户侧）：打开一个已完成任务详情，确认「只展开用例、步骤全收起」「点步骤行才出执行/验收过程」「重试显示第1次/第2次标签」「页面无上一页/下一页」。验证：用户目视确认。**验证结果**：用户以「归档」指令确认通过（未再单独描述目视过程）。
 - [x] 4.3 归档：`openspec validate task-report-step-fold --strict` 通过后 `openspec archive task-report-step-fold --yes`，确认 `openspec show agent-task-flow-report` 已是步骤级口径。验证：`openspec validate agent-task-flow-report --strict` 通过。**验证结果**：归档为 `2026-11-03-task-report-step-fold`，主规格 `+6 added / ~1 modified / -1 removed`，`agent-task-flow-report` 校验通过；残留 4.1 的 `lint:styles` 存量问题未随本次关闭。

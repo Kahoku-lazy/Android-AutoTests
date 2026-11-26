@@ -41,4 +41,4 @@
 - [x] 8.1 后端：`python manage.py check && python manage.py makemigrations --check && ruff check apps/element_locator && ruff format --check <本次改动文件>` + `pytest -m "unit or integration"`。
 - [x] 8.2 前端：`cd frontend && npm run build`、`npm run lint`、`npm run lint:styles`、`npx vitest run tests/element-locator/p0` 全通过；按 `vue-frontend-check` 量规自检布局裁剪、字号与接口契约。
 - [x] 8.3 边界：`python tools/gen_arch_stats.py --check-boundaries` 通过。
-- [ ] 8.4 人工验收：逐条对照 `specs/element-locator-page-workbench/spec.md` 的新增 / 修改场景走查（默认 10 行分页、翻页不丢行、各列可编辑并持久化、XPath 覆盖为单条候选、非法输入被拒且不写库、新增一行、缺必填被拒、勾选 3 行批量删除）。
+- 【已取消 · 人工验收不做】8.4 人工验收：逐条对照 `specs/element-locator-page-workbench/spec.md` 的新增 / 修改场景走查（默认 10 行分页、翻页不丢行、各列可编辑并持久化、XPath 覆盖为单条候选、非法输入被拒且不写库、新增一行、缺必填被拒、勾选 3 行批量删除）。

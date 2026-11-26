@@ -23,4 +23,4 @@
 
 - [x] 5.1 跑后端门禁：`python manage.py check && ruff check && pytest tests/ai_assistant -m "unit or integration"`；验证：命令全绿、无回归（92 passed）
 - [x] 5.2 跑架构红线：`python tools/gen_arch_stats.py --check-boundaries`（跨模块 import/写库合规）；验证：零违规
-- [ ] 5.3 端到端手测（≥2 次）：真实对话分别输入「点击涂鸦」（意图 code=1 → 视觉 Harness）、「测试制冰机功能」（意图 code=2 → 推理 Harness）、「你好」（code=2 → 推理 Harness 兜底），强模型开关 ON 时短路；验证：意图路由正确、SSE 流式正常、截图回显正常
+- 【已取消 · 人工验收不做】5.3 端到端手测（≥2 次）：真实对话分别输入「点击涂鸦」（意图 code=1 → 视觉 Harness）、「测试制冰机功能」（意图 code=2 → 推理 Harness）、「你好」（code=2 → 推理 Harness 兜底），强模型开关 ON 时短路；验证：意图路由正确、SSE 流式正常、截图回显正常

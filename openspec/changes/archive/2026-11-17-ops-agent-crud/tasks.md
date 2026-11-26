@@ -14,6 +14,6 @@
 
 - [x] 3.1 若 OpenAPI 基线未包含这五个路径或描述仍写「仅超管」，随代码更新 `openspec/openapi.yaml`。验证：`python utils/check_gates.py --only openapi-schema,openapi-coverage` 通过。
 - [x] 3.2 后端回归：`tests/ai_assistant/api/test_roles.py` 中智能体相关 10 项通过（运营可创建且 owner 为空、普通用户 403、全员可见、不存在 404）。
-- [ ] 3.3 人工验收：运营新建一条后，用普通账号打开任务发布，下拉中能看到它；普通账号打创建接口返回 403；运营删除前能取消。
+- 【已取消 · 人工验收不做】3.3 人工验收：运营新建一条后，用普通账号打开任务发布，下拉中能看到它；普通账号打创建接口返回 403；运营删除前能取消。
 
 > **2026-11-17 归档**：按需求方决定直接归档，未完成项不再执行；本次 delta 因 MODIFIED 头部缺失未合并，delta 原文保留在本目录 specs/ 下。

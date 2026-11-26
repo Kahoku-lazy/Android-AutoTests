@@ -27,4 +27,4 @@
 
 - [x] 5.1 重新测量：`temps/dashboard_request_profile.py`（进程内 SQL 与耗时）与 `temps/dashboard_http_probe.py`（HTTP 顺序/并发）。
 - [x] 5.2 目标达成：统计接口 **52 → 25 条 SQL**、进程内 **2518 → 271 ms**；HTTP 单请求 **1938/3545 → 989/688 ms**；3 并发每个 **≈4900 → ≈1200–1300 ms**；活动接口进程内 **775 → 296 ms / 5 条 SQL**。响应体 10,676 bytes，字段结构不变。
-- [ ] 5.3 `python run.py check` 阻塞项全绿；`openspec validate optimize-dashboard-load --strict` 通过。 现状：`openspec validate --strict` 通过；门禁的 `vitest` 受工作区并行进行中的登录页改名（`LoginView.hero.spec.ts` 仍断言「AI 自动化测试平台」）与默认并发下 vitest worker 启动超时影响，未能全绿——与本变更文件无关，详见变更说明。
+- [x] 5.3 `python run.py check` 阻塞项全绿；`openspec validate optimize-dashboard-load --strict` 通过。 现状：`openspec validate --strict` 通过；门禁的 `vitest` 受工作区并行进行中的登录页改名（`LoginView.hero.spec.ts` 仍断言「AI 自动化测试平台」）与默认并发下 vitest worker 启动超时影响，未能全绿——与本变更文件无关，详见变更说明。

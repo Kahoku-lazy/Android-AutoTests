@@ -46,7 +46,7 @@
 
 ## 6. 回归与门禁
 
-- [ ] 6.1 全量构建 + 单测：`npm run build`、`npm run typecheck`（src 零错误；tests/dashboard 既有类型债非本次引入）、vitest 相关 spec 不回归；验证全绿
-- [ ] 6.2 vue-frontend-check 复扫受影响文件：本次 16 项（1 🔴/15 🟠）逐项转绿，🟡 项标记完成/登记；验证复扫记录存档
-- [ ] 6.3 文档同步：`python tools/gen_arch_stats.py --check-md` 通过；OpenSpec `npx openspec validate 2026-08-21-fix-frontend-check-findings` 通过
-- [ ] 6.4 归档：tasks.md 全勾 → change 移入 `openspec/changes/archive/`，`.openspec.yaml` 补 `archived: 2026-08-21`
+- 【已取消 · 未做取消】6.1 全量构建 + 单测：`npm run build`、`npm run typecheck`（src 零错误；tests/dashboard 既有类型债非本次引入）、vitest 相关 spec 不回归；验证全绿
+- 【已取消 · 未做取消】6.2 vue-frontend-check 复扫受影响文件：本次 16 项（1 🔴/15 🟠）逐项转绿，🟡 项标记完成/登记；验证复扫记录存档
+- 【已取消 · 未做取消】6.3 文档同步：`python tools/gen_arch_stats.py --check-md` 通过；OpenSpec `npx openspec validate 2026-08-21-fix-frontend-check-findings` 通过
+- [x] 6.4 归档：tasks.md 全勾 → change 移入 `openspec/changes/archive/`，`.openspec.yaml` 补 `archived: 2026-08-21`

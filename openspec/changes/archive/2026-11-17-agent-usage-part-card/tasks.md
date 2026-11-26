@@ -7,6 +7,6 @@
 ## 2. 验证
 
 - [x] 2.1 `npx vue-tsc --noEmit`、`npm run build:check`、`npx vitest run tests/dashboard`、`npm run lint:styles`、`npm run lint:lines`。验证：全绿。**验证结果**：tsc 0；build 20.7s；2 文件 62 passed；批 2 通过；虚线 0 处。
-- [ ] 2.2 目视：AI 用量右侧两张 Agent 卡的色条、黄圆、编号与数据两列。验证：用户确认。
+- 【已取消 · 人工验收不做】2.2 目视：AI 用量右侧两张 Agent 卡的色条、黄圆、编号与数据两列。验证：用户确认。
 
 > **2026-11-17 归档**：按需求方决定，剩余未完成项（人工验收 / 目视确认 / 门禁复核）不再执行——实现已完成或已被后续主题取代，本变更直接归档。

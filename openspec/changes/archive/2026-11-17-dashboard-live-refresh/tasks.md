@@ -18,7 +18,7 @@
 ## 4. 门禁与验收
 
 - [x] 4.1 `npx vue-tsc --noEmit`、`npm run build:check`、`npx vitest run tests/dashboard`、`npm run lint:lines`。验证：命令全绿。**验证结果**：tsc 0；build 37.9s；59 passed；虚线门禁 0 处。
-- [ ] 4.2 页面目视：章节头只剩标题、页头无刷新按钮、滚动时页脚不动。验证：用户确认。
+- 【已取消 · 人工验收不做】4.2 页面目视：章节头只剩标题、页头无刷新按钮、滚动时页脚不动。验证：用户确认。
 
 ## 5. AI 用量 Agent 卡横排
 

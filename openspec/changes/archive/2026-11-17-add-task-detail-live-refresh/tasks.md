@@ -19,7 +19,7 @@
 
 - [x] 4.1 新增 `frontend/tests/task-list/p0/task-report-live-refresh.spec.ts`：用例集合不变时连续替换 `flow` 后 `openCases` / `openSteps` 保持不变；新增一个用例后回到「只展开第一个用例」；新增轮次追加在末尾且既有 `round_id` 顺序不变。验证：`npx vitest run tests/task-list/p0/task-report-live-refresh.spec.ts` 全绿。
 - [x] 4.2 全量前端门禁：`npx vitest run tests/task-list`、`npm run typecheck`、`npm run lint:styles`、`npm run build:check` 四项全绿；不新增 `any`。验证结果：vitest 127/127、typecheck、build:check 三项全绿；`lint:styles` 仍红 50 处 G6 跨边界借用（`StepLogCheck` / `StepLogEvidence` / `TaskAttemptCard` / `TaskBoard` 借用 `--ai-*`），经确认全部为存量、本变更 0 新增（`TaskDetailPage.style.css` 不在清单内，`git show HEAD:…/StepLogCheck.style.css` 已含 `var(--ai-warm-border)`），按「本变更未新增违规」接受，清理另开变更。
-- [ ] 4.3 人工验收（一个真在跑的执行类任务，页面停留 5 分钟）：① 新轮次自动出现；② 展开用例后 30 秒仍展开；③ 翻页后刷新不跳页；④ 切后台 2 分钟无请求、切回立刻补一次；⑤ 任务结束自动停止且摘要五项齐全。把观测到的请求总数、`304` 比例与报告接口耗时记录到本变更的说明里。**（用户执行中）**
+- 【已取消 · 人工验收不做】4.3 人工验收（一个真在跑的执行类任务，页面停留 5 分钟）：① 新轮次自动出现；② 展开用例后 30 秒仍展开；③ 翻页后刷新不跳页；④ 切后台 2 分钟无请求、切回立刻补一次；⑤ 任务结束自动停止且摘要五项齐全。把观测到的请求总数、`304` 比例与报告接口耗时记录到本变更的说明里。**（用户执行中）**
 - [x] 4.4 文档复核：确认 `README.md` 与 `PRD-平台总需求` 的「无 WebSocket / SSE，任务进度走 HTTP 轮询」表述无需改动（本变更只是让既有轮询覆盖到详情页，不新增通道）。验证：`python utils/gen_arch_stats.py --check-md --doc dev_docs/ARCH_PRD/ARCH-平台架构设计.md` 通过。
 
 > **2026-11-17 归档**：按需求方决定，剩余未完成项（人工验收 / 目视确认 / 门禁复核）不再执行——实现已完成或已被后续主题取代，本变更直接归档。

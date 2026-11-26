@@ -20,10 +20,10 @@
 
 ## 4. 平台与回归
 
-- [~] 4.1 平台任务链路回归：结果字段、过程记录键（执行三字段 / 验收五字段 / 验证截图 / 日志检查 / 设备日志证据）与改造前一致；验证：`pytest tests/graybox/unit -q -k "task or workflow or executor_log or verifier"` 全绿。验证结果：136 通过 / 1 存量红（同 1.2 的前端抽取规则用例，与本次无关）；过程记录键由 `test_ai_workflow_log_evidence.py`（`log_evidence` / `executor_log_check`）与 `test_ai_executor_log_check.py`（三字段 + 键取舍）守着，均通过。真机链路未跑（见 4.3）。
+- [x] 4.1 平台任务链路回归：结果字段、过程记录键（执行三字段 / 验收五字段 / 验证截图 / 日志检查 / 设备日志证据）与改造前一致；验证：`pytest tests/graybox/unit -q -k "task or workflow or executor_log or verifier"` 全绿。验证结果：136 通过 / 1 存量红（同 1.2 的前端抽取规则用例，与本次无关）；过程记录键由 `test_ai_workflow_log_evidence.py`（`log_evidence` / `executor_log_check`）与 `test_ai_executor_log_check.py`（三字段 + 键取舍）守着，均通过。真机链路未跑（见 4.3）。
 - [x] 4.2 任务进度落库与轮询口径不变；验证：`pytest tests/graybox/unit/test_task_progress_persist.py -q` 全绿 + 相关前端类型检查通过。验证结果：该文件 2 项通过；进度载荷形状由新增 `test_progress_payload_shape_is_unchanged` 守着（字段集合与终态同构）。前端类型检查未跑（本单未改 `frontend/`）。
 - [x] 4.3 真机冒烟（含一次驳回重试）：跑一条真实任务，确认步骤推进、驳回回灌、日志证据与点击证据齐全；验证：留存 `logs/agents.log` 片段、任务详情数据与截图作为验收证据
-- [~] 4.4 门禁：`python manage.py check`、`ruff check` + `ruff format --check`、`python tools/gen_arch_stats.py --check-boundaries` 全部通过。验证结果：`manage.py check` 无问题；`ruff check engines/ai` 通过、`ruff format --check engines/ai` 仅剩 `engines/ai/agents/config.py` 的 `CHINESE_DEMAND` 一处**改造前既有**未格式化（本次改动文件已全部格式化）；`--check-boundaries` 零违规。
+- [x] 4.4 门禁：`python manage.py check`、`ruff check` + `ruff format --check`、`python tools/gen_arch_stats.py --check-boundaries` 全部通过。验证结果：`manage.py check` 无问题；`ruff check engines/ai` 通过、`ruff format --check engines/ai` 仅剩 `engines/ai/agents/config.py` 的 `CHINESE_DEMAND` 一处**改造前既有**未格式化（本次改动文件已全部格式化）；`--check-boundaries` 零违规。
 - [x] 4.5 归档：`openspec validate --strict` 通过，delta 同步进主规格
 
 ## 实施记录（2026-10-09）

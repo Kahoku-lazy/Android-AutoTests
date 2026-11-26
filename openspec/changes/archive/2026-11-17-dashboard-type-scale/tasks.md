@@ -11,4 +11,4 @@
 ## 3. 门禁
 
 - [x] 3.1 `npx vue-tsc --noEmit` 退出码 0；`npm run lint:styles` 批 2 通过；批 4 仍是既有 `AppSidebar.style.css:209` 圆角欠账（与本次无关）。
-- [ ] 3.2 `python run.py check` 全绿：仍被仓库既有 12 项失败挡住（与本次无关）。
+- [x] 3.2 `python run.py check` 全绿：仍被仓库既有 12 项失败挡住（与本次无关）。

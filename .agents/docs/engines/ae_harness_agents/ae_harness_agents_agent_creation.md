@@ -23,6 +23,10 @@ agents/
 
 `create_agent` 是唯一出口，返回 `AgentBundle`：`.agent` 是可运行智能体，`.api_key_env` 是本次使用的密钥环境变量名（只有名字，没有值）。
 
+### 强制工具被思考模式拒绝时的重发
+
+`create_model` 给 openai 与 deepseek 两条通道都包一层 `ThinkingToolChoiceGuard`，语义完全一致：只有收到含 `Thinking mode does not support this tool_choice` 的 400、且本次请求强制了工具时才重发，同一次调用最多一次。第一次重发关闭思考（`extra_body.thinking.type=disabled`）并保持工具名；若仍是同一句 400 且强制的是 `GenerateStructuredOutput`，第二次重发只保留该工具并把选择权交回模型（`auto`），请求不再携带设备工具。其它 400、超时、连接失败不重发；dashscope 不套用。判定函数 `is_thinking_tool_choice_rejection(exc)` 是公开出口，任务失败分类按它识别「交卷轮被思考模式拒绝」。成功路径的调用次数与参数不受影响。
+
 ```python
 from engines.ae_harness.agents.creator import create_agent
 

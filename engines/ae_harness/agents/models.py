@@ -30,8 +30,12 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 __all__ = [
     "ChatModel",
     "CreatedModel",
+    "DeepSeekToolChoiceChatModel",
+    "OpenAIGatewayChatModel",
     "OpenAIGatewayFormatter",
+    "ThinkingToolChoiceGuard",
     "create_model",
+    "is_thinking_tool_choice_rejection",
     "load_secret",
 ]
 
@@ -85,7 +89,7 @@ _THINKING_TOOL_CHOICE = "Thinking mode does not support this tool_choice"
 _STRUCTURED_TOOL = "GenerateStructuredOutput"
 
 
-def _thinking_rejected(exc: Exception) -> bool:
+def is_thinking_tool_choice_rejection(exc: Exception) -> bool:
     return _THINKING_TOOL_CHOICE in str(exc)
 
 
@@ -125,10 +129,7 @@ def _only_structured(tools: list[dict] | None) -> list[dict]:
     ]
 
 
-class OpenAIGatewayChatModel(OpenAIChatModel):
-    def _get_disable_thinking_kwargs(self) -> dict:
-        return {"extra_body": {"thinking": {"type": "disabled"}}}
-
+class ThinkingToolChoiceGuard:
     async def _call_api(
         self,
         model_name: str,
@@ -142,13 +143,16 @@ class OpenAIGatewayChatModel(OpenAIChatModel):
                 model_name, messages, tools, tool_choice, **generate_kwargs
             )
         except Exception as exc:
-            if not _thinking_rejected(exc) or not _can_retry(tool_choice):
+            if not is_thinking_tool_choice_rejection(exc) or not _can_retry(tool_choice):
                 raise
             quiet = _disable_thinking(generate_kwargs)
             try:
                 return await super()._call_api(model_name, messages, tools, tool_choice, **quiet)
             except Exception as second:
-                if not _thinking_rejected(second) or _forced_name(tool_choice) != _STRUCTURED_TOOL:
+                if (
+                    not is_thinking_tool_choice_rejection(second)
+                    or _forced_name(tool_choice) != _STRUCTURED_TOOL
+                ):
                     raise
                 return await super()._call_api(
                     model_name,
@@ -157,6 +161,15 @@ class OpenAIGatewayChatModel(OpenAIChatModel):
                     ToolChoice(mode="auto"),
                     **quiet,
                 )
+
+
+class OpenAIGatewayChatModel(ThinkingToolChoiceGuard, OpenAIChatModel):
+    def _get_disable_thinking_kwargs(self) -> dict:
+        return {"extra_body": {"thinking": {"type": "disabled"}}}
+
+
+class DeepSeekToolChoiceChatModel(ThinkingToolChoiceGuard, DeepSeekChatModel):
+    pass
 
 
 def load_secret(name: str) -> str:
@@ -197,7 +210,7 @@ def create_model(
     resolved = entry.base_url or _DEFAULT_BASE_URL.get(entry.provider, "")
     if entry.provider == "deepseek":
         return CreatedModel(
-            model=DeepSeekChatModel(
+            model=DeepSeekToolChoiceChatModel(
                 credential=DeepSeekCredential(api_key=api_key, base_url=resolved),
                 model=entry.model_name,
                 stream=stream,

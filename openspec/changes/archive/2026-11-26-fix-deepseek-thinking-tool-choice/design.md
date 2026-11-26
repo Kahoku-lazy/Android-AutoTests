@@ -5,6 +5,7 @@
 - `engines/backend_bridge/workflow/bound_sop.py` 的 `on_abort(report_path, exc)` 只把报告路径交给调用方；`record` 里已有的 `usages` / `cost_s` 在异常抛出后丢失。
 - `backend/apps/task_list/task_runner.py` 的失败分支只写状态、`result` 与 `finished_at`，不调用 `claim_terminal(usage=..., costs=...)`，也不写逐次账；成功分支才走 `_record_task_usages` 与 `api.summarize_ledger_cost`。
 - 任务 260 的失败文案由 `_failure_payload` 按 `openai` 异常的 `status_code` 生成「模型拒绝（400）」，`failed_steps` 的名称来自 `api.category_step("provider", ...)` 的固定映射。
+- 任务详情页已于 2026-11-26 退役（提交 `5ddebe95`，前端不再有 `/tasks/:id` 路由，`/api/tasks/{id}/` 仍保留）；本变更的可观察面是 `Task.result`、`/api/reports/` 台账与 BUG 单，不是页面。
 
 ## Goals / Non-Goals
 
@@ -20,8 +21,10 @@
 - 不改 dashscope 通道，不给通用 400 增加重试。
 - 不改 `engines/agents`（已不存在）与任何「30 次后强制关思考」的历史规格。
 - 不回填历史失败任务的用量与费用。
-- 不处理用户取消（`cancelled`）与进程退出（`interrupted`）的用量回写；前者沿用既有口径，后者已有启动恢复。
+- 不处理用户取消（`cancelled`）、预算超限或进程退出（`interrupted`）的用量回写；取消沿用既有口径，进程退出已有启动恢复，预算中断的用量另议。
+- 不处理 `goal` / `team` 编排链路的用量与费用回写（它们当前成功收口也不写逐次账，另开变更）。
 - 不处理 `task_events` 当前没有任何落库行的问题（与本次三条规格无关，另行排查）。
+- 不恢复任务详情页；验收只认任务记录、报告台账与 BUG 单。
 
 ## Decisions
 
@@ -50,7 +53,7 @@
 
 `task_runner` 的失败分支在拿到用量快照后：先按 `task:<task_id>:<round>` 写逐次账（与成功路径同一个 `record_run_usages`），再用 `api.summarize_ledger_cost(task_id)` 汇总，最后 `claim_terminal(..., usage=_usage_totals(tokens), costs=costs)`。`_record_task_usages` 改为接收 `usages` 列表与 `model`，成功路径传 `outcome.usages` / `outcome.model`。
 
-用整次运行的累计值回写而不是累加，是因为 `api._apply_usage` 是覆盖式写入，重入不会翻倍；逐次账由 `record_usage` 按 `event_id` 幂等更新。
+用整次运行的累计值回写而不是累加，是因为 `api._apply_usage` 是覆盖式写入，重入不会翻倍；逐次账由 `record_usage` 按 `event_id` 幂等更新。该路径只覆盖 `assistant_sop`（`run_bound_sop` 的 on_abort 快照）；`_finish_goal` / `_finish_team` 没有用量快照，保持现状。
 
 ### D5 文案判定放在引擎的公开 helper，步骤名可覆写
 

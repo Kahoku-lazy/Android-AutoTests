@@ -800,7 +800,7 @@ def failed_step_rows(steps: list, kind: str) -> list[dict]:
     return rows
 
 
-def category_step(kind: str, actual: str) -> dict:
+def category_step(kind: str, actual: str, *, name: str = "") -> dict:
     names = {
         "provider": "模型拒绝",
         "device": "设备命令失败",
@@ -812,7 +812,7 @@ def category_step(kind: str, actual: str) -> dict:
         expected = "流程应跑完"
     return {
         "seq": 1,
-        "name": names.get(kind, "平台错误"),
+        "name": name or names.get(kind, "平台错误"),
         "expected": expected,
         "actual": step_text(actual),
         "attempts": 0,

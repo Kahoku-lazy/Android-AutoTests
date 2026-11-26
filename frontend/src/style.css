@@ -3,29 +3,9 @@
   font-style: normal;
   font-weight: var(--app-font-weight-regular);
   font-display: swap;
-  src: url("/fonts/ziku-feiyang.ttf") format("truetype");
-}
-
-@font-face {
-  font-family: "Cascadia Mono";
-  font-style: normal;
-  font-weight: var(--app-font-weight-regular);
-  font-display: swap;
   src:
-    local("Cascadia Mono"),
-    url("https://cdn.jsdelivr.net/npm/@fontsource/cascadia-mono@5.3.0/files/cascadia-mono-latin-400-normal.woff2")
-      format("woff2");
-}
-@font-face {
-  font-family: "Cascadia Mono";
-  font-style: normal;
-  font-weight: var(--app-font-weight-bold);
-  font-display: swap;
-  src:
-    local("Cascadia Mono Bold"),
-    local("Cascadia Mono"),
-    url("https://cdn.jsdelivr.net/npm/@fontsource/cascadia-mono@5.3.0/files/cascadia-mono-latin-700-normal.woff2")
-      format("woff2");
+    url("/fonts/ziku-feiyang.woff2") format("woff2"),
+    url("/fonts/ziku-feiyang.ttf") format("truetype");
 }
 
 * {

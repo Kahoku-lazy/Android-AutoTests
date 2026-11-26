@@ -34,6 +34,7 @@ class ServiceSpec:
     command: tuple[str, ...]
     extra_env: dict[str, str] = field(default_factory=dict)
     drain: bool = False
+    preflight: tuple[str, ...] = ()
 
 
 def env_flag(name: str, default: bool) -> bool:
@@ -82,6 +83,7 @@ def build_registry() -> dict[str, ServiceSpec]:
             cwd=ROOT / "frontend",
             ready_timeout=30,
             command=(npx, "vite", "--host"),
+            preflight=(sys.executable, "-m", "utils.fetch_fonts", "--soft"),
         ),
     }
 

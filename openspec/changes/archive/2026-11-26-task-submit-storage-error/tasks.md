@@ -24,6 +24,6 @@
 
 - [x] 4.1 后端门禁（2026-11-26 实跑：阻塞项 30/30 通过）：`.venv\Scripts\python.exe -m run check`（等价 `python run.py check`），退出码 0。
 
-- [ ] 4.2 真实链路复验（未执行：需改 .env 的 DATA_DIR 并重启后端 + 浏览器点「开始运行」，留待真机复验）（浏览器）：把 `.env` 的 `DATA_DIR` 临时指向一个不存在的盘符（如 `Z:\nope`）→ `python -m run restart backend` → 弹窗点「开始运行」→ 界面 MUST 显示「任务配置文件写入失败…请检查…写权限」，而不是「服务暂时异常，请稍后重试」；`logs/backend.log` MUST 有对应堆栈；任务清单 MUST 不出现新任务。验完把 `DATA_DIR` 还原并重启后端，正常提交成功。验证：记录界面文案截图与 backend.log 片段。
+- [x] 4.2 **等价验证（偏差记录：浏览器端到端未做）** —— 2026-11-26 实测：把 `DATA_DIR` 指到 `Z:\nope` 后**后端进程直接起不来**（`run start backend` 报 backend did not start，健康检查期间 MySQL 连接丢失），浏览器路径拿不到那个 500；改用「真实 settings + 真实文件系统」验证同一落盘入口：`temps/probe_storage_error.py` 输出 `status=500`、`message=任务配置文件写入失败：系统找不到指定的路径，请检查运行账号对该目录的写权限`、无 `Traceback`，且 `logs/backend.log` 有 `任务附件写入失败: probe.yaml` 堆栈；界面文案映射由 `apiError.spec.ts` 单独锁定。**未做**：浏览器点「开始运行」的截图。（浏览器）：把 `.env` 的 `DATA_DIR` 临时指向一个不存在的盘符（如 `Z:\nope`）→ `python -m run restart backend` → 弹窗点「开始运行」→ 界面 MUST 显示「任务配置文件写入失败…请检查…写权限」，而不是「服务暂时异常，请稍后重试」；`logs/backend.log` MUST 有对应堆栈；任务清单 MUST 不出现新任务。验完把 `DATA_DIR` 还原并重启后端，正常提交成功。验证：记录界面文案截图与 backend.log 片段。
 
 - [x] 4.3 架构与风格：`gen_arch_stats.py --check-boundaries` 零违规；`module_docstring` 不在 `run check` 门禁内（2026-11-24 起全仓不写注释），本条以 boundary + ruff 为准。原任务文本：`python utils/gen_arch_stats.py --check-boundaries` 退出码 0；`engines-agents-style-check` / docstring 检查仅报本次新增问题（本变更只动 `backend/apps/task_list/views.py` 与测试）。

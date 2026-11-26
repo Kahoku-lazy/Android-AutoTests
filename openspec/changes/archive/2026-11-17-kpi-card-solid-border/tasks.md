@@ -12,8 +12,7 @@
 
 ## 4. 去阴影（2026-11-09 追加）
 
-- [x] 4.1 KpiCard.vue：box-shadow: 4px 4px 0 0 var(--kpi-accent) → 
-one，hover 也去掉阴影，只保留描边与微倾。验证：build 24.5s、共享/仪表盘测试通过。**验证结果**：通过。
+- [x] 4.1 KpiCard.vue：box-shadow: 4px 4px 0 0 var(--kpi-accent) → none，hover 也去掉阴影，只保留描边与微倾。验证：build 24.5s、共享/仪表盘测试通过。**验证结果**：通过。
 - [x] 4.2 规格 delta 同步：frontend-doodle-kpi-card 的卡壳要求改为「实线描边 + 近直角圆角 + 无阴影」，entry 主数值色改以描边 accent 为准。验证：openspec validate kpi-card-solid-border --strict。**验证结果**：valid。
 - [x] 4.3 doodle-craft/references/components/cards.md §3 同步为「阴影 无」。验证：文档与代码一致。**验证结果**：已改。
 

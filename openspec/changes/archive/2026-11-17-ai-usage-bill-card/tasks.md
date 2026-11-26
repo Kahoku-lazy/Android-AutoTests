@@ -21,12 +21,7 @@
 
 ## 5. 统一后的门禁
 
-- [x] 5.1 
-px vue-tsc --noEmit、
-pm run build:check、
-px vitest run tests/dashboard、
-pm run lint:styles、
-pm run lint:lines。验证：全绿。**验证结果**：tsc 0；build 通过；62 passed；批 2 通过；虚线 0 处。
+- [x] 5.1 npx vue-tsc --noEmit、npm run build:check、npx vitest run tests/dashboard、npm run lint:styles、npm run lint:lines。验证：全绿。**验证结果**：tsc 0；build 通过；62 passed；批 2 通过；虚线 0 处。
 
 - [x] 4.4 角标同色系：.part-card::after 由固定黄改为 color-mix(in srgb, var(--part-accent) 28%, var(--paper))，顶边紫色则角标淡紫、顶边青绿则角标淡青绿。验证：build 19.6s、62 用例通过、虚线 0 处。**验证结果**：全绿。
 

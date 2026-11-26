@@ -23,8 +23,7 @@
 ## 5. AI 用量 Agent 卡横排
 
 - [x] 5.1 DashboardView.style.css：.ch-ai__body 右列由 minmax(280px, 420px) 改为 minmax(0, 1fr)，让 Agent 卡拿到整段剩余宽度。验证：1684 视口下两卡各约 420px。**验证结果**：已改。
-- [x] 5.2 index.vue：.agent-usage-list 由单列改 
-epeat(2, minmax(0, 1fr))，align-items: stretch；@media (max-width: 1400px) 回落单列，保留 1100px 的间距规则。验证：
+- [x] 5.2 index.vue：.agent-usage-list 由单列改 repeat(2, minmax(0, 1fr))，align-items: stretch；@media (max-width: 1400px) 回落单列，保留 1100px 的间距规则。验证：
 pm run build:check 与 tests/dashboard 通过。**验证结果**：build 35s、59 用例通过。
 
 ## 6. 章节标题放大与活动区留白

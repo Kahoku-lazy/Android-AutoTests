@@ -8,6 +8,7 @@ import {
   editablePayload,
   groupRows,
   hasAnchor,
+  hasDraftChanges,
   hasLog,
   isGroupHeader,
   priorityTone,
@@ -181,6 +182,59 @@ describe("[P1] 草稿读写", () => {
       steps: [{ action: "A".repeat(2001), assertion: "断言" }],
     })
     expect(validateDraft(row)?.message).toContain("2000")
+  })
+})
+
+describe("[P1] 草稿差异判定", () => {
+  it("草稿是原行的克隆时不算改动", () => {
+    const row = makeRow("a")
+    expect(hasDraftChanges(row, cloneRow(row))).toBe(false)
+  })
+
+  it("没有草稿时不算改动", () => {
+    expect(hasDraftChanges(makeRow("a"), null)).toBe(false)
+    expect(hasDraftChanges(null, makeRow("a"))).toBe(false)
+  })
+
+  it("改了步骤动作即算改动", () => {
+    const row = makeRow("a")
+    const draft = cloneRow(row)
+    draft.steps[0].action = "打开登录页"
+    expect(hasDraftChanges(row, draft)).toBe(true)
+  })
+
+  it("新增或删除步骤算改动", () => {
+    const row = makeRow("a")
+    const added = cloneRow(row)
+    added.steps.push({ action: "退出", assertion: "回到首页" })
+    expect(hasDraftChanges(row, added)).toBe(true)
+
+    const removed = cloneRow(row)
+    removed.steps = []
+    expect(hasDraftChanges(row, removed)).toBe(true)
+  })
+
+  it("改了行字段算改动", () => {
+    const row = makeRow("a")
+    expect(hasDraftChanges(row, { ...cloneRow(row), priority: "P0" })).toBe(true)
+    expect(hasDraftChanges(row, { ...cloneRow(row), precondition: "设备在线" })).toBe(true)
+  })
+
+  it("只差尾部空格不算改动（保存时本来就会 trim）", () => {
+    const row = makeRow("a", { title: "定时用例" })
+    const draft = cloneRow(row)
+    draft.title = "定时用例  "
+    expect(hasDraftChanges(row, draft)).toBe(false)
+  })
+
+  it("空执行提示与缺键不算改动", () => {
+    const row = makeRow("a", {
+      steps: [{ action: "打开", assertion: "可见", anchor: {}, log: {} }],
+    })
+    const draft = cloneRow(row)
+    draft.steps[0].anchor = undefined
+    draft.steps[0].log = undefined
+    expect(hasDraftChanges(row, draft)).toBe(false)
   })
 })
 

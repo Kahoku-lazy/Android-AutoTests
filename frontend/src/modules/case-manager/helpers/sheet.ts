@@ -104,6 +104,11 @@ export function editablePayload(row: CaseRow): Partial<CaseRow> {
   }
 }
 
+export function hasDraftChanges(row: CaseRow | null, draft: CaseRow | null): boolean {
+  if (!row || !draft) return false
+  return JSON.stringify(editablePayload(row)) !== JSON.stringify(editablePayload(draft))
+}
+
 export function validateDraft(row: CaseRow): DraftIssue | null {
   if (!row.title.trim()) return { message: "标题不能为空", step: 0 }
   const steps = row.steps || []

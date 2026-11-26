@@ -16,6 +16,9 @@
   `deepseek_billing.py` 已退役为占位文件，**不要再引用**。
 - **无报告端点**：任务详情报告端点已下线，`urls.py` 不再注册 `report` 路由；报告读取走
   `report_generator` 台账与 `ai_assistant` 的报告通道。
+- **失败报告**：`failed` 且已进入执行（有事件记录）的任务必须留一份 HTML 报告，定位写入
+  `Task.result` 的 `report_run` / `report_name`，任务清单与报告台账按该定位展示；
+  `cancelled` 与 `interrupted` 不产报告；起跑前失败（无事件记录）只写失败原因。
 
 ## 红线
 

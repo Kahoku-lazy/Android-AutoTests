@@ -18,7 +18,7 @@ import {
   taskStatusTone,
 } from "../constants"
 import { caseHover } from "../helpers/case-identity"
-import { formatTaskCost, formatTaskDuration } from "../helpers/task-detail"
+import { formatTaskCost, formatTaskDuration } from "../helpers/task-card"
 import { fetchTaskReport } from "../api/tasks"
 import { useTaskList } from "../composables/useTaskList"
 import TaskStatsStrip from "./TaskStatsStrip.vue"

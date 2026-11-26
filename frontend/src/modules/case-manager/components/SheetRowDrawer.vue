@@ -1,9 +1,15 @@
 <script setup lang="ts">
-import { ref, watch } from "vue"
-import { ElMessage } from "element-plus"
+import { computed, ref, watch } from "vue"
+import { ElMessage, ElMessageBox } from "element-plus"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
-import { cloneRow, hasAnchor, hasLog, validateDraft } from "../helpers/sheet"
+import { cloneRow, hasAnchor, hasDraftChanges, hasLog, validateDraft } from "../helpers/sheet"
+import {
+  DISCARD_DRAFT_CANCEL,
+  DISCARD_DRAFT_CONFIRM,
+  DISCARD_DRAFT_MESSAGE,
+  DISCARD_DRAFT_TITLE,
+} from "../constants"
 import { BUSINESS_OPTIONS, PRIORITY_OPTIONS, SYSTEM_OPTIONS } from "../types"
 import type { CaseRow, CaseStep } from "../types"
 
@@ -17,9 +23,11 @@ const emit = defineEmits<{
   "update:modelValue": [value: boolean]
   "apply": [row: CaseRow]
   "remove": [row: CaseRow]
+  "dirty-change": [value: boolean]
 }>()
 
 const draft = ref<CaseRow | null>(null)
+const hasEdits = computed(() => hasDraftChanges(props.row, draft.value))
 
 watch(
   () => [props.modelValue, props.row] as const,
@@ -34,8 +42,32 @@ watch(
   { immediate: true },
 )
 
-function close() {
+watch(hasEdits, (value) => emit("dirty-change", value), { immediate: true })
+
+async function confirmDiscardDraft(): Promise<boolean> {
+  try {
+    await ElMessageBox.confirm(DISCARD_DRAFT_MESSAGE, DISCARD_DRAFT_TITLE, {
+      confirmButtonText: DISCARD_DRAFT_CONFIRM,
+      cancelButtonText: DISCARD_DRAFT_CANCEL,
+      type: "warning",
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function close() {
+  if (hasEdits.value && !(await confirmDiscardDraft())) return
   emit("update:modelValue", false)
+}
+
+async function handleBeforeClose(done: () => void) {
+  if (!hasEdits.value) {
+    done()
+    return
+  }
+  if (await confirmDiscardDraft()) done()
 }
 
 function addStep() {
@@ -76,6 +108,7 @@ function applyChanges() {
     :title="'编辑用例 ' + (row?.id || '')"
     size="min(520px, 92vw)"
     class="case-row-drawer"
+    :before-close="handleBeforeClose"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <div v-if="draft" class="sheet-drawer sketch-kit">

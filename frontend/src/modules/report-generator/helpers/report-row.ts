@@ -1,3 +1,4 @@
+import { formatMonthDayTime } from "@/shared/helpers/datetime"
 import type { ReportRow } from "../types"
 
 export function reportRowKey(row: ReportRow): string {
@@ -32,10 +33,5 @@ export function reportMoment(row: ReportRow): string {
 
 export function formatReportTime(iso: string): string {
   if (!iso) return "—"
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  const pad = (value: number) => String(value).padStart(2, "0")
-  return `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(
-    date.getMinutes(),
-  )}`
+  return formatMonthDayTime(iso) ?? iso
 }

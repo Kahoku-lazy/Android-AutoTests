@@ -4,7 +4,7 @@
 
 > **作用域警示**：`.ac-card` 的涂鸦皮肤**只在 `.wb-shell`（或 `.workflow-workbench`）内生效**。页面根忘带主题作用域 → 卡片变实线大圆角 + 灰阴影（EP 出厂皮肤）。
 
-> **线型规则（2026-11-04 起，强制；2026-11-09 修订）**：虚线是**组件皮肤**，不是页面装饰。目前**只有 `AgentRouteCard`（`.route-card` 助手角色卡）**可以声明 `dashed`；`KpiCard` 已于 2026-11-09 按需求改为实线（描边 = 硬阴影色 `--kpi-accent`），并移出白名单。把白名单组件的虚线样式抄到别的组件里**不算白名单**，一律实线。判定口径见 [../../SKILL.md](../../SKILL.md) §线型规则。下表列的是**当前代码**，其中 AppCard / SketchCard / DoodleNote 基类 / TaskBoard 任务卡的 `dashed` 属待迁移存量，改到即改实线，不要照抄。
+> **线型规则（2026-11-04 起，强制；2026-11-09 修订）**：虚线是**组件皮肤**，不是页面装饰。目前**只有 `AgentRouteCard`（`.route-card` 助手角色卡）**可以声明 `dashed`；`KpiCard` 已于 2026-11-09 按需求改为实线（描边 = 硬阴影色 `--kpi-accent`），并移出白名单。把白名单组件的虚线样式抄到别的组件里**不算白名单**，一律实线。判定口径见 [../../SKILL.md](../../SKILL.md) §线型规则。下表列的是**当前代码**，其中 AppCard / SketchCard / TaskBoard 任务卡的 `dashed` 属待迁移存量，改到即改实线，不要照抄。
 
 ## 1. AppCard 钉板卡（可复用数据块）
 
@@ -19,7 +19,7 @@
 - **微倾** `--ac-tilt`（默认 `0.3deg`，无钳制）；父级常用 `sketchTiltAt(i)` 注入 `±0.4°~1.5°`
 - **图钉** `.ac-card__pin`：14×14、居中置顶、2px 墨框、底 = accent、`pointer-events: none`、`aria-hidden`；`pin=false` 关闭
 - **props**：`type`（`default` / `dashed`，当前视觉无差异）/ `tone`（`--c-*` 或色值）/ `tilt` / `pin`；无 `tone` 回落 `--c-dashboard`
-- **用途**：图表卡 / 表格卡 / 指标组。**不替代** SketchCard（入口）、KpiCard（指标）、DoodleNote（条目）
+- **用途**：图表卡 / 表格卡 / 指标组。**不替代** SketchCard（入口）、KpiCard（指标）
 
 **裸 `el-card`（EP 覆盖，非 `.ac-card`）**：底白、圆角 `--app-radius-md`、框 `2.5px solid var(--ink)`、影 `--app-shadow-md`；hover（仅 `.wb-shell` 内、非 `.ac-card`）抬起 `translateY(-3px)` + `--app-shadow-lg`。**禁止**用裸 `el-card` 当数据块外壳。
 
@@ -55,18 +55,7 @@
 - **a11y**：可点时 `role="button"` + Enter/Space
 - **用途**：仪表盘入口统计、报告 / AI 指标行。**禁止**另造第二套清新风统计卡
 
-## 4. DoodleNote 涂鸦内容卡 / 便利贴
-
-共同壳：框 `2.5px dashed var(--ink)`、圆角 `2px`、影 `4px 4px 0 0 <accent>`、内边距 `--app-space-md`、hover 回正 + `translate(-1,-1)` + 影 5px。
-
-| variant | 内容 |
-|---------|------|
-| `note`（胶带卡）| 底 `--paper`、微倾 `-0.8deg`、顶中胶带 64×18（`pointer-events: none`）、插槽 `header` / `default` / `actions` |
-| `sticky`（Do/Dont 便利贴）| status `ok`：底 `--paper`、accent `--c-case`、微倾 `-1.2deg`；`fail`：底 `--app-error-bg`、accent `--app-marker-red`、微倾 `+1.4deg`；`run`：底白、accent `--c-workflow`；`wait`：底 `--paper`、accent `--app-offline` |
-
-**用途**：列表条目卡（助手线路、任务条目）。**不替代** KpiCard / SketchCard / AppCard。排版未定义，由使用方给定。
-
-## 5. 错误内容卡（`bug-detail`）· 已登记的渐变卡
+## 4. 错误内容卡（`bug-detail`）· 已登记的渐变卡
 
 不是共享组件，是 BUG 单详情抽屉里「错误内容」正文块（`.bug-detail__body`）的皮肤，落点 `modules/bug-manager/components/BugDetailDrawer.style.css`。
 

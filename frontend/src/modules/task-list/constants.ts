@@ -4,50 +4,8 @@ export function taskKindLabel(kind: string): string {
   return "设备执行"
 }
 
-export const TASK_DEVICE_POLL_INTERVAL_MS = 30000
-
-export const CASE_SOURCE_PLATFORM = "platform"
-export const CASE_SOURCE_YAML = "yaml"
-export type CaseSource = typeof CASE_SOURCE_PLATFORM | typeof CASE_SOURCE_YAML
-
-export const CASE_SOURCE_OPTIONS: { value: CaseSource; label: string; hint: string }[] = [
-  { value: CASE_SOURCE_PLATFORM, label: "平台用例", hint: "选项目与用例，直接跑平台用例库" },
-  { value: CASE_SOURCE_YAML, label: "本地 YAML", hint: "上传一份 YAML，可指定单条用例" },
-]
-
-export const CASE_SOURCE_DEFAULT: CaseSource = CASE_SOURCE_PLATFORM
-
-export const TASK_REPORT_HEADER_ICON = "file-bar-chart"
-export const TASK_REPORT_HEADER_GRADIENT = "linear-gradient(135deg,#999,#8b7f8f)"
-
-export const TASK_REPORT_POLL_MS = 3000
-
 export const TASK_PAGE_SIZE_OPTIONS = [10]
 export const TASK_DEFAULT_PAGE_SIZE = 10
-
-export const REPORT_POLL_BACKOFF_MS = [3000, 6000, 12000, 30000]
-
-export const REPORT_POLL_MAX_FAILURES = 5
-
-export const DEFAULT_OPEN_CASE_INDEX = 0
-
-export const STEP_LOG_CHECK_TITLE = "日志检查"
-
-export const STEP_LOG_CHECK_HINT = "本步断言需核对设备日志 · 取证窗 5 秒"
-
-export const STEP_LOG_CHECK_NO_SHOT_TEXT = "该次点击后未截图"
-
-export const STEP_EXEC_NO_SHOT_TEXT = "该步未截图"
-
-export const AGENT_ROUTES = [{ value: "device_control", label: "控制设备" }] as const
-
-export const ROUTE_LABELS: Record<string, string> = {
-  device_control: "控制设备",
-}
-
-export const ROUTE_ICONS: Record<string, string> = {
-  device_control: "📱",
-}
 
 export const TASK_FILTER_TABS = {
   all: { label: "全部任务" },

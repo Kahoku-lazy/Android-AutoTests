@@ -193,7 +193,9 @@ const meetingTitle = computed(() => (viewState.value === "register" ? "注册" :
     </div>
 
     <footer class="login-footer">
-      <span>AI Automated Testing Platform · Django + Vue + Animal Island</span>
+      <span
+        >AI Automated Testing Platform · Django + Vue + Animal Island · 字体 HarmonyOS Sans SC</span
+      >
     </footer>
   </div>
 </template>

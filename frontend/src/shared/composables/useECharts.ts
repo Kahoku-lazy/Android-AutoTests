@@ -1,5 +1,5 @@
 import { ref, watch, onMounted, onUnmounted, nextTick } from "vue"
-import * as echarts from "echarts"
+import echarts from "@/shared/helpers/echarts-setup"
 
 export function useECharts(
   buildOption,

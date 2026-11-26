@@ -1,3 +1,4 @@
+import { formatDateTime } from "@/shared/helpers/datetime"
 import type { BugCategory, BugStatus } from "./types"
 
 export const BUG_PAGE_HEADER = {
@@ -94,10 +95,6 @@ export function bugTaskStatusLabel(status: string): string {
 
 export function formatBugTime(iso: string): string {
   if (!iso) return "—"
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  const pad = (value: number) => String(value).padStart(2, "0")
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(
-    date.getHours(),
-  )}:${pad(date.getMinutes())}`
+  const text = formatDateTime(iso, { precision: "minute" })
+  return text === "—" ? iso : text
 }

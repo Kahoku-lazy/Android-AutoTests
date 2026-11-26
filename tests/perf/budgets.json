@@ -1,0 +1,32 @@
+{
+  "profiles": {
+    "dev": {
+      "/login": {
+        "lcp_ms": 2500,
+        "load_ms": 8000,
+        "transfer_kb": 8000,
+        "requests": 90
+      },
+      "/dashboard": {
+        "lcp_ms": 2500,
+        "load_ms": 8000,
+        "transfer_kb": 11000,
+        "requests": 120
+      }
+    },
+    "preview": {
+      "/login": {
+        "lcp_ms": 2500,
+        "load_ms": 8000,
+        "transfer_kb": 1200,
+        "requests": 20
+      },
+      "/dashboard": {
+        "lcp_ms": 2500,
+        "load_ms": 8000,
+        "transfer_kb": 1400,
+        "requests": 30
+      }
+    }
+  }
+}

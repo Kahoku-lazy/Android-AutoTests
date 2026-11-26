@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from engines.ae_harness.middleware.control import CancelMiddleware, CancelToken
+from engines.ae_harness.middleware.observer import ObservationMiddleware
 from engines.backend_bridge.agents.card_agent import build_card_agent
 
 __all__ = [
@@ -8,10 +9,12 @@ __all__ = [
     "request_thread_cancel",
     "thread_agent",
     "thread_cancel_token",
+    "thread_observer",
 ]
 
 _AGENTS: dict[str, object] = {}
 _CANCELS: dict[str, CancelToken] = {}
+_OBSERVERS: dict[str, ObservationMiddleware] = {}
 
 
 async def thread_agent(thread_id: str, snapshot: dict) -> object:
@@ -21,6 +24,7 @@ async def thread_agent(thread_id: str, snapshot: dict) -> object:
     current = _AGENTS.get(key)
     if current is not None:
         return current
+    observer = ObservationMiddleware(capture_messages=True)
     bundle = await build_card_agent(
         name=str(snapshot.get("name") or "assistant"),
         provider=str(snapshot["provider"]),
@@ -29,10 +33,15 @@ async def thread_agent(thread_id: str, snapshot: dict) -> object:
         base_url=str(snapshot.get("base_url") or ""),
         system_prompt=str(snapshot.get("system_prompt") or ""),
         tools=list(snapshot.get("tools") or []),
-        observers=[CancelMiddleware(thread_cancel_token(key))],
+        observers=[CancelMiddleware(thread_cancel_token(key)), observer],
     )
     _AGENTS[key] = bundle.agent
+    _OBSERVERS[key] = observer
     return bundle.agent
+
+
+def thread_observer(thread_id: str) -> ObservationMiddleware | None:
+    return _OBSERVERS.get(thread_id.strip())
 
 
 def thread_cancel_token(thread_id: str) -> CancelToken:
@@ -56,3 +65,4 @@ def drop_thread(thread_id: str) -> None:
     key = thread_id.strip()
     _AGENTS.pop(key, None)
     _CANCELS.pop(key, None)
+    _OBSERVERS.pop(key, None)

@@ -27,6 +27,7 @@ Python 调试：➡️ python -m engines.ae_harness.tools.adb.core 🏁
 
 from __future__ import annotations
 
+import contextvars
 import os
 import subprocess
 
@@ -39,11 +40,24 @@ __all__ = [
     "DeviceInfo",
     "adb_binary",
     "list_devices",
+    "lock_serial",
     "resolve_serial",
     "run_adb",
     "run_adb_bytes",
     "screen_size",
+    "unlock_serial",
 ]
+
+_SERIAL_LOCK: contextvars.ContextVar[str] = contextvars.ContextVar("adb_serial_lock", default="")
+
+
+def lock_serial(serial: str) -> contextvars.Token:
+    return _SERIAL_LOCK.set(str(serial or "").strip())
+
+
+def unlock_serial(token: contextvars.Token) -> None:
+    _SERIAL_LOCK.reset(token)
+
 
 # 项目自带的 platform-tools 优先；路径相对仓库根。
 _ADB_NAME = "adb.exe" if os.name == "nt" else "adb"
@@ -232,6 +246,11 @@ def resolve_serial(serial: str = "") -> str:
     Raises:
         AdbError: 指定的设备不在线、没有在线设备，或有多台却没指定。
     """
+    locked = _SERIAL_LOCK.get()
+    if locked:
+        if serial and serial != locked:
+            raise AdbError(f"设备由平台指定为 {locked}，禁止改用其他设备（收到 {serial}）")
+        serial = locked
     online = [device for device in list_devices() if device.state == "device"]
     if serial:
         if any(device.serial == serial for device in online):

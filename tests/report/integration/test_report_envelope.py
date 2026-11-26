@@ -102,3 +102,29 @@ def test_retired_endpoints_return_404(auth_client, path):
     response = auth_client.get(path)
 
     assert response.status_code == 404
+
+
+def test_failed_task_with_report_locator_is_listed(auth_client):
+    task = Task.objects.create(
+        title="运行中断任务",
+        task_kind=TaskKind.ASSISTANT_SOP,
+        status=TaskStatus.FAILED,
+        result=json.dumps(
+            {
+                "status": "fail",
+                "failure_kind": "provider",
+                "reason": "模型拒绝（400）",
+                "report_run": "20261125_170751",
+                "report_name": "20261125_170751_sop_bound.html",
+            }
+        ),
+    )
+
+    response = auth_client.get("/api/reports/")
+
+    assert response.status_code == 200
+    items = json.loads(response.content)["data"]["items"]
+    row = next(item for item in items if item.get("task_id") == task.id)
+    assert row["source"] == "sop"
+    assert row["report_run"] == "20261125_170751"
+    assert row["report_name"] == "20261125_170751_sop_bound.html"

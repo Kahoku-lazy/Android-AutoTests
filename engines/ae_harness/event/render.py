@@ -35,6 +35,7 @@ def _brand_font_src(fallback: str) -> str:
 
 _EVENT_KIND = {
     "reply_start": ("log-start", "开始"),
+    "ReplyStartEvent": ("log-start", "开始"),
     "phase": ("log-start", "阶段"),
     "HintBlockEvent": ("log-misc", "注入"),
     "ModelCallStartEvent": ("log-model", "模型"),
@@ -91,7 +92,7 @@ _ORDINAL_DEFS = """<svg class="ord-defs" width="0" height="0" aria-hidden="true"
 </svg>"""
 
 
-def _ordinal_svg(value: int) -> str:
+def _ordinal_svg(value: int, label: str = "子目标") -> str:
     number = min(max(value, 1), _ORDINAL_MAX)
     shapes: list[str] = []
     for slot, digit in enumerate(f"{number:02d}"):
@@ -103,7 +104,7 @@ def _ordinal_svg(value: int) -> str:
         shapes.append(f'<path class="ord-soft {hue}" d="{path}" transform="{placement}"></path>')
         shapes.append(f'<path class="ord-ink {hue}" d="{path}" transform="{placement}"></path>')
     drawn = "".join(shapes)
-    return f'<svg class="ord" viewBox="0 0 50 36" role="img" aria-label="第 {number} 个子目标">{drawn}</svg>'
+    return f'<svg class="ord" viewBox="0 0 50 36" role="img" aria-label="第 {number} 个{label}">{drawn}</svg>'
 
 
 _CSS = """
@@ -133,8 +134,8 @@ _CSS = """
   --app-status-danger-bg:var(--color-red-95);    --app-status-danger-text:var(--color-red-46);
   --app-marker-red:var(--color-red-69);          --app-offline:var(--color-ink-79);
 
-  --app-font:"Cascadia Mono","Noto Sans SC","PingFang SC","Microsoft YaHei",monospace,sans-serif;
-  --app-font-mono:"Cascadia Mono","Consolas",monospace;
+  --app-font:"HarmonyOS Sans SC","PingFang SC","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
+  --app-font-mono:"Consolas","Cascadia Mono",ui-monospace,monospace;
   --app-size-xs:12px; --app-size-sm:14px; --app-size-md:16px;
   --app-size-lg:20px; --app-size-xl:24px; --app-size-2xl:32px;
   --app-space-xs:4px; --app-space-sm:8px; --app-space-md:16px;
@@ -646,6 +647,17 @@ function openListView(name) {
   document.querySelectorAll(".view").forEach(function (view) { view.classList.remove("active"); });
   document.getElementById("view-" + name).classList.add("active");
 }
+function loadPlatformFont() {
+  let origin = "";
+  try { origin = new URL(location.href).origin; } catch (error) { return; }
+  if (origin.indexOf("http") !== 0) { return; }
+  if (document.getElementById("platform-font")) { return; }
+  const style = document.createElement("style");
+  style.id = "platform-font";
+  style.textContent = '@import url("' + origin + '/fonts/harmonyos-sans/harmonyos-sans.css");';
+  document.head.appendChild(style);
+}
+loadPlatformFont();
 initSplitter();
 """
 

@@ -40,6 +40,19 @@ goal = await run_goal(executor, verifier, task, log_dir=LOG_DIR)
 team = await run_team(leader, members, task, log_dir=LOG_DIR)
 ```
 
+## 运行产物的三个出口
+
+`run_sop` 只负责编排与过程日志，**运行产物（对齐记录、原始事件流）与报告渲染由调用方接管**：
+
+| 参数 | 用途 | 不传时 |
+| --- | --- | --- |
+| `on_begin(recorder)` | 记录器已 `begin`、路径已确定，但还没有任何事件——调用方在这里按 `recorder.log_path` 派生自己的文件路径 | 不回调 |
+| `on_event(event)` | 每个 AgentScope 事件原样投递（对齐记录与原始事件流都靠它） | 不投递 |
+| `on_observation(record)` | 每条观测记录投递（观测中间件采到的系统提示、模型调用、工具执行等） | 不投递 |
+| `render_report` | 是否由 `run_sop` 自己产出四段式报告 | `True` |
+
+为什么不是 `run_sop` 直接写对齐记录：文件命名与落点属于平台口径（`logs/agents/backend_bridge/...`），编排层不该知道；同时步骤结论（通过 / 尝试次数 / 失败说明）只有 `run_sop` 返回后才知道，报告要用它，所以渲染必须回到调用方。SOP 侧的落地见 [`backend_bridge_role_assembly.md`](../backend_bridge/backend_bridge_role_assembly.md) 与 [`ae_harness_event_observation_and_report.md`](../ae_harness_event/ae_harness_event_observation_and_report.md) 的「SOP 的增量字段」。
+
 ## 步骤 YAML
 
 ```yaml
@@ -68,7 +81,7 @@ steps:
 1. **禁止在 `workflow/` 建角色或挂工具** —— 执行者与验收者由调用方建好传入；本目录不调 `create_agent`、不 `add_tool`。
 2. **禁止绕过 `run_sop` 自己写编排循环** —— 步骤推进、重试预算、驳回记录都由 SOP 引擎负责，不要在别处重写一遍。
 3. **禁止把步骤写死在 Python 里** —— 步骤是调用方给的数据；本目录只定义字段，不保存具体流程。
-4. **禁止在 `workflow/` 拼 HTML** —— 报告一律走 `event/` 的 `HtmlReportRenderer`。
+4. **禁止在 `workflow/` 拼 HTML** —— 报告一律走 `event/` 的渲染器；本目录只把 `render_report=False` 与三个出口交给调用方，由调用方决定渲染口径。
 5. **禁止在 `workflow/` 读提示词或造模型** —— 提示词正文与连接参数由调用方在 `backend_bridge` 准备；本目录只消费已经建好的角色。
 6. **禁止在本目录决定验收者的工具** —— 谁挂只读工具由调用方装配，本目录不 `add_tool`。
 

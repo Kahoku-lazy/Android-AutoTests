@@ -4,7 +4,7 @@ import time
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from agentscope.message import UserMsg
 from agentscope.sop import SOP, SOPEngine, SOPStep
@@ -97,6 +97,10 @@ async def run_sop(
     log_dir: Path | None = None,
     role: str = "sop",
     renderer: HtmlReportRenderer | None = None,
+    render_report: bool = True,
+    on_begin: Callable[[AgentEventRecorder], None] | None = None,
+    on_event: Callable[[Any], None] | None = None,
+    on_observation: Callable[[Any], None] | None = None,
     api_key_env: str = "",
     role_api_keys: dict[str, str] | None = None,
     role_models: dict[str, str] | None = None,
@@ -117,6 +121,7 @@ async def run_sop(
             str(getattr(verifier, "name", "") or ""): "verifier",
         },
         observations=observations,
+        observation_sink=on_observation,
     )
     recorder.begin(
         spec.task or spec.name,
@@ -125,15 +130,20 @@ async def run_sop(
             {"subject": step.subject, "description": step.description} for step in spec.steps
         ],
     )
+    if on_begin is not None:
+        on_begin(recorder)
 
     begin = time.perf_counter()
     async for event in engine.reply_stream(UserMsg(name="user", content=spec.task or spec.name)):
         recorder.on_event(event)
+        if on_event is not None:
+            on_event(event)
     cost_s = round(time.perf_counter() - begin, 2)
     record = recorder.finish(cost_s)
 
-    painter = renderer or HtmlReportRenderer()
-    painter.save(record)
+    if render_report:
+        painter = renderer or HtmlReportRenderer()
+        painter.save(record)
 
     outcomes: list[StepOutcome] = []
     for step, state in zip(spec.steps, engine.state.steps):

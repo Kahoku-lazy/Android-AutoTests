@@ -7,6 +7,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Callable
 
 from .usage import TokenUsage, summarize
 
@@ -82,6 +83,7 @@ class AgentEventRecorder:
         role_models: dict[str, str] | None = None,
         sop_roles: dict[str, str] | None = None,
         observations: list | None = None,
+        observation_sink: Callable[[object], None] | None = None,
         full: bool = True,
     ) -> None:
         self.out_dir = out_dir
@@ -92,6 +94,7 @@ class AgentEventRecorder:
         self._role_models = dict(role_models or {})
         self._sop_roles = dict(sop_roles or {})
         self._observations = observations if observations is not None else []
+        self._observation_sink = observation_sink
         self._observed: list[dict] = []
         self._full = bool(full)
         self.directory = out_dir
@@ -191,6 +194,8 @@ class AgentEventRecorder:
             row = {"event": "observation", "t_ms": self._now(), **payload}
             self._write(row)
             self._observed.append(payload)
+            if self._observation_sink is not None:
+                self._observation_sink(record)
 
     def begin(
         self,

@@ -11,6 +11,7 @@ __all__ = ["UiRunResult", "run_ui_task"]
 async def run_ui_task(
     task: str,
     *,
+    serial: str,
     system_prompt: str,
     provider: str,
     api_key_env: str,
@@ -18,15 +19,17 @@ async def run_ui_task(
     base_url: str = "",
     report_root: Path | None = None,
     controls: list | None = None,
+    capture_messages: bool = False,
 ) -> UiRunResult:
     session = await open_session(
-        "",
+        serial,
         system_prompt=system_prompt,
         provider=provider,
         api_key_env=api_key_env,
         model_name=model_name,
         base_url=base_url,
         controls=controls,
+        capture_messages=capture_messages,
     )
     return await session.run_turn(task, report_root=report_root)
 
@@ -37,6 +40,7 @@ if __name__ == "__main__":
     result = asyncio.run(
         run_ui_task(
             "只回复 OK 两个字母，不要调用任何工具。",
+            serial="R5CT62RH88F",
             system_prompt="你是 UI 执行者。",
             provider="openai",
             api_key_env="OPENAI_API_KEY",

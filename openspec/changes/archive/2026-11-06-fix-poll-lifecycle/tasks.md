@@ -25,4 +25,4 @@
 ## 5. 收尾与观察
 
 - [x] 5.1 删除 `frontend/src/modules/task-list/composables/useTaskDetail.ts` 及其唯一的测试 `frontend/tests/task-list/p0/useTaskDetail.spec.ts`（内含一个 3 秒 `setInterval` 的旧实现，全仓无组件引用）。验证结果：`grep -rn "useTaskDetail" frontend` 无结果；`helpers/task-detail.ts` 的三个引用方（`StepLogCheck` / `TaskAttemptCard` / `TaskBoard`）不受影响，`isTaskTerminal` 仍由该 helper 内部使用；全量 vitest 仅少这 2 条用例，无新增失败。
-- [ ] 5.2 观察项（一周）：复核 `insertBefore` 是否复现。若复现，记录「页面 / 操作路径 / 控制台栈」并另开「详情页模板单根化」变更；若未复现，在 `design.md` 的 Risks 中标注「未复现，观察结束」。
+- 【已取消 · 未做取消】5.2 观察项（一周）：复核 `insertBefore` 是否复现。若复现，记录「页面 / 操作路径 / 控制台栈」并另开「详情页模板单根化」变更；若未复现，在 `design.md` 的 Risks 中标注「未复现，观察结束」。

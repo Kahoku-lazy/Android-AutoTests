@@ -22,11 +22,11 @@
 
 ## 4. 关单门禁
 
-- [ ] 4.1 后端：`python manage.py check && ruff check apps/element_locator && ruff format --check apps/element_locator` 全通过（本变更无 Model 改动，无需 makemigrations）。
-- [ ] 4.2 前端：`cd frontend && npm run build`（含 `vue-tsc --noEmit`）通过；按 `vue-frontend-check` 量规逐项自检布局裁剪、字号、硬编码色与接口契约。
+- 【已取消 · 未做取消】4.1 后端：`python manage.py check && ruff check apps/element_locator && ruff format --check apps/element_locator` 全通过（本变更无 Model 改动，无需 makemigrations）。
+- 【已取消 · 未做取消】4.2 前端：`cd frontend && npm run build`（含 `vue-tsc --noEmit`）通过；按 `vue-frontend-check` 量规逐项自检布局裁剪、字号、硬编码色与接口契约。
 - [x] 4.3 边界：`python tools/gen_arch_stats.py --check-boundaries` 通过（确认无新增跨 App import、写库仍只在 `element_locator/api*.py`）。
 - [x] 4.4 文档同步：按项目文档约定在元素定位接口文档补记 `POST /api/elements/batch-move/`（请求体、成功信封与 400/404/409 语义）。验证：文档所列端点与方法同 `apps/element_locator/urls.py` 一致。
-- [ ] 4.5 人工验收：逐条对照 `specs/element-locator-projects/spec.md` 的六条新增需求的关键场景走查（桌面拖动、触摸长按 1 秒、页面落点被拒、目录落自身被拒、拖回项目根、批量勾选移动、去重、重名被拒、批量勾选删除、删目录连带删页面且不浮回项目根）。
+- 【已取消 · 人工验收不做】4.5 人工验收：逐条对照 `specs/element-locator-projects/spec.md` 的六条新增需求的关键场景走查（桌面拖动、触摸长按 1 秒、页面落点被拒、目录落自身被拒、拖回项目根、批量勾选移动、去重、重名被拒、批量勾选删除、删目录连带删页面且不浮回项目根）。
 
 ## 5. 批量删除与目录级联删除
 

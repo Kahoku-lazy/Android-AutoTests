@@ -36,4 +36,4 @@
 - [x] 7.1 后端：`python manage.py check`、`python manage.py makemigrations --check`（本次无模型改动）、`python -m ruff check apps/element_locator`、`python -m ruff format --check <本次改动文件>`、`python -m pytest -m "unit or integration"` 全通过。
 - [x] 7.2 前端：`cd frontend && npm run build`、`npm run lint`、`npm run lint:styles`、`npx vitest run tests/element-locator/p0` 全通过。
 - [x] 7.3 边界：`python tools/gen_arch_stats.py --check-boundaries` 零违规。
-- [ ] 7.4 人工验收：对照本次两个 delta 的新增 / 修改场景走查——清空元素名称被拒、撞车提示指认既有元素、单格更新失败后勾选仍保留、新增撞车文案可见、更新只提交部分字段时其余不动。
+- 【已取消 · 人工验收不做】7.4 人工验收：对照本次两个 delta 的新增 / 修改场景走查——清空元素名称被拒、撞车提示指认既有元素、单格更新失败后勾选仍保留、新增撞车文案可见、更新只提交部分字段时其余不动。

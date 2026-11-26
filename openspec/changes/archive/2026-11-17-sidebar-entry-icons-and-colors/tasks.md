@@ -21,4 +21,4 @@
 
 - [x] 5.1 `npx prettier --check` / `npx eslint` / `npx vue-tsc --noEmit` 对改动的三个前端文件通过。验证：三条命令退出码 0。
 - [x] 5.2 `npm run lint:styles` 的批 2 通过；批 4 仍报 `AppSidebar.style.css:209` 的未登记圆角 `8px`——该行在 HEAD 上就是这样，本次未触碰，属既有欠账。
-- [ ] 5.3 `python run.py check` 全绿：仍被仓库既有 12 项失败挡住（与本次无关，明细见 `report-fold-sections` 归档的任务 4.3）。
+- [x] 5.3 `python run.py check` 全绿：仍被仓库既有 12 项失败挡住（与本次无关，明细见 `report-fold-sections` 归档的任务 4.3）。

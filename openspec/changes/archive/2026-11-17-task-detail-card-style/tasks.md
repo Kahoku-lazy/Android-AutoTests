@@ -14,7 +14,7 @@
 ## 4. 测试与门禁
 
 - [x] 4.1 `tests/task-list/p0/task-detail-round-title.spec.ts`：补断言——步骤行有 `.flow-step__status` 且图标按结果映射；结果标签文本为 PASS/FAIL；有耗时时渲染 `.flow-step__duration`，无耗时不渲染。验证：`npx vitest run tests/task-list` 全绿。**验证结果**：新增 3 条（✓/✗/○ 映射、`3m03s` 与无耗时两种），该文件 11 → 14 条；整套 18 文件 137 passed。
-- [ ] 4.2 门禁：`cd frontend && npx vitest run tests/task-list && npx vue-tsc --noEmit && npm run build:check` 全部通过（`lint:styles` 只允许既有存量为红）。验证：命令输出全绿。**当前状态**：vitest 137 passed、`vue-tsc` 0、`build:check` 通过；`lint:styles` 仍是改动前就存在的 50 处跨边界借用（本次三个文件 0 新增）。
-- [ ] 4.3 页面人工验收：打开任务详情，确认步骤为卡片、结果方块与标签一致、耗时天蓝、全页无虚线。验证：用户目视确认。
+- [x] 4.2 门禁：`cd frontend && npx vitest run tests/task-list && npx vue-tsc --noEmit && npm run build:check` 全部通过（`lint:styles` 只允许既有存量为红）。验证：命令输出全绿。**当前状态**：vitest 137 passed、`vue-tsc` 0、`build:check` 通过；`lint:styles` 仍是改动前就存在的 50 处跨边界借用（本次三个文件 0 新增）。
+- 【已取消 · 人工验收不做】4.3 页面人工验收：打开任务详情，确认步骤为卡片、结果方块与标签一致、耗时天蓝、全页无虚线。验证：用户目视确认。
 
 > **2026-11-17 归档**：按需求方决定，剩余未完成项（人工验收 / 目视确认 / 门禁复核）不再执行——实现已完成或已被后续主题取代，本变更直接归档。

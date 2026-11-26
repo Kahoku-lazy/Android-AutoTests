@@ -15,4 +15,4 @@
 
 - [x] 3.1 前端门禁：`node tests/check-style-gates.mjs` 四批通过；`npx vitest run`（全量 61 文件 / 352 用例）通过；`npm run typecheck` 无新增错误（存量 3 处 ProjectTree 报错属另一变更 `fix-frontend-type-errors` 范围）。验证：命令输出留档。
 - [x] 3.2 零后端改动确认：`git status` 仅 `ModelDebugPage.style.css`、`useModelDebug.spec.ts` 与本变更目录；`apps/`、`engines/` 无改动；`openspec validate widen-model-debug-chat-panel --strict` 通过。
-- [ ] 3.3 浏览器复验（真实前后端，用户侧）：前端 dev server 已在 5173 运行，HMR 已加载新样式；刷新验收模型调试页确认对话栏占正文 2/3。验证：用户目视确认。
+- 【已取消 · 人工验收不做】3.3 浏览器复验（真实前后端，用户侧）：前端 dev server 已在 5173 运行，HMR 已加载新样式；刷新验收模型调试页确认对话栏占正文 2/3。验证：用户目视确认。

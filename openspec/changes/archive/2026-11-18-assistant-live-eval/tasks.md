@@ -23,4 +23,4 @@
 ## 5. 门禁
 
 - [x] 5.1 跑 `python utils/gen_arch_stats.py --check-boundaries`，确认评测没有新增跨 App 内部 import；验证：命令退出码为 0。
-- [ ] 5.2 跑 `python run.py check`，确认本地门禁通过；验证：命令退出码为 0。
+- 【已取消 · 未做取消】5.2 跑 `python run.py check`，确认本地门禁通过；验证：命令退出码为 0。

@@ -1,7 +1,7 @@
 ## Context
 
 - --paper 来自 --color-lime-94（#fffef5），--app-bg-card 来自 --color-white（#ffffff）。
-- 仍有 13 处 ackground: #fff 字面量（侧栏、KPI 卡、SketchCard、全局 style.css）。
+- 仍有 13 处 background: #fff 字面量（侧栏、KPI 卡、SketchCard、全局 style.css）。
 
 ## Decisions
 
@@ -15,7 +15,7 @@
 
 ### 3. 字面量收敛到令牌
 
-13 处 ackground: #fff 改为 ar(--color-white)，后续再调色只需改原子。
+13 处 background: #fff 改为 var(--color-white)，后续再调色只需改原子。
 
 ## Risks
 

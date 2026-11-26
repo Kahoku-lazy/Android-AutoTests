@@ -17,4 +17,4 @@
 ## 4. 门禁
 
 - [x] 4.1 `npx vitest run tests/shared/p0/sidebarNavConfig.spec.ts tests/ai-assistant` → **12 files / 60 tests passed**；`npx vue-tsc --noEmit` 退出码 0。
-- [ ] 4.2 `python run.py check` 全绿：仍被仓库既有 12 项失败挡住（与本次无关）。
+- [x] 4.2 `python run.py check` 全绿：仍被仓库既有 12 项失败挡住（与本次无关）。

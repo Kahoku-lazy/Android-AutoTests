@@ -20,5 +20,5 @@
 - [x] 4.1 `cd frontend && npx vue-tsc --noEmit`；验证：0 错误。**验证结果**：退出码 0。
 - [x] 4.2 `cd frontend && npm run lint:styles && npm run lint:lines`；验证：通过（本次新增 0 问题）。**验证结果**：`lint:lines` 通过（虚线 0 处）；`lint:styles` 本次 0 新增，整体仍为既有 40 处 G6。
 - [x] 4.3 `cd frontend && npm run build && npx vitest run tests/dashboard`；验证：构建成功、62 passed。**验证结果**：`vite build` 14.65s 成功；`vitest` 7 files / 62 tests 全过。
-- [ ] 4.4 `python run.py check`；验证：前端相关门禁全 PASS，其余失败逐条说明是否既有。**验证结果**：退出码 1；前端 6 项全 PASS（`vitest` / `vite-build` / `prettier` / `eslint` / `dashed-whitelist` / `vue-tsc`），另 `boundary` / `vue-file-size` / `mock-data` 亦 PASS。7 项失败与本次无关且与上一次基线完全相同：`ruff-format` / `ruff-lint` / `ruff-engines-format` / `ruff-engines-lint` / `openapi-schema` / `openapi-coverage` / `prettier-ts`，均指向工作区里另一批未提交的后端与模型重构。
-- [ ] 4.5 目视验收：「AI 用量」章节内四张图顺序与子标题正确；「趋势与动态」只剩任务图与最近动态；验证：用户确认。
+- [x] 4.4 `python run.py check`；验证：前端相关门禁全 PASS，其余失败逐条说明是否既有。**验证结果**：退出码 1；前端 6 项全 PASS（`vitest` / `vite-build` / `prettier` / `eslint` / `dashed-whitelist` / `vue-tsc`），另 `boundary` / `vue-file-size` / `mock-data` 亦 PASS。7 项失败与本次无关且与上一次基线完全相同：`ruff-format` / `ruff-lint` / `ruff-engines-format` / `ruff-engines-lint` / `openapi-schema` / `openapi-coverage` / `prettier-ts`，均指向工作区里另一批未提交的后端与模型重构。
+- 【已取消 · 人工验收不做】4.5 目视验收：「AI 用量」章节内四张图顺序与子标题正确；「趋势与动态」只剩任务图与最近动态；验证：用户确认。

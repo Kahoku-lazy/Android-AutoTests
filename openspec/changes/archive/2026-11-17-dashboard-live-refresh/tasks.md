@@ -18,14 +18,13 @@
 ## 4. 门禁与验收
 
 - [x] 4.1 `npx vue-tsc --noEmit`、`npm run build:check`、`npx vitest run tests/dashboard`、`npm run lint:lines`。验证：命令全绿。**验证结果**：tsc 0；build 37.9s；59 passed；虚线门禁 0 处。
-- [ ] 4.2 页面目视：章节头只剩标题、页头无刷新按钮、滚动时页脚不动。验证：用户确认。
+- 【已取消 · 人工验收不做】4.2 页面目视：章节头只剩标题、页头无刷新按钮、滚动时页脚不动。验证：用户确认。
 
 ## 5. AI 用量 Agent 卡横排
 
 - [x] 5.1 DashboardView.style.css：.ch-ai__body 右列由 minmax(280px, 420px) 改为 minmax(0, 1fr)，让 Agent 卡拿到整段剩余宽度。验证：1684 视口下两卡各约 420px。**验证结果**：已改。
-- [x] 5.2 index.vue：.agent-usage-list 由单列改 
-epeat(2, minmax(0, 1fr))，lign-items: stretch；@media (max-width: 1400px) 回落单列，保留 1100px 的间距规则。验证：
-pm run build:check 与 	ests/dashboard 通过。**验证结果**：build 35s、59 用例通过。
+- [x] 5.2 index.vue：.agent-usage-list 由单列改 repeat(2, minmax(0, 1fr))，align-items: stretch；@media (max-width: 1400px) 回落单列，保留 1100px 的间距规则。验证：
+pm run build:check 与 tests/dashboard 通过。**验证结果**：build 35s、59 用例通过。
 
 ## 6. 章节标题放大与活动区留白
 
@@ -34,15 +33,15 @@ pm run build:check 通过。**验证结果**：build 35.1s 通过。
 - [x] 6.2 ActivityTimeline.vue：去掉 .timeline__list 与 .timeline__empty 的 min-height: 10 槽（以及只服务它的 --timeline-slot），条目少时不再留整片空白；空态改为 padding: var(--app-space-xl) 0。验证：
 px vitest run tests/dashboard 通过。**验证结果**：59 passed。
 
-- [x] 6.3 DashboardView.style.css：.doc-body 顶部内距 0 → ar(--app-space-sm)。章节板带 -0.25° 旋转，宽度约 1400px 时上角外扩约 3px，零内距下会被滚动容器裁掉顶边。验证：最小复现页左右对比顶边完整。**验证结果**：build 33.6s、	ests/dashboard 59 passed。
+- [x] 6.3 DashboardView.style.css：.doc-body 顶部内距 0 → var(--app-space-sm)。章节板带 -0.25° 旋转，宽度约 1400px 时上角外扩约 3px，零内距下会被滚动容器裁掉顶边。验证：最小复现页左右对比顶边完整。**验证结果**：build 33.6s、tests/dashboard 59 passed。
 
-- [x] 6.4 DashboardView.style.css：章节图标与标题对齐——.chapter-mark 40 → 26px、边框 2.5 → 2px、内部 svg 20 → 15px；.chapter-head__left 由 lex-start 改 center，使图标上下与 20px 标题行盒（25px）齐平。验证：
-pm run build:check、	ests/dashboard 通过。**验证结果**：build 41.9s、59 用例通过。
+- [x] 6.4 DashboardView.style.css：章节图标与标题对齐——.chapter-mark 40 → 26px、边框 2.5 → 2px、内部 svg 20 → 15px；.chapter-head__left 由 flex-start 改 center，使图标上下与 20px 标题行盒（25px）齐平。验证：
+pm run build:check、tests/dashboard 通过。**验证结果**：build 41.9s、59 用例通过。
 
 ## 7. 页尾空白
 
-- [x] 7.1 内容不满一屏时的页尾裸白：DashboardView.style.css 让最后一块章节板 .doc-body > section:last-child 以 lex: 1 撑满剩余高度，并把其中的 .activity-timeline 设为 lex: 1; min-height: 0，活动卡边框与硬阴影一直落到页脚。验证：数据超过一屏时无剩余空间，不受影响。**验证结果**：build 35.5s。
-- [x] 7.2 ActivityTimeline.vue：.timeline__list 改 flex 列，.timeline__empty 用 lex: 1 在卡内垂直居中，空白不再裸露在卡外。验证：
+- [x] 7.1 内容不满一屏时的页尾裸白：DashboardView.style.css 让最后一块章节板 .doc-body > section:last-child 以 flex: 1 撑满剩余高度，并把其中的 .activity-timeline 设为 flex: 1; min-height: 0，活动卡边框与硬阴影一直落到页脚。验证：数据超过一屏时无剩余空间，不受影响。**验证结果**：build 35.5s。
+- [x] 7.2 ActivityTimeline.vue：.timeline__list 改 flex 列，.timeline__empty 用 flex: 1 在卡内垂直居中，空白不再裸露在卡外。验证：
 px vitest run tests/dashboard 59 passed。**验证结果**：59 passed。
 
 > **2026-11-17 归档**：按需求方决定，剩余未完成项（人工验收 / 目视确认 / 门禁复核）不再执行——实现已完成或已被后续主题取代，本变更直接归档。

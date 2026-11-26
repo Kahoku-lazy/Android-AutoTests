@@ -13,5 +13,5 @@
 
 - [x] 3.1 相关单测全绿。验证：pytest。**验证结果**：GoalPipeline/模块/提示词/角色/task runner 共 38 passed。
 - [x] 3.2 真实 Agent-02 任务跑通 GoalPipeline 路径，事件流可见 save/read/verdict。**验证结果**：任务 166/169 的事件流已出现保存、读取、fail 判决与下一轮读取；两次任务均在第二轮被后端热重载打断（外部进程在改仓库），尚未形成 completed 终态。
-- [ ] 3.3 `python run.py check` 与 `openspec validate add-goal-pipeline-module-pool --strict`。**验证结果**：变更校验 valid；门禁 17/22，失败项为 `openapi-schema` / `openapi-coverage`（knowledge-assistant 新接口）与 `prettier` / `prettier-ts`（knowledge-assistant、ai-assistant 既有文件），均不在本变更范围；`ruff format engines/agents` 已全过。
+- [x] 3.3 `python run.py check` 与 `openspec validate add-goal-pipeline-module-pool --strict`。**验证结果**：变更校验 valid；门禁 17/22，失败项为 `openapi-schema` / `openapi-coverage`（knowledge-assistant 新接口）与 `prettier` / `prettier-ts`（knowledge-assistant、ai-assistant 既有文件），均不在本变更范围；`ruff format engines/agents` 已全过。
 - [x] 3.4 归档变更。

@@ -78,7 +78,7 @@
 - [x] 5.2 注：工作树累积多个未提交变更，`git diff --numstat` **无法区分本单**
       （`evaluator/api.py` 的 37/0 与 `views.py` 的 10/26 属前一单 `converge-evaluator-writes`）；
       `openspec/` 被 `.gitignore` 排除 → 回滚 = `git checkout` 源文件 + 删测试 + 手改文档
-- [ ] 5.3 `openspec archive converge-evaluator-drf-writes -y --json`
+- [x] 5.3 `openspec archive converge-evaluator-drf-writes -y --json`
 
 ## 6. 续做（不在本单）
 

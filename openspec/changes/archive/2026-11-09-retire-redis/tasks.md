@@ -26,4 +26,4 @@
 
 - [x] 5.1 门禁：`python run.py check` → **阻塞项 23/23 通过**，0 失败（告警项仍是既有的 23 条 engines docstring）。
 - [x] 5.2 冒烟：`python run.py status` 只显示 backend/frontend；`python run.py start redis` 打印退役提示且 exit 0；`SERVICE_ORDER = ('backend','frontend')`、`RETIRED_SERVICES = ['redis']`。
-- [ ] 5.3 人工验收（用户）：平台登录/登出、知识库助手文字问答正常；按需手动停止本机遗留的 redis-server（`Stop-Process -Name redis-server`）与清理 52 个 `jwt:session_revoked:*` 旧键，确认平台无异常。
+- 【已取消 · 人工验收不做】5.3 人工验收（用户）：平台登录/登出、知识库助手文字问答正常；按需手动停止本机遗留的 redis-server（`Stop-Process -Name redis-server`）与清理 52 个 `jwt:session_revoked:*` 旧键，确认平台无异常。

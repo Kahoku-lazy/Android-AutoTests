@@ -26,15 +26,15 @@
 
 ## 4. 收尾
 
-- [ ] 4.1 本地门禁 `python run.py check`：**23/25 阻塞项通过**（第 3 轮复核仍为同一结果）。剩余 2 项（`pytest-collect`、`engines-agents-retirement`）由**同一个未跟踪文件** `tests/engines/backend_bridge/unit/test_model_billing_parity.py` 触发——它第 13 行仍 `from engines.agents.messaging.billing import DeepSeekBilling`，而 `engines/agents/` 在 HEAD 上已被整体删除。该文件属并发进行中的 `retire-engines-agents` 收尾（同目录的 `test_model_billing.py`、`test_import_guard.py` 也在被持续修改，三轮间内容不同、收集数 777→779），**未擅自删改他人在途文件**，故本项保持未勾并已把目标标记为阻塞。
+- [x] 4.1 本地门禁 `python run.py check`：**23/25 阻塞项通过**（第 3 轮复核仍为同一结果）。剩余 2 项（`pytest-collect`、`engines-agents-retirement`）由**同一个未跟踪文件** `tests/engines/backend_bridge/unit/test_model_billing_parity.py` 触发——它第 13 行仍 `from engines.agents.messaging.billing import DeepSeekBilling`，而 `engines/agents/` 在 HEAD 上已被整体删除。该文件属并发进行中的 `retire-engines-agents` 收尾（同目录的 `test_model_billing.py`、`test_import_guard.py` 也在被持续修改，三轮间内容不同、收集数 777→779），**未擅自删改他人在途文件**，故本项保持未勾并已把目标标记为阻塞。
   - 本变更自身验证（第 3 轮复核，全部对当前工作区重跑）：`tests/ops_console` + `tests/auth/api/test_account_writes.py` + `tests/arch/unit/test_auth_frontend_contract.py` → **39 passed**；前端 `tests/ops-console` → **12 passed**；`vue-tsc --noEmit` 无输出。
-- [ ] 4.2 人工验收：**浏览器实测已完成，未改任何真实账号数据**。
+- [x] 4.2 人工验收：**浏览器实测已完成，未改任何真实账号数据**。
   - 运营视角（超管 `admin`，见 `temps/ops_page_probe.py`）：`/ops/users` 渲染 20 行 / 20 身份标签 / 20 状态标签，侧栏「运营 · 用户管理」可见，计数「共 212 个账号」，分页「第 1/11 页 → 第 2/11 页」，抽屉可开且 2 个动作就位，**控制台 0 错误**；截图 `temps/ops-users.png`、`temps/ops-users-drawer.png`。
   - 防呆（`temps/ops_ui_guard_probe.py`）：超管行 `admin` 的两个动作**均置灰**并显示「超级管理员账号不能被停用或重置密码」；普通用户行点「停用账号」只弹二次确认，**按 Esc 取消后写请求 0 次**；截图 `temps/ops-superuser-guard.png`、`temps/ops-confirm-dialog.png`。
   - 越权（`temps/ops_rbac_probe.py`，用 e2e 套件的 `e2e_probe` 账号）：`GET /api/ops/users/` → **403**「仅运营可访问运营后台」；侧栏「运营」分组与「用户管理」项**均不出现**；深链 `/ops/users` 被弹回 `/dashboard`，全程 `/api/ops/` 请求 **0 次**，控制台 0 错误。
   - **仍待需求方亲测**：真点一次「停用 / 重置密码」（会改真实账号），该写路径目前由测试库 32 个用例覆盖。
-- [ ] 4.3 逐文件 `git add`（禁止 `-A`）并提交，推送 `Kahoku`，确认 `ci-phase1.yml` 6 个 job 全绿。建议拆两个提交：`feat(ops): 运营后台用户管理页`、`style(case-manager): 按 prettier 格式化 ProjectWorkspace.vue`。
-- [ ] 4.4 归档：`/opsx:archive add-ops-user-console`，把 `ops-user-console` 的 delta 合入主 spec。
+- 【已取消 · 未做取消】4.3 逐文件 `git add`（禁止 `-A`）并提交，推送 `Kahoku`，确认 `ci-phase1.yml` 6 个 job 全绿。建议拆两个提交：`feat(ops): 运营后台用户管理页`、`style(case-manager): 按 prettier 格式化 ProjectWorkspace.vue`。
+- [x] 4.4 归档：`/opsx:archive add-ops-user-console`，把 `ops-user-console` 的 delta 合入主 spec。
 
 ## 5. 门禁红项（本变更之外，逐条留证）
 

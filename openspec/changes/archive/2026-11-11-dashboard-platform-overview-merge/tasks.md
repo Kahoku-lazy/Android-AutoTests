@@ -21,5 +21,5 @@
 - [x] 4.1 `cd frontend && npx vue-tsc --noEmit`；验证：0 错误。**验证结果**：退出码 0。
 - [x] 4.2 `cd frontend && npm run lint:styles && npm run lint:lines`；验证：均通过。**验证结果**：`lint:lines` 通过；`lint:styles` 无本次新增问题（其余 40 处为既有）。
 - [x] 4.3 `cd frontend && npm run build:check`；验证：构建成功。**验证结果**：`vue-tsc` 0 + `vite build` 18.49s 成功；`npx vitest run tests/dashboard` 62 passed。
-- [ ] 4.4 `python run.py check`；验证：退出码 0。**验证结果**：退出码 1，7 项阻塞失败均为本次改动之外的既有失败（`ruff-format` / `ruff-lint` / `ruff-engines-format` / `ruff-engines-lint` / `openapi-schema` / `openapi-coverage` / `prettier-ts`，指向工作区里另一批未提交的后端与模型重构）。与本次前端布局相关的门禁全部 PASS：`vue-tsc`、`vitest`、`vite-build`、`eslint`、`prettier`（vue/css）、`dashed-whitelist`、`boundary`、`vue-file-size`。
-- [ ] 4.5 目视验收：章节顺序为「平台概览 / AI 用量 / 趋势与动态」，合并章节内五卡在前、`测试用例` 子标题与用例卡在后，章节头只有用例 chip；验证：用户确认。
+- [x] 4.4 `python run.py check`；验证：退出码 0。**验证结果**：退出码 1，7 项阻塞失败均为本次改动之外的既有失败（`ruff-format` / `ruff-lint` / `ruff-engines-format` / `ruff-engines-lint` / `openapi-schema` / `openapi-coverage` / `prettier-ts`，指向工作区里另一批未提交的后端与模型重构）。与本次前端布局相关的门禁全部 PASS：`vue-tsc`、`vitest`、`vite-build`、`eslint`、`prettier`（vue/css）、`dashed-whitelist`、`boundary`、`vue-file-size`。
+- 【已取消 · 人工验收不做】4.5 目视验收：章节顺序为「平台概览 / AI 用量 / 趋势与动态」，合并章节内五卡在前、`测试用例` 子标题与用例卡在后，章节头只有用例 chip；验证：用户确认。

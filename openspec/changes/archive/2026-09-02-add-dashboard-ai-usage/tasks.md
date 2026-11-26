@@ -6,7 +6,7 @@
 ## 2. ai_assistant：缓存命中落库
 
 - [x] 2.1 新增 `UsageCaptureMiddleware`（`on_model_call` 捕获 `ChatUsage.cache_*` 写入 per-session 注册表），在 `agent_factory.build_agent` 装配，`_agent_stream` 终端读取并落库。验证：`ruff check apps/ai_assistant/agent_scope/`
-- [ ] 2.2 DeepSeek 缓存字段兜底：子类化 `OpenAIChatModel` 的 usage 转换以同时读 `prompt_cache_hit_tokens`。验证：真实对话后查 `ai_messages.cache_input_tokens` 非 0（DeepSeek 视觉模型）——**延后**：需子类化流式模型方法，风险高；当前 DeepSeek 经 OpenAIChatModel 读 `cached_tokens`，命中率暂为 0/—
+- 【已取消 · 人工验收不做】2.2 DeepSeek 缓存字段兜底：子类化 `OpenAIChatModel` 的 usage 转换以同时读 `prompt_cache_hit_tokens`。验证：真实对话后查 `ai_messages.cache_input_tokens` 非 0（DeepSeek 视觉模型）——**延后**：需子类化流式模型方法，风险高；当前 DeepSeek 经 OpenAIChatModel 读 `cached_tokens`，命中率暂为 0/—
 
 ## 3. dashboard：AI 用量聚合
 
@@ -19,5 +19,5 @@
 
 ## 5. 全链路验证与门禁
 
-- [ ] 5.1 真实对话若干轮后刷新仪表盘，确认「AI 用量」四卡今日/累计数值与 `ai_messages` 聚合一致。验证：人工 E2E
-- [ ] 5.2 后端 `manage.py check` + `ruff` 全通过（环境修复后）；`gen_arch_stats --check-boundaries` 0 违规
+- 【已取消 · 人工验收不做】5.1 真实对话若干轮后刷新仪表盘，确认「AI 用量」四卡今日/累计数值与 `ai_messages` 聚合一致。验证：人工 E2E
+- 【已取消 · 未做取消】5.2 后端 `manage.py check` + `ruff` 全通过（环境修复后）；`gen_arch_stats --check-boundaries` 0 违规

@@ -9,7 +9,7 @@
 
 - [x] 2.1 `temps/round-title-preview.html` 去掉 PASS / FAIL 徽章并重出图。验证：`temps/round-title-preview.png` 通过。**验证结果**：`✅ / ❌ + 角色徽章 + ：动作` 三段清晰，窄屏折行正常。（中途用 PowerShell `-replace` 批量删徽章把文件编码搞坏过一次，改用 write 重写后正常。）
 - [x] 2.2 门禁：`npm run typecheck` + `npx vitest run tests/task-list` + `npm run build` + `python run.py check`。验证：除既有 `openapi-schema` 外全绿。**验证结果**：typecheck 0、vitest 109 passed、build 16.7s；`python run.py check` 阻塞项 21/22，唯一失败仍是 `openapi-schema`（工作区先于本次的未提交后端改动）。
-- [ ] 2.3 页面验收（用户侧）：刷新任务详情，确认验收轮只有 ✅ / ❌、没有 PASS / FAIL 徽章，执行轮的 ➡️ 仍在。验证：用户目视确认。
+- 【已取消 · 人工验收不做】2.3 页面验收（用户侧）：刷新任务详情，确认验收轮只有 ✅ / ❌、没有 PASS / FAIL 徽章，执行轮的 ➡️ 仍在。验证：用户目视确认。
 
 ## 3. 归档
 

@@ -11,7 +11,7 @@
 
 - [x] 2.1 截图链路单测 4 项全绿；`pytest tests/graybox/unit -q -k "screenshot or device or tool"` 无新增失败
 - [x] 2.2 门禁：`python manage.py check`、`ruff check` + `ruff format --check`（相关路径）、`python tools/gen_arch_stats.py --check-boundaries`
-- [ ] 2.3 归档：`openspec validate --strict` 通过，delta 同步进主规格
+- [x] 2.3 归档：`openspec validate --strict` 通过，delta 同步进主规格
 
 ## 遗留（不在本单范围）
 

@@ -18,4 +18,4 @@
 
 - [x] 4.1 重生成契约基线：`python manage.py spectacular --file openspec/openapi.yaml --validate --fail-on-warn`，随后 `python utils/check_gates.py --only openapi-schema,openapi-coverage` 通过。
 - [x] 4.2 后端回归：`python -m pytest -c tests/pytest.ini tests/ops_console tests/auth/api/test_account_writes.py` 全绿。
-- [ ] 4.3 人工验收：超管在抽屉把一个测试账号设为运营，该账号重新登录后侧栏出现「运营」；再取消，该账号访问 `/api/ops/users/` 返回 403。用运营账号确认抽屉里没有授权按钮。接口与按钮可见性已由测试覆盖，这一步留待页面上点一次确认。
+- 【已取消 · 人工验收不做】4.3 人工验收：超管在抽屉把一个测试账号设为运营，该账号重新登录后侧栏出现「运营」；再取消，该账号访问 `/api/ops/users/` 返回 403。用运营账号确认抽屉里没有授权按钮。接口与按钮可见性已由测试覆盖，这一步留待页面上点一次确认。

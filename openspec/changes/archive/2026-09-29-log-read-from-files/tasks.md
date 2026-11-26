@@ -21,7 +21,7 @@
 
 - [x] 5.1 后端关单：`python manage.py check`、`python manage.py makemigrations --check`、`python -m ruff check apps/ai_assistant engines/ai engines/device`、`python -m pytest tests/graybox/unit/test_device_log_file_range.py … -q`。验证：全部通过（不跑全量回归）。验证结果：`System check identified no issues (0 silenced)`；`No changes detected`；`ruff check` + `ruff format --check` 通过（136 文件已格式化）；九个相关用例文件共 130 项通过。
 - [x] 5.2 前端关单：本变更无前端改动，仅需 `npx vue-tsc --noEmit` 与相关调试页用例仍绿（工具清单由服务端驱动）。验证：命令输出与退出码。验证结果：`vue-tsc` 退出码 0；`model-debug-log-check` 9 项 + `useModelDebug` 30 项通过（验收调试页的工具清单由接口下发，页面无需改）。
-- [ ] 5.3 页面验收（用户侧，需重启后端）：到执行模型调试台发一条「查 12 分钟前那一刻的日志」，模型应能查到那条 `switch_on`（不再返回「超出缓冲保留时长」）；到验收模型调试页确认工具清单里出现只读日志工具。验证：用户目视确认。
+- 【已取消 · 人工验收不做】5.3 页面验收（用户侧，需重启后端）：到执行模型调试台发一条「查 12 分钟前那一刻的日志」，模型应能查到那条 `switch_on`（不再返回「超出缓冲保留时长」）；到验收模型调试页确认工具清单里出现只读日志工具。验证：用户目视确认。
 
 ## 6. 修订（2026-09-29，需求方澄清：验收侧不是「自己查日志」，而是「工具按规则检查」）
 

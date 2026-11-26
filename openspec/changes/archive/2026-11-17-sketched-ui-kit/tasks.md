@@ -27,7 +27,7 @@
 ## 5. 文档与验收
 
 - [x] 5.1 本变更 `proposal.md` / `design.md` / `tasks.md` / `specs/frontend-doodle-sketched-ui-kit/spec.md`。验证：`openspec validate sketched-ui-kit --strict`。**验证结果**：见下条。
-- [ ] 5.2 目视验收：打开「运营 → 模型配置 → 新建模型」，确认按钮五态、输入框虚线、label 字距、名称行列表与新皮肤自洽；任一主线页面（如用户管理）外观未变。**未完成**：本机沙箱禁止浏览器子进程（`spawn EPERM`）与 `run.py start`（`adb.exe` 读取被拒），无法截图比对，需需求方本地确认。
+- 【已取消 · 人工验收不做】5.2 目视验收：打开「运营 → 模型配置 → 新建模型」，确认按钮五态、输入框虚线、label 字距、名称行列表与新皮肤自洽；任一主线页面（如用户管理）外观未变。**未完成**：本机沙箱禁止浏览器子进程（`spawn EPERM`）与 `run.py start`（`adb.exe` 读取被拒），无法截图比对，需需求方本地确认。
 
 ## 6. 审核收口（2026-11-16，按 StyleKit `hand-drawn-doodle` LINT RULES 反向审查后）
 
@@ -38,7 +38,7 @@
 - [x] 6.5 EP 2.14 选择器补全：实测安装版本 `element-plus@2.14.7` 的 select 根节点是 `.el-select__wrapper`（不是旧版 `.el-select .el-input__wrapper`），kit 的选择器补齐 hover / focus / disabled，否则「厂商」下拉会退回 EP 实线皮肤。验证：预览页 `getComputedStyle(.el-select__wrapper).borderTopStyle === "dashed"`。**验证结果**：`dashed 1px .../0.3` + `radius 3px`。
 - [x] 6.6 选中值着色与行内按钮挤压：`.el-select__placeholder` 只在带 `is-transparent`（真空态）时用弱色，避免已选中的「deepseek」显示成灰占位；行内「删除」按钮补 `flex: 0 0 auto` + `white-space: nowrap`（此前被压成两字竖排，实测 62×34）。**验证结果**：计算值 `placeholderColor = rgb(30,30,36)`（墨色）；按钮 `62×34`。
 - [x] 6.7 真实渲染取证：用 `vue.global.js` + `element-plus/dist/index.full.js` + 仓内 `tokens.css` / `sketched-kit.css` 在 file:// 下渲染同构抽屉并截图（`temps/stylekit/preview.html`、`shoot.mjs`、`metrics.mjs`），逐项核对：输入框与按钮焦点计算值均为 `solid 2px / offset 2px / rgb(247,201,72)`，内层 input `outline: none`。**验证结果**：见 6.5 / 6.6 的计算值。
-- [ ] 6.8 待定：Chrome 把 `border-width` 舍入到整数 CSS px（`1.5px → 1px`、`2.5px → 2px`，DPR 1/2 实测一致），所以文档写的 `1.5px dashed` 实际画的是 `1px`。是改 `2px`（更接近参考图）还是把文档改成 `1px`，等需求方定。
+- 【已取消 · 未做取消】6.8 待定：Chrome 把 `border-width` 舍入到整数 CSS px（`1.5px → 1px`、`2.5px → 2px`，DPR 1/2 实测一致），所以文档写的 `1.5px dashed` 实际画的是 `1px`。是改 `2px`（更接近参考图）还是把文档改成 `1px`，等需求方定。
 
 ## 7. 观感调整 + 保存按钮绿渐变（2026-11-16，需求方看图后追加）
 

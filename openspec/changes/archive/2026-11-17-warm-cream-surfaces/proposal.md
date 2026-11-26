@@ -5,7 +5,7 @@
 ## What Changes
 
 - 表面色原子改为暖米色系：--color-lime-94 #fffef5 → #f3efe2（页面/纸面/浅底），--color-white #ffffff → #f7f3e8（卡片/输入/浮层）。
-- 清理残留的 ackground: #fff 字面量（4 个文件、13 处），统一走 ar(--color-white)。
+- 清理残留的 background: #fff 字面量（4 个文件、13 处），统一走 var(--color-white)。
 - 模块级已加的柠檬黄/薄荷绿淡底保留，与新的暖米色底叠加后仍在同一暖色系。
 
 ## Capabilities

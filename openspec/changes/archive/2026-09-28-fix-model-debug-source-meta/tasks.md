@@ -11,4 +11,4 @@
 ## 3. 收口
 
 - [x] 3.1 前端门禁：`frontend` 下 `npx prettier --check` 涉及本变更的文件、`npx eslint src/modules/ai-assistant` 无新增 error、`npx vue-tsc --noEmit` 通过。验证：三条命令退出码为 0。验证结果：改动文件 prettier 全通过（仓库既有 `helpers/task-detail.ts` 为本次无关的存量告警）；eslint 10 warning / 0 error（全为存量）；`vue-tsc --noEmit` 无输出、退出码 0。相关用例合计 14 项全绿（port 4 + debug 4 + prompts 2 + useToolbox 3 + ToolboxPanel 1）。
-- [ ] 3.2 页面验收（用户侧）：刷新 AI 工具箱，左侧「工具来源」中「模型调试」一行副标题显示 `规划 / 执行 / 验收 · 仅调试不交给助手`，页面上不再出现「0/5 生效」。验证：用户目视确认。
+- 【已取消 · 人工验收不做】3.2 页面验收（用户侧）：刷新 AI 工具箱，左侧「工具来源」中「模型调试」一行副标题显示 `规划 / 执行 / 验收 · 仅调试不交给助手`，页面上不再出现「0/5 生效」。验证：用户目视确认。

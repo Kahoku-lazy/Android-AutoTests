@@ -34,7 +34,7 @@
 - [x] 6.1 两个 helper 由 `@staticmethod` 改为**实例方法**：`def _credential(self, credential_cls)` / `def _credential_default_endpoint(self, credential_cls)`，直接读 `self.config`；4 个调用点去掉第二个实参（`self._credential(OpenAICredential)` / `self._credential(DeepSeekCredential)` / `self._credential_default_endpoint(DashScopeCredential)`）。验证：AST ④c 断言两者是实例方法、无装饰器、形参为 `(self, credential_cls)`；⑰ 断言调用只传 1 个位置参数。**验证结果**：通过 —— ④c / ⑰ 均 PASS。
 - [x] 6.2 指标与校验脚本同步改写：D6 由「全文件 `self.config.` 为 0」改为「**只允许出现在两个凭证 helper 内，其它方法 0 次**」；脚本新增 ①b 按方法统计分布。验证：`python temps/verify_refactor.py` 的 ①b 通过。**验证结果**：通过 —— `self.config.` 共 6 次，分布 `{_credential: 2, _credential_default_endpoint: 4}`，provider 方法与 `create()` **0 次**。代价已如实记入 design.md D2 修订。
 - [x] 6.3 静态复核复跑。验证：AST 全 PASS；`ruff check --no-cache` 不因本次修订产生新问题；格式化器"新增行"中不含我方标识符。**验证结果**：通过 —— AST **21 项**全 PASS；`ruff check` 仍只剩那 1 条既有 `T201`；对 `ruff format --diff` 只取 `+` 新增行过滤后**无任何我方标识符**。
-- [ ] 6.4 运行时复跑（本单唯一未执行项）：`python -m pytest tests/graybox/unit/test_executor_tool_groups.py -q` → **15 passed**，以及导入冒烟 → `import ok`。**未执行 —— 提权被用户拒绝**（5.4 阶段申请的 danger-full-access 被拒，按要求不绕路重试）。**当前状态缺少运行期实测**：静态证据已足够强（④b/④c 证明两个 helper 是实例方法且形参正确、⑪⑫ 证明调用方正确、⑮/⑯ 证明类内 `self.<name>(...)` 调用与分派表的值都能解析到本类已定义方法、⑰ 证明调用实参个数与签名匹配），但"运行期确实能构造出模型"只有**两次修订之前**的实测记录（4.1）。命令原样交用户在本机终端执行。
+- 【已取消 · 未做取消】6.4 运行时复跑（本单唯一未执行项）：`python -m pytest tests/graybox/unit/test_executor_tool_groups.py -q` → **15 passed**，以及导入冒烟 → `import ok`。**未执行 —— 提权被用户拒绝**（5.4 阶段申请的 danger-full-access 被拒，按要求不绕路重试）。**当前状态缺少运行期实测**：静态证据已足够强（④b/④c 证明两个 helper 是实例方法且形参正确、⑪⑫ 证明调用方正确、⑮/⑯ 证明类内 `self.<name>(...)` 调用与分派表的值都能解析到本类已定义方法、⑰ 证明调用实参个数与签名匹配），但"运行期确实能构造出模型"只有**两次修订之前**的实测记录（4.1）。命令原样交用户在本机终端执行。
 
 <!-- 编写约定：apply 阶段按 `- [ ]` 解析进度。
      按根 AGENTS.md「禁止主动跑全量回归」，本次只做上列定向验证，不跑全量回归。

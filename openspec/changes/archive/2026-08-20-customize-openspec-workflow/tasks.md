@@ -7,4 +7,4 @@
 ## 2. 全链路验证
 
 - [x] 2.1 创建本变更并按定制模板填写 proposal/tasks，验证 `npx openspec validate customize-openspec-workflow` 通过
-- [ ] 2.2 归档本变更：`npx openspec archive customize-openspec-workflow --skip-specs -y`，验证进入 changes/archive/
+- [x] 2.2 归档本变更：`npx openspec archive customize-openspec-workflow --skip-specs -y`，验证进入 changes/archive/

@@ -13,7 +13,7 @@
 ## 3. 门禁与页面验收
 
 - [x] 3.1 前端门禁：`npm run typecheck` + `npx vitest run tests/task-list` + `npm run build` 全绿；仓库门禁 `python run.py check` 通过。验证：命令退出码 0。**验证结果**：typecheck / vitest（96 passed）/ vite build（17.5s）均过；`python run.py check` 阻塞项 21/22，唯一失败是 `openapi-schema`——它由工作区里先于本次的未提交后端改动引起（`backend/apps/accounts/*`、`backend/apps/task_list/*`、`openspec/openapi.yaml` 均为本次改动之前就已 `M` 的文件），本次前端改动不涉及 OpenAPI。
-- [ ] 3.2 页面验收（用户侧，前端 dev server 已跑）：打开任一已跑完的任务详情，展开用例，确认轮次行为「序号 + 执行模型 + `executor_role` 徽章 + ：动作」，不含「步骤一」与 `deepseek-flash`；PASS/FAIL 徽章位置与样式未变。验证：用户目视确认。
+- 【已取消 · 人工验收不做】3.2 页面验收（用户侧，前端 dev server 已跑）：打开任一已跑完的任务详情，展开用例，确认轮次行为「序号 + 执行模型 + `executor_role` 徽章 + ：动作」，不含「步骤一」与 `deepseek-flash`；PASS/FAIL 徽章位置与样式未变。验证：用户目视确认。
 
 ## 4. 规格归档
 

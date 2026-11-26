@@ -8,13 +8,12 @@
 - [x] 2.1 `doodle-craft/SKILL.md` §线型规则：白名单表只留助手角色卡，补 2026-11-09 变更说明与回退路径。验证：文档表格与 OWNERS 一致。**验证结果**：已改。
 - [x] 2.2 `references/components/cards.md`：顶部线型提示与 §3 KpiCard 规格改为实线描述。验证：不再声称 KpiCard 可声明 dashed。**验证结果**：已改。
 - [x] 2.3 门禁：`npx vue-tsc --noEmit`、`npm run build:check`、`npx vitest run tests/shared tests/dashboard`、`npm run lint:styles`、`npm run lint:lines`。验证：全绿。**验证结果**：tsc 0；lint:lines 通过（0 处）。
-- [ ] 2.4 目视：仪表盘 / 报告页 / BUG 概览三处统计卡描边与阴影同色。验证：用户确认。
+- 【已取消 · 人工验收不做】2.4 目视：仪表盘 / 报告页 / BUG 概览三处统计卡描边与阴影同色。验证：用户确认。
 
 ## 4. 去阴影（2026-11-09 追加）
 
-- [x] 4.1 KpiCard.vue：ox-shadow: 4px 4px 0 0 var(--kpi-accent) → 
-one，hover 也去掉阴影，只保留描边与微倾。验证：build 24.5s、共享/仪表盘测试通过。**验证结果**：通过。
-- [x] 4.2 规格 delta 同步：rontend-doodle-kpi-card 的卡壳要求改为「实线描边 + 近直角圆角 + 无阴影」，entry 主数值色改以描边 accent 为准。验证：openspec validate kpi-card-solid-border --strict。**验证结果**：valid。
+- [x] 4.1 KpiCard.vue：box-shadow: 4px 4px 0 0 var(--kpi-accent) → none，hover 也去掉阴影，只保留描边与微倾。验证：build 24.5s、共享/仪表盘测试通过。**验证结果**：通过。
+- [x] 4.2 规格 delta 同步：frontend-doodle-kpi-card 的卡壳要求改为「实线描边 + 近直角圆角 + 无阴影」，entry 主数值色改以描边 accent 为准。验证：openspec validate kpi-card-solid-border --strict。**验证结果**：valid。
 - [x] 4.3 doodle-craft/references/components/cards.md §3 同步为「阴影 无」。验证：文档与代码一致。**验证结果**：已改。
 
 - [x] 4.4 阴影改为浅色渐变：单层高饱和硬影 → 同色相三层（42% / 20% / 8% 混纸白，偏移 4/8/12px、0 模糊），只在右下方；hover 同步 5/9/13px。验证：build 29.0s、共享+仪表盘测试通过。**验证结果**：通过。

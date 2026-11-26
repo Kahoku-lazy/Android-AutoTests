@@ -10,11 +10,7 @@ import {
   suiteRows,
   trendPoints,
 } from "@/modules/ai-assistant/helpers/eval-view"
-import type {
-  EvalMethod,
-  EvalScore,
-  EvalSuiteRun,
-} from "@/modules/ai-assistant/api/assistants"
+import type { EvalMethod, EvalScore, EvalSuiteRun } from "@/modules/ai-assistant/api/assistants"
 
 function makeScore(id: number, prompt: number, handover: number): EvalScore {
   return {

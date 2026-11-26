@@ -1,12 +1,18 @@
 import { formatDateTime } from "@/shared/helpers/datetime"
 import { EVAL_METRIC_LABELS } from "../constants"
 import type {
+  EvalCandidate,
   EvalCase,
   EvalMethod,
   EvalScore,
   EvalScoreItem,
   EvalSuiteRun,
 } from "../api/assistants"
+
+export function candidateLabel(item: EvalCandidate): string {
+  const at = formatDateTime(item.modified_at, { precision: "minute" })
+  return `${at} · ${item.task.slice(0, 40) || item.dir}`
+}
 
 export function metricLabel(key: string): string {
   return EVAL_METRIC_LABELS[key] || key
@@ -159,4 +165,17 @@ export function methodViews(methods: EvalMethod[] = []): MethodView[] {
       .map((line) => line.trim())
       .filter(Boolean),
   }))
+}
+
+export interface KindTab {
+  key: string
+  label: string
+  count: number
+}
+
+export function kindTabViews(assistants: number, workflows: number): KindTab[] {
+  return [
+    { key: "assistant", label: "助手", count: assistants },
+    { key: "workflow", label: "工作流", count: workflows },
+  ]
 }

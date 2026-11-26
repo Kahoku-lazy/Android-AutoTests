@@ -214,7 +214,11 @@ onMounted(load)
       <div class="bank-form">
         <label class="bank-form__field">
           <span>题目</span>
-          <input v-model="draftTitle" class="bank-form__input" placeholder="例如：H6810 定时功能测试" />
+          <input
+            v-model="draftTitle"
+            class="bank-form__input"
+            placeholder="例如：H6810 定时功能测试"
+          />
         </label>
 
         <div v-for="(step, index) in draftSteps" :key="index" class="bank-form__step">

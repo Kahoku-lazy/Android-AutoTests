@@ -32,8 +32,10 @@ import {
   type EvalSuiteRun,
 } from "./api/assistants"
 import {
+  candidateLabel,
   caseRows,
   historyRows,
+  kindTabViews,
   methodViews,
   missingNotes,
   scoreCards,
@@ -42,27 +44,12 @@ import {
   trendPoints,
 } from "./helpers/eval-view"
 import type { AssistantCard, SopWorkflow } from "./types"
-
-const CRUMBS = [{ label: "平台助手", to: "/ai-assistant" }, { label: "评测" }]
-
-const CASE_COLUMNS = [
-  { dataIndex: "pick", title: "选", width: 56 },
-  { dataIndex: "title", title: "题目", minWidth: 260 },
-  { dataIndex: "stepCount", title: "步数", width: 88 },
-]
-
-const SUITE_COLUMNS = [
-  { dataIndex: "title", title: "题目", minWidth: 240 },
-  { dataIndex: "passed", title: "步骤通过", width: 108 },
-  { dataIndex: "cost", title: "耗时", width: 88 },
-  { dataIndex: "verdict", title: "判定", width: 104 },
-]
-
-const HISTORY_COLUMNS = [
-  { dataIndex: "at", title: "时间", width: 150 },
-  { dataIndex: "metrics", title: "指标与分数", minWidth: 240 },
-  { dataIndex: "fingerprint", title: "提示词指纹", width: 190 },
-]
+import {
+  EVAL_CASE_COLUMNS,
+  EVAL_CRUMBS,
+  EVAL_HISTORY_COLUMNS,
+  EVAL_SUITE_COLUMNS,
+} from "./constants"
 
 const router = useRouter()
 const assistants = ref<AssistantCard[]>([])
@@ -101,10 +88,7 @@ const options = computed(() =>
     : workflows.value.map((item) => ({ id: String(item.id), label: item.name })),
 )
 
-const kindTabs = computed(() => [
-  { key: "assistant", label: "助手", count: assistants.value.length },
-  { key: "workflow", label: "工作流", count: workflows.value.length },
-])
+const kindTabs = computed(() => kindTabViews(assistants.value.length, workflows.value.length))
 
 const cards = computed(() => scoreCards(latest.value?.items || []))
 const missing = computed(() => missingNotes(latest.value))
@@ -120,7 +104,9 @@ const latestAt = computed(() =>
 
 const targetState = computed(() => {
   if (kind.value === "assistant") {
-    return assistants.value.find((item) => item.assistant_id === targetId.value)?.release_state || ""
+    return (
+      assistants.value.find((item) => item.assistant_id === targetId.value)?.release_state || ""
+    )
   }
   return workflows.value.find((item) => String(item.id) === targetId.value)?.release_state || ""
 })
@@ -257,11 +243,6 @@ async function publish(): Promise<void> {
   }
 }
 
-function candidateLabel(item: EvalCandidate): string {
-  const at = formatDateTime(item.modified_at, { precision: "minute" })
-  return `${at} · ${item.task.slice(0, 40) || item.dir}`
-}
-
 onMounted(load)
 </script>
 
@@ -269,7 +250,7 @@ onMounted(load)
   <div class="doc-page doc-page--fixed wb-shell eval-page">
     <WorkbenchHeader title="评测" icon="bot" />
     <div class="doc-body">
-      <WorkbenchCrumbs :items="CRUMBS" back-to="/ai-assistant" back-label="返回助手" />
+      <WorkbenchCrumbs :items="EVAL_CRUMBS" back-to="/ai-assistant" back-label="返回助手" />
 
       <ErrorState v-if="listError" :message="listError" @retry="load" />
       <SkeletonCard v-else-if="loading && !loaded" variant="list" :lines="4" />
@@ -307,7 +288,9 @@ onMounted(load)
           </label>
           <div class="eval-bar__tail">
             <span v-if="targetStateText" class="eval-chip">{{ targetStateText }}</span>
-            <DoodleBtn tone="paper" @click="router.push('/ai-assistant/eval-cases')">编辑题库</DoodleBtn>
+            <DoodleBtn tone="paper" @click="router.push('/ai-assistant/eval-cases')"
+              >编辑题库</DoodleBtn
+            >
             <DoodleBtn tone="yellow" :disabled="!targetId || running" @click="start">
               {{ running ? "评分中…" : "开始评分" }}
             </DoodleBtn>
@@ -356,13 +339,17 @@ onMounted(load)
               >
                 <header>
                   <b>{{ card.label }}</b>
-                  <span v-if="card.warning" class="eval-chip eval-chip--warn">{{ card.warning }}</span>
+                  <span v-if="card.warning" class="eval-chip eval-chip--warn">{{
+                    card.warning
+                  }}</span>
                 </header>
                 <strong class="eval-score__num">{{ card.text }}</strong>
                 <p class="eval-score__reason">{{ card.reason }}</p>
               </article>
             </div>
-            <p v-else class="eval-hint">选好对象与交接文本来源后点「开始评分」，这里会出现两项分数与理由。</p>
+            <p v-else class="eval-hint">
+              选好对象与交接文本来源后点「开始评分」，这里会出现两项分数与理由。
+            </p>
 
             <p v-for="note in missing" :key="note.key" class="eval-hint eval-hint--warn">
               {{ note.label }} 未评分：{{ note.reason }}
@@ -378,7 +365,11 @@ onMounted(load)
               <div class="eval-actions">
                 <label class="eval-field eval-field--inline">
                   <span>设备串号</span>
-                  <el-input v-model="serial" class="eval-field__control" placeholder="例如 H6810-0207" />
+                  <el-input
+                    v-model="serial"
+                    class="eval-field__control"
+                    placeholder="例如 H6810-0207"
+                  />
                 </label>
                 <DoodleBtn
                   tone="teal"
@@ -398,7 +389,7 @@ onMounted(load)
             />
             <AppTable
               v-else
-              :columns="CASE_COLUMNS"
+              :columns="EVAL_CASE_COLUMNS"
               :data-source="caseTable"
               row-key="id"
               table-layout="fixed"
@@ -415,7 +406,7 @@ onMounted(load)
             <template v-if="suiteTable.length">
               <h4 class="eval-subtitle">最近一次逐条结果</h4>
               <AppTable
-                :columns="SUITE_COLUMNS"
+                :columns="EVAL_SUITE_COLUMNS"
                 :data-source="suiteTable"
                 row-key="id"
                 table-layout="fixed"
@@ -454,7 +445,7 @@ onMounted(load)
 
             <AppTable
               v-if="historyTable.length"
-              :columns="HISTORY_COLUMNS"
+              :columns="EVAL_HISTORY_COLUMNS"
               :data-source="historyTable"
               row-key="id"
               table-layout="fixed"

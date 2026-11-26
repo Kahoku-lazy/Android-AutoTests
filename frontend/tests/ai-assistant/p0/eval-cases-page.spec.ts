@@ -75,7 +75,9 @@ describe("评测题库页", () => {
     await flushPromises()
 
     expect(bodyText(".el-dialog__title")).toContain("编辑题目")
-    const inputs = Array.from(document.body.querySelectorAll(".bank-form__input")) as HTMLInputElement[]
+    const inputs = Array.from(
+      document.body.querySelectorAll(".bank-form__input"),
+    ) as HTMLInputElement[]
     expect(inputs[0].value).toBe("定时功能测试")
     expect(inputs.map((input) => input.previousElementSibling?.textContent)).toEqual([
       "题目",
@@ -104,8 +106,8 @@ describe("评测题库页", () => {
     titleInput.dispatchEvent(new Event("input"))
     await flushPromises()
 
-    const save = Array.from(document.body.querySelectorAll(".el-dialog__footer button")).find((node) =>
-      node.textContent?.includes("保存"),
+    const save = Array.from(document.body.querySelectorAll(".el-dialog__footer button")).find(
+      (node) => node.textContent?.includes("保存"),
     )
     save?.dispatchEvent(new MouseEvent("click", { bubbles: true }))
     await flushPromises()

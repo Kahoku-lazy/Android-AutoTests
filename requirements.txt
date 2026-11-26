@@ -50,6 +50,9 @@ ruff==0.17.3
 # ── AgentScope 2.0 AI ──
 # 下限 2.0.12：SOP / GoalPipeline / TeamPipeline 仍在；本地向量库 delete 对齐该版可选 metadata_filter
 agentscope>=2.0.12
+# 助手评测的 LLM 裁判（GEval）用它打分：只在评分服务里延迟 import，并设置 DEEPEVAL_TELEMETRY_OPT_OUT=1。
+# 注意：它把 click 钉在 <8.4.0、rich<15、tabulate<0.10，会与 huggingface-hub（cnstd→OCR 链路）的 click 下限冲突。
+deepeval>=4.3.5
 # engines/ae_harness 直接 import：models.py 与 knowledge/config.py 用 pydantic 定义配置模型、用 dotenv 读 .env。
 # 此前它们是 fastapi / uvicorn[standard] 的传递依赖，移除那两个包后必须显式声明，否则 CI 报 No module named 'dotenv'。
 pydantic>=2.9.0

@@ -58,7 +58,7 @@ AUTH_VIEW_BY_PATH = {
 AUTH_CALL_FILES = (
     "frontend/src/shared/api/auth.ts",
     "frontend/src/shared/api-client.ts",
-    "tests/api/conftest.py",
+    "tests/conftest.py",
 )
 
 
@@ -180,8 +180,8 @@ def test_scanner_finds_the_expected_volume():
 def test_multiline_call_sites_are_captured():
     multiline = [c for c in CALLERS if c.multiline]
     assert multiline, "一条跨行调用都没扫到，说明扫描器退化成了按行匹配"
-    assert any(c.rel == "tests/api/conftest.py" for c in multiline), (
-        "tests/api/conftest.py 的跨行调用未被扫到："
+    assert any(c.rel == "tests/conftest.py" for c in multiline), (
+        "tests/conftest.py 的跨行调用未被扫到："
         + NL
         + NL.join(f"  - {c.rel}:{c.line}" for c in multiline)
     )

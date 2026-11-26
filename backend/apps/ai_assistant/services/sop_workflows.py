@@ -140,6 +140,13 @@ def get_workflow(workflow_id: int) -> AISopWorkflow:
     return AISopWorkflow.objects.get(pk=workflow_id)
 
 
+def align_run_names(executor: dict, verifier: dict) -> None:
+    name = executor.get("run_name") or ""
+    if not name or name != (verifier.get("run_name") or ""):
+        return
+    verifier["run_name"] = f"{name}-{verifier.get('assistant_id') or ''}"
+
+
 def _resolve_side(card: AIAssistant, side: str) -> dict:
     role = AIRole.objects.select_related("model_config").filter(role_id=card.role_id).first()
     if role is None:
@@ -171,6 +178,5 @@ def resolve_workflow(workflow: AISopWorkflow) -> dict:
     verifier_card = _require_card(workflow.verifier_assistant_id, "verifier")
     executor = _resolve_side(executor_card, "executor")
     verifier = _resolve_side(verifier_card, "verifier")
-    if executor["run_name"] == verifier["run_name"]:
-        verifier["run_name"] = f"{verifier['run_name']}-{verifier['assistant_id']}"
+    align_run_names(executor, verifier)
     return {"executor": executor, "verifier": verifier}

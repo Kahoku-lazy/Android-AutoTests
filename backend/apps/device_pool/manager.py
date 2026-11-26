@@ -7,7 +7,6 @@ from typing import Final
 
 from django.contrib.auth.models import User
 from django.utils import timezone
-from rest_framework.exceptions import APIException
 
 from engines.device.action import EngineConnectError
 from engines.device.connection import fetch_device_info, probe_u2
@@ -17,6 +16,7 @@ from utils.logs import backend_log
 from .contracts import (
     RUNNER_OCCUPIED_PREFIXES,
     ConnectionType,
+    DeviceError,
     DeviceInfo,
     DeviceStatus,
     LockReleaseReason,
@@ -38,13 +38,6 @@ def reset_status_sync_cache() -> None:
     with _status_sync_lock:
         _status_sync_at = 0.0
         _status_sync_result = (0, 0)
-
-
-class DeviceError(APIException):
-    def __init__(self, message: str, status_code: int = 400):
-        super().__init__(message)
-        self.log = backend_log
-        self.status_code = status_code
 
 
 class DeviceDetector:

@@ -6,7 +6,7 @@
 
 ## 取消前的原定内容（摘自 proposal）
 
-两处计费失真：助手评测是真模型调用但 usage 硬编码 0 token；ssistant_eval 来源未入账。
+两处计费失真：助手评测是真模型调用但 usage 硬编码 0 token；assistant_eval 来源未入账。
 
 ## 恢复方法
 

@@ -10,7 +10,7 @@
 - [x] 2.2 行高令牌化：`line-height: 1.2/1.35/1.4/1.45/1.5/1.6/1.7/1.65/1.8` → 最近档令牌；`1` 与 px 值保留。验证：`npm run lint:styles` 通过。**验证结果**：74 处替换；残留仅 `line-height: 1`（12 处，图标）与 16/18px 固定高（允许）。
 - [x] 2.3 文字色语义化：`color: var(--ink)` → `var(--app-text-primary)`。验证：`vue-tsc` / build 通过。**验证结果**：195 处替换；`vue-tsc` 退出码 0，build 通过。
 - [x] 2.4 边界线语义化：`border/outline` 里的 `var(--color-ink-79)` → `var(--app-border-subtle)`。验证：`npm run lint:styles` 与 build 通过。**验证结果**：3 处替换；其余边框已是 `color-mix`，无需替换。
-- [x] 2.6 平台名称与页头标题：侧栏标识「自动化测试平台」→「智能化测试平台」：去掉 AI 方块图标；「智能化」三字取山景渐变（blue-27 → teal-38 → green-49 + 0.35px 描边），「测试平台」保持墨色；登录页 hero 与仪表盘副标题同步改名；页头标题 WorkbenchHeader 32px → 24px 并改手写体；页头副标题整体停用（.brand-sub 删除，prop 暂留兼容调用点）。验证：ue-tsc / build / 	ests/shared+	ests/dashboard 通过。**验证结果**：uild:check 27.7s、ue-tsc 0、108 测试通过；页标题 2xl → xl、--app-font-brand 400。
+- [x] 2.6 平台名称与页头标题：侧栏标识「自动化测试平台」→「智能化测试平台」：去掉 AI 方块图标；「智能化」三字取山景渐变（blue-27 → teal-38 → green-49 + 0.35px 描边），「测试平台」保持墨色；登录页 hero 与仪表盘副标题同步改名；页头标题 WorkbenchHeader 32px → 24px 并改手写体；页头副标题整体停用（.brand-sub 删除，prop 暂留兼容调用点）。验证：vue-tsc / build / tests/shared+tests/dashboard 通过。**验证结果**：build:check 27.7s、vue-tsc 0、108 测试通过；页标题 2xl → xl、--app-font-brand 400。
 - [x] 2.5 侧边栏排版：平台标识改 `--app-font-brand`（20px / 400，登录页同款手写体）；导航项 14 → 16（行高 46）；分组标题 12 → 14 并去掉 `opacity: .45`、改 `--app-text-secondary`（2.81:1 → 5.21:1）。验证：`vue-tsc` / build / `lint:styles` 批 2 通过。**验证结果**：`build:check` 34.8s 通过；批 2 通过（批 3 仍 50 处既有）；`tests/shared` 11 文件 49 passed。底部用户区本来就是 16px，未改。
 
 ## 3. P2 收敛

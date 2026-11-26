@@ -13,6 +13,7 @@ import {
   formatBugTime,
 } from "../constants"
 import type { BugFailureStep, BugStatus, BugTicket } from "../types"
+import { splitErrorDetail } from "../helpers/errorDetail"
 
 const props = defineProps<{
   modelValue: boolean
@@ -28,6 +29,9 @@ const emit = defineEmits<{
 
 const steps = computed(() => props.bug?.failure_steps ?? [])
 const hasReport = computed(() => Boolean(props.bug?.report_run && props.bug?.report_name))
+const errorLines = computed(() =>
+  splitErrorDetail(props.bug?.detail || props.bug?.detail_preview || ""),
+)
 
 function attemptText(step: BugFailureStep): string {
   if (!step.attempts) return ""
@@ -149,7 +153,14 @@ async function openReport() {
 
       <section v-else class="bug-detail__section">
         <h3 class="bug-detail__subtitle">错误内容</h3>
-        <pre class="bug-detail__body">{{ bug.detail || bug.detail_preview || "—" }}</pre>
+        <div class="bug-detail__body">
+          <p v-for="(line, index) in errorLines" :key="index" class="bug-detail__line">
+            <strong v-if="line.label" class="bug-detail__line-key">{{ line.label }}</strong>{{
+              line.text
+            }}
+          </p>
+          <p v-if="!errorLines.length" class="bug-detail__line">—</p>
+        </div>
       </section>
     </div>
   </el-drawer>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import * as echarts from "echarts"
+import echarts from "@/shared/helpers/echarts-setup"
 import { formatSignificant } from "@/shared/animations"
 import { useECharts } from "@/shared/composables/useECharts"
 import { clockLabel, hourLabel, type HourlyPoint } from "../helpers/hourlyPoints"

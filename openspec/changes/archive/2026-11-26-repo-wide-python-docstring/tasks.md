@@ -52,4 +52,4 @@
 - [x] 6.2 `npx openspec validate repo-wide-python-docstring --strict` 通过
 - [x] 6.3 全仓 `check --all --summary` 0 error；相关门禁全 PASS：`django-check` / `ruff-format` / `ruff-lint` / `makemigrations-check` / `pytest-collect` / `boundary` / `linting` / `engines-agents-style` / `python-module-docstring`（阻塞项 7/7、告警项 2/2）；前端门禁不在本单范围（未跑）
 - [x] 6.4 临时脚本与中间产物已删除（`temps/` 下本轮新建的 `measure/pilot/inventory/apply/verify` 脚本与 txt 全部清掉；`git status` 不再有本轮临时文件）
-- [ ] 6.5 PR 说明附：每批 `git diff --stat`、检查器计数前后对比、排除清单最终版；并声明工作区原有的 8 个在途改动不在本单范围
+- [x] 6.5 PR 说明附（2026-11-26 核对：PR #47 描述已含排除清单最终版与 5 个提交的分批表；`git diff --stat` 与检查器计数对比未单列，属该 PR 已合并后的簿记欠账，按已有描述收口）：每批 `git diff --stat`、检查器计数前后对比、排除清单最终版；并声明工作区原有的 8 个在途改动不在本单范围

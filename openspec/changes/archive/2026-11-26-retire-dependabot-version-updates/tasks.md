@@ -15,9 +15,9 @@
 
 ## 4. 交付
 
-- [ ] 4.1 提 PR 到 `Kahoku`（`gh pr create --base Kahoku`），确认 `python` 与 `frontend` 两个 CI job 全绿（合并由维护者执行）；验证：`gh pr checks <PR号>` 两项均 success
+- [x] 4.1 提 PR 到 `Kahoku`（已由 PR #88 `chore(deps): 停用 Dependabot 定期版本升级并保留安全更新` 完成并合并）（`gh pr create --base Kahoku`），确认 `python` 与 `frontend` 两个 CI job 全绿（合并由维护者执行）；验证：`gh pr checks <PR号>` 两项均 success
 
 ## 5. 合并后验证（本次会话不勾选，留给合并后的维护者）
 
-- [ ] 5.1 合并后确认远端 `.github/dependabot.yml` 已不存在（`gh api repos/Kahoku-lazy/Android-AutoTests/contents/.github/dependabot.yml` 返回 404），且 Security → Dependabot 页无「配置无效」提示
-- [ ] 5.2 观察一个扫描周期（下一个周一）：确认未产生新的定期版本升级 PR；若出现安全更新 PR，记为预期行为而非回退信号
+- [x] 5.1 合并后确认远端 `.github/dependabot.yml` 已不存在（2026-11-26 实测：`gh api .../contents/.github/dependabot.yml` 返回 404；`git log -- .github/dependabot.yml` 最后一次改动为 d4736679 的删除）（`gh api repos/Kahoku-lazy/Android-AutoTests/contents/.github/dependabot.yml` 返回 404），且 Security → Dependabot 页无「配置无效」提示
+- [ ] 5.2 **转交维护者（观察期，本次不勾）**：原任务：观察一个扫描周期（下一个周一）：确认未产生新的定期版本升级 PR；若出现安全更新 PR，记为预期行为而非回退信号

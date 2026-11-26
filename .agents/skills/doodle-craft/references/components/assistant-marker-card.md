@@ -100,7 +100,7 @@ border: 1px solid color-mix(in srgb, var(--assistant-marker) 26%, transparent);
 
 - 蓝笔色 → 浅蓝往下渐隐；其它笔色同理，**不得**写死某个颜色。
 - 禁 `backdrop-filter`（全站禁令）；透明度只靠 `color-mix(..., transparent)`。
-- 运行日志卡（§5.2）与 `DoodleNote` 的胶带仍是条纹 / 实色口径，本次只改工作流便签卡。
+- 运行日志卡（§5.2）的胶带仍是条纹 / 实色口径，本次只改工作流便签卡。
 
 ## 4. 配置弹窗（新建 / 编辑）
 

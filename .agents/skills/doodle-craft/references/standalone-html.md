@@ -102,7 +102,7 @@ body { margin: 0; font-family: var(--app-font); font-size: var(--app-size-sm);
 
 **页头按钮（wb-btn）**：`border: 2px solid var(--ink); border-radius: var(--app-radius-sm); background: var(--app-bg-card); box-shadow: var(--app-shadow-sm);`，hover 底 `--c-dashboard` + `translate(1px,1px)`；primary 底 `--c-dashboard`，success 底 `--c-device`。
 
-**钉板卡（AppCard）/ 撕纸卡（SketchCard）/ 指标卡（KpiCard）/ 胶带卡（DoodleNote）**
+**钉板卡（AppCard）/ 撕纸卡（SketchCard）/ 指标卡（KpiCard）**
 
 ```css
 .ac-card { position: relative; background: var(--app-bg-card); border: 2.5px dashed var(--ink);

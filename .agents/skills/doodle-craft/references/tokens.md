@@ -152,7 +152,7 @@ easing：`--app-ease: cubic-bezier(0.25,0.1,0.25,1)`、`--app-spring: cubic-bezi
 
 `prefers-reduced-motion: reduce` 时：`.fade-slide-*` 路由过渡 `transition: none` 直接切页；`shared/animations.ts` 的 JS 编排跳过过程、落到终态（void 函数写终值；返回句柄的函数 `duration: 0`）；**凡 `transition` 里动了 `transform` 的文件都必须提供降级块**（只动颜色/边框色的可免）。已登记的循环装饰动效例外：骨架 shimmer `1.4s`、状态脉冲 `1.5s`。
 
-**已降级**（有 `@media (prefers-reduced-motion: reduce)` 块）：`.el-button:active` · `.ac-card` · `.fade-slide-*` · AppCard / SketchCard / KpiCard / DoodleNote / DoodleBtn / WorkbenchCrumbs · SkeletonCard。
+**已降级**（有 `@media (prefers-reduced-motion: reduce)` 块）：`.el-button:active` · `.ac-card` · `.fade-slide-*` · AppCard / SketchCard / KpiCard / DoodleBtn / WorkbenchCrumbs · SkeletonCard。
 
 **未降级**（现存缺口，别照抄；见 [known-gaps.md](known-gaps.md)）：侧栏微倾 · `.wb-shell .el-card` hover 位移 · `.ac-tabs` · `wb-btn` · 输入框 focus 环 · `ErrorState` 按钮 · `FilterTabs`。
 

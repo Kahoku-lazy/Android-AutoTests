@@ -35,7 +35,6 @@
 | 图钉 `.ac-card__pin` | 14×14、居中置顶、2px 墨框、底 = accent | AppCard（`pin` 可关）|
 | 图钉 `KpiCard` deco=`pin` | 12×12，同几何 | KpiCard |
 | 胶带 `KpiCard` deco=`tape` | 64×18，斜置（`rotate(-4deg)`），`color-mix(accent 60%, transparent)` + `1px solid --comp-kpi-tape-border` | KpiCard |
-| 胶带 `DoodleNote` | 顶中 64×18，`rotate(-3deg)`，色 = `--comp-note-tape` + `--comp-note-tape-border` | DoodleNote `variant="note"` |
 
 三者都 `pointer-events: none`，只做视觉锚点，不承担交互。
 

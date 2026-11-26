@@ -28,7 +28,7 @@
 
 - [x] 5.1 `tests/arch/unit` 增加契约守卫：`bound_sop` 必须先校验设备再装配角色、必须持锁、`bound_roles` 必须传 `capture_messages=True`、`run_sop` 必须暴露两个出口与渲染开关；验证：`python -m pytest -c tests/pytest.ini tests/arch/unit -q` 通过。
 - [x] 5.2 阶段切分的临时验证脚本放 `temps/`：有 `steps` 走步骤分组、无 `steps` 走轮次分组、步骤事件缺失时不抛错；验证：`python -m temps.check_sop_stages` 三项全 OK（按 `tests/AGENTS.md` 口径，函数级验证不入 `tests/`）。
-- [ ] 5.3 一次真实 SOP 任务验收（真机 + 已发布 SOP 工作流）：确认报告五页签、阶段为步骤卡、每步两个角色块、步骤结论与平台任务结果里的 `completed` / `failed` 一致；验证：记录任务号与报告路径，逐项打勾。**当前阻塞**：库里唯一的 SOP 工作流 `UI执行`（id=9）仍是 `draft`（平台提交只接受 `published`），且其验收角色用 `openai` provider + `OPENAI_API_KEY`，本机未配置该密钥。已改用「直连 `run_bound_sop` + DB 解析出的两个角色（验收角色临时换成 deepseek 密钥）」跑真机一步 SOP 通过，剩平台提交链路待这段数据/密钥就绪后再验。
+- [ ] **skipped（2026-11-27 需求方决定：真机验证不做）** 5.3 一次真实 SOP 任务验收（真机 + 已发布 SOP 工作流）：确认报告五页签、阶段为步骤卡、每步两个角色块、步骤结论与平台任务结果里的 `completed` / `failed` 一致；验证：记录任务号与报告路径，逐项打勾。**当前阻塞**：库里唯一的 SOP 工作流 `UI执行`（id=9）仍是 `draft`（平台提交只接受 `published`），且其验收角色用 `openai` provider + `OPENAI_API_KEY`，本机未配置该密钥。已改用「直连 `run_bound_sop` + DB 解析出的两个角色（验收角色临时换成 deepseek 密钥）」跑真机一步 SOP 通过，剩平台提交链路待这段数据/密钥就绪后再验。
 - [x] 5.4 单角色回归：跑一次真实 UI 执行任务，报告仍五页签、阶段仍按轮、`aligned.json` 里没有 `steps` 段；验证：报告与既有产物结构一致。
 - [x] 5.5 门禁：`python -m run check` 27/29 通过——ruff（平台 + engines）、格式、Django 检查、迁移、OpenAPI、boundary、linting、silent-except、engines 风格全绿；失败的两项是 `vitest` / `vite-build`，原因为本机 `.vite-temp` 写权限 EPERM（环境问题，非代码）。`openspec validate --strict` 通过。既有与本变更无关的失败已在结果里注明：`tests/arch/unit` 5 项（api-docs、auth 403/401、前端调用路径、`engines/agents` 已退役、views 直写 ORM）、`tests/task` 3 项（`Workflow.release_state`）、`tests/ai_assistant` 16 项（401/403）。
 

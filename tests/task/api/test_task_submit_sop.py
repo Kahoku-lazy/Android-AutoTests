@@ -47,7 +47,17 @@ def _workflow_and_no_dispatch(monkeypatch):
     monkeypatch.setattr(api, "dispatch_device", lambda serial: None)
     monkeypatch.setattr(
         "backend.apps.ai_assistant.api.get_sop_workflow",
-        lambda workflow_id: type("Workflow", (), {"id": workflow_id, "name": "回归工作流"})(),
+        lambda workflow_id: type(
+            "Workflow",
+            (),
+            {
+                "id": workflow_id,
+                "name": "回归工作流",
+                "release_state": "published",
+                "kind": "ui",
+                "orchestration": "goal",
+            },
+        )(),
     )
 
 

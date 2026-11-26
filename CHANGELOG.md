@@ -9,6 +9,7 @@
 ### Changed
 
 - AgentScope 下限由 2.0.9 提到 2.0.12。本地向量库 `delete` 接受可选 `metadata_filter`，与该版 `VectorStoreBase` 对齐
+- 依赖升级策略调整：移除 Dependabot 定期版本升级（`.github/dependabot.yml`），保留安全更新与漏洞告警，依赖巡检改为人工按需发起（见 `openspec/changes/retire-dependabot-version-updates/`）
 
 ### Added
 

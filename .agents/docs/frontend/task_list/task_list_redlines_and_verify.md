@@ -1,7 +1,7 @@
 # task-list · 红线与快速验证
 
 > 归属模块：`frontend/src/modules/task-list` ｜ 类型：模块功能开发说明
-> 代码真相源：`frontend/src/modules/task-list/api/tasks.ts`、`constants.ts`、`helpers/task-detail.ts`
+> 代码真相源：`frontend/src/modules/task-list/api/tasks.ts`、`constants.ts`、`helpers/task-card.ts`
 > 上级约束：根 `AGENTS.md`、`frontend/AGENTS.md` ｜ 模块索引：`frontend/AGENTS.md`
 
 ## 红线

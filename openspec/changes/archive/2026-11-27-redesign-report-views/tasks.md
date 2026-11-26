@@ -52,4 +52,4 @@
 - [x] 7.1 更新 `.agents/docs/engines/ae_harness_event/ae_harness_event_observation_and_report.md` 的五页签口径（字体、事实表、JSON、Markdown、阶段层）
 - [x] 7.2 契约守护：新增 `tests/arch/unit/test_report_render_blocks.py`（字体族、同源字体注入、事实表/JSON/Markdown 类名、阶段序号、依赖登记）；`tests/arch/unit` 相关 29 项通过
 - [x] 7.3 质量门禁：`engines-agents-style` 0 违规、docstring 检查 0 error；`utils/check_gates.py` 中 `ruff-engines-format / ruff-engines-lint / vite-build / style-gates` 均通过（`prettier` 与 `vue-file-size` 的失败来自工作区既有前端改动，本单未碰前端）
-- [ ] 7.4 人工验收：本机无真实 `*.aligned.json`，已用合成记录（单角色 + SOP）逐页截图核对；待需求方用真实记录复跑后确认
+- [ ] **skipped（2026-11-27 需求方决定：真机验证不做）** 7.4 人工验收：本机无真实 `*.aligned.json`，已用合成记录（单角色 + SOP）逐页截图核对；待需求方用真实记录复跑后确认

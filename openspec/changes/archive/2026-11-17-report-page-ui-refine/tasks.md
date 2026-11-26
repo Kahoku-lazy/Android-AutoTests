@@ -23,12 +23,11 @@
 
 - [x] 4.5 表头加大 + 淡色底：.report-table .el-table__header th 字号 xs(12) → sm(14)、背景由 --app-bg-subtle 改为 --c-report 16% 混白、字距 0.04 → 0.03em。验证：build 19.7s、虚线 0 处。**验证结果**：通过。
 
-- [x] 4.6 表格薄荷绿淡底：.table-card、.el-table、	r、	d 背景改为 --c-device 8% 混白；表头 16%；hover 15%。验证：build 25.4s、批 2 通过、虚线 0 处。**验证结果**：通过。
+- [x] 4.6 表格薄荷绿淡底：.table-card、.el-table、tr、td 背景改为 --c-device 8% 混白；表头 16%；hover 15%。验证：build 25.4s、批 2 通过、虚线 0 处。**验证结果**：通过。
 
-- [x] 4.7 薄荷底优先级加固：选择器提升为 .report-workbench .report-table :deep(.el-table__cell)（10%）与表头 	h.el-table__cell（20%），hover 18%；编译产物确认选择器为 (0,4,1) + !important，高于全局 .el-table td 的 (0,1,1)。验证：dist 于 16:58 重新构建。**验证结果**：by build。
+- [x] 4.7 薄荷底优先级加固：选择器提升为 .report-workbench .report-table :deep(.el-table__cell)（10%）与表头 th.el-table__cell（20%），hover 18%；编译产物确认选择器为 (0,4,1) + !important，高于全局 .el-table td 的 (0,1,1)。验证：dist 于 16:58 重新构建。**验证结果**：by build。
 
-- [x] 4.8 定位到真实原因：AppTable 把 
-eport-table 类合并到内层 el-table，而该元素不带页面 scope 属性，.report-table[data-v] 选择器永远不匹配（td 仍是全局白色）。改用 .report-workbench :deep(...)（scope 属性在页面根上），并用 CDP 实测 	d 背景 = srgb(0.94,0.98,0.95) 薄荷绿。验证：真实页面截图（temps/report-live.png）确认表头/表体薄荷底生效。**验证结果**：通过。
+- [x] 4.8 定位到真实原因：AppTable 把 report-table 类合并到内层 el-table，而该元素不带页面 scope 属性，.report-table[data-v] 选择器永远不匹配（td 仍是全局白色）。改用 .report-workbench :deep(...)（scope 属性在页面根上），并用 CDP 实测 td 背景 = srgb(0.94,0.98,0.95) 薄荷绿。验证：真实页面截图（temps/report-live.png）确认表头/表体薄荷底生效。**验证结果**：通过。
 
 - [x] 4.9 表底换柠檬黄：.table-card / 表体 / 悬停由 --c-device 改为 --c-dashboard（12% / 22% / 20%）。验证：真实页面 CDP 截图（temps/report-live.png）确认柠檬淡底生效；build 18.1s。**验证结果**：通过。
 

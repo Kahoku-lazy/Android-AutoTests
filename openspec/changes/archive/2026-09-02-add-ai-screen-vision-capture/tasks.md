@@ -10,9 +10,9 @@
 ## 3. 前端：工具结果图片渲染
 
 - [x] 3.1 `ToolCallCard.vue` 渲染 `tool_result.data`（base64）→ data URI 图片（`el-image` + `preview-src-list`）。验证：`npm run build` + `vue-frontend-check`
-- [ ] 3.2 历史消息加载路径确认 `tool_result.data` 图片正常展示。验证：真实页面重开含截图的对话
+- 【已取消 · 人工验收不做】3.2 历史消息加载路径确认 `tool_result.data` 图片正常展示。验证：真实页面重开含截图的对话
 
 ## 4. 全链路验证与门禁
 
-- [ ] 4.1 真实视觉模型（`deepseek-v4-flash-vision-exp`，平台内自动走 openai formatter）+ 在线设备端到端：让 AI「查看当前页面」，确认模型基于像素作答且对话回显截图。验证：人工 E2E
+- 【已取消 · 人工验收不做】4.1 真实视觉模型（`deepseek-v4-flash-vision-exp`，平台内自动走 openai formatter）+ 在线设备端到端：让 AI「查看当前页面」，确认模型基于像素作答且对话回显截图。验证：人工 E2E
 - [x] 4.2 `python tools/gen_arch_stats.py --check-boundaries` 通过（跨模块写/import 合规）。验证：命令 0 违规

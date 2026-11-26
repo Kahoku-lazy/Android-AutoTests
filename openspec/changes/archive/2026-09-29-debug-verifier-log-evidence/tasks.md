@@ -20,4 +20,4 @@
 
 - [x] 5.1 后端关单：`python manage.py check`、`python manage.py makemigrations --check`、`python -m ruff check apps/ai_assistant engines/ai`、`python -m pytest tests/graybox/unit/test_ai_debug_log_history.py tests/graybox/unit/test_ai_debug_log_check.py tests/graybox/unit/test_ai_model_debug.py tests/graybox/unit/test_ai_workflow_log_evidence.py -q`。验证：全部通过（不跑全量回归）。验证结果：`System check identified no issues (0 silenced)`；`No changes detected`；`ruff check` + `ruff format --check` 全通过（126 文件已格式化）；五个相关用例文件共 58 项通过。
 - [x] 5.2 前端关单：改动文件 `npx prettier --check`、`npx eslint src/modules/ai-assistant src/shared/types` 无新增 error、`npx vue-tsc --noEmit` 通过。验证：命令输出与退出码。验证结果：prettier 全通过；eslint 10 warning / 0 error（全为存量），退出码 0；`vue-tsc --noEmit` 退出码 0；四个相关用例文件 67 项通过。
-- [ ] 5.3 页面验收（用户侧，需重启后端）：到验收模型调试台，把执行模型的回复（含点击时刻）贴进去发一条 —— 助手消息里应出现日志证据块与基准说明，模型回复的 `logAssertionTimer` 应有值；再发一条不带时刻的确认退回最近窗并标明来源。验证：用户目视确认。
+- 【已取消 · 人工验收不做】5.3 页面验收（用户侧，需重启后端）：到验收模型调试台，把执行模型的回复（含点击时刻）贴进去发一条 —— 助手消息里应出现日志证据块与基准说明，模型回复的 `logAssertionTimer` 应有值；再发一条不带时刻的确认退回最近窗并标明来源。验证：用户目视确认。

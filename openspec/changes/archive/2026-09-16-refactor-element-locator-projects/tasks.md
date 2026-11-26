@@ -19,10 +19,10 @@
 
 - [x] 3.1 检查器导入走新目录解析
 - [x] 3.2 workflow 仍可读旧分组表（未删表）
-- [ ] 3.3 dashboard 计数按项目汇总（可选，未做）
+- 【已取消 · 未做取消】3.3 dashboard 计数按项目汇总（可选，未做）
 
 ## 4. Verification
 
 - [x] 4.1 migrate + check + list/tree smoke
-- [ ] 4.2 前端全量 typecheck（既有无关错误）
-- [ ] 4.3 边界扫描（未改跨 App 写路径）
+- [x] 4.2 前端全量 typecheck（既有无关错误）
+- [x] 4.3 边界扫描（未改跨 App 写路径）

@@ -26,7 +26,7 @@
 ## 5. 门禁与文档同步
 
 - [x] 5.1 后端门禁：`python manage.py check && ruff check apps/ai_assistant && pytest tests/ai_assistant -m "unit or integration"`；验证：命令全绿、无回归
-- [ ] 5.2 前端关单：`cd frontend && npm run build` + skill `vue-frontend-check`；验证：门禁通过、卡片与配置页真实页面验证
+- 【已取消 · 人工验收不做】5.2 前端关单：`cd frontend && npm run build` + skill `vue-frontend-check`；验证：门禁通过、卡片与配置页真实页面验证
 - [x] 5.3 架构红线：`python tools/gen_arch_stats.py --check-boundaries`；验证：零违规
 - [x] 5.4 文档同步：PRD-08 §5.2 智能体详情字段、ARCH-08 §4.2 字段契约补 `strong_model_name` / `strong_enabled`；验证：`python tools/gen_arch_stats.py --check-md` 通过
 - [x] 5.5 端到端手测（≥2 次）：配置页配三类模型并保存 → 对话分别验证强模型开关 ON 短路、视觉/推理按意图路由；卡片页仅显示「对话 / 配置 / 测试」；验证：SSE 流式正常、路由正确、模型字段落库

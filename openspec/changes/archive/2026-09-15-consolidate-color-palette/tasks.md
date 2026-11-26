@@ -19,7 +19,7 @@
 ## 5. 回归与关单
 
 - [x] 5.1 `npm run lint:styles` exit 0 · `temps/verify-colors.ps1` 裸值 0/0 · `npm run typecheck` 与基线一致
-- [ ] 5.2 逐页浏览器复核（21 页 × 768/1024/1280）——**需人工**，本环境无浏览器
+- 【已取消 · 人工验收不做】5.2 逐页浏览器复核（21 页 × 768/1024/1280）——**需人工**，本环境无浏览器
 - [x] 5.3 `openspec validate consolidate-color-palette --strict` 通过后归档
 
 ## 备注

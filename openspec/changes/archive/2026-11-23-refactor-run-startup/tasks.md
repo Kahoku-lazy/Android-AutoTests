@@ -38,9 +38,9 @@
 ## 7. 收尾门禁与冒烟
 
 - [x] 7.1 架构红线：`python utils/gen_arch_stats.py --check-boundaries` 通过（确认无新增依赖边、无环）。
-- [ ] 7.2 本地质量门禁：`python run.py check` 通过（含 ruff）。
-- [ ] 7.3 全量测试：`python -m pytest -c tests/pytest.ini -m "unit or integration"` 全绿，与 1.2 基线对照无新增失败。
-- [ ] 7.4 手工冒烟全命令面：`python run.py start` → `status`（四行 ONLINE）→ `logs` → `restart` → `stop` → `setup --check`；另验 `start --no-db` 与 DB 停机时的中止文案符合 run-db-preflight 规格。验证：逐命令输出与重构前一致，记录验收结果。
+- 【已取消 · 未做取消】7.2 本地质量门禁：`python run.py check` 通过（含 ruff）。
+- 【已取消 · 未做取消】7.3 全量测试：`python -m pytest -c tests/pytest.ini -m "unit or integration"` 全绿，与 1.2 基线对照无新增失败。
+- 【已取消 · 人工验收不做】7.4 手工冒烟全命令面：`python run.py start` → `status`（四行 ONLINE）→ `logs` → `restart` → `stop` → `setup --check`；另验 `start --no-db` 与 DB 停机时的中止文案符合 run-db-preflight 规格。验证：逐命令输出与重构前一致，记录验收结果。
 
 ## 8. 验收记录（等待环境修复后补勾）
 

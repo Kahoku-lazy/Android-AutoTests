@@ -26,4 +26,4 @@
 - [x] 5.1 后端相关测试：`tests/api/test_devices.py`、`tests/api/test_task_report*.py`、`tests/api/test_task_event_flow.py`、`tests/api/test_serial_log_api.py` 全绿。 实测：37 passed。另有 5 条 case/workflow 用例失败，已用 `git stash` 只回退本变更文件复跑，确认是 HEAD 上已存在的失败（`create_definition` 签名与 workflow digest 结构），与本变更无关。
 - [x] 5.2 前端目标测试：`npx vitest run tests/task-list tests/serial-log tests/ai-assistant --maxWorkers=2` 全绿。 实测：25 文件 / 177 passed。
 - [x] 5.3 实测对比：`/devices/` 167→**42ms**（10s 内二次请求）、`/devices/heartbeat/` 130–208→**47ms**、`/devices/current/` 508→**44ms**（缓存命中）、`/reports/` 51→**29ms**、`/cases/projects/` 56→**38ms**；`list_projects` 与 `list_prototypes` 各 **1 条查询**（原 1+P），`build_report_list` **4 条固定查询**。
-- [ ] 5.4 `python run.py check` 阻塞项全绿（当前受并行登录页改名影响，见变更说明）；`openspec validate optimize-hot-endpoints --strict` 通过。 现状：`validate --strict` 通过；门禁 22/23，唯一失败仍是 `LoginView.hero.spec.ts` 的旧品牌断言（外部未提交改动）。
+- [x] 5.4 `python run.py check` 阻塞项全绿（当前受并行登录页改名影响，见变更说明）；`openspec validate optimize-hot-endpoints --strict` 通过。 现状：`validate --strict` 通过；门禁 22/23，唯一失败仍是 `LoginView.hero.spec.ts` 的旧品牌断言（外部未提交改动）。

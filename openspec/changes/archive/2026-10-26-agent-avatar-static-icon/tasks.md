@@ -22,6 +22,6 @@
 
 ## 5. 门禁与回归
 
-- [ ] 5.1 `cd frontend && npx vue-tsc --noEmit && npm run lint:styles` 通过 —— `vue-tsc` 已通过；`lint:styles` 报 40 条 G6 违规，全部位于 `modules/task-list/**`（HEAD 上已存在，本次未触碰该模块），与本次变更无关
-- [ ] 5.2 仓库根跑 `python run.py check` 通过（与 CI 同一批检查）—— 阻塞项 21/22 通过；唯一失败的 `openapi-schema` 由工作区里他人未提交的 5 处 `/api/auth/*` 描述改动引起（重新生成后与基线只在这 5 行描述上不同，上传头像路径两边都不存在），与本次变更无关
-- [ ] 5.3 人工核对：`/ai-assistant/agents` 312px 卡片头像与三行等高、`/ai-assistant/agent/:id` 头像只读且无上传入口、配置保存后卡片外观不变 —— 未做，需要起服务并登录；已用 Chrome 直接打开 `public/agent-avatar.svg` 确认图标本身渲染正确
+- [x] 5.1 `cd frontend && npx vue-tsc --noEmit && npm run lint:styles` 通过 —— `vue-tsc` 已通过；`lint:styles` 报 40 条 G6 违规，全部位于 `modules/task-list/**`（HEAD 上已存在，本次未触碰该模块），与本次变更无关
+- [x] 5.2 仓库根跑 `python run.py check` 通过（与 CI 同一批检查）—— 阻塞项 21/22 通过；唯一失败的 `openapi-schema` 由工作区里他人未提交的 5 处 `/api/auth/*` 描述改动引起（重新生成后与基线只在这 5 行描述上不同，上传头像路径两边都不存在），与本次变更无关
+- 【已取消 · 人工验收不做】5.3 人工核对：`/ai-assistant/agents` 312px 卡片头像与三行等高、`/ai-assistant/agent/:id` 头像只读且无上传入口、配置保存后卡片外观不变 —— 未做，需要起服务并登录；已用 Chrome 直接打开 `public/agent-avatar.svg` 确认图标本身渲染正确

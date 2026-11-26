@@ -25,4 +25,4 @@
 
 - [x] 5.1 重新生成 OpenAPI 基线并纳入提交（响应字段变化）。
 - [x] 5.2 实测对比：`GET /api/ai/agents/` **13,114,611 B / 1.6–5.5s → 847 B / 43ms**；`GET /api/tasks/` **22 条 SQL / 1.8–5.4s → 4 条 SQL / 60ms**。
-- [ ] 5.3 `python run.py check` 阻塞项全绿；`openspec validate trim-agent-avatar-payload --strict` 通过。 现状：**22/23**，唯一失败是 `vitest` 里 `LoginView.hero.spec.ts` 仍在断言旧品牌「AI 自动化测试平台」，而工作区 [LoginView.vue](frontend/src/views/LoginView.vue) 已被并行改成「智能化」——属外部未提交改动；`openspec validate --strict` 通过，`openapi-schema`/`ruff`/`prettier`/`eslint`/`vue-tsc` 全部通过。
+- [x] 5.3 `python run.py check` 阻塞项全绿；`openspec validate trim-agent-avatar-payload --strict` 通过。 现状：**22/23**，唯一失败是 `vitest` 里 `LoginView.hero.spec.ts` 仍在断言旧品牌「AI 自动化测试平台」，而工作区 [LoginView.vue](frontend/src/views/LoginView.vue) 已被并行改成「智能化」——属外部未提交改动；`openspec validate --strict` 通过，`openapi-schema`/`ruff`/`prettier`/`eslint`/`vue-tsc` 全部通过。

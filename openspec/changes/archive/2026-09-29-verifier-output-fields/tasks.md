@@ -21,7 +21,7 @@
 
 - [x] 5.1 后端关单：`python manage.py check`、`python manage.py makemigrations --check`、`python -m ruff check apps/ai_assistant engines/ai`、`python -m pytest tests/graybox/unit/test_ai_workflow_log_evidence.py tests/graybox/unit/test_ai_executor_log_check.py tests/graybox/unit/test_ai_model_debug.py tests/graybox/unit/test_ai_debug_log_check.py tests/graybox/unit/test_ai_verifier_output_contract.py tests/graybox/unit/test_ai_verifier_output_prompt_migration.py -q`。验证：全部通过（不跑全量回归）。验证结果：`System check identified no issues (0 silenced)`；`No changes detected`；`ruff check` + `ruff format --check` 全通过（124 文件已格式化）；连同上一变更的两个契约/迁移用例共 74 项通过。
 - [x] 5.2 前端关单：改动文件 `npx prettier --check`、`npx eslint src/modules/ai-assistant src/shared/types` 无新增 error、`npx vue-tsc --noEmit` 通过。验证：命令输出与退出码。验证结果：prettier 全通过；eslint 10 warning / 0 error，全为存量，退出码 0；`vue-tsc --noEmit` 退出码 0；四个相关用例文件 67 项通过。
-- [ ] 5.3 页面验收（用户侧，需重启后端）：到验收模型调试台选定设备，发一条会验收的内容 —— 助手消息里的模型回复应只有 `result` / `click_timer` / `logAssertionTimer` / `screenshot` / `actual` 五个键；再到新跑出的任务详情页看验收段，应能看到验收结果、实际结果、日志断言时间（有日志时）与验证截图路径（可点开）；打开历史任务确认旧记录照常显示。验证：用户目视确认。
+- 【已取消 · 人工验收不做】5.3 页面验收（用户侧，需重启后端）：到验收模型调试台选定设备，发一条会验收的内容 —— 助手消息里的模型回复应只有 `result` / `click_timer` / `logAssertionTimer` / `screenshot` / `actual` 五个键；再到新跑出的任务详情页看验收段，应能看到验收结果、实际结果、日志断言时间（有日志时）与验证截图路径（可点开）；打开历史任务确认旧记录照常显示。验证：用户目视确认。
 
 ## 6. 修订（2026-09-29，需求方澄清：加 `logAssertionInfo`，且「日志检测到 + 截图确认」两条件才 PASS）
 

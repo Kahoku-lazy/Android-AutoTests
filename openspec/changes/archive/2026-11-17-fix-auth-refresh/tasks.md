@@ -22,6 +22,6 @@
 
 - [x] 5.1 `npx vitest run tests/login tests/knowledge-assistant` + `npm run typecheck` + `npm run build:check`。验证结果：89 条中 87 通过（失败 2 条为既有登录页 spec）；`vue-tsc --noEmit` 无输出；构建通过。
 - [x] 5.2 `python run.py check`：验证结果 **22/23**，唯一失败为 `vitest`（即上面的 `LoginView.hero.spec.ts`）；`eslint` 一度因 `shared/auth` 直接 import axios 失败，已改为注入传输层后通过。全量 vitest 487/489。
-- [ ] 5.3 人工验证：凭证过期后点「开始对话」自动续期并连上、控制台无 4401 红字；删掉 refresh 凭证后再点应提示「登录状态已过期」且不循环。**（待用户执行；需页面挂满 1 小时或手动改 localStorage 里的 access 触发）**
+- 【已取消 · 人工验收不做】5.3 人工验证：凭证过期后点「开始对话」自动续期并连上、控制台无 4401 红字；删掉 refresh 凭证后再点应提示「登录状态已过期」且不循环。**（待用户执行；需页面挂满 1 小时或手动改 localStorage 里的 access 触发）**
 
 > **2026-11-17 归档**：按需求方决定，剩余未完成项（人工验收 / 目视确认 / 门禁复核）不再执行——实现已完成或已被后续主题取代，本变更直接归档。

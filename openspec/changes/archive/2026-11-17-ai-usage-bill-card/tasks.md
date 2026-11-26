@@ -11,7 +11,7 @@
 ## 3. 门禁
 
 - [x] 3.1 `npx vue-tsc --noEmit`、`npm run build:check`、`npx vitest run tests/dashboard`、`npm run lint:styles`、`npm run lint:lines`。验证：全绿。**验证结果**：tsc 0；build 22.1s；62 passed；批 2 通过（批 3 仍 50 处既有）；虚线 0 处。
-- [ ] 3.2 目视：账单卡层级、数字精度与右侧 Agent 卡对齐。验证：用户确认。
+- 【已取消 · 人工验收不做】3.2 目视：账单卡层级、数字精度与右侧 Agent 卡对齐。验证：用户确认。
 
 ## 4. 零件卡风格统一
 

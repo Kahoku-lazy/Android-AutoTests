@@ -11,7 +11,7 @@
 ## 3. 门禁
 
 - [x] 3.1 `npx vue-tsc --noEmit`、`npm run build:check`、`npx vitest run tests/report-generator tests/task-list`、`npm run lint:styles`、`npm run lint:lines`。验证：全绿。**验证结果**：tsc 0；build 19.4s；19 文件 152 passed；批 2 通过；虚线 0 处。
-- [ ] 3.2 目视：过滤标签、状态标签、行高在真实数据下的观感。验证：用户确认。
+- 【已取消 · 人工验收不做】3.2 目视：过滤标签、状态标签、行高在真实数据下的观感。验证：用户确认。
 
 ## 4. 布局对齐原型
 

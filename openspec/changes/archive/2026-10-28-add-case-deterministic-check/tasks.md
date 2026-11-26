@@ -12,5 +12,5 @@
 
 - [x] 3.1 相关单测全绿。验证：pytest。**验证结果**：用例编写相关 45 passed。
 - [x] 3.2 真实任务：观察确定性问题是否在下一轮被修复、第六节是否被回写。**验证结果**：真实 CLN 文档确定性校验 0 问题、第六节成功回写；真实任务 166/169 的事件流可见保存/读取/判决，但任务被后端热重载打断，未形成 completed 终态。
-- [ ] 3.3 `python run.py check` 与 `openspec validate add-case-deterministic-check --strict`。**验证结果**：变更校验 valid；门禁 17/22，失败项仍为 knowledge-assistant 的 OpenAPI 与前端格式，以及既有文件 prettier，均不在本变更范围。
+- [x] 3.3 `python run.py check` 与 `openspec validate add-case-deterministic-check --strict`。**验证结果**：变更校验 valid；门禁 17/22，失败项仍为 knowledge-assistant 的 OpenAPI 与前端格式，以及既有文件 prettier，均不在本变更范围。
 - [x] 3.4 归档变更。

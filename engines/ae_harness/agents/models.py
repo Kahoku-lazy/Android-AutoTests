@@ -163,6 +163,17 @@ def load_secret(name: str) -> str:
     return str(_ENV.get(name) or os.environ.get(name, ""))
 
 
+def _input_types(model_cls: type, model_name: str) -> list[str]:
+    try:
+        cards = model_cls.list_models()
+    except Exception:  # silent-except
+        return []
+    for card in cards or []:
+        if str(getattr(card, "name", "")) == model_name:
+            return [str(item) for item in getattr(card, "input_types", []) or []]
+    return []
+
+
 def create_model(
     provider: str,
     api_key_env: str,
@@ -191,7 +202,9 @@ def create_model(
                 model=entry.model_name,
                 stream=stream,
                 max_retries=max_retries,
-                formatter=DeepSeekMultiAgentFormatter(),
+                formatter=DeepSeekMultiAgentFormatter(
+                    input_types=_input_types(DeepSeekChatModel, entry.model_name) or ["text/plain"]
+                ),
             ),
             api_key_env=entry.api_key,
         )
@@ -207,7 +220,9 @@ def create_model(
                 model=entry.model_name,
                 stream=stream,
                 max_retries=max_retries,
-                formatter=DashScopeMultiAgentFormatter(),
+                formatter=DashScopeMultiAgentFormatter(
+                    input_types=_input_types(DashScopeChatModel, entry.model_name) or ["text/plain"]
+                ),
             ),
             api_key_env=entry.api_key,
         )
@@ -220,7 +235,9 @@ def create_model(
                 model=entry.model_name,
                 stream=stream,
                 max_retries=max_retries,
-                formatter=OpenAIGatewayFormatter(),
+                formatter=OpenAIGatewayFormatter(
+                    input_types=_input_types(OpenAIChatModel, entry.model_name) or ["text/plain"]
+                ),
             ),
             api_key_env=entry.api_key,
         )

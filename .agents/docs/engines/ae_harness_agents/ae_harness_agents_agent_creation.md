@@ -80,7 +80,7 @@ print(bundle.api_key_env)  # OPENAI_API_KEY；用量记账按这个名字归组
 | `on_reply` | Onion | 包裹一次回复，读入参/出参 | 改输入或输出、吞异常、跳过 `next_handler` |
 | `on_reasoning` | Onion | 包裹一轮推理，计时 | 改输入、改返回、跳过 `next_handler` |
 | `on_acting` | Onion | 观察一次工具执行，记耗时与结果状态 | 改工具入参、改工具结果、跳过执行 |
-| `on_model_call` | Onion | 观测请求与响应，读 token 与模型名 | 改写 `kwargs`（含 `extra_body` / `tool_choice`）、换模型、跳过调用 |
+| `on_model_call` | Onion | 观测请求与响应，读 token 与模型名；`capture_messages=True` 时读消息正文 | 改写 `kwargs`（含 `extra_body` / `tool_choice`）、换模型、跳过调用 |
 | `on_compress_context` | Onion | 观测是否压缩、压缩比例、注入的指令 | 改变压缩结果、改上下文 |
 | `on_system_prompt` | Transformer | **读到最终提示词后原样返回** | 改一个字符、注入任何指令（改了就是能力型） |
 | `on_check_permission` | Onion | 只读观测权限判定 | 改动判定结果（安全红线） |

@@ -1,10 +1,4 @@
-/* ═══════════════════════════════════════════
-   Doodle Craft — 侧边栏（hand-drawn doodle）
-   对齐 temps/hand-drawn-doodle-sidebar.html
-   ═══════════════════════════════════════════ */
-
 .sidebar {
-  /* 线型由侧栏边界自持：全站不再用共享 --comp-* 令牌代持 实线/虚线 决定 */
   --sidebar-line: solid;
   --sidebar-border: var(--size-stroke-sketch) var(--sidebar-line) var(--ink);
   --sidebar-yellow: var(--comp-sidebar-yellow);
@@ -45,7 +39,6 @@
   user-select: none;
 }
 
-/* ── 折叠 / 退出图标按钮 ── */
 .sidebar__toggle {
   flex-shrink: 0;
   width: 28px;
@@ -90,7 +83,7 @@
   gap: var(--app-space-sm);
   padding: var(--app-space-sm) 0;
 }
-/* 折叠态：头像 / 退出 / 展开三个控件统一为 32×32 小方块，等距竖向排列 */
+
 .sidebar--collapsed .sidebar__user-card {
   margin: 0;
   padding: 0;
@@ -139,7 +132,6 @@
   box-shadow: 3px 3px 0 0 var(--ink);
 }
 
-/* ── 拖拽条 ── */
 .sidebar__resizer {
   position: absolute;
   top: 0;
@@ -174,7 +166,6 @@
   background: color-mix(in srgb, var(--ink) 4%, transparent);
 }
 
-/* ── 品牌头 ── */
 .sidebar__header {
   display: flex;
   align-items: center;
@@ -200,7 +191,7 @@
   min-width: 0;
   line-height: var(--app-line-height-tight);
 }
-/* 品牌图标：手绘 AI 徽标，纯白底用 multiply 融进纸面 */
+
 .brand-mark {
   flex: 0 0 auto;
   width: 32px;
@@ -211,7 +202,7 @@
 }
 .brand-title {
   display: block;
-  /* 平台标识用登录页同款手写体（--font-brand，仅 400 字重；加粗会变合成粗体） */
+
   font-family: var(--app-font-brand);
   font-size: var(--app-size-xl);
   font-weight: var(--app-font-weight-regular);
@@ -221,7 +212,7 @@
   text-overflow: ellipsis;
   color: var(--app-text-primary);
 }
-/* 「智能化」三字取山景配色：深蓝 → 青 → 绿（三档均为现有原子） */
+
 .brand-accent {
   background-image: linear-gradient(
     100deg,
@@ -232,11 +223,10 @@
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  /* 手写体笔画细，加 0.35px 墨色描边保证浅色段仍可读 */
+
   -webkit-text-stroke: 0.35px color-mix(in srgb, var(--ink) 40%, transparent);
 }
 
-/* ── 导航 ── */
 .sidebar__nav {
   flex: 1;
   min-height: 0;
@@ -257,7 +247,7 @@
   font-weight: var(--app-font-weight-semibold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  /* 原为墨色 + opacity .45（≈2.81:1）；改用 secondary 实色后 5.21:1 */
+
   color: var(--app-text-secondary);
   line-height: var(--app-line-height-tight);
   user-select: none;
@@ -357,7 +347,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  /* 导航文字取 16px（--app-size-md）：比分组标题（14px）大一档，层级靠字号分开 */
+
   font-size: var(--app-size-md);
   font-weight: var(--app-font-weight-bold);
 }
@@ -375,7 +365,7 @@
   margin-left: auto;
   border: 1.5px solid var(--ink);
 }
-/* 开发中：红底红字的窄标签，用语义色而不是 ink 描边 */
+
 .sidebar-menu__badge--dev {
   background: var(--app-status-danger-bg);
   border-color: var(--app-status-danger-text);
@@ -393,7 +383,7 @@
   background: var(--color-white);
   border-color: var(--ink);
 }
-/* 选中态保持红色语义，不被上面的白底覆盖 */
+
 .sidebar-menu__item.active .sidebar-menu__badge--dev {
   background: var(--app-status-danger-bg);
   border-color: var(--app-status-danger-text);
@@ -443,7 +433,6 @@
   box-shadow: 2px 2px 0 0 var(--mod-color, var(--sidebar-teal));
 }
 
-/* ── 底部用户区 ── */
 .sidebar__footer {
   position: relative;
   flex-shrink: 0;
@@ -513,7 +502,6 @@
   box-shadow: 3px 3px 0 0 var(--ink) !important;
 }
 
-/* 减少动效：关闭位移 / 旋转 / 缩放（颜色过渡不受影响） */
 @media (prefers-reduced-motion: reduce) {
   .sidebar__toggle,
   .sidebar-menu__item,

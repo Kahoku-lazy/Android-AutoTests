@@ -1,9 +1,3 @@
-/**
- * [P0] 必测 — 新增 / 编辑端口表单纯校验（spec: device-log-port-console 自定义端口登记）
- * 目录：tests/serial-log/p0/
- *
- * 断言：重号 / 越界 / SKU 空 / 自定义波特率 / 编辑模式跳过端口校验。
- */
 import { describe, expect, it } from "vitest"
 import { validatePortForm } from "@/modules/serial-log/helpers/port-form"
 

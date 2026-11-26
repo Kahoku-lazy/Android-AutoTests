@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 合成评测集出题：chat 模型按块生成正题与负样本，逐调用收集用量 🏁
-Python 调试：➡️ python -m backend.apps.knowledge_search.eval_generation 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（经 knowledge_search 的功能用例间接覆盖，未直接 import 本模块）
-🏁
-"""
-
 from __future__ import annotations
 
 import json
@@ -30,17 +21,6 @@ _STAMP = "%Y-%m-%d_%H-%M-%S.%f"
 
 
 def extract_text(response) -> str:
-    """
-    从聊天响应里拼出纯文本（只取 text 块）。
-
-    块可能是 pydantic TextBlock 对象，也可能是 dict 形状，两种都兼容。
-
-    Args:
-        response: agentscope ChatResponse。
-
-    Returns:
-        文本；没有 text 块时为空串。
-    """
     parts = []
     for block in response.content or []:
         if isinstance(block, dict):
@@ -55,15 +35,6 @@ def extract_text(response) -> str:
 
 
 def parse_json_payload(text: str):
-    """
-    解析模型输出里的 JSON（容忍代码围栏）。
-
-    Args:
-        text: 模型输出文本。
-
-    Returns:
-        解析结果；解析失败时 None。
-    """
     cleaned = text.strip()
     if cleaned.startswith("```"):
         cleaned = cleaned.strip("`")
@@ -76,7 +47,6 @@ def parse_json_payload(text: str):
 
 
 def _usage_event(response, *, api_key_env: str, model_name: str, round_index: int) -> dict | None:
-    """把一次聊天调用的用量转成账本事件字典；无用量时 None。"""
     usage = getattr(response, "usage", None)
     if usage is None:
         return None
@@ -93,11 +63,6 @@ def _usage_event(response, *, api_key_env: str, model_name: str, round_index: in
 
 
 async def _call(model, prompt: str):
-    """发一轮用户消息并返回响应。
-
-    content 必须经 UserMsg 归一成块列表：裸 Msg 的 content 字段
-    是 pydantic list[ContentBlock]，直接传 str 会校验失败。
-    """
     from agentscope.message import UserMsg
 
     return await model([UserMsg(name="evaluator", content=prompt)])
@@ -111,19 +76,6 @@ async def generate_positive_questions(
     model_name: str,
     batch_size: int = 5,
 ) -> tuple[list[dict], list[dict]]:
-    """
-    按块批量生成正题；解析失败的条目跳过。
-
-    Args:
-        model: 聊天模型实例（stream=False）。
-        chunks: 采样块列表。
-        api_key_env: 密钥环境变量名（用量归属）。
-        model_name: 模型名（用量归属）。
-        batch_size: 每批块数。
-
-    Returns:
-        (题目列表[{question, chunk}], 用量事件列表)。
-    """
     questions: list[dict] = []
     usages: list[dict] = []
     round_index = 0
@@ -160,20 +112,6 @@ async def generate_negative_questions(
     api_key_env: str,
     model_name: str,
 ) -> tuple[list[str], list[dict]]:
-    """
-    生成与语料无关的负样本问题。
-
-    Args:
-        model: 聊天模型实例。
-        description: 模块说明。
-        sources: 文档标题样本。
-        count: 负样本数。
-        api_key_env: 密钥环境变量名。
-        model_name: 模型名。
-
-    Returns:
-        (问题列表, 用量事件列表)；count<=0 时直接返回空。
-    """
     if count <= 0:
         return [], []
     prompt = _NEGATIVE_PROMPT.format(

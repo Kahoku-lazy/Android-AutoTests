@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 并发同名注册（TC-REG-023）— 唯一性由数据库唯一约束保证，并发下也只一个成功 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/auth/api/test_auth_register_concurrency.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/accounts（账号与会话）
-🏁
-"""
-
 import uuid
 
 from concurrent.futures import ThreadPoolExecutor

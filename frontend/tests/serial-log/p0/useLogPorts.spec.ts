@@ -1,10 +1,3 @@
-/**
- * [P0] 必测 — 端口开关编排（spec: device-log-port-console 监听失败显式提示）
- * 目录：tests/serial-log/p0/
- *
- * 断言：enabled && !listening → ElMessage.error（不得 success）；重试再次 toggle true；
- * listen_ip 入状态；no_log 结论不判失败。
- */
 import { createApp, h, ref } from "vue"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ElMessage, ElMessageBox } from "element-plus"
@@ -24,7 +17,6 @@ vi.mock("@/modules/serial-log/api", () => api)
 
 import { useLogPorts } from "@/modules/serial-log/composables/useLogPorts"
 
-/** composable 带生命周期钩子：挂一个最小宿主再取返回值 */
 function withSetup<T>(fn: () => T): T {
   let result!: T
   const app = createApp({

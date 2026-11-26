@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** 运营后台 · 模型配置：模型类型、厂商、密钥环境变量、协议、音色、地址、模型名。 */
 import { computed, onMounted, ref, watch } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
@@ -40,7 +39,6 @@ const editorOpen = ref(false)
 const editingId = ref<number | null>(null)
 const keyword = ref("")
 
-/** 关键字只在页面内过滤：模型配置数量很少，不为它加接口参数。 */
 const visibleConfigs = computed(() => {
   const q = keyword.value.trim().toLowerCase()
   if (!q) return configs.value
@@ -55,12 +53,10 @@ const visibleConfigs = computed(() => {
   )
 })
 
-/** ⋯ 菜单：删除仍走二次确认（`remove` 内已有 ElMessageBox）。 */
 function onCommand(command: string, row: OpsModelConfig): void {
   if (command === "delete") void remove(row)
 }
 
-// ── 本页分页：接口一次返回全部模型配置，前端按每页 10 条切片 ──
 const page = ref(1)
 const totalPages = computed(() =>
   Math.max(1, Math.ceil(visibleConfigs.value.length / OPS_MODEL_PAGE_SIZE)),
@@ -72,17 +68,14 @@ const pagedConfigs = computed(() =>
   ),
 )
 
-/** 翻页：越界夹到首 / 末页。 */
 function goPage(next: number): void {
   page.value = Math.max(1, Math.min(next, totalPages.value))
 }
 
-/** 关键字一变就回第 1 页，避免停在过滤后不存在的页码上。 */
 watch(keyword, () => {
   page.value = 1
 })
 
-/** 新建模型的初始表单：聊天 + 该类型默认厂商 + 对应密钥变量。 */
 function blankForm(): OpsModelConfigInput {
   const provider = defaultProviderForKind(OPS_DEFAULT_MODEL_KIND)
   return {
@@ -100,7 +93,6 @@ function blankForm(): OpsModelConfigInput {
 const form = ref<OpsModelConfigInput>(blankForm())
 const providerOptions = computed(() => providersForKind(form.value.model_kind))
 
-/** 名称草稿行（多行聊天 / 单行语音）由组合式持有；这里按原名字解构，模板与保存逻辑不用改。 */
 const {
   rows: nameRows,
   loading: loadingNames,
@@ -136,7 +128,7 @@ async function load(): Promise<void> {
     const { data } = await listModelConfigs()
     if (!data.status || !data.data) throw data
     configs.value = data.data.configs || []
-    // 删除后当前页可能越界：夹回最后一页，避免停在空白页
+
     page.value = Math.min(
       page.value,
       Math.max(1, Math.ceil(configs.value.length / OPS_MODEL_PAGE_SIZE)),
@@ -271,7 +263,6 @@ onMounted(load)
           </DoodleBtn>
         </div>
 
-        <!-- 行 2：页码文案 + 翻页（常驻，只有一页时两键置灰仍可见） -->
         <div class="ops-controls">
           <span class="ops-page-info">
             第 {{ page }} / {{ totalPages }} 页 · 共 {{ visibleConfigs.length }} 条
@@ -298,7 +289,6 @@ onMounted(load)
           table-layout="fixed"
           accent="var(--c-ops)"
         >
-          <!-- 表头：图标与列名同源（OPS_MODEL_COLUMNS[].icon / .label） -->
           <template
             v-for="col in OPS_MODEL_COLUMNS"
             :key="`head-${col.prop}`"
@@ -347,8 +337,6 @@ onMounted(load)
       :title="editingId == null ? '新建模型' : '编辑模型'"
       size="min(460px, 92vw)"
     >
-      <!-- Sketched UI Kit（手稿控件皮肤）：作用域根只挂 .sketch-kit，
-           表单结构类挂在它内部（kit 用后代选择器，同级挂两个类不会命中） -->
       <div class="sketch-kit">
         <div class="sketch-form">
           <label class="sketch-field">

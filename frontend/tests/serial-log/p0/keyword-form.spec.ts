@@ -1,9 +1,3 @@
-/**
- * [P0] 必测 — 关键词表单校验（spec: serial-log-module 关键词维护接口）
- *
- * 目录：tests/serial-log/p0/
- * 断言：必填 / 长度 / 范围白名单 / 编号可选非负整数；通过时载荷口径（缺省不带编号）。
- */
 import { describe, expect, it } from "vitest"
 import { validateKeywordForm } from "@/modules/serial-log/helpers/keyword-form"
 

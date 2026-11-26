@@ -1,6 +1,5 @@
 import { animate, stagger } from "animejs"
 
-/** 用户启用「减少动效」时短路 JS 编排；无 window 时视为不降级 */
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
     return false
@@ -11,7 +10,6 @@ function prefersReducedMotion(): boolean {
 type AnimateTarget = Parameters<typeof animate>[0]
 type AnimateParams = Parameters<typeof animate>[1]
 
-/** 降级时以 duration: 0 落到终态，保持 animejs 返回类型 */
 function runMotion(targets: AnimateTarget, params: AnimateParams): ReturnType<typeof animate> {
   if (!prefersReducedMotion()) {
     return animate(targets, params)
@@ -19,7 +17,6 @@ function runMotion(targets: AnimateTarget, params: AnimateParams): ReturnType<ty
   return animate(targets, { ...params, duration: 0, delay: 0, loop: false })
 }
 
-/** 按有效数字显示，不使用科学计数法。0 显示为 0。 */
 export function formatSignificant(value: number, digits = 3): string {
   if (!Number.isFinite(value) || value === 0) return "0"
   const negative = value < 0

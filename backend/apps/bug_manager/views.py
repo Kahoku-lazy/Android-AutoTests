@@ -1,5 +1,3 @@
-"""bug-manager DRF views — list, detail, status update and historical sync."""
-
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.exceptions import NotFound, ValidationError
@@ -11,13 +9,10 @@ from backend.apps.bug_manager.serializers import BugListQuerySerializer, BugStat
 
 
 def _user_id(request) -> str:
-    """Current request user id as a string."""
     return str(getattr(request, "user_id", "") or "")
 
 
 class BugListAPIView(APIView):
-    """GET /api/bugs/ — visible BUG tickets with summary counters."""
-
     @extend_schema(
         tags=["bugs"],
         operation_id="bug_ticket_list",
@@ -45,8 +40,6 @@ class BugListAPIView(APIView):
 
 
 class BugDetailAPIView(APIView):
-    """GET / PATCH /api/bugs/{id}/ — full detail or processing status."""
-
     @extend_schema(tags=["bugs"], operation_id="bug_ticket_detail", responses=OpenApiTypes.OBJECT)
     def get(self, request, bug_id: int):
         row = api.get_bug(_user_id(request), bug_id)
@@ -74,8 +67,6 @@ class BugDetailAPIView(APIView):
 
 
 class BugSyncAPIView(APIView):
-    """POST /api/bugs/sync/ — backfill BUG tickets from visible task errors."""
-
     @extend_schema(
         tags=["bugs"],
         operation_id="bug_ticket_sync",

@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 可配置的模型价目表与费用计算 🏁
-Python 调试：➡️ python -m backend.apps.usage_ledger.pricing 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（经 usage_ledger 的功能用例间接覆盖，未直接 import 本模块）
-🏁
-"""
-
 from __future__ import annotations
 
 import json
@@ -32,7 +23,6 @@ _EIGHT = Decimal("0.00000001")
 
 
 def _load() -> dict[str, Any]:
-    """读取价目表；失败时返回空表，按 unpriced 处理。"""
     try:
         return json.loads(_PRICING_PATH.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -43,7 +33,6 @@ _PRICING = _load()
 
 
 def normalize_provider(provider: str, model: str = "") -> str:
-    """把厂商归一为 deepseek / dashscope / openai。厂商只用于归类，不用于选价。"""
     value = (provider or "").strip().lower()
     if value in ("deepseek", "dashscope", "openai"):
         return value
@@ -60,7 +49,6 @@ def normalize_provider(provider: str, model: str = "") -> str:
 
 
 def category_of(model: str, provider: str = "") -> str:
-    """按模型名推断分类：LLM/TTS/Realtime/Embedding/ASR。"""
     name = (model or "").lower()
     if "embedding" in name:
         return "Embedding"
@@ -84,22 +72,6 @@ def price_usage(
     characters: int = 0,
     occurred_at: datetime | None = None,
 ) -> dict[str, Any]:
-    """
-    按价目表计算一条用量的费用。
-
-    Args:
-        provider: deepseek / dashscope。
-        model: 模型名。
-        input_tokens: 输入 token。
-        output_tokens: 输出 token。
-        cache_input_tokens: 缓存命中 token。
-        cache_creation_tokens: 缓存创建 token。
-        characters: TTS 字符数。
-        occurred_at: 发生时间；DeepSeek 用于高峰倍率。
-
-    Returns:
-        含 category/provider/cost_* /pricing_status/pricing_snapshot 的字典。
-    """
     provider = normalize_provider(provider, model)
     rate = lookup_rate(model)
     if rate is not None:
@@ -170,7 +142,6 @@ def _price_from_rate(
     characters: int,
     occurred_at: datetime | None,
 ) -> dict[str, Any]:
-    """用一条公式把基数折成人民币。没有基数的调用不得进入本函数。"""
     incoming = max(int(input_tokens or 0), 0)
     outgoing = max(int(output_tokens or 0), 0)
     hit = min(max(int(cache_input_tokens or 0), 0), incoming)
@@ -214,7 +185,6 @@ def _price_from_rate(
 
 
 def _is_peak(occurred_at: datetime | None) -> bool:
-    """复用 DeepSeek 的北京时间高峰规则。无时刻按空闲。"""
     return DeepSeekBilling._is_peak_time(occurred_at)
 
 
@@ -224,12 +194,10 @@ def _cost_amount(
     input_per_million: Decimal,
     per_10k_chars: Decimal,
 ) -> Decimal:
-    """按字符或输入 token 计算输入费用。"""
     if per_10k_chars:
         return Decimal(characters) * per_10k_chars / Decimal(10_000)
     return Decimal(input_tokens) * input_per_million / _MILLION
 
 
 def _q(value: Decimal) -> Decimal:
-    """金额保留 8 位。"""
     return value.quantize(_EIGHT, rounding=ROUND_HALF_UP)

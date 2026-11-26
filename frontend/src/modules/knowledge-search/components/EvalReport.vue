@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** EvalReport — 评测报告与过程：阶段进度 / 实时逐题 / 命中详情 / 指标卡 / 原理说明。 */
 import { computed, ref } from "vue"
 import AppTable from "@/shared/components/AppTable.vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"

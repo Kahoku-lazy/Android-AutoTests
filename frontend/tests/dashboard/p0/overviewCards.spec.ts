@@ -1,6 +1,3 @@
-/**
- * [P0] 平台概览卡片：卡序、排队副标题、运营子区显隐。
- */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { defineComponent, ref } from "vue"
 import { createRouter, createMemoryHistory } from "vue-router"

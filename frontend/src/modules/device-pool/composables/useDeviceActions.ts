@@ -1,9 +1,3 @@
-/**
- * useDeviceActions — 设备操作逻辑提取
- *
- * 从 index.vue 提取所有设备操作 handler、数据加载和动画逻辑。
- * 依赖 useDevicePoolState composable（替代原 Pinia store）。
- */
 import { ref, nextTick, type Ref } from "vue"
 import { animate, stagger } from "animejs"
 import { ElMessage } from "element-plus"
@@ -11,8 +5,6 @@ import { getUsername } from "@/shared/auth/token-storage"
 import { DEFAULT_DIALOGS, LIST_ANIMATION } from "../constants"
 import type { DeviceRecord, DisconnectDialogState, NetworkDialogState } from "@/shared/types/device"
 import type { UseDevicePoolStateReturn } from "./useDevicePoolState"
-
-// ── 返回类型接口 ──
 
 export interface UseDeviceActionsReturn {
   disconnectDialog: Ref<DisconnectDialogState>
@@ -35,20 +27,14 @@ export interface UseDeviceActionsReturn {
   cancelDisconnectDialog: () => void
 }
 
-// ── Composable ──
-
 export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActionsReturn {
-  // ── Dialog state ──
   const disconnectDialog = ref<DisconnectDialogState>({ ...DEFAULT_DIALOGS.disconnect })
   const networkDialog = ref<NetworkDialogState>({ ...DEFAULT_DIALOGS.network })
 
-  // ── Internal state ──
   let prevDevicesJson = ""
 
-  // ── Current user ──
   const currentUser = getUsername()
 
-  // ── Animation ──
   function animateDeviceRows() {
     animate(LIST_ANIMATION.selector, {
       opacity: LIST_ANIMATION.opacity,
@@ -59,7 +45,6 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
     })
   }
 
-  // ── Data loading ──
   async function loadDevices() {
     await pool.fetchDevices()
     await nextTick()
@@ -70,7 +55,6 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
     }
   }
 
-  // ── Refresh / Scan ──
   async function handleRefresh() {
     if (pool.scanning.value || pool.loading.value) return
     const result = await pool.doScan()
@@ -82,7 +66,6 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
     await loadDevices()
   }
 
-  // ── Network (LAN) connect ──
   function openNetworkDialog() {
     networkDialog.value = { visible: true, loading: false }
   }
@@ -113,14 +96,12 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
     networkDialog.value.visible = false
   }
 
-  // ── Row click ──
   function handleRowClick(record: DeviceRecord) {
     if (!record || !record.serial) return
     if (record.status !== "ONLINE" && record.status !== "BUSY") return
     pool.selectDevice(record.serial)
   }
 
-  // ── 锁定 / 公开切换 ──
   async function handleLockClick(device: DeviceRecord) {
     const nextLocked = !device.locked
     const result = await pool.doLock(device.serial, nextLocked)
@@ -131,7 +112,6 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
     }
   }
 
-  // ── 强制释放 ──
   async function handleRelease(serial: string) {
     const result = await pool.doRelease(serial)
     if (result.status) {
@@ -141,7 +121,6 @@ export function useDeviceActions(pool: UseDevicePoolStateReturn): UseDeviceActio
     }
   }
 
-  // ── 删除 ──
   function openDisconnectDialog(serial: string) {
     const dev = pool.devices.value.find((d) => d.serial === serial)
     if (!dev) return

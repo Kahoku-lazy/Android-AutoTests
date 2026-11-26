@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** ModuleFormDialog — 模块登记表单：库名 / 说明 / 服务器绝对路径 / 启用。 */
 import { reactive, watch } from "vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
 import { KS_MODULE_DIALOG_TITLE } from "../constants"

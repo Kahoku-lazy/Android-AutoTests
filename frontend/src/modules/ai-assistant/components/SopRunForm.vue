@@ -1,11 +1,4 @@
 <script setup lang="ts">
-/**
- * 工作流任务表单：左列基本信息（用例来源 / 设备 / 已选摘要），右列用例输入（平台用例选择器或里程碑 YAML）。
- *
- * 平台用例可多选、跨项目保留；缺项时「开始运行」置灰，原因写在 footer 左侧。
- * 设备从设备管理里选（USB 提交序列号、局域网提交 IP:端口），不手填。
- * 工作流由卡片带入，这里不再选一次；弹窗外壳与宽度由 `SopWorkflowSection.vue` 提供。
- */
 import { computed, onMounted, ref } from "vue"
 import CasePicker from "./CasePicker.vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
@@ -35,17 +28,14 @@ const devices = ref<DeviceRecord[]>([])
 const devicesLoading = ref(false)
 const devicesError = ref("")
 
-/** 下拉只列能连的设备：无线调试别名那些记录先剔掉。 */
 const deviceOptions = computed(() =>
   devices.value
     .filter(isSelectableDevice)
     .map((device) => ({ value: deviceAddress(device), label: deviceLabel(device) })),
 )
 
-/** 左栏摘要卡：条数、覆盖的项目数与所选用例名。 */
 const picked = computed(() => summarizePicked(selectedCaseIds.value, projects.value))
 
-/** 缺项原因与提交按钮同源：`sop-form.ts` 是唯一判据。 */
 const kind = computed(() => props.workflow.kind || "ui_automation")
 const blockReason = computed(() => {
   if (kind.value !== "ui_automation" && !material.value) return "先上传文档"
@@ -81,7 +71,6 @@ async function loadDevices(): Promise<void> {
   }
 }
 
-/** 项目与用例一次取全量：选择器的过滤、分组、计数都在前端做。 */
 async function loadCases(): Promise<void> {
   casesLoading.value = true
   casesError.value = ""
@@ -94,7 +83,6 @@ async function loadCases(): Promise<void> {
   }
 }
 
-/** 切换来源：按既有口径清空另一侧的输入。 */
 function switchSource(next: "yaml" | "platform"): void {
   if (source.value === next) return
   source.value = next
@@ -103,7 +91,6 @@ function switchSource(next: "yaml" | "platform"): void {
   error.value = ""
 }
 
-/** 选文件只记在本机，提交时才随表单上传。 */
 function onFile(event: Event): void {
   yaml.value = (event.target as HTMLInputElement).files?.[0] || null
   error.value = ""

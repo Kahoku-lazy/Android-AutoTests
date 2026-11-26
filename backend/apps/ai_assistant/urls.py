@@ -1,9 +1,3 @@
-"""ai-assistant URL routing — 角色注册表与执行报告。
-
-智能体配置页与对话工作流已随 AI 助手重设计下线，只保留创建入口；
-报告接口保留，任务清单的「报告」按钮与执行报告页仍在读取。
-"""
-
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 

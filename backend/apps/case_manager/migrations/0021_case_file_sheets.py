@@ -1,5 +1,3 @@
-"""Add CaseFile sheet entity; convert legacy case leaves into files."""
-
 import django.db.models.deletion
 from django.db import migrations, models
 

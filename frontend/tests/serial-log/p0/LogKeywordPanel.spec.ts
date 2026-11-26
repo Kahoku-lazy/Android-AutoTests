@@ -1,13 +1,3 @@
-/**
- * [P0] 必测 — 日志关键词面板（spec: device-log-keyword-catalog）
- *
- * 目录：tests/serial-log/p0/
- * 断言：① 四列表格（含范围）+ 行数/计数、数据库来源与刷新时效标注；② 搜索过滤；
- * ③ 范围筛选与搜索叠加、计数恒全量；④ 空表给可读空态；⑤ 面板内没有任何写控件（只读）。
- *
- * AppTable 在本用例里以桩件呈现（只把 columns / data-source 渲染出来），
- * 断的是本面板的列定义与数据口径，不是 el-table 自身行为。
- */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { flushPromises, mount } from "@vue/test-utils"
 import { nextTick } from "vue"
@@ -79,7 +69,6 @@ const stubs = {
 }
 
 async function mountPanel(canManage = false) {
-  // 搜索框已是 Element Plus 的 el-input：这里按需注册 EP，而不是给 el-input 造桩
   const wrapper = mount(LogKeywordPanel, {
     props: { canManage },
     global: { stubs, plugins: [ElementPlus] },
@@ -143,7 +132,7 @@ describe("[P0] LogKeywordPanel", () => {
     await select.setValue("H6601")
     expect(wrapper.find('[data-testid="log-keyword-table"]').attributes("data-rows")).toBe("1")
     expect(wrapper.find('[data-testid="log-keyword-count"]').text()).toContain("4 个关键词")
-    // 叠加搜索：H6601 范围内搜「开机」命中 1 行，搜「彩色」无命中
+
     const input = wrapper.find('[data-testid="log-keyword-search"]')
     await input.setValue("开机")
     expect(wrapper.find('[data-testid="log-keyword-table"]').attributes("data-rows")).toBe("1")
@@ -177,12 +166,12 @@ describe("[P0] LogKeywordPanel", () => {
     const wrapper = await mountPanel()
     const body = wrapper.find('[data-testid="log-keyword-panel"]')
     expect(body.findAll("button").length).toBe(0)
-    // 两个输入控件：搜索框 + 范围筛选下拉（均为读侧过滤，不是写入口）
+
     expect(body.findAll("input").length).toBe(2)
     expect(body.find('input[type="file"]').exists()).toBe(false)
     expect(body.text()).not.toContain("保存")
     expect(body.text()).not.toContain("删除")
-    // 唯一的操作是页头「刷新」（重新拉取只读数据）
+
     expect(wrapper.findAll(".sl-cat-actions button").map((b) => b.text())).toEqual(["刷新"])
   })
 })

@@ -1,10 +1,4 @@
 <script setup lang="ts">
-/**
- * 工作流配置表单：名称 + 执行助手 + 验收助手。
- *
- * 只出表单本体，弹窗外壳由 `SopWorkflowSection.vue` 的 el-dialog 提供。
- * 传入 `workflow` 即编辑：字段预填，保存走 PATCH 回写同一条记录，并可删除。
- */
 import { computed, ref } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
@@ -47,7 +41,6 @@ const options = computed(() =>
   props.cards.map((card) => ({ id: card.assistant_id, label: card.display_name })),
 )
 
-/** 新建走 POST，编辑走 PATCH；两处共用同一份字段与校验。 */
 async function save(): Promise<void> {
   error.value = sopCreateError({
     name: name.value,
@@ -90,7 +83,6 @@ async function save(): Promise<void> {
   }
 }
 
-/** 删除前二次确认：只说清影响面，历史任务不受影响。 */
 async function remove(): Promise<void> {
   if (!props.workflow) return
   try {
@@ -246,7 +238,6 @@ async function remove(): Promise<void> {
   padding-top: var(--app-space-sm);
 }
 
-/* 删除靠左，取消与保存靠右：删除不与保存相邻，避免误点 */
 .sop-editor__spacer {
   flex: 1;
 }

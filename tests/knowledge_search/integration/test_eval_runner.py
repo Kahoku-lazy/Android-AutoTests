@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 评测运行器集成场景：替身承接引擎与模型，验证生命周期、进度、入账与失败收口 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/knowledge_search/integration/test_eval_runner.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/knowledge_search、backend/apps/usage_ledger、engines/ae_harness
-🏁
-"""
-
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -41,7 +32,6 @@ def _dirs(tmp_path, settings):
 
 @pytest.fixture()
 def run_row(tmp_path):
-    """登记模块并创建一次 pending 运行（快照冻结）。"""
     data_dir = tmp_path / "docs"
     data_dir.mkdir()
     module = api.create_module(name="kb_eval", description="评测库", data_dir=str(data_dir))
@@ -81,8 +71,6 @@ def _chunks(count=6):
 
 
 class _FakeRetriever:
-    """替身检索器：正题命中 gold，负样本不命中。"""
-
     def __init__(self, config):
         self.config = config
         self._usage_left = [
@@ -124,7 +112,6 @@ class _FakeRetriever:
 
 @pytest.fixture()
 def patched_engine(monkeypatch):
-    """替身：配置 / 检索器 / 模型 / 采样 / gold 映射 / 出题。"""
     config = SimpleNamespace(
         chunk_size=400,
         chunk_overlap=60,
@@ -168,7 +155,6 @@ def patched_engine(monkeypatch):
 
 
 def test_run_completes_with_metrics_and_ledger(run_row, patched_engine):
-    """运行收口 done：指标、逐题明细、两类用量入账齐全。"""
     eval_runner._run(run_row.pk)
     run = api.get_eval_run(run_row.pk)
     assert run.status == "done"
@@ -176,7 +162,6 @@ def test_run_completes_with_metrics_and_ledger(run_row, patched_engine):
     assert run.progress_done == 7
     assert run.metrics["n_pos"] == 5
     assert run.metrics["n_neg"] == 2
-    # 正题 gold 均为 doc_f0..f4，命中只有 doc_f0 → 仅第一题命中
     assert run.metrics["recall_at_1"] == 0.2
     assert run.metrics["false_hit_rate"] == 0.0
     assert run.queries.count() == 7
@@ -186,8 +171,6 @@ def test_run_completes_with_metrics_and_ledger(run_row, patched_engine):
 
 
 def test_run_fails_when_positives_insufficient(run_row, patched_engine, monkeypatch):
-    """有效正题不足 5 条：运行失败并给可读原因。"""
-
     async def few_positives(model, chunks, **kwargs):
         return [{"question": "唯一问题", "chunk": chunks[0]}], []
 
@@ -199,7 +182,6 @@ def test_run_fails_when_positives_insufficient(run_row, patched_engine, monkeypa
 
 
 def test_run_fails_when_engine_missing(run_row, monkeypatch):
-    """引擎缺失：运行失败降级，不抛异常。"""
     monkeypatch.setattr(eval_runner, "KnowledgeRetriever", None)
     eval_runner._run(run_row.pk)
     run = api.get_eval_run(run_row.pk)
@@ -208,7 +190,6 @@ def test_run_fails_when_engine_missing(run_row, monkeypatch):
 
 
 def test_snapshot_isolates_module_change(run_row, patched_engine, tmp_path):
-    """运行期间改模块路径：运行仍按触发时快照执行。"""
     new_dir = tmp_path / "new_docs"
     new_dir.mkdir()
     module = api.list_modules()[0]

@@ -1,13 +1,9 @@
-"""字段形状校验。不查库。存在性由 agent_configs / model_configs 负责。"""
-
 from rest_framework import serializers
 
-# 类型取值：执行者 / 验收者 / 规划者。与 AIRoleKind.KIND_CHOICES 同源，改一处必须改两处。
 ROLE_KIND_VALUES = ("executor", "verifier", "planner")
 
 
 def _valid_http_url(value, schemes: set[str] | None = None) -> str:
-    """地址必须是带主机名的链接。实时语音额外允许 ws 与 wss。"""
     from urllib.parse import urlparse
 
     url = str(value or "").strip()
@@ -22,8 +18,6 @@ def _valid_http_url(value, schemes: set[str] | None = None) -> str:
 
 
 class ModelConfigSerializer(serializers.Serializer):
-    """模型配置入参与出参。只校验字段形状，不创建模型。"""
-
     id = serializers.IntegerField(read_only=True)
     provider = serializers.ChoiceField(choices=["deepseek", "dashscope", "openai"])
     api_protocol = serializers.ChoiceField(choices=["deepseek", "dashscope", "openai"])
@@ -66,12 +60,6 @@ class ModelConfigSerializer(serializers.Serializer):
 
 
 class RoleInputSerializer(serializers.Serializer):
-    """Agent 配置入参。不查模型配置是否存在。
-
-    `kinds`：新建 MUST 恰好 1 项（在视图里校验，因为 PATCH 缺省表示不改动）；
-    更新时显式提交 [] 表示置为未分类。一份配置 MUST NOT 同时有多个类型。
-    """
-
     name = serializers.CharField(required=False, max_length=200)
     model_config_id = serializers.IntegerField(required=False, min_value=1)
     system_prompt = serializers.CharField(required=False, allow_blank=True)
@@ -96,8 +84,6 @@ class RoleInputSerializer(serializers.Serializer):
 
 
 class AssistantInputSerializer(serializers.Serializer):
-    """助手名片入参。头像字节由视图解码后传入写库层。"""
-
     display_name = serializers.CharField(required=False, max_length=200)
     role_id = serializers.CharField(required=False, max_length=11)
     tools = serializers.ListField(required=False, child=serializers.DictField())
@@ -111,8 +97,6 @@ class AssistantInputSerializer(serializers.Serializer):
 
 
 class AssistantOutputSerializer(serializers.Serializer):
-    """助手列表出参。不下发头像正文。"""
-
     assistant_id = serializers.CharField()
     display_name = serializers.CharField()
     has_avatar = serializers.SerializerMethodField()
@@ -133,8 +117,6 @@ class AssistantOutputSerializer(serializers.Serializer):
 
 
 class SopWorkflowInputSerializer(serializers.Serializer):
-    """新建或编辑工作流入参。编排与种类只在新建时生效。"""
-
     name = serializers.CharField(max_length=200)
     orchestration = serializers.CharField(max_length=16, required=False, default="sop")
     kind = serializers.CharField(max_length=32, required=False, default="ui_automation")
@@ -151,8 +133,6 @@ class SopWorkflowInputSerializer(serializers.Serializer):
 
 
 class SopWorkflowOutputSerializer(serializers.Serializer):
-    """工作流出参。不下发提示词、模型参数或工具勾选。"""
-
     id = serializers.IntegerField()
     name = serializers.CharField()
     orchestration = serializers.CharField()
@@ -168,8 +148,6 @@ class SopWorkflowOutputSerializer(serializers.Serializer):
 
 
 class RoleOutputSerializer(serializers.Serializer):
-    """Agent 配置出参。关联字段由写库层 select_related 后交给这里。"""
-
     role_id = serializers.CharField()
     name = serializers.CharField()
     model_config_id = serializers.IntegerField(source="model_config.id", allow_null=True)
@@ -184,5 +162,4 @@ class RoleOutputSerializer(serializers.Serializer):
     updated_at = serializers.DateTimeField()
 
     def get_kinds(self, obj) -> list[str]:
-        """类型标签数组；未分类时为空数组。prefetch_related 生效时不额外查库。"""
         return [item.kind for item in obj.kinds.all()]

@@ -1,4 +1,3 @@
-/** keyword-form — 关键词表单提交前校验（纯函数，无 HTTP） */
 import { SCOPE_GENERAL } from "./log-keyword-rows"
 import {
   KEYWORD_ERR_FEATURE_ID_INVALID,
@@ -11,7 +10,6 @@ import {
   KEYWORD_ERR_SCOPE_INVALID,
 } from "../constants"
 
-/** SKU 名白名单：与后端 api._SCOPE_PATTERN 同形 */
 const SKU_PATTERN = /^[A-Za-z0-9_-]+$/
 
 export interface KeywordFormInput {
@@ -19,7 +17,7 @@ export interface KeywordFormInput {
   module: string
   feature: string
   scope: string
-  /** 功能点编号文本；空串表示缺省（新建续编 / 编辑保持） */
+
   featureIdText: string
 }
 
@@ -34,12 +32,6 @@ export interface KeywordFormPayload {
 export type KeywordFormCheck =
   { kind: "ok"; payload: KeywordFormPayload } | { kind: "error"; error: string }
 
-/**
- * 表单校验：必填 / 长度 / 范围白名单 / 编号可选非负整数。
- *
- * Returns:
- *   通过时给出提交载荷（编号缺省不带字段）；失败时给出可读错误文案。
- */
 export function validateKeywordForm(input: KeywordFormInput): KeywordFormCheck {
   const keyword = (input.keyword || "").trim()
   if (!keyword) return { kind: "error", error: KEYWORD_ERR_KEYWORD_REQUIRED }

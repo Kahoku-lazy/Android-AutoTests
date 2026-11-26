@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 全部调用方与后端路由表的一致性守护（前端 / 测试 / 接口用例） 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_api_path_callers.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 前端与后端源码的一致性面（只读源码断言）
-🏁
-"""
-
 from __future__ import annotations
 
 import pathlib
@@ -26,12 +17,8 @@ YAML_CASE_DIR = TESTS_DIR / "api" / "case"
 
 API_BASE = "/api"
 
-# 前端三种字面量写法的引号：双引号 / 单引号 / 反引号（模板字面量）
 _QUOTES = "\"'`"
 
-# 按“调用形态”匹配：动词 + （可选的 TS 泛型）+ 左括号 + 可选 f 前缀 + 第一个引号字面量。
-# 不加 re.MULTILINE：让 \s* 能跳过换行，这正是上一版漏扫的修法。
-# 动词单独成组：命中 router 视图时要断言该方法在动作白名单内（能 resolve ≠ 会被受理）。
 _CALL_RX = re.compile(
     r"\.(get|post|put|patch|delete)\s*(?:<[^<>()]*>)?\s*\(\s*f?(["
     + _QUOTES
@@ -41,17 +28,12 @@ _CALL_RX = re.compile(
     re.S,
 )
 
-# 从字面量里取出 /api/ 开头的片段（Python 测试会写成 f"{base_url}/api/..."）
 _API_IN_LITERAL_RX = re.compile(r"/api/[A-Za-z0-9_\-/{}.:]*")
 
-# tests/api/case/*.yaml 的 path: 字段（单行标量，无跨行风险）
 _YAML_PATH_RX = re.compile(r"^\s*(?:-\s*)?path:\s*[\"']?([^\"'\s]+)")
 
-# 前端自身的路由，不是后端端点
 NON_API_PREFIXES = ("/login", "/dashboard")
 
-# 显式例外：三元组 (相对路径, 字面量, 理由)。
-# 不用行号（会漂），不用整文件白名单（等于关掉该文件）。
 EXCEPTIONS = (
     (
         "tests/arch/unit/test_api_path_convention.py",
@@ -60,15 +42,12 @@ EXCEPTIONS = (
     ),
 )
 
-# 各面的规模下限（后方为实测值，下限取 ~95%）。
-# 识别规则退化时计数骤降，测试随即失败，而不是给出虚假的“全部一致”。
 MIN_PER_SURFACE = {
-    "frontend": 42,  # 实测 45（2026-11-17 提交树重登记：页面流 api.ts 17 个调用点随退役删除；按提交树独立计数复核，扫描器未退化；脏工作树实测 57 含并行未提交调用点，不作基准）
-    "tests": 32,  # 实测 34（本变更改写两个 element_locator 测试删去 2 个字面量调用点；其余下降来自并发会话对 tests/ 的改动）
-    "yaml": 42,  # 实测 45
+    "frontend": 42,
+    "tests": 32,
+    "yaml": 42,
 }
 
-# 认证链路：本守护最初要解决的问题，单独钉住
 AUTH_VIEW_BY_PATH = {
     "/api/auth/login/": "LoginView",
     "/api/auth/register/": "RegisterView",
@@ -84,8 +63,6 @@ AUTH_CALL_FILES = (
 
 
 class Caller:
-    """一个 HTTP 调用点上的路径字面量。"""
-
     def __init__(
         self,
         surface: str,
@@ -100,7 +77,6 @@ class Caller:
         self.call_line = call_line
         self.line = line
         self.path = path
-        # HTTP 动词（小写）；YAML 用例暂无方法字段，故可为 None
         self.method = method
 
     @property
@@ -109,15 +85,10 @@ class Caller:
 
     @property
     def multiline(self) -> bool:
-        """调用与字面量是否分处两行 —— 上一版守护正是在这里漏扫。"""
         return self.call_line != self.line
 
     @property
     def full_path(self) -> str:
-        """拼上 baseURL 后的后端路径；动态段换为占位值以便 resolve。
-
-        下位置选 `1`：本仓只用了 `int` 与 `str` 两种转换器，两者都能匹配 "1"。
-        """
         path = self.path
         if not path.startswith(API_BASE + "/"):
             path = API_BASE + path
@@ -134,21 +105,16 @@ def _line_of(text: str, offset: int) -> int:
 
 
 def _scan_call_sites(surface: str, files) -> list[Caller]:
-    """扫描一组文件里的 HTTP 调用点。"""
     found: list[Caller] = []
     for source in files:
         text = source.read_text(encoding="utf-8", errors="replace")
         for match in _CALL_RX.finditer(text):
             literal = match.group(3)
             if surface == "frontend":
-                # 前端的调用写相对 baseURL 的路径（如 "/auth/login/"），
-                # 但 /login、/dashboard 是前端自身路由，不是端点。
                 if not literal.startswith("/") or literal.startswith(NON_API_PREFIXES):
                     continue
                 path = literal
             else:
-                # 测试侧一律带 /api/ 写全路径（或在 f-string 里）。
-                # 不能把 "/admin/login/" 这类非 API 路径当成接口。
                 hit = _API_IN_LITERAL_RX.search(literal)
                 if not hit:
                     continue
@@ -187,7 +153,6 @@ def _collect_callers() -> list[Caller]:
 
 
 CALLERS = _collect_callers()
-# 三个面全部参与 resolve 断言
 
 
 def _is_excepted(caller: Caller) -> bool:
@@ -198,7 +163,6 @@ def _is_excepted(caller: Caller) -> bool:
 
 
 def test_scanner_finds_the_expected_volume():
-    """每个面都必须真的扫到东西，否则后面的断言会空跑通过。"""
     actual = {}
     for caller in CALLERS:
         actual[caller.surface] = actual.get(caller.surface, 0) + 1
@@ -214,7 +178,6 @@ def test_scanner_finds_the_expected_volume():
 
 
 def test_multiline_call_sites_are_captured():
-    """跨行书写的调用必须被扫到 —— 上一版守护正是在这里漏了。"""
     multiline = [c for c in CALLERS if c.multiline]
     assert multiline, "一条跨行调用都没扫到，说明扫描器退化成了按行匹配"
     assert any(c.rel == "tests/api/conftest.py" for c in multiline), (
@@ -228,7 +191,6 @@ def test_multiline_call_sites_are_captured():
 
 
 def test_exception_list_entries_are_real():
-    """例外必须指向真实存在的字面量，否则清单会腐化成永久免责。"""
     stale = []
     for rel, literal, reason in EXCEPTIONS:
         if not reason.strip():
@@ -239,7 +201,6 @@ def test_exception_list_entries_are_real():
 
 
 def test_auth_chain_is_covered_by_the_scan():
-    """本守护起因于认证链路，必须确认那些调用真的被扫到了。"""
     covered = {c.rel for c in CALLERS if c.rel in AUTH_CALL_FILES}
     assert covered == set(AUTH_CALL_FILES), (
         "认证链路有文件没被扫到："
@@ -249,7 +210,6 @@ def test_auth_chain_is_covered_by_the_scan():
 
 
 def test_every_caller_path_ends_with_slash():
-    """全部三个面的 /api/ 路径都必须带尾斜杠（例外清单除外）。"""
     bad = [c.where for c in CALLERS if not c.path.endswith("/") and not _is_excepted(c)]
     assert bad == [], (
         "以下调用方缺尾斜杠（约定见 openspec/specs/api-path-convention）："
@@ -259,7 +219,6 @@ def test_every_caller_path_ends_with_slash():
 
 
 def test_every_caller_path_resolves_to_a_view():
-    """**三个面**的每条路径都必须在后端路由表里命中。"""
     failures = []
     for caller in CALLERS:
         if _is_excepted(caller):
@@ -274,14 +233,10 @@ def test_every_caller_path_resolves_to_a_view():
 
 
 def test_scanner_records_http_methods():
-    """方法必须真的被扫到 —— 否则下面的白名单断言会空跑通过。"""
     by_method = {}
     for caller in CALLERS:
         if caller.method:
             by_method[caller.method] = by_method.get(caller.method, 0) + 1
-    # put / delete 调用点随页面流模块退役消失（2026-11-17，remove-page-flow-module，
-    # 提交树实测 get 51 / post 30 / patch 1）；剩余动词仍须各扫到至少一处，
-    # 捕获组退化即失败。并行新增的 put / delete 调用点入库后可再扩清单。
     missing = [verb for verb in ("get", "post", "patch") if not by_method.get(verb)]
     assert missing == [], (
         "以下动词一个调用点都没扫到，说明 _CALL_RX 的动词捕获组退化了：" + ", ".join(missing)
@@ -289,14 +244,6 @@ def test_scanner_records_http_methods():
 
 
 def test_every_caller_method_is_accepted_by_the_matched_view():
-    """**能 resolve ≠ 会被受理**：命中 router 视图时，方法必须在其动作白名单内。
-
-    起因：router 详情路由 `<collection>/<pk>/` 把字面量段（`create` / `import`）当成主键
-    抢占，请求落到只接受 get/put/patch/delete 的详情视图上，得到 405
-    「方法 "POST" 不被允许。」—— 只断言「路径能 resolve」放过了这类故障。
-
-    函数视图 / 非 router 视图的允许方法在运行期才判定，静态不可知，故不在本断言范围。
-    """
     failures = []
     for caller in CALLERS:
         if caller.method is None or _is_excepted(caller):
@@ -304,10 +251,10 @@ def test_every_caller_method_is_accepted_by_the_matched_view():
         try:
             match = resolve(caller.full_path)
         except Resolver404:
-            continue  # 「路径不存在」由 test_every_caller_path_resolves_to_a_view 负责报错
+            continue
         actions = getattr(match.func, "actions", None)
         if not actions:
-            continue  # 函数视图 / 非 router 视图：无静态白名单
+            continue
         if caller.method not in actions:
             failures.append(
                 f"{caller.where}  {caller.method.upper()} → {match.func.cls.__name__} "
@@ -321,7 +268,6 @@ def test_every_caller_method_is_accepted_by_the_matched_view():
 
 
 def test_auth_chain_resolves_to_expected_views():
-    """认证链路五个端点必须命中五个认证视图。"""
     mismatches = []
     for path, view_name in AUTH_VIEW_BY_PATH.items():
         try:

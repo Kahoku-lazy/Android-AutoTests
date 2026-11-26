@@ -1,16 +1,9 @@
 <script setup lang="ts">
-/**
- * 用例表 chip：优先级 / 系统 / 业务类型 / 步骤共用的读态标签。
- *
- * 视觉口径沿用 bug-manager 的 .bug-badge（1.5px 墨描边 + --app-radius-sm + 14px 700）；
- * 实线——虚线白名单只给助手卡与 .sketch-kit 控件，chip 不在其中。
- */
 withDefaults(
   defineProps<{
-    /** p0 / p1 / p2 / system / business / steps */
     tone: string
     text: string
-    /** 悬停提示（如 IOS 的「暂不支持执行」、时间列的绝对时间） */
+
     hint?: string
   }>(),
   { hint: "" },

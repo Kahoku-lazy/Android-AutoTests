@@ -1,5 +1,3 @@
-"""运营后台路由 — 挂在 /api/ops/ 下；全部端点路径带尾斜杠。"""
-
 from django.urls import path
 
 from .views import (

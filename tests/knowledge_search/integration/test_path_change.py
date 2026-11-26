@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 改路径集成场景：登记 → 组装引擎配置 → 改路径后目录切换 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/knowledge_search/integration/test_path_change.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/ai_assistant、backend/apps/knowledge_search
-🏁
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -20,7 +11,6 @@ pytestmark = [pytest.mark.integration, pytest.mark.django_db]
 
 @pytest.fixture(autouse=True)
 def _settings_row():
-    """放一行检索配置，组装引擎参数时要用。"""
     model = AIModelConfig.objects.create(
         provider="dashscope",
         api_key_env="DASHSCOPE_API_KEY",
@@ -38,7 +28,6 @@ def _settings_row():
 
 
 def test_path_change_switches_engine_catalog(tmp_path):
-    """改路径后，引擎配置里的资料目录切到新目录，旧目录不再出现。"""
     old_dir = tmp_path / "old"
     new_dir = tmp_path / "new"
     old_dir.mkdir()
@@ -55,7 +44,6 @@ def test_path_change_switches_engine_catalog(tmp_path):
 
 
 def test_disable_module_excludes_it_from_enabled_bases(tmp_path):
-    """停用模块仍在配置里，但不参与检索。"""
     dir_a = tmp_path / "a"
     dir_b = tmp_path / "b"
     dir_a.mkdir()

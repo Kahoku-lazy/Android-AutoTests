@@ -1,15 +1,12 @@
 <script setup lang="ts">
-/** 模型表首列身份单元：首字母头像 + 模型名主行 + 「厂商 · 类型（· 音色）」副行。 */
 import { computed } from "vue"
 import { modelKindLabel, OPS_MODEL_KIND_OPTIONS } from "../constants"
 import type { OpsModelConfig } from "../types"
 
 const props = defineProps<{ config: OpsModelConfig }>()
 
-/** 头像文字取模型名首字母（`qwen-max` → Q）。 */
 const initial = computed(() => (props.config.model_name || "?").slice(0, 1).toUpperCase())
 
-/** 副行：厂商 + 类型 + 音色，三段都为空时给占位符。 */
 const subtitle = computed(() => {
   const parts = [props.config.provider, modelKindLabel(props.config.model_kind)].filter(
     (part): part is string => Boolean(part),
@@ -22,7 +19,6 @@ const subtitle = computed(() => {
   return parts.length ? parts.join(" · ") : "—"
 })
 
-/** 头像底色随类型走，扫读时不同类型一眼可分。 */
 const tone = computed(() => {
   const kind = props.config.model_kind || OPS_MODEL_KIND_OPTIONS[0].value
   return `ops-avatar--${kind}`
@@ -60,7 +56,6 @@ const tone = computed(() => {
   color: var(--app-text-primary);
 }
 
-/* 聊天 / 语音合成 / 实时语音三种类型各一支模块色 */
 .ops-avatar--chat {
   background: color-mix(in srgb, var(--c-device) 28%, var(--app-bg-card));
 }

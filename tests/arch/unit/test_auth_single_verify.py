@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 受保护请求只解析一次令牌（网关中间件与 DRF 认证不重复验签） 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_auth_single_verify.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/gateway、backend/shared、backend/shared/auth
-🏁
-"""
-
 from __future__ import annotations
 
 import json
@@ -39,7 +30,6 @@ def _login(c) -> str:
 
 
 def _count_calls(monkeypatch) -> dict:
-    """把两处 verify_token 都换成计数器，返回统计字典。"""
     calls = {"middleware": 0, "drf": 0}
     real = shared_auth.jwt_auth.verify_token
 
@@ -57,7 +47,6 @@ def _count_calls(monkeypatch) -> dict:
 
 
 def test_drf_request_verifies_token_only_once(user, monkeypatch):
-    """一个 DRF 请求：中间件验一次，DRF 认证复用 user_id，不再验第二次。"""
     c = Client()
     token = _login(c)
     calls = _count_calls(monkeypatch)
@@ -70,7 +59,6 @@ def test_drf_request_verifies_token_only_once(user, monkeypatch):
 
 
 def test_drf_auth_still_works_without_middleware(user, monkeypatch):
-    """回退路径：没有中间件注入 user_id 时（直接调用认证类）仍能鉴权。"""
     token = create_access_token(str(user.id))
     request = RequestFactory().get("/api/auth/me/", HTTP_AUTHORIZATION="Bearer " + token)
     assert not getattr(request, "user_id", "")
@@ -81,7 +69,6 @@ def test_drf_auth_still_works_without_middleware(user, monkeypatch):
 
 
 def test_deleted_user_still_rejected(user):
-    """复用 user_id 不跳过用户存在性校验：用户被删后仍返回 401。"""
     c = Client()
     token = _login(c)
     assert c.get("/api/auth/me/", HTTP_AUTHORIZATION="Bearer " + token).status_code == 200

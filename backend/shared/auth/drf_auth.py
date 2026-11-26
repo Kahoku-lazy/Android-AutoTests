@@ -1,13 +1,3 @@
-"""
-模块功能：➡️ DRF authentication bridge — reuses the existing PyJWT verify_token(). 🏁
-Python 调试：➡️ python -m backend.shared.auth.drf_auth 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. tests/arch/unit/test_auth_single_verify.py: 覆盖本模块
-2. tests/arch/unit/test_jwt_hardening.py: 同上
-🏁
-"""
-
 from django.contrib.auth import get_user_model
 from rest_framework import exceptions
 from rest_framework.authentication import BaseAuthentication
@@ -16,20 +6,6 @@ from .jwt_auth import verify_token
 
 
 class JWTAuthentication(BaseAuthentication):
-    """DRF authentication class that validates JWT Bearer tokens.
-
-    Uses the project-wide ``verify_token()`` from ``shared.auth.jwt_auth``,
-    which checks:
-      - Token signature (HS256, shared SECRET_KEY)
-      - Expiry (access token TTL)
-      - Token type (must be "access")
-      - Revocation status (jti / sid 两级吊销，落库持久化)
-
-    Returns the real ``auth.User`` resolved by the token's ``sub`` claim so
-    DRF permission classes (``IsAdminUser``) and ``request.user.is_superuser``
-    work. ``User.DoesNotExist`` (deleted user) is raised as 401.
-    """
-
     keyword = "Bearer"
 
     def authenticate(self, request):
@@ -47,8 +23,6 @@ class JWTAuthentication(BaseAuthentication):
         if not token:
             return None
 
-        # 网关中间件已在同一请求上验签并把 user_id 注入 request；直接复用，
-        # 避免一个请求解析两次令牌（两次 JWT 解码 + 两次吊销查询）。
         user_id = getattr(request, "user_id", "")
         if not user_id:
             try:
@@ -67,5 +41,4 @@ class JWTAuthentication(BaseAuthentication):
         return (user, token)
 
     def authenticate_header(self, request):
-        # realm 只作协议保护域标识（RFC 6750），禁止携带任何密钥材料
         return f'{self.keyword} realm="api"'

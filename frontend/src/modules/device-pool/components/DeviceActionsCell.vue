@@ -1,10 +1,4 @@
 <script setup lang="ts">
-/**
- * 设备操作列 — 主操作胶囊（锁定 / 公开）+ 「⋯」次操作菜单（强制释放 / 删除）
- *
- * 权限与请求语义不变：三个 emit 仍由父级 `useDeviceActions` 消费，
- * 删除仍走 `DisconnectDialog` 二次确认；USB 行保持无操作。
- */
 import { computed } from "vue"
 import type { DeviceRecord } from "@/shared/types/device"
 import { isRunnerOccupied } from "@/shared/helpers/deviceOccupancy"
@@ -19,13 +13,12 @@ const emit = defineEmits<{
   disconnect: [device: DeviceRecord]
 }>()
 
-/** 执行引擎占用：此时不提供「强制释放」（与改动前条件一致） */
 const runnerOccupied = computed(() => isRunnerOccupied(props.device.occupied_by))
 const isWifi = computed(() => props.device.connection_type === "WIFI")
-/** 次操作：强制释放（被占用且非执行占用）、删除（仅 Wi-Fi） */
+
 const canRelease = computed(() => Boolean(props.device.occupied_by) && !runnerOccupied.value)
 const hasSecondary = computed(() => canRelease.value || isWifi.value)
-/** 主操作只有 Wi-Fi 行有；两样都没有时整列留空标记 */
+
 const hasPrimary = computed(() => isWifi.value)
 
 function onCommand(command: string) {
@@ -69,7 +62,6 @@ function onCommand(command: string) {
   gap: 6px;
 }
 
-/* 主操作胶囊：外形沿用页面统一按键皮肤（2px 墨边 + 2px 硬影 + 近直角） */
 .act-pill {
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-sm);
@@ -90,7 +82,6 @@ function onCommand(command: string) {
   box-shadow: 3px 3px 0 0 var(--ink);
 }
 
-/* 底色取状态令牌：锁定紫、公开绿（与可见性列同源，语义不靠行号轮转） */
 .act-pill--locked {
   background: var(--app-status-purple-bg);
 }

@@ -1,5 +1,3 @@
-"""Dashboard stats views — aggregated platform statistics for the frontend dashboard."""
-
 from django.contrib.auth import get_user_model
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Count, Q
@@ -28,7 +26,6 @@ from utils.logs import backend_log
 
 
 def _user_id(request):
-    """用户 id：优先中间件注入的 request.user_id，回退 DRF request.user.id。"""
     uid = getattr(request, "user_id", None)
     if uid is not None and uid != "":
         return uid
@@ -37,7 +34,6 @@ def _user_id(request):
 
 
 def _safe_count(queryset_or_model, filter_kwargs=None, q_filter=None):
-    """Safely count records, returning 0 if the table doesn't exist yet."""
     try:
         qs = (
             queryset_or_model.objects.all()
@@ -55,21 +51,15 @@ def _safe_count(queryset_or_model, filter_kwargs=None, q_filter=None):
 
 
 def _user_cases_q(user_id):
-    """Filter document cases owned via project.created_by."""
     uid = str(user_id) if user_id is not None else ""
     return Q(project__created_by=uid)
 
 
-# Match device-pool UI: hide stale OFFLINE / DISCONNECTED records from totals
 _VISIBLE_DEVICE_STATUSES = ("ONLINE", "BUSY")
 _HIDDEN_DEVICE_STATUSES = ("OFFLINE", "DISCONNECTED")
 
 
 def _device_dashboard_stats():
-    """Return (online, total) consistent with /devices list filtering.
-
-    一次聚合同时算总数与在线数：仪表盘每次请求都调它，能省一条查询。
-    """
     row = Device.objects.exclude(status__in=_HIDDEN_DEVICE_STATUSES).aggregate(
         total=Count("id"),
         online=Count("id", filter=Q(status__in=_VISIBLE_DEVICE_STATUSES)),
@@ -78,7 +68,6 @@ def _device_dashboard_stats():
 
 
 def _platform_counts():
-    """助手名片、工作流与运营三项的只读计数。表未就绪时该项为 0。"""
     return {
         "assistants": _safe_count(AIAssistant),
         "workflows": _safe_count(AISopWorkflow),
@@ -89,7 +78,6 @@ def _platform_counts():
 
 
 def _cases_breakdown(user_id=None):
-    """Return per-project breakdown for document cases owned by the user."""
     if user_id is None:
         return []
     projects = list_projects(user_id=str(user_id))
@@ -105,20 +93,16 @@ def _cases_breakdown(user_id=None):
 
 @extend_schema(responses=OpenApiTypes.OBJECT)
 class DashboardStatsAPIView(APIView):
-    """GET /api/dashboard/stats/ — platform-level statistics."""
-
     def get(self, request):
         user_id = _user_id(request)
 
         device_online, device_total = _device_dashboard_stats()
-        # Totals derive from breakdown (single source of truth — no double counting)
         cases_breakdown = _cases_breakdown(user_id)
         case_total = sum(row["total"] for row in cases_breakdown)
-        case_enabled = case_total  # 文档用例无独立 enabled，与 total 同值
+        case_enabled = case_total
         tasks = workflow_task_counts(user_id)
         counts = _platform_counts()
 
-        # ── AI 用量 + 每日 token/缓存/费用序列 ──
         daily_ai = ai_daily_series(user_id)
 
         payload = {
@@ -163,7 +147,6 @@ class DashboardStatsAPIView(APIView):
 
 
 def _parse_activity_paging(request):
-    """解析 limit/offset；非法时返回 (None, None, message)。"""
     raw_limit = request.query_params.get("limit")
     raw_offset = request.query_params.get("offset")
 
@@ -190,15 +173,8 @@ def _parse_activity_paging(request):
     return limit, offset, None
 
 
-# 该视图直接返回 list（活动条目数组），故用 ANY 描述，避免声明成 object
 @extend_schema(responses=OpenApiTypes.ANY)
 class DashboardActivitiesAPIView(APIView):
-    """GET /api/dashboard/activities/ — recent events across the platform.
-
-    查询参数：limit（缺省 10，最大 50）、offset（缺省 0）。
-    data 仍为活动数组（非对象包裹）。
-    """
-
     def get(self, request):
         limit, offset, err = _parse_activity_paging(request)
         if err:
@@ -210,8 +186,6 @@ class DashboardActivitiesAPIView(APIView):
 
 @extend_schema(responses=OpenApiTypes.OBJECT)
 class DeviceStatsAPIView(APIView):
-    """GET /api/devices/stats/ — device pool summary."""
-
     def get(self, request):
         online, total = _device_dashboard_stats()
         return Response(
@@ -227,8 +201,6 @@ class DeviceStatsAPIView(APIView):
 
 @extend_schema(responses=OpenApiTypes.OBJECT)
 class CaseStatsAPIView(APIView):
-    """GET /api/cases/stats/ — document case summary."""
-
     def get(self, request):
         user_id = _user_id(request)
         cq = _user_cases_q(user_id)

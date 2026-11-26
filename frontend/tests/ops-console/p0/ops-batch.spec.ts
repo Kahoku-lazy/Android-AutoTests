@@ -1,9 +1,3 @@
-/**
- * [P0] 必测 — 用户管理的本页勾选与批量动作。
- *
- * 断言：超管行复选框禁用；运营看不到批量注销；确认文案对不上时不发注销请求；
- * 批量停用成功后重新拉取列表，而不是本地改状态。
- */
 import { flushPromises, mount } from "@vue/test-utils"
 import { defineComponent } from "vue"
 import { beforeEach, describe, expect, it, vi } from "vitest"

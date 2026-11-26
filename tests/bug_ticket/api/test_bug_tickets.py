@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ BUG 单接口：列表、详情、状态更新与历史同步 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/bug_ticket/api/test_bug_tickets.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/bug_manager、backend/apps/task_list、backend/models/constants.py
-🏁
-"""
-
 from __future__ import annotations
 
 import json

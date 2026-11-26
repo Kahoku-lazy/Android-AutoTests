@@ -1,21 +1,17 @@
 <script setup lang="ts">
-/**
- * WorkbenchCrumbs — L2 子页可见回退（返回芯片 + 波浪面包屑）
- * 挂在 L2 子页 `.doc-body` 顶部；祖先可点，末级马克笔且不可点。
- */
 import { computed } from "vue"
 import { useRouter } from "vue-router"
 
 export type CrumbItem = {
   label: string
-  /** 省略 to 表示当前页（不可点） */
+
   to?: string
 }
 
 const props = withDefaults(
   defineProps<{
     items?: CrumbItem[]
-    /** 可选返回芯片目标（渲染在面包屑条右端） */
+
     backTo?: string
     backLabel?: string
   }>(),

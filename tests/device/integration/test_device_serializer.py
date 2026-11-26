@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 灰盒·集成测试 — 设备展示/可见性（DeviceSerializer） 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/device/integration/test_device_serializer.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/device_pool
-🏁
-"""
-
 import pytest
 
 from backend.apps.device_pool.manager import DeviceSerializer
@@ -22,7 +13,6 @@ def serializer() -> DeviceSerializer:
 @pytest.mark.django_db
 @pytest.mark.device_pool
 def test_usb_device_visible_to_all(serializer):
-    """USB 设备恒公开，所有用户可见。"""
     dev = Device.objects.create(serial="USB1", connection_type="USB")
     assert serializer.is_device_visible(dev, "999", set()) is True
 
@@ -31,7 +21,6 @@ def test_usb_device_visible_to_all(serializer):
 @pytest.mark.django_db
 @pytest.mark.device_pool
 def test_wifi_device_locked_visible_only_owner(serializer):
-    """无线设备锁定后仅锁定者可见，他人不可见。"""
     dev = Device.objects.create(serial="WIFI1", connection_type="WIFI", locked_by="1", added_by="1")
     assert serializer.is_device_visible(dev, "1", set()) is True
     assert serializer.is_device_visible(dev, "2", set()) is False
@@ -41,7 +30,6 @@ def test_wifi_device_locked_visible_only_owner(serializer):
 @pytest.mark.django_db
 @pytest.mark.device_pool
 def test_wifi_device_unlocked_visible_to_all(serializer):
-    """无线设备未锁定公开。"""
     dev = Device.objects.create(serial="WIFI2", connection_type="WIFI")
     assert serializer.is_device_visible(dev, "2", set()) is True
 
@@ -50,7 +38,6 @@ def test_wifi_device_unlocked_visible_to_all(serializer):
 @pytest.mark.django_db
 @pytest.mark.device_pool
 def test_admin_sees_all(serializer):
-    """管理员全局可见。"""
     dev = Device.objects.create(serial="WIFI3", connection_type="WIFI", locked_by="1", added_by="1")
     assert serializer.is_device_visible(dev, "999", {"999"}) is True
 
@@ -59,7 +46,6 @@ def test_admin_sees_all(serializer):
 @pytest.mark.django_db
 @pytest.mark.device_pool
 def test_device_to_dict_fields(serializer):
-    """列表序列化：字段完整 + screen 合成 + is_current + remaining。"""
     dev = Device.objects.create(
         serial="DEV1",
         model="X",

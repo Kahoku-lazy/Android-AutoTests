@@ -1,14 +1,3 @@
-"""
-平台认证接口：登录、注册、续期、登出、当前用户。
-
-业务：
-1. 登录：账号密码正确则发本次会话；账号或密码不对则拒绝进入。
-2. 注册：校验通过则创建用户并直接登录；用户名已有则拒绝。
-3. 续期：用续期凭证换新的访问凭证，仍属同一次登录；账号已停用或令牌早于停用则拒绝。
-4. 登出：作废这次登录的访问凭证和续期凭证；服务暂不可用时拒绝登出，请稍后重试。
-5. 当前用户：返回账号，以及是否管理员。
-"""
-
 from typing import ClassVar
 
 from django.contrib.auth.models import User
@@ -35,8 +24,6 @@ from .serializers import LoginSerializer, RefreshSerializer, RegisterSerializer
 
 
 class LoginView(APIView):
-    """POST /api/auth/login — 账号密码正确则发本次会话。"""
-
     permission_classes = [AllowAny]
     authentication_classes: ClassVar[list] = []
 
@@ -48,7 +35,6 @@ class LoginView(APIView):
         ser = LoginSerializer(data=request.data)
         if not ser.is_valid():
             msg = _first_error(ser.errors)
-            # 认证失败保持 401；其余校验 400
             code = (
                 status.HTTP_401_UNAUTHORIZED
                 if msg == "用户名或密码错误"
@@ -67,8 +53,6 @@ class LoginView(APIView):
 
 
 class RegisterView(APIView):
-    """POST /api/auth/register — 创建用户并直接登录。用户名已有则拒绝。"""
-
     permission_classes = [AllowAny]
     authentication_classes: ClassVar[list] = []
 
@@ -79,7 +63,6 @@ class RegisterView(APIView):
     def post(self, request):
         ser = RegisterSerializer(data=request.data)
         if not ser.is_valid():
-            # 409 只由写口的 ConflictError 产生（唯一性由写口保证），输入校验一律 400
             return Response(
                 {"detail": _first_error(ser.errors)}, status=status.HTTP_400_BAD_REQUEST
             )
@@ -107,8 +90,6 @@ class RegisterView(APIView):
 
 
 class RefreshView(APIView):
-    """POST /api/auth/refresh — 用续期凭证换新的访问凭证，仍属同一次登录。"""
-
     permission_classes = [AllowAny]
     authentication_classes: ClassVar[list] = []
 
@@ -129,13 +110,11 @@ class RefreshView(APIView):
                     {"detail": "令牌类型错误，需要刷新令牌"},
                     status=status.HTTP_401_UNAUTHORIZED,
                 )
-            # 停用与注销都不能换新令牌续命；停用前签发的 refresh 在启用后仍然无效。
             if _refresh_blocked(payload):
                 return Response(
                     {"detail": "刷新令牌无效或已过期"},
                     status=status.HTTP_401_UNAUTHORIZED,
                 )
-            # 透传 sid：续期后的 access 仍属同一会话，登出时一并失效
             new_access = create_access_token(payload["sub"], sid=payload.get("sid"))
             return Response({"access_token": new_access, "token_type": "bearer"})
         except Exception as exc:
@@ -151,11 +130,8 @@ class RefreshView(APIView):
 
 
 class LogoutView(APIView):
-    """POST /api/auth/logout — 作废这次登录。服务暂不可用时拒绝登出。"""
-
     permission_classes = [IsAuthenticated]
 
-    # 仅读取 Authorization 头完成登出，不接收请求体
     @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         auth_header = request.META.get("HTTP_AUTHORIZATION", "")
@@ -164,11 +140,9 @@ class LogoutView(APIView):
 
         token = auth_header[7:]
         try:
-            # 会话粒度：同一 sid 的 access 与 refresh 一起失效
             sid = session_id_of(token)
             if sid:
                 revoke_session(sid)
-            # 兜底：本变更部署前签发的令牌没有 sid，只能按 jti 吊销
             blacklist_token(token)
         except BlacklistUnavailableError:
             return Response(
@@ -179,8 +153,6 @@ class LogoutView(APIView):
 
 
 class MeView(APIView):
-    """GET /api/auth/me — 当前登录用户，含是否管理员。"""
-
     permission_classes = [IsAuthenticated]
 
     @extend_schema(responses=OpenApiTypes.OBJECT)
@@ -211,14 +183,6 @@ class MeView(APIView):
 
 
 def _refresh_blocked(payload: dict) -> bool:
-    """续期是否必须拒绝：账号不存在、已停用，或令牌早于最近一次停用。
-
-    Args:
-        payload: 已验签的 refresh 载荷。
-
-    Returns:
-        必须拒绝时为 True。
-    """
     try:
         user_id = int(str(payload.get("sub") or ""))
     except (TypeError, ValueError):
@@ -230,7 +194,6 @@ def _refresh_blocked(payload: dict) -> bool:
 
 
 def _first_error(errors) -> str:
-    """取出第一条给用户看的校验说明。"""
     if isinstance(errors, dict):
         non_field = errors.get("non_field_errors")
         if isinstance(non_field, list) and non_field:

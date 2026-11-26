@@ -10,7 +10,6 @@
   font-size: var(--app-size-sm);
 }
 
-/* 两栏：左固定轨（基本信息），右自适应（用例选择）。窄屏回退单列 */
 .sop-run__grid {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
@@ -29,7 +28,6 @@
   min-width: 0;
 }
 
-/* 用例来源分段控件：两段等宽、墨框、选中段用流程色浅底 */
 .sop-run__seg {
   display: grid;
   grid-auto-flow: column;
@@ -71,7 +69,6 @@
   outline-offset: -4px;
 }
 
-/* 已选摘要：浅底内嵌卡，只陈述事实，不承载交互 */
 .sop-run__summary {
   padding: var(--app-space-sm) var(--app-space-md);
   border: 2px solid var(--ink);
@@ -114,7 +111,6 @@
   line-height: var(--app-line-height-snug);
 }
 
-/* 本地 YAML 面板：与右列等宽的一块纸面，实线框、不滚动 */
 .sop-run__yaml {
   display: flex;
   flex-direction: column;
@@ -138,7 +134,6 @@
   min-width: 0;
 }
 
-/* 文件选择器本体不可控外观：留在无障碍树里（可 Tab 到、可回车触发），视觉上藏起来 */
 .sop-run__pick {
   display: inline-flex;
   flex: none;
@@ -193,7 +188,6 @@
   font-size: var(--app-size-sm);
 }
 
-/* footer：左侧写缺哪一项，右侧两枚按钮 */
 .sop-run__actions {
   display: flex;
   align-items: center;

@@ -1,32 +1,3 @@
-"""
-文件名: ➡ android_device.py 🏁
-路径: ➡ engines/device/android/android_device.py 🏁
-模块功能：➡ Android 设备连接、信息查询与控制实现 🏁
-Python 调试：➡ python -m engines.device.android.android_device 🏁
-时间：➡ 2026-10-20 🏁
-作者：➡ kahoku 🏁
-版本：➡ 1.0.0 🏁
-修改时间: ➡ 2026-11-19 🏁
-类型: ➡ 工具模块 🏁
-简介说明：➡
-1. AndroidConnectionConfig / AndroidConnection: 无线/USB 双栈连接、探活与断开
-2. AdbChannel: adb 命令通道（只执行、取回，不做解析）
-3. AdbInfo: 分辨率 / 前台应用 / 包名 / 已连接设备 / 层级 XML
-4. AdbControl: 点击 / 长按 / 滑动 / 拖动 / 输入 / 按键 / 截图 / 应用启停
-5. AndroidControl: 在 AdbControl 之上补 u2（xpath 等）
-🏁
-关联模块：➡
-1. engines.device.action: DeviceConnection / DeviceControl 等抽象
-2. utils.logs: device_log
-3. utils.adb: adb_binary（平台自带 adb 路径解析）
-🏁
-测试：➡
-1. tests/engines/device/unit/test_android_device.py: 连接 / 命令通道 / 解析器
-2. tests/device/unit/test_device_app_control.py: 应用启停与错误提示
-3. tests/device/unit/test_device_foreground.py: 前台应用解析
-🏁
-"""
-
 from __future__ import annotations
 
 import re
@@ -42,21 +13,12 @@ from engines.device.action import DeviceConnection, DeviceControl, DeviceInfo, E
 from utils.adb import adb_binary
 from utils.logs import device_log
 
-# u2 单操作 HTTP 超时上限（秒）。u2 默认 HTTP_TIMEOUT=300，设备冻结会永久阻塞。
 U2_OP_TIMEOUT = 20
 
-# 真实超时异常类在这里固定一份：单测会把 `subprocess` 换成替身，替身上没有 TimeoutExpired。
 _SUBPROCESS_TIMEOUT = subprocess.TimeoutExpired
 
 
 def _tune_u2_http_timeout() -> None:
-    """把 u2 的单次请求超时收紧到 `U2_OP_TIMEOUT`。
-
-    uiautomator2 3.x 没有会话级超时开关：每次 jsonrpc 的 timeout 默认取 `base` 模块里
-    绑定的 `HTTP_TIMEOUT`（300 秒），设备冻结时一次调用就能挂满 5 分钟。
-    这里在建立会话前改掉该模块常量——进程级生效，device 模块是进程内唯一的 u2 控制入口。
-    拿不到该常量（u2 升级改了内部结构）时只记一条告警，不阻断连接。
-    """
     try:
         from uiautomator2 import base as u2_base
     except ImportError:  # pragma: no cover - 仅 u2 结构变化时触发
@@ -75,14 +37,6 @@ _CONNECTED_KEYWORDS = ("connected", "already", "已连接", "已经连接", "成
 
 
 def _masked_command(args: tuple[str, ...]) -> str:
-    """拼出可写日志的 adb 命令行；`pair` 的配对码用固定掩码替换。
-
-    Args:
-        args: 传给 adb 的子命令与参数。
-
-    Returns:
-        空格拼接后的命令行文本；配对码位置已打码，不落真实凭据。
-    """
     parts = list(args)
     if parts and parts[0] == "pair" and len(parts) >= 3:
         parts[-1] = "******"
@@ -91,77 +45,27 @@ def _masked_command(args: tuple[str, ...]) -> str:
 
 @dataclass(frozen=True)
 class AndroidConnectionConfig:
-    """Android 连接配置：USB 用序列号，无线用地址/端口，首次配对再带配对码。
-
-    Attributes:
-        uuid: USB 设备序列号；无线连接时为空。
-        address: 无线连接地址。
-        address_port: 无线连接端口。
-        pair_port: 无线配对端口。
-        pair_code: 无线配对码（凭据，不写入日志）。
-    """
-
-    # USB 连接 设备UUID
     uuid: str | None = None
 
-    # 无线连接 设备地址与端口号
     address: str | None = None
     address_port: int | None = None
 
-    # 无线配对码 设备地址与端口号、配对码
     pair_port: int | None = None
     pair_code: str | None = None
 
 
 class AndroidConnection(DeviceConnection):
-    """
-    Android 设备连接类
-    """
-
     def __init__(self, config: AndroidConnectionConfig) -> None:
-        """
-        保存连接配置并准备设备日志。
-
-        Args:
-            config: 目标设备（USB 序列号或无线地址/端口/配对码）。
-        """
         self.config = config
-        self.log = device_log  # 设备日志
+        self.log = device_log
 
     def _check_ip_address(self) -> str:
-        """
-        检查 IP 地址是否有效。
-
-        Args:
-            参数来自 self.config 中的 address 和 address_port。
-
-        Returns:
-            `地址:端口` 形式的连接端点。
-
-        Raises:
-            EngineConnectError: address 或 address_port 缺失。
-        """
         if self.config.address is None or self.config.address_port is None:
             raise EngineConnectError("无线连接地址与端口号不能为空，请检查配置")
 
         return f"{self.config.address}:{self.config.address_port}"
 
     def _check_pair_code(self) -> tuple[str, str]:
-        """
-        检查无线配对码 设备地址与端口号、配对码是否有效。
-
-        返回 (地址:配对端口, 配对码)。两者必须分开传给 ``adb pair``，
-        拼成一个参数时 adb 会把整串当成地址，并在终端等待输入配对码。
-
-        Args:
-            参数来自 self.config 中的 address、pair_port 与 pair_code。
-
-        Returns:
-            `(地址:配对端口, 配对码)`。
-
-        Raises:
-            EngineConnectError: 配对码、地址或配对端口缺失。
-        """
         if (
             self.config.pair_code is None
             or self.config.address is None
@@ -172,18 +76,6 @@ class AndroidConnection(DeviceConnection):
         return f"{self.config.address}:{self.config.pair_port}", self.config.pair_code
 
     def _run_adb(self, *args: str, stdin=None) -> str:
-        """执行 adb 子命令并记录命令与结果。失败或超时抛 EngineConnectError，成功返回拼接文本。
-
-        Args:
-            *args: adb 子命令与参数，例如 ``("connect", "192.168.1.5:5555")``。
-            stdin: 子进程标准输入；``adb pair`` 传 DEVNULL 以避免终端等待。
-
-        Returns:
-            stdout 与 stderr 拼接后的文本，供关键词判定使用。
-
-        Raises:
-            EngineConnectError: 超过 10 秒超时，或 adb 退出码非 0。
-        """
         shown = _masked_command(args)
         self.log.info(f"执行命令: adb {shown}")
         try:
@@ -203,20 +95,6 @@ class AndroidConnection(DeviceConnection):
         return output
 
     def _adb_connect(self) -> str:
-        """
-        无线设备 adb connect（关键词判定）；USB 跳过。失败抛 EngineConnectError。
-
-        adb connect 失败时退出码仍是 0（只有终端文本不同），所以不能靠 returncode
-        判成败，只能匹配返回文本里的关键词。
-
-        args:
-            参数来自 self.config 中的 address 和 address_port
-                address: 无线连接地址
-                address_port: 无线连接端口
-        Raises:
-            EngineConnectError: 连接失败
-        """
-
         ip_address = self._check_ip_address()
         self.log.info(f"待连接的设备地址与端口号是: {ip_address}")
         output = self._run_adb("connect", ip_address)
@@ -225,64 +103,26 @@ class AndroidConnection(DeviceConnection):
         return output
 
     def _adb_disconnect(self) -> None:
-        """
-        无线设备 adb disconnect（关键词判定）；USB 跳过。失败抛 EngineConnectError。
-
-        args:
-            参数来自 self.config 中的 address 和 address_port
-                address: 无线连接地址
-                address_port: 无线连接端口
-        Raises:
-            EngineConnectError: 断开连接失败
-        """
         ip_address = self._check_ip_address()
         self.log.info(f"待断开的设备地址与端口号是:{ip_address}")
         self._run_adb("disconnect", ip_address)
 
     def _adb_pair(self) -> None:
-        """
-        无线设备 adb pair（关键词判定）；USB 跳过。失败抛 EngineConnectError。
-
-        args:
-            参数来自 self.config 中的 addr 和 addr_port，pair_code
-                addr: 无线连接地址
-                addr_port: 无线连接端口
-                pair_code: 配对码
-        Raises:
-            EngineConnectError: 配对失败
-        """
-
         endpoint, code = self._check_pair_code()
         self.log.info(f"待配对的设备地址与端口号是: {endpoint}")
         self._run_adb("pair", endpoint, code, stdin=subprocess.DEVNULL)
 
     def _verify_usb(self) -> None:
-        """USB 连接校验：确认该序列号的设备在线。
-
-        Raises:
-            EngineConnectError: adb 报错，或设备状态不是 device。
-        """
         output = self._run_adb("-s", str(self.config.uuid), "get-state")
         if "device" not in output:
             raise EngineConnectError(f"USB 设备不在线: {self.config.uuid}")
 
     def disconnect(self) -> None:
-        """断开无线设备连接。USB 没有地址，直接返回。
-
-        Raises:
-            EngineConnectError: 无线断开失败。
-        """
         if self.config.address is None:
             return
         self._adb_disconnect()
 
     def connect(self) -> None:
-        """
-        连接设备：有配对码先配对，随后 adb connect；USB 只校验设备在线。
-
-        Raises:
-            EngineConnectError: 配对、无线连接或 USB 探活失败。
-        """
         if self.config.pair_code is not None:
             self._adb_pair()
         if self.config.address is not None:
@@ -291,19 +131,10 @@ class AndroidConnection(DeviceConnection):
             self._verify_usb()
 
     def adb_devices(self) -> str:
-        """返回 ``adb devices`` 原文。已连接行形如 ``192.168.35.57:44123     device``。
-
-        Returns:
-            adb devices 的原始文本。
-
-        Raises:
-            EngineConnectError: adb 超时或退出码非 0。
-        """
         return self._run_adb("devices")
 
 
 def _bounds_center(bounds: str) -> tuple[int, int]:
-    """把 `[left,top][right,bottom]` 解成中心点；解析失败返回 (0, 0)。"""
     parts = bounds.replace("][", ",").replace("[", "").replace("]", "").split(",")
     if len(parts) != 4 or not all(re.fullmatch(r"-?\d+", part.strip()) for part in parts):
         return 0, 0
@@ -311,30 +142,11 @@ def _bounds_center(bounds: str) -> tuple[int, int]:
     return (left + right) // 2, (top + bottom) // 2
 
 
-# ══════════════════════════════════════════════════════════════════════
-# 纯 adb 实现：只用 adb 命令，不依赖 uiautomator2 服务
-#
-# System.info("android")    -> AdbInfo
-# System.control("android") -> AndroidControl（本文件末尾，继承 AdbControl）
-# 本文件末尾的 AndroidControl 只额外补 u2 的两项能力：xpath 元素查找与非 ASCII 输入。
-# ══════════════════════════════════════════════════════════════════════
-
 _UIDUMP_PATH = "/data/local/tmp/window_dump.xml"
 _FAIL_DETAIL_LIMIT = 200
 
 
 def _failure_detail(stdout: bytes, stderr: bytes) -> str:
-    """把失败的 stdout / stderr 收成一行可读详情。
-
-    stderr 优先；为空时退回 stdout——设备侧的报错通常走 stdout，不退回会只剩「未知错误」。
-
-    Args:
-        stdout: 子进程标准输出字节。
-        stderr: 子进程标准错误字节。
-
-    Returns:
-        压成单行并截断的详情；两者都为空时返回「未知错误」。
-    """
     for raw in (stderr, stdout):
         text = " ".join((raw or b"").decode("utf-8", "replace").split())
         if not text:
@@ -346,118 +158,33 @@ def _failure_detail(stdout: bytes, stderr: bytes) -> str:
 
 
 def _quoted_input_text(text: str) -> str:
-    """把待输入文本变成可安全交给设备 shell 的单个参数。
-
-    空格先换成 `%s`（`input text` 的空格转义），再按 POSIX 规则加引号；
-    分号、管道、反引号、`$()`、单引号都会被留在引号内，不再被设备 shell 当成命令。
-
-    Args:
-        text: 用户或模型给出的原始文本。
-
-    Returns:
-        加好引号的字面量，可直接作为 `input text` 的最后一个参数。
-    """
     return shlex.quote(str(text or "").replace(" ", "%s"))
 
 
 class AdbChannel:
-    """adb 命令通道：只负责执行命令并取回结果，不做任何解析。"""
-
     def __init__(self, serial: str, executable: str | None = None) -> None:
-        """
-        绑定一台设备并解析 adb 可执行文件。
-
-        Args:
-            serial: 设备序列号（无线设备是 ``IP:port``）。
-            executable: adb 可执行文件路径；省略时用平台解析结果。
-        """
         self.serial = serial
         self.executable = executable or adb_binary()
 
     def shell(self, args: list[str], timeout: float = 30.0) -> str:
-        """跑一条 adb shell 命令，返回解码后的文本。
-
-        Args:
-            args: 命令及其参数，例如 ["wm", "size"]。
-            timeout: 命令超时秒数。
-
-        Returns:
-            标准输出文本。
-
-        Raises:
-            RuntimeError: 命令退出码非 0，或超过 timeout 秒。
-        """
         return self.shell_bytes(args, timeout).decode("utf-8", "replace")
 
     def shell_bytes(self, args: list[str], timeout: float = 30.0) -> bytes:
-        """跑一条 adb shell 命令，返回原始字节。
-
-        Args:
-            args: 命令及其参数。
-            timeout: 命令超时秒数。
-
-        Returns:
-            标准输出字节。
-
-        Raises:
-            RuntimeError: 命令退出码非 0，或超过 timeout 秒。
-        """
         return self._exec(["shell", *args], timeout)
 
     def exec_out(self, args: list[str], timeout: float = 30.0) -> bytes:
-        """跑一条 adb exec-out 命令，返回原始字节。
-
-        exec-out 不经 PTY，二进制安全；抓图必须用它而不是 shell。
-
-        Args:
-            args: 命令及其参数。
-            timeout: 命令超时秒数。
-
-        Returns:
-            标准输出字节。
-
-        Raises:
-            RuntimeError: 命令退出码非 0，或超过 timeout 秒。
-        """
         return self._exec(["exec-out", *args], timeout)
 
     def host(self, args: list[str], timeout: float = 10.0) -> str:
-        """跑一条不带 -s 的主机侧 adb 命令（如 devices），返回文本。
-
-        Args:
-            args: 命令及其参数。
-            timeout: 命令超时秒数。
-
-        Returns:
-            标准输出文本。
-
-        Raises:
-            RuntimeError: 命令退出码非 0，或超过 timeout 秒。
-        """
         return self._exec(args, timeout, with_serial=False).decode("utf-8", "replace")
 
     def _exec(self, args: list[str], timeout: float, with_serial: bool = True) -> bytes:
-        """执行 adb 进程并返回标准输出字节。
-
-        Args:
-            args: 命令及其参数。
-            timeout: 命令超时秒数。
-            with_serial: 是否带上 -s <serial>。
-
-        Returns:
-            标准输出字节。
-
-        Raises:
-            RuntimeError: 命令退出码非 0，或超过 timeout 秒。
-        """
         command = [self.executable]
         if with_serial:
             command += ["-s", self.serial]
         try:
             proc = subprocess.run(command + args, capture_output=True, timeout=timeout)
         except _SUBPROCESS_TIMEOUT as exc:
-            # 设备冻结 / 掉线时 subprocess 抛 TimeoutExpired；统一成 RuntimeError，
-            # 与四个公开方法声明的异常契约一致，调用方不必同时捕获两种类型。
             raise RuntimeError(f"adb {' '.join(args)} 超时（{timeout}s）") from exc
         if proc.returncode != 0:
             detail = _failure_detail(proc.stdout, proc.stderr)
@@ -466,17 +193,6 @@ class AdbChannel:
 
 
 def _parse_wm_size(text: str) -> tuple[int, int]:
-    """从 `wm size` 输出取分辨率，Override 优先于 Physical。
-
-    Args:
-        text: `wm size` 的原始输出。
-
-    Returns:
-        (宽, 高)。
-
-    Raises:
-        RuntimeError: 两种尺寸都解析不到。
-    """
     for pattern in (r"Override size:\s*(\d+)x(\d+)", r"Physical size:\s*(\d+)x(\d+)"):
         match = re.search(pattern, text or "")
         if match:
@@ -489,17 +205,6 @@ _RESUMED_PATTERN = re.compile(r"mResumedActivity.*?\s([\w.]+)/([\w.$]+)")
 
 
 def _parse_current_app(text: str) -> dict:
-    """从窗口/Activity 转储里取当前前台应用。
-
-    同时认两种写法：`mCurrentFocus=Window{… pkg/Act}`（window 段）与
-    `mResumedActivity: ActivityRecord{… pkg/Act}`（activity 段）。
-
-    Args:
-        text: `dumpsys window displays` 或 `dumpsys activity activities` 的原始输出。
-
-    Returns:
-        {"package": 包名, "activity": Activity}；取不到时两者为空串。
-    """
     for pattern in (_FOCUS_PATTERN, _RESUMED_PATTERN):
         match = pattern.search(text or "")
         if match:
@@ -508,15 +213,6 @@ def _parse_current_app(text: str) -> dict:
 
 
 def _parse_packages(text: str, query: str = "") -> list[str]:
-    """从 `pm list packages` 输出取包名，可按关键词过滤。
-
-    Args:
-        text: `pm list packages` 的原始输出。
-        query: 关键词（忽略大小写子串匹配），空串返回全部。
-
-    Returns:
-        包名列表。
-    """
     names = [
         line.split(":", 1)[1].strip()
         for line in (text or "").splitlines()
@@ -527,14 +223,6 @@ def _parse_packages(text: str, query: str = "") -> list[str]:
 
 
 def _parse_devices(text: str) -> list[str]:
-    """从 `adb devices` 输出取已连接序列号。
-
-    Args:
-        text: `adb devices` 的原始输出。
-
-    Returns:
-        状态为 device 的序列号列表。
-    """
     serials: list[str] = []
     for line in (text or "").splitlines()[1:]:
         parts = line.split()
@@ -544,163 +232,55 @@ def _parse_devices(text: str) -> list[str]:
 
 
 class AdbInfo(DeviceInfo):
-    """设备信息查询（纯 adb）。不需要 uiautomator2 服务。"""
-
     def __init__(self, serial: str) -> None:
-        """
-        绑定一台设备的信息查询通道。
-
-        Args:
-            serial: 设备序列号（无线设备是 ``IP:port``）。
-        """
         self.adb = AdbChannel(serial)
 
     def screen_size(self) -> tuple[int, int]:
-        """屏幕分辨率 (宽, 高)，Override 尺寸优先。
-
-        Returns:
-            (宽, 高)。
-
-        Raises:
-            RuntimeError: wm size 输出无法解析。
-        """
         return _parse_wm_size(self.adb.shell(["wm", "size"]))
 
     def current_app(self) -> dict:
-        """当前前台应用。
-
-        只读 `dumpsys window displays`（约 0.2s）；整份 `dumpsys window` 在本机要 5.5s，
-        而启停 App 时前台要轮询读取，用整份转储会把这个工具拖到十几秒。
-        displays 段取不到焦点窗口时，退回 `dumpsys activity activities`（同样约 0.2s）。
-
-        Returns:
-            {"package": 包名, "activity": Activity}；都取不到时两者为空串。
-        """
         app = _parse_current_app(self.adb.shell(["dumpsys", "window", "displays"]))
         if app["package"]:
             return app
         return _parse_current_app(self.adb.shell(["dumpsys", "activity", "activities"]))
 
     def packages(self, query: str = "") -> list[str]:
-        """已安装包名列表。
-
-        Args:
-            query: 关键词，空串返回全部。
-
-        Returns:
-            包名列表。
-        """
         return _parse_packages(self.adb.shell(["pm", "list", "packages"]), query)
 
     def connected_devices(self) -> list[str]:
-        """当前已连接的设备序列号。
-
-        Returns:
-            序列号列表。
-
-        Raises:
-            RuntimeError: adb devices 失败。
-        """
         return _parse_devices(self.adb.host(["devices"]))
 
     def hierarchy_xml(self) -> str:
-        """页面层级原始 XML（系统 uiautomator dump，不需要 u2 服务）。
-
-        Returns:
-            XML 文本。
-
-        Raises:
-            RuntimeError: dump 或读取失败。
-        """
         self.adb.shell(["uiautomator", "dump", _UIDUMP_PATH])
         return self.adb.shell(["cat", _UIDUMP_PATH])
 
 
 class AdbControl(DeviceControl):
-    """设备控制（纯 adb）。只覆盖 adb 能做的动作，xpath 相关方法不在本类。"""
-
-    # 本实现的截图是 PNG（无损、原尺寸），由 Screenshot.save 读取该属性决定 media_type。
     screenshot_media_type = "image/png"
 
     def __init__(self, serial: str) -> None:
-        """
-        绑定一台设备的控制通道与信息查询通道。
-
-        Args:
-            serial: 设备序列号（无线设备是 ``IP:port``）。
-        """
         self.log = device_log
         self.adb = AdbChannel(serial)
         self.info = AdbInfo(serial)
 
-    # ── 点击 ──
     def click_coord(self, x: int, y: int) -> None:
-        """按设备像素坐标点击。
-
-        Args:
-            x: 横坐标像素。
-            y: 纵坐标像素。
-        """
         self.adb.shell(["input", "tap", str(int(x)), str(int(y))])
 
     def click_img(self, nx: float, ny: float) -> tuple[int, int]:
-        """按归一化坐标点击。
-
-        Args:
-            nx: 横向相对位置 0~1。
-            ny: 纵向相对位置 0~1。
-
-        Returns:
-            实际点击的像素坐标 (x, y)。
-
-        Raises:
-            RuntimeError: 屏幕尺寸无效。
-        """
         x, y = self._to_pixel(nx, ny)
         self.click_coord(x, y)
         return x, y
 
-    # ── 长按 ──
     def long_click_coord(self, x: int, y: int, duration: float = 0.8) -> None:
-        """按像素坐标长按（原地 swipe 模拟）。
-
-        Args:
-            x: 横坐标像素。
-            y: 纵坐标像素。
-            duration: 按住时长秒数。
-        """
         ms = str(int(float(duration) * 1000))
         self.adb.shell(["input", "swipe", str(int(x)), str(int(y)), str(int(x)), str(int(y)), ms])
 
     def long_click_img(self, nx: float, ny: float, duration: float = 0.8) -> tuple[int, int]:
-        """按归一化坐标长按。
-
-        Args:
-            nx: 横向相对位置 0~1。
-            ny: 纵向相对位置 0~1。
-            duration: 按住时长秒数。
-
-        Returns:
-            实际按下的像素坐标 (x, y)。
-
-        Raises:
-            RuntimeError: 屏幕尺寸无效。
-        """
         x, y = self._to_pixel(nx, ny)
         self.long_click_coord(x, y, duration=duration)
         return x, y
 
-    # ── 滑动 / 拖动 ──
     def swipe(self, direction: str = "up", distance: int = 500) -> None:
-        """按方向滑动。
-
-        Args:
-            direction: up / down / left / right。
-            distance: 滑动距离像素。
-
-        Raises:
-            RuntimeError: 屏幕尺寸无效。
-        """
         width, height = self.info.screen_size()
         cx, cy = width // 2, height // 2
         span = int(distance or 500)
@@ -713,49 +293,16 @@ class AdbControl(DeviceControl):
         self.swipe_coord(*moves.get(str(direction or "up"), moves["up"]))
 
     def swipe_coord(self, x1: int, y1: int, x2: int, y2: int, duration: float = 0.5) -> None:
-        """按像素起终点滑动。
-
-        Args:
-            x1: 起点横坐标像素。
-            y1: 起点纵坐标像素。
-            x2: 终点横坐标像素。
-            y2: 终点纵坐标像素。
-            duration: 滑动时长秒数。
-        """
         points = [str(int(v)) for v in (x1, y1, x2, y2)]
         ms = str(int(float(duration) * 1000))
         self.adb.shell(["input", "swipe", *points, ms])
 
     def drag(self, nx1: float, ny1: float, nx2: float, ny2: float) -> None:
-        """按归一化起终点拖动（长按后拖动，不是滑动）。
-
-        Args:
-            nx1: 起点横向 0~1。
-            ny1: 起点纵向 0~1。
-            nx2: 终点横向 0~1。
-            ny2: 终点纵向 0~1。
-
-        Raises:
-            RuntimeError: 屏幕尺寸无效。
-        """
         x1, y1 = self._to_pixel(nx1, ny1)
         x2, y2 = self._to_pixel(nx2, ny2)
         self.adb.shell(["input", "draganddrop", str(x1), str(y1), str(x2), str(y2), "1000"])
 
-    # ── 输入 / 按键 ──
     def input_text(self, text: str, clear_first: bool = True) -> None:
-        """向当前输入框输入文本（仅 ASCII）。
-
-        文本会先按 POSIX 规则加引号再交给设备 shell：`adb shell` 之后的参数由设备上的
-        `/system/bin/sh` 重新解析，只替换空格挡不住分号、管道与反引号。
-
-        Args:
-            text: 要输入的文本。
-            clear_first: 输入前是否清空。
-
-        Raises:
-            ValueError: 文本含非 ASCII 字符（adb input text 的硬限制）。
-        """
         value = str(text or "")
         if any(ord(char) > 0x7F for char in value):
             raise ValueError("adb input text 只支持 ASCII；中文需改用 IME 方案")
@@ -765,37 +312,15 @@ class AdbControl(DeviceControl):
         self.adb.shell(["input", "text", _quoted_input_text(value)])
 
     def press_key(self, key: str = "back") -> None:
-        """按系统按键。
-
-        Args:
-            key: 按键名，如 back / home / enter。
-        """
         self.adb.shell(["input", "keyevent", str(key or "back").upper()])
 
-    # ── 截图 / 应用 ──
     def screenshot_bytes(self) -> bytes:
-        """截屏并返回原始 PNG 字节（无损、原尺寸）。
-
-        Returns:
-            PNG 字节。
-
-        Raises:
-            RuntimeError: 截屏失败或返回的不是 PNG。
-        """
         png = self.adb.exec_out(["screencap", "-p"])
         if not png.startswith(b"\x89PNG"):
             raise RuntimeError("screencap 返回的不是 PNG")
         return png
 
     def launcher_component(self, package: str) -> str:
-        """解析包的 LAUNCHER 组件。
-
-        Args:
-            package: 包名。
-
-        Returns:
-            形如 `com.govee.home/.HomeActivity` 的组件名；解析不到时返回空串。
-        """
         try:
             output = self.adb.shell(
                 [
@@ -817,14 +342,6 @@ class AdbControl(DeviceControl):
         return ""
 
     def is_installed(self, package: str) -> bool:
-        """包是否已安装。
-
-        Args:
-            package: 包名。
-
-        Returns:
-            已安装返回 True。
-        """
         try:
             output = self.adb.shell(["pm", "list", "packages", str(package)])
         except RuntimeError:
@@ -833,14 +350,6 @@ class AdbControl(DeviceControl):
         return any(line.strip() == expected for line in str(output or "").splitlines())
 
     def _install_hint(self, package: str) -> str:
-        """列出设备上名字相近的已安装包，便于发现包名写错。
-
-        Args:
-            package: 调用方给的包名。
-
-        Returns:
-            形如「；设备上包含 'govee' 的包：com.govee.home, …」的提示；没有相近包时为空串。
-        """
         segments = [part for part in str(package or "").split(".") if part]
         keyword = max(segments, key=len) if segments else ""
         if not keyword:
@@ -857,14 +366,6 @@ class AdbControl(DeviceControl):
         return f"；设备上包含 {keyword!r} 的包：{', '.join(near[:5])}" if near else ""
 
     def app_start(self, package: str) -> None:
-        """启动应用：优先按 LAUNCHER 组件用 am start，解析不到再退回 monkey。
-
-        Args:
-            package: 包名。
-
-        Raises:
-            RuntimeError: 包名未安装，或没有可用的启动入口。
-        """
         pkg = str(package or "").strip()
         component = self.launcher_component(pkg)
         if component:
@@ -872,7 +373,7 @@ class AdbControl(DeviceControl):
                 self.adb.shell(["am", "start", "-W", "-n", component])
                 return
             except RuntimeError:
-                pass  # am start 不认组件时退回 monkey 兜底
+                pass  # silent-except
         try:
             self.adb.shell(["monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"])
             return
@@ -883,45 +384,15 @@ class AdbControl(DeviceControl):
             ) from exc
 
     def app_stop(self, package: str) -> None:
-        """停止应用。
-
-        Args:
-            package: 包名。
-
-        Raises:
-            RuntimeError: 包名未安装。am force-stop 对不存在的包也会返回成功，
-                不先校验会让调用方误以为应用已关闭。
-        """
         pkg = str(package or "").strip()
         if not self.is_installed(pkg):
             raise RuntimeError(f"停止应用失败：包名 {pkg!r} 未安装{self._install_hint(pkg)}")
         self.adb.shell(["am", "force-stop", pkg])
 
     def screen_size(self) -> tuple[int, int]:
-        """屏幕分辨率，转发给 AdbInfo。
-
-        Returns:
-            (宽, 高)。
-
-        Raises:
-            RuntimeError: wm size 输出无法解析。
-        """
         return self.info.screen_size()
 
-    # ── 内部辅助 ──
     def _to_pixel(self, nx: float, ny: float) -> tuple[int, int]:
-        """归一化坐标换算成像素坐标，并夹在屏幕范围内。
-
-        Args:
-            nx: 横向相对位置 0~1。
-            ny: 纵向相对位置 0~1。
-
-        Returns:
-            (x, y) 像素坐标。
-
-        Raises:
-            RuntimeError: 屏幕尺寸无效。
-        """
         width, height = self.info.screen_size()
         if width <= 0 or height <= 0:
             raise RuntimeError("屏幕尺寸无效，无法换算归一化坐标")
@@ -931,31 +402,12 @@ class AdbControl(DeviceControl):
 
 
 class AndroidControl(AdbControl):
-    """设备控制：动作全部走纯 adb；u2 只在 xpath 查找与非 ASCII 输入时按需连接。"""
-
     def __init__(self, serial: str) -> None:
-        """
-        建立纯 adb 控制通道，u2 会话留给首次 xpath / 非 ASCII 输入时再连。
-
-        Args:
-            serial: 设备序列号（无线设备是 ``IP:port``）。
-        """
         super().__init__(serial)
-        # 惰性 u2 会话：截图 / 点击 / 滑动 / dump 等纯 adb 动作永远不碰它
         self._u2_device = None
 
     @property
     def device(self):
-        """uiautomator2 会话：首次访问才连接，之后复用同一实例。
-
-        连接前把 u2 的请求超时收紧到 `U2_OP_TIMEOUT`，避免设备冻结时一次 jsonrpc 挂满 5 分钟。
-
-        Returns:
-            已连接的 u2 设备对象。
-
-        Raises:
-            RuntimeError: u2 服务不可用或设备掉线，连接失败。
-        """
         if self._u2_device is None:
             _tune_u2_http_timeout()
             try:
@@ -965,20 +417,6 @@ class AndroidControl(AdbControl):
         return self._u2_device
 
     def find_xpath(self, xpath: str) -> list[dict]:
-        """按传入的 xpath 查找元素，返回元素文本与中心点坐标；查不到返回空列表。
-
-        Args:
-            xpath: 元素 xpath 表达式。
-
-        Returns:
-            [{"text", "x", "y"}]；text 取元素文本，没有则为空串；
-            x / y 是元素 bounds 的中心点，可直接交给 click_coord 点击，
-            bounds 解析失败时为 (0, 0)。
-
-        Raises:
-            RuntimeError: uiautomator2 连接失败（不当作「查不到元素」）。
-        """
-        # 连接失败在这里抛：不能被下面「查询本身失败」的兜底吞成空列表
         device = self.device
         try:
             elements = device.xpath(str(xpath)).all()
@@ -993,18 +431,6 @@ class AndroidControl(AdbControl):
         return found
 
     def input_text(self, text: str, clear_first: bool = True) -> None:
-        """向当前输入框输入文本；走 u2 的 send_keys，支持中文等非 ASCII。
-
-        send_keys 失败时退回 `input text`，文本仍按 POSIX 规则加引号后再交给设备 shell。
-
-        Args:
-            text: 要输入的文本。
-            clear_first: 输入前是否清空输入框。
-
-        Raises:
-            RuntimeError: uiautomator2 连接失败。
-        """
-        # 连接失败在这里抛：不能落进下面的输入兜底，否则错误会被掩盖
         device = self.device
         if clear_first:
             try:

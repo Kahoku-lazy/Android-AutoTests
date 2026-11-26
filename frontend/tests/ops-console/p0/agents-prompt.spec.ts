@@ -1,11 +1,3 @@
-/**
- * [P0] 必测 — Agent 配置页「系统提示词」列不再被截断（缺陷：长 Markdown 显示不全）
- *
- * 目录：tests/ops-console/p0/
- * 断言：① 该列关掉 EP 溢出 tooltip（否则整段原文会被塞进超出视口的深色浮层）；
- * ② 全文预览组件原样渲染整份提示词，并给出字数/行数；
- * ③ 「复制全文」写入的是完整原文。
- */
 import { mount } from "@vue/test-utils"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import OpsPromptPreview from "@/modules/ops-console/components/OpsPromptPreview.vue"

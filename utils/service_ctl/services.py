@@ -1,13 +1,3 @@
-"""
-模块功能：➡️ 按注册表启停服务：拉起并等待就绪、停机排空、空闲连接清理与超时名单 🏁
-Python 调试：➡️ python -m utils.service_ctl.services 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. tests/arch/unit/test_platform_services.py: 启停与排空
-2. tests/task/unit/test_task_sweep.py: 停机超时名单与启动清扫
-🏁
-"""
-
 from __future__ import annotations
 
 import json
@@ -18,13 +8,11 @@ from . import db
 from .config import ROOT, ServiceSpec, stop_drain_timeout
 from .proc import kill_port, make_env, spawn, wait_http
 
-# 停机等满后留下的任务编号：后端启动清扫据此把任务标成 stop_timeout
 STOP_TIMEOUT_MARK = ROOT / "temps" / "stop-timeout-tasks.json"
 DRAIN_REPORT_SECONDS = 10
 
 
 def start_service(spec: ServiceSpec) -> bool:
-    """拉起一个服务并等待就绪；就绪返回 True，超时给出日志位置并返回 False。"""
     print(f"[{spec.label}] Starting {spec.runtime} on port {spec.port}...")
     spawn(list(spec.command), spec.log, cwd=spec.cwd, env=make_env(spec.extra_env))
     if wait_http(f"http://127.0.0.1:{spec.port}/", spec.ready_timeout):
@@ -35,7 +23,6 @@ def start_service(spec: ServiceSpec) -> bool:
 
 
 def stop_service(spec: ServiceSpec) -> None:
-    """停一个服务：需要排空的服务先等任务归零，再杀端口。"""
     print(f"[{spec.label}] Stopping port {spec.port}...")
     if spec.drain:
         drain_backend(spec.port)
@@ -44,7 +31,6 @@ def stop_service(spec: ServiceSpec) -> None:
 
 
 def drain_backend(port: int) -> None:
-    """停机前停止派发并等待 running 归零；后端不可达时直接返回。"""
     base = f"http://127.0.0.1:{port}/api/system/drain/"
     try:
         request = urllib.request.Request(base, method="POST", data=b"")
@@ -80,7 +66,6 @@ def drain_backend(port: int) -> None:
 
 
 def running_ids_from_drain(base: str) -> list[int]:
-    """再问一次仍在跑的编号。后端不可达时返回空列表，不阻止停机。"""
     try:
         with urllib.request.urlopen(base, timeout=3) as resp:
             data = json.loads(resp.read().decode("utf-8")).get("data") or {}
@@ -97,7 +82,6 @@ def running_ids_from_drain(base: str) -> list[int]:
 
 
 def write_stop_timeout_mark(ids: list[int]) -> None:
-    """停机等满后留下编号。写失败只打印，不阻止杀进程。"""
     if not ids:
         return
     try:

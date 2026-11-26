@@ -1,11 +1,9 @@
 <script setup lang="ts">
-/** 用户表首列身份单元：首字母头像 + 账号主行 + 邮箱副行（邮箱不再单独占列）。 */
 import { computed } from "vue"
 import type { OpsUser } from "../types"
 
 const props = defineProps<{ user: OpsUser }>()
 
-/** 头像文字取账号首字母；空账号兜底一个问号。 */
 const initial = computed(() => (props.user.username || "?").slice(0, 1).toUpperCase())
 </script>
 
@@ -20,7 +18,6 @@ const initial = computed(() => (props.user.username || "?").slice(0, 1).toUpperC
 </template>
 
 <style scoped>
-/* 首列身份单元：结构随样式下沉到本组件，与设备 / BUG 表同一口径 */
 .ops-identity-cell {
   display: flex;
   align-items: center;

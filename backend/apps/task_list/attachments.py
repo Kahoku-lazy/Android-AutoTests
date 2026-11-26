@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 任务附件解析 — 配置 YAML 原样保留，文档转为 Markdown 🏁
-Python 调试：➡️ python -m backend.apps.task_list.attachments 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（经 task_list 的功能用例间接覆盖，未直接 import 本模块）
-🏁
-"""
-
 from __future__ import annotations
 
 import uuid
@@ -23,7 +14,7 @@ MAX_CASE_DOCUMENTS = 5
 
 
 class AttachmentError(ValueError):
-    """用户可见的任务附件错误。"""
+    pass
 
 
 def _suffix(filename: str) -> str:
@@ -44,7 +35,6 @@ def _check_size(content: bytes) -> None:
 
 
 def _fallback_docx(path: str) -> str:
-    """python-docx 兜底解析：保留段落、标题级别与表格。"""
     from docx import Document
 
     document = Document(path)
@@ -79,7 +69,6 @@ def _fallback_docx(path: str) -> str:
 
 
 def _fallback_pdf(path: str) -> str:
-    """PyMuPDF 兜底解析：按页提取可复制文本。"""
     import fitz
 
     document = fitz.open(path)
@@ -92,7 +81,6 @@ def _fallback_pdf(path: str) -> str:
 
 
 def _fallback_convert(path: str) -> str:
-    """按扩展名走本地解析；没有可用兜底时返回空串。"""
     ext = _suffix(Path(path).name)
     if ext == ".docx":
         return _fallback_docx(path)
@@ -102,17 +90,6 @@ def _fallback_convert(path: str) -> str:
 
 
 def convert_with_markitdown(path: str) -> str:
-    """把 Word / PDF 转成 Markdown；MarkItDown 缺可选依赖时自动走本地兜底。
-
-    Args:
-        path: 临时文件路径。
-
-    Returns:
-        解析出的 Markdown 文本。
-
-    Raises:
-        AttachmentError: MarkItDown 与本地兜底都无法解析，或没有可用文本。
-    """
     from markitdown import MarkItDown
 
     markitdown_error: Exception | None = None
@@ -138,7 +115,6 @@ def convert_with_markitdown(path: str) -> str:
 
 
 def parse_document_bytes(filename: str, content: bytes) -> tuple[str, str]:
-    """文档附件 → (markdown, 安全文件名)。失败抛 AttachmentError。"""
     _check_size(content)
     base = _safe_name(filename)
     ext = _suffix(base)
@@ -169,7 +145,6 @@ def parse_document_bytes(filename: str, content: bytes) -> tuple[str, str]:
 
 
 def parse_task_attachment_bytes(filename: str, content: bytes) -> tuple[str, str]:
-    """兼容旧调用名，行为与 parse_document_bytes 相同。"""
     return parse_document_bytes(filename, content)
 
 
@@ -189,11 +164,6 @@ def _upload_pair(item) -> tuple[str, bytes]:
 
 
 def collect_task_files(configs: list, documents: list) -> list[PreparedUpload]:
-    """检查一次提交的配置与文档。失败抛 AttachmentError。不写库、不落盘。
-
-    配置附件不再按用例 YAML 深度校验（用例 YAML 模型已下线，见 retire-engines-agents）：
-    只保留体积、扩展名与编码检查，文件作为任务记录随任务保存。
-    """
     if not configs:
         raise AttachmentError("需要一份 YAML 配置")
     if len(configs) != 1:
@@ -218,7 +188,6 @@ def collect_task_files(configs: list, documents: list) -> list[PreparedUpload]:
 
 
 def store_flat_upload(filename: str, content: bytes) -> str:
-    """把原件写成上传目录第一层的文件，返回相对文件名。"""
     from backend.apps.task_list.upload_cleanup import ensure_upload_dir
 
     root = ensure_upload_dir()
@@ -228,16 +197,6 @@ def store_flat_upload(filename: str, content: bytes) -> str:
 
 
 def validate_milestone_yaml(text: str) -> None:
-    """确认正文是里程碑 YAML，不是用例格式。
-
-    角色、模型、工具字段不读取。缺字段或用例格式在交给流程加载前拒绝。
-
-    Args:
-        text: 上传的 YAML 正文。
-
-    Raises:
-        AttachmentError: 不是合法 YAML、缺必填字段，或用了用例格式。
-    """
     import yaml
 
     try:
@@ -272,17 +231,6 @@ def validate_milestone_yaml(text: str) -> None:
 
 
 def collect_milestone_file(configs: list) -> PreparedUpload:
-    """检查名片绑定 SOP 的一份里程碑 YAML。不写库、不落盘。
-
-    Args:
-        configs: 上传文件列表，必须正好一份。
-
-    Returns:
-        解析后的配置附件。
-
-    Raises:
-        AttachmentError: 份数、扩展名、编码或里程碑字段不合法。
-    """
     if not configs:
         raise AttachmentError("需要一份 YAML 配置")
     if len(configs) != 1:
@@ -300,17 +248,6 @@ def collect_milestone_file(configs: list) -> PreparedUpload:
 
 
 def collect_document_files(documents: list) -> list[PreparedUpload]:
-    """检查用例编写任务上传的 PRD/Word 文档。失败抛 AttachmentError，不写库、不落盘。
-
-    Args:
-        documents: 上传文件列表（Django UploadedFile 或 (文件名, 字节) 二元组）。
-
-    Returns:
-        解析后的文档列表，kind 固定为 document。
-
-    Raises:
-        AttachmentError: 没有文档、文档数量超限，或某份文档解析失败。
-    """
     if not documents:
         raise AttachmentError("请上传 PRD 或 Word 文档")
     if len(documents) > MAX_CASE_DOCUMENTS:

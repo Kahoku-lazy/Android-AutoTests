@@ -1,6 +1,4 @@
-﻿/* SheetTagPicker 私有样式：标签色板按「优先级 / 系统 / 类型 / 业务」四组编码登记一次 */
-
-.sheet-tag-wrap {
+﻿.sheet-tag-wrap {
   position: relative;
   display: inline-flex;
   padding: var(--app-space-sm) 10px;
@@ -37,7 +35,6 @@
   opacity: 0.75;
 }
 
-/* 优先级 */
 .sheet-tag--pri-p0 {
   background: var(--color-red-95);
   color: var(--color-red-49);
@@ -53,7 +50,6 @@
   color: var(--color-blue-27);
 }
 
-/* 系统 */
 .sheet-tag--sys-android {
   background: var(--color-lime-94);
   color: var(--color-green-33);
@@ -74,7 +70,6 @@
   color: var(--color-yellow-27);
 }
 
-/* 类型 */
 .sheet-tag--ct-func {
   background: var(--color-blue-89);
   color: var(--color-blue-27);
@@ -85,7 +80,6 @@
   color: var(--color-teal-30);
 }
 
-/* 业务 */
 .sheet-tag--biz-appliance {
   background: var(--color-lime-94);
   color: var(--color-green-33);

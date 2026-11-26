@@ -7,7 +7,6 @@ paths:
   /api/ai/agent-reports/{run}/{name}/:
     get:
       operationId: ai_agent_reports_retrieve
-      description: GET /api/ai/agent-reports/{run}/{name}/ — 只读平台报告正文。
       parameters:
       - in: path
         name: name
@@ -34,7 +33,6 @@ paths:
   /api/ai/assistants/:
     get:
       operationId: ai_assistants_list
-      description: 助手名片 — /api/ai/assistants/ 与 /api/ai/assistants/{assistant_id}/。
       tags:
       - ai
       security:
@@ -50,7 +48,6 @@ paths:
           description: ''
     post:
       operationId: ai_assistants_create
-      description: 助手名片 — /api/ai/assistants/ 与 /api/ai/assistants/{assistant_id}/。
       tags:
       - ai
       requestBody:
@@ -76,7 +73,6 @@ paths:
   /api/ai/assistants/{assistant_id}/:
     get:
       operationId: ai_assistants_retrieve
-      description: 助手名片 — /api/ai/assistants/ 与 /api/ai/assistants/{assistant_id}/。
       parameters:
       - in: path
         name: assistant_id
@@ -96,7 +92,6 @@ paths:
           description: ''
     patch:
       operationId: ai_assistants_partial_update
-      description: 助手名片 — /api/ai/assistants/ 与 /api/ai/assistants/{assistant_id}/。
       parameters:
       - in: path
         name: assistant_id
@@ -127,7 +122,6 @@ paths:
           description: ''
     delete:
       operationId: ai_assistants_destroy
-      description: 助手名片 — /api/ai/assistants/ 与 /api/ai/assistants/{assistant_id}/。
       parameters:
       - in: path
         name: assistant_id
@@ -144,7 +138,6 @@ paths:
   /api/ai/assistants/{assistant_id}/avatar/:
     get:
       operationId: ai_assistants_avatar_retrieve
-      description: GET /api/ai/assistants/{assistant_id}/avatar/ — 只返回压缩后的头像正文。
       parameters:
       - in: path
         name: assistant_id
@@ -166,7 +159,6 @@ paths:
   /api/ai/assistants/{assistant_id}/publish/:
     post:
       operationId: ai_assistants_publish_create
-      description: POST /api/ai/assistants/{assistant_id}/publish/ — 发布当前草稿。
       parameters:
       - in: path
         name: assistant_id
@@ -188,7 +180,6 @@ paths:
   /api/ai/assistants/{assistant_id}/threads/:
     get:
       operationId: ai_assistant_threads_list
-      description: 测试对话栏：建栏、列表、发送、轮询、取消。发送只落库并排队，不在请求里跑模型。
       parameters:
       - in: path
         name: assistant_id
@@ -209,7 +200,6 @@ paths:
           description: ''
     post:
       operationId: ai_assistant_threads_create
-      description: 测试对话栏：建栏、列表、发送、轮询、取消。发送只落库并排队，不在请求里跑模型。
       parameters:
       - in: path
         name: assistant_id
@@ -231,7 +221,6 @@ paths:
   /api/ai/assistants/threads/{thread_id}/:
     get:
       operationId: ai_assistant_thread_detail
-      description: GET 轮询消息；POST 发送；PATCH 重命名；DELETE 取消。
       parameters:
       - in: path
         name: thread_id
@@ -252,7 +241,6 @@ paths:
           description: ''
     post:
       operationId: ai_assistant_thread_send
-      description: GET 轮询消息；POST 发送；PATCH 重命名；DELETE 取消。
       parameters:
       - in: path
         name: thread_id
@@ -287,7 +275,6 @@ paths:
           description: ''
     patch:
       operationId: ai_assistants_threads_partial_update
-      description: GET 轮询消息；POST 发送；PATCH 重命名；DELETE 取消。
       parameters:
       - in: path
         name: thread_id
@@ -322,7 +309,6 @@ paths:
           description: ''
     delete:
       operationId: ai_assistants_threads_destroy
-      description: GET 轮询消息；POST 发送；PATCH 重命名；DELETE 取消。
       parameters:
       - in: path
         name: thread_id
@@ -339,10 +325,6 @@ paths:
   /api/ai/assistants/threads/{thread_id}/delete/:
     post:
       operationId: ai_assistants_threads_delete_create
-      description: |-
-        POST /api/ai/assistants/threads/{thread_id}/delete/ — 删除对话栏与其消息。
-
-        进行中的轮次先请求取消，再删记录；后台线程写回时发现栏已不存在会跳过。
       parameters:
       - in: path
         name: thread_id
@@ -364,7 +346,6 @@ paths:
   /api/ai/assistants/threads/{thread_id}/logs/:
     get:
       operationId: ai_assistant_thread_logs_list
-      description: 列出该栏日志，或用 ticket 打开一份 HTML。report_id 为空时只列目录。
       parameters:
       - in: path
         name: thread_id
@@ -385,7 +366,6 @@ paths:
           description: ''
     post:
       operationId: ai_assistant_thread_log_ticket
-      description: 列出该栏日志，或用 ticket 打开一份 HTML。report_id 为空时只列目录。
       parameters:
       - in: path
         name: thread_id
@@ -407,7 +387,6 @@ paths:
   /api/ai/assistants/threads/{thread_id}/logs/{report_id}/:
     get:
       operationId: ai_assistant_thread_log_file
-      description: 用一次性 ticket 打开一份已写完的 HTML 日志。只挂带 report_id 的路径。
       parameters:
       - in: path
         name: report_id
@@ -434,7 +413,6 @@ paths:
           description: ''
     post:
       operationId: ai_assistants_threads_logs_create
-      description: 用一次性 ticket 打开一份已写完的 HTML 日志。只挂带 report_id 的路径。
       parameters:
       - in: path
         name: report_id
@@ -462,7 +440,6 @@ paths:
   /api/ai/evals/run/:
     post:
       operationId: ai_evals_run_create
-      description: POST /api/ai/evals/run/ — 作者选择一条助手或工作流后自测。
       tags:
       - ai
       requestBody:
@@ -492,7 +469,6 @@ paths:
   /api/ai/evals/runs/{run_id}/:
     get:
       operationId: ai_evals_runs_retrieve
-      description: GET /api/ai/evals/runs/{run_id}/ — 一次评测的进度与逐条过程。
       parameters:
       - in: path
         name: run_id
@@ -514,7 +490,6 @@ paths:
   /api/ai/model-configs/:
     get:
       operationId: ai_model_configs_list
-      description: 模型配置 — /api/ai/model-configs/。登录可读，运营可写。
       tags:
       - ai
       security:
@@ -530,7 +505,6 @@ paths:
           description: ''
     post:
       operationId: ai_model_configs_create
-      description: 模型配置 — /api/ai/model-configs/。登录可读，运营可写。
       tags:
       - ai
       requestBody:
@@ -557,7 +531,6 @@ paths:
   /api/ai/model-configs/{id}/:
     get:
       operationId: ai_model_configs_retrieve
-      description: 模型配置 — /api/ai/model-configs/。登录可读，运营可写。
       parameters:
       - in: path
         name: id
@@ -578,7 +551,6 @@ paths:
           description: ''
     patch:
       operationId: ai_model_configs_partial_update
-      description: 模型配置 — /api/ai/model-configs/。登录可读，运营可写。
       parameters:
       - in: path
         name: id
@@ -610,7 +582,6 @@ paths:
           description: ''
     delete:
       operationId: ai_model_configs_destroy
-      description: 模型配置 — /api/ai/model-configs/。登录可读，运营可写。
       parameters:
       - in: path
         name: id
@@ -628,7 +599,6 @@ paths:
   /api/ai/model-configs/discover/:
     post:
       operationId: ai_model_configs_discover_create
-      description: POST /api/ai/model-configs/discover/ — 向厂商查询模型名，不写库。
       tags:
       - ai
       requestBody:
@@ -656,7 +626,6 @@ paths:
   /api/ai/roles/:
     get:
       operationId: ai_roles_list
-      description: 角色增删改查 — /api/ai/roles/ 与 /api/ai/roles/{role_id}/。
       tags:
       - ai
       security:
@@ -672,7 +641,6 @@ paths:
           description: ''
     post:
       operationId: ai_roles_create
-      description: 角色增删改查 — /api/ai/roles/ 与 /api/ai/roles/{role_id}/。
       tags:
       - ai
       requestBody:
@@ -698,7 +666,6 @@ paths:
   /api/ai/roles/{role_id}/:
     get:
       operationId: ai_roles_retrieve
-      description: 角色增删改查 — /api/ai/roles/ 与 /api/ai/roles/{role_id}/。
       parameters:
       - in: path
         name: role_id
@@ -718,7 +685,6 @@ paths:
           description: ''
     patch:
       operationId: ai_roles_partial_update
-      description: 角色增删改查 — /api/ai/roles/ 与 /api/ai/roles/{role_id}/。
       parameters:
       - in: path
         name: role_id
@@ -749,7 +715,6 @@ paths:
           description: ''
     delete:
       operationId: ai_roles_destroy
-      description: 角色增删改查 — /api/ai/roles/ 与 /api/ai/roles/{role_id}/。
       parameters:
       - in: path
         name: role_id
@@ -766,7 +731,6 @@ paths:
   /api/ai/sop-workflows/:
     get:
       operationId: ai_sop_workflows_list
-      description: GET/POST /api/ai/sop-workflows/ — 列出与创建 SOP 工作流。
       tags:
       - ai
       security:
@@ -782,7 +746,6 @@ paths:
           description: ''
     post:
       operationId: ai_sop_workflows_create
-      description: GET/POST /api/ai/sop-workflows/ — 列出与创建 SOP 工作流。
       tags:
       - ai
       requestBody:
@@ -809,11 +772,6 @@ paths:
   /api/ai/sop-workflows/{workflow_id}/:
     patch:
       operationId: ai_sop_workflows_partial_update
-      description: |-
-        PATCH/DELETE /api/ai/sop-workflows/{workflow_id}/ — 编辑或删除一条工作流。
-
-        编辑与创建共用同一份入参与校验；删除只删工作流记录，
-        名片、Agent 配置与历史任务都不受影响。
       parameters:
       - in: path
         name: workflow_id
@@ -844,11 +802,6 @@ paths:
           description: ''
     delete:
       operationId: ai_sop_workflows_destroy
-      description: |-
-        PATCH/DELETE /api/ai/sop-workflows/{workflow_id}/ — 编辑或删除一条工作流。
-
-        编辑与创建共用同一份入参与校验；删除只删工作流记录，
-        名片、Agent 配置与历史任务都不受影响。
       parameters:
       - in: path
         name: workflow_id
@@ -865,7 +818,6 @@ paths:
   /api/ai/sop-workflows/{workflow_id}/publish/:
     post:
       operationId: ai_sop_workflows_publish_create
-      description: POST /api/ai/sop-workflows/{workflow_id}/publish/ — 发布当前草稿。
       parameters:
       - in: path
         name: workflow_id
@@ -887,7 +839,6 @@ paths:
   /api/ai/tool-catalog/:
     get:
       operationId: ai_tool_catalog_retrieve
-      description: GET /api/ai/tool-catalog/ — 只读工具目录，不含实现。
       tags:
       - ai
       security:
@@ -903,7 +854,6 @@ paths:
   /api/auth/login/:
     post:
       operationId: auth_login_create
-      description: POST /api/auth/login — 账号密码正确则发本次会话。
       tags:
       - auth
       requestBody:
@@ -930,7 +880,6 @@ paths:
   /api/auth/logout/:
     post:
       operationId: auth_logout_create
-      description: POST /api/auth/logout — 作废这次登录。服务暂不可用时拒绝登出。
       tags:
       - auth
       security:
@@ -946,7 +895,6 @@ paths:
   /api/auth/me/:
     get:
       operationId: auth_me_retrieve
-      description: GET /api/auth/me — 当前登录用户，含是否管理员。
       tags:
       - auth
       security:
@@ -962,7 +910,6 @@ paths:
   /api/auth/refresh/:
     post:
       operationId: auth_refresh_create
-      description: POST /api/auth/refresh — 用续期凭证换新的访问凭证，仍属同一次登录。
       tags:
       - auth
       requestBody:
@@ -989,7 +936,6 @@ paths:
   /api/auth/register/:
     post:
       operationId: auth_register_create
-      description: POST /api/auth/register — 创建用户并直接登录。用户名已有则拒绝。
       tags:
       - auth
       requestBody:
@@ -1016,7 +962,6 @@ paths:
   /api/bugs/:
     get:
       operationId: bug_ticket_list
-      description: GET /api/bugs/ — visible BUG tickets with summary counters.
       parameters:
       - in: query
         name: category
@@ -1045,7 +990,6 @@ paths:
   /api/bugs/{bug_id}/:
     get:
       operationId: bug_ticket_detail
-      description: GET / PATCH /api/bugs/{id}/ — full detail or processing status.
       parameters:
       - in: path
         name: bug_id
@@ -1066,7 +1010,6 @@ paths:
           description: ''
     patch:
       operationId: bug_ticket_update_status
-      description: GET / PATCH /api/bugs/{id}/ — full detail or processing status.
       parameters:
       - in: path
         name: bug_id
@@ -1099,7 +1042,6 @@ paths:
   /api/bugs/sync/:
     post:
       operationId: bug_ticket_sync
-      description: POST /api/bugs/sync/ — backfill BUG tickets from visible task errors.
       tags:
       - bugs
       security:
@@ -1115,7 +1057,6 @@ paths:
   /api/cases/projects/:
     get:
       operationId: cases_projects_list
-      description: 项目列表、项目表、导入与个人视图。
       tags:
       - cases
       security:
@@ -1128,7 +1069,6 @@ paths:
           description: ''
     post:
       operationId: cases_projects_create
-      description: 项目列表、项目表、导入与个人视图。
       tags:
       - cases
       requestBody:
@@ -1158,7 +1098,6 @@ paths:
   /api/cases/projects/{id}/:
     get:
       operationId: cases_projects_retrieve
-      description: 项目列表、项目表、导入与个人视图。
       parameters:
       - in: path
         name: id
@@ -1180,7 +1119,6 @@ paths:
           description: ''
     patch:
       operationId: cases_projects_partial_update
-      description: 项目列表、项目表、导入与个人视图。
       parameters:
       - in: path
         name: id
@@ -1216,7 +1154,6 @@ paths:
           description: ''
     delete:
       operationId: cases_projects_destroy
-      description: 项目列表、项目表、导入与个人视图。
       parameters:
       - in: path
         name: id
@@ -1234,7 +1171,6 @@ paths:
   /api/cases/projects/{id}/import-yaml/:
     post:
       operationId: cases_projects_import_yaml_create
-      description: 项目列表、项目表、导入与个人视图。
       parameters:
       - in: path
         name: id
@@ -1271,7 +1207,6 @@ paths:
   /api/cases/projects/{id}/rows/:
     post:
       operationId: cases_projects_rows_create
-      description: 项目列表、项目表、导入与个人视图。
       parameters:
       - in: path
         name: id
@@ -1308,7 +1243,6 @@ paths:
   /api/cases/projects/{id}/rows/{case_id}/:
     patch:
       operationId: cases_projects_rows_partial_update
-      description: 项目列表、项目表、导入与个人视图。
       parameters:
       - in: path
         name: case_id
@@ -1349,7 +1283,6 @@ paths:
           description: ''
     delete:
       operationId: cases_projects_rows_destroy
-      description: 项目列表、项目表、导入与个人视图。
       parameters:
       - in: path
         name: case_id
@@ -1372,7 +1305,6 @@ paths:
   /api/cases/projects/{id}/view/:
     put:
       operationId: cases_projects_view_update
-      description: 项目列表、项目表、导入与个人视图。
       parameters:
       - in: path
         name: id
@@ -1409,7 +1341,6 @@ paths:
   /api/cases/projects/automation/:
     get:
       operationId: cases_projects_automation_retrieve
-      description: 项目列表、项目表、导入与个人视图。
       tags:
       - cases
       security:
@@ -1423,7 +1354,6 @@ paths:
   /api/cases/stats/:
     get:
       operationId: cases_stats_retrieve
-      description: GET /api/cases/stats/ — document case summary.
       tags:
       - cases
       security:
@@ -1439,11 +1369,6 @@ paths:
   /api/dashboard/activities/:
     get:
       operationId: dashboard_activities_retrieve
-      description: |-
-        GET /api/dashboard/activities/ — recent events across the platform.
-
-        查询参数：limit（缺省 10，最大 50）、offset（缺省 0）。
-        data 仍为活动数组（非对象包裹）。
       tags:
       - dashboard
       security:
@@ -1457,7 +1382,6 @@ paths:
   /api/dashboard/stats/:
     get:
       operationId: dashboard_stats_retrieve
-      description: GET /api/dashboard/stats/ — platform-level statistics.
       tags:
       - dashboard
       security:
@@ -1473,7 +1397,6 @@ paths:
   /api/devices/:
     get:
       operationId: devices_retrieve
-      description: GET /api/devices/ — 设备列表 + 当前设备（含状态同步 + 可见性过滤）。
       tags:
       - devices
       security:
@@ -1489,7 +1412,6 @@ paths:
   /api/devices/{serial}/:
     post:
       operationId: devices_create
-      description: POST /api/devices/{serial} — 连接 + 采集信息 + 自动激活（observe 模式置使用中）。
       parameters:
       - in: path
         name: serial
@@ -1525,7 +1447,6 @@ paths:
   /api/devices/{serial}/activate/:
     post:
       operationId: devices_activate_create
-      description: POST /api/devices/{serial}/activate — 切换当前活动设备。
       parameters:
       - in: path
         name: serial
@@ -1561,7 +1482,6 @@ paths:
   /api/devices/{serial}/disconnect/:
     post:
       operationId: devices_disconnect_create
-      description: POST /api/devices/{serial}/disconnect — 删除设备（在线可删、使用中置灰、USB 无删除键）。
       parameters:
       - in: path
         name: serial
@@ -1597,8 +1517,6 @@ paths:
   /api/devices/{serial}/disconnect-observe/:
     post:
       operationId: devices_disconnect_observe_create
-      description: POST /api/devices/{serial}/disconnect-observe — 轻量断开（不删记录，释放观察占用为
-        ONLINE）。
       parameters:
       - in: path
         name: serial
@@ -1634,7 +1552,6 @@ paths:
   /api/devices/{serial}/lock/:
     post:
       operationId: devices_lock_create
-      description: POST /api/devices/{serial}/lock — 锁定 / 公开切换（可见性）。
       parameters:
       - in: path
         name: serial
@@ -1670,7 +1587,6 @@ paths:
   /api/devices/{serial}/release/:
     post:
       operationId: devices_release_create
-      description: POST /api/devices/{serial}/release — 释放设备检查器占用。
       parameters:
       - in: path
         name: serial
@@ -1706,11 +1622,6 @@ paths:
   /api/devices/current/:
     get:
       operationId: devices_current_retrieve
-      description: |-
-        GET /api/devices/current — 当前活动设备信息。
-
-        读分辨率与前台应用需要连一次 ADB；同一设备 10 秒内复用上次结果，
-        避免轮询式调用把请求线程拖在 shell 上。
       tags:
       - devices
       security:
@@ -1726,7 +1637,6 @@ paths:
   /api/devices/heartbeat/:
     get:
       operationId: devices_heartbeat_retrieve
-      description: GET /api/devices/heartbeat — 心跳同步。
       tags:
       - devices
       security:
@@ -1742,7 +1652,6 @@ paths:
   /api/devices/scan/:
     post:
       operationId: devices_scan_create
-      description: POST /api/devices/scan — ADB 扫描注册（全量 / USB / WiFi）。
       tags:
       - devices
       requestBody:
@@ -1772,7 +1681,6 @@ paths:
   /api/devices/stats/:
     get:
       operationId: devices_stats_retrieve
-      description: GET /api/devices/stats/ — device pool summary.
       tags:
       - devices
       security:
@@ -1788,7 +1696,6 @@ paths:
   /api/knowledge-search/evaluations/:
     get:
       operationId: knowledge_search_evaluations_list
-      description: GET 评测运行列表（登录可读）；POST 触发自动评测（仅超管）。
       tags:
       - knowledge-search
       security:
@@ -1803,7 +1710,6 @@ paths:
           description: ''
     post:
       operationId: knowledge_search_evaluations_create
-      description: GET 评测运行列表（登录可读）；POST 触发自动评测（仅超管）。
       tags:
       - knowledge-search
       requestBody:
@@ -1831,7 +1737,6 @@ paths:
   /api/knowledge-search/evaluations/{id}/:
     get:
       operationId: knowledge_search_evaluations_detail
-      description: GET 评测运行详情（登录可读）：进度 / 指标 / 逐题明细。
       parameters:
       - in: path
         name: id
@@ -1853,7 +1758,6 @@ paths:
   /api/knowledge-search/modules/:
     get:
       operationId: knowledge_search_modules_retrieve
-      description: GET 模块列表（登录可读）；POST 新增模块（仅超管）。
       tags:
       - knowledge-search
       security:
@@ -1868,7 +1772,6 @@ paths:
           description: ''
     post:
       operationId: knowledge_search_modules_create
-      description: GET 模块列表（登录可读）；POST 新增模块（仅超管）。
       tags:
       - knowledge-search
       requestBody:
@@ -1896,7 +1799,6 @@ paths:
   /api/knowledge-search/modules/{id}/:
     patch:
       operationId: knowledge_search_modules_partial_update
-      description: PATCH 编辑 / DELETE 删除模块登记（仅超管）。
       parameters:
       - in: path
         name: id
@@ -1928,7 +1830,6 @@ paths:
           description: ''
     delete:
       operationId: knowledge_search_modules_destroy
-      description: PATCH 编辑 / DELETE 删除模块登记（仅超管）。
       parameters:
       - in: path
         name: id
@@ -1945,7 +1846,6 @@ paths:
   /api/knowledge-search/modules/{id}/index/:
     post:
       operationId: knowledge_search_modules_index_create
-      description: POST 预建索引（仅超管）：同步增量重建，返回重建文件数。
       parameters:
       - in: path
         name: id
@@ -1981,7 +1881,6 @@ paths:
   /api/knowledge-search/query/:
     post:
       operationId: knowledge_search_query_create
-      description: POST 多选提问（登录可用）：返回检索原文与三态结果。
       tags:
       - knowledge-search
       requestBody:
@@ -2009,7 +1908,6 @@ paths:
   /api/knowledge-search/settings/:
     get:
       operationId: knowledge_search_settings_retrieve
-      description: GET / PUT 全局检索配置（仅超管）。
       tags:
       - knowledge-search
       security:
@@ -2024,7 +1922,6 @@ paths:
           description: ''
     put:
       operationId: knowledge_search_settings_update
-      description: GET / PUT 全局检索配置（仅超管）。
       tags:
       - knowledge-search
       requestBody:
@@ -2052,7 +1949,6 @@ paths:
   /api/ops/users/:
     get:
       operationId: ops_users_retrieve
-      description: GET /api/ops/users/ — 分页账号列表（运营可读）。
       tags:
       - ops
       security:
@@ -2068,7 +1964,6 @@ paths:
   /api/ops/users/{user_id}/disable/:
     post:
       operationId: ops_users_disable_create
-      description: POST /api/ops/users/<int:user_id>/disable/ — 停用普通账号（运营）。
       parameters:
       - in: path
         name: user_id
@@ -2090,7 +1985,6 @@ paths:
   /api/ops/users/{user_id}/enable/:
     post:
       operationId: ops_users_enable_create
-      description: POST /api/ops/users/<int:user_id>/enable/ — 启用普通账号（运营）。
       parameters:
       - in: path
         name: user_id
@@ -2112,7 +2006,6 @@ paths:
   /api/ops/users/{user_id}/grant-author/:
     post:
       operationId: ops_users_grant_author_create
-      description: POST /api/ops/users/<int:user_id>/grant-author/ — 授予助手作者（仅超管）。
       parameters:
       - in: path
         name: user_id
@@ -2134,7 +2027,6 @@ paths:
   /api/ops/users/{user_id}/grant-operator/:
     post:
       operationId: ops_users_grant_operator_create
-      description: POST /api/ops/users/<int:user_id>/grant-operator/ — 设为运营（仅超管）。
       parameters:
       - in: path
         name: user_id
@@ -2156,7 +2048,6 @@ paths:
   /api/ops/users/{user_id}/model-grants/:
     post:
       operationId: ops_users_model_grants_create
-      description: POST /api/ops/users/<int:user_id>/model-grants/ — 修改模型名单（仅超管）。
       parameters:
       - in: path
         name: user_id
@@ -2192,7 +2083,6 @@ paths:
   /api/ops/users/{user_id}/reset-password/:
     post:
       operationId: ops_users_reset_password_create
-      description: POST /api/ops/users/<int:user_id>/reset-password/ — 重置普通账号密码（运营）。
       parameters:
       - in: path
         name: user_id
@@ -2214,7 +2104,6 @@ paths:
   /api/ops/users/{user_id}/revoke-author/:
     post:
       operationId: ops_users_revoke_author_create
-      description: POST /api/ops/users/<int:user_id>/revoke-author/ — 收回助手作者（仅超管）。
       parameters:
       - in: path
         name: user_id
@@ -2236,7 +2125,6 @@ paths:
   /api/ops/users/{user_id}/revoke-operator/:
     post:
       operationId: ops_users_revoke_operator_create
-      description: POST /api/ops/users/<int:user_id>/revoke-operator/ — 取消运营（仅超管）。
       parameters:
       - in: path
         name: user_id
@@ -2258,7 +2146,6 @@ paths:
   /api/ops/users/disable/:
     post:
       operationId: ops_users_batch_disable
-      description: POST /api/ops/users/disable/ — 本页批量停用（运营）。
       tags:
       - ops
       requestBody:
@@ -2288,7 +2175,6 @@ paths:
   /api/ops/users/purge/:
     post:
       operationId: ops_users_purge
-      description: POST /api/ops/users/purge/ — 批量注销（仅超管，只删账号）。
       tags:
       - ops
       requestBody:
@@ -2318,7 +2204,6 @@ paths:
   /api/reports/:
     get:
       operationId: report_list
-      description: GET /api/reports — 当前用户可见的已生成报告台账 / 报告数量统计。
       parameters:
       - in: query
         name: end_date
@@ -2503,12 +2388,6 @@ paths:
   /api/serial-log/keywords/:
     get:
       operationId: serial_log_keywords_retrieve
-      description: |-
-        GET /api/serial-log/keywords/ — 关键词对照表（登录可读，功能点带 row_id）。
-
-        POST /api/serial-log/keywords/ — 新建关键词条目（仅超级管理员）。
-        body: `{"keyword": "h6601_boot", "module": "设备开关", "feature": "H6601开机完成", "scope": "H6601"}`
-        （scope 缺省通用；feature_id 缺省续编）。
       tags:
       - serial-log
       security:
@@ -2523,12 +2402,6 @@ paths:
           description: ''
     post:
       operationId: serial_log_keywords_create
-      description: |-
-        GET /api/serial-log/keywords/ — 关键词对照表（登录可读，功能点带 row_id）。
-
-        POST /api/serial-log/keywords/ — 新建关键词条目（仅超级管理员）。
-        body: `{"keyword": "h6601_boot", "module": "设备开关", "feature": "H6601开机完成", "scope": "H6601"}`
-        （scope 缺省通用；feature_id 缺省续编）。
       tags:
       - serial-log
       requestBody:
@@ -2558,11 +2431,6 @@ paths:
   /api/serial-log/keywords/{row_id}/:
     patch:
       operationId: serial_log_keywords_partial_update
-      description: |-
-        PATCH / DELETE /api/serial-log/keywords/<row_id>/ — 编辑 / 删除关键词条目（仅超级管理员）。
-
-        PATCH body: 部分字段 `{"keyword"?, "module"?, "feature"?, "scope"?, "feature_id"?, "sort_order"?}`。
-        删除只移除登记条目，不影响日志文件与采集。
       parameters:
       - in: path
         name: row_id
@@ -2597,11 +2465,6 @@ paths:
           description: ''
     delete:
       operationId: serial_log_keywords_destroy
-      description: |-
-        PATCH / DELETE /api/serial-log/keywords/<row_id>/ — 编辑 / 删除关键词条目（仅超级管理员）。
-
-        PATCH body: 部分字段 `{"keyword"?, "module"?, "feature"?, "scope"?, "feature_id"?, "sort_order"?}`。
-        删除只移除登记条目，不影响日志文件与采集。
       parameters:
       - in: path
         name: row_id
@@ -2618,11 +2481,6 @@ paths:
   /api/serial-log/ports/:
     get:
       operationId: serial_log_ports_retrieve
-      description: |-
-        GET /api/serial-log/ports/ — 端口列表（顺带按开关状态校正监听，10 秒节流）。
-
-        POST /api/serial-log/ports/ — 新增自定义端口（仅超级管理员），保存即增量开启监听。
-        body: `{"port": 7008, "sku": "H717D", "baud": 115200}`
       tags:
       - serial-log
       security:
@@ -2637,11 +2495,6 @@ paths:
           description: ''
     post:
       operationId: serial_log_ports_create
-      description: |-
-        GET /api/serial-log/ports/ — 端口列表（顺带按开关状态校正监听，10 秒节流）。
-
-        POST /api/serial-log/ports/ — 新增自定义端口（仅超级管理员），保存即增量开启监听。
-        body: `{"port": 7008, "sku": "H717D", "baud": 115200}`
       tags:
       - serial-log
       requestBody:
@@ -2671,11 +2524,6 @@ paths:
   /api/serial-log/ports/{port}/:
     patch:
       operationId: serial_log_ports_partial_update
-      description: |-
-        PATCH / DELETE /api/serial-log/ports/<port>/ — 编辑 / 删除自定义端口（仅超级管理员）。
-
-        PATCH body: `{"sku": "H717D-V2", "baud": 460800}`（至少一个字段；端口号不可改）。
-        编辑只重启被编辑的端口；删除停监听并移除登记，历史日志文件保留。
       parameters:
       - in: path
         name: port
@@ -2710,11 +2558,6 @@ paths:
           description: ''
     delete:
       operationId: serial_log_ports_destroy
-      description: |-
-        PATCH / DELETE /api/serial-log/ports/<port>/ — 编辑 / 删除自定义端口（仅超级管理员）。
-
-        PATCH body: `{"sku": "H717D-V2", "baud": 460800}`（至少一个字段；端口号不可改）。
-        编辑只重启被编辑的端口；删除停监听并移除登记，历史日志文件保留。
       parameters:
       - in: path
         name: port
@@ -2731,10 +2574,6 @@ paths:
   /api/serial-log/ports/{port}/lines/:
     get:
       operationId: serial_log_ports_lines_retrieve
-      description: |-
-        GET /api/serial-log/ports/<port>/lines/ — 当前日志文件尾部若干行（只读）。
-
-        query: `tail`（行数，默认 2000，夹紧到上限）；未登记端口与关闭态都返回可读结论。
       parameters:
       - in: path
         name: port
@@ -2756,11 +2595,6 @@ paths:
   /api/serial-log/ports/toggle/:
     post:
       operationId: serial_log_ports_toggle_create
-      description: |-
-        POST /api/serial-log/ports/toggle/ — 开关某端口的持续监听（仅超级管理员）。
-
-        body: `{"port": 7005, "enabled": true|false}`
-        开启即开始监听并落日志文件；关闭即停止监听并释放端口。
       tags:
       - serial-log
       requestBody:
@@ -2790,7 +2624,6 @@ paths:
   /api/system/drain/:
     get:
       operationId: task_drain_status
-      description: 只读：返回 running 数与当前排空标志。
       tags:
       - tasks
       security:
@@ -2806,7 +2639,6 @@ paths:
           description: ''
     post:
       operationId: task_drain_begin
-      description: 置位排空标志；此后不再派发新任务。
       tags:
       - tasks
       security:
@@ -2823,7 +2655,6 @@ paths:
   /api/tasks/:
     get:
       operationId: tasks_retrieve
-      description: GET /api/tasks — 当前用户可见的全部任务发布（设备执行 + 用例编写）。
       tags:
       - tasks
       security:
@@ -2839,7 +2670,6 @@ paths:
   /api/tasks/{task_id}/:
     get:
       operationId: ai_agent_task_detail
-      description: GET /api/tasks/{task_id} — 任务发布详情（过程日志）。
       parameters:
       - in: path
         name: task_id
@@ -2861,7 +2691,6 @@ paths:
   /api/tasks/{task_id}/cancel/:
     post:
       operationId: tasks_cancel_create
-      description: POST /api/tasks/{task_id}/cancel — 关闭运行中的 SOP。
       parameters:
       - in: path
         name: task_id
@@ -2883,7 +2712,6 @@ paths:
   /api/tasks/{task_id}/delete/:
     post:
       operationId: tasks_delete_create
-      description: POST /api/tasks/{task_id}/delete — 删除任务发布记录。
       parameters:
       - in: path
         name: task_id
@@ -2905,7 +2733,6 @@ paths:
   /api/tasks/{task_id}/media/{media_id}/:
     get:
       operationId: task_media
-      description: GET /api/tasks/{task_id}/media/{media_id} — 截图缩略图字节（WebP，非信封）。
       parameters:
       - in: path
         name: media_id
@@ -2932,7 +2759,6 @@ paths:
   /api/tasks/{task_id}/media/{media_id}/link/:
     post:
       operationId: task_media_link
-      description: POST /api/tasks/{task_id}/media/{media_id}/link — 签发短时直链。
       parameters:
       - in: path
         name: media_id
@@ -2959,7 +2785,6 @@ paths:
   /api/tasks/{task_id}/rerun/:
     post:
       operationId: tasks_rerun_create
-      description: POST /api/tasks/{task_id}/rerun — 已结束任务克隆新建并调度。
       parameters:
       - in: path
         name: task_id
@@ -2981,7 +2806,6 @@ paths:
   /api/tasks/clear/:
     post:
       operationId: tasks_clear_create
-      description: POST /api/tasks/clear — 调试：清空当前用户可见的全部任务发布记录。
       tags:
       - tasks
       security:
@@ -2997,7 +2821,6 @@ paths:
   /api/tasks/stats/:
     get:
       operationId: tasks_stats_retrieve
-      description: GET /api/tasks/stats — 当前用户可见任务的状态统计（总体 + 分智能体）。
       tags:
       - tasks
       security:
@@ -3013,7 +2836,6 @@ paths:
   /api/tasks/submit/:
     post:
       operationId: tasks_submit_create
-      description: POST /api/tasks/submit — 提交任务；按设备调度（同设备排队 / 异设备并行）。
       tags:
       - tasks
       requestBody:
@@ -3041,7 +2863,6 @@ paths:
   /api/tasks/upload-file/:
     post:
       operationId: tasks_upload_file_create
-      description: POST /api/ai/upload-file — multipart 文件上传并解析。
       tags:
       - tasks
       requestBody:
@@ -3071,8 +2892,6 @@ paths:
   /media/signed/{task_id}/{media_id}/{expires}/{signature}/:
     get:
       operationId: task_media_signed
-      description: GET /media/signed/{task_id}/{media_id}/{expires}/{signature} —
-        签名直链字节。
       parameters:
       - in: path
         name: expires
@@ -3131,7 +2950,6 @@ components:
         * `openai` - openai
     AssistantInput:
       type: object
-      description: 助手名片入参。头像字节由视图解码后传入写库层。
       properties:
         display_name:
           type: string
@@ -3148,7 +2966,6 @@ components:
           type: integer
     AssistantOutput:
       type: object
-      description: 助手列表出参。不下发头像正文。
       properties:
         assistant_id:
           type: string
@@ -3193,7 +3010,6 @@ components:
         * `platform` - platform
     EvalTrigger:
       type: object
-      description: 触发自动评测入参：模块 + chat 模型配置 + 题量（默认 30 正 + 10 负）。
       properties:
         module_id:
           type: integer
@@ -3233,7 +3049,6 @@ components:
           default: ''
     ModelConfig:
       type: object
-      description: 模型配置入参与出参。只校验字段形状，不创建模型。
       properties:
         id:
           type: integer
@@ -3280,7 +3095,6 @@ components:
         * `embedding` - embedding
     ModuleWrite:
       type: object
-      description: 新增模块入参。
       properties:
         name:
           type: string
@@ -3300,7 +3114,6 @@ components:
       - name
     PatchedAssistantInput:
       type: object
-      description: 助手名片入参。头像字节由视图解码后传入写库层。
       properties:
         display_name:
           type: string
@@ -3317,13 +3130,11 @@ components:
           type: integer
     PatchedBugStatusInput:
       type: object
-      description: Body for PATCH /api/bugs/{id}/.
       properties:
         status:
           $ref: '#/components/schemas/StatusEnum'
     PatchedModelConfig:
       type: object
-      description: 模型配置入参与出参。只校验字段形状，不创建模型。
       properties:
         id:
           type: integer
@@ -3353,7 +3164,6 @@ components:
           maxLength: 100
     PatchedModulePatch:
       type: object
-      description: 编辑模块入参（至少一个字段）。
       properties:
         name:
           type: string
@@ -3368,11 +3178,6 @@ components:
           type: boolean
     PatchedRoleInput:
       type: object
-      description: |-
-        Agent 配置入参。不查模型配置是否存在。
-
-        `kinds`：新建 MUST 恰好 1 项（在视图里校验，因为 PATCH 缺省表示不改动）；
-        更新时显式提交 [] 表示置为未分类。一份配置 MUST NOT 同时有多个类型。
       properties:
         name:
           type: string
@@ -3388,7 +3193,6 @@ components:
             $ref: '#/components/schemas/KindsEnum'
     PatchedSopWorkflowInput:
       type: object
-      description: 新建或编辑工作流入参。编排与种类只在新建时生效。
       properties:
         name:
           type: string
@@ -3417,7 +3221,6 @@ components:
             additionalProperties: {}
     Query:
       type: object
-      description: 多选提问入参：问题与勾选库名均非空。
       properties:
         question:
           type: string
@@ -3454,7 +3257,6 @@ components:
           default: ''
     RetrievalSettings:
       type: object
-      description: 检索配置入参与出参。
       properties:
         embedding_model_id:
           type: integer
@@ -3489,11 +3291,6 @@ components:
       - top_k
     RoleInput:
       type: object
-      description: |-
-        Agent 配置入参。不查模型配置是否存在。
-
-        `kinds`：新建 MUST 恰好 1 项（在视图里校验，因为 PATCH 缺省表示不改动）；
-        更新时显式提交 [] 表示置为未分类。一份配置 MUST NOT 同时有多个类型。
       properties:
         name:
           type: string
@@ -3509,7 +3306,6 @@ components:
             $ref: '#/components/schemas/KindsEnum'
     RoleOutput:
       type: object
-      description: Agent 配置出参。关联字段由写库层 select_related 后交给这里。
       properties:
         role_id:
           type: string
@@ -3539,7 +3335,6 @@ components:
           type: array
           items:
             type: string
-          description: 类型标签数组；未分类时为空数组。prefetch_related 生效时不额外查库。
           readOnly: true
         created_at:
           type: string
@@ -3557,7 +3352,6 @@ components:
       - updated_at
     SopWorkflowInput:
       type: object
-      description: 新建或编辑工作流入参。编排与种类只在新建时生效。
       properties:
         name:
           type: string
@@ -3588,7 +3382,6 @@ components:
       - name
     SopWorkflowOutput:
       type: object
-      description: 工作流出参。不下发提示词、模型参数或工具勾选。
       properties:
         id:
           type: integer
@@ -3640,12 +3433,6 @@ components:
         * `ignored` - ignored
     TaskSubmitInput:
       type: object
-      description: |-
-        任务提交入参 — title/agent_id 必填；设备由任务类型在视图层校验。
-
-        device_control 任务必须有 device_serial，用例来源二选一：``yaml`` 上传配置
-        文件，或 ``platform`` 给用例编号列表（JSON 数组字符串）。case_authoring 任务
-        必须上传 documents（PRD/Word），不需要设备与 YAML。
       properties:
         title:
           type: string

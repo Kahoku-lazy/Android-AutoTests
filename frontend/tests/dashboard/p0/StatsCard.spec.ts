@@ -1,8 +1,3 @@
-/**
- * [P0] 必测 — 仪表盘统计卡主交互（数值展示 / 趋势文案 / loading 骨架 / 点击跳转）
- * 目录：tests/dashboard/p0/
- * StatsCard 现为 KpiCard entry 薄包装，交互只落在整卡 .kpi-card（无独立进入按钮）。
- */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { mount } from "@vue/test-utils"
 import StatsCard from "@/modules/dashboard/components/StatsCard.vue"

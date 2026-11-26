@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 停机超时名单：run.py 在杀进程前写下任务编号，清扫读完即删 🏁
-Python 调试：➡️ python -m backend.apps.task_list.sweep_mark 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（经 task_list 的功能用例间接覆盖，未直接 import 本模块）
-🏁
-"""
-
 from __future__ import annotations
 
 import json
@@ -18,7 +9,6 @@ MARK = Path(__file__).resolve().parents[3] / "temps" / "stop-timeout-tasks.json"
 
 
 def write_stop_timeout_ids(ids: list[int]) -> None:
-    """写下仍在跑的任务编号。目录不存在时创建。"""
     MARK.parent.mkdir(parents=True, exist_ok=True)
     MARK.write_text(
         json.dumps(
@@ -30,7 +20,6 @@ def write_stop_timeout_ids(ids: list[int]) -> None:
 
 
 def read_stop_timeout_ids() -> set[int]:
-    """读名单。文件没有或坏了就当空，不抛给清扫循环。"""
     try:
         data = json.loads(MARK.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError, TypeError, ValueError):
@@ -48,5 +37,4 @@ def read_stop_timeout_ids() -> set[int]:
 
 
 def clear_stop_timeout_ids() -> None:
-    """清扫用过之后删掉，避免下次误套。"""
     MARK.unlink(missing_ok=True)

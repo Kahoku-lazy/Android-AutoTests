@@ -1,15 +1,10 @@
-"""模型用量明细表 — 每次模型调用一条可追溯记录。"""
-
 import uuid
 
 from django.db import models
 
 
 class ModelUsage(models.Model):
-    """一次模型调用的 token、费用与关联 ID。"""
-
     usage_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    # 事件流定位；唯一，用于重试幂等
     event_id = models.CharField(max_length=180, unique=True)
     execution_id = models.CharField(max_length=128, blank=True, default="", db_index=True)
     source = models.CharField(max_length=32, default="")

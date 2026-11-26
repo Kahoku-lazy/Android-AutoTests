@@ -1,7 +1,3 @@
-/**
- * [P0] 必测 — 登录页 hand-drawn Hero（CTA / Meeting 标题 / 无贴纸板）
- * 目录：tests/login/p0/
- */
 import { ref, computed } from "vue"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { mount } from "@vue/test-utils"
@@ -85,7 +81,7 @@ describe("[P0] LoginView Hero", () => {
       "专注于创造价值",
     ])
     expect(wrapper.find(".hero__version").text()).toBe("v3.0")
-    // 眉标整块已移除：左栏不再有独立成行的「AI 智能化测试」
+
     expect(wrapper.find(".hero__eyebrow").exists()).toBe(false)
   })
 
@@ -120,7 +116,7 @@ describe("[P0] LoginView Hero", () => {
     const wrapper = await mountLogin()
     expect(wrapper.find('[data-testid="login-mode-login"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="login-mode-register"]').exists()).toBe(true)
-    // 登录页只有 login / register 两态：切换提示卡的内容不应再出现
+
     expect(wrapper.text()).not.toContain("检测到已登录账号")
     expect(wrapper.text()).not.toContain("添加新账号")
 

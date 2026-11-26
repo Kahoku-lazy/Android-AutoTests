@@ -1,7 +1,3 @@
-/**
- * [P0] 必测 — 登录页两态视图切换（login / register）
- * 目录：tests/login/p0/
- */
 import { describe, expect, it, vi } from "vitest"
 import { useViewStateMachine } from "@/views/composables/useViewStateMachine"
 import { mountComposable } from "../../helpers/mountComposable"

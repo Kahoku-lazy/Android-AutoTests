@@ -1,9 +1,4 @@
 <script setup>
-/**
- * FilterTabs — 通用筛选标签栏
- * 替代手写 filter-tab button 组，配合 useFilterTabs composable 使用。
- * tab 可选 count：展示数量角标。
- */
 defineProps({
   tabs: { type: Array, required: true },
   modelValue: { type: String, default: "all" },

@@ -1,9 +1,8 @@
-/** yaml-case-titles — 浏览器端解析 YAML 用例标题（只读，不替代后端校验） */
 import { load } from "js-yaml"
 
 export interface CaseTitleParseResult {
   titles: string[]
-  /** 可读错误；成功时为空串 */
+
   error: string
 }
 
@@ -11,12 +10,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
-/**
- * 读取 YAML 根节点的用例标题。
- *
- * 根节点支持单条用例映射或用例列表（与后端一致）；只取非空 `title`。
- * 解析失败、结构不对或缺 title 时返回空列表与可读错误，不抛异常。
- */
 export function parseCaseTitles(text: string): CaseTitleParseResult {
   if (!String(text || "").trim()) {
     return { titles: [], error: "YAML 中没有可用用例" }

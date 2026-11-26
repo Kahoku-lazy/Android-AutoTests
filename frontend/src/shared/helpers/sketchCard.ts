@@ -1,7 +1,3 @@
-/**
- * 撕纸入口卡的 cycle 配色 / 微倾（父级按 v-for index 注入）。
- * 令牌来自 tokens.css 的 8 个 --c-*，不写字面量色。
- */
 export const SKETCH_TONES = [
   "var(--c-dashboard)",
   "var(--c-device)",
@@ -13,7 +9,6 @@ export const SKETCH_TONES = [
   "var(--c-workflow)",
 ] as const
 
-/** 对齐 principles 卡的 ±0.6°~1.5° 倾角循环 */
 export const SKETCH_TILTS = [-1.5, 1, -0.6, 1.2, -1, 0.8, 0.4, -0.9] as const
 
 export function sketchToneAt(index: number): string {

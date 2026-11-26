@@ -1,16 +1,8 @@
-/** 用例项目表类型。一个项目只有一张表。 */
-
 export type LibraryKind = "automation" | "functional"
 export type SystemType = "ANDROID" | "WEB" | "IOS" | "API"
 export type Priority = "P0" | "P1" | "P2"
 export type BusinessType = "appliance" | "lighting" | "app"
 
-/**
- * 步骤执行提示（仅自动化项目）。
- *
- * 服务端对空提示的序列化结果是 `{}` 而不是缺键（见 api_rows._serialize_steps），
- * 所以字段一律可选，判空必须看内容而不是看对象是否为真。
- */
 export interface StepAnchorHint {
   page?: string
   entry?: string
@@ -106,14 +98,12 @@ export const SHEET_COLUMNS = [
   { key: "updated_at", label: "更新时间" },
 ]
 
-/** 分组可选项（FilterTabs 的 tabs）；key 直接写进 view.group_by */
 export const GROUP_OPTIONS = [
   { key: "", label: "不分组" },
   { key: "module", label: "按模块" },
   { key: "priority", label: "按优先级" },
 ]
 
-/** 新用户 / 视图缺失时的默认视图（顺序按 sort_order 升序） */
 export const DEFAULT_SHEET_VIEW: SheetView = {
   hidden_columns: [],
   filters: {},

@@ -5,9 +5,8 @@ import DoodleBtn from "@/shared/components/DoodleBtn.vue"
 import { fetchRecentActivities } from "../api"
 import type { ActivityItem } from "@/shared/types/dashboard"
 
-/** 主屏最多展示条数；与后端缺省 limit、十条槽位一致 */
 const BOARD_LIMIT = 10
-/** 历史弹层每页条数 */
+
 const HISTORY_PAGE = 50
 
 const props = withDefaults(defineProps<{ items?: ActivityItem[] }>(), {
@@ -16,7 +15,6 @@ const props = withDefaults(defineProps<{ items?: ActivityItem[] }>(), {
 
 const listRef = ref<HTMLElement | null>(null)
 
-/** 主屏只渲染最新十条 */
 const boardItems = computed(() => props.items.slice(0, BOARD_LIMIT))
 
 async function revealItems() {
@@ -29,14 +27,13 @@ async function revealItems() {
 onMounted(revealItems)
 watch(() => boardItems.value.length, revealItems)
 
-// ── 活动历史弹层 ──
 const historyOpen = ref(false)
 const historyItems = ref<ActivityItem[]>([])
 const historyOffset = ref(BOARD_LIMIT)
 const historyLoading = ref(false)
 const historyError = ref<string | null>(null)
 const historyHasMore = ref(false)
-/** 丢弃过期的历史请求结果（防并发重置） */
+
 let historyReqSeq = 0
 
 async function loadHistoryPage(reset: boolean) {
@@ -196,7 +193,6 @@ defineExpose({ openHistory, loadMoreHistory, historyItems, historyHasMore })
   font-size: var(--app-size-sm);
 }
 
-/* Item */
 .timeline-item {
   position: relative;
   padding-left: 30px;
@@ -223,7 +219,6 @@ defineExpose({ openHistory, loadMoreHistory, historyItems, historyHasMore })
   z-index: var(--z-base);
 }
 
-/* 事件类型样式（PRD §2.3）：run=测试执行→紫，agent=智能体更新→黄；枚举外值用默认灰 */
 .timeline-item--run .timeline-item__dot {
   border-color: var(--app-status-purple);
 }

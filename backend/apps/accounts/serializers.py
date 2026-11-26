@@ -1,12 +1,3 @@
-"""
-登录、注册、续期的入参校验。
-
-业务：
-1. 登录：账号必填且不能为空白、最长 150 字；密码必填。对不上则视为账号或密码错误。
-2. 注册：账号 3–20 字，邮箱需含 @，密码至少 6 位，两次密码一致。用户名是否已占用不在这里判断。
-3. 续期：接收续期凭证，是否有效由续期接口判断。
-"""
-
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 
@@ -74,7 +65,6 @@ class RegisterSerializer(serializers.Serializer):
         if "@" not in email:
             raise serializers.ValidationError("邮箱格式不正确")
 
-        # 唯一性不在此校验：它是数据不变量，由写口按数据库唯一约束保证（见 api.py）
         attrs["username"] = username
         attrs["password"] = password
         attrs["email"] = email

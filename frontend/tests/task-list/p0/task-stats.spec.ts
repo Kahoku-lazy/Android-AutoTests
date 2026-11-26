@@ -1,6 +1,3 @@
-/**
- * [P0] 必测 — 任务统计：成功率口径、四类占比、统计随列表刷新
- */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { flushPromises } from "@vue/test-utils"
 import * as taskApi from "@/modules/task-list/api/tasks"

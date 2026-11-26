@@ -1,10 +1,4 @@
 <script setup lang="ts">
-/**
- * 用例行编辑抽屉：一个用例的全部字段与步骤序列都在这里改。
- *
- * 语义（case-manager-case-form）：抽屉内改动只落草稿，面板内不向服务端提交；
- * 用户点「应用改动」后由页面把草稿合并进该行并标记未保存，写库留给页面级「保存」。
- */
 import { ref, watch } from "vue"
 import { ElMessage } from "element-plus"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
@@ -15,7 +9,7 @@ import type { CaseRow, CaseStep } from "../types"
 
 const props = defineProps<{
   modelValue: boolean
-  /** 当前编辑的行；关闭时为 null */
+
   row: CaseRow | null
 }>()
 
@@ -33,7 +27,6 @@ watch(
     try {
       draft.value = props.modelValue && props.row ? cloneRow(props.row) : null
     } catch (e: unknown) {
-      // 草稿构建失败必须可见：静默失败会表现成「点了没反应」
       draft.value = null
       ElMessage.error(`打开编辑面板失败：${e instanceof Error ? e.message : String(e)}`)
     }
@@ -53,13 +46,6 @@ function removeStep(index: number) {
   draft.value?.steps.splice(index, 1)
 }
 
-/**
- * 上下移动一步。
- *
- * Args:
- *   index: 当前步骤下标。
- *   delta: -1 上移，1 下移。
- */
 function moveStep(index: number, delta: number) {
   const steps = draft.value?.steps
   if (!steps) return
@@ -288,7 +274,6 @@ function applyChanges() {
   gap: var(--app-space-xs);
 }
 
-/* 步骤内三个小动作：只收高度与内边距，皮肤仍由 DoodleBtn 自己持有 */
 .sheet-step__ops :deep(.doodle-btn) {
   min-height: 26px;
   padding: 0 var(--app-space-sm);

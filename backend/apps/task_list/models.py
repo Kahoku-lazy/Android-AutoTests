@@ -1,21 +1,13 @@
-"""task-list ORM models — task_ prefix tables. Task execution domain."""
-
 from django.db import models
 
 
 class Task(models.Model):
-    """Task → task_tasks."""
-
     title = models.CharField(max_length=500)
-    # 任务类型快照：device_control=设备执行；case_authoring=家电测试用例编写。
     task_kind = models.CharField(max_length=32, default="device_control")
-    # 启动时冻结。workflow_id 不建外键，工作流删除后历史任务仍可读。
     workflow_id = models.PositiveIntegerField(null=True, blank=True)
-    # 提交时冻结的发布版本。开跑和重跑读它，不读名片当前内容。
     release_version = models.PositiveIntegerField(null=True, blank=True)
     orchestration = models.CharField(max_length=16, default="", blank=True)
     kind = models.CharField(max_length=32, default="", blank=True)
-    # 任务发起人快照：用例入库按发起人隔离，不能回落到共享 Agent 的 owner。
     created_by = models.CharField(max_length=64, default="", blank=True)
     goal = models.TextField(default="", blank=True)
     attachment = models.TextField(default="", blank=True)
@@ -23,7 +15,6 @@ class Task(models.Model):
     device_serial = models.CharField(max_length=100, default="", blank=True)
     device_label = models.CharField(max_length=200, default="", blank=True)
     case_title = models.CharField(max_length=255, default="", blank=True)
-    # 提交时冻结的用例身份。空对象表示旧任务，不回读用例库。
     case_identity = models.JSONField(default=dict, blank=True)
     status = models.CharField(max_length=20, default="pending")
     result = models.TextField(default="", blank=True)
@@ -51,8 +42,6 @@ class Task(models.Model):
 
 
 class TaskAttachment(models.Model):
-    """任务附件正文与原件路径 → task_attachments。"""
-
     KIND_CONFIG = "config"
     KIND_DOCUMENT = "document"
 
@@ -75,8 +64,6 @@ class TaskAttachment(models.Model):
 
 
 class TaskEvent(models.Model):
-    """一条任务运行事件 → task_events。"""
-
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="events")
     case_title = models.CharField(max_length=255, default="", blank=True)
     step_seq = models.IntegerField(null=True, blank=True)
@@ -134,8 +121,6 @@ class TaskEvent(models.Model):
 
 
 class TaskMedia(models.Model):
-    """任务图片缩略图 → task_media。不存原图。"""
-
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="media")
     event_seq = models.IntegerField(null=True, blank=True)
     role_name = models.CharField(max_length=64, default="", blank=True)
@@ -164,8 +149,6 @@ class TaskMedia(models.Model):
 
 
 class TaskUsageHourly(models.Model):
-    """按小时累计的模型费用。agent_id 是裸数字，不设外键。"""
-
     stat_date = models.DateField()
     stat_hour = models.PositiveSmallIntegerField()
     is_peak = models.BooleanField(default=False)

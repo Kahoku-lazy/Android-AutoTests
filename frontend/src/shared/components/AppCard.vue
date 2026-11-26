@@ -1,22 +1,14 @@
 <script setup lang="ts">
-/**
- * AppCard — L3 可复用数据块（钉板壳）
- *
- * 对齐 hand-drawn #page-typography .panel：虚线近直角、马克笔硬阴影、可选图钉、微倾。
- * accent / tilt 由父级注入（同排 cycle 用 sketchToneAt / sketchTiltAt）。
- * ECharts 画布内配色独立，不由本组件约束。
- */
 import { computed } from "vue"
 
 const props = withDefaults(
   defineProps<{
-    /** 兼容旧调用：模块色名或 app-*；优先用 tone */
     color?: string
-    /** CSS 色或 var(--c-*)，驱动图钉与硬阴影 */
+
     tone?: string
-    /** 微倾角度（deg） */
+
     tilt?: number
-    /** 是否显示居中图钉 */
+
     pin?: boolean
   }>(),
   {
@@ -27,7 +19,6 @@ const props = withDefaults(
   },
 )
 
-/** 旧 color 名 → 模块令牌（无 tone 时回退） */
 const COLOR_TONE: Record<string, string> = {
   blue: "var(--c-workflow)",
   green: "var(--c-device)",

@@ -7,10 +7,6 @@ const props = withDefaults(defineProps<{ chart: ExecutionChart }>(), {
   chart: () => ({ labels: [], success: [], failed: [] }),
 })
 
-// ⚠️ ECharts 渲染在 Canvas 上，不支持 CSS 变量，此处保留色值字面量。
-//    如需改色，修改此函数内的常量；CSS 文件使用 tokens.css 对应变量。
-//    token 对照：#1e1e24=--ink · #e8ecf1=--app-border-light · #f0ede8=--app-border-lighter
-//    #999=--app-text-secondary · #6BCB77=--c-device · #FFB5A7=--c-runner
 function buildOption() {
   const c = props.chart
   return {

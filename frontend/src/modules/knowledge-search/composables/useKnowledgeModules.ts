@@ -1,4 +1,3 @@
-/** useKnowledgeModules — 模块列表、勾选与登记维护（写操作仅超管，由页面传 canManage）。 */
 import { ref } from "vue"
 import { formatApiError } from "@/shared/api-client"
 import {
@@ -14,7 +13,7 @@ export function useKnowledgeModules() {
   const modules = ref<KnowledgeModuleRow[]>([])
   const loading = ref(false)
   const error = ref("")
-  /** 勾选的库名：提问围绕且仅围绕这些模块。 */
+
   const selected = ref<string[]>([])
 
   async function load(): Promise<void> {
@@ -24,7 +23,7 @@ export function useKnowledgeModules() {
       const response = await fetchKnowledgeModules()
       if (response.status) {
         modules.value = response.data?.modules ?? []
-        // 模块被删/禁用后，勾选里不留失效项
+
         const alive = new Set(modules.value.filter((m) => m.enabled).map((m) => m.name))
         selected.value = selected.value.filter((name) => alive.has(name))
       } else {

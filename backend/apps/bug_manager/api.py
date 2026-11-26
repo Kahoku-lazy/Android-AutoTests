@@ -1,9 +1,3 @@
-"""BUG ticket read/write services.
-
-All writes in this app go through this module. Task state is read-only here: BUG
-registration must never change a task's status or verdict.
-"""
-
 from __future__ import annotations
 
 import json
@@ -27,16 +21,6 @@ _TASK_STATUSES = ("failed", "interrupted", "completed")
 
 
 def record_task_bugs(task) -> dict:
-    """
-    Persist all BUG drafts for one task, idempotently.
-
-    Args:
-        task: Task-like object with id/title/task_kind/status/result/agent_id.
-
-    Returns:
-        ``{"created": n, "updated": n, "skipped": n}``. A task with no drafts
-        contributes zero rows; sync counts those tasks separately.
-    """
     drafts = build_bug_drafts(task)
     created_count = 0
     updated_count = 0
@@ -48,15 +32,6 @@ def record_task_bugs(task) -> dict:
 
 
 def sync_visible_tasks(user_id: str | None) -> dict:
-    """
-    Backfill BUG tickets from tasks visible to a user.
-
-    Args:
-        user_id: Current user id; empty means no visible tasks.
-
-    Returns:
-        ``{"scanned": n, "created": n, "updated": n, "skipped": n}``.
-    """
     result = {"scanned": 0, "created": 0, "updated": 0, "skipped": 0}
     if not user_id:
         return result
@@ -89,21 +64,6 @@ def list_bugs(
     status: str = "",
     keyword: str = "",
 ) -> dict:
-    """
-    Return BUG tickets visible to a user with summary counters.
-
-    Args:
-        user_id: Current user id.
-        category: Optional category filter.
-        status: Optional status filter.
-        keyword: Matches title/detail/task title/task id/BUG id.
-
-    Returns:
-        ``{"summary": {...}, "total": n, "items": [...], "truncated": bool}``.
-
-    Raises:
-        ValueError: Unknown category or status.
-    """
     category = _clean(category)
     status = _clean(status)
     if category and category not in _CATEGORY_VALUES:
@@ -132,35 +92,11 @@ def list_bugs(
 
 
 def get_bug(user_id: str | None, bug_id: int) -> dict | None:
-    """
-    Return one visible BUG ticket with full detail.
-
-    Args:
-        user_id: Current user id.
-        bug_id: BUG ticket id.
-
-    Returns:
-        Serialized ticket, or None when missing or invisible.
-    """
     row = _visible_bugs(user_id).filter(id=bug_id).first()
     return serialize_bug(row, detail=True) if row is not None else None
 
 
 def update_bug_status(user_id: str | None, bug_id: int, status: str) -> dict | None:
-    """
-    Update the processing status of a visible BUG ticket.
-
-    Args:
-        user_id: Current user id.
-        bug_id: BUG ticket id.
-        status: open / resolved / ignored.
-
-    Returns:
-        Updated ticket, or None when missing or invisible.
-
-    Raises:
-        ValueError: Unknown status.
-    """
     status = _clean(status)
     if status not in _STATUS_VALUES:
         raise ValueError("BUG 状态只能是 open / resolved / ignored")
@@ -174,16 +110,6 @@ def update_bug_status(user_id: str | None, bug_id: int, status: str) -> dict | N
 
 
 def serialize_bug(row: BugTicket, *, detail: bool = False) -> dict:
-    """
-    Serialize a BUG row for the API.
-
-    Args:
-        row: BUG ticket.
-        detail: Include full detail instead of a preview.
-
-    Returns:
-        Snake_case payload consumed by the frontend.
-    """
     labels = dict(BugTicket.CATEGORY_CHOICES)
     status_labels = dict(BugTicket.STATUS_CHOICES)
     payload = {
@@ -216,7 +142,6 @@ def serialize_bug(row: BugTicket, *, detail: bool = False) -> dict:
 
 
 def _upsert_draft(task, draft: BugDraft) -> tuple[bool, bool]:
-    """Create or update one draft while preserving the human-owned status."""
     defaults = {
         "title": draft.title,
         "detail": draft.detail,
@@ -257,7 +182,6 @@ def _upsert_draft(task, draft: BugDraft) -> tuple[bool, bool]:
 
 
 def _visible_bugs(user_id: str | None):
-    """Base queryset filtered by the agents visible to the current user."""
     if not user_id:
         return BugTicket.objects.none()
     try:
@@ -268,7 +192,6 @@ def _visible_bugs(user_id: str | None):
 
 
 def _summary(qs) -> dict:
-    """Counters over the full visible set, independent of the active filters."""
     by_category = {
         row["category"]: row["count"] for row in qs.values("category").annotate(count=Count("id"))
     }
@@ -287,7 +210,6 @@ def _summary(qs) -> dict:
 
 
 def _keyword_q(keyword: str) -> Q:
-    """Build the keyword predicate, including numeric task id and BUG number."""
     q = (
         Q(title__icontains=keyword)
         | Q(detail__icontains=keyword)
@@ -303,20 +225,17 @@ def _keyword_q(keyword: str) -> Q:
 
 
 def _case_snapshot(task) -> dict:
-    """从任务冻结身份抄文案和行。读不到时两处都空，不编造。"""
     identity = getattr(task, "case_identity", None)
     rows = case_identity_rows(identity)
     return {"case_label": case_identity_label(identity), "case_rows": rows}
 
 
 def _task_title(task) -> str:
-    """Task title snapshot, clamped for the model."""
     text = " ".join(str(getattr(task, "title", "") or "").split())
     return (text or "未命名任务")[:500]
 
 
 def _created_by(task) -> str:
-    """Task creator, falling back to the agent owner for historical tasks."""
     created_by = str(getattr(task, "created_by", "") or "").strip()
     if created_by:
         return created_by
@@ -325,7 +244,6 @@ def _created_by(task) -> str:
 
 
 def _report_locator(task_id: int) -> dict:
-    """任务还在且结果里有报告定位时才返回。任务删除后两个字段都是空串。"""
     empty = {"report_run": "", "report_name": ""}
     task = Task.objects.filter(pk=task_id).only("result").first()
     if task is None:
@@ -344,7 +262,6 @@ def _report_locator(task_id: int) -> dict:
 
 
 def _failure_steps(row: BugTicket) -> list[dict]:
-    """详情与列表共用的失败步骤。旧单没有快照时为空列表。"""
     raw = row.failure if isinstance(row.failure, dict) else {}
     steps = raw.get("steps")
     if not isinstance(steps, list):
@@ -353,7 +270,6 @@ def _failure_steps(row: BugTicket) -> list[dict]:
 
 
 def _preview(detail: str) -> str:
-    """Short detail for list payloads."""
     text = " ".join(str(detail or "").split())
     if len(text) <= _PREVIEW_LIMIT:
         return text
@@ -361,10 +277,8 @@ def _preview(detail: str) -> str:
 
 
 def _iso(value) -> str:
-    """ISO timestamp or empty string."""
     return value.isoformat() if value else ""
 
 
 def _clean(value: str | None) -> str:
-    """Trim and lowercase a filter value."""
     return str(value or "").strip().lower()

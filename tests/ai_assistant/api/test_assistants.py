@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 助手名片接口：写限助手作者，读限登录，列表不含头像正文 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ai_assistant/api/test_assistants.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/ai_assistant、backend/shared/users.py
-🏁
-"""
-
 from __future__ import annotations
 
 import io
@@ -127,7 +118,6 @@ def test_unknown_assistant_is_404():
 
 
 def test_delete_rejects_assistant_bound_by_workflow_and_names_it():
-    """被工作流占用时拒绝删除，提示点名到那条工作流，名片保持原样。"""
     from backend.apps.ai_assistant.models import AIAssistant, AISopWorkflow
 
     role = _role()
@@ -148,7 +138,6 @@ def test_delete_rejects_assistant_bound_by_workflow_and_names_it():
 
 
 def test_delete_removes_unbound_assistant():
-    """没有工作流引用时删除成功，名片不再存在。"""
     from backend.apps.ai_assistant.models import AIAssistant
 
     role = _role()

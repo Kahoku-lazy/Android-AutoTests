@@ -11,11 +11,10 @@
 
 <script setup>
 defineProps({
-  /** Emoji icon (e.g. "📁" "📋" "🔍") */
   icon: { type: String, default: "" },
-  /** Primary text (e.g. "暂无页面" "没有匹配的结果") */
+
   text: { type: String, required: true },
-  /** Secondary hint text */
+
   hint: { type: String, default: "" },
 })
 </script>

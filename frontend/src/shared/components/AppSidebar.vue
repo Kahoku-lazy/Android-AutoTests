@@ -1,13 +1,3 @@
-<!--
-侧栏：模块导航、当前账号，以及退出登录。
-
-业务：
-- 按模块进入各页面，可收起侧栏
-- 底部显示当前账号
-- 退出时通知服务端作废本次登录，再清掉本地会话回到登录页
-- 服务暂时不可用时保留登录态，并提示稍后重试
-- 网络中断或会话已失效时，仍清掉本地会话回到登录页
--->
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue"
 import { useRouter, useRoute } from "vue-router"
@@ -24,8 +14,6 @@ import AnimatedMascot from "./AnimatedMascot.vue"
 const router = useRouter()
 const route = useRoute()
 
-// ── 单账号会话 ──
-/** 账号名在组件生命周期内不变：登录会跳转、登出会导航 */
 const activeAccount = getUsername()
 
 async function logout() {
@@ -33,12 +21,11 @@ async function logout() {
     await logoutApi()
   } catch (e) {
     const data = e?.response?.data
-    // 服务暂时不可用：保留本地登录态，提示稍后重试
+
     if (e?.response?.status === 503 && data?.retry) {
       ElMessage.warning(data.message || "服务暂时异常，请稍后重试")
       return
     }
-    // 网络中断或会话已失效：仍清掉本地会话，回到登录页
   }
   clearSession()
   router.push("/login")
@@ -57,13 +44,11 @@ const {
   initSidebarWidth,
 } = useSidebarResize()
 
-/** 运营分组只在运营/超管登录时出现：其余分组原样保留。 */
 const { isOperator } = useAuthUser()
 const categories = computed(() =>
   NAV_CATEGORIES.filter((cat) => !cat.requiresOperator || isOperator.value),
 )
 
-// ── 可展开分组（元素定位）：父项点击展开/收起；进入子页时自动展开 ──
 const expandedGroups = ref(new Set())
 
 function isActive(path) {
@@ -90,18 +75,16 @@ function toggleGroup(item) {
 
 function onGroupClick(item) {
   if (collapsed.value) {
-    // 折叠态无子项区：跳转到默认子页，保持可用
     router.push(item.children[0].path)
     return
   }
   toggleGroup(item)
-  // 子项为点击后新增的 DOM：补渲染 lucide 图标
+
   nextTick(() => {
     if (window.lucide) window.lucide.createIcons()
   })
 }
 
-// 路由变化时自动展开当前分组（不覆盖用户手动收起后的再点击）
 watch(
   () => route.path,
   () => {
@@ -125,11 +108,10 @@ onMounted(async () => {
   window.addEventListener("mousemove", onSidebarResizeMove)
   window.addEventListener("mouseup", onSidebarResizeEnd)
   await nextTick()
-  // Lucide icons render
+
   if (window.lucide) window.lucide.createIcons()
   sidebarNavEnter(".sidebar-menu__item")
 
-  // Brand entrance — restrained geometric reveal
   animate(".sidebar__brand", {
     opacity: [0, 1],
     duration: 400,
@@ -159,13 +141,11 @@ onUnmounted(() => {
       </div>
     </router-link>
 
-    <!-- 导航菜单 -->
     <nav class="sidebar__nav">
       <div v-for="cat in categories" :key="cat.key" class="sidebar__group">
         <div v-if="cat.label && !collapsed" class="sidebar__group-label">{{ cat.label }}</div>
         <div class="nav-section-items">
           <template v-for="item in cat.items" :key="item.path">
-            <!-- 可展开分组：父项（展开/收起） + 子项 -->
             <template v-if="item.children">
               <button
                 type="button"
@@ -210,7 +190,6 @@ onUnmounted(() => {
               </div>
             </template>
 
-            <!-- 普通导航项 -->
             <router-link
               v-else
               :to="item.path"
@@ -231,7 +210,6 @@ onUnmounted(() => {
       </div>
     </nav>
 
-    <!-- 底部用户区 -->
     <div class="sidebar__footer">
       <div class="sidebar__user-card">
         <div class="sidebar__user-display" :title="collapsed ? activeAccount : ''">

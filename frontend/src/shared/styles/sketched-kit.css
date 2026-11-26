@@ -1,17 +1,3 @@
-/**
- * Sketched UI Kit — 手稿控件皮肤（分类）
- *
- * 作用域：`.sketch-kit`（挂在容器上，不挂页面根）
- * 规格：.agents/skills/doodle-craft/references/components/sketched-ui-kit.md
- * 线型白名单：本文件是仓内唯一允许声明 dashed 的样式表（另一个是 AgentRouteCard.vue），
- *   范围仅限「按钮描边态」与「输入框 / 多行框 / 下拉框边框」；卡片、表纸、弹窗、抽屉外框仍实线。
- * 选择器写法说明：DoodleBtn 的样式是 scoped（编译成 `.doodle-btn[data-v-*]`，特异性 0,2,0），
- *   路由组件按需加载后其 CSS 可能晚于本文件注入，因此这里用重复类名 `.doodle-btn.doodle-btn`
- *   把特异性抬到 0,3,0，避免“谁后加载谁赢”。EP 输入框那几条沿用全局 `!important` 口径。
- */
-
-/* ── 0. 本作用域的组合值（虚线边框）：虚线口径只允许由白名单样式表声明，
-   颜色原语来自 tokens.css 的 --comp-kit-* ── */
 .sketch-kit {
   --comp-kit-border: 1.5px dashed var(--comp-kit-line);
   --comp-kit-border-soft: 1.5px dashed var(--comp-kit-line-soft);
@@ -19,7 +5,6 @@
   --comp-kit-border-danger: 1.5px dashed var(--comp-kit-danger-line);
 }
 
-/* ── 1. 表单骨架（kit 自带，页面不必再写一套） ── */
 .sketch-kit .sketch-form {
   display: flex;
   flex-direction: column;
@@ -30,7 +15,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--app-space-xs);
-  /* 字段标题与动作按钮同一档：14px + 墨色（需求方 2026-11-16 指定，原为 12px 次级灰） */
+
   font-size: var(--app-size-sm);
   color: var(--ink);
 }
@@ -43,15 +28,12 @@
   letter-spacing: normal;
 }
 
-/* label 行里的小动作按钮（如「加载模型」）压到一行高度，避免把 label 行撑高、
-   让字段标题与它下面的控件互相脱节；字号仍与其它按钮同档（14px），不缩字 */
 .sketch-kit .sketch-field__label .doodle-btn.doodle-btn {
   min-height: 28px;
   padding: 0 var(--app-space-sm);
   letter-spacing: normal;
 }
 
-/* label 的字距会继承进输入内容，控件本体重置 */
 .sketch-kit
   .sketch-field
   :is(.el-input, .el-select, .el-textarea, .el-input__inner, .el-select__placeholder) {
@@ -64,7 +46,6 @@
   gap: var(--app-space-sm);
 }
 
-/* ── 2. 按钮五态（Primary / Danger / Highlight / Disabled / Teal） ── */
 .sketch-kit .doodle-btn.doodle-btn {
   min-height: 34px;
   padding: 0 var(--app-space-md);
@@ -93,7 +74,6 @@
   color: var(--comp-kit-danger-ink);
 }
 
-/* 填充态：实线墨边 + 硬影，与主线同一套语言 */
 .sketch-kit .doodle-btn.doodle-btn--yellow {
   border: 2.5px solid var(--ink);
   background: var(--c-dashboard);
@@ -108,9 +88,6 @@
   box-shadow: 3px 3px 0 0 var(--ink);
 }
 
-/* 保存（提交）态：与 Primary 同一套描边（虚线、无影），只多了绿色渐变填充。
-   放在 --paper / --danger 之后：调用方同时带 tone 类与 .doodle-btn--save 时靠顺序取胜。
-   需求方 2026-11-16 指定（偏离 hand-drawn-doodle 的「flat marker colors only」），已登记进分类文档。 */
 .sketch-kit .doodle-btn.doodle-btn--save {
   border: var(--comp-kit-border);
   background: var(--comp-kit-save-gradient);
@@ -118,7 +95,6 @@
   box-shadow: none;
 }
 
-/* 描边态：只变底色，不位移、不加影 */
 .sketch-kit .doodle-btn.doodle-btn--paper:hover:not(:disabled):not(.is-disabled),
 .sketch-kit .doodle-btn.doodle-btn--danger:hover:not(:disabled):not(.is-disabled) {
   background: var(--app-highlight);
@@ -126,7 +102,6 @@
   box-shadow: none;
 }
 
-/* 保存态保留渐变，反馈只用亮度微调（换底色会把渐变冲掉） */
 .sketch-kit .doodle-btn.doodle-btn--save:hover:not(:disabled):not(.is-disabled) {
   filter: brightness(1.04);
   transform: none;
@@ -173,7 +148,6 @@
   outline-offset: 2px;
 }
 
-/* ── 3. 输入框四态（默认 / hover / focus / disabled）+ 多行 + label ── */
 .sketch-kit .el-input__wrapper,
 .sketch-kit .el-select__wrapper,
 .sketch-kit .el-textarea__inner {
@@ -203,14 +177,12 @@
 .sketch-kit .el-select__wrapper.is-focused,
 .sketch-kit .el-textarea__inner:focus {
   border-color: var(--comp-kit-line) !important;
-  /* 焦点指示与按钮同一套：2px outline + 2px offset（不再用扩散环） */
+
   outline: 2px solid var(--c-dashboard);
   outline-offset: 2px;
   box-shadow: none !important;
 }
 
-/* 焦点指示只由本文件提供：显式关掉 EP / 浏览器给内层控件的 outline，
-   避免 EP 升级或浏览器差异导致“圆环 + 原生 outline”双重焦点框 */
 .sketch-kit .el-input__inner,
 .sketch-kit .el-textarea__inner,
 .sketch-kit .el-select__wrapper,
@@ -235,13 +207,11 @@
 
 .sketch-kit .el-input__inner::placeholder,
 .sketch-kit .el-textarea__inner::placeholder,
-/* 只有“真的在显示占位”时才用弱色；已选中的值保持正文墨色 */
 .sketch-kit .el-select__placeholder.is-transparent,
 .sketch-kit .el-select__placeholder.is-transparent span {
   color: var(--app-text-muted);
 }
 
-/* ── 4. 动效降级（本文件动了 transform） ── */
 @media (prefers-reduced-motion: reduce) {
   .sketch-kit .doodle-btn.doodle-btn {
     transition: none;

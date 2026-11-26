@@ -1,4 +1,3 @@
-/** case-manager API — 项目表、导入与个人视图。 */
 import client from "@/shared/api-client"
 import type { DjangoResponse } from "@/shared/api-client"
 import type { CaseProject, CaseRow, LibraryKind, ProjectSheet, SheetView } from "./types"

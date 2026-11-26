@@ -1,13 +1,4 @@
 <script setup lang="ts">
-/**
- * KpiCard — 共享统计卡（Hand-Drawn Doodle 壳）
- *
- * variant:
- * - kpi（默认）：紧凑指标（shape + label + value），兼容既有调用
- * - entry：仪表盘入口（图标 + 标题 + 数值 + 描述 + 进入）
- *
- * 视觉 DNA：虚线边 / 近直角 / 硬偏移色阴影 / 可选微倾与图钉胶带
- */
 import { computed } from "vue"
 
 const props = withDefaults(
@@ -15,18 +6,18 @@ const props = withDefaults(
     value?: string | number
     label?: string
     color?: string
-    /** kpi 变体几何点缀 */
+
     shape?: "diamond" | "triangle" | "square" | "circle"
     variant?: "kpi" | "entry"
-    /** entry：描述文案 */
+
     desc?: string
-    /** entry：live 指示点 */
+
     live?: boolean
-    /** 装饰：无 / 图钉 / 胶带 */
+
     deco?: "none" | "pin" | "tape"
-    /** 微倾角度（deg）；不传则用 CSS 默认 */
+
     tilt?: number
-    /** 是否可点击（kpi 默认可点；entry 默认不可点，必须显式传 true） */
+
     clickable?: boolean
   }>(),
   {
@@ -51,7 +42,7 @@ const isEntry = computed(() => props.variant === "entry")
 
 const isClickable = computed(() => {
   if (props.clickable !== undefined) return props.clickable
-  // entry 卡默认只展示，可点性必须由调用方显式给出
+
   return isEntry.value ? false : true
 })
 
@@ -92,7 +83,6 @@ function onKeydown(e: KeyboardEvent) {
     <span v-if="deco === 'pin'" class="kpi-card__pin" aria-hidden="true" />
     <span v-if="deco === 'tape'" class="kpi-card__tape" aria-hidden="true" />
 
-    <!-- ── kpi：紧凑指标 ── -->
     <template v-if="!isEntry">
       <div
         class="kpi-card__shape"
@@ -108,7 +98,6 @@ function onKeydown(e: KeyboardEvent) {
       <slot />
     </template>
 
-    <!-- ── entry：仪表盘入口 ── -->
     <template v-else>
       <div class="kpi-card__head">
         <span class="kpi-card__icon">
@@ -137,23 +126,22 @@ function onKeydown(e: KeyboardEvent) {
 <style scoped>
 .kpi-card {
   --kpi-accent: var(--comp-kpi-accent);
-  /* 图钉 / 胶带 / 图标硬阴影与形状描边（rgba 装饰绘制色登记处） */
+
   --kpi-pin-shadow: var(--comp-kpi-pin-shadow);
   --kpi-tape-border: var(--comp-kpi-tape-border);
   --kpi-icon-shadow: var(--comp-kpi-icon-shadow);
   --kpi-shape-border: var(--comp-kpi-shape-border);
-  /* live 指示点脉冲（rgba 状态绘制色登记处） */
+
   --kpi-live-pulse: var(--comp-kpi-live-pulse);
   --kpi-live-pulse-fade: var(--comp-kpi-live-pulse-fade);
   --kpi-tilt: var(--comp-kpi-tilt);
   --kpi-radius: var(--comp-kpi-radius);
   position: relative;
   background: var(--color-white);
-  /* 2026-11-09 按需求改：虚线 → 实线，描边色与硬阴影同为模块色（--kpi-accent） */
-  /* 描边与阴影同色：取阴影第一层（accent 42% 混纸白） */
+
   border: 2.5px solid color-mix(in srgb, var(--kpi-accent) 42%, var(--paper));
   border-radius: var(--kpi-radius);
-  /* 2026-11-09：描边之外补回阴影，取同色相三层、逐层变浅（浅色渐变） */
+
   box-shadow:
     4px 4px 0 0 color-mix(in srgb, var(--kpi-accent) 42%, var(--paper)),
     8px 8px 0 0 color-mix(in srgb, var(--kpi-accent) 20%, var(--paper)),
@@ -181,7 +169,6 @@ function onKeydown(e: KeyboardEvent) {
   outline-offset: 3px;
 }
 
-/* 装饰：不拦截点击 */
 .kpi-card__pin,
 .kpi-card__tape {
   position: absolute;
@@ -218,7 +205,6 @@ function onKeydown(e: KeyboardEvent) {
   );
 }
 
-/* ── kpi 变体 ── */
 .kpi-card--kpi {
   text-align: center;
   padding: var(--app-space-md, 12px) var(--app-space-lg, 16px) var(--app-space-sm, 8px);
@@ -276,7 +262,7 @@ function onKeydown(e: KeyboardEvent) {
   font-weight: var(--app-font-weight-bold);
   letter-spacing: 0.04em;
   margin-bottom: 2px;
-  /* 标题统一黑色，不再跟随 accent */
+
   color: var(--app-text-primary);
 }
 
@@ -285,10 +271,7 @@ function onKeydown(e: KeyboardEvent) {
   font-size: var(--app-size-2xl, 28px);
   font-weight: var(--app-font-weight-heavy);
   line-height: 1.1;
-  /* 数值：同色相深→浅渐变。
-     2026-11-17 修订（上一版 80%→30% 混纸色对比度只有 1.1~3.0:1，读不动）：
-     两端改为 accent 与墨色混合（48% → 30%），既保留色相差异，又把对比度拉到 7:1 以上；
-     不支持 background-clip:text 时回落到起点色，仍然可读。 */
+
   background-image: linear-gradient(
     90deg,
     color-mix(in srgb, var(--kpi-accent) 48%, var(--ink)) 0%,
@@ -300,7 +283,6 @@ function onKeydown(e: KeyboardEvent) {
   -webkit-text-fill-color: transparent;
 }
 
-/* ── entry 变体 ── */
 .kpi-card--entry {
   display: flex;
   flex-direction: column;
@@ -396,7 +378,7 @@ function onKeydown(e: KeyboardEvent) {
   font-weight: var(--app-font-weight-heavy);
   letter-spacing: -0.03em;
   line-height: 1;
-  /* 与 kpi 变体同一套：accent 与墨色 48% → 30%，保色相、保对比度 */
+
   background-image: linear-gradient(
     90deg,
     color-mix(in srgb, var(--kpi-accent) 48%, var(--ink)) 0%,

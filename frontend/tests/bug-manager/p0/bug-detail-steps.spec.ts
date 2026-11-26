@@ -1,6 +1,3 @@
-/**
- * [P0] BUG 单详情 — 有快照按四问，无快照退回原文，报告按钮按定位出现。
- */
 import { mount } from "@vue/test-utils"
 import { describe, expect, it } from "vitest"
 import BugDetailDrawer from "@/modules/bug-manager/components/BugDetailDrawer.vue"

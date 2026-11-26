@@ -1,12 +1,4 @@
 <script setup lang="ts">
-/**
- * 对话栏面板：纸卡 + 浅墨虚线框 + 该助手笔色的双波浪线。
- *
- * 对话页左栏专用：不做倾斜，虚线只属于这一个卡片（登记在
- * doodle-craft `references/components/assistant-marker-card.md`）。
- * 每个对话栏支持就地重命名与删除，具体接口由父组件调。
- */
-
 import { nextTick, ref } from "vue"
 import type { ComponentPublicInstance } from "vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
@@ -25,7 +17,6 @@ const renamingId = ref("")
 const draft = ref("")
 const renameInput = ref<HTMLInputElement | null>(null)
 
-/** 就地改名：把该行切成输入框并聚焦全选。 */
 async function startRename(lane: AssistantThread): Promise<void> {
   renamingId.value = lane.thread_id
   draft.value = lane.title || ""
@@ -34,7 +25,6 @@ async function startRename(lane: AssistantThread): Promise<void> {
   renameInput.value?.select()
 }
 
-/** 提交改名；空标题由父组件当作"恢复默认名"。 */
 function commitRename(): void {
   if (!renamingId.value) return
   const id = renamingId.value
@@ -42,12 +32,10 @@ function commitRename(): void {
   emit("rename", id, draft.value.trim())
 }
 
-/** Esc 取消：先清状态，再让随后的 blur 直接返回。 */
 function cancelRename(): void {
   renamingId.value = ""
 }
 
-/** v-for 里的单例输入框：用函数 ref 取元素，避免模板 ref 退化成数组。 */
 function bindRenameInput(el: Element | ComponentPublicInstance | null): void {
   renameInput.value = el instanceof HTMLInputElement ? el : null
 }
@@ -80,7 +68,6 @@ function bindRenameInput(el: Element | ComponentPublicInstance | null): void {
         />
       </svg>
 
-      <!-- 新建对话：Teal 键（参考 Sketched UI Kit 的 Teal 变体） -->
       <DoodleBtn tone="teal" @click="emit('create')">新建对话</DoodleBtn>
 
       <template v-for="(lane, index) in lanes" :key="lane.thread_id">
@@ -134,10 +121,8 @@ function bindRenameInput(el: Element | ComponentPublicInstance | null): void {
       </template>
     </aside>
 
-    <!-- 左栏附加内容（对话页的运行日志卡）：与对话栏同列堆叠 -->
     <slot />
 
-    <!-- 两栏之间的纵向虚线分隔：拉满整列高度，只由本组件声明 -->
     <div class="lane-column__split" role="separator" aria-orientation="vertical" />
   </div>
 </template>
@@ -146,7 +131,7 @@ function bindRenameInput(el: Element | ComponentPublicInstance | null): void {
 .lane-column {
   position: relative;
   height: 100%;
-  /* 对话栏在上、日志卡在下：左栏自己是一列，分隔线是绝对定位、不参与这层排布 */
+
   display: flex;
   flex-direction: column;
   gap: var(--app-space-lg);
@@ -155,7 +140,7 @@ function bindRenameInput(el: Element | ComponentPublicInstance | null): void {
 .lane-column__split {
   position: absolute;
   top: 0;
-  /* 落在两栏 24px 间距的中线：与面板右边框留 12px，不贴着卡片 */
+
   right: calc(var(--app-space-lg) / -2);
   bottom: 0;
   width: 0;
@@ -168,8 +153,7 @@ function bindRenameInput(el: Element | ComponentPublicInstance | null): void {
   gap: var(--app-space-sm);
   padding: var(--app-space-md);
   background: var(--paper);
-  /* 浅墨虚线：比颜料片轻一档，卡片本体不倾斜。
-     四边闭合；两栏分隔线另算，落在右侧间距中线，不贴卡边 */
+
   border: 1.5px dashed color-mix(in srgb, var(--ink) 38%, transparent);
   border-radius: var(--app-radius-md);
 }
@@ -213,7 +197,6 @@ function bindRenameInput(el: Element | ComponentPublicInstance | null): void {
   stroke: var(--c-ai);
 }
 
-/* 对话栏条目：外层是卡片，内层按钮负责"选中/打开"，动作按钮浮在右端 */
 .lane-panel__lane {
   position: relative;
   display: flex;
@@ -229,7 +212,6 @@ function bindRenameInput(el: Element | ComponentPublicInstance | null): void {
   border-color: var(--ink);
 }
 
-/* 选中的对话栏：浅蓝色填充（需求方指定），描边仍用墨色 */
 .lane-panel__lane.is-current {
   background: color-mix(in srgb, var(--c-workflow) 40%, var(--app-bg-card));
   border: 2px solid var(--ink);
@@ -269,7 +251,6 @@ function bindRenameInput(el: Element | ComponentPublicInstance | null): void {
   font-size: var(--app-size-xs);
 }
 
-/* 动作按钮：悬停或键盘进入本行时浮出，底色跟随本行（白 / 浅蓝） */
 .lane-panel__actions {
   position: absolute;
   top: 0;
@@ -291,7 +272,6 @@ function bindRenameInput(el: Element | ComponentPublicInstance | null): void {
   pointer-events: auto;
 }
 
-/* 触屏没有 hover：动作常显 */
 @media (hover: none) {
   .lane-panel__actions {
     opacity: 1;
@@ -330,7 +310,6 @@ function bindRenameInput(el: Element | ComponentPublicInstance | null): void {
   outline-offset: 2px;
 }
 
-/* 就地改名：整行变成输入框，几何不变避免跳动 */
 .lane-panel__rename {
   width: 100%;
   min-height: 38px;

@@ -1,5 +1,3 @@
-"""task-list API — task creation, dispatch, billing and read models."""
-
 import base64
 import json
 import re
@@ -51,41 +49,27 @@ __all__ = [
     "get_task_media",
 ]
 
-# 停机排空标志：进程内生效，重启后自然复位。置位后不再领取新的 pending 任务。
 _DRAINING = False
 
 
 def begin_drain() -> None:
-    """置位停机排空标志：调用后 dispatch_device 不再领取新任务。"""
     global _DRAINING
     _DRAINING = True
 
 
 def is_draining() -> bool:
-    """当前进程是否处于停机排空状态。"""
     return _DRAINING
 
 
 def running_task_ids() -> list[int]:
-    """当前仍为 running 的任务编号，供停机超时名单使用。"""
     return list(Task.objects.filter(status=TaskStatus.RUNNING).values_list("id", flat=True))
 
 
 def count_running_tasks() -> int:
-    """当前进程可见的 running 任务数，供停机排空轮询。"""
     return Task.objects.filter(status=TaskStatus.RUNNING).count()
 
 
 def _status_buckets(counts: dict[str, int]) -> dict:
-    """把「状态 → 条数」收成统计字段：成功含 completed/success 两种历史写法。
-
-    Args:
-        counts: `{状态: 条数}`，允许含未知状态（自然计入总数与分母）。
-
-    Returns:
-        `{total, running, pending, success, failed, interrupted, cancelled,
-        finished, success_rate}`。
-    """
     success = counts.get(TaskStatus.COMPLETED, 0) + counts.get("success", 0)
     running = counts.get(TaskStatus.RUNNING, 0)
     pending = counts.get(TaskStatus.PENDING, 0)
@@ -106,19 +90,6 @@ def _status_buckets(counts: dict[str, int]) -> dict:
 
 
 def task_stats(tasks) -> dict:
-    """
-    按状态聚合任务数并派生成功率。
-
-    统计只做一次 `GROUP BY status`，不读取任务明细行；成功率口径为
-    「成功 ÷ 已结束」，已结束 = 总数 − 执行中 − 待执行。
-
-    Args:
-        tasks: 已按可见范围过滤的 `Task` 查询集。
-
-    Returns:
-        `{total, running, pending, success, failed, interrupted, cancelled,
-        finished, success_rate}`；成功含 `completed` 与 `success` 两种历史写法。
-    """
     counts = {
         str(row["status"] or ""): int(row["count"])
         for row in tasks.values("status").annotate(count=Count("id"))
@@ -127,19 +98,6 @@ def task_stats(tasks) -> dict:
 
 
 def task_stats_by_agent(tasks, agents) -> list[dict]:
-    """
-    按智能体分别统计任务（供任务清单的分智能体柱状图）。
-
-    每个可见智能体都会出现在结果里，没有任务的智能体返回全 0 —— 新增智能体后
-    图表自动多一张，不需要改前端。统计仍只做一次 `GROUP BY agent_id, status`。
-
-    Args:
-        tasks: 已按可见范围过滤的 `Task` 查询集。
-        agents: 当前用户可见的智能体列表（`AIAgent`）。
-
-    Returns:
-        按智能体编号升序的列表，每项为 `{id, name, ...统计字段}`。
-    """
     grouped: dict[int, dict[str, int]] = {}
     for row in tasks.values("agent_id", "status").annotate(count=Count("id")):
         agent_id = int(row["agent_id"])
@@ -163,14 +121,6 @@ SWEEP_STALE_SECONDS = 45
 
 
 def sweep_stale_tasks(stop_timeout_ids: set[int] | None = None) -> int:
-    """把心跳超时的 running 收成中断。心跳还在的不收。
-
-    Args:
-        stop_timeout_ids: 停机等满后记下的任务编号。命中则 cause 为 stop_timeout。
-
-    Returns:
-        本次收成中断的条数。
-    """
     from datetime import timedelta
 
     cutoff = timezone.now() - timedelta(seconds=SWEEP_STALE_SECONDS)
@@ -205,14 +155,12 @@ def sweep_stale_tasks(stop_timeout_ids: set[int] | None = None) -> int:
 
 
 def models_q_heartbeat(cutoff):
-    """心跳为空或早于阈值。空心跳视为没有活线程。"""
     from django.db.models import Q
 
     return Q(heartbeat_at__isnull=True) | Q(heartbeat_at__lt=cutoff)
 
 
 def recover_orphaned_tasks() -> int:
-    """兼容旧入口：只清扫心跳已停的 running。拉起 pending 由 claim_terminal 负责。"""
     return sweep_stale_tasks()
 
 
@@ -233,7 +181,6 @@ def create_task(
     orchestration: str = "",
     kind: str = "",
 ) -> Task:
-    """创建任务（任务发布）；device_serial 须已在提交时固化。"""
     return Task.objects.create(
         title=title,
         task_kind=task_kind,
@@ -262,7 +209,6 @@ def add_task_attachment(
     sort_order: int,
     stored_path: str = "",
 ) -> TaskAttachment:
-    """写入一条任务附件。调用方只经本函数落库。"""
     return TaskAttachment.objects.create(
         task=task,
         kind=kind,
@@ -274,12 +220,10 @@ def add_task_attachment(
 
 
 def list_task_attachments(task: Task) -> list[TaskAttachment]:
-    """按排序返回任务附件。"""
     return list(task.file_attachments.all())
 
 
 def copy_task_attachments(source: Task, dest: Task) -> list[TaskAttachment]:
-    """把源任务的附件行复制到新任务，不复制磁盘原件，加载结论清空。"""
     created: list[TaskAttachment] = []
     for row in list_task_attachments(source):
         created.append(
@@ -296,11 +240,6 @@ def copy_task_attachments(source: Task, dest: Task) -> list[TaskAttachment]:
 
 
 def materialize_config_file(task: Task) -> tuple[str, bool]:
-    """返回 YAML 路径。原件还在时用原件；否则用正文写成临时文件。
-
-    Returns:
-        (路径, 是否为临时文件)。临时文件由调用方用完删除。
-    """
     import tempfile
 
     from backend.apps.task_list.upload_cleanup import UPLOAD_DIR
@@ -322,21 +261,11 @@ def materialize_config_file(task: Task) -> tuple[str, bool]:
 
 
 def build_sop_run_input(task: Task) -> str:
-    """SOP 执行开场：只由设备序列号按固定模板生成，不拼目标与文档。"""
     serial = (task.device_serial or "").strip()
     return f"本次要操作的设备 serial 是：{serial}。每一步的设备动作都必须带上它。"
 
 
 def build_case_requirement(task: Task, limit: int = 80000) -> str:
-    """把任务文档拼成用例编写的需求正文；超长截断并留下标记。
-
-    Args:
-        task: 用例编写任务。
-        limit: 需求正文最大字符数。
-
-    Returns:
-        以「## 文件名」分节的正文；没有文档时返回空串。
-    """
     rows = [
         row
         for row in list_task_attachments(task)
@@ -351,13 +280,11 @@ def build_case_requirement(task: Task, limit: int = 80000) -> str:
 
 
 def case_project_code(task: Task) -> str:
-    """从任务标题提取型号代号（如 H717D）；提取不到时用 PROJ。"""
     found = re.search(r"[A-Z]{1,4}\d{3,}[A-Z0-9]*", task.title or "")
     return found.group(0) if found else "PROJ"
 
 
 def set_config_load_message(task: Task, message: str) -> None:
-    """把配置加载结论写到该任务的 YAML 附件行。"""
     (
         TaskAttachment.objects.filter(task=task, kind=TaskAttachment.KIND_CONFIG)
         .order_by("sort_order", "id")
@@ -366,7 +293,6 @@ def set_config_load_message(task: Task, message: str) -> None:
 
 
 def workflow_id_of(task: Task) -> int:
-    """从任务结果里取出工作流编号。没有或不是正整数时返回 0。"""
     raw = parse_task_result(task.result).get("workflow_id")
     try:
         value = int(raw)
@@ -376,10 +302,6 @@ def workflow_id_of(task: Task) -> int:
 
 
 def resolve_rerun_workflow_id(task: Task) -> int:
-    """重跑用的工作流编号：当前记录没有时，沿同一设备同一用例往回找。
-
-    旧的重跑会把编号丢掉。再点那些失败记录时，编号只存在更早的原任务上。
-    """
     found = workflow_id_of(task)
     if found:
         return found
@@ -401,12 +323,6 @@ def resolve_rerun_workflow_id(task: Task) -> int:
 
 
 def rerun_task(task: Task) -> Task:
-    """失败任务克隆新建：复制标题/目标/附件/设备/指定用例，并只保留工作流编号。
-
-    工作流编号存在 result JSON 里，执行器靠它解析名片。不复制失败原因、
-    报告路径和费用，避免新任务继承上一次的终态。调用方负责校验状态，
-    并在返回后调度。
-    """
     created = create_task(
         title=task.title or "",
         goal=task.goal or "",
@@ -432,12 +348,10 @@ def rerun_task(task: Task) -> Task:
 
 
 def touch_heartbeat(task_id: int) -> None:
-    """只刷新仍在运行的任务心跳。终态行不动。"""
     Task.objects.filter(pk=task_id, status=TaskStatus.RUNNING).update(heartbeat_at=timezone.now())
 
 
 def start_task(task: Task) -> Task:
-    """标记任务开始执行（异步执行线程启动时调用）。"""
     task.status = TaskStatus.RUNNING
     task.started_at = timezone.now()
     task.save(update_fields=["status", "started_at"])
@@ -445,7 +359,6 @@ def start_task(task: Task) -> Task:
 
 
 def build_planner_user_input(task) -> str:
-    """规划模型用户输入：四键中文 JSON（无 markdown 代码块）。"""
     return json.dumps(
         {
             "任务标题": getattr(task, "title", None) or "",
@@ -458,7 +371,6 @@ def build_planner_user_input(task) -> str:
 
 
 def dispatch_device(serial: str) -> Task | None:
-    """按设备抢槽：同 serial 至多一条 running；否则 start 最早 pending 并起线程。"""
     serial = (serial or "").strip()
     if not serial:
         return None
@@ -499,14 +411,6 @@ def dispatch_device(serial: str) -> Task | None:
 
 
 def dispatch_case_authoring(task: Task) -> Task | None:
-    """用例编写任务不占设备：置 running 后直接起线程，同一条任务只派发一次。
-
-    Args:
-        task: 刚创建的用例编写任务。
-
-    Returns:
-        已领取并置 running 的任务；任务不存在或不在 pending 时返回 None。
-    """
     if _DRAINING:
         return None
     with transaction.atomic():
@@ -534,19 +438,6 @@ def claim_terminal(
     costs: dict | None = None,
     release_device: bool = True,
 ) -> Task | None:
-    """仅当任务仍为 running 时写入终态。抢不到则不改状态和结果。
-
-    Args:
-        task_id: 要收口的任务编号。
-        status: 目标终态。
-        result: 合并进现有结果的载荷。空串表示不改结果正文。
-        usage: token 累加器。抢不到终态时仍可补写。
-        costs: 费用。抢不到终态时仍可补写。
-        release_device: 终态生效后是否放行设备槽。
-
-    Returns:
-        终态生效后的任务。任务不存在，或状态已不是 running，返回 None。
-    """
     with transaction.atomic():
         locked = Task.objects.select_for_update().filter(pk=task_id).first()
         if locked is None:
@@ -571,7 +462,6 @@ def claim_terminal(
 
 
 def _apply_usage(task: Task, usage: dict | None, costs: dict | None) -> list[str]:
-    """把用量和费用写到内存对象上，返回需要 update 的字段名。"""
     fields: list[str] = []
     if usage:
         task.input_tokens = int(usage.get("input_tokens") or 0)
@@ -602,20 +492,6 @@ def finalize_task(
     costs: dict | None = None,
     release_device: bool = True,
 ) -> Task:
-    """完成任务。running 走条件收口；调用方已确认的终态补写仍直接保存。
-
-    Args:
-        task: 要收口的任务。
-        status: 终态。
-        result: 写入 `Task.result` 的结果载荷。
-        usage: 工作流返回的任务级 token 累加器（含按模型拆分），空则只落状态/结果。
-        costs: 本次运行按价目表算出的费用（input / cache / output / total），空则不写。
-        release_device: 是否在收口后放行该设备槽。取消路径传 False，
-            放行交给工作线程退出时统一执行，避免旧线程还在操作设备就拉起下一条任务。
-
-    Returns:
-        已保存终态的任务。条件收口抢不到时返回库里的当前行，不改其状态。
-    """
     if task.status == TaskStatus.RUNNING:
         claimed = claim_terminal(
             task.id,
@@ -644,16 +520,6 @@ def finalize_task(
 
 
 def _record_bug_safely(task: Task) -> None:
-    """
-    Mirror a terminal task error into the BUG ledger without affecting the task.
-
-    Args:
-        task: Task that has already been saved in a terminal state.
-
-    Returns:
-        None. Any failure is logged and swallowed so BUG registration cannot
-        change the task outcome.
-    """
     try:
         from backend.apps.bug_manager.api import record_task_bugs
 
@@ -663,12 +529,6 @@ def _record_bug_safely(task: Task) -> None:
 
 
 def cancel_running_task(task: Task) -> Task:
-    """关闭运行中的 SOP。排队中的任务拒绝关闭。不调用角色基类的中断方法。
-
-    设备槽 MUST NOT 在关闭动作里放行：任务终态立刻置为 `cancelled`，但同一设备
-    上排队的任务要等工作线程真正退出后才拉起（见 `task_runner.release_device_now`），
-    否则旧线程还在操作设备，就会出现两条任务抢同一台手机。
-    """
     if task.status == TaskStatus.PENDING:
         raise ValueError("排队中的任务不能关闭")
     if task.status != TaskStatus.RUNNING:
@@ -686,7 +546,6 @@ def cancel_running_task(task: Task) -> Task:
 
 
 def delete_task(task: Task) -> None:
-    """删除任务发布记录及其截图文件，并补派发同设备下一条。"""
     from backend.apps.task_list.media_storage import get_media_storage
 
     task_id = task.id
@@ -699,7 +558,6 @@ def delete_task(task: Task) -> None:
 
 
 def clear_agent_tasks(agent=None) -> int:
-    """调试：清空全部任务发布记录及其截图文件，返回删除条数。"""
     from backend.apps.task_list.media_storage import get_media_storage
 
     del agent
@@ -712,7 +570,6 @@ def clear_agent_tasks(agent=None) -> int:
 
 
 def merge_task_result(current: str, incoming: str) -> str:
-    """把新结果并进已有 JSON，保留 workflow_id。纯文本不再整段覆盖。"""
     base = parse_task_result(current)
     extra = parse_task_result(incoming)
     if not extra and (incoming or "").strip() and not base:
@@ -726,7 +583,6 @@ def merge_task_result(current: str, incoming: str) -> str:
 
 
 def parse_task_result(raw: str) -> dict:
-    """解析任务 result 文本：JSON 对象原样返回，纯文本包成 {summary}。"""
     text = (raw or "").strip()
     if not text:
         return {}
@@ -740,7 +596,6 @@ def parse_task_result(raw: str) -> dict:
 
 
 def task_result_preview(raw: str, limit: int = 120) -> str:
-    """列表卡片用的短摘要，避免把整份过程 JSON 下发。"""
     obj = parse_task_result(raw)
     summary = obj.get("reason") or obj.get("summary") or obj.get("message") or ""
     if not summary and isinstance(obj.get("completed"), list) and obj["completed"]:
@@ -761,7 +616,6 @@ def _attachment_names(task: Task) -> list[str]:
     return [legacy] if legacy else []
 
 
-# 任务列表只取这些列；不要 select_related("agent")——agent 行可能带 MB 级头像与线路配置。
 TASK_LIST_FIELDS = (
     "id",
     "title",
@@ -781,20 +635,11 @@ TASK_LIST_FIELDS = (
 
 
 def assistant_names_by_agent(agent_ids) -> dict[int, str]:
-    """旧智能体已下线，任务列表不再按智能体取名。"""
     del agent_ids
     return {}
 
 
 def _report_locator(task: Task) -> dict:
-    """从任务结果里取出报告定位。
-
-    Args:
-        task: 任务对象；`result` 是 JSON 文本，可能为空或非字典。
-
-    Returns:
-        含 `report_run` / `report_name` 的字典；没有报告时两者都是空串。
-    """
     try:
         payload = json.loads(task.result or "{}")
     except (TypeError, ValueError):
@@ -808,7 +653,6 @@ def _report_locator(task: Task) -> dict:
 
 
 def _workflow_name(payload: dict) -> str:
-    """现存工作流用当前名称；已删除时回退本次运行名。"""
     from backend.apps.ai_assistant import api as assistant_api
 
     raw_id = payload.get("workflow_id")
@@ -827,7 +671,6 @@ def _workflow_name(payload: dict) -> str:
 
 
 def workflow_filter_options() -> list[dict]:
-    """现存工作流的筛选项。已删除的工作流不出现。"""
     from backend.apps.ai_assistant import api as assistant_api
 
     return [
@@ -837,12 +680,6 @@ def workflow_filter_options() -> list[dict]:
 
 
 def serialize_agent_task_row(task: Task, *, assistant_name: str | None = None) -> dict:
-    """任务发布列表行。正文不下发。
-
-    Args:
-        task: 任务对象；附件需已 prefetch。
-        assistant_name: 批量取好的线路名；None 时回退到单条解析。
-    """
     names = _attachment_names(task)
     payload = parse_task_result(task.result)
     workflow_name = _workflow_name(payload)
@@ -877,7 +714,6 @@ def serialize_agent_task_row(task: Task, *, assistant_name: str | None = None) -
 
 
 def _sop_binding(task: Task) -> dict:
-    """从运行结果取出本次实际使用的两个名片编号与运行名。"""
     payload = parse_task_result(task.result)
     return {
         "executor_assistant_id": str(payload.get("executor_assistant_id") or ""),
@@ -888,7 +724,6 @@ def _sop_binding(task: Task) -> dict:
 
 
 def serialize_agent_task_detail(task: Task) -> dict:
-    """任务发布详情。新附件行不下发规划输入；历史单附件仍回退旧字段。"""
     rows = list_task_attachments(task)
     if rows:
         documents = [
@@ -943,21 +778,11 @@ _MISSING_STEP_TEXT = "未记录"
 
 
 def step_text(value: object) -> str:
-    """步骤展示文本。空白写成「未记录」，避免四问留空。"""
     text = " ".join(str(value or "").split())
     return text or _MISSING_STEP_TEXT
 
 
 def failed_step_rows(steps: list, kind: str) -> list[dict]:
-    """把没通过的步骤收成可落库的四问快照。
-
-    Args:
-        steps: 带 subject / passed / attempts / message / expected 的步骤结论。
-        kind: verdict / provider / device / platform / interrupted。
-
-    Returns:
-        按原顺序的失败步骤。空文本写成「未记录」。
-    """
     rows = []
     for index, item in enumerate(steps, start=1):
         if getattr(item, "passed", False):
@@ -976,15 +801,6 @@ def failed_step_rows(steps: list, kind: str) -> list[dict]:
 
 
 def category_step(kind: str, actual: str) -> dict:
-    """没有步骤结论时的唯一步骤：用失败类别当步骤名。
-
-    Args:
-        kind: provider / device / platform / interrupted。
-        actual: 给人读的短原因。
-
-    Returns:
-        一条失败步骤。期望结果按类别给出，不假装知道具体步骤。
-    """
     names = {
         "provider": "模型拒绝",
         "device": "设备命令失败",
@@ -1005,12 +821,10 @@ def category_step(kind: str, actual: str) -> dict:
 
 
 def dump_task_run_payload(payload: dict) -> str:
-    """过程结果落库为 JSON 文本。"""
     return json.dumps(payload, ensure_ascii=False)
 
 
 def insert_task_events(task_id: int, rows: list[dict]) -> None:
-    """批量写入任务事件。rows 已是模型字段。"""
     from backend.apps.task_list.models import TaskEvent
 
     if not rows:
@@ -1019,17 +833,6 @@ def insert_task_events(task_id: int, rows: list[dict]) -> None:
 
 
 def store_task_media(task_id: int, packed: dict, defaults: dict) -> int | None:
-    """
-    按任务内 sha256 去重保存缩略图：新图落盘后写元数据。
-
-    Args:
-        task_id: 任务编号。
-        packed: media_storage.encode 的结果（sha256/data/width/height/media_type）。
-        defaults: 事件关联字段（event_seq/role_name/step_seq/attempt）。
-
-    Returns:
-        TaskMedia 行编号；坏图返回 None。
-    """
     from backend.apps.task_list.media_storage import get_media_storage
     from backend.apps.task_list.models import TaskMedia
 
@@ -1057,7 +860,6 @@ def store_task_media(task_id: int, packed: dict, defaults: dict) -> int | None:
 
 
 def _visible_media(user_id: str | None, task_id: int, media_id: int):
-    """按用户可见性取图片行；不可见或未登录返回 None。"""
     from backend.apps.task_list.models import TaskMedia
 
     if not user_id:
@@ -1066,15 +868,6 @@ def _visible_media(user_id: str | None, task_id: int, media_id: int):
 
 
 def media_payload(media) -> dict | None:
-    """
-    读取图片行的字节与元数据。
-
-    Args:
-        media: TaskMedia 行。
-
-    Returns:
-        {sha256, media_type, data}；文件与旧列都缺失时返回 None。
-    """
     from backend.apps.task_list.media_storage import get_media_storage
 
     storage = get_media_storage()
@@ -1091,24 +884,12 @@ def media_payload(media) -> dict | None:
 
 
 def get_media_by_id(task_id: int, media_id: int):
-    """按任务号与图片号取图片行（签名直链用，不做用户校验）。"""
     from backend.apps.task_list.models import TaskMedia
 
     return TaskMedia.objects.filter(task_id=task_id, id=media_id).first()
 
 
 def get_task_media(user_id: str | None, task_id: int, media_id: int) -> dict | None:
-    """
-    按可见性取一张截图的字节与元数据。
-
-    Args:
-        user_id: 当前用户编号。
-        task_id: 任务编号。
-        media_id: 图片行编号。
-
-    Returns:
-        {sha256, media_type, data}；任务不可见、图片不属于该任务或字节缺失时返回 None。
-    """
     media = _visible_media(user_id, task_id, media_id)
     if media is None:
         return None
@@ -1116,17 +897,6 @@ def get_task_media(user_id: str | None, task_id: int, media_id: int) -> dict | N
 
 
 def create_task_media_link(user_id: str | None, task_id: int, media_id: int) -> dict | None:
-    """
-    为可见截图签发短时直链。
-
-    Args:
-        user_id: 当前用户编号。
-        task_id: 任务编号。
-        media_id: 图片行编号。
-
-    Returns:
-        {url, expires, expires_at}；不可见时返回 None。
-    """
     from datetime import datetime
     from datetime import timezone as dt_timezone
 
@@ -1144,7 +914,6 @@ def create_task_media_link(user_id: str | None, task_id: int, media_id: int) -> 
 
 
 def add_usage_hourly(slot: dict, delta: dict) -> None:
-    """按唯一槽位累加一次模型调用。agent_id 为 0 表示未知。"""
     from decimal import Decimal
 
     from django.db import transaction
@@ -1179,7 +948,6 @@ def add_usage_hourly(slot: dict, delta: dict) -> None:
 
 
 def summarize_ledger_cost(task_id: int) -> tuple[dict, list[str]]:
-    """任务费用只读账本。账本不可用时返回 0，不阻断收口。"""
     from decimal import Decimal
 
     from backend.apps.usage_ledger.api import summarize_execution_cost
@@ -1196,7 +964,6 @@ def summarize_ledger_cost(task_id: int) -> tuple[dict, list[str]]:
 
 
 def rollup_task_cost(task_id: int) -> None:
-    """用模型调用结束行的费用合计回写任务。"""
     from django.db.models import Sum
 
     from backend.apps.task_list.models import Task, TaskEvent

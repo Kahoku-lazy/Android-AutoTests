@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** Knowledge Search — 知识库：左栏勾选模块（可多选），右栏提问返回检索原文。 */
 import { onMounted, ref } from "vue"
 import { ElMessage } from "element-plus"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"

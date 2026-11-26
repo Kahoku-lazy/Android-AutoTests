@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 运营后台：本页批量停用与仅超管批量注销 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ops_console/api/test_ops_user_batch.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/case_manager、backend/apps/ops_console
-🏁
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -21,7 +12,6 @@ pytestmark = [pytest.mark.django_db, pytest.mark.api]
 
 
 def test_batch_disable_normal_users(operator_user, other_user):
-    """运营批量停用普通用户：逐行成功。"""
     peer = get_user_model().objects.create_user(username="peer-normal", password="pass-123456")
     response = call(
         OpsUserBatchDisableView,
@@ -39,7 +29,6 @@ def test_batch_disable_normal_users(operator_user, other_user):
 
 
 def test_batch_disable_skips_already_disabled(operator_user, other_user):
-    """已停用记为跳过，其余可管理的行仍被停用。"""
     other_user.is_active = False
     other_user.save(update_fields=["is_active"])
     peer = get_user_model().objects.create_user(username="still-on", password="pass-123456")
@@ -60,7 +49,6 @@ def test_batch_disable_skips_already_disabled(operator_user, other_user):
 def test_batch_disable_rejects_unmanageable_without_aborting(
     operator_user, admin_user, operator_group
 ):
-    """自己、超管、其他运营被拒绝，普通用户仍被停用。"""
     peer = get_user_model().objects.create_user(username="peer-ops", password="pass-123456")
     peer.groups.add(operator_group)
     target = get_user_model().objects.create_user(username="target", password="pass-123456")
@@ -85,7 +73,6 @@ def test_batch_disable_rejects_unmanageable_without_aborting(
 
 
 def test_superuser_cannot_batch_disable_operator(admin_user, operator_user, other_user):
-    """超管批量停用时，运营行被拒绝，普通用户仍被停用。"""
     response = call(
         OpsUserBatchDisableView,
         method="post",
@@ -102,7 +89,6 @@ def test_superuser_cannot_batch_disable_operator(admin_user, operator_user, othe
 
 
 def test_batch_disable_rejects_over_limit(operator_user):
-    """超过 100 个整批拒绝，不写库。"""
     response = call(
         OpsUserBatchDisableView,
         method="post",
@@ -114,7 +100,6 @@ def test_batch_disable_rejects_over_limit(operator_user):
 
 
 def test_operator_cannot_purge(operator_user, other_user):
-    """运营调用注销被拒，目标仍在。"""
     response = call(
         OpsUserPurgeView,
         method="post",
@@ -127,7 +112,6 @@ def test_operator_cannot_purge(operator_user, other_user):
 
 
 def test_purge_deletes_account_but_keeps_business_row(admin_user, other_user):
-    """注销只删账号；该用户创建的项目仍在，创建者字段不变。"""
     project = CaseProject.objects.create(name="kept", created_by=str(other_user.id))
     old_id = other_user.id
 
@@ -149,7 +133,6 @@ def test_purge_deletes_account_but_keeps_business_row(admin_user, other_user):
 
 
 def test_purge_aborts_when_list_contains_operator(admin_user, operator_user, other_user):
-    """名单含运营时整批不删。"""
     response = call(
         OpsUserPurgeView,
         method="post",
@@ -163,7 +146,6 @@ def test_purge_aborts_when_list_contains_operator(admin_user, operator_user, oth
 
 
 def test_purge_aborts_when_list_contains_superuser(admin_user, other_user):
-    """名单含超管时整批不删。"""
     peer = get_user_model().objects.create_superuser(username="root2", password="pass-123456")
     response = call(
         OpsUserPurgeView,

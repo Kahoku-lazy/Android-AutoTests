@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** 运营后台 · Agent配置：名称、一条模型配置、系统提示词。 */
 import { computed, onMounted, ref } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
@@ -49,11 +48,9 @@ const configs = ref<OpsModelConfig[]>([])
 const form = ref<AgentFormDraft>({ name: "", model_config_id: null, system_prompt: "", kind: "" })
 const promptFile = ref<HTMLInputElement>()
 
-// ── 系统提示词全文预览：列表只放一行摘要，全文在弹窗里读 ──
 const previewOpen = ref(false)
 const previewAgent = ref<OpsAgent | null>(null)
 
-/** 打开全文预览：先落定是哪一条，再开弹窗 */
 function openPreview(agent: OpsAgent): void {
   previewAgent.value = agent
   previewOpen.value = true
@@ -66,14 +63,12 @@ const modelOptions = computed(() =>
   })),
 )
 
-// ── 本页分页：Agent 配置接口一次返回全部，前端按每页 10 条切片 ──
 const page = ref(1)
 const totalPages = computed(() => Math.max(1, Math.ceil(agents.value.length / OPS_AGENT_PAGE_SIZE)))
 const pagedAgents = computed(() =>
   agents.value.slice((page.value - 1) * OPS_AGENT_PAGE_SIZE, page.value * OPS_AGENT_PAGE_SIZE),
 )
 
-/** 翻页：越界夹到首 / 末页，判断放在这里，模板只负责禁用态。 */
 function goPage(next: number): void {
   page.value = Math.max(1, Math.min(next, totalPages.value))
 }
@@ -85,7 +80,7 @@ async function load(): Promise<void> {
     const { data } = await listOpsAgents()
     if (!data.status || !data.data) throw data
     agents.value = data.data || []
-    // 删除后当前页可能已越界：夹回最后一页，避免停在空白页
+
     page.value = Math.min(
       page.value,
       Math.max(1, Math.ceil(agents.value.length / OPS_AGENT_PAGE_SIZE)),
@@ -190,12 +185,10 @@ onMounted(load)
 
     <div class="doc-body">
       <section class="doc-section ops-section" data-testid="ops-agents-page">
-        <!-- 行 1：新建配置 -->
         <div class="ops-toolbar">
           <DoodleBtn tone="yellow" @click="openCreate">新建配置</DoodleBtn>
         </div>
 
-        <!-- 行 2：页码文案 + 翻页（常驻，只有一页时两键置灰仍可见） -->
         <div class="ops-controls">
           <span class="ops-page-info">
             第 {{ page }} / {{ totalPages }} 页 · 共 {{ agents.length }} 条
@@ -323,8 +316,6 @@ onMounted(load)
 
 <style src="./index.style.css" scoped></style>
 <style scoped>
-/* 行间距：新建配置 / 翻页行 / 表格之间取 --app-space-md（16px），
-   比共享骨架的 8px 更松，避免按键紧贴表格表头。 */
 .ops-section {
   gap: var(--app-space-md);
 }
@@ -359,8 +350,6 @@ onMounted(load)
   gap: var(--app-space-sm);
 }
 
-/* 系统提示词单元格：整格是一个按钮（一行摘要 + 「查看」），
-   摘要用 width:0 + flex:1 让文本宽度只受列宽约束，超长才出省略号。 */
 .ops-prompt {
   display: flex;
   align-items: center;

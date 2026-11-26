@@ -16,25 +16,25 @@ export interface TaskStepAttempt {
   loop: number
   executorResult: string
   executorMessage: string
-  /** 点击前的时间戳（新执行契约；存量旧记录为空串） */
+
   executorClickTimer?: string
-  /** 点击后截图的相对路径文本（新执行契约；无截图 / 旧记录为空串） */
+
   executorScreenshotPath?: string
-  /** 点击后截图的可展示 URL（无落盘路径为空串） */
+
   executorScreenshotUrl?: string
   verifierResult: string
-  /** 检测到日志关键词的时间戳（新验收契约；未检测到 / 旧记录为空串） */
+
   verifierLogTimer?: string
-  /** 本轮检查的日志关键词（新验收契约；平台按工具调用自动填） */
+
   verifierLogInfo?: string
-  /** 验证截图的相对路径文本（新验收契约；旧记录为空串） */
+
   verifierScreenshotPath?: string
   actual: string
-  /** 验收证据截图 URL（媒体相对路径经共享登记处拼接），无图为空 */
+
   screenshotUrl: string
-  /** 本步的验收设备日志证据（老任务 / 未采集时缺省） */
+
   logEvidence?: TaskLogEvidence
-  /** 本步执行侧的点击证据（老任务 / 本步无点击且不需日志时缺省） */
+
   logCheck?: TaskLogCheck
 }
 
@@ -80,9 +80,8 @@ export function formatTaskCost(cost?: number): string {
   return `${Number(cost ?? 0).toFixed(4)} 元`
 }
 
-/** JSON 代码块缩进宽度（展示口径，与后端下发文本无关） */
 const JSON_BLOCK_INDENT = "  "
-/** 控制字符转义表：换行不在表内，由渲染规则转为真实换行 */
+
 const JSON_ESCAPE_TABLE: Record<string, string> = {
   "\\": "\\\\",
   '"': '\\"',
@@ -91,19 +90,16 @@ const JSON_ESCAPE_TABLE: Record<string, string> = {
   "\t": "\\t",
 }
 
-/** 换行符：后随空行或已到串尾时不补缩进，避免悬挂空格 */
 function lineBreakText(whole: string, index: number, pad: string): string {
   const next = whole[index + 1]
   return next === undefined || next === "\n" || next === "\r" ? "\n" : `\n${pad}`
 }
 
-/** 表外字符：控制字符按 \uXXXX 转义，其余（含多字节字符）原样保留 */
 function escapeOtherChar(ch: string): string {
   const code = ch.charCodeAt(0)
   return code < 0x20 ? `\\u${code.toString(16).padStart(4, "0")}` : ch
 }
 
-/** 字符串字面量：内部换行按真实换行呈现，续行缩进到该值所在层级 */
 function renderJsonString(value: string, depth: number): string {
   const pad = JSON_BLOCK_INDENT.repeat(depth)
   let body = ""
@@ -113,7 +109,7 @@ function renderJsonString(value: string, depth: number): string {
       body += lineBreakText(value, i, pad)
       continue
     }
-    // CRLF 只换一次行：\r 让位给紧随的 \n
+
     if (ch === "\r") {
       if (value[i + 1] !== "\n") body += lineBreakText(value, i, pad)
       continue
@@ -123,7 +119,6 @@ function renderJsonString(value: string, depth: number): string {
   return `"${body}"`
 }
 
-/** 单值渲染：首行不带缩进，结构与字符串续行按 depth 层级缩进 */
 function renderJsonValue(value: unknown, depth: number): string {
   const pad = JSON_BLOCK_INDENT.repeat(depth)
   if (value === null || value === undefined) return "null"
@@ -143,12 +138,6 @@ function renderJsonValue(value: unknown, depth: number): string {
   return `{\n${lines.join(",\n")}\n${pad}}`
 }
 
-/**
- * 规划输入的展示形态：缩进 JSON 代码块，字符串值内的换行按真实换行呈现。
- *
- * 只做渲染期派生，后端下发的原文不被改写（「展示 == 入模」以接口字段为准）；
- * 非法 JSON 原样回退，空值返回空串交由调用方走空态。
- */
 export function formatPlannerInputText(raw?: string): string {
   const text = (raw ?? "").trim()
   if (!text) return ""
@@ -156,7 +145,6 @@ export function formatPlannerInputText(raw?: string): string {
   try {
     parsed = JSON.parse(text)
   } catch {
-    // 历史脏数据 / 非 JSON 文本：原样展示，不吞内容
     return text
   }
   return renderJsonValue(parsed, 0)
@@ -219,7 +207,6 @@ function toAttempt(entry: TaskRunLogEntry): TaskStepAttempt {
   }
 }
 
-/** MEDIA 相对路径 → 可展示 URL；旧任务无字段返回空 */
 export function attemptScreenshotUrl(rel?: string): string {
   const path = (rel || "").trim()
   if (!path) return ""
@@ -227,7 +214,6 @@ export function attemptScreenshotUrl(rel?: string): string {
   return mediaUrl(path)
 }
 
-/** 执行侧点击证据是否有内容可展示（无点击且无日志时不渲染该区块，不留空壳） */
 export function hasLogCheck(check?: TaskLogCheck | null): boolean {
   if (!check) return false
   return Boolean(check.clicks?.length) || Boolean(check.log)
@@ -241,12 +227,11 @@ function lastAttemptPassed(attempts: TaskStepAttempt[]): boolean {
 function logsForStep(logs: TaskRunLogEntry[], step: TaskRunStep, goal?: string): TaskRunLogEntry[] {
   const byAction = logs.filter((e) => e.action && e.action === step.action)
   if (byAction.length) return byAction
-  // 旧协议：按 goal 挂日志
+
   if (goal) return logs.filter((e) => e.goal === goal)
   return []
 }
 
-/** 从 plans + log 聚合成逐步时间线（新协议一步一结果；旧协议兼容） */
 export function taskStepBlocks(detail: TaskDetail | null): TaskStepBlock[] {
   const run = detail?.run || {}
   const logs = run.log || []
@@ -259,7 +244,7 @@ export function taskStepBlocks(detail: TaskDetail | null): TaskStepBlock[] {
       const rawSteps = plan.steps || []
       const legacyStringSteps = rawSteps.length > 0 && rawSteps.every((s) => typeof s === "string")
       const normalized = normalizeSteps(rawSteps)
-      // 旧协议：steps 为字符串 + 目标级 verification / log.goal → 压成一步，避免日志挂到每一步
+
       if (legacyStringSteps || !normalized.length) {
         if (plan.goal) {
           steps.push({
@@ -273,7 +258,6 @@ export function taskStepBlocks(detail: TaskDetail | null): TaskStepBlock[] {
       }
     }
   } else {
-    // 无 plans：从 log 去重 action / goal
     const seen = new Set<string>()
     for (const e of logs) {
       const key = e.action || e.goal || ""
@@ -351,7 +335,6 @@ export function currentStepLabel(blocks: TaskStepBlock[]): string {
   return `${blocks.length}/${blocks.length}`
 }
 
-/** 默认选中：执行中 → 最后失败 → 最后一步 */
 export function defaultStepIndex(blocks: TaskStepBlock[]): number {
   if (!blocks.length) return 0
   const running = blocks.findIndex((b) => b.phase === "running")

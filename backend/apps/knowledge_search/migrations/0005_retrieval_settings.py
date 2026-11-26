@@ -1,10 +1,3 @@
-"""知识库全局检索配置，种子用调过的阈值 0.45。
-
-0.55 会漏掉「缺水提醒」这类短查询（实测最高 0.549），故种子不用代码默认 0.55。
-向量模型指向 ai_model_configs 中 dashscope 的 text-embedding-v4；该行由
-ai_assistant.0084 种入。找不到时不插入，检索会返回「检索不可用」。
-"""
-
 from django.db import migrations, models
 
 _EMBEDDING_KEY = "DASHSCOPE_API_KEY"
@@ -12,7 +5,6 @@ _EMBEDDING_MODEL = "text-embedding-v4"
 
 
 def seed_settings(apps, schema_editor):
-    """表为空时写入一行检索配置，指向已种入的向量模型。"""
     settings_model = apps.get_model("knowledge_search", "RetrievalSettings")
     if settings_model.objects.exists():
         return
@@ -33,7 +25,6 @@ def seed_settings(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ai_assistant", "0084_aimodelconfig_dimensions"),
         ("knowledge_search", "0004_ksevalrun_phase"),

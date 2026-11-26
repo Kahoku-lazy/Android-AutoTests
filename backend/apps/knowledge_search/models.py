@@ -1,18 +1,9 @@
-"""知识库检索数据模型：模块登记（平台侧真相源）与评测运行。"""
-
 import uuid
 
 from django.db import models
 
 
 class KnowledgeModule(models.Model):
-    """知识库模块登记 → ks_modules。
-
-    一行 = 一个模块 = 一个服务器本地只读资料目录。库名即引擎向量集合名；
-    资料目录只读，索引与检索仍在 engines/ae_harness/knowledge。
-    写库一律经本 App 的 api.py；检索时由调用方把本表行组装成引擎参数。
-    """
-
     name = models.CharField(max_length=64, unique=True)
     description = models.CharField(max_length=200)
     data_dir = models.CharField(max_length=500)
@@ -31,15 +22,6 @@ class KnowledgeModule(models.Model):
 
 
 class RetrievalSettings(models.Model):
-    """知识库全局检索配置 → ks_retrieval_settings。
-
-    全表只应有一行：用哪条向量模型、默认返回条数、相似度阈值与切块参数。
-    embedding_model_id 指向 ai_model_configs.id，不建跨 App 外键；
-    删除保护由 ai_assistant 删除模型配置前只读本表完成。
-    index_epoch 在切块参数变化时加一，检索据此判断旧索引是否失效。
-    写库一律经本 App 的 api.py。
-    """
-
     embedding_model_id = models.PositiveIntegerField()
     top_k = models.PositiveIntegerField(default=4)
     score_threshold = models.FloatField(default=0.45)
@@ -58,12 +40,6 @@ class RetrievalSettings(models.Model):
 
 
 class KsEvalRun(models.Model):
-    """一次自动评测运行 → ks_eval_runs。
-
-    触发时冻结模块与模型快照：运行期间模块登记或模型配置变更不影响该运行。
-    指标与逐题明细见 KsEvalQuery；写库一律经本 App 的 api.py。
-    """
-
     STATUS_PENDING = "pending"
     STATUS_RUNNING = "running"
     STATUS_DONE = "done"
@@ -98,12 +74,6 @@ class KsEvalRun(models.Model):
 
 
 class KsEvalQuery(models.Model):
-    """评测集里的一道题及其检索结果 → ks_eval_queries。
-
-    kind=positive 时 gold_document_id 为正确答案文档编号；
-    kind=negative 为语料范围外的负样本，命中即误命中。
-    """
-
     KIND_POSITIVE = "positive"
     KIND_NEGATIVE = "negative"
 

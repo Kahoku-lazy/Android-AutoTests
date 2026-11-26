@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ YAML 用例加载：占位符解析与断言执行 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/api_kit/loader.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 tests/api/case 下的接口用例 YAML
-🏁
-"""
-
 from pathlib import Path
 from typing import Any
 
@@ -15,19 +6,16 @@ import yaml
 
 from tests.api_kit.schemas import SCHEMAS
 
-# 用例仍在 tests/api/case/：契约测试 tests/arch/unit/test_api_path_callers.py 硬编码了该路径。
 CASE_DIR = Path(__file__).resolve().parents[1] / "api" / "case"
 
 
 def load_cases(filename: str) -> list[dict]:
-    """加载 tests/api/case/{filename}，返回用例列表。"""
     path = CASE_DIR / filename
     with path.open(encoding="utf-8") as f:
         return yaml.safe_load(f) or []
 
 
 def resolve(value: Any, **ctx: str) -> Any:
-    """递归替换字符串中的 {{key}} 占位符。"""
     if isinstance(value, str):
         for key, val in ctx.items():
             value = value.replace("{{" + key + "}}", str(val))
@@ -40,20 +28,17 @@ def resolve(value: Any, **ctx: str) -> Any:
 
 
 def get_path(obj: Any, dotted: str) -> Any:
-    """按点分路径取值，如 data.user.username。"""
     for part in dotted.split("."):
         obj = obj[part]
     return obj
 
 
 def execute_case(base_url: str, api_session, case: dict, ctx: dict) -> None:
-    """按 YAML 用例执行并断言：状态码 + JSONSchema + 定点字段。"""
     method = case.get("method", "POST")
     url = f"{base_url}{case['path']}"
     if "raw_body" in case:
         resp = api_session.request(method, url, data=case["raw_body"])
     elif method.upper() == "GET":
-        # GET 不带请求体：没有 body 的 GET 不需要塞一个空 JSON 进去
         resp = api_session.request(method, url)
     else:
         body = resolve(case.get("body", {}), **ctx)

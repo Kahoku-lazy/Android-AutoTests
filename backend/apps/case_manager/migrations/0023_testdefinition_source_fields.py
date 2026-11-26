@@ -1,5 +1,3 @@
-"""给用例增加来源字段：源文档用例编号与来源任务编号。"""
-
 from django.db import migrations, models
 
 

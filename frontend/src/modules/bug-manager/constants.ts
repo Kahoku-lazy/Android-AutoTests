@@ -1,4 +1,3 @@
-/** BUG 单管理常量 — 分类、状态、列定义、文案与路由的唯一真相源 */
 import type { BugCategory, BugStatus } from "./types"
 
 export const BUG_PAGE_HEADER = {
@@ -40,8 +39,6 @@ export const BUG_CATEGORY_TABS = [
   { key: "case_authoring", label: "测试用例编写" },
 ] as const
 
-// 表头图标只进表头（配合 #header-<prop> 插槽），title 保持纯文字；
-// 「创建时间」不再是独立列——时间已并入首列身份单元的副行，避免同一信息两处出现。
 export const BUG_TABLE_COLUMNS = [
   { title: "BUG 编号", dataIndex: "bug_no", icon: "🐞", width: 200 },
   { title: "分类", dataIndex: "category", icon: "🏷", width: 124, align: "center" },

@@ -1,13 +1,3 @@
-"""
-模块功能：➡️ device-pool 设备管理 — 四个职责类（L3 业务层数据面） 🏁
-Python 调试：➡️ python -m backend.apps.device_pool.manager 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. tests/device/integration/conftest.py: 覆盖本模块
-2. tests/device/integration/test_device_registry.py: 同上
-🏁
-"""
-
 import subprocess
 import threading
 import time
@@ -35,11 +25,8 @@ from .contracts import (
 from .models import Device, DeviceLock
 from .pool import device as device_pool
 
-# observe 观察占用锁的兜底超时（秒）：关页/崩溃无释放时，30 分钟后由心跳回收
 OBSERVE_LOCK_TTL = 1800
 
-# 设备状态同步的最小间隔（秒）：列表/心跳共用一次 ADB 扫描结果，
-# 避免每个 GET 都在请求线程里跑 adb 子进程与 u2 连接。
 STATUS_SYNC_TTL_SECONDS: Final[float] = 10.0
 _status_sync_lock = threading.Lock()
 _status_sync_at = 0.0
@@ -47,7 +34,6 @@ _status_sync_result: tuple[int, int] = (0, 0)
 
 
 def reset_status_sync_cache() -> None:
-    """清空状态同步缓存（测试与显式刷新用）。"""
     global _status_sync_at, _status_sync_result
     with _status_sync_lock:
         _status_sync_at = 0.0
@@ -55,8 +41,6 @@ def reset_status_sync_cache() -> None:
 
 
 class DeviceError(APIException):
-    """设备业务错误 — 由 DRF 异常处理器自动映射为 HTTP 响应。"""
-
     def __init__(self, message: str, status_code: int = 400):
         super().__init__(message)
         self.log = backend_log
@@ -64,14 +48,7 @@ class DeviceError(APIException):
 
 
 class DeviceDetector:
-    """设备探测 — ADB 发现 + 身份解析 + 元信息采集（产出 DeviceInfo，不落库）。"""
-
     def detect(self) -> list[DeviceInfo]:
-        """检测设备：adb devices 发现 + 序列号解析，返回检测结果契约列表。
-
-        无线设备解析不到真实序列号时跳过（身份不明不纳入），口径与状态同步的注册一致：
-        USB 恒可解析，无线需 getprop ro.serialno 就绪。
-        """
         detected: list[DeviceInfo] = []
         for addr in self.connectable_serials():
             serial, conn_addr = self.resolve_serial(addr)
@@ -89,7 +66,6 @@ class DeviceDetector:
         return detected
 
     def adb_device_serials(self) -> set:
-        """返回当前 adb 可见设备的地址集合（USB 串号 / 无线 IP:port / mDNS）。"""
         try:
             result = subprocess.run(
                 [adb_binary(), "devices"], capture_output=True, text=True, timeout=5
@@ -106,35 +82,24 @@ class DeviceDetector:
             return set()
 
     def connectable_serials(self, listed: set | None = None) -> set:
-        """去掉无线调试别名，只留能作为 adb -s 目标的 USB 序列号和 IP:端口。"""
         rows = self.adb_device_serials() if listed is None else listed
         return {addr for addr in rows if not str(addr).endswith("_adb-tls-connect._tcp")}
 
     def is_wireless(self, addr: str) -> bool:
-        """判断是否无线设备（IP:port 或 mDNS transport）。"""
         return ":" in addr or addr.startswith("adb-")
 
     @staticmethod
     def parse_mdns_serial(addr: str) -> str:
-        """从 mDNS 名拆真实序列号：adb-<serial>-<随机>._adb-tls-connect._tcp。"""
         if not addr.startswith("adb-"):
             return ""
-        # adb-R5CT62RH88F-chgdtV._adb-tls-connect._tcp → R5CT62RH88F
         body = addr[4:]
         serial = body.split("-", 1)[0]
         return serial.strip() if serial else ""
 
     def is_adb_listed(self, addr: str) -> bool:
-        """addr 是否已在 adb devices 为 device（含 IP:port / mDNS / USB）。"""
         return addr in self.adb_device_serials()
 
     def wireless_ready_hint(self, ip: str) -> dict:
-        """根据 adb devices 判断该 IP 是否已可直连（无需再 pair）。
-
-        口径：
-        - 已出现 `IP:任意端口` → 已 TCP 连接，可直连/注册
-        - 已出现 `adb-<serial>-…._adb-tls-connect._tcp` → 无线调试 mDNS 已发现（通常已配对）
-        """
         listed = self.adb_device_serials()
         ip_addrs = [a for a in listed if a.startswith(f"{ip}:")]
         mdns = [a for a in listed if a.startswith("adb-") and "_adb-tls-connect" in a]
@@ -148,7 +113,6 @@ class DeviceDetector:
         }
 
     def fetch_serial_no(self, addr: str) -> str:
-        """获取设备真实序列号 ro.serialno（无线设备连接后需短暂等待，带重试）。"""
         for attempt in range(3):
             try:
                 result = subprocess.run(
@@ -161,14 +125,12 @@ class DeviceDetector:
                 if serial:
                     return serial
             except Exception:
-                # 明确忽略：本轮 adb 取值失败，交由下方重试；重试耗尽由调用方按空值处理
                 pass
             if attempt < 2:
                 time.sleep(1)
         return ""
 
     def _getprop(self, addr: str, prop: str) -> str:
-        """读取设备 property（如 ro.product.model），失败返回空串。"""
         try:
             result = subprocess.run(
                 [adb_binary(), "-s", addr, "shell", "getprop", prop],
@@ -181,11 +143,6 @@ class DeviceDetector:
             return ""
 
     def resolve_serial(self, addr: str) -> tuple[str, str]:
-        """解析设备序列号与连接地址：USB 直接取 addr，无线取 ro.serialno + addr。
-
-        无线设备解析不到真实序列号时返回 ("", addr)，由调用方跳过注册，避免用
-        传输地址（IP:port）顶替 serial —— 地址会随重连变化，导致设备身份漂移。
-        """
         if self.is_wireless(addr):
             if str(addr).endswith("_adb-tls-connect._tcp"):
                 return "", addr
@@ -193,11 +150,6 @@ class DeviceDetector:
         return addr, ""
 
     def get_info(self, addr: str) -> DeviceInfo:
-        """获取设备信息：采集元信息（model/brand/分辨率/Android 版本），返回契约。
-
-        只采集返回、不落库；serial 由 detect() 阶段产出，本方法不重复解析序列号。
-        失败抛异常，由调用方处理（DeviceRegistry.collect_device_info 会兜底捕获）。
-        """
         raw = fetch_device_info(addr)
         return DeviceInfo(
             model=self._getprop(addr, "ro.product.model") or raw.get("productName", "") or "",
@@ -208,11 +160,6 @@ class DeviceDetector:
         )
 
     def connect(self, addr: str) -> None:
-        """连接设备：无线 IP:port 先 adb connect（已在 adb devices 则跳过），再 u2 探活。
-
-        Raises:
-            DeviceError: 连接失败（超时 / ATX Agent 未运行 / 无法连接 / 需配对）。
-        """
         try:
             if ":" in addr and not self.is_adb_listed(addr):
                 result = subprocess.run(
@@ -250,7 +197,6 @@ class DeviceDetector:
             raise DeviceError("连接超时，请检查设备 USB/WiFi 连接", status_code=504) from e
 
     def pair(self, ip: str, pair_port: str, pair_code: str) -> None:
-        """首次无线调试：adb pair IP:配对端口 配对码。已配对视为成功。"""
         port = (pair_port or "").strip()
         code = (pair_code or "").strip()
         if not port.isdigit() or not (1024 <= int(port) <= 65535):
@@ -276,18 +222,11 @@ class DeviceDetector:
 
 
 class DeviceRegistry:
-    """设备注册落库 — dp_devices 增删 + 连接状态（依赖 DeviceDetector）。"""
-
     def __init__(self, detector: DeviceDetector):
         self.log = backend_log
         self._detector = detector
 
     def register_device(self, addr: str, user_id: str = "") -> tuple[Device, bool]:
-        """注册设备（update_or_create），无线设备取 ro.serialno 作为序列号。返回 (dev, created)。
-
-        Raises:
-            DeviceError: 无线设备解析不到真实序列号（设备未就绪）。
-        """
         serial, conn_addr = self._detector.resolve_serial(addr)
         if not serial:
             raise DeviceError(
@@ -303,7 +242,6 @@ class DeviceRegistry:
                 "connection_addr": conn_addr,
             },
         )
-        # 清理旧数据：serial 曾存无线传输地址（IP:port / mDNS）的旧记录
         if serial != addr:
             Device.objects.filter(serial=addr).delete()
         if created:
@@ -314,7 +252,6 @@ class DeviceRegistry:
         return dev, created
 
     def collect_device_info(self, dev: Device, addr: str) -> None:
-        """通过 uiautomator2 采集设备元信息并更新记录（L1c：经引擎静态方法）。"""
         try:
             info = self._detector.get_info(addr)
             dev.model = info.model
@@ -337,10 +274,6 @@ class DeviceRegistry:
             backend_log.warning("采集设备信息失败 %s: %s", addr, e)
 
     def delete_device_record(self, dev: Device, reason: str = LockReleaseReason.DISCONNECT) -> None:
-        """删除设备行并清理连接缓存（不保留离线/DISCONNECTED 墓碑）。
-
-        标记活跃锁为 released（保留审计）。
-        """
         DeviceLock.objects.filter(device=dev, status=LockStatus.ACTIVE).update(
             status=LockStatus.RELEASED,
             released_at=datetime.now(),
@@ -352,37 +285,28 @@ class DeviceRegistry:
         dev.delete()
 
     def purge_disconnected_devices(self) -> int:
-        """删除遗留的 DISCONNECTED 行（不作为历史保留）。"""
         stale = list(Device.objects.filter(status="DISCONNECTED"))
         for dev in stale:
             self.delete_device_record(dev, reason="purge")
         return len(stale)
 
     def set_connection_state(self, dev: Device, connection_type: str) -> None:
-        """设置连接类型 + 状态 ONLINE 并落库（连接成功后调用）。"""
         dev.connection_type = connection_type
         dev.status = DeviceStatus.ONLINE
         dev.save(update_fields=["connection_type", "status"])
 
     def touch_last_seen(self, dev: Device) -> None:
-        """刷新最后在线时间戳。"""
         dev.last_seen = datetime.now()
         dev.save(update_fields=["last_seen"])
 
 
 class DeviceStateMachine:
-    """设备状态机 — ONLINE/BUSY 判定 + 同步 + 锁定/释放/占用 + 心跳（依赖 Detector + Registry）。"""
-
     def __init__(self, detector: DeviceDetector, registry: DeviceRegistry):
         self.log = backend_log
         self._detector = detector
         self._registry = registry
 
     def judge_status(self, dev: Device) -> DeviceStatus:
-        """判断设备权威状态：BUSY 且持有未过期进程锁 → BUSY；否则 ONLINE。
-
-        只读判定、不写库；锁过期回收动作由 update_device_status 执行。
-        """
         if dev.status == DeviceStatus.BUSY:
             active_lock = (
                 DeviceLock.objects.filter(device=dev, lock_type="process", status=LockStatus.ACTIVE)
@@ -395,12 +319,6 @@ class DeviceStateMachine:
         return DeviceStatus.ONLINE
 
     def update_device_status(self) -> tuple[int, int]:
-        """同步 DB 设备状态与真实 ADB 状态（list/heartbeat 触发，10 秒内复用）。
-
-        含「注册 adb 新设备」——设备发现是状态同步的一部分（见 PRD §4.4）。
-        设备不在 adb 列表时：BUSY 保护进行中任务；非 BUSY 直接删除（不保留离线记录）。
-        真正扫描的实现在 `_sync_device_status()`；本方法只做节流与并发保护。
-        """
         global _status_sync_at, _status_sync_result
         now = time.monotonic()
         if now - _status_sync_at < STATUS_SYNC_TTL_SECONDS:
@@ -415,18 +333,15 @@ class DeviceStateMachine:
             return result
 
     def _sync_device_status(self) -> tuple[int, int]:
-        """真正执行一次 ADB 扫描与库内状态对齐。"""
         self._registry.purge_disconnected_devices()
         now = datetime.now()
         adb_serials = self._detector.connectable_serials()
         updated = 0
         removed = 0
 
-        # 注册 adb 可见但 DB 未登记的设备
         for addr in adb_serials:
             serial, conn_addr = self._detector.resolve_serial(addr)
             if not serial:
-                # 无线设备未就绪（拿不到 ro.serialno）：清理旧地址记录，但不新建
                 Device.objects.filter(serial=addr).delete()
                 continue
             dev, created = Device.objects.get_or_create(
@@ -439,14 +354,11 @@ class DeviceStateMachine:
                     "connection_addr": conn_addr,
                 },
             )
-            # 记录首次连接时间点：新建取 now，历史遗留用首次发现时间（created_at）回填
             if dev.connected_at is None:
                 dev.connected_at = now if created else (dev.created_at or now)
                 dev.save(update_fields=["connected_at"])
-            # 新建或元信息缺失时采集型号/分辨率（u2 连接有开销，仅缺失时执行）
             if created or not dev.model or not dev.screen_w:
                 self._registry.collect_device_info(dev, addr)
-            # 清理旧数据：serial 曾存无线传输地址的旧记录
             if serial != addr:
                 Device.objects.filter(serial=addr).delete()
 
@@ -455,7 +367,6 @@ class DeviceStateMachine:
                 dev.connection_addr and dev.connection_addr in adb_serials
             )
             if visible:
-                # USB 设备恒公开，清理历史锁定数据
                 if dev.connection_type != ConnectionType.WIFI and (dev.locked_by or dev.locked_at):
                     dev.locked_by = ""
                     dev.locked_at = None
@@ -475,7 +386,6 @@ class DeviceStateMachine:
                         dev.last_seen = now
                         dev.save(update_fields=["last_seen"])
             else:
-                # 不在 adb：BUSY 保护进行中任务；非 BUSY 删除记录
                 if dev.status == DeviceStatus.BUSY:
                     active_lock = (
                         DeviceLock.objects.filter(
@@ -494,7 +404,6 @@ class DeviceStateMachine:
         return updated, removed
 
     def set_device_lock(self, dev: Device, locked: bool, user_id: str) -> dict:
-        """锁定 / 公开切换（可见性）。USB 设备无锁定能力。"""
         if dev.connection_type != ConnectionType.WIFI:
             raise DeviceError("USB 设备不支持锁定", status_code=400)
 
@@ -520,11 +429,6 @@ class DeviceStateMachine:
         return {"serial": dev.serial, "locked": locked}
 
     def claim_wireless_device(self, dev: Device, user_id: str) -> None:
-        """局域网主动连接 → 默认锁定给当前用户（PRD §2.5.1 默认可见性）。
-
-        仅 WIFI 且 user_id 非空时生效：未锁定则锁定（复用 set_device_lock 写审计），
-        未记录配置者则补记（added_by）。
-        """
         if dev.connection_type != ConnectionType.WIFI or not user_id:
             return
         if not dev.locked_by:
@@ -536,7 +440,6 @@ class DeviceStateMachine:
     def release_internal(
         self, dev: Device, reason: str = LockReleaseReason.MANUAL, clear_lock: bool = False
     ) -> None:
-        """释放占用：清空 occupied_by + 恢复 ONLINE，锁记录标记 released（不删除）。"""
         now = datetime.now()
 
         DeviceLock.objects.filter(device=dev, status=LockStatus.ACTIVE).update(
@@ -560,7 +463,6 @@ class DeviceStateMachine:
         backend_log.info("设备 %s 已释放占用 (reason=%s)", dev.serial, reason)
 
     def release_occupy(self, dev: Device) -> dict:
-        """释放设备检查器占用；执行引擎占用受保护，不可释放。"""
         occupied_by = dev.occupied_by or ""
         if occupied_by.startswith(RUNNER_OCCUPIED_PREFIXES):
             raise DeviceError("设备正在执行用例，无法解除占用", status_code=409)
@@ -571,11 +473,6 @@ class DeviceStateMachine:
         return {"serial": dev.serial, "released": True}
 
     def occupy_observe(self, dev: Device, user_id: str) -> None:
-        """观察连接占用：置 BUSY + occupied_by + observe 超时锁（30min 兜底回收）。
-
-        fix-observe-leak：原实现不建锁（无超时回收，关页/崩溃后设备永久 BUSY），
-        现建 lock_type="observe" 锁，由 heartbeat_sync 过期回收。
-        """
         dev.status = DeviceStatus.BUSY
         dev.occupied_by = user_id or "observe"
         dev.occupied_at = datetime.now()
@@ -589,18 +486,15 @@ class DeviceStateMachine:
         )
 
     def release_observe(self, dev: Device) -> None:
-        """释放观察占用：仅当占用者为观察连接（非执行引擎）时恢复 ONLINE。"""
         occupied = dev.occupied_by or ""
         if occupied.startswith(RUNNER_OCCUPIED_PREFIXES):
             return
         self.release_internal(dev, reason=LockReleaseReason.DISCONNECT)
 
     def heartbeat_sync(self) -> dict:
-        """心跳同步：状态同步 + 刷新活跃锁心跳 + 回收过期 observe 锁，返回各状态计数。"""
         updated, removed = self.update_device_status()
         DeviceLock.objects.filter(status=LockStatus.ACTIVE).update(last_heartbeat=timezone.now())
 
-        # fix-observe-leak：过期 observe 锁（关页/崩溃无释放）→ 自动释放占用
         for lock in DeviceLock.objects.filter(lock_type="observe", status=LockStatus.ACTIVE):
             if lock.is_expired:
                 try:
@@ -623,10 +517,7 @@ class DeviceStateMachine:
 
 
 class DeviceSerializer:
-    """设备展示 — 可见性过滤 + 序列化（只读，独立）。"""
-
     def resolve_admin_ids(self, admin_users: set[str]) -> set[str]:
-        """把管理员白名单归一化为数字用户 ID 集合（纯数字保留，用户名查表转 ID）。"""
         ids = {u for u in admin_users if u.isdigit()}
         names = {u for u in admin_users if not u.isdigit()}
         if names:
@@ -637,10 +528,6 @@ class DeviceSerializer:
         return ids
 
     def is_device_visible(self, dev: Device, user_id: str, admin_ids: set[str]) -> bool:
-        """判断设备对当前用户是否可见（PRD §2.5.1 可见性规则）。
-
-        管理员全局可见；USB 恒公开；WIFI 公开对所有人可见；WIFI 锁定仅锁定者与配置者可见。
-        """
         if user_id in admin_ids:
             return True
         if dev.connection_type != ConnectionType.WIFI:
@@ -650,7 +537,6 @@ class DeviceSerializer:
         return dev.locked_by == user_id or dev.added_by == user_id
 
     def usernames_by_ids(self, user_ids: set[str]) -> dict[str, str]:
-        """数字用户 ID → 用户名映射（批量查询，供序列化展示用）。"""
         ids = {u for u in user_ids if u and u.isdigit()}
         if not ids:
             return {}
@@ -659,11 +545,6 @@ class DeviceSerializer:
     def device_to_dict(
         self, dev: Device, current_serial: str, id_to_name: dict[str, str] | None = None
     ) -> dict:
-        """将 Device 转为 PRD §5.2 响应字段。
-
-        Args:
-            id_to_name: 数字 ID → 用户名映射；提供时 locked_by/added_by/occupied_by 转为用户名展示。
-        """
         name_of = id_to_name or {}
         result = {
             "id": dev.id,
@@ -705,7 +586,6 @@ class DeviceSerializer:
         return result
 
 
-# ── 组合装配（单向依赖，无循环）──
 detector = DeviceDetector()
 registry = DeviceRegistry(detector)
 state_machine = DeviceStateMachine(detector, registry)

@@ -1,28 +1,3 @@
-"""
-文件名: ➡ recent_apps.py 🏁
-路径: ➡ engines/device/android/recent_apps.py 🏁
-模块功能：➡ 解析并关闭 Android 最近任务中的应用 🏁
-Python 调试：➡ python -m engines.device.android.recent_apps 🏁
-时间：➡ 2026-10-20 🏁
-作者：➡ kahoku 🏁
-版本：➡ 1.0.0 🏁
-修改时间: ➡ 2026-11-19 🏁
-类型: ➡ 工具模块 🏁
-简介说明：➡
-1. parse_recent_packages: 从最近任务原文取出包名
-2. parse_home_package: 解析桌面包名
-3. packages_to_stop: 去掉桌面和系统界面后的待停包名
-4. close_recent_apps: 停掉这些应用并回到桌面
-🏁
-关联模块：➡
-1. engines.device.action: 设备控制入口
-2. utils.logs: 过程日志（device_log）
-🏁
-测试：➡
-1. 暂无专门单测（真机收尾流程，依赖桌面解析结果）
-🏁
-"""
-
 from __future__ import annotations
 
 import re
@@ -54,23 +29,10 @@ _HOME_CMD = [
 
 
 def _write_line(action: str) -> None:
-    """写一行过程日志，换行折叠成空格，保证一行一条。
-
-    Args:
-        action: 这一行的动作或汇总文本。
-    """
     device_log.info(" ".join(str(action or "").split()) or "-")
 
 
 def parse_recent_packages(text: str) -> list[str]:
-    """从 `dumpsys activity recents` 原文取包名，按出现顺序去重。
-
-    Args:
-        text: `dumpsys activity recents` 的原始输出。
-
-    Returns:
-        包名列表（按首次出现顺序，已去重）。
-    """
     found: list[str] = []
     for match in _PACKAGE_IN_RECENTS.finditer(text or ""):
         name = match.group(1)
@@ -80,14 +42,6 @@ def parse_recent_packages(text: str) -> list[str]:
 
 
 def parse_home_package(text: str) -> str:
-    """从桌面 Activity 解析结果取包名。取不到时返回空串。
-
-    Args:
-        text: `cmd package resolve-activity --brief` 的原始输出。
-
-    Returns:
-        桌面包名；解析不到时是空串。
-    """
     for line in reversed((text or "").splitlines()):
         item = line.strip()
         if "/" not in item or "=" in item:
@@ -97,15 +51,6 @@ def parse_home_package(text: str) -> str:
 
 
 def packages_to_stop(packages: list[str], home_package: str) -> list[str]:
-    """留下要停止的包。系统界面始终跳过；桌面解析到了就跳过它，否则跳过常见桌面。
-
-    Args:
-        packages: 最近任务里的包名列表。
-        home_package: 解析到的桌面包名；空串表示没解析到。
-
-    Returns:
-        需要 `am force-stop` 的包名列表。
-    """
     skip = {SYSTEM_UI}
     home = str(home_package or "").strip()
     if home:
@@ -116,12 +61,6 @@ def packages_to_stop(packages: list[str], home_package: str) -> list[str]:
 
 
 def close_recent_apps(serial: str, *, opener=None) -> None:
-    """停掉最近任务里的非桌面应用，再按 Home。失败只记日志。
-
-    Args:
-        serial: 设备序列号。
-        opener: 替身。省略时打开真机。返回 (连接, 信息, 控制)。
-    """
     target = str(serial or "").strip()
     if not target:
         _write_line("收尾跳过：设备序列号为空")
@@ -146,7 +85,6 @@ def close_recent_apps(serial: str, *, opener=None) -> None:
 
 
 def _read_home(info) -> str:
-    """读桌面解析结果。命令失败时当作没有解析到。"""
     try:
         return str(info.adb.shell(_HOME_CMD) or "")
     except Exception:
@@ -154,5 +92,4 @@ def _read_home(info) -> str:
 
 
 def _open_android(serial: str):
-    """打开一台安卓设备。"""
     return open_device(System.ANDROID, serial)

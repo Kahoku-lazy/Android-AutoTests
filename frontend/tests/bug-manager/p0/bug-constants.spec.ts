@@ -1,6 +1,3 @@
-/**
- * [P0] BUG 单管理 — 分类标签、状态样式与任务跳转
- */
 import { describe, expect, it } from "vitest"
 import {
   BUG_CATEGORY_LABELS,

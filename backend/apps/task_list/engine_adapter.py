@@ -1,29 +1,9 @@
-"""
-模块功能：➡️ 任务装配：设备串兜底解析 🏁
-Python 调试：➡️ python -m backend.apps.task_list.engine_adapter 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（经 task_list 的功能用例间接覆盖，未直接 import 本模块）
-🏁
-"""
-
 from __future__ import annotations
 
 __all__ = ["resolve_device_serial"]
 
 
 def resolve_device_serial(task_device_serial: str = "") -> str:
-    """取任务指定设备串，否则取第一台在线设备；都没有即抛错（不再返回空串）。
-
-    Args:
-        task_device_serial: 任务上指定的设备序列号，可为空。
-
-    Returns:
-        可用的设备序列号。
-
-    Raises:
-        ValueError: 未指定序列号且当前没有在线设备，或在线设备缺少 serial。
-    """
     serial = str(task_device_serial or "").strip()
     if serial:
         return serial

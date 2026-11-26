@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** KsPanelTabs — 知识页右栏模块私有手稿 chip（照 SerialLogTabs 先例，不用共享 AppTabs）。 */
 defineProps<{
   items: { key: string; label: string }[]
   modelValue: string

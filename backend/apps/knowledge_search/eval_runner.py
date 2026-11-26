@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 评测运行器：后台线程 + 快照隔离 + 逐题进度 + 两类用量入账 🏁
-Python 调试：➡️ python -m backend.apps.knowledge_search.eval_runner 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（经 knowledge_search 的功能用例间接覆盖，未直接 import 本模块）
-🏁
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -24,7 +15,6 @@ from .eval_corpus import gold_document_map, sample_chunks
 from .eval_generation import generate_negative_questions, generate_positive_questions
 from .eval_metrics import first_gold_rank, summarize
 
-# 局部可选导入：引擎缺失时评测降级失败，模块登记面不受影响。
 try:
     from engines.ae_harness.agents.models import create_model
     from engines.ae_harness.knowledge.config import INDEX_DIR, build_config
@@ -37,46 +27,21 @@ except ModuleNotFoundError as exc:  # pragma: no cover - 引擎缺失分支由�
     build_config = None
     KnowledgeRetriever = None
 
-# 评测检索条数：覆盖 Recall@5。
 EVAL_TOP_K = 5
-# 有效正题下限：低于此值运行失败（样本太小无意义）。
 MIN_POSITIVES = 5
 
 
 def engine_available() -> bool:
-    """
-    评测所需引擎原语是否可导入。
-
-    Returns:
-        可用为真。
-    """
     return KnowledgeRetriever is not None and create_model is not None
 
 
 def start_eval_run(pk: int) -> None:
-    """
-    起后台线程跑一次评测；pytest 进程不起线程（测试直调 _run）。
-
-    Args:
-        pk: 运行主键。
-    """
     if "pytest" in sys.modules:
         return
     threading.Thread(target=_run, args=(pk,), daemon=True, name=f"ks-eval-{pk}").start()
 
 
 def estimate_cost(pos_count: int, neg_count: int, chunk_size: int = 400) -> dict:
-    """
-    启发式预估 token 成本（展示用，实际以账本为准）。
-
-    Args:
-        pos_count: 正题数。
-        neg_count: 负样本数。
-        chunk_size: 切块大小（出题输入近似）。
-
-    Returns:
-        预估 token 字典与说明。
-    """
     total = pos_count + neg_count
     return {
         "chat_input_tokens": pos_count * chunk_size * 2 + neg_count * 200,
@@ -87,7 +52,6 @@ def estimate_cost(pos_count: int, neg_count: int, chunk_size: int = 400) -> dict
 
 
 def _run(pk: int) -> None:
-    """后台线程入口：状态流转与用量入账都在同步上下文做。"""
     from django.db import close_old_connections
 
     close_old_connections()
@@ -109,7 +73,6 @@ def _run(pk: int) -> None:
 
 
 async def _run_async(run, collector: dict) -> dict:
-    """出题 → 逐题检索 → 评分；进度与题目经 sync_to_async 落库。"""
     if not engine_available():
         raise RuntimeError("检索不可用：引擎知识库模块缺失")
     snapshot = run.module_snapshot
@@ -209,7 +172,6 @@ async def _run_async(run, collector: dict) -> dict:
 
 
 async def _retrieve(retriever, name: str, question: str, collector: dict) -> list[dict]:
-    """单题检索；不可用时终止运行，用量照常收集。"""
     result = await retriever.retrieve(question, base=name, top_k=EVAL_TOP_K)
     collector["embedding"].extend(event.as_dict() for event in retriever.usage_events())
     if result.status == "unavailable":
@@ -218,18 +180,6 @@ async def _retrieve(retriever, name: str, question: str, collector: dict) -> lis
 
 
 def _config_from_snapshot(run):
-    """
-    用触发时冻结的检索配置与模块快照组装引擎配置。
-
-    Args:
-        run: 评测运行。
-
-    Returns:
-        引擎知识库配置。
-
-    Raises:
-        RuntimeError: 快照里没有检索配置。
-    """
     retrieval = (run.model_snapshot or {}).get("retrieval") or {}
     if not retrieval.get("model_name"):
         raise RuntimeError("检索不可用：评测触发时没有检索配置")
@@ -258,7 +208,6 @@ def _config_from_snapshot(run):
 
 
 def _record_usages(collector: dict, run) -> None:
-    """两类用量经账本 api 入账；失败只记日志，不影响运行收口。"""
     try:
         from backend.apps.usage_ledger.api import record_embedding_usages, record_run_usages
 

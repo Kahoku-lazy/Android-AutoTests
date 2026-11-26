@@ -1,6 +1,3 @@
-/* AI 助手专有笔色：只用在本模块的颜料片、配置弹窗与对话页。
-   色值只在这里登记一次；深到浅的浅底与渐变由消费它的组件用 color-mix
-   从 --assistant-marker 现算，避免页面级预置导致「所有卡片共用一档浅色」。 */
 .ai-assistant-page {
   --assistant-marker-teal: #1f7a6a;
   --assistant-marker-ink: #2c3a4a;

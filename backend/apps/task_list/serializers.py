@@ -1,5 +1,3 @@
-"""task-list serializers — task submission input."""
-
 import json
 
 from rest_framework import serializers
@@ -9,13 +7,6 @@ CASE_SOURCE_PLATFORM = "platform"
 
 
 class TaskSubmitInputSerializer(serializers.Serializer):
-    """任务提交入参 — title/agent_id 必填；设备由任务类型在视图层校验。
-
-    device_control 任务必须有 device_serial，用例来源二选一：``yaml`` 上传配置
-    文件，或 ``platform`` 给用例编号列表（JSON 数组字符串）。case_authoring 任务
-    必须上传 documents（PRD/Word），不需要设备与 YAML。
-    """
-
     title = serializers.CharField(required=True, allow_blank=False)
     workflow_id = serializers.IntegerField(required=False, min_value=1)
     agent_id = serializers.IntegerField(
@@ -72,11 +63,6 @@ class TaskSubmitInputSerializer(serializers.Serializer):
         return (value or "").strip()
 
     def validate_case_ids(self, value):
-        """把 JSON 数组字符串收成用例编号列表。
-
-        Raises:
-            serializers.ValidationError: 不是 JSON 数组，或元素不是非空字符串。
-        """
         text = (value or "").strip()
         if not text:
             return []

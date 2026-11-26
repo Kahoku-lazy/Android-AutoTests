@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 给验收模型准备关键词对照文本。历史取证已去掉 🏁
-Python 调试：➡️ python -m backend.apps.task_list.log_history 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（经 task_list 的功能用例间接覆盖，未直接 import 本模块）
-🏁
-"""
-
 from __future__ import annotations
 
 from django.conf import settings
@@ -17,7 +8,6 @@ __all__ = ["keyword_catalog_text"]
 
 
 def keyword_catalog_text() -> str:
-    """当前日志关键词表 → 给验收模型看的「关键词 → 功能点」对照文本（取不到返回空串）。"""
     path = str(getattr(settings, "DEVICE_LOG_KEYWORD_FILE", "") or "")
     mapping = KeywordIndex.from_file(path).mapping
     if not mapping:

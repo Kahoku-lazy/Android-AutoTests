@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 接口响应 JSON Schema 目录：供 YAML 用例按名字引用 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/api_kit/schemas.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 tests/api/case 下的接口用例 YAML
-🏁
-"""
-
 AUTH_SUCCESS_SCHEMA = {
     "type": "object",
     "properties": {
@@ -228,7 +219,6 @@ LOGOUT_SUCCESS_SCHEMA = {
 }
 
 
-# YAML expect.schema 引用名 -> schema 对象
 SCHEMAS = {
     "auth_success": AUTH_SUCCESS_SCHEMA,
     "register_success": REGISTER_SUCCESS_SCHEMA,

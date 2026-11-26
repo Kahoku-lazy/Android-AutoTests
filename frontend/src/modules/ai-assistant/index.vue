@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** AI 助手入口：上方助手颜料片网格，下方工作流颜料片网格。卡片只放名称、头像或笔色圆与一行说明。 */
 import { onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
@@ -52,7 +51,6 @@ function openEdit(card: AssistantCard): void {
   editorOpen.value = true
 }
 
-/** 关闭弹窗；保存成功后同时刷新网格，让卡片立刻反映新名称与头像。 */
 function closeEditor(): void {
   editorOpen.value = false
   editing.value = null
@@ -119,7 +117,6 @@ onMounted(load)
       </template>
     </div>
 
-    <!-- 不 append-to-body：弹窗留在 .ai-assistant-page 里才继承该助手笔色的模块令牌 -->
     <el-dialog
       v-model="editorOpen"
       :title="editing ? '编辑助手' : '新建助手'"
@@ -146,7 +143,6 @@ onMounted(load)
   align-items: start;
 }
 
-/* 分区虚线自带外边距：与 .doc-body 的 gap 相加后，两区块间距从 24px 抬到 40px */
 .ai-assistant-page__divider {
   margin: var(--app-space-md) 0;
 }

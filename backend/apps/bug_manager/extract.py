@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ Pure extraction rules: task terminal errors -> classified BUG drafts. 🏁
-Python 调试：➡️ python -m backend.apps.bug_manager.extract 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（经 bug_manager 的功能用例间接覆盖，未直接 import 本模块）
-🏁
-"""
-
 from __future__ import annotations
 
 import hashlib
@@ -29,8 +20,6 @@ _CASE_IMPORT_FAILURE = "测试用例入库失败"
 
 @dataclass(frozen=True, slots=True)
 class BugDraft:
-    """A BUG record ready to be persisted for one task source."""
-
     category: str
     source_ref: str
     title: str
@@ -39,16 +28,6 @@ class BugDraft:
 
 
 def build_bug_drafts(task: Any) -> list[BugDraft]:
-    """
-    Build BUG drafts from a task-like object.
-
-    Args:
-        task: Object exposing ``id``, ``title``, ``task_kind``, ``status``,
-            ``result``, ``agent_id`` and ``created_by`` attributes.
-
-    Returns:
-        Zero or more drafts. Cancelled/running/pending tasks yield an empty list.
-    """
     status = _status(task)
     kind = _task_kind(task)
     payload = _parse_result(getattr(task, "result", ""))
@@ -88,7 +67,6 @@ _KIND_LABEL = {
 
 
 def _workflow_draft(task: Any, status: str, payload: dict) -> BugDraft:
-    """当前工作流只出一张：标题用第一个失败步骤，四问进 failure。"""
     steps = _failed_steps(payload)
     first = steps[0]
     name = str(first.get("name") or "未记录")
@@ -121,7 +99,6 @@ def _workflow_draft(task: Any, status: str, payload: dict) -> BugDraft:
 
 
 def _failed_steps(payload: dict) -> list[dict]:
-    """读结果里的失败步骤。缺字段或不是列表时当没有。"""
     raw = payload.get("failed_steps")
     if not isinstance(raw, list):
         return []
@@ -129,7 +106,6 @@ def _failed_steps(payload: dict) -> list[dict]:
 
 
 def _ui_drafts(task: Any, status: str, payload: dict) -> list[BugDraft]:
-    """UI automation: one ticket per failed case, else one task-level ticket."""
     if status not in {TaskStatus.FAILED, TaskStatus.INTERRUPTED}:
         return []
     drafts: list[BugDraft] = []
@@ -191,7 +167,6 @@ def _ui_drafts(task: Any, status: str, payload: dict) -> list[BugDraft]:
 
 
 def _requirement_drafts(task: Any, status: str, payload: dict) -> list[BugDraft]:
-    """需求拆解只在没有合法模块清单或中断时登记一张。"""
     if payload.get("passed") or payload.get("modules"):
         return []
     if status not in {TaskStatus.FAILED, TaskStatus.INTERRUPTED}:
@@ -210,7 +185,6 @@ def _requirement_drafts(task: Any, status: str, payload: dict) -> list[BugDraft]
 
 
 def _case_drafts(task: Any, status: str, payload: dict) -> list[BugDraft]:
-    """Case authoring: verification failure, interruption, or case-import failure."""
     if status == TaskStatus.FAILED:
         return [
             _draft(
@@ -247,7 +221,6 @@ def _case_drafts(task: Any, status: str, payload: dict) -> list[BugDraft]:
 
 
 def _ui_task_detail(task: Any, payload: dict, failed_cases: list[str]) -> str:
-    """Task-level UI failure body with reason, summary and failed-case titles."""
     lines = _common_lines(task)
     if failed_cases:
         _append(lines, "失败用例：" + "；".join(failed_cases))
@@ -257,7 +230,6 @@ def _ui_task_detail(task: Any, payload: dict, failed_cases: list[str]) -> str:
 
 
 def _ui_case_detail(task: Any, payload: dict, case_title: str, failed_cases: list[str]) -> str:
-    """One failed UI case body, keeping other failed cases for context."""
     lines = _common_lines(task)
     _append(lines, f"失败用例：{case_title}")
     others = [case for case in failed_cases if case != case_title]
@@ -269,7 +241,6 @@ def _ui_case_detail(task: Any, payload: dict, case_title: str, failed_cases: lis
 
 
 def _case_verification_detail(task: Any, payload: dict, *, interrupted: bool = False) -> str:
-    """Case-authoring verification body: summary, verdicts and failed modules."""
     lines = _common_lines(task)
     if interrupted:
         _append(
@@ -297,7 +268,6 @@ def _case_verification_detail(task: Any, payload: dict, *, interrupted: bool = F
 
 
 def _case_import_detail(task: Any, payload: dict, imported: dict) -> str:
-    """Case-import failure body: import message and verification context."""
     lines = _common_lines(task)
     _append(lines, "入库状态：" + (_text(imported.get("status")) or "failed"))
     _append(lines, "入库失败原因：" + _text(imported.get("message")))
@@ -307,17 +277,6 @@ def _case_import_detail(task: Any, payload: dict, imported: dict) -> str:
 
 
 def _interrupt_reason(task: Any) -> tuple[str, int]:
-    """读这条任务最后一次「事件流被打断」的原因与步骤号。
-
-    打断事件由引擎在异常结束时写入（设备日志为空、日志没盖满 5 秒都会走到这里），
-    台账据此单独开一张「设备日志中断」单，避免把判据问题当成模型判错。
-
-    Args:
-        task: 任务对象，只需要 ``id``。
-
-    Returns:
-        (原因, 步骤号)；没有打断事件时为 ("", 0)。
-    """
     task_id = int(getattr(task, "id", 0) or 0)
     if not task_id:
         return "", 0
@@ -340,7 +299,6 @@ def _interrupt_reason(task: Any) -> tuple[str, int]:
 
 
 def _common_lines(task: Any) -> list[str]:
-    """Header lines shared by every draft: task snapshot and status."""
     task_id = int(getattr(task, "id", 0) or 0)
     status = _status(task) or "—"
     lines = [f"来源任务：#{task_id} {_task_title(task)}", f"任务状态：{status}"]
@@ -355,7 +313,6 @@ def _draft(
     detail: str,
     failure: dict | None = None,
 ) -> BugDraft:
-    """Build a draft and clamp the title to the model limit."""
     return BugDraft(
         category=category,
         source_ref=source_ref,
@@ -366,7 +323,6 @@ def _draft(
 
 
 def _failed_case_titles(payload: dict) -> list[str]:
-    """Read failed case titles from result.failed, tolerating dict rows and duplicates."""
     raw = payload.get("failed")
     if not isinstance(raw, list):
         return []
@@ -385,7 +341,6 @@ def _failed_case_titles(payload: dict) -> list[str]:
 
 
 def _verdicts(payload: dict) -> list[dict]:
-    """Return verdict rows that are dictionaries."""
     raw = payload.get("verdicts")
     if not isinstance(raw, list):
         return []
@@ -393,7 +348,6 @@ def _verdicts(payload: dict) -> list[dict]:
 
 
 def _failed_modules(payload: dict) -> list[dict]:
-    """Return module rows explicitly marked as not passed."""
     raw = payload.get("modules")
     if not isinstance(raw, list):
         return []
@@ -401,7 +355,6 @@ def _failed_modules(payload: dict) -> list[dict]:
 
 
 def _case_ref(case_title: str) -> str:
-    """Stable 16-char source key for a failed case title."""
     normalized = " ".join(str(case_title or "").split()).lower()
     if not normalized:
         normalized = "untitled"
@@ -409,7 +362,6 @@ def _case_ref(case_title: str) -> str:
 
 
 def _parse_result(raw: Any) -> dict:
-    """Parse Task.result JSON, wrapping plain text as ``{"summary": text}``."""
     if isinstance(raw, dict):
         return raw
     text = str(raw or "").strip()
@@ -425,33 +377,27 @@ def _parse_result(raw: Any) -> dict:
 
 
 def _task_kind(task: Any) -> str:
-    """Task kind normalized to a string; defaults to device control."""
     return str(getattr(task, "task_kind", "") or TaskKind.DEVICE_CONTROL)
 
 
 def _status(task: Any) -> str:
-    """Task status normalized to lowercase."""
     return str(getattr(task, "status", "") or "").strip().lower()
 
 
 def _task_title(task: Any) -> str:
-    """Task title for display, never empty."""
     return _text(getattr(task, "title", "")) or "未命名任务"
 
 
 def _title(value: str) -> str:
-    """Clamp a BUG title to the database column limit."""
     text = _text(value)
     return text[:_TITLE_LIMIT]
 
 
 def _text(value: Any) -> str:
-    """Collapse whitespace and strip a value for a compact display field."""
     return " ".join(str(value or "").split())
 
 
 def _append(lines: list[str], value: str) -> None:
-    """Append a non-empty line unless the same line already exists."""
     text = _text(value)
     if text and text not in lines:
         lines.append(text)

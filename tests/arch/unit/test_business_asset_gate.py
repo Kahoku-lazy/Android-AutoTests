@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 架构契约测试 — business-asset 门禁口径（变更 purge-govee-business-assets） 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_business_asset_gate.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 utils/check_gates.py
-🏁
-"""
-
 from __future__ import annotations
 
 import pytest

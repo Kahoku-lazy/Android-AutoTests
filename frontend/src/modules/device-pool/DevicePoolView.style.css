@@ -1,7 +1,3 @@
-/* ═══════════════════════════════════════════
-   Device-Pool — 单页工作台（无独立 Overview）
-   ═══════════════════════════════════════════ */
-
 .device-workbench {
   display: flex;
   flex-direction: column;
@@ -29,7 +25,6 @@
   min-width: 0;
 }
 
-/* ── Toolbar ── */
 .device-toolbar {
   display: flex;
   align-items: center;
@@ -64,7 +59,7 @@
   gap: 5px !important;
   padding: 5px 14px !important;
 }
-/* 工具条按键底色分配：局域网紫、刷新绿（其余组见下方统一皮肤） */
+
 .action-bar-btn--network {
   background: var(--c-element) !important;
 }
@@ -72,13 +67,6 @@
   background: var(--c-device) !important;
 }
 
-/* ── 统一按键皮肤 ──
-   几何基准 = 侧栏底部「退出」按钮（AppSidebar.style.css:439-455）：
-   2px 墨色实边 + 2px 近直角 + 2px 偏移硬阴影；hover 左上位移 1px、阴影增至 3px。
-   底色按角色分配：「局域网」紫、「刷新」绿。
-   作用域限定本页 —— 共享件 ErrorState 与 .wb-btn 的默认皮肤不变。
-   注意：控制条的筛选下拉与名称搜索是输入件，不在这套皮肤里，见下方「控制条输入件」。
-   ═══════════════════════════════════════════ */
 .device-workbench :deep(.el-button),
 .device-workbench :deep(.error-state__btn) {
   border: 2px solid var(--ink) !important;
@@ -92,11 +80,7 @@
     box-shadow var(--app-duration-fast) var(--app-ease),
     background var(--app-duration-fast) var(--app-ease) !important;
 }
-/* ── 控制条输入件：筛选下拉与名称搜索不套按键皮肤 ──
-   2px 墨边（与主题输入框同口径）+ 输入框圆角 + 135° 薄荷绿渐变填充（浓度 45% → 20%）；
-   撤掉按键的两处身份特征（硬偏移影、粗字），保留 min-height 与工具条对齐。
-   hover / focus 沿用主题输入框语言（style.css:188-196）；模块的 !important 会压掉全局
-   :hover / :focus-within，故在此同处补回，不另发明一套反馈。 */
+
 .device-workbench :deep(.el-select__wrapper),
 .device-workbench :deep(.el-input__wrapper) {
   border: 2px solid var(--ink) !important;
@@ -120,8 +104,7 @@
 .device-workbench :deep(.el-input__wrapper:focus-within) {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-dashboard) 20%, transparent) !important;
 }
-/* 渐变填充抬亮了底色：EP 出厂的 placeholder 灰与下拉箭头灰落到约 1.7:1，
-   两处一起提到次级墨色（--app-text-secondary），保住"这是输入件"的可读提示。 */
+
 .device-workbench :deep(.el-input__inner::placeholder) {
   color: var(--app-text-secondary) !important;
 }
@@ -133,20 +116,17 @@
   transform: translate(-1px, -1px) !important;
   box-shadow: 3px 3px 0 0 var(--ink) !important;
 }
-/* Element Plus 实心 danger 的底色是深红（--el-color-danger = --color-red-46），
-   墨字压深红只有 2.78:1，跌破 frontend-l0-design-tokens 的 4.5:1 门槛；
-   故沿用主题既有的浅色文字（tokens.css:485 已注明该底色"白字仍可读"）。 */
+
 .device-workbench :deep(.el-button--danger:not(.is-plain)) {
   color: var(--color-white) !important;
 }
-/* 不可点：降透明度并撤掉位移阴影，避免与可用态混淆 */
+
 .device-workbench :deep(.el-button.is-disabled) {
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none !important;
 }
 
-/* ── 控制条：左「第 X / Y 页 · 共 N 台」+ 筛选 + 搜索；右「上一页 / 下一页」（常驻） ── */
 .list-controls {
   display: flex;
   align-items: center;
@@ -169,14 +149,13 @@
   width: 248px;
   flex-shrink: 0;
 }
-/* 右侧成对常驻：位置固定，不随页数出现/消失 */
+
 .page-nav {
   display: flex;
   gap: var(--app-space-sm);
   margin-left: auto;
 }
 
-/* ── 表格卡片 ── */
 .table-card {
   flex-shrink: 0;
   min-width: 0;
@@ -223,7 +202,7 @@
 .device-table-wrapper.is-dragging :deep(button) {
   pointer-events: none;
 }
-/* 宽屏铺满容器；窄于 min-width 时外层横滚 + 拖拽滑动 */
+
 .device-table-wrapper :deep(.el-table) {
   width: 100% !important;
   min-width: var(--device-table-min-width, 1130px);
@@ -260,22 +239,16 @@
   background: var(--app-bg-subtle);
 }
 
-/* ── 表纸：实线 + 无影（设备页登记变体） ──
-   共享表纸皮肤 `.wb-shell .sketch-sheet` 带模块色位移硬影，本页需要实线边但不带影：
-   只在此作用域内去影 + 改线型，描边宽度/颜色/圆角仍取 `--comp-sheet-*` 令牌。
-   共享文件不动 —— 同一套皮肤还有 9 处消费方。 */
 .device-workbench :deep(.sketch-sheet) {
   border-style: solid;
   box-shadow: none;
 }
 
-/* ── 表头图标：与列名同源渲染，只做扫读加速，不参与列宽计算 ── */
 .device-workbench .th-ico {
   margin-right: 4px;
   font-weight: var(--app-font-weight-heavy);
 }
 
-/* ── 表头：居中 + 浅底（字号 16px / 单行 nowrap 由全局 `.el-table th` 唯一定义） ── */
 .device-table-wrapper :deep(.el-table th.el-table__cell) {
   background: linear-gradient(
     180deg,
@@ -286,8 +259,6 @@
   padding: 14px 12px !important;
 }
 
-/* 纸面风格不画网格线：行线、列线与表头分栏底线均不绘制
-   （frontend-l4-data-surface「Tables draw no visible grid lines」） */
 .device-table-wrapper :deep(.el-table td.el-table__cell) {
   color: var(--app-text-primary);
   font-size: var(--app-size-sm);
@@ -306,10 +277,6 @@
   padding-bottom: var(--app-space-xs);
 }
 
-/* ── 设备身份列：样式随结构下沉到 DeviceIdentityCell.vue（scoped）──
-   选中态改为行级 `is-selected` 由共享皮肤着色，首列不再画伪元素状态块。 */
-
-/* ── Chip：连接 / 可见性 ── */
 .conn-chip,
 .vis-chip {
   display: inline-flex;

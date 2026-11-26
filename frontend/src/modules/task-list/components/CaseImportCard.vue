@@ -1,5 +1,4 @@
 <script setup>
-/** 用例编写任务：入库结果卡（成功给跳转，失败/跳过给原因）。 */
 defineProps({
   caseImport: { type: Object, default: null },
   isRunning: { type: Boolean, default: false },

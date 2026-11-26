@@ -1,6 +1,3 @@
-/** 评测纯函数：token 预估（与后端启发式同口径）与百分比展示。 */
-
-/** 与后端 eval_runner.estimate_cost 同口径的启发式预估。 */
 export function estimateEvalTokens(
   posCount: number,
   negCount: number,
@@ -14,7 +11,6 @@ export function estimateEvalTokens(
   }
 }
 
-/** 指标展示为百分比，保留一位小数。 */
 export function formatPercent(value: number): string {
   return `${(value * 100).toFixed(1)}%`
 }

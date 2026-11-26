@@ -10,7 +10,6 @@ const previewSrc = ref("")
 const previewTitle = ref("")
 const expandedCases = ref(new Set())
 
-// ── Group steps by case ──
 const caseGroups = computed(() => {
   const map = new Map()
   for (const s of props.steps) {
@@ -70,14 +69,12 @@ function stepTypeColor(type) {
     </h3>
     <p class="sec-sub">每步自动截图 + 红框标注 AI 操作位置。按用例分组，点击展开查看。</p>
 
-    <!-- 用例分组 -->
     <div
       v-for="group in caseGroups"
       :key="group.caseId"
       class="case-group"
       :class="{ 'case-group--expanded': expandedCases.has(group.caseId) }"
     >
-      <!-- 用例头部 -->
       <div class="case-group__header" @click="toggleCase(group.caseId)">
         <span class="case-group__arrow">{{ expandedCases.has(group.caseId) ? "▼" : "▶" }}</span>
         <span class="case-group__id">{{ group.caseId }}</span>
@@ -90,7 +87,6 @@ function stepTypeColor(type) {
         <span v-if="group.date" class="case-group__date">{{ group.date }}</span>
       </div>
 
-      <!-- 步骤截图网格 -->
       <div v-if="expandedCases.has(group.caseId)" class="case-group__body">
         <div class="ss-grid">
           <div
@@ -136,7 +132,6 @@ function stepTypeColor(type) {
       </div>
     </div>
 
-    <!-- 大图预览 -->
     <el-dialog v-model="previewVisible" :title="previewTitle" width="90%" top="2vh">
       <img :src="previewSrc" style="width: 100%; border-radius: var(--app-radius-md)" />
     </el-dialog>
@@ -144,15 +139,13 @@ function stepTypeColor(type) {
 </template>
 
 <style scoped>
-/* ── Section ── */
 .section-block {
-  /* 步骤类型色板（数据编码型分类色板；色相登记例外，集中声明一次） */
-  --ss-type-gesture: var(--comp-ss-type-gesture); /* click / long_click */
-  --ss-type-input: var(--comp-ss-type-input); /* fill / type */
-  --ss-type-assert: var(--comp-ss-type-assert); /* assert */
-  --ss-type-nav: var(--comp-ss-type-nav); /* navigate */
-  --ss-type-wait: var(--comp-ss-type-wait); /* wait / sleep */
-  --ss-type-other: var(--comp-ss-type-other); /* 其它类型 */
+  --ss-type-gesture: var(--comp-ss-type-gesture);
+  --ss-type-input: var(--comp-ss-type-input);
+  --ss-type-assert: var(--comp-ss-type-assert);
+  --ss-type-nav: var(--comp-ss-type-nav);
+  --ss-type-wait: var(--comp-ss-type-wait);
+  --ss-type-other: var(--comp-ss-type-other);
   margin-top: var(--app-space-lg);
 }
 .sec-title {
@@ -177,7 +170,6 @@ function stepTypeColor(type) {
   margin: 0 0 var(--app-space-md);
 }
 
-/* ── Case group ── */
 .case-group {
   border: 1.5px solid var(--app-border-light);
   border-radius: var(--app-radius-md);
@@ -253,7 +245,6 @@ function stepTypeColor(type) {
   background: var(--app-bg-subtle);
 }
 
-/* ── Screenshot grid ── */
 .ss-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));

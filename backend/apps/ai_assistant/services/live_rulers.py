@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 四条发布规则。只读一次评测的过程，不打综合分 🏁
-Python 调试：➡️ python -m backend.apps.ai_assistant.services.live_rulers 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（经 ai_assistant 的功能用例间接覆盖，未直接 import 本模块）
-🏁
-"""
-
 from __future__ import annotations
 
 _WRITE_TOOLS = {"adb_tap", "adb_swipe", "adb_input_text", "adb_press_key", "save_authored_case"}
@@ -19,7 +10,6 @@ def _fail(ruler: str, text: str) -> dict:
 def grade_process(
     steps: list[dict], *, allowed: set[str], same_instance: bool | None = None
 ) -> list[dict]:
-    """按过程判定四条规则。缺过程时不制造失败。"""
     failures: list[dict] = []
     for step in steps:
         name = str(step.get("tool") or "")

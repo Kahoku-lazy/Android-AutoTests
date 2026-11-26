@@ -1,6 +1,3 @@
-/**
- * [P0] 报告台账列、来源筛选与空态文案（报告数据源，不是任务卡）
- */
 import { describe, expect, it } from "vitest"
 import {
   EMPTY_TEXT,

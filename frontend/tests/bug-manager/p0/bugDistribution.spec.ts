@@ -1,6 +1,3 @@
-/**
- * BUG 分布图表配置单测：summary → 图表数据的映射口径。
- */
 import { describe, expect, it } from "vitest"
 import {
   BUG_CATEGORY_BARS,
@@ -61,7 +58,7 @@ describe("buildDistributionOption", () => {
   it("圆心文字以像素锚在圆心，不随容器高度漂", () => {
     const option = buildDistributionOption(SUMMARY)
     expect(typeof option.graphic[0].top).toBe("number")
-    // 数字字形盒顶部 = 圆心 - 半字高（9px），使字形正中对上圆心
+
     expect(option.graphic[0].top).toBe(BUG_DISTRIBUTION_HEIGHT / 2 - 9)
     expect(option.graphic[0].left).toBe(option.series[0].center[0])
     expect(option.graphic[0].style.textVerticalAlign).toBe("middle")

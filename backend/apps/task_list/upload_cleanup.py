@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ Helpers for AI assistant chat file uploads under data/uploads/. 🏁
-Python 调试：➡️ python -m backend.apps.task_list.upload_cleanup 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（经 task_list 的功能用例间接覆盖，未直接 import 本模块）
-🏁
-"""
-
 from __future__ import annotations
 
 import time
@@ -27,7 +18,6 @@ def ensure_upload_dir() -> Path:
 
 
 def safe_upload_path(filepath: Path) -> bool:
-    """Return True if path is a regular file inside UPLOAD_DIR."""
     try:
         resolved = filepath.resolve()
         root = UPLOAD_DIR.resolve()
@@ -38,7 +28,6 @@ def safe_upload_path(filepath: Path) -> bool:
 
 
 def remove_upload_file(filepath: Path | str) -> bool:
-    """Delete one upload file if it lies under UPLOAD_DIR."""
     path = Path(filepath)
     if not safe_upload_path(path):
         return False
@@ -55,7 +44,6 @@ def cleanup_upload_dir(
     *,
     dry_run: bool = False,
 ) -> dict:
-    """Remove upload files older than max_age_seconds (default from settings)."""
     ensure_upload_dir()
     age = max_age_seconds if max_age_seconds is not None else DEFAULT_MAX_AGE_SECONDS
     cutoff = time.time() - max(0, age)

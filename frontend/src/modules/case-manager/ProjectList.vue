@@ -23,7 +23,7 @@ const newProjectDesc = ref("")
 const newLibraryKind = ref<LibraryKind>("automation")
 
 const createFormRef = ref<FormInstance>()
-/** 新建项目的字段级校验（按 L4 口径走 EP :rules，取代原 Toast 空值守卫） */
+
 const createRules = {
   name: [{ required: true, message: "请输入项目名称", trigger: "blur" }],
 }
@@ -43,7 +43,6 @@ async function confirmCreate() {
   try {
     await createFormRef.value?.validate()
   } catch {
-    // 校验失败：EP 的 validate 以 reject 表示，交由字段内联提示（非静默吞错）
     return
   }
   const created = await addProject(newProjectName.value, newLibraryKind.value, newProjectDesc.value)
@@ -89,7 +88,7 @@ async function onDeleteProject(id: number, name: string) {
       <div class="project-toolbar">
         <el-button type="primary" @click="openCreateDialog">新建项目</el-button>
       </div>
-      <!-- 操作带与内容之间的分区虚线：只做分区，可点元素一律在线下 -->
+
       <SectionDivider class="project-divider" />
       <EmptyState
         v-if="isEmpty"
@@ -168,9 +167,6 @@ async function onDeleteProject(id: number, name: string) {
 </template>
 
 <style scoped>
-/* 模块作用域色板：登记本页用到的非全局色值（消费点都在页面根之内；页面根即组件根） */
-
-/* 页面根/主体骨架由 .doc-page / .doc-body 提供，这里只留本页增量 */
 .project-list-page .doc-body {
   overflow-y: auto;
   padding: var(--app-space-lg);
@@ -181,14 +177,12 @@ async function onDeleteProject(id: number, name: string) {
   margin-bottom: var(--app-space-sm);
 }
 
-/* 弹窗动作区：右对齐、8px 间距（按钮几何由 DoodleBtn 自持，本页不另写皮肤） */
 .create-dialog__actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--app-space-sm);
 }
 
-/* 分区虚线：与上方操作带留 8px、与下方卡片留 16px（间距由使用方给，组件自身不带外边距） */
 .project-divider {
   margin-bottom: var(--app-space-md);
 }

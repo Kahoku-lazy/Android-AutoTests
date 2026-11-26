@@ -28,7 +28,8 @@
 2. 设计方案与报告，接口文档在 `dev_docs\DEV_TEST`目录中，文件名举例：XXX.md/XXX.html
 3. 需求文档与架构文档放在 `dev_docs\ARCH_PRD` 中，文件名举例：ARCH-XXX.md/ARCH-XXX.html 或 PRD-XXX.md/PRD-XXX.html
 4. 项目全局的Python代码编写规则文档在`.agents\docs\Python代码规则.md`
-5. 全仓 Python 注释（模块头 4 字段：模块功能 / Python 调试 / 时间 / 测试）规范在`.agents\rules\python-docstring-style.md`；Django 固定脚手架（models/views/api/serializers/admin/urls/apps/migrations 等）不适用
+5. 全仓代码**不写注释**（模块头 / 类与函数 docstring / 行内 `#` 注释都不写）；唯一例外是交给模型的工具函数 docstring（`engines\ae_harness\tools` 下的工具）与 `tests\**\e2e` 用例 docstring，`# noqa` 等工具链指令必须保留。规则见`.agents\rules\python-docstring-style.md`
+6. **大范围机械改造（一次改上百个文件）前先读**`.agents\docs\repo_wide_comment_removal_retro_2026-11-24.md`：里面是 2026-11-24 全仓去注释的耗时复盘、走过的弯路（过期基线、逐文件起进程、逐文件 `git show`）与下次该怎么做
 
 
 ### 项目工具

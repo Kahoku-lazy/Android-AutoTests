@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** BUG 单详情抽屉 — 有失败步骤时按四问展示，没有时沿用错误原文。 */
 import { computed } from "vue"
 import { ElMessage } from "element-plus"
 import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"

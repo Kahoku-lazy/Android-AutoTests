@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** HitCard — 一条检索命中：实线条目卡，逐字展示原文，不改写不总结。 */
 import type { KnowledgeHit } from "../types"
 import { formatScore } from "../helpers/hits"
 

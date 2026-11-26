@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** 设备状态列 — el-tag + 占用/锁定 Badge */
 import { statusTag } from "../helpers"
 import { isExecutionOccupied } from "@/shared/helpers/deviceOccupancy"
 import type { DeviceRecord } from "@/shared/types/device"

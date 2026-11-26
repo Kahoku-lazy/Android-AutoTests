@@ -1,4 +1,3 @@
-/** 任务列表 — 加载 / 刷新 / 按线路筛选 / 运行态轮询（离开页面即停） */
 import { ref, computed, onActivated, onDeactivated, onMounted, onUnmounted } from "vue"
 import { ElMessage } from "element-plus"
 import {
@@ -20,7 +19,6 @@ import {
 } from "../constants"
 import type { TaskRecord, TaskStats, WorkflowFilterOption } from "@/shared/types/ai"
 
-/** 运行态轮询间隔：任务执行中每 10s 刷新，全部终态后自动停止 */
 const POLL_INTERVAL_MS = 10000
 
 const TERMINAL_STATUSES = new Set([
@@ -41,11 +39,11 @@ export function useTaskList() {
   const rerunningId = ref<number | null>(null)
   const cancellingId = ref<number | null>(null)
   let pollTimer: ReturnType<typeof setInterval> | null = null
-  // 在途请求计数：轮询在上一轮未返回时直接跳过，避免慢请求叠加
+
   let inFlight = 0
-  // 失活标记：keep-alive 只触发 onDeactivated，离开页面后不得继续轮询
+
   let deactivated = false
-  // onActivated 首次触发紧跟 onMounted，用它区分「首次挂载」与「从缓存回来」
+
   let activatedOnce = false
 
   const { activeFilter, filterTabs, filteredItems } = useFilterTabs(
@@ -79,7 +77,7 @@ export function useTaskList() {
 
   function schedulePoll() {
     stopPoll()
-    // 页面已被缓存：不再排定时器，回到页面时由 onActivated 重新加载并重排
+
     if (deactivated) return
     const hasActive = tasks.value.some(
       (t) => !TERMINAL_STATUSES.has((t.status || "").toLowerCase()),
@@ -90,13 +88,10 @@ export function useTaskList() {
   }
 
   async function loadStats() {
-    // 统计与列表同源刷新：失败只保留上一次数值，不把页面拖进错误态
     try {
       const data = await getTaskStats()
       if (data.status && data.data) stats.value = data.data
-    } catch {
-      // 统计失败不提示：列表本身仍是可用的
-    }
+    } catch {}
   }
 
   async function load(silent = false) {
@@ -202,13 +197,12 @@ export function useTaskList() {
     stopPoll()
   })
   onActivated(() => {
-    // 首次激活紧跟 onMounted，此时 onMounted 已经拉过，不重复请求
     if (!activatedOnce) {
       activatedOnce = true
       return
     }
     deactivated = false
-    // 回到清单：静默补拉一次（成功后 schedulePoll 会按有无运行中任务重排定时器）
+
     void load(true)
   })
   onUnmounted(stopPoll)

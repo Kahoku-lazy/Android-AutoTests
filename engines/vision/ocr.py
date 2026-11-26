@@ -1,26 +1,3 @@
-"""
-文件名: ➡ ocr.py 🏁
-路径: ➡ engines/vision/ocr.py 🏁
-模块功能：➡ 页面文本识别（cnocr，惰性由调用方导入） 🏁
-Python 调试：➡ python -m engines.vision.ocr 🏁
-时间：➡ 2026-10-20 🏁
-作者：➡ kahoku 🏁
-版本：➡ 1.0.0 🏁
-修改时间: ➡ 2026-11-02 🏁
-类型: ➡ 工具模块 🏁
-简介说明：➡
-1. recognize: 对页面图像做文本识别
-2. cnocr 在本模块被导入时加载；调用方必须在函数内部导入本模块，避免引擎启动拉起重依赖
-3. 只供引擎侧 OCR 工具调用（原调用方 `engines/agents/tools/tool_ocr.py` 随该包退役，当前无生产调用方）
-🏁
-关联模块：➡
-1. 无引擎内调用方：本包作为底座能力保留，供后续工具层按需接入
-🏁
-测试：➡
-1. tests/engines/agents/test_ocr_tool.py: OCR 工具
-🏁
-"""
-
 import logging
 import threading
 
@@ -28,14 +5,11 @@ from cnocr import CnOcr
 
 logger = logging.getLogger(__name__)
 
-# Lazily-initialized cnocr engine. Model download happens on first use (~/.cnocr),
-# so we init once and cache to avoid re-downloading / re-loading on every call.
 _engine = None
 _engine_lock = threading.Lock()
 
 
 def _get_engine() -> CnOcr:
-    """Return the cached CnOcr engine, initializing it on first call."""
     global _engine
     if _engine is None:
         with _engine_lock:
@@ -45,23 +19,7 @@ def _get_engine() -> CnOcr:
 
 
 def recognize(screenshot_path: str) -> list[dict]:
-    """Run OCR on a full-resolution screenshot.
-
-    Returns a list of text regions, each with an axis-aligned bounding box in
-    device pixels (matching dump element x/y/width/height). `bounds` 与 dump
-    元素同格式（[x,y][r,b]），坐标口径统一。
-
-    Args:
-        screenshot_path: Path to a PNG screenshot file.
-
-    Returns:
-        list[dict]: [{text, confidence, x, y, width, height, bounds, coordinates}]
-
-        `coordinates` 是文本框的**左上与右下两个对角点** `[[x, y], [x2, y2]]`
-        （设备像素）；`bounds` 是同一包围盒的字符串形式。
-    """
     engine = _get_engine()
-    # cnocr returns [{text, score, position}] — position is a (N,2) array of corner points.
     results = engine.ocr(screenshot_path)
 
     texts = []

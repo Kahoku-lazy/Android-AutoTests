@@ -1,5 +1,3 @@
-"""task-list views — task submit/list/detail/rerun/cancel/delete/clear."""
-
 import json
 
 from django.db import transaction
@@ -18,7 +16,6 @@ from backend.models.constants import TaskKind, TaskStatus
 
 
 def _case_ids(request) -> list[str]:
-    """读取平台用例编号。格式不对或为空时拒绝，不创建任务。"""
     raw_ids = request.data.get("case_ids") or "[]"
     try:
         case_ids = json.loads(raw_ids) if isinstance(raw_ids, str) else list(raw_ids)
@@ -30,7 +27,6 @@ def _case_ids(request) -> list[str]:
 
 
 def _platform_milestone(case_ids: list[str], user_id: str):
-    """把所选自动化用例编译成里程碑附件，并带回提交当时的行身份。不写入用例表。"""
     from backend.apps.case_manager.api import automation_case_identity, compile_automation_cases
     from backend.apps.task_list.attachments import PreparedUpload, validate_milestone_yaml
 
@@ -48,7 +44,6 @@ def _platform_milestone(case_ids: list[str], user_id: str):
 
 
 def _current_release_version(workflow_id: int) -> int | None:
-    """读取工作流当前已发布版本号。没有版本时留空。"""
     from backend.apps.ai_assistant.models import AssistantRelease
 
     return (
@@ -60,7 +55,6 @@ def _current_release_version(workflow_id: int) -> int | None:
 
 
 def _submit_material_workflow(request, workflow, title: str, user_id):
-    """用例编写与需求拆解：上传文档，解析成 Markdown 后作为任务正文。"""
     from backend.apps.task_list.attachments import (
         AttachmentError,
         parse_document_bytes,
@@ -105,7 +99,6 @@ def _submit_material_workflow(request, workflow, title: str, user_id):
 def _submit_assistant_sop(
     request, title: str, goal: str, device_serial: str, device_label: str, user_id
 ):
-    """提交名片绑定的 SOP。设备必填；配置必须是里程碑格式。"""
     from backend.apps.ai_assistant import api as assistant_api
     from backend.apps.task_list.attachments import (
         AttachmentError,
@@ -164,15 +157,12 @@ def _submit_assistant_sop(
 
 
 def _visible_task(request, task_id: int) -> Task | None:
-    """登录用户按 id 取任务；未登录返回 None。"""
     if not getattr(request, "user_id", None):
         return None
     return Task.objects.filter(id=task_id).first()
 
 
 class TaskSubmitAPIView(APIView):
-    """POST /api/tasks/submit — 提交任务；按设备调度（同设备排队 / 异设备并行）。"""
-
     @extend_schema(request=TaskSubmitInputSerializer, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         serializer = TaskSubmitInputSerializer(data=request.data)
@@ -190,8 +180,6 @@ class TaskSubmitAPIView(APIView):
 
 
 class AgentTaskListAPIView(APIView):
-    """GET /api/tasks — 当前用户可见的全部任务发布（设备执行 + 用例编写）。"""
-
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         if not getattr(request, "user_id", None):
@@ -217,8 +205,6 @@ class AgentTaskListAPIView(APIView):
 
 
 class AgentTaskStatsAPIView(APIView):
-    """GET /api/tasks/stats — 当前用户可见任务的状态统计（总体 + 分智能体）。"""
-
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         if not getattr(request, "user_id", None):
@@ -229,8 +215,6 @@ class AgentTaskStatsAPIView(APIView):
 
 
 class AgentTaskDeleteAPIView(APIView):
-    """POST /api/tasks/{task_id}/delete — 删除任务发布记录。"""
-
     @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def post(self, request, task_id: int):
         task = _visible_task(request, task_id)
@@ -241,8 +225,6 @@ class AgentTaskDeleteAPIView(APIView):
 
 
 class AgentTaskCancelAPIView(APIView):
-    """POST /api/tasks/{task_id}/cancel — 关闭运行中的 SOP。"""
-
     @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def post(self, request, task_id: int):
         task = _visible_task(request, task_id)
@@ -256,8 +238,6 @@ class AgentTaskCancelAPIView(APIView):
 
 
 class AgentTaskRerunAPIView(APIView):
-    """POST /api/tasks/{task_id}/rerun — 已结束任务克隆新建并调度。"""
-
     @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def post(self, request, task_id: int):
         task = _visible_task(request, task_id)
@@ -282,8 +262,6 @@ class AgentTaskRerunAPIView(APIView):
 
 
 class AgentTaskClearAPIView(APIView):
-    """POST /api/tasks/clear — 调试：清空当前用户可见的全部任务发布记录。"""
-
     @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         if not getattr(request, "user_id", None):
@@ -293,8 +271,6 @@ class AgentTaskClearAPIView(APIView):
 
 
 class AgentTaskDetailAPIView(APIView):
-    """GET /api/tasks/{task_id} — 任务发布详情（过程日志）。"""
-
     @extend_schema(responses=OpenApiTypes.OBJECT, operation_id="ai_agent_task_detail")
     def get(self, request, task_id: int):
         task = _visible_task(request, task_id)
@@ -304,8 +280,6 @@ class AgentTaskDetailAPIView(APIView):
 
 
 class TaskMediaAPIView(APIView):
-    """GET /api/tasks/{task_id}/media/{media_id} — 截图缩略图字节（WebP，非信封）。"""
-
     @extend_schema(
         tags=["tasks"],
         operation_id="task_media",
@@ -327,13 +301,10 @@ class TaskMediaAPIView(APIView):
 
 
 class TaskDrainAPIView(APIView):
-    """GET/POST /api/system/drain — 停机排空：只允许本机回环调用。"""
-
     permission_classes = [AllowAny]
 
     @staticmethod
     def _require_loopback(request) -> None:
-        """拒绝非回环来源，避免把停机开关暴露给局域网。"""
         if request.META.get("REMOTE_ADDR", "") not in ("127.0.0.1", "::1"):
             raise PermissionDenied("仅本机可调用")
 
@@ -343,7 +314,6 @@ class TaskDrainAPIView(APIView):
         responses=OpenApiTypes.OBJECT,
     )
     def get(self, request):
-        """只读：返回 running 数与当前排空标志。"""
         self._require_loopback(request)
         return Response(
             {
@@ -360,7 +330,6 @@ class TaskDrainAPIView(APIView):
         responses=OpenApiTypes.OBJECT,
     )
     def post(self, request):
-        """置位排空标志；此后不再派发新任务。"""
         self._require_loopback(request)
         api.begin_drain()
         return Response(

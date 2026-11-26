@@ -1,12 +1,4 @@
 #!/usr/bin/env python3
-"""
-模块功能：➡️ 架构事实生成器：代码量、依赖与模块边界检查，供架构文档与 CI 消费 🏁
-Python 调试：➡️ python -m utils.gen_arch_stats 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（门禁 `boundary` / `vue-file-size` 直接调用其 --check-* 开关）
-🏁
-"""
 
 import ast
 import json
@@ -17,29 +9,17 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-# 控制台输出统一 UTF-8：本脚本会打印 emoji（📝 / ✅ / 🔴/❌）。
-# Windows 中文环境下 stdout 默认是 GBK，被管道/重定向捕获时 print 会抛
-# UnicodeEncodeError 并以退出码 1 结束——与「发现边界违规」的退出码无法区分，
-# 任何按退出码判定的调用方（CI 步骤、脚本门禁）都会误判为检查失败。
-# 修复放在脚本内而非要求调用方设 PYTHONIOENCODING：单点覆盖所有输出路径。
-# 被 pytest 等捕获时 stdout 可能不是 TextIOWrapper，故用 hasattr 守卫。
 for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
         _stream.reconfigure(encoding="utf-8", errors="replace")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-# ── 仓库布局常量 ──
-# 源码位于 `backend/` 下，跨 App import 统一写作 `backend.apps.<app>`。
-# 早期版本的脚本按「根目录即 Django 项目、import 写作 apps.<app>」写死了路径与正则，
-# 迁目录后所有扫描都会静默返回空结果——集中在这里，改目录只改这一处。
 BACKEND_DIR = PROJECT_ROOT / "backend"
 APPS_DIR = BACKEND_DIR / "apps"
 GATEWAY_DIR = BACKEND_DIR / "gateway"
 SETTINGS_PATH = BACKEND_DIR / "config" / "settings.py"
-# 供 re 使用的「跨 App import」前缀（不含结尾点，调用方自行拼接）
 APP_IMPORT_PREFIX = r"backend\.apps"
-# 表前缀归属：App 名 → 表名前缀。新增 App 时在此登记，未登记会显示 "??"。
 TABLE_PREFIX = {
     "device_pool": "dp_",
     "case_manager": "cm_",
@@ -53,20 +33,7 @@ TABLE_PREFIX = {
 }
 
 
-# ── 1. Django App 扫描 ──
-
-
 def _viewset_actions(app_dir: Path, class_name: str):
-    """找出 ViewSet 类上的 `@action` 装饰器。
-
-    Args:
-        app_dir: App 目录。
-        class_name: ViewSet 类名。
-
-    Returns:
-        [(detail, url_path), ...]；detail 为 True 表示挂在详情路由下。
-        找不到类时返回空表。
-    """
     for view_file in sorted(app_dir.glob("views*.py")):
         try:
             tree = ast.parse(view_file.read_text(encoding="utf-8"))
@@ -95,18 +62,6 @@ def _viewset_actions(app_dir: Path, class_name: str):
 
 
 def count_app_endpoints(app_dir: Path):
-    """统计一个 App 的端点数量。
-
-    口径：唯一 URL 路径，同一路径多方法计 1。字面 `path()` / `re_path()` 各计 1；
-    `router.register()` 按其 ViewSet 展开为「集合路由 + 详情路由 + 每个 @action」，
-    与 DefaultRouter 实际生成的路径一致。
-
-    Args:
-        app_dir: App 目录。
-
-    Returns:
-        端点条数。
-    """
     urls_path = app_dir / "urls.py"
     if not urls_path.exists():
         return 0
@@ -115,13 +70,12 @@ def count_app_endpoints(app_dir: Path):
     count = len(re.findall(r"^\s*(?:path|re_path)\(", content, re.MULTILINE))
     for match in re.finditer(r"router\.register\(\s*r?[\"']([^\"']+)[\"']\s*,\s*(\w+)", content):
         viewset = match.group(2)
-        count += 2  # 集合路由 `{prefix}/` + 详情路由 `{prefix}/{lookup}/`
+        count += 2
         count += len(_viewset_actions(app_dir, viewset))
     return count
 
 
 def scan_django_apps():
-    """扫描 backend/apps/ 下所有 Django App，返回结构化数据。"""
     apps_dir = APPS_DIR
     apps = []
     for d in sorted(apps_dir.iterdir()):
@@ -133,7 +87,6 @@ def scan_django_apps():
         app = {
             "name": d.name,
             "has_models": (d / "models.py").exists(),
-            # 视图可拆成多片（views_pages.py / views_drf.py ...），故按前缀识别
             "has_views": (d / "views.py").exists()
             or any(d.glob("views*.py"))
             or (d / "views").is_dir(),
@@ -141,7 +94,6 @@ def scan_django_apps():
             "has_urls": (d / "urls.py").exists(),
         }
 
-        # 统计表数量（含 models_*.py 分表，如 case_manager 的 models_web/models_storage/models_api）
         app["table_count"] = 0
         app["tables"] = []
         model_files = sorted(d.glob("models*.py"))
@@ -150,10 +102,8 @@ def scan_django_apps():
             app["table_count"] += len(re.findall(r"db_table\s*=\s*['\"](\w+)['\"]", content))
             app["tables"].extend(re.findall(r"db_table\s*=\s*['\"](\w+)['\"]", content))
 
-        # 统计端点数量（字面 path() + DRF Router 生成的路由）
         app["endpoint_count"] = count_app_endpoints(d)
 
-        # 统计代码行数
         app["total_lines"] = 0
         for py_file in d.rglob("*.py"):
             if "migrations" in str(py_file) or "__pycache__" in str(py_file):
@@ -167,25 +117,17 @@ def scan_django_apps():
     return apps
 
 
-# ── 2. Agent 工具扫描 ──
-
 TOOLS_CONFIG_PATH = PROJECT_ROOT / "engines" / "agents" / "tools_config.py"
 TOOLS_DIR = PROJECT_ROOT / "engines" / "agents" / "tools"
 
 
 def _literal_str_tuple(node):
-    """把 ast.Tuple / ast.List 里的字符串常量取成 list；非字面量返回空表。"""
     if not isinstance(node, (ast.Tuple, ast.List)):
         return []
     return [e.value for e in node.elts if isinstance(e, ast.Constant) and isinstance(e.value, str)]
 
 
 def _tool_source_index():
-    """建立 工具名 → 定义文件（相对仓库根）的索引。
-
-    Returns:
-        dict[str, str]：函数名映射到 `engines/agents/tools/tool_*.py` 的相对路径。
-    """
     index = {}
     if not TOOLS_DIR.exists():
         return index
@@ -195,7 +137,6 @@ def _tool_source_index():
         except SyntaxError:
             continue
         rel = path.relative_to(PROJECT_ROOT).as_posix()
-        # 先收模块级函数，再补 build_*_tools() 内部的闭包工具（如 screenshot_page）
         for node in tree.body:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 index.setdefault(node.name, rel)
@@ -206,14 +147,6 @@ def _tool_source_index():
 
 
 def scan_tools():
-    """扫描工具注册表 `engines/agents/tools_config.py`，返回已装配给角色的工具。
-
-    工具来自 `TOOL_MODULES` 的 device / observe / serial。角色由 `DEFAULT_ROLE_MODULES` 决定。
-    同一工具只登记一次，角色列累计所有引用它的角色。
-
-    Returns:
-        工具列表，元素含 name / group / roles / file。
-    """
     if not TOOLS_CONFIG_PATH.exists():
         return []
     try:
@@ -222,7 +155,7 @@ def scan_tools():
         return []
 
     files = _tool_source_index()
-    tools = {}  # name → 记录；dict 保序，保证输出稳定
+    tools = {}
     named_tuples = {
         node.targets[0].id: _literal_str_tuple(node.value)
         for node in tree.body
@@ -232,7 +165,6 @@ def scan_tools():
     }
 
     def add(name, group, role):
-        """登记一个工具；重复出现时只补角色，不覆盖首次出现的位置。"""
         item = tools.setdefault(
             name,
             {"name": name, "group": group, "roles": [], "file": files.get(name, "")},
@@ -264,11 +196,7 @@ def scan_tools():
     return list(tools.values())
 
 
-# ── 3. 前端模块扫描 ──
-
-
 def scan_frontend_modules():
-    """扫描 frontend/src/modules/ 下所有模块。"""
     mods_dir = PROJECT_ROOT / "frontend" / "src" / "modules"
     if not mods_dir.exists():
         return []
@@ -283,7 +211,6 @@ def scan_frontend_modules():
         mod["has_store"] = (d / "store.js").exists() or (d / "store.ts").exists()
         mod["has_composables"] = (d / "composables").is_dir()
         mod["has_components"] = (d / "components").is_dir()
-        # 统计 Vue 文件总行数
         mod["vue_lines"] = 0
         for vue_file in d.rglob("*.vue"):
             try:
@@ -294,14 +221,9 @@ def scan_frontend_modules():
     return modules
 
 
-# ── 4. 文件体积违规扫描 ──
-
-
 def scan_file_size_violations(py_limit=400, vue_limit=500):
-    """扫描超标文件。"""
     violations = []
 
-    # Python 文件
     apps_dir = APPS_DIR
     for py_file in apps_dir.rglob("*.py"):
         if "migrations" in str(py_file) or "__pycache__" in str(py_file):
@@ -318,7 +240,6 @@ def scan_file_size_violations(py_limit=400, vue_limit=500):
                 }
             )
 
-    # Vue 文件
     frontend_dir = PROJECT_ROOT / "frontend" / "src"
     for vue_file in frontend_dir.rglob("*.vue"):
         lines = len(vue_file.read_text(encoding="utf-8").splitlines())
@@ -337,12 +258,7 @@ def scan_file_size_violations(py_limit=400, vue_limit=500):
     return violations
 
 
-# ── 5. 跨模块依赖扫描 ──
-
-
 def scan_cross_app_imports():
-    """扫描跨 App import 关系（被依赖 App → 依赖来源文件）。"""
-    # 从 INSTALLED_APPS 获取 App 列表（条目形如 "backend.apps.device_pool"）
     app_names = list(
         dict.fromkeys(
             re.findall(
@@ -350,10 +266,9 @@ def scan_cross_app_imports():
                 SETTINGS_PATH.read_text(encoding="utf-8"),
             )
         )
-    )  # 去重：settings 里另有菜单图标字典会重复出现 App 名
+    )
 
-    # 按目标 App 分组
-    targets = defaultdict(set)  # {target_app: {source_file1, source_file2, ...}}
+    targets = defaultdict(set)
 
     for scan_dir in [APPS_DIR, GATEWAY_DIR]:
         for py_file in scan_dir.rglob("*.py"):
@@ -363,7 +278,6 @@ def scan_cross_app_imports():
             for app_name in app_names:
                 pattern = rf"from\s+{APP_IMPORT_PREFIX}\.{app_name}\."
                 if re.search(pattern, content):
-                    # 排除同 App 内的 import
                     rel_path = py_file.relative_to(PROJECT_ROOT).as_posix()
                     if f"apps/{app_name}/" not in rel_path:
                         targets[app_name].add(rel_path)
@@ -371,12 +285,7 @@ def scan_cross_app_imports():
     return {app: sorted(sources) for app, sources in sorted(targets.items())}
 
 
-# ── 5b. 跨模块 ORM 写违规扫描（防火墙 #2）──
-
-
-# 已知违规白名单加载
 def _load_boundary_whitelist():
-    """Load known-violation whitelist from utils/boundary-whitelist.json."""
     whitelist_path = PROJECT_ROOT / "utils" / "boundary-whitelist.json"
     if not whitelist_path.exists():
         return []
@@ -388,21 +297,10 @@ def _load_boundary_whitelist():
 
 
 def scan_orm_write_violations():
-    """Detect cross-module direct ORM write violations.
-
-    Firewall #2 rule: cross-app writes MUST go through api.py.
-    This scans for files that import a Model from another app
-    and then call .objects.create / .objects.update / .objects.filter(...).update
-    / .objects.filter(...).delete on it, bypassing api.py.
-
-    Returns (new_violations, known_violations) — new violations not yet whitelisted
-    should fail CI.
-    """
     apps_dir = APPS_DIR
     whitelist = _load_boundary_whitelist()
 
-    # Build a mapping: model_class_name → app_name
-    model_to_app = {}  # {"Device": "device_pool", ...}
+    model_to_app = {}
     for d in sorted(apps_dir.iterdir()):
         if not d.is_dir() or d.name.startswith("_") or d.name.startswith("."):
             continue
@@ -411,11 +309,6 @@ def scan_orm_write_violations():
             for m in re.findall(r"class\s+(\w+)\s*\(\s*models\.Model\s*\)", content):
                 model_to_app[m] = d.name
 
-    # Write patterns to detect
-    # Pattern 1: ModelName.objects.create(   — direct INSERT
-    # Pattern 2: ModelName.objects.update(   — direct bulk UPDATE
-    # Pattern 3: ModelName.objects.filter(...).update( — queryset UPDATE
-    # Pattern 4: ModelName.objects.filter(...).delete( — queryset DELETE
     WRITE_PATTERNS = [
         (r"\b({model})\s*\.\s*objects\s*\.\s*create\s*\(", "objects.create()"),
         (r"\b({model})\s*\.\s*objects\s*\.\s*update\s*\(", "objects.update()"),
@@ -429,7 +322,6 @@ def scan_orm_write_violations():
         ),
     ]
 
-    # Scan all source files
     scan_dirs = [apps_dir]
     violations = []
 
@@ -446,15 +338,13 @@ def scan_orm_write_violations():
             except Exception:
                 continue
 
-            # Find which models this file imports from OTHER apps
-            imported_models = {}  # {ModelName: source_app}
+            imported_models = {}
             for m in re.finditer(
                 rf"from\s+{APP_IMPORT_PREFIX}\.(\w+)\s*\.\s*models\s+import\s+([^#\n]+)",
                 content,
             ):
                 source_app = m.group(1)
                 imported_str = m.group(2)
-                # Extract individual model names from the import
                 names = re.findall(r"\b(\w+)\b", imported_str.split("#")[0])
                 for name in names:
                     if name in model_to_app and model_to_app[name] == source_app:
@@ -463,14 +353,11 @@ def scan_orm_write_violations():
             if not imported_models:
                 continue
 
-            # Determine the "owning" app of this file
             file_app = None
             if f"apps/" in rel_path:
                 file_app = rel_path.split("apps/")[1].split("/")[0]
 
-            # For each imported model, check for write patterns
             for model_name, source_app in imported_models.items():
-                # Skip if this file IS the source app's api.py (allowed)
                 if file_app == source_app and py_file.name == "api.py":
                     continue
 
@@ -490,7 +377,6 @@ def scan_orm_write_violations():
                             }
                         )
 
-    # Match against whitelist
     def _whitelist_key(v):
         return f"{v['file']}:{v['line']}:{v['model']}:{v['pattern']}"
 
@@ -512,15 +398,8 @@ def scan_orm_write_violations():
 
 
 def scan_cross_app_internal_imports():
-    """Detect cross-app imports of internal implementation (firewall #1).
-
-    Firewall #1 rule: service.py 互不 import.
-    Extends to: no importing from other apps' non-api internals
-    (e.g. runner.py internals, views.py private symbols like _active_runs).
-    """
     apps_dir = APPS_DIR
 
-    # Apps that have these internal modules
     INTERNAL_MODULES = ["service", "runner", "consumer", "callbacks", "state_machine"]
 
     whitelist = _load_boundary_whitelist()
@@ -537,7 +416,6 @@ def scan_cross_app_internal_imports():
             except Exception:
                 continue
 
-            # Detect: from backend.apps.X.{internal} import ...
             for mod in INTERNAL_MODULES:
                 for m in re.finditer(
                     rf"from\s+{APP_IMPORT_PREFIX}\.(\w+)\.{mod}\s+import\s+([^#\n]+)",
@@ -545,7 +423,6 @@ def scan_cross_app_internal_imports():
                 ):
                     source_app = m.group(1)
                     imported_names = m.group(2).strip()
-                    # Skip if same app
                     if f"apps/{source_app}/" in rel_path:
                         continue
                     line_no = content[: m.start()].count("\n") + 1
@@ -560,7 +437,6 @@ def scan_cross_app_internal_imports():
                         }
                     )
 
-    # Match against whitelist
     def _key(v):
         return f"{v['file']}:{v['line']}:internal:{v['source_app']}.{v['module']}"
 
@@ -582,10 +458,6 @@ def scan_cross_app_internal_imports():
 
 
 def _iter_code_line_nos(content):
-    """返回含真实代码的行号集合（跳过注释/字符串/docstring）。
-
-    tokenize 失败时返回 None（调用方退化为所有行皆代码）。
-    """
     import io
     import tokenize as _tokenize
 
@@ -608,13 +480,6 @@ def _iter_code_line_nos(content):
 
 
 def scan_engine_leak_violations():
-    """Detect engine capability leak to upper layers (L1c boundary).
-
-    uiautomator2 与 engines.device.android 的 import 已交 .linting。
-    这里只留属性访问：backend/apps 与 backend/gateway 的代码行不得出现 .u2。
-
-    Returns (new_violations, known_violations) — new violations fail CI.
-    """
     scan_dirs = [APPS_DIR, GATEWAY_DIR]
     whitelist = _load_boundary_whitelist()
     raw_handle_re = re.compile(r"\.u2\b")
@@ -638,7 +503,6 @@ def scan_engine_leak_violations():
                 line_no = content[: m.start()].count("\n") + 1
                 if code_lines is not None and line_no not in code_lines:
                     continue
-                # 同一行访问 .u2 只计一次（按行去重）
                 key = (rel_path, line_no)
                 if key in seen_raw:
                     continue
@@ -652,7 +516,6 @@ def scan_engine_leak_violations():
                     }
                 )
 
-    # Match against whitelist（pattern == "engine-leak" 的条目）
     def _key(v):
         return f"{v['file']}:{v['line']}:engine-leak:{v['category']}"
 
@@ -675,20 +538,12 @@ def scan_engine_leak_violations():
     return new, known
 
 
-# 引擎依赖方向（底座不反向依赖、engines 不导入 Django）已交 .linting。
-
-
-# ── 6. 设备状态 ──
-
-
 def scan_device_statuses():
-    """从 device_pool/models.py 提取设备状态定义。"""
     models_path = APPS_DIR / "device_pool" / "models.py"
     if not models_path.exists():
         return {"count": 0, "statuses": []}
 
     content = models_path.read_text(encoding="utf-8")
-    # Pattern 1: comment-based # ONLINE | BUSY | OFFLINE
     for m in re.finditer(
         r"#\s*((?:ONLINE|BUSY|OFFLINE|DISCONNECTED)(?:\s*\|\s*(?:ONLINE|BUSY|OFFLINE|DISCONNECTED))*)",
         content,
@@ -698,11 +553,7 @@ def scan_device_statuses():
     return {"count": 0, "statuses": []}
 
 
-# ── 7. 汇总 → Markdown ──
-
-
 def generate_markdown():
-    """生成可插入 项目架构.md 的 Markdown 片段。"""
     apps = scan_django_apps()
     tools = scan_tools()
     modules = scan_frontend_modules()
@@ -718,7 +569,6 @@ def generate_markdown():
     lines.append(f"<!-- 最后更新: 见 git log -- -->")
     lines.append("")
 
-    # App 总览
     lines.append("### Django App 清单")
     lines.append("")
     lines.append(f"| App | 表 | 端点 | 代码行数 | models | views | api | urls |")
@@ -734,7 +584,6 @@ def generate_markdown():
     lines.append(f"| **合计** | **{total_tables}** | **{total_endpoints}** | — | — | — | — | — |")
     lines.append("")
 
-    # 数据库表
     lines.append("### 数据库表清单")
     lines.append("")
     lines.append(f"| 前缀 | App | 表名 |")
@@ -745,7 +594,6 @@ def generate_markdown():
             lines.append(f"| `{prefix}` | `{a['name']}` | `{t}` |")
     lines.append("")
 
-    # Agent 工具
     lines.append("### Agent 工具清单（已装配给角色）")
     lines.append("")
     lines.append(f"| Tool 名称 | 工具组 | 角色 | 定义文件 |")
@@ -756,7 +604,6 @@ def generate_markdown():
     lines.append(f"| **合计 {len(tools)} 个** | | | |")
     lines.append("")
 
-    # 前端模块
     lines.append("### 前端模块清单")
     lines.append("")
     lines.append(f"| 模块 | index.vue | api.js | routes.js | Vue 行数 |")
@@ -770,7 +617,6 @@ def generate_markdown():
         )
     lines.append("")
 
-    # 跨模块依赖
     lines.append("### 跨模块 import 关系")
     lines.append("")
     lines.append("（被依赖的 App → 依赖来源文件）")
@@ -783,7 +629,6 @@ def generate_markdown():
             lines.append(f"  - ... 还有 {len(sources) - 5} 个")
         lines.append("")
 
-    # 文件体积违规
     lines.append("### 文件体积违规 TOP 10")
     lines.append("")
     if top_violations:
@@ -799,7 +644,6 @@ def generate_markdown():
 
     lines.append(f"<!-- ARCH_STATS_END -->")
 
-    # ── 设备状态 ──
     dev_status = scan_device_statuses()
     lines.append("### 设备状态定义")
     lines.append("")
@@ -812,7 +656,6 @@ def generate_markdown():
 
 
 def generate_json():
-    """输出 JSON 格式（供 CI/hook 消费）。"""
     new_violations, known_violations = scan_orm_write_violations()
     eng_new, eng_known = scan_engine_leak_violations()
     return json.dumps(
@@ -849,14 +692,12 @@ def generate_json():
 
 
 def check_drift(doc_path: Path):
-    """对比给定架构文档中的 auto 区域，检测 drift。"""
     if not doc_path.exists():
         return {"status": "no_doc", "message": f"{doc_path.name} 不存在"}
 
     doc_content = doc_path.read_text(encoding="utf-8")
     current = generate_markdown()
 
-    # 提取文档中的 auto 区域
     match = re.search(r"<!-- ARCH_STATS.*?-->.*?<!-- ARCH_STATS_END -->", doc_content, re.DOTALL)
     if not match:
         return {
@@ -866,20 +707,16 @@ def check_drift(doc_path: Path):
 
     existing = match.group(0)
 
-    # 简单对比: 提取关键数字
     def extract_numbers(text):
         nums = {}
-        # App 数量
         m = re.search(r"\|\s*\*+\s*合计\s*\*+\s*\|\s*\*+(\d+)\*+\s*\|\s*\*+(\d+)\*+", text)
         if m:
             nums["tables"] = int(m.group(1))
             nums["endpoints"] = int(m.group(2))
-        # Tool 数量
         m = re.search(r"\*\*合计\s*(\d+)\s*个\*\*", text)
         if m:
             nums["tools"] = int(m.group(1))
-        # 违规数量 (从 TOP 10 表行数判断)
-        nums["violations"] = len(re.findall(r"^\| `", text, re.MULTILINE))  # 粗略估计
+        nums["violations"] = len(re.findall(r"^\| `", text, re.MULTILINE))
         return nums
 
     current_nums = extract_numbers(current)
@@ -897,15 +734,7 @@ def check_drift(doc_path: Path):
     return {"status": "ok", "current_stats": current_nums}
 
 
-# ── 7. AGENTS.md 自动更新 ──
-
-
 def generate_agents_md_sections():
-    """Generate auto-updatable sections for AGENTS.md.
-
-    Returns a dict: {section_name: markdown_content}
-    Sections are designed to be placed between <!-- AUTO_STATS: {name} --> markers.
-    """
     apps = scan_django_apps()
     tools = scan_tools()
     modules = scan_frontend_modules()
@@ -915,13 +744,11 @@ def generate_agents_md_sections():
 
     sections = {}
 
-    # ── Summary line ──
     sections["summary"] = (
         f"{len(apps)} App · {total_tables} 表 · {total_endpoints} 端点 · "
         f"{len(tools)} Tool · {len(modules)} 前端模块"
     )
 
-    # ── Django App table ──
     lines = []
     lines.append(f"| App | 表 | 端点 | 代码行数 | models | views | api | urls |")
     lines.append(f"|-----|:--:|:--:|:--:|:--:|:--:|:--:|:--:|")
@@ -936,7 +763,6 @@ def generate_agents_md_sections():
     lines.append(f"| **合计** | **{total_tables}** | **{total_endpoints}** | — | — | — | — | — |")
     sections["app-table"] = "\n".join(lines)
 
-    # ── DB table list ──
     lines = []
     lines.append(f"| 前缀 | App | 表名 |")
     lines.append(f"|------|-----|------|")
@@ -947,7 +773,6 @@ def generate_agents_md_sections():
     lines.append(f"| **合计** | **{len(apps)} App** | **{total_tables} 张表** |")
     sections["db-tables"] = "\n".join(lines)
 
-    # ── Tool list ──
     lines = []
     lines.append(f"| Tool 名称 | 工具组 | 角色 | 定义文件 |")
     lines.append(f"|-----------|--------|------|----------|")
@@ -957,7 +782,6 @@ def generate_agents_md_sections():
     lines.append(f"| **合计 {len(tools)} 个** | | | |")
     sections["tool-list"] = "\n".join(lines)
 
-    # ── Frontend module list ──
     lines = []
     lines.append(
         f"| 模块 | index.vue | api.js | routes.js | store | composables | components | Vue 行数 |"
@@ -981,7 +805,6 @@ def generate_agents_md_sections():
 
 
 def update_agents_md():
-    """Read AGENTS.md, replace AUTO_STATS sections with current data, write back."""
     agents_md_path = PROJECT_ROOT / "AGENTS.md"
     if not agents_md_path.exists():
         print("❌ AGENTS.md 不存在")
@@ -997,10 +820,8 @@ def update_agents_md():
         marker_start = f"<!-- AUTO_STATS: {section_name} -->"
         marker_end = f"<!-- AUTO_STATS_END: {section_name} -->"
 
-        # Build the replacement block
         replacement = f"{marker_start}\n{new_content}\n{marker_end}"
 
-        # Find existing block
         pattern = re.compile(
             rf"{re.escape(marker_start)}.*?{re.escape(marker_end)}",
             re.DOTALL,
@@ -1024,15 +845,7 @@ def update_agents_md():
     return 0
 
 
-# ── CLI ──
-
-
 def _setup_boundary_logger():
-    """配置边界检查日志到 logs/boundary-check.log。
-
-    Returns:
-        (logger, log_path)：日志已落盘时 log_path 为文件路径；只读检出无法写盘时为空串。
-    """
     log_dir = PROJECT_ROOT / "logs"
     logger = logging.getLogger("boundary-check")
     for h in list(logger.handlers):
@@ -1043,8 +856,6 @@ def _setup_boundary_logger():
         log_dir.mkdir(exist_ok=True)
         handler = logging.FileHandler(log_path, encoding="utf-8")
     except OSError:
-        # 只读检出（沙箱 / 受限 CI 容器）无法落盘日志，退化为仅控制台输出；
-        # 检查结果与退出码不受影响，但明确告知日志没写成功，避免静默。
         return logger, ""
     handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
     logger.addHandler(handler)
@@ -1054,7 +865,6 @@ def _setup_boundary_logger():
 
 
 def _known_debt_lines(orm_known, imp_known, eng_known):
-    """返回已知技术债明细的文本行列表（--verbose 时打印 + 写日志）。"""
     notes = {}
     for w in _load_boundary_whitelist():
         notes.setdefault((w.get("file", ""), w.get("line", 0)), w.get("note", ""))
@@ -1124,17 +934,14 @@ if __name__ == "__main__":
         logger, log_path = _setup_boundary_logger()
         exit_code = 0
 
-        # Firewall #2: ORM write violations
         orm_new, orm_known = scan_orm_write_violations()
-        # Firewall #1: Internal import violations
         imp_new, imp_known = scan_cross_app_internal_imports()
-        # L1c 引擎边界只留 .u2 裸句柄。import 方向已交 .linting。
         eng_new, eng_known = scan_engine_leak_violations()
 
         total_new = len(orm_new) + len(imp_new) + len(eng_new)
         total_known = len(orm_known) + len(imp_known) + len(eng_known)
 
-        out = []  # 报告行（控制台打印 + 日志落盘）
+        out = []
 
         if total_new > 0:
             out.append("╔══════════════════════════════════════════╗")
@@ -1183,10 +990,8 @@ if __name__ == "__main__":
                 out.append("✅ 模块边界检查通过 — 零违规")
             exit_code = 0
 
-        # 写日志（整份报告一次落盘，带时间戳前缀）
         logger.info("\n".join(out))
 
-        # 控制台：首行说明日志路径，再打印明细
         if log_path:
             print(f"📝 详细日志: {log_path}")
         else:
@@ -1203,7 +1008,6 @@ if __name__ == "__main__":
             print("✅ 前端文件体积检查通过 ─ 所有 .vue 文件 < 500 行")
             sys.exit(0)
 
-        # Load frontend whitelist
         fwl_path = PROJECT_ROOT / "utils" / "frontend-whitelist.json"
         whitelist = set()
         if fwl_path.exists():

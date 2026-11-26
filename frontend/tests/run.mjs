@@ -1,102 +1,85 @@
 #!/usr/bin/env node
-/**
- * Vitest 运行入口（报告输出到 tests/reports/）
- *
- * 用法（在 frontend 目录）:
- *   node tests/run.mjs                  # 默认跑全部
- *   node tests/run.mjs module login     # 只跑指定模块（p0+p1）
- *   node tests/run.mjs prio p0          # 跨模块跑指定优先级
- *   node tests/run.mjs file             # 只跑指定文件
- *   node tests/run.mjs verbose          # 终端详细输出
- *   node tests/run.mjs junit            # 生成 JUnit XML
- *   node tests/run.mjs json             # 生成 JSON 报告
- *   node tests/run.mjs all              # 终端 + JUnit + JSON
- *   node tests/run.mjs watch            # 监听模式
- *   node tests/run.mjs ui               # Vitest UI（需 @vitest/ui）
- *
- * 也可传文件路径：
- *   node tests/run.mjs junit tests/login-form.demo.spec.ts
- */
-import { existsSync, mkdirSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { spawnSync } from 'node:child_process'
-import { listProjects, scanModules } from './module-scan.mjs'
-import { buildSummary, generateReport, parseReport } from './generate-html-report.mjs'
+
+import { existsSync, mkdirSync } from "node:fs"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
+import { spawnSync } from "node:child_process"
+import { listProjects, scanModules } from "./module-scan.mjs"
+import { buildSummary, generateReport, parseReport } from "./generate-html-report.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const frontendRoot = join(__dirname, '..')
-const reportsDir = join(__dirname, 'reports')
+const frontendRoot = join(__dirname, "..")
+const reportsDir = join(__dirname, "reports")
 
 mkdirSync(reportsDir, { recursive: true })
 
-const mode = process.argv[2] || 'default'
+const mode = process.argv[2] || "default"
 const extraArgs = process.argv.slice(3)
 
 const presets = {
-  default: ['run', ...extraArgs],
-  file: ['run', ...extraArgs],
-  verbose: ['run', '--reporter=verbose', ...extraArgs],
+  default: ["run", ...extraArgs],
+  file: ["run", ...extraArgs],
+  verbose: ["run", "--reporter=verbose", ...extraArgs],
   junit: [
-    'run',
-    '--reporter=default',
-    '--reporter=junit',
-    `--outputFile.junit=${join(reportsDir, 'junit.xml')}`,
+    "run",
+    "--reporter=default",
+    "--reporter=junit",
+    `--outputFile.junit=${join(reportsDir, "junit.xml")}`,
     ...extraArgs,
   ],
   json: [
-    'run',
-    '--reporter=default',
-    '--reporter=json',
-    `--outputFile.json=${join(reportsDir, 'report.json')}`,
+    "run",
+    "--reporter=default",
+    "--reporter=json",
+    `--outputFile.json=${join(reportsDir, "report.json")}`,
     ...extraArgs,
   ],
   all: [
-    'run',
-    '--reporter=default',
-    '--reporter=junit',
-    '--reporter=json',
-    `--outputFile.junit=${join(reportsDir, 'junit.xml')}`,
-    `--outputFile.json=${join(reportsDir, 'report.json')}`,
+    "run",
+    "--reporter=default",
+    "--reporter=junit",
+    "--reporter=json",
+    `--outputFile.junit=${join(reportsDir, "junit.xml")}`,
+    `--outputFile.json=${join(reportsDir, "report.json")}`,
     ...extraArgs,
   ],
   watch: [...extraArgs],
-  ui: ['--ui', ...extraArgs],
+  ui: ["--ui", ...extraArgs],
 }
 
 function presetsFor(mode) {
   switch (mode) {
-    case 'module': {
+    case "module": {
       const moduleName = extraArgs[0]
       const valid = scanModules().map((m) => m.name)
       if (!moduleName || !valid.includes(moduleName)) {
         console.error(`未知模块: ${moduleName}`)
-        console.error(`可用: ${valid.join(', ')}`)
+        console.error(`可用: ${valid.join(", ")}`)
         process.exit(1)
       }
-      return ['run', `tests/${moduleName}`, ...extraArgs.slice(1)]
+      return ["run", `tests/${moduleName}`, ...extraArgs.slice(1)]
     }
-    case 'html':
+    case "html":
       return [
-        'run',
-        '--reporter=default',
-        '--reporter=json',
-        `--outputFile.json=${join(reportsDir, 'report.json')}`,
+        "run",
+        "--reporter=default",
+        "--reporter=json",
+        `--outputFile.json=${join(reportsDir, "report.json")}`,
         ...extraArgs,
       ]
-    case 'prio': {
+    case "prio": {
       const prio = extraArgs[0]
-      if (!['p0', 'p1'].includes(prio)) {
+      if (!["p0", "p1"].includes(prio)) {
         console.error(`未知优先级: ${prio}（可用: p0, p1）`)
         process.exit(1)
       }
       const projects = listProjects().filter((p) => p.endsWith(`/${prio}`))
-      return ['run', ...projects.flatMap((p) => ['--project', p]), ...extraArgs.slice(1)]
+      return ["run", ...projects.flatMap((p) => ["--project", p]), ...extraArgs.slice(1)]
     }
     default:
       if (!(mode in presets)) {
         console.error(`未知模式: ${mode}`)
-        console.error(`可用: ${Object.keys(presets).join(', ')}, module, prio`)
+        console.error(`可用: ${Object.keys(presets).join(", ")}, module, prio`)
         process.exit(1)
       }
       return presets[mode]
@@ -104,33 +87,39 @@ function presetsFor(mode) {
 }
 
 const args = presetsFor(mode)
-console.log(`> vitest ${args.join(' ')}`)
+console.log(`> vitest ${args.join(" ")}`)
 
-const result = spawnSync('npx', ['vitest', ...args], {
+const result = spawnSync("npx", ["vitest", ...args], {
   cwd: frontendRoot,
-  stdio: 'inherit',
+  stdio: "inherit",
   shell: true,
 })
 
-if (['junit', 'json', 'all'].includes(mode)) {
+if (["junit", "json", "all"].includes(mode)) {
   console.log(`\n报告目录: ${reportsDir}`)
 }
 
-if (mode === 'html' && existsSync(join(reportsDir, 'report.json'))) {
+if (mode === "html" && existsSync(join(reportsDir, "report.json"))) {
   const summary = generateReport(
-    join(reportsDir, 'report.json'),
-    join(reportsDir, 'html', 'index.html'),
+    join(reportsDir, "report.json"),
+    join(reportsDir, "html", "index.html"),
   )
-  console.log(`\n模块 ${summary.kpi.modules} 个 · 用例 ${summary.kpi.total} · 通过 ${summary.kpi.passed} · 失败 ${summary.kpi.failed}`)
-  console.log(`HTML 报告: ${join(reportsDir, 'html', 'index.html')}`)
+  console.log(
+    `\n模块 ${summary.kpi.modules} 个 · 用例 ${summary.kpi.total} · 通过 ${summary.kpi.passed} · 失败 ${summary.kpi.failed}`,
+  )
+  console.log(`HTML 报告: ${join(reportsDir, "html", "index.html")}`)
 }
 
-if (mode === 'all' && existsSync(join(reportsDir, 'report.json'))) {
-  const summary = buildSummary(parseReport(join(reportsDir, 'report.json')))
-  console.log('\n── 按模块汇总 ──')
+if (mode === "all" && existsSync(join(reportsDir, "report.json"))) {
+  const summary = buildSummary(parseReport(join(reportsDir, "report.json")))
+  console.log("\n── 按模块汇总 ──")
   for (const m of summary.modules) {
-    const line = [`${m.name}: P0 ${m.p0.passed}/${m.p0.total}`, `P1 ${m.p1.passed}/${m.p1.total}`, `失败 ${m.p0.failed + m.p1.failed}`]
-    console.log(line.join(' · '))
+    const line = [
+      `${m.name}: P0 ${m.p0.passed}/${m.p0.total}`,
+      `P1 ${m.p1.passed}/${m.p1.total}`,
+      `失败 ${m.p0.failed + m.p1.failed}`,
+    ]
+    console.log(line.join(" · "))
   }
 }
 

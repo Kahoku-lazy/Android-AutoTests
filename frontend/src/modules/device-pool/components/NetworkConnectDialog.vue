@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** NetworkConnectDialog — 局域网连接：已配对/已在 adb devices 可直连；首次选填配对 */
 import { computed, ref, watch } from "vue"
 import { validateLanConnect, type LanConnectPayload } from "../helpers"
 

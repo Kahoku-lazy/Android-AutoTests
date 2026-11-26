@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** QueryPanel — 右栏：提问 + 检索原文流；三态共享件，no_hit 与 unavailable 文案分开。 */
 import { computed } from "vue"
 import AppCard from "@/shared/components/AppCard.vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"

@@ -1,6 +1,3 @@
-/**
- * [P1] 用例表视图与草稿纯函数
- */
 import { describe, expect, it } from "vitest"
 import { isReactive, reactive } from "vue"
 import {
@@ -102,7 +99,6 @@ describe("[P1] 草稿读写", () => {
     expect(row.steps[0].log?.keywords).toEqual(["ok"])
   })
 
-  // 回归：自动化项目的空执行提示是 {} 而不是缺键，按字段重建会抛 TypeError，抽屉打不开
   it("cloneRow 遇到空执行提示 {} 不抛错且原样保留", () => {
     const row = makeRow("a", {
       steps: [{ action: "打开", assertion: "可见", anchor: {}, log: {} }],
@@ -113,7 +109,6 @@ describe("[P1] 草稿读写", () => {
     expect(draft.steps[0].log).toEqual({})
   })
 
-  // 回归：表格行是 reactive Proxy，structuredClone 对 Proxy 会抛 DataCloneError
   it("cloneRow 能吃下 reactive 行并返回普通对象", () => {
     const row = reactive(
       makeRow("a", { steps: [{ action: "打开", assertion: "可见", anchor: {}, log: {} }] }),

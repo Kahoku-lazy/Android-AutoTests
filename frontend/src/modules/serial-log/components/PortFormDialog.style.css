@@ -1,9 +1,3 @@
-/* PortFormDialog — 新增 / 编辑自定义端口弹窗（Doodle Craft 令牌；pf-* 为本组件私有）
- *
- * 弹窗外框走 el-dialog 全局皮肤；表单骨架与控件皮肤来自 shared/styles/sketched-kit.css。
- * 弹窗 teleport 到 body：本文件只装饰组件自有的 pf-* 元素，不依赖页面级样式。
- */
-
 .pf-body {
   display: flex;
   flex-direction: column;

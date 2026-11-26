@@ -11,23 +11,23 @@
 
 | 层级 | 路径 | 本文哪几节生效 |
 |------|------|----------------|
-| 全仓 Python（含 engines 之外） | 见 [`.agents/rules/python-docstring-style.md`](python-docstring-style.md) §1 的纳入 / 排除清单 | 注释模板**不再由本文定义**，见 §2 |
+| 全仓 Python（含 engines 之外） | 见 [`.agents/rules/python-docstring-style.md`](python-docstring-style.md) §1 | 注释规则**不再由本文定义**，见 §2 |
 | 全 engines | `engines/**`（含 `ae_harness`、`device`、`uart_log`、`vision` 等） | §3–§5、§7 |
 | 仅工具函数 | `engines/ae_harness/tools/**` | 另加 §6（工具函数 docstring 专规） |
 
-注释（模块头 4 字段）的正文在 [`.agents/rules/python-docstring-style.md`](python-docstring-style.md)：2026-11-24 起该方案已推广到全仓 Python 代码，本文不再重复模板，避免两处正文漂移。
+注释规则的正文在 [`.agents/rules/python-docstring-style.md`](python-docstring-style.md)：2026-11-24 起全仓代码不写注释，只保留工具函数 docstring 与工具链指令，本文不重复细则。
 
 功能架构、目录职责、工具必须经 `tools_config` 分配等，见 [`engines/AGENTS.md`](../../engines/AGENTS.md)，本文不重复展开。
 
-## 2. 注释与文档字符串（模板正文已外移）
+## 2. 注释与文档字符串（2026-11-24 起：不写注释）
 
-**模板、字段取值、纳入/排除清单、tests 口径、检查命令**统一由 [`.agents/rules/python-docstring-style.md`](python-docstring-style.md) 定义。
-本节只保留 engines 侧必须记住的三条：
+**全仓规则**见 [`.agents/rules/python-docstring-style.md`](python-docstring-style.md)；engines 侧只需记住三条：
 
-1. 模块头 4 字段（模块功能 / Python 调试 / 时间 / 测试）是**全仓要求**，engines 不例外；
-2. **工具函数**（`engines/ae_harness/tools/**` 里被 `FunctionTool(...)` 注册的函数）必须写「首行一句话摘要 + `Args:`」——
-   这是交给模型的说明，细则见 §6；
-3. 其余位置（类 docstring、普通函数 / 方法 docstring、函数体内 `#` 注释）默认不写；确需解释「为什么」时按全仓规范 §3.3 写一行原因。
+1. **不写注释**：模块 docstring、类 / 函数 docstring、函数体内 `#` 注释一律不写；
+2. **唯一例外——工具函数**（`engines/ae_harness/tools/**` 里被 `FunctionTool(...)` 注册的函数，以及 `engines/ae_harness/knowledge/tool.py` 的 `search_knowledge`）必须写「首行一句话摘要 + `Args:`」——这是交给模型的说明，细则见 §6；
+3. **保留工具链指令**：`# noqa` / `# type: ignore` / `# pragma` / shebang 等必须保留；`silent-except` 门禁要求的痕迹用 `# silent-except` 标记，不写解释性注释。
+
+模块职责、调试入口、能力清单写进 `.agents/docs/**`，不写进代码。
 
 ## 3. 模块划分与单一职责
 

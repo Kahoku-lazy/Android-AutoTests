@@ -1,4 +1,3 @@
-/** Device-Pool API — 设备管理 HTTP 调用（8 端点，DRF {status,data} 信封） */
 import client from "@/shared/api-client"
 import type { DeviceListResponse, ScanResponse, DeviceOpResponse } from "@/shared/types/device"
 

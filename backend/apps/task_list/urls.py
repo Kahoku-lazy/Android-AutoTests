@@ -1,5 +1,3 @@
-"""task-list URL routing — endpoints under /api/tasks/."""
-
 from django.urls import path
 
 from .media_views import TaskMediaLinkAPIView

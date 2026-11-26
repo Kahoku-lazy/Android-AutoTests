@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** Device Pool — 单页工作台（表格单一视图：筛选下拉 + 名称搜索 + 常驻分页条） */
 import AppTable from "@/shared/components/AppTable.vue"
 import DeviceIdentityCell from "./components/DeviceIdentityCell.vue"
 import DeviceStatusCell from "./components/DeviceStatusCell.vue"
@@ -69,7 +68,6 @@ const {
 
     <div v-else class="doc-body">
       <section class="device-section--list">
-        <!-- 工具条：视图切换与筛选 Tab 已下线，只留动作键 -->
         <div class="device-toolbar">
           <div class="device-toolbar__right">
             <div class="dev-mock-toggle" title="开发调试：注入 60 条模拟设备">
@@ -94,7 +92,6 @@ const {
           </div>
         </div>
 
-        <!-- 控制条：左「第 X / Y 页 · 共 N 台」+ 筛选 + 搜索；右「上一页 / 下一页」（常驻） -->
         <div class="list-controls">
           <span class="page-info"
             >第 {{ currentPage }} / {{ totalPages }} 页 · 共 {{ filteredDevices.length }} 台</span
@@ -158,7 +155,6 @@ const {
             :row-class-name="rowClassName"
             @row-click="handleRowClick"
           >
-            <!-- 表头图标与列名同源（COLUMNS[].icon / .title），纯文字 title 不受影响 -->
             <template
               v-for="col in COLUMNS"
               :key="`head-${col.dataIndex}`"

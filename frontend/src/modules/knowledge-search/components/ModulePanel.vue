@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** ModulePanel — 左栏：模块勾选列表 + 超管维护（新增/编辑/启停/删除/预建索引）。 */
 import { ref } from "vue"
 import AppCard from "@/shared/components/AppCard.vue"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
@@ -46,7 +45,6 @@ function onSave(payload: ModulePayload, id?: number) {
   emit("save", payload, id)
 }
 
-/** 保存成功后由页面关闭弹窗。 */
 function closeDialog() {
   dialogOpen.value = false
 }

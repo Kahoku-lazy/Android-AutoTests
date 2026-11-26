@@ -1,10 +1,4 @@
 <script setup lang="ts">
-/**
- * TaskOutcomeDonut — 任务结果占比（成功 / 失败 / 中断 / 取消）。
- *
- * 图例固定四项：数量为 0 的类别不画扇区但仍列出，说明「该类别当前为空」；
- * 四类全 0 时走空态，不画一个占满的假圆环。
- */
 import { computed } from "vue"
 import AppCard from "@/shared/components/AppCard.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
@@ -26,13 +20,10 @@ interface PieLabelParams {
   percent?: number
 }
 
-/** 画布上的百分比与图例同口径：一位小数（整数不带小数） */
 function percentText(value: number): string {
   return Number.isInteger(value) ? `${value.toFixed(0)}%` : `${value.toFixed(1)}%`
 }
 
-// ⚠️ ECharts 渲染在 Canvas 上，不支持 CSS 变量，此处保留色值字面量。
-//    token 对照：#1e1e24=--ink · #fffef5=--paper；扇区色由 helpers/task-stats 按令牌同值给出。
 function buildOption() {
   return {
     animation: true,
@@ -53,7 +44,7 @@ function buildOption() {
         center: ["50%", "50%"],
         avoidLabelOverlap: true,
         itemStyle: { borderColor: "#fffef5", borderWidth: 2 },
-        // 环上只标占比（不标条数）；图例置顶给颜色与名称
+
         label: {
           show: true,
           formatter: (params: PieLabelParams) => percentText(params.percent ?? 0),
@@ -116,7 +107,7 @@ const { container } = useECharts(buildOption, () => [props.stats])
   height: 100%;
   min-height: 0;
 }
-/* 图例置顶、横向叠放：只给颜色与名称，具体占比由环上标签与悬停提示承担 */
+
 .task-outcome__legend {
   list-style: none;
   margin: 0;

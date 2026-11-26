@@ -1,4 +1,3 @@
-/** 测试报告台账 API — 列表唯一 HTTP 出口，走 /api/reports/ */
 import client, { type DjangoResponse } from "@/shared/api-client"
 import type { ReportListData } from "./types"
 

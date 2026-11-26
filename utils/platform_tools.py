@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ platform-tools 安装器：下载、sha 校验、解压到 tools/platform-tools 🏁
-Python 调试：➡️ python -m utils.platform_tools 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（`python -m run setup --check` 可冒烟）
-🏁
-"""
-
 from __future__ import annotations
 
 import hashlib
@@ -62,20 +53,14 @@ _ARCHIVES = {
 
 
 class PlatformToolsError(RuntimeError):
-    """安装/校验 platform-tools 失败时抛出；message 面向用户。"""
+    pass
 
 
 def install_dir() -> Path:
-    """返回项目内 platform-tools 的安装目录。"""
     return INSTALL_DIR
 
 
 def platform_key() -> str:
-    """返回当前操作系统的归档键（Windows / Darwin / Linux）。
-
-    Raises:
-        PlatformToolsError: 当前系统没有对应的官方归档。
-    """
     key = platform.system()
     if key not in _ARCHIVES:
         raise PlatformToolsError(f"当前系统 {key or '未知'} 没有对应的 platform-tools 归档")
@@ -83,20 +68,17 @@ def platform_key() -> str:
 
 
 def _archive_info() -> dict:
-    """返回当前系统的归档元数据（file / size / sha1 / url）。"""
     info = dict(_ARCHIVES[platform_key()])
     info["url"] = _BASE_URL + info["file"]
     return info
 
 
 def installed_adb() -> Path | None:
-    """返回项目内已安装的 adb 路径；未安装时返回 None。"""
     candidate = INSTALL_DIR / _ADB_NAME
     return candidate if candidate.is_file() else None
 
 
 def read_meta() -> dict:
-    """读取安装元数据（版本 / 校验值 / 安装时间）；缺失或损坏时返回空字典。"""
     path = INSTALL_DIR / _META_NAME
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -105,7 +87,6 @@ def read_meta() -> dict:
 
 
 def _sha1_of(path: Path) -> str:
-    """计算文件的 sha1。"""
     digest = hashlib.sha1()
     with path.open("rb") as fh:
         for chunk in iter(lambda: fh.read(1024 * 1024), b""):
@@ -114,7 +95,6 @@ def _sha1_of(path: Path) -> str:
 
 
 def _sha256_of(path: Path) -> str:
-    """计算文件的 sha256。"""
     digest = hashlib.sha256()
     with path.open("rb") as fh:
         for chunk in iter(lambda: fh.read(1024 * 1024), b""):
@@ -123,18 +103,6 @@ def _sha256_of(path: Path) -> str:
 
 
 def verify_archive(zip_path: Path, info: dict | None = None) -> str:
-    """校验 zip 的大小与 sha1，通过后返回 sha256。
-
-    Args:
-        zip_path: 待校验的 zip 路径。
-        info: 归档元数据；缺省时按当前系统取。
-
-    Returns:
-        str: 该 zip 的 sha256。
-
-    Raises:
-        PlatformToolsError: 文件不存在、大小或 sha1 不符。
-    """
     info = info or _archive_info()
     if not zip_path.is_file():
         raise PlatformToolsError(f"找不到压缩包：{zip_path}")
@@ -152,7 +120,6 @@ def verify_archive(zip_path: Path, info: dict | None = None) -> str:
 
 
 def _download(url: str, dest: Path) -> None:
-    """下载 url 到 dest；先写 `.part` 再原子改名。"""
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     part = dest.with_suffix(dest.suffix + ".part")
     request = urllib.request.Request(url, headers={"User-Agent": "Android-AutoTests-setup"})
@@ -166,11 +133,6 @@ def _download(url: str, dest: Path) -> None:
 
 
 def _safe_extract(zip_path: Path, dest: Path) -> None:
-    """安全解压：拒绝绝对路径与 `..` 条目。
-
-    Raises:
-        PlatformToolsError: 压缩包内含有越界路径。
-    """
     with zipfile.ZipFile(zip_path) as zf:
         for member in zf.infolist():
             name = member.filename.replace("\\", "/")
@@ -181,16 +143,11 @@ def _safe_extract(zip_path: Path, dest: Path) -> None:
 
 
 def _chmod_adb(adb_path: Path) -> None:
-    """POSIX 上给 adb 加可执行位。"""
     if not _IS_WINDOWS:
         adb_path.chmod(0o755)
 
 
 def _kill_server(adb_path: Path) -> None:
-    """替换前停掉旧 adb server，避免 Windows 上 adb.exe 被占用而无法替换。
-
-    失败不影响安装：kill-server 只是尽力而为，替换阶段仍会兜底报错并保留旧目录。
-    """
     try:
         subprocess.run([str(adb_path), "kill-server"], capture_output=True, timeout=10)
     except (OSError, subprocess.SubprocessError):
@@ -198,11 +155,6 @@ def _kill_server(adb_path: Path) -> None:
 
 
 def _self_check(adb_path: Path) -> str:
-    """执行 `adb version` 自检，返回首行版本文本。
-
-    Raises:
-        PlatformToolsError: 自检失败。
-    """
     try:
         proc = subprocess.run(
             [str(adb_path), "version"],
@@ -219,7 +171,6 @@ def _self_check(adb_path: Path) -> str:
 
 
 def _publish(src: Path, meta: dict) -> None:
-    """把解压好的目录替换为正式安装目录；失败时恢复旧目录。"""
     INSTALL_DIR.parent.mkdir(parents=True, exist_ok=True)
     backup = INSTALL_DIR.with_name(f"{INSTALL_DIR.name}.old")
     if backup.exists():
@@ -241,19 +192,6 @@ def _publish(src: Path, meta: dict) -> None:
 
 
 def install(force: bool = False, archive: str | Path | None = None, log=print) -> dict:
-    """安装（或复用）项目内 platform-tools。
-
-    Args:
-        force: 已安装且校验通过时是否强制重装。
-        archive: 离线 zip 路径；给出时跳过下载。
-        log: 进度输出函数（默认 print）。
-
-    Returns:
-        dict: {"result": "already|installed", "path": str, "version": str, "adb": str}。
-
-    Raises:
-        PlatformToolsError: 下载、校验、解压或自检失败。
-    """
     info = _archive_info()
     meta = read_meta()
     adb = installed_adb()
@@ -330,11 +268,6 @@ def install(force: bool = False, archive: str | Path | None = None, log=print) -
 
 
 def status() -> dict:
-    """报告项目内安装状态（不触网、不抛异常）。
-
-    Returns:
-        dict: {"installed": bool, "path": str|None, "version": str|None, "source": str}。
-    """
     from utils import adb as adb_tools
 
     adb = installed_adb()

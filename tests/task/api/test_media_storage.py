@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 本地截图存储：WebP 编码、读写回环、路径越界保护 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/task/api/test_media_storage.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/task_list
-🏁
-"""
-
 from __future__ import annotations
 
 import base64

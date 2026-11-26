@@ -15,7 +15,6 @@ class TaskListConfig(AppConfig):
     verbose_name = "任务清单"
 
     def ready(self):
-        """只在对外服务进程里清扫心跳已停的 running 任务。"""
         argv = " ".join(sys.argv)
         is_asgi_server = os.environ.get("DJANGO_ASGI_SERVER") == "1" or "daphne" in argv
         is_runserver = (

@@ -1,10 +1,4 @@
-/**
- * 工作台共享设计令牌 — Doodle Craft
- * 挂在 .wb-shell 上
- */
 .wb-shell {
-  /* 取共享/主 token：本规则在各 .wb-shell 页根上生效，
-     消费只在单个模块页根内声明的令牌会在这些页根上静默失效 */
   font-family: var(--app-font);
   color: var(--app-text-primary);
 }
@@ -15,7 +9,6 @@
   box-sizing: border-box;
 }
 
-/* 按钮 — Doodle Craft 粗框 */
 .wb-shell .wb-btn.el-button,
 .wb-shell .el-button.wb-btn {
   border-radius: var(--app-radius-sm);
@@ -56,7 +49,6 @@
   border-color: var(--ink);
 }
 
-/* AppCard — 钉板壳（对齐 #page-typography .panel） */
 .wb-shell .ac-card {
   position: relative;
   overflow: visible !important;
@@ -102,7 +94,6 @@
   }
 }
 
-/* AppTabs */
 .wb-shell .ac-tabs .el-tabs__header {
   margin-bottom: var(--app-space-md);
 }
@@ -138,15 +129,11 @@
   border-color: var(--ink);
 }
 
-/* AppTable：表纸风格
-   - 表头无底色、细 1px 分隔线（需 !important 压过全局 .el-table th 的底色与 2px 墨线）
-   - 行分隔 1px 浅线、单元格纵向留白加大，读起来是一条条“笔迹行”而不是网格 */
 .wb-shell .ac-table th.el-table__cell {
   background: transparent !important;
   color: var(--app-text-secondary) !important;
   font-weight: var(--app-font-weight-semibold) !important;
-  /* 表头字号 16px（平台表格字号三档 16 / 14 / 12，见 doodle-craft data-display §1.1）；
-     模块不得再覆写 */
+
   font-size: var(--app-size-md);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -162,10 +149,6 @@
   background: color-mix(in srgb, var(--ink) 3%, transparent) !important;
 }
 
-/* 斑马纹：同上，全局 .el-table td 底色带 !important，条纹也必须画在单元格上。
-   注意本选择器特异性 (0,8,2) 高于选中行规则 (0,5,2)，两者同为 !important 时按特异性决胜，
-   故用 :not(.is-selected):not(.current-row) 显式排除选中行，让选中态优先（而非依赖来源顺序）。
-   （frontend-l4-data-surface「Table zebra striping is visible when requested」） */
 .wb-shell
   .ac-table.el-table--striped
   .el-table__body
@@ -174,14 +157,11 @@
   background: var(--comp-table-row-striped-bg) !important;
 }
 
-/* 行选中态：全局 .el-table td 底色带 !important，画在 tr 上会被吞掉，必须画在单元格上
-   （frontend-l4-data-surface「Table row state stays visible」） */
 .wb-shell .ac-table .el-table__body tr.is-selected > td.el-table__cell,
 .wb-shell .ac-table .el-table__body tr.current-row > td.el-table__cell {
   background: var(--comp-table-row-selected-bg) !important;
 }
 
-/* SketchTable 表纸皮肤（AppTable accent）：虚线纸 + 模块色硬阴影，表体不旋转 */
 .wb-shell .sketch-sheet {
   border: var(--comp-sheet-border);
   background: var(--comp-sheet-bg);

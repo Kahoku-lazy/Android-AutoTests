@@ -1,28 +1,7 @@
-"""登录鉴权的持久化模型。
-
-本模块的业务功能如下：
-1. TokenRevocation: 记录已吊销的会话（sid）、单个令牌（jti）与停用账号（user），让登出和停用立即生效。
-"""
-
 from django.db import models
 
 
 class TokenRevocation(models.Model):
-    """
-    令牌吊销记录 → acc_token_revocations。
-
-    `kind` 区分粒度：`session` 对应一次登录的会话（sid，access 与 refresh 一起失效），
-    `token` 对应单个令牌（jti，兜底没有 sid 的旧令牌），`user` 对应被停用的账号主键
-    （停用前签发的令牌一律作废，启用不恢复这些令牌）。判定只看未过期的行，
-    过期行由写入方顺手清理。写库一律经本 App 的 `api.py`。
-
-    Attributes:
-        kind: 吊销粒度（session / token / user）。
-        ref: 会话标识、令牌标识或账号主键。
-        expires_at: 记录失效时刻；超过后不再参与判定。
-        created_at: 写入时刻（排障用）。
-    """
-
     KIND_SESSION = "session"
     KIND_TOKEN = "token"
     KIND_USER = "user"
@@ -40,7 +19,6 @@ class TokenRevocation(models.Model):
     class Meta:
         db_table = "acc_token_revocations"
         constraints = [
-            # 同一粒度的同一标识只留一行：重复登出用 update_or_create 幂等覆盖
             models.UniqueConstraint(fields=["kind", "ref"], name="uniq_acc_revocation_kind_ref"),
         ]
         indexes = [

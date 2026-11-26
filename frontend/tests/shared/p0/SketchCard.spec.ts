@@ -1,6 +1,3 @@
-/**
- * [P0] SketchCard — 撕纸壳 / 空描述 / 删除不冒泡 / 键盘进入
- */
 import { describe, expect, it, vi } from "vitest"
 import { mount } from "@vue/test-utils"
 import SketchCard from "@/shared/components/SketchCard.vue"

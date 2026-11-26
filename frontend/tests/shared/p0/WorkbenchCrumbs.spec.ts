@@ -1,6 +1,3 @@
-/**
- * [P0] WorkbenchCrumbs — 返回芯片 + 波浪面包屑；末级不可点；reduced-motion 契约
- */
 // @ts-nocheck — 本文件用 node:fs 读源码校验 CSS 契约，不纳入浏览器 DOM 类型
 import { describe, expect, it, vi } from "vitest"
 import { mount } from "@vue/test-utils"

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** Serial Log — 串口日志：无线端口 / 日志关键词两个 Tab（模块私有手稿 chip） */
 import { ref } from "vue"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
 import SerialLogTabs from "./components/SerialLogTabs.vue"
@@ -16,7 +15,6 @@ import {
 
 const { isSuperuser } = useAuthUser()
 
-/** Tab 切换不改变任何开关状态：两个面板各自只在被选中时挂载。 */
 const activeTab = ref<string>(SERIAL_LOG_DEFAULT_TAB)
 </script>
 

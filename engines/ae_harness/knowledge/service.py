@@ -1,30 +1,3 @@
-"""
-文件名: ➡️ service.py 🏁
-路径: ➡️ engines/ae_harness/knowledge/service.py 🏁
-模块功能：➡️ 按库懒建索引并返回未经改写的检索命中，失败只降级不抛异常 🏁
-Python 调试：➡️ python -m engines.ae_harness.knowledge.service 🏁
-时间：➡️ 2026-11-24 🏁
-作者：➡️ kahoku 🏁
-版本：➡️ 1.0.0 🏁
-修改时间: ➡️ 2026-11-18 🏁
-类型: ➡️ Harness 配置模块 🏁
-简介说明：➡️
-1. KnowledgeHit: 一条未经改写的检索命中。
-2. Retrieval: 一次检索的结果，区分「有命中」「无命中」「检索不可用」。
-3. KnowledgeRetriever: 首次使用时才造嵌入模型、开库、建索引；不跨事件循环复用。
-4. usage_events(): 取出并清空嵌入用量事件（阶段与库名已打标），供调用方入账。
-🏁
-关联模块：➡️
-1. engines.ae_harness.knowledge.config: 库目录与检索参数。
-2. engines.ae_harness.knowledge.indexer: 按库增量索引。
-3. engines.ae_harness.knowledge.store: 本地 SQLite 向量库。
-4. engines.ae_harness.knowledge.usage: 嵌入用量记录代理与事件打标。
-🏁
-测试：➡️
-1. 暂无
-🏁
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -50,18 +23,6 @@ _DB_FILE = "rag.sqlite3"
 
 @dataclass(frozen=True)
 class KnowledgeHit:
-    """
-    一条未经改写的检索命中。
-
-    Attributes:
-        base: 命中来自哪个库。
-        source: 来源文件名。
-        text: 片段正文。
-        score: 余弦相似度，越大越相关。
-        chunk_index: 文件内片段序号。
-        document_id: 稳定文档编号。
-    """
-
     base: str
     source: str
     text: str
@@ -70,12 +31,6 @@ class KnowledgeHit:
     document_id: str
 
     def as_dict(self) -> dict[str, object]:
-        """
-        转成可直接序列化的字典。
-
-        Returns:
-            六个验收字段组成的字典。
-        """
         return {
             "base": self.base,
             "source": self.source,
@@ -88,39 +43,13 @@ class KnowledgeHit:
 
 @dataclass(frozen=True)
 class Retrieval:
-    """
-    一次检索的结果。
-
-    Attributes:
-        status: ok 表示有命中；no_hit 表示库可用但无命中；unavailable 表示检索不可用。
-        hits: 命中列表，按相似度降序。
-        error: 不可用时的可读原因；其余情况为空串。
-    """
-
     status: Literal["ok", "no_hit", "unavailable"]
     hits: tuple[KnowledgeHit, ...] = ()
     error: str = ""
 
 
 class KnowledgeRetriever:
-    """
-    一个进程内的知识库检索器。
-
-    惰性初始化：构造时不读配置以外的任何东西、不连库、不建索引。每次入口新建一个，
-    **不要跨事件循环复用**（内部有 asyncio.Lock）。嵌入用量经 usage_events() 取出。
-
-    Attributes:
-        config: 知识库配置。
-    """
-
     def __init__(self, config: KnowledgeConfig, *, index_dir: Path | None = None) -> None:
-        """
-        保存配置；不做任何 IO。
-
-        Args:
-            config: 已装载的知识库配置。
-            index_dir: 索引目录；None 时用模块自带的 index/。
-        """
         self.config = config
         self._index_dir = index_dir or INDEX_DIR
         self._embedding: CreatedEmbedding | None = None
@@ -132,39 +61,12 @@ class KnowledgeRetriever:
         self._counts: dict[str, int] = {}
 
     def error(self, base: str) -> str:
-        """
-        返回一个库最近的可读错误。
-
-        Args:
-            base: 库名。
-
-        Returns:
-            错误原因；没有错误时为空串。
-        """
         return self._errors.get(base, "")
 
     def indexed_count(self, base: str) -> int:
-        """
-        返回一个库最近一次重建的文件数。
-
-        Args:
-            base: 库名。
-
-        Returns:
-            文件数；尚未索引时为 0。
-        """
         return self._counts.get(base, 0)
 
     async def ensure_index(self, base: str) -> int:
-        """
-        懒建并增量更新一个库。
-
-        Args:
-            base: 库名。
-
-        Returns:
-            本次重新索引的文件数；库不可用时为 0。
-        """
         spec = self.config.base(base)
         if spec is None:
             self._errors[base] = f"知识库不存在：{base}"
@@ -203,17 +105,6 @@ class KnowledgeRetriever:
         base: str | None = None,
         top_k: int | None = None,
     ) -> Retrieval:
-        """
-        检索一个库或全部启用库。
-
-        Args:
-            query: 检索问题。
-            base: 指定库名；None 时检索全部启用库并合并排序。
-            top_k: 覆盖默认返回条数；None 或非正数时用配置值。
-
-        Returns:
-            检索结果；任何失败都降级成 unavailable，不抛异常。
-        """
         text = query.strip()
         if not text:
             return Retrieval("unavailable", error="检索问题不能为空")
@@ -235,7 +126,6 @@ class KnowledgeRetriever:
         return Retrieval("ok", hits=tuple(hits[:limit]))
 
     def _targets(self, base: str | None) -> tuple[str, ...] | Retrieval:
-        """确定要检索的库；参数不合法时直接给出降级结果。"""
         if base:
             spec = self.config.base(base)
             if spec is None:
@@ -249,7 +139,6 @@ class KnowledgeRetriever:
         return enabled
 
     async def _search_one(self, base: str, query: str, top_k: int) -> list[KnowledgeHit]:
-        """检索单个库；失败时写错误并返回空列表。"""
         await self.ensure_index(base)
         if self._errors.get(base):
             return []
@@ -284,41 +173,30 @@ class KnowledgeRetriever:
         ]
 
     def usage_events(self) -> list[UsageEvent]:
-        """
-        取出并清空累计的嵌入用量事件。
-
-        Returns:
-            已打阶段与库名标签的用量事件，按发生顺序；取走后内部清空。
-        """
         self._collect_usage(phase="", base="")
         events = self._usage
         self._usage = []
         return events
 
     def _collect_usage(self, *, phase: str, base: str) -> None:
-        """把代理里的事件打标后收进累计列表；代理未创建时什么都不做。"""
         if self._usage_proxy is not None:
             self._usage.extend(tag_events(self._usage_proxy.drain_events(), phase=phase, base=base))
 
     def _embedding_model(self) -> CreatedEmbedding:
-        """懒造嵌入模型；同一实例内只造一次。"""
         if self._embedding is None:
             self._embedding = create_embedding_model(self.config.embedding)
         return self._embedding
 
     def _proxy(self) -> UsageRecordingEmbedding:
-        """懒造用量记录代理；包住真实模型，同一实例内只造一次。"""
         if self._usage_proxy is None:
             created = self._embedding_model()
             self._usage_proxy = UsageRecordingEmbedding(created.model, created.api_key_env)
         return self._usage_proxy
 
     def _store(self) -> SQLiteVectorStore:
-        """打开本地向量库。"""
         return SQLiteVectorStore(self._index_dir / _DB_FILE)
 
     def _knowledge(self, spec: KnowledgeBaseSpec, store: SQLiteVectorStore) -> KnowledgeBase:
-        """把库名、嵌入模型与向量库绑成一个句柄。"""
         return KnowledgeBase(
             name=spec.name,
             description=spec.description,

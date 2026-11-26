@@ -1,11 +1,7 @@
-/**
- * [P0] 侧栏导航 — 分组顺序、入口配色与图标登记
- */
 import { describe, expect, it } from "vitest"
 import { NAV_CATEGORIES, MOD_COLORS } from "@/shared/components/sidebarNavConfig"
 import { lucideIconSubset } from "@/shared/icons/lucide-registry"
 
-/** lucide 按 PascalCase 查表：data-lucide="layout-dashboard" → LayoutDashboard */
 function toIconKey(name: string): string {
   return name
     .split("-")
@@ -91,7 +87,7 @@ describe("[P0] 侧栏 AI 功能分组", () => {
     expect(keys.slice(0, 2)).toEqual(["main", "ai"])
 
     const group = NAV_CATEGORIES.find((category) => category.key === "ai")
-    // 「AI 功能」标题已去掉：label 为空时侧栏不出分组标题行
+
     expect(group?.label).toBe("")
     expect(group?.items.map((item) => item.label)).toEqual(["平台助手"])
     expect(group?.items.map((item) => item.path)).toEqual(["/ai-assistant"])

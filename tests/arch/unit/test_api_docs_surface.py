@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 公开 API 文档面契约（`api-docs-surface`）：以 schema + Swagger UI 为唯一文档面 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_api_docs_surface.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 前端与后端源码的一致性面（只读源码断言）
-🏁
-"""
-
 from __future__ import annotations
 
 import re
@@ -18,7 +9,6 @@ from django.contrib.staticfiles.views import serve
 from django.test import Client, RequestFactory
 from django.urls import Resolver404, resolve
 
-# django_db：JWTAuthenticationMiddleware 每请求调用 close_old_connections()
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 
 REMOVED_DOC_PATHS = ["/api/docs", "/api/docs.html"]
@@ -26,9 +16,7 @@ KEPT_DOC_PATHS = ["/api/schema/", "/api/swagger/"]
 
 HTTP_METHODS = ("get", "post", "put", "patch", "delete", "head", "options")
 
-# 页面里指向第三方域名的资源引用（外链字体 / CDN）
 THIRD_PARTY_ASSET = re.compile(r"""(?:src|href)=["']https?://[^"']+["']""")
-# 页面里指向本服务的静态资产（sidecar 提供的 Swagger UI 资产）
 SAME_ORIGIN_ASSET = re.compile(r"""(?:src|href)=["'](/static/[^"']+)["']""")
 
 
@@ -38,7 +26,6 @@ def client():
 
 
 def test_removed_handwritten_doc_paths_are_gone(client):
-    """已删除的文档路径不再提供文档：无凭据 401，路由本身也不存在（等价携带凭据时 404）。"""
     for path in REMOVED_DOC_PATHS:
         with pytest.raises(Resolver404):
             resolve(path)
@@ -46,20 +33,17 @@ def test_removed_handwritten_doc_paths_are_gone(client):
 
 
 def test_kept_doc_endpoints_stay_public(client):
-    """schema 与 swagger 无凭据可访问（有意公开，便于外部联调）。"""
     for path in KEPT_DOC_PATHS:
         assert client.get(path).status_code == 200, path
 
 
 def _load_schema(client) -> dict:
-    """取 `/api/schema/`（默认 YAML 渲染）并解析为 dict。"""
     resp = client.get("/api/schema/")
     assert resp.status_code == 200
     return yaml.safe_load(resp.content.decode("utf-8"))
 
 
 def test_every_operation_has_a_description(client):
-    """每个 operation 都有非空说明：删除手写文档后中文可读性不丢。"""
     schema = _load_schema(client)
     missing = [
         f"{method.upper()} {path}"
@@ -71,7 +55,6 @@ def test_every_operation_has_a_description(client):
 
 
 def test_every_tag_has_a_chinese_description(client):
-    """每个分组（tag）都有中文说明，Swagger 分组标题可读。"""
     schema = _load_schema(client)
     tags = schema.get("tags") or []
     assert tags, "schema 未声明任何 tag 说明（SPECTACULAR_SETTINGS['TAGS'] 缺失？）"
@@ -80,19 +63,12 @@ def test_every_tag_has_a_chinese_description(client):
 
 
 def test_swagger_ui_has_no_third_party_assets(client):
-    """文档页不引用任何第三方域名：断网环境也要能渲染。"""
     html = client.get("/api/swagger/").content.decode("utf-8")
     external = THIRD_PARTY_ASSET.findall(html)
     assert external == [], f"文档页仍引用外部资源: {external}"
 
 
 def test_swagger_ui_assets_are_served_same_origin(client):
-    """文档页引用的同源静态资产全部可取，否则页面白屏。
-
-    说明：pytest-django 会把 `DEBUG` 置为 False，此时 URLconf 里的静态服务不注册
-    （`staticfiles_urlpatterns()` 无 DEBUG 即空表），所以这里直接走与开发服务器同一个
-    `staticfiles serve` 视图（finders → 文件）来验证资产可取，而不是发 HTTP 请求。
-    """
     html = client.get("/api/swagger/").content.decode("utf-8")
     assets = sorted(set(SAME_ORIGIN_ASSET.findall(html)))
     assert assets, "文档页未引用任何同源静态资产（SWAGGER_UI_DIST=SIDECAR 未生效？）"

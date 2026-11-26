@@ -1,13 +1,3 @@
-"""
-模块功能：➡️ adb 可执行文件解析：平台自带优先，不回退系统 PATH 🏁
-Python 调试：➡️ python -m utils.adb 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. tests/device/unit/test_adb_resolver.py: 候选优先级与环境变量覆盖
-2. tests/device/unit/test_device_adb_missing.py: adb 缺失时的报错路径
-🏁
-"""
-
 from __future__ import annotations
 
 import os
@@ -30,23 +20,20 @@ _resolved: tuple[str, str] | None = None
 
 
 class AdbUnavailableError(RuntimeError):
-    """adb 的所有来源都不可用时抛出；message 直接面向用户，包含修复命令。"""
+    pass
 
 
 def _usable(path: Path) -> bool:
-    """判断候选路径是否是当前系统可执行的 adb。"""
     if not path.is_file():
         return False
     return _IS_WINDOWS or os.access(path, os.X_OK)
 
 
 def _platform_adb() -> Path:
-    """项目内安装目录中的 adb 路径（未必存在）。"""
     return _PLATFORM_TOOLS_DIR / _ADB_NAME
 
 
 def _bundled_adb() -> Path | None:
-    """adbutils 依赖包内置的 adb 路径；未安装或该平台无内置时返回 None。"""
     try:
         import adbutils
     except Exception:  # noqa: BLE001 - 依赖缺失只是这一档不可用，不影响其它来源
@@ -56,7 +43,6 @@ def _bundled_adb() -> Path | None:
 
 
 def _resolve() -> tuple[str, str]:
-    """按优先级解析一次并缓存：返回 (来源标签, 绝对路径)。"""
     global _resolved
     if _resolved is not None:
         return _resolved
@@ -80,31 +66,14 @@ def _resolve() -> tuple[str, str]:
 
 
 def adb_binary() -> str:
-    """返回本次进程应使用的 adb 路径，并让 adbutils/uiautomator2 复用它。
-
-    Returns:
-        str: adb 可执行文件的绝对路径。
-
-    Raises:
-        AdbUnavailableError: `ADB_PATH`、项目内安装、adbutils 内置三者都不可用。
-    """
     _, path = _resolve()
-    # 覆盖而不是 setdefault：以本解析器为唯一权威，避免进程外残留的旧值让 u2 用错二进制
     os.environ["ADBUTILS_ADB_PATH"] = path
     if _IS_WINDOWS:
-        # adb 37 的 daemon 会把日志写到 %TEMP%\adb.log；部分 Windows 策略下该文件打不开，
-        # daemon 直接起不来（实测报 main.cpp:54 cannot open ...: Permission denied）。
-        # 平台统一把 daemon 日志指向 NUL：客户端 stderr 仍可看到错误，不影响功能。
         os.environ.setdefault("ANDROID_ADB_LOG_PATH", os.devnull)
     return path
 
 
 def adb_status() -> dict:
-    """只读报告当前 adb 来源，不抛异常（供状态面板与排障使用）。
-
-    Returns:
-        dict: {"source": "env|platform|bundled|missing", "path": str | None}。
-    """
     try:
         source, path = _resolve()
     except AdbUnavailableError:
@@ -113,6 +82,5 @@ def adb_status() -> dict:
 
 
 def reset_cache() -> None:
-    """清空解析缓存；安装器写入新 adb 后调用，使下一次解析拿到新路径。"""
     global _resolved
     _resolved = None

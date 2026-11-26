@@ -1,11 +1,3 @@
-/**
- * [P0] 必测 — 注册卡片交互（提交/禁用/去登录）
- * 目录：tests/login/p0/
- */
-/**
- * [P0] 必测 — 注册卡主交互（提交 / 禁用 / 去登录）
- * 目录：tests/login/p0/
- */
 import { describe, expect, it } from "vitest"
 import { mount } from "@vue/test-utils"
 import RegisterCard from "@/views/components/RegisterCard.vue"

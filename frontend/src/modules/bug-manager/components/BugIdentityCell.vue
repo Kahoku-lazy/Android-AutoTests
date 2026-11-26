@@ -1,9 +1,4 @@
 <script setup lang="ts">
-/**
- * BUG 身份单元 — 首列：图标圆 + BUG 编号（主）+ 创建时间（副）
- *
- * 组件只做渲染；时间格式化仍走 `constants.ts` 的 `formatBugTime`，不在此重复实现。
- */
 import { formatBugTime } from "../constants"
 import type { BugTicket } from "../types"
 
@@ -31,7 +26,6 @@ defineProps<{
   text-align: left;
 }
 
-/* 图标圆：与设备表身份单元同构，浅底装饰不承载状态语义 */
 .bug-id__badge {
   display: grid;
   place-items: center;

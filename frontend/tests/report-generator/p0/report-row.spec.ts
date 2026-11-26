@@ -1,6 +1,3 @@
-/**
- * [P0] 报告行展示派生：两来源身份列、关联列、摘要与行键
- */
 import { describe, expect, it } from "vitest"
 import {
   formatReportTime,

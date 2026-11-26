@@ -1,10 +1,3 @@
-/**
- * [P0] 必测 — 访问凭证主动续期（单飞刷新）
- * 目录：tests/login/p0/
- *
- * 覆盖 specs/auth-session/spec.md 的「访问凭证在过期前主动续期」：
- * 未过期不续期、过期续期并写回、并发只刷一次、无续期凭证不发请求、解析不出的令牌按原样返回。
- */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   configureTokenRefresh,
@@ -16,10 +9,8 @@ import {
 } from "@/shared/auth/token-refresh"
 import type { AuthResponse } from "@/shared/types/auth"
 
-/** 续期传输层的替身：生产环境由 api-client 注入真实 HTTP 请求 */
 const refreshRequest = vi.fn<(refreshToken: string) => Promise<AuthResponse>>()
 
-/** 造一个只含 exp 的假 JWT（不验签，测试只关心 exp 解码） */
 function makeToken(expSecondsFromNow: number): string {
   const payload = { sub: "1", exp: Math.floor(Date.now() / 1000) + expSecondsFromNow }
   const encode = (value: object) =>

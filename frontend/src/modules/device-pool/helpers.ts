@@ -1,4 +1,3 @@
-/** Device-Pool 工具函数 — 纯函数，从 constants.ts 拆分 */
 import type { DeviceRecord, DeviceStatusMeta } from "@/shared/types/device"
 import { ADB_PORT_MAX, ADB_PORT_MIN, DEVICE_STATUS_MAP, IPV4_RE } from "./constants"
 
@@ -78,7 +77,6 @@ export function formatRelativeTime(iso: string): string {
 }
 
 export function formatDateTime(iso: string): string {
-  // 绝对时间：YYYY-MM-DD HH:mm:ss（设备连接时间点）
   if (!iso) return "—"
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return "—"
@@ -101,7 +99,6 @@ export function connectionLabel(record: DeviceRecord): string {
 }
 
 export function deviceAddress(record: DeviceRecord): string {
-  // 原始 adb devices 传输地址：无线为 connection_addr，USB 即序列号本身
   return record.connection_addr || record.serial
 }
 

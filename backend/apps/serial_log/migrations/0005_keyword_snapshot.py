@@ -1,15 +1,5 @@
-"""冻结快照迁移：device_log_keywords.json 存量条目迁入 sl_log_keywords。
-
-基线（2026-11-18）：67 关键词 / 70 行 / 56 功能点，SHA256
-97a42dc55a46b7bba03df56702771b63c78e1c59739adcba3e11805a631c1553。
-冻结后文件 description 已标注「已迁库」（keywords 载荷未变，一致性测试逐行核对）。
-快照以 Python 字面量冻结，migrate 时不读数据文件；scope 全部为通用（"*"），
-sort_order 按原表顺序以 10 为步长（留插入空隙）。get_or_create 幂等；reverse 清空本表行。
-"""
-
 from django.db import migrations
 
-# (keyword, feature_id, module, feature) —— 顺序与原 JSON 表逐行一致
 SNAPSHOT = [
     ('switch_on', 0, '设备开关', '打开设备成功'),
     ('switch_off', 1, '设备开关', '关闭设备成功'),
@@ -85,7 +75,6 @@ SNAPSHOT = [
 
 
 def forwards(apps, schema_editor):
-    """按快照逐行写入（幂等）：同唯一键的已有行不覆盖。"""
     LogKeyword = apps.get_model("serial_log", "LogKeyword")
     for index, (keyword, feature_id, module, feature) in enumerate(SNAPSHOT):
         LogKeyword.objects.get_or_create(
@@ -97,13 +86,11 @@ def forwards(apps, schema_editor):
 
 
 def backwards(apps, schema_editor):
-    """回退：清空本表行（表本身由 0004 的 reverse 删除）。"""
     LogKeyword = apps.get_model("serial_log", "LogKeyword")
     LogKeyword.objects.all().delete()
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("serial_log", "0004_logkeyword"),
     ]

@@ -1,10 +1,3 @@
-/**
- * [P0] 必测 — 运营入口的可见性与配色（spec: ops-user-console）
- *
- * 目录：tests/ops-console/p0/
- * 断言：① 侧栏存在「运营」分组且标记 requiresOperator；② 该分组排在最后（不插进既有顺序）；
- * ③ 入口路径与模块色已登记；④ 身份标签覆盖三种身份；⑤ 其余分组不受影响。
- */
 import { describe, expect, it } from "vitest"
 import { MOD_COLORS, NAV_CATEGORIES } from "@/shared/components/sidebarNavConfig"
 import {
@@ -37,7 +30,7 @@ describe("[P0] 侧栏运营入口", () => {
       "/ops/agents",
       "/ops/model-configs",
     ])
-    // 同分组内入口不得同色：用户管理 --c-account、Agent 配置 --c-element、模型配置 --c-ops
+
     expect(MOD_COLORS[OPS_PATH]).toBe("var(--c-account)")
     expect(MOD_COLORS["/ops/agents"]).toBe("var(--c-element)")
     expect(MOD_COLORS["/ops/model-configs"]).toBe("var(--c-ops)")

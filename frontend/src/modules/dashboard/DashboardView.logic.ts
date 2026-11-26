@@ -1,5 +1,3 @@
-/** DashboardView 逻辑编排器 — 组合子 composable + 展示辅助 */
-
 import { computed, onMounted, type ComputedRef } from "vue"
 
 import { useDashboardStats, type UseDashboardStatsReturn } from "./composables/useDashboardStats"
@@ -11,10 +9,6 @@ import { toHourlyPoints, type HourlyPoint } from "./helpers/hourlyPoints"
 import type { CaseProjectCardDisplay } from "@/shared/types/dashboard"
 
 import { IconLayers } from "@/shared/icons/index"
-
-// ── 展示配置 ──
-
-/** Dashboard WorkbenchHeader 配置 */
 
 export const PAGE_HEADER = {
   title: "仪表盘",
@@ -28,15 +22,9 @@ export const PAGE_HEADER = {
 
 const PROJECT_CARD_COLORS = ["deep", "sage", "cream", "dust"] as const
 
-// ── 数值格式化助手（单位换算：token → 百万 M）──
-
-/** token 展示数值：百万（M）单位，保留 2 位小数（供 StatsCard value 计数用） */
-
 export function toMillions(n: number): number {
   return Number((n / 1_000_000).toFixed(2))
 }
-
-// ── 返回类型接口 ──
 
 interface SeriesDisplay {
   name: string
@@ -46,7 +34,6 @@ interface SeriesDisplay {
   color: string
 }
 
-/** 今日 4 小时槽系列：token 走左轴，费用走右轴，点为 [小时, 数值] */
 export interface TodayUsageSeriesDisplay {
   name: string
 
@@ -54,7 +41,6 @@ export interface TodayUsageSeriesDisplay {
 
   color: string
 
-  /** 0 = 左轴（token）· 1 = 右轴（费用，元） */
   axisIndex: 0 | 1
 
   unit: "token" | "cost"
@@ -71,8 +57,6 @@ export interface DashboardViewState extends UseDashboardStatsReturn {
 
   todayUsageSeries: ComputedRef<TodayUsageSeriesDisplay[]>
 }
-
-// ── Composable ──
 
 export function useDashboardView(): DashboardViewState {
   const statsComposable = useDashboardStats()
@@ -91,10 +75,6 @@ export function useDashboardView(): DashboardViewState {
     })),
   )
 
-  // ECharts Canvas 不解析 CSS 变量，系列色为字面量（与 tokens.css 同值）：
-
-  // 总 Token #4ECDC4=--c-case · 缓存命中 #A78BFA=--c-element · 费用 #F7C948=--c-dashboard
-
   const tokenSeries = computed<SeriesDisplay[]>(() => [
     { name: "总 Token", data: statsComposable.aiTokenChart.value.totalTokens, color: "#4ECDC4" },
 
@@ -105,7 +85,6 @@ export function useDashboardView(): DashboardViewState {
     { name: "费用", data: statsComposable.deepseekCostChart.value.cost, color: "#F7C948" },
   ])
 
-  // 今日用量折线：token 与费用同色于各自按日图（#4ECDC4=--c-case、#F7C948=--c-dashboard）
   const todayUsageSeries = computed<TodayUsageSeriesDisplay[]>(() => {
     const chart = statsComposable.todayUsageChart.value
     const current = chart.current
@@ -132,7 +111,6 @@ export function useDashboardView(): DashboardViewState {
     statsComposable.loadData()
   })
 
-  // 页面停留期间静默跟进当日用量，避免图表停在进入页面那一刻
   useDashboardAutoRefresh(statsComposable.refreshSilently)
 
   return {

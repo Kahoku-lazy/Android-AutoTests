@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 平台管理入口：start/stop/restart/status/logs/check/setup，实现落在 utils.service_ctl 🏁
-Python 调试：➡️ python -m run status 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（命令编排与测试见 utils/service_ctl 各模块头）
-🏁
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -16,7 +7,6 @@ from utils.service_ctl import commands
 
 
 def main() -> None:
-    """加载 .env 后按子命令分发到 utils.service_ctl.commands。"""
     load_dotenv()
     parser = argparse.ArgumentParser(description="Android-AutoTests platform manager")
     parser.add_argument(

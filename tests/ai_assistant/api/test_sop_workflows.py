@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ SOP 工作流接口：编辑整幅回写三字段，删除只删工作流记录 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ai_assistant/api/test_sop_workflows.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/ai_assistant
-🏁
-"""
-
 from __future__ import annotations
 
 from uuid import uuid4
@@ -25,7 +16,6 @@ pytestmark = [pytest.mark.django_db, pytest.mark.api]
 
 
 def _card(assistant_id: str, display_name: str) -> AIAssistant:
-    """建一张能解析的名片：模型配置、Agent 配置与名片三件齐。"""
     config, _ = AIModelConfig.objects.get_or_create(
         api_key_env="DEEPSEEK_API_KEY",
         model_name="deepseek-flash",
@@ -46,7 +36,6 @@ def _card(assistant_id: str, display_name: str) -> AIAssistant:
 
 
 def _call(method: str, workflow_id: int | None = None, data: dict | None = None, *, author=True):
-    """按视图类直调接口，绕开中间件但注入 user_id。"""
     user = get_user_model().objects.create_user(username=f"wf-{uuid4().hex[:8]}", password="pass")
     if author:
         grant_assistant_author(user.id)
@@ -63,7 +52,6 @@ def _call(method: str, workflow_id: int | None = None, data: dict | None = None,
 
 
 def test_plain_user_cannot_create_patch_or_delete():
-    """普通用户创建、修改、删除都是 403，记录保持原样。"""
     card = _card("20261117_PD1", "留着")
     workflow = AISopWorkflow.objects.create(
         name="原样",
@@ -89,13 +77,11 @@ def test_plain_user_cannot_create_patch_or_delete():
 
 
 def test_routes_resolve():
-    """详情路由指向详情视图。"""
     assert resolve("/api/ai/sop-workflows/").func.cls is SopWorkflowView
     assert resolve("/api/ai/sop-workflows/7/").func.cls is SopWorkflowDetailView
 
 
 def test_patch_rewrites_name_and_bindings():
-    """PATCH 改名称与两侧编号，编号与记录都不变。"""
     executor = _card("20261117_PA1", "执行甲")
     verifier = _card("20261117_PA2", "验收甲")
     replacement = _card("20261117_PA3", "执行乙")
@@ -123,7 +109,6 @@ def test_patch_rewrites_name_and_bindings():
 
 
 def test_patch_missing_card_returns_readable_400():
-    """名片缺失时 400 并说明是哪一侧，记录保持原值。"""
     executor = _card("20261117_PB1", "执行丙")
     verifier = _card("20261117_PB2", "验收丙")
     workflow = AISopWorkflow.objects.create(
@@ -150,7 +135,6 @@ def test_patch_missing_card_returns_readable_400():
 
 
 def test_patch_unknown_workflow_returns_404():
-    """工作流不存在时 404。"""
     response = _call(
         "patch",
         9999,
@@ -166,7 +150,6 @@ def test_patch_unknown_workflow_returns_404():
 
 
 def test_delete_removes_only_workflow():
-    """DELETE 只删工作流，名片仍在。"""
     card = _card("20261117_PC1", "留着")
     workflow = AISopWorkflow.objects.create(
         name="待删",

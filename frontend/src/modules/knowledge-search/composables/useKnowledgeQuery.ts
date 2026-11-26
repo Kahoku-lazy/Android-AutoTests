@@ -1,4 +1,3 @@
-/** useKnowledgeQuery — 提问与三态结果：加载期不渲染空态，no_hit 与 unavailable 文案分开。 */
 import { ref } from "vue"
 import { formatApiError } from "@/shared/api-client"
 import { queryKnowledge } from "../api"
@@ -9,7 +8,7 @@ export function useKnowledgeQuery() {
   const question = ref("")
   const loading = ref(false)
   const outcome = ref<QueryResult | null>(null)
-  /** 传输层/信封错误（与业务三态分开）。 */
+
   const transportError = ref("")
 
   async function ask(bases: string[]): Promise<void> {

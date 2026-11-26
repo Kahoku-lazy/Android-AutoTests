@@ -1,10 +1,3 @@
-/**
- * [P0] 必测 — 设备池状态管理 composable（mock 整个 api 模块，不断真网络）
- * 目录：tests/device-pool/p0/
- *
- * useDevicePoolState：fetchDevices 成功写入 state / 失败置 error、
- * doScan 异常降级返回、doActivate 成功写 currentSerial 并触发刷新。
- */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import * as dpApi from "@/modules/device-pool/api"
 import { useDevicePoolState } from "@/modules/device-pool/composables/useDevicePoolState"

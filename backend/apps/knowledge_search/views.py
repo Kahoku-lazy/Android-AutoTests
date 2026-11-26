@@ -1,16 +1,3 @@
-"""知识库检索 HTTP 面（JWT）：模块登记 / 多选提问 / 预建索引。
-
-GET    /api/knowledge-search/modules/              登录可读：模块列表
-POST   /api/knowledge-search/modules/              仅超管：新增模块（=新增资料路径）
-PATCH  /api/knowledge-search/modules/<int:pk>/     仅超管：编辑模块（含改路径与启停）
-DELETE /api/knowledge-search/modules/<int:pk>/     仅超管：删除模块登记
-POST   /api/knowledge-search/modules/<int:pk>/index/  仅超管：预建增量索引
-POST   /api/knowledge-search/query/                登录可用：勾选模块提问，返回检索原文
-
-响应信封由全局 EnvelopeJSONRenderer 统一包 {status, data}；
-检索三态（ok/no_hit/unavailable）是业务结果，HTTP 仍 200。
-"""
-
 from __future__ import annotations
 
 import random
@@ -37,7 +24,6 @@ from .serializers import (
 
 
 def _retrieval_snapshot() -> dict:
-    """冻结触发当时的检索配置；没有配置时给空字典，运行阶段会报可读原因。"""
     row = api.get_retrieval_settings()
     if row is None:
         return {}
@@ -58,18 +44,15 @@ def _retrieval_snapshot() -> dict:
 
 
 def _user_id(request) -> str:
-    """取网关注入的用户 ID。"""
     return str(getattr(request, "user_id", "") or "")
 
 
 def _require_superuser(request) -> None:
-    """非超管一律 403。"""
     if not is_superuser(_user_id(request)):
         raise PermissionDenied("Forbidden")
 
 
 def _module_or_404(pk: int):
-    """按主键取模块；不存在给 404。"""
     module = api.get_module(int(pk))
     if module is None:
         raise NotFound("模块不存在")
@@ -77,8 +60,6 @@ def _module_or_404(pk: int):
 
 
 class RetrievalSettingsAPIView(APIView):
-    """GET / PUT 全局检索配置（仅超管）。"""
-
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         _require_superuser(request)
@@ -112,8 +93,6 @@ class RetrievalSettingsAPIView(APIView):
 
 
 class KnowledgeModuleListAPIView(APIView):
-    """GET 模块列表（登录可读）；POST 新增模块（仅超管）。"""
-
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request):
         modules = KnowledgeModuleSerializer(api.list_modules(), many=True).data
@@ -132,8 +111,6 @@ class KnowledgeModuleListAPIView(APIView):
 
 
 class KnowledgeModuleDetailAPIView(APIView):
-    """PATCH 编辑 / DELETE 删除模块登记（仅超管）。"""
-
     @extend_schema(request=ModulePatchSerializer, responses=OpenApiTypes.OBJECT)
     def patch(self, request, pk: int):
         _require_superuser(request)
@@ -157,8 +134,6 @@ class KnowledgeModuleDetailAPIView(APIView):
 
 
 class KnowledgeModuleIndexAPIView(APIView):
-    """POST 预建索引（仅超管）：同步增量重建，返回重建文件数。"""
-
     @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
     def post(self, request, pk: int):
         _require_superuser(request)
@@ -174,8 +149,6 @@ class KnowledgeModuleIndexAPIView(APIView):
 
 
 class KnowledgeQueryAPIView(APIView):
-    """POST 多选提问（登录可用）：返回检索原文与三态结果。"""
-
     @extend_schema(request=QuerySerializer, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         serializer = QuerySerializer(data=request.data)
@@ -190,16 +163,12 @@ class KnowledgeQueryAPIView(APIView):
 
 
 class EvalRunningConflict(APIException):
-    """同模块已有进行中的评测：409。"""
-
     status_code = 409
     default_detail = "该模块已有进行中的评测"
     default_code = "eval_running"
 
 
 class EvalRunListAPIView(APIView):
-    """GET 评测运行列表（登录可读）；POST 触发自动评测（仅超管）。"""
-
     @extend_schema(operation_id="knowledge_search_evaluations_list", responses=OpenApiTypes.OBJECT)
     def get(self, request):
         runs = api.list_eval_runs(request.query_params.get("module", ""))
@@ -224,7 +193,6 @@ class EvalRunListAPIView(APIView):
             raise ValidationError("题量超过上限 100")
         if api.running_eval_run(module.name) is not None:
             raise EvalRunningConflict()
-        # 跨 App 只读 Model：运营模型配置（规则允许的读路径）。
         from backend.apps.ai_assistant.models import AIModelConfig
 
         model_config = AIModelConfig.objects.filter(
@@ -258,8 +226,6 @@ class EvalRunListAPIView(APIView):
 
 
 class EvalRunDetailAPIView(APIView):
-    """GET 评测运行详情（登录可读）：进度 / 指标 / 逐题明细。"""
-
     @extend_schema(
         operation_id="knowledge_search_evaluations_detail", responses=OpenApiTypes.OBJECT
     )

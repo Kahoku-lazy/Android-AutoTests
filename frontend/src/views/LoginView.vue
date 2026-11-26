@@ -1,6 +1,3 @@
-<!--
-登录页：按当前是登录还是注册展示对应表单，服务端出错时弹出提示。
--->
 <script setup lang="ts">
 import { computed } from "vue"
 
@@ -10,22 +7,21 @@ import LoginCard from "@/views/components/LoginCard.vue"
 import RegisterCard from "@/views/components/RegisterCard.vue"
 
 const {
-  // ── 视图状态 ──
   viewState,
-  // ── 登录表单 ──
+
   loginUsername,
   loginPassword,
   rememberMe,
   loginErrors,
   canLogin,
-  // ── 注册表单 ──
+
   regUsername,
   regPassword,
   regPassword2,
   regEmail,
   regErrors,
   canRegister,
-  // ── 认证流程 ──
+
   loading,
   serverError,
   clearServerError,
@@ -34,7 +30,6 @@ const {
   switchMode,
 } = useLoginView()
 
-/** Meeting doodle 标题：登录 / 注册 */
 const meetingTitle = computed(() => (viewState.value === "register" ? "注册" : "登录"))
 </script>
 

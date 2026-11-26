@@ -1,6 +1,3 @@
-/* 登录认证扁平面板 — LoginCard / RegisterCard 共用
-   外壳由 Meeting doodle 承担；此处不再做便签/AppCard 壳 */
-
 .auth-panel {
   width: 100%;
   box-sizing: border-box;

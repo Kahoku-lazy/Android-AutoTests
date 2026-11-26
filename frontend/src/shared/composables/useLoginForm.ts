@@ -1,11 +1,3 @@
-/**
- * 登录与注册表单的字段校验，并据此判断能否提交。
- *
- * 业务：
- * - 登录：账号必填且不能为空白、最长 150 字；密码必填
- * - 注册：账号 3–20 字，邮箱需含 @，密码至少 6 位，两次密码一致
- * - 登录和注册的错误互不影响
- */
 import { computed, type Ref, type ComputedRef } from "vue"
 import type { FieldErrors } from "@/shared/types/auth"
 
@@ -42,7 +34,6 @@ export function useLoginForm(
   const canLogin = computed<boolean>(() => Object.keys(loginErrors.value).length === 0)
 
   const regErrors = computed<FieldErrors>(() => {
-    // 与 RegisterSerializer.strip() 对齐后再校验
     const username = regUsername.value.trim()
     const email = regEmail.value.trim()
     const password = regPassword.value.trim()

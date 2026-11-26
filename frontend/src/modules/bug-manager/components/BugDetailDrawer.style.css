@@ -1,4 +1,3 @@
-/* BUG 单详情抽屉 — Doodle Craft 纸面细节 */
 .bug-detail {
   display: flex;
   flex-direction: column;
@@ -117,8 +116,6 @@
   color: var(--app-text-primary);
 }
 
-/* 错误内容卡：浅红渐变填充 + 墨色硬影，与旁边的元信息块（无影浅底）分层次。
-   填充浓度压到 18% → 6%，14px 等宽正文压在上面仍以字为主。 */
 .bug-detail__body {
   margin: 0;
   max-height: 46vh;
@@ -133,7 +130,7 @@
   line-height: var(--app-line-height-relaxed);
   color: var(--app-text-primary);
 }
-/* 每行一段：缩进与长串折行下沉到行级，行首「标签：」加粗与后面的正文分开 */
+
 .bug-detail__line {
   margin: 0;
   white-space: pre-wrap;

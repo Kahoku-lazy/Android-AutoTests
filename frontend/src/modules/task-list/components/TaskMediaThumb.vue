@@ -2,10 +2,6 @@
 import { onBeforeUnmount, onMounted, ref, watch } from "vue"
 import { createTaskMediaLink, getTaskMedia } from "../api/tasks"
 
-/**
- * 任务截图缩略图：进入视口才取字节，取到后转 object URL，卸载时释放。
- * 报告只下发 media_id，图片字节走 /api/tasks/{id}/media/{media_id}/（需 JWT，故不能用 <img src>）。
- */
 const props = defineProps({
   taskId: { type: Number, required: true },
   mediaId: { type: Number, required: true },
@@ -68,10 +64,6 @@ function observe() {
   observer.observe(root.value)
 }
 
-/**
- * 在新标签打开原图：先同步开空窗口（避免异步调用被拦截），
- * 再签发短时直链并按当前 origin 补全地址导航。
- */
 async function openInNewTab() {
   if (opening.value) return
   opening.value = true

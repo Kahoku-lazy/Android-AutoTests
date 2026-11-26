@@ -1,25 +1,3 @@
-"""
-文件名: ➡️ probe.py 🏁
-路径: ➡️ engines/ae_harness/knowledge/probe.py 🏁
-模块功能：➡️ 知识库探针：建索引或打印未经改写的检索命中，不创建智能体 🏁
-Python 调试：➡️ python -m engines.ae_harness.knowledge.probe retrieve product_manuals "指示灯" 🏁
-时间：➡️ 2026-11-24 🏁
-作者：➡️ kahoku 🏁
-版本：➡️ 1.0.0 🏁
-修改时间: ➡️ 2026-11-15 🏁
-类型: ➡️ 工具模块 🏁
-简介说明：➡️
-1. build_parser(): 两个子命令 index / retrieve，向量模型与库由参数显式传入。
-2. main(): 不创建 Agent、不调用聊天模型；缺参或配置错误返回 1，没命中返回 0。
-🏁
-关联模块：➡️
-1. engines.ae_harness.knowledge.service: KnowledgeRetriever。
-🏁
-测试：➡️
-1. 暂无
-🏁
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -33,12 +11,6 @@ __all__ = ["build_parser", "main"]
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """
-    构建命令行解析器。
-
-    Returns:
-        带 index / retrieve 两个子命令的解析器。
-    """
     parser = argparse.ArgumentParser(prog="python -m engines.ae_harness.knowledge")
     parser.add_argument("--model-name", required=True, help="向量模型名")
     parser.add_argument("--dimensions", required=True, type=int, help="向量维度")
@@ -55,15 +27,6 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """
-    运行探针。
-
-    Args:
-        argv: 命令行参数；None 时读 sys.argv。
-
-    Returns:
-        退出码：0 表示探针正常结束（含没命中），1 表示配置或参数有问题。
-    """
     try:
         args = build_parser().parse_args(argv)
     except SystemExit as exc:

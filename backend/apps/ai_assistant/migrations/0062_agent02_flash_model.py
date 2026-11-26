@@ -1,5 +1,3 @@
-"""Agent-02 统一使用 deepseek-flash（与用例编写/验收角色的引擎常量对齐）。"""
-
 from django.db import migrations
 
 AGENT_NAME = "Agent-02"

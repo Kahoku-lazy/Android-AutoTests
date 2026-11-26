@@ -1,4 +1,3 @@
-/** 打开报告：按来源分流到两条既有读取通道，不新拼地址。 */
 import { ElMessage } from "element-plus"
 import { issueLogTicket, threadLogUrl } from "@/modules/ai-assistant/api/assistants"
 import { fetchTaskReport } from "@/modules/task-list/api/tasks"
@@ -23,7 +22,6 @@ export function useOpenReport() {
   return { openReport }
 }
 
-/** SOP 报告：登录态取正文 → blob 新标签打开（与任务清单同款）。 */
 async function openSopReport(run: string, name: string) {
   const content = await fetchTaskReport(run, name)
   if (!content) {
@@ -35,7 +33,6 @@ async function openSopReport(run: string, name: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), BLOB_REVOKE_MS)
 }
 
-/** 智能体报告：换一次性 ticket → 新标签直开 HTML（避免 blob 相对字体问题）。 */
 async function openAgentReport(threadId: string, reportId: string) {
   const ticket = await issueLogTicket(threadId, reportId)
   window.open(threadLogUrl(threadId, reportId, ticket), "_blank", "noopener")

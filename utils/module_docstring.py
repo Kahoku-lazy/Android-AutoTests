@@ -1,12 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-模块功能：➡️ 模块 docstring 字段解析、校验与按文件夹批量提取 🏁
-Python 调试：➡️ python -m utils.module_docstring 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无专门单测（可用 `python -m utils.module_docstring <文件> --repo-root .` 冒烟）
-🏁
-"""
 
 from __future__ import annotations
 
@@ -19,7 +11,6 @@ import sys
 from pathlib import Path
 from typing import Any, Iterator
 
-# 必填 4 字段：2026-11-24 起模块头只保留这些（.agents/rules/engines-code-style.md §2）。
 REQUIRED_FIELDS: list[str] = [
     "模块功能",
     "Python 调试",
@@ -27,7 +18,6 @@ REQUIRED_FIELDS: list[str] = [
     "测试",
 ]
 
-# 兼容解析：历史文件仍带这些字段，读得到但不校验、也不要求新文件写。
 LEGACY_FIELDS: list[str] = [
     "文件名",
     "路径",
@@ -52,8 +42,8 @@ ALLOWED_TYPES: frozenset[str] = frozenset(
     }
 )
 
-ARROW = "\u27a1"  # U+27A1
-FLAG = "\U0001f3c1"  # U+1F3C1
+ARROW = "\u27a1"
+FLAG = "\U0001f3c1"
 
 TIME_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -71,8 +61,6 @@ _DEBUG_PREFIX_RE = re.compile(
 
 
 class ModuleDocstringValidationError(ValueError):
-    """Raised by read_module_docstring when strict validation fails."""
-
     def __init__(self, issues: list[str], *, path: str | None = None) -> None:
         self.issues = list(issues)
         self.path = path
@@ -83,7 +71,6 @@ class ModuleDocstringValidationError(ValueError):
 
 
 def _field_re(name: str) -> re.Pattern[str]:
-    """Match field markers: name[:：] + U+27A1 + optional U+FE0F + value + U+1F3C1."""
     if name not in _FIELD_RE_CACHE:
         _FIELD_RE_CACHE[name] = re.compile(
             re.escape(name) + r"\s*[:：]\s*" + ARROW + r"(?:\ufe0f)?" + r"(.*?)" + FLAG,
@@ -93,7 +80,6 @@ def _field_re(name: str) -> re.Pattern[str]:
 
 
 def normalize_python_debug(value: str) -> str:
-    """Strip legacy prefixes; keep a trimmed python -m style value."""
     v = (value or "").strip()
     if not v:
         return ""
@@ -101,22 +87,15 @@ def normalize_python_debug(value: str) -> str:
 
 
 def looks_like_python_m(value: str) -> bool:
-    """True if value looks like python -m package.module."""
     v = (value or "").strip()
     return bool(re.match(r"^python\s+-m\s+\S+", v, re.IGNORECASE))
 
 
 def empty_module_fields() -> dict[str, str]:
-    """Return a dict with every MODULE_FIELDS key set to empty string."""
     return {k: "" for k in MODULE_FIELDS}
 
 
 def parse_module_docstring(text: str) -> dict[str, str]:
-    """Parse module docstring fields into a dict (all MODULE_FIELDS keys).
-
-    Legacy label 说明 maps into Python 调试 when that key is empty.
-    Does not validate; use validate_module_docstring / read_module_docstring.
-    """
     out = empty_module_fields()
     doc = text or ""
     for name in MODULE_FIELDS:
@@ -142,7 +121,6 @@ def validate_module_docstring(
     check_python_debug_format: bool = True,
     check_time_format: bool = True,
 ) -> list[str]:
-    """Validate module docstring fields; return issue strings (empty = OK)."""
     if fields is None:
         if text is None:
             raise TypeError("validate_module_docstring requires fields= or text=")
@@ -205,7 +183,6 @@ def validate_module_docstring(
 
 
 def extract_module_docstring_from_source(source: str, *, filename: str = "<unknown>") -> str:
-    """Return the module docstring from Python source, or empty string."""
     try:
         tree = ast.parse(source, filename=filename)
     except SyntaxError:
@@ -220,10 +197,6 @@ def read_module_docstring(
     rel_path: str | Path | None = None,
     strict: bool = True,
 ) -> dict[str, str]:
-    """Validate first, then return module docstring fields (all keys present).
-
-    Flow: extract → parse → validate → (raise if strict) → return fields.
-    """
     file_path = Path(path)
     if not file_path.is_file():
         raise FileNotFoundError(str(file_path))
@@ -253,7 +226,6 @@ def read_module_docstring(
 
 
 def is_compliant(fields: dict[str, str], rel_path: str | Path) -> bool:
-    """True when the 4 required fields and their formats look OK."""
     return not validate_module_docstring(fields, rel_path=rel_path)
 
 
@@ -263,13 +235,6 @@ def iter_python_modules(
     recursive: bool = True,
     include_init: bool = True,
 ) -> Iterator[Path]:
-    """Yield *.py paths under root, skipping __pycache__ and skill-creator trees.
-
-    Args:
-        root: Folder to walk.
-        recursive: If True (default), rglob; else only the immediate directory.
-        include_init: If False, skip __init__.py files.
-    """
     base = Path(root)
     if not base.is_dir():
         return iter(())
@@ -294,23 +259,6 @@ def extract_module_docstrings(
     strict: bool = False,
     include_init: bool = True,
 ) -> list[dict[str, Any]]:
-    """Batch extract->parse->validate module docstring fields under a folder.
-
-    Returns a list of records::
-
-        {"file": "<rel_posix>", "fields": {...}, "issues": [...]}
-
-    ``strict=False`` (default for batch): one bad file does not abort the folder;
-    that file still appears with a non-empty ``issues`` list (and empty/partial
-    fields as parsed).
-
-    ``strict=True``: raise ``ModuleDocstringValidationError`` on the first file
-    that has validation issues (or cannot be read). Earlier successful records
-    are not returned.
-
-    Relative ``file`` paths are computed against ``repo_root`` when given,
-    otherwise against ``folder``.
-    """
     folder_path = Path(folder)
     if not folder_path.is_dir():
         raise NotADirectoryError(str(folder_path))
@@ -364,11 +312,6 @@ def extract_module_docstrings_map(
     strict: bool = False,
     include_init: bool = True,
 ) -> dict[str, dict[str, str]]:
-    """Same as extract_module_docstrings, but return mapping rel_path -> fields only.
-
-    Validation issues are discarded in the map; use extract_module_docstrings
-    when you need per-file issues. ``strict`` behaves the same (raise on first).
-    """
     records = extract_module_docstrings(
         folder,
         repo_root=repo_root,
@@ -379,21 +322,10 @@ def extract_module_docstrings_map(
     return {r["file"]: r["fields"] for r in records}
 
 
-# Back-compat aliases used by temps/ scripts
 parse_module_fields = parse_module_docstring
 
 
 def main(argv: list[str] | None = None) -> int:
-    """CLI: read one .py or batch a folder; print JSON fields / records.
-
-    Single file (default path engines/agents/config/config.py):
-      python -m utils.module_docstring [path.py] [--repo-root .] [--no-strict]
-
-    Folder batch (strict defaults to False; use --strict to abort on first issue):
-      python -m utils.module_docstring engines/agents --repo-root .
-      python -m utils.module_docstring engines/agents --repo-root . --out temps/out.json
-      python -m utils.module_docstring engines/agents --repo-root . --strict
-    """
     parser = argparse.ArgumentParser(
         description="Parse/validate module docstring fields (file or folder batch)"
     )
@@ -450,7 +382,6 @@ def main(argv: list[str] | None = None) -> int:
     target_path = Path(target)
     root = Path(args.repo_root) if args.repo_root else None
 
-    # Directory -> batch mode
     if target_path.is_dir():
         try:
             records = extract_module_docstrings(
@@ -489,7 +420,6 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
-    # Single-file mode (default strict unless --no-strict)
     try:
         fields = read_module_docstring(target_path, repo_root=root, strict=not args.no_strict)
     except ModuleDocstringValidationError as e:

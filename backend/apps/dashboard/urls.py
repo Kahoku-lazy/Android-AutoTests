@@ -1,5 +1,3 @@
-"""Dashboard URL routing — aggregation endpoints under /api/."""
-
 from django.urls import path
 
 from .views import (

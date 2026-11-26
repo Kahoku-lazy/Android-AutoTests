@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ OpenAPI 覆盖门禁：URLconf 的每条业务路径都必须出现在基线里 🏁
-Python 调试：➡️ python -m utils.check_openapi_coverage 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无
-🏁
-"""
-
 from __future__ import annotations
 
 import os
@@ -20,7 +11,6 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 BASELINE = ROOT / "openspec" / "openapi.yaml"
 
-# 非业务路径：DRF Router 根与文档端点，不要求出现在 schema 的业务清单里
 EXCLUDED = {
     "/api/ai/",
     "/api/cases/",
@@ -30,7 +20,6 @@ EXCLUDED = {
 
 
 def _walk(patterns, prefix: str = ""):
-    """递归展开 include()，逐个产出最终 URL pattern 字符串。"""
     for pattern in patterns:
         full = prefix + str(pattern.pattern)
         if hasattr(pattern, "url_patterns"):
@@ -40,7 +29,6 @@ def _walk(patterns, prefix: str = ""):
 
 
 def _normalize(raw: str) -> str:
-    """归一化为 `/api/.../{}/.../`：去锚点、参数名统一成 `{}`。"""
     text = raw.replace("^", "").replace("$", "")
     text = re.sub(r"\(\?P<[^>]+>[^)]*\)", "{}", text)
     text = re.sub(r"<[^>]+>", "{}", text)
@@ -53,7 +41,6 @@ def _normalize(raw: str) -> str:
 
 
 def business_paths() -> set[str]:
-    """URLconf 中的业务路径集合（去掉 format 变体与排除项）。"""
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.config.settings")
@@ -74,7 +61,6 @@ def business_paths() -> set[str]:
 
 
 def documented_paths() -> set[str]:
-    """OpenAPI 基线中的路径集合（参数名归一化）。"""
     data = yaml.safe_load(BASELINE.read_text(encoding="utf-8"))
     return {_normalize(path) for path in (data.get("paths") or {})}
 

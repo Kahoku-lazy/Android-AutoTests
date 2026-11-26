@@ -1,11 +1,4 @@
 <script setup lang="ts">
-/**
- * 工作流区块：卡片网格 + 新建/配置弹窗 + 任务弹窗。
- *
- * 工作流不再是页内常驻表单：卡片上只有「配置」与「任务」两个动作，
- * 运行输入（平台用例或里程碑 YAML、必选设备）只在任务弹窗里出现。
- * 任务弹窗按两栏呈现，宽度定在这里（960px，窄屏 92vw）。
- */
 import { computed, h, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import { ElMessage } from "element-plus"
@@ -76,13 +69,11 @@ function closeEditor(): void {
   editing.value = null
 }
 
-/** 保存或删除后重取列表：卡片的名称、绑定与笔色都要跟着变。 */
 async function onChanged(): Promise<void> {
   closeEditor()
   await load()
 }
 
-/** 提交成功：留在本页，提示里给可点的任务清单链接。未点击不跳转。 */
 function onSubmitted(taskId: number): void {
   runOpen.value = false
   running.value = null
@@ -139,7 +130,6 @@ onMounted(load)
       </div>
     </template>
 
-    <!-- 不 append-to-body：弹窗留在 .ai-assistant-page 里才继承模块令牌 -->
     <el-dialog
       v-model="editorOpen"
       :title="editing ? '配置工作流' : '新建工作流'"
@@ -173,8 +163,6 @@ onMounted(load)
   gap: var(--app-space-md);
 }
 
-/* 便签卡正文三行 + 一排色块；列宽固定 280px（2026-11-17 需求方按参考图指定），
-   不再往上限 360px 拉宽——卡片右侧会留一大片空白 */
 .sop-section__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, 280px);

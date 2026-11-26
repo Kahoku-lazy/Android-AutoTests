@@ -1,26 +1,3 @@
-"""
-文件名: ➡️ tool.py 🏁
-路径: ➡️ engines/ae_harness/knowledge/tool.py 🏁
-模块功能：➡️ 把知识库检索包成只读工具，返回结构化命中 JSON 🏁
-Python 调试：➡️ python -m engines.ae_harness.knowledge.tool 🏁
-时间：➡️ 2026-11-24 🏁
-作者：➡️ kahoku 🏁
-版本：➡️ 1.0.0 🏁
-修改时间: ➡️ 2026-11-15 🏁
-类型: ➡️ 工具模块 🏁
-简介说明：➡️
-1. build_knowledge_tools(): 产出只读 search_knowledge 工具，供调用方挂到 Agent。
-2. 挂载时不读配置：首次调用检索时才装载配置并创建检索器。
-3. 成功返回 hits；库可用但没命中单独给 no_hit 文案；检索不可用时返回 status=false。
-🏁
-关联模块：➡️
-1. engines.ae_harness.knowledge.service: KnowledgeRetriever 与 KnowledgeHit。
-🏁
-测试：➡️
-1. 暂无
-🏁
-"""
-
 from __future__ import annotations
 
 import json
@@ -34,43 +11,18 @@ from .service import KnowledgeRetriever
 
 __all__ = ["build_knowledge_tools"]
 
-# 只读检索，不需要逐次确认。
 _ALLOW = PermissionDecision(behavior=PermissionBehavior.ALLOW, message="知识库只读检索，允许执行")
 
 
 def _stamp() -> str:
-    """
-    产出操作时间戳。
-
-    Returns:
-        形如 2026-11-15_10-53-12.321 的字符串，毫秒三位。
-    """
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S.%f")[:-3]
 
 
 def _ok(**payload: object) -> str:
-    """
-    产出成功结果。
-
-    Args:
-        **payload: 命中列表等要返回的字段。
-
-    Returns:
-        JSON 文本，含 timestamp、status=true 与载荷字段。
-    """
     return json.dumps({"timestamp": _stamp(), "status": True, **payload}, ensure_ascii=False)
 
 
 def _fail(error: str) -> str:
-    """
-    产出失败结果。
-
-    Args:
-        error: 可读原因。
-
-    Returns:
-        JSON 文本，含 timestamp、status=false 与 error。
-    """
     return json.dumps(
         {"timestamp": _stamp(), "status": False, "error": error},
         ensure_ascii=False,
@@ -78,18 +30,6 @@ def _fail(error: str) -> str:
 
 
 def build_knowledge_tools(retriever: KnowledgeRetriever) -> list[FunctionTool]:
-    """
-    产出知识库检索工具。
-
-    只返回工具对象：不读配置、不连库、不建索引。向量模型与库列表由调用方
-    先组装成检索器再传入，本模块没有自带配置。
-
-    Args:
-        retriever: 已建好的检索器。
-
-    Returns:
-        只含一个只读工具的列表。
-    """
     service = retriever
 
     async def search_knowledge(query: str, base: str = "", top_k: int = 0) -> str:

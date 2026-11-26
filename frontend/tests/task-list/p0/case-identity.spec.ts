@@ -1,6 +1,3 @@
-/**
- * 用例列：一句文案在单元格，多条才在悬停展开。
- */
 import { describe, expect, it } from "vitest"
 import { caseHover } from "@/modules/task-list/helpers/case-identity"
 

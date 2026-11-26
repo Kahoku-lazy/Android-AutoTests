@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** EvalPanel — 右栏评测区：触发（超管）+ 运行列表 + 报告；轮询进度。 */
 import { onMounted, ref } from "vue"
 import { ElMessage } from "element-plus"
 import AppCard from "@/shared/components/AppCard.vue"

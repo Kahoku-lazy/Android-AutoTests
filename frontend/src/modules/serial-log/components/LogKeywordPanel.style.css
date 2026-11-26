@@ -1,10 +1,3 @@
-/* LogKeywordPanel — 串口日志页「日志关键词」Tab（Doodle Craft 令牌；类名 lk-* / sl-* 为本组件私有）
- *
- * 区块头与按键由本面板自带：组件是多根节点，页面级 scoped 样式到不了这里，
- * MUST NOT 再依赖其它模块的样式文件。数值只引用令牌。
- */
-
-/* ── 区块头 ── */
 .sl-cat-head {
   display: flex;
   align-items: flex-start;
@@ -29,7 +22,7 @@
 .sl-cat-actions {
   display: flex;
   gap: var(--app-space-sm);
-  /* 说明文案较长时头部会换行，这里把操作按钮顶到右侧 */
+
   margin-left: auto;
 }
 .sl-cat-body {
@@ -37,14 +30,13 @@
   min-height: 200px;
 }
 
-/* ── 通用按键 ── */
 .sl-btn {
   display: inline-flex;
   align-items: center;
   gap: var(--app-space-xs);
   padding: 6px 12px;
   border-radius: var(--app-radius-sm);
-  /* 与卡头 Tab chip（SerialLogTabs）同档 14px，避免同一行两种字号 */
+
   font-size: var(--app-size-sm);
   font-weight: var(--app-font-weight-bold);
   border: 2px solid var(--ink);
@@ -100,11 +92,10 @@
   color: var(--app-text-muted);
 }
 
-/* 单元格：功能点编号弱化、名称加粗（关键词样式见下方「首列身份」段） */
 .lk-module {
   font-size: var(--app-size-sm);
   font-weight: var(--app-font-weight-semibold);
-  /* 与同行的关键词同色：同一模块在整张表里是一个色相 */
+
   color: color-mix(in srgb, var(--mod-color, var(--app-text-secondary)) 58%, var(--ink));
 }
 .lk-feature-id {
@@ -126,7 +117,6 @@
   }
 }
 
-/* ══════ 2026-11 B 档：表头字号 / 首列身份 / 手稿搜索 / 说明条 ══════ */
 .th-ico {
   margin-right: 4px;
 }
@@ -136,7 +126,6 @@
   padding: 12px 14px !important;
 }
 
-/* 首列：图标圆 + 关键词 */
 .lk-id {
   display: flex;
   align-items: center;
@@ -153,23 +142,20 @@
   font-size: var(--app-size-sm);
   background: color-mix(in srgb, var(--c-device) 28%, var(--app-bg-card));
 }
-/* 模块色相：同一「功能模块」的图标圆、关键词与模块名共用一个令牌，
-   文字用「令牌 58% + 墨色」压深，浅底上仍可读 */
+
 .lk-badge {
   background: color-mix(in srgb, var(--mod-color, var(--c-device)) 28%, var(--app-bg-card));
 }
 
-/* 字号按列位：首列（功能点）16，其余列 14 —— 列序换成「功能点 / 功能模块 / 关键词」后同步对调 */
 .lk-keyword {
   font-family: var(--app-font-mono);
   font-size: var(--app-size-sm);
   font-weight: var(--app-font-weight-heavy);
   color: color-mix(in srgb, var(--mod-color, var(--app-text-primary)) 58%, var(--ink));
-  /* 长关键词（如 color_configs_set_success）在定宽列里折行，不撑破表格 */
+
   word-break: break-all;
 }
 
-/* 搜索：宽度由容器控制，皮肤来自 .sketch-kit（虚线 + 无影） */
 .lk-bar {
   display: flex;
   align-items: center;
@@ -179,7 +165,7 @@
 .lk-search {
   width: 360px;
 }
-/* 范围筛选：与搜索框同档皮肤（.sketch-kit），定宽不压缩搜索框 */
+
 .lk-scope {
   width: 180px;
   flex-shrink: 0;
@@ -191,7 +177,6 @@
   white-space: nowrap;
 }
 
-/* 范围单元格：通用弱化、SKU 专用用设备强调色压深（令牌混色，浅底可读） */
 .lk-scope-tag {
   font-size: var(--app-size-sm);
   font-weight: var(--app-font-weight-bold);
@@ -201,7 +186,6 @@
   color: var(--app-text-secondary);
 }
 
-/* 操作列（仅超管）：描边态小按钮，皮肤来自 .sketch-kit，不自写虚线 */
 .lk-actions {
   display: flex;
   gap: var(--app-space-xs);
@@ -229,7 +213,6 @@
   color: var(--app-status-danger-text);
 }
 
-/* 说明条：取值来源 + 最近写入时间 + 刷新提示合并为一条 */
 .lk-hintbar {
   display: flex;
   gap: 8px;

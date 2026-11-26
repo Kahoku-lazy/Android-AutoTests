@@ -1,10 +1,3 @@
-"""
-python -m 调试路径: backend.apps.case_manager.api
-
-本模块的业务功能如下：
-1. 对外只暴露项目表、导入、视图和里程碑编译。目录与文件接口已删除。
-"""
-
 from .api_import import PROJECT_NAME, import_case_rows
 from .api_projects import (
     ConflictError,

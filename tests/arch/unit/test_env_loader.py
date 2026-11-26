@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ `.env` 加载单一实现（`config/env.py`）的行为契约 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_env_loader.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/config/env.py
-🏁
-"""
-
 from __future__ import annotations
 
 import os
@@ -25,7 +16,6 @@ def _write(tmp_path, text: str):
 
 
 def test_three_quote_styles(tmp_path, monkeypatch):
-    """三种写法都要能解析：KEY=v / KEY="v" / KEY='v'。"""
     monkeypatch.delenv("D0_PLAIN", raising=False)
     monkeypatch.delenv("D0_DOUBLE", raising=False)
     monkeypatch.delenv("D0_SINGLE", raising=False)
@@ -37,7 +27,6 @@ def test_three_quote_styles(tmp_path, monkeypatch):
 
 
 def test_existing_environment_wins(tmp_path, monkeypatch):
-    """真实环境变量优先：.env 不得覆盖已存在的键。"""
     monkeypatch.setenv("D0_EXISTING", "from-env")
     path = _write(tmp_path, "D0_EXISTING=from-file\n")
     load_dotenv(path)
@@ -53,12 +42,10 @@ def test_comments_blank_lines_and_invalid_lines_skipped(tmp_path, monkeypatch):
 
 
 def test_missing_file_is_noop(tmp_path):
-    """文件不存在时静默返回（显式忽略，不抛异常）。"""
     load_dotenv(tmp_path / "nope.env")
 
 
 def test_value_with_equals_sign_is_preserved(tmp_path, monkeypatch):
-    """值里含 `=` 时只按第一个 `=` 切分。"""
     monkeypatch.delenv("D0_URL", raising=False)
     path = _write(tmp_path, "D0_URL=mysql://u:p@h/db?a=1\n")
     load_dotenv(path)

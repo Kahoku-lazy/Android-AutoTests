@@ -1,4 +1,3 @@
-/** 报告台账列表状态：服务端过滤、报告数量统计与前端分页。 */
 import { computed, onMounted, onUnmounted, ref, watch } from "vue"
 import { usePagination } from "@/shared/composables/usePagination"
 import { listReports, type ReportListParams } from "../api"

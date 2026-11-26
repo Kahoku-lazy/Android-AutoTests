@@ -6,7 +6,6 @@ class AiAssistantConfig(AppConfig):
     verbose_name = "AI 助手"
 
     def ready(self) -> None:
-        """启动时把上次没跑完的测试对话标为已中断。测试建库阶段不写库。"""
         from django.conf import settings
         from django.db.utils import OperationalError, ProgrammingError
 

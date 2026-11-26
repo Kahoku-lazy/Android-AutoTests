@@ -1,5 +1,3 @@
-"""report-generator URL routing — endpoints under /api/reports/."""
-
 from django.urls import path
 
 from .views import ReportListAPIView

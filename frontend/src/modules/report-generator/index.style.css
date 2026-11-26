@@ -1,4 +1,3 @@
-/* Doodle Craft — 测试报告台账：纸面工作台 + 概览 KPI + 单表 */
 .doc-page {
   display: flex;
   flex-direction: column;
@@ -25,7 +24,6 @@
   padding: 0 var(--app-space-md) var(--app-space-md);
 }
 
-/* 控制区一行：来源 chip 最左，其后关键字 / 日期区间 */
 .filter-bar {
   display: flex;
   align-items: flex-end;
@@ -47,7 +45,6 @@
   width: 100%;
 }
 
-/* 表格上方工具条：显示行数 + 分页文案 + 翻页键 */
 .table-toolbar {
   display: flex;
   align-items: center;
@@ -104,7 +101,6 @@
   gap: var(--app-space-sm);
 }
 
-/* 翻页键：可点＝浅绿填充，不可点＝灰填充（与 BUG 单页同口径） */
 .report-page-nav :deep(.doodle-btn.doodle-btn) {
   border: 2px solid var(--ink);
   border-radius: var(--app-radius-sm);
@@ -135,7 +131,6 @@
   cursor: pointer;
 }
 
-/* 表纸底：模块色纵向渐变（上 10% → 下 5%，混纸色降饱和） */
 .report-workbench :deep(.sketch-sheet) {
   background: linear-gradient(
     180deg,
@@ -176,7 +171,6 @@
   border-bottom: 1px solid var(--el-border-color-light) !important;
 }
 
-/* 来源筛选：淡色底 + 墨框选中，两来源各认各的模块色 */
 .report-source-tabs :deep(.filter-tab) {
   display: inline-flex;
   align-items: center;
@@ -206,7 +200,6 @@
   box-shadow: 2px 2px 0 0 color-mix(in srgb, var(--c-report) 40%, var(--paper));
 }
 
-/* 来源徽标 */
 .report-source {
   display: inline-flex;
   align-items: center;
@@ -225,7 +218,6 @@
   border-color: var(--c-case);
 }
 
-/* 身份单元：主行 + 副行 */
 .report-identity {
   display: flex;
   flex-direction: column;
@@ -254,7 +246,6 @@
   font-size: var(--app-size-sm);
 }
 
-/* SOP 终态徽标 + 摘要同行 */
 .report-status {
   display: inline-flex;
   align-items: center;

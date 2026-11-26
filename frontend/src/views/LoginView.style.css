@@ -1,9 +1,6 @@
-/* LoginView 样式层 — hand-drawn Hero：横线本（仅本页）+ 左文案/CTA + 右 Meeting doodle */
-
 .login-page {
   --login-rule: var(--color-blue-82-a30);
-  /* 登录页保留手绘虚线：线型是本页自己的登记，不借用侧栏自持的 --sidebar-line，
-     以免全站线型切换时被静默带走（见 openspec frontend-login-hand-drawn-hero） */
+
   --login-line: solid;
   --login-border: var(--size-stroke-sketch) var(--login-line) var(--ink);
 
@@ -59,7 +56,6 @@
   opacity: 0.65;
 }
 
-/* ── Hero 双栏 ── */
 .hero {
   position: relative;
   z-index: 1;
@@ -129,7 +125,6 @@
   margin-top: var(--app-space-lg);
 }
 
-/* ── CTA（对齐 showcase primary / ghost）── */
 .hero__cta {
   display: flex;
   flex-wrap: wrap;
@@ -193,7 +188,6 @@
   background: color-mix(in srgb, var(--c-case) 18%, transparent);
 }
 
-/* ── Meeting doodle ── */
 .hero-sketch {
   position: relative;
   min-height: 340px;
@@ -210,9 +204,7 @@
   border: var(--login-border);
   background: var(--app-bg-card);
   box-shadow: 4px 4px 0 0 var(--c-case);
-  /* 手绘倾斜。注意：带 transform 的祖先会成为 position: fixed 后代的包含块 ——
-     本卡内挂的 el-dialog 必须 append-to-body，否则遮罩只盖住本卡而非视口
-     （见 frontend-l5-overlay「Blocking overlays escape transformed ancestors」）。 */
+
   transform: rotate(1.2deg);
   animation: meeting-settle var(--app-duration-slow) var(--app-spring) both;
 }

@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 角色注册表接口契约：五个方法的状态码、信封、字段集合与错误码 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/ai_assistant/api/test_roles.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/ai_assistant、backend/gateway/middleware.py
-🏁
-"""
-
 from __future__ import annotations
 
 import re
@@ -46,7 +37,6 @@ def user(db):
 
 
 def call(user, method, path, data=None, **url_kwargs):
-    """直调视图：DRF 鉴权放行，绕过网关中间件（401 另有中间件用例覆盖）。"""
     factory = APIRequestFactory()
     request = getattr(factory, method)(path, data or {}, format="json")
     request.user_id = str(user.id)
@@ -63,7 +53,6 @@ def call(user, method, path, data=None, **url_kwargs):
 
 
 def test_model_config_round_trip(db):
-    """模型配置能创建、列出，同一个密钥可以有两个模型。"""
     from backend.apps.ai_assistant.models import AIModelConfig
     from backend.apps.ai_assistant.views_drf import ModelConfigViewSet
 

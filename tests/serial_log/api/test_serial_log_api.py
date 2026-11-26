@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 串口日志接口契约：鉴权、权限、路径与开关落库 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/serial_log/api/test_serial_log_api.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/serial_log、backend/gateway/middleware.py
-🏁
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -31,8 +22,6 @@ pytestmark = [pytest.mark.django_db, pytest.mark.api]
 
 
 class _FakeSwitch:
-    """只记录开关状态的替身：不绑定任何真实 TCP 端口。"""
-
     def __init__(self) -> None:
         self.opened: set[int] = set()
 
@@ -78,7 +67,6 @@ def _call(
     data=None,
     **url_kwargs,
 ):
-    """用请求工厂直调视图：模拟网关注入 user_id，并让 DRF 鉴权通过。"""
     factory = APIRequestFactory()
     request = getattr(factory, method)(path, data or {}, format="json")
     if user is not None:
@@ -149,7 +137,6 @@ def test_lines_unknown_port_returns_readable_conclusion(normal_user):
 
 
 def test_keyword_catalog_readable(normal_user):
-    """关键词目录契约：来源 db、功能点带 scope、无 keyword_file、计数与更新时间。"""
     from backend.apps.serial_log import api as serial_api
 
     serial_api.upsert_keyword(
@@ -185,7 +172,6 @@ def test_keyword_catalog_readable(normal_user):
 
 
 def test_keyword_catalog_empty_table_readable(normal_user):
-    """空表给可读空态：origin none + note，不抛错。"""
     response = _call(
         LogKeywordCatalogAPIView,
         path="/api/serial-log/keywords/",
@@ -203,11 +189,7 @@ def test_old_paths_are_gone(path):
         resolve(path)
 
 
-# ── 关键词维护接口（仅超管）─────────────────────────────────────────────────
-
-
 def _seed_keyword(keyword="switch_on", feature_id=0, scope="*"):
-    """经 api 登记一条关键词，返回行。"""
     from backend.apps.serial_log import api as serial_api
 
     return serial_api.create_keyword(
@@ -340,4 +322,4 @@ def test_keyword_delete_superuser_keeps_ports(admin_user):
     assert response.status_code == 200
     assert response.data["deleted"] is True
     assert LogKeyword.objects.count() == 0
-    assert LogPort.objects.filter(port=7008).exists()  # 删除关键词不动端口
+    assert LogPort.objects.filter(port=7008).exists()

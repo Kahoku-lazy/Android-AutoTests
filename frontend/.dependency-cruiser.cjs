@@ -1,4 +1,3 @@
-/** @type {import('dependency-cruiser').IConfiguration} */
 module.exports = {
   forbidden: [
     {
@@ -14,4 +13,4 @@ module.exports = {
     tsPreCompilationDeps: true,
     tsConfig: { fileName: "./tsconfig.json" },
   },
-};
+}

@@ -68,17 +68,14 @@ const modelSeries = computed(() => {
   return rows.map((row) => ({ ...row, cost: row.cost.map((value) => value / fx.value) }))
 })
 
-// 跨零点自动换天：刷新后「今日」系列与三张按日图都切到新的一天
 useMidnightRefresh(refreshData)
 
-/** Agent 用量卡顶点色条：按序号轮转模块色，与「卡片即零件」的编号卡一致 */
 const AGENT_CARD_ACCENTS = ["var(--c-ai)", "var(--c-case)", "var(--c-runner)", "var(--c-workflow)"]
 
 function agentCardAccent(index: number): string {
   return AGENT_CARD_ACCENTS[index % AGENT_CARD_ACCENTS.length]
 }
 
-/** Token 只允许 K / M 两个单位：数值与单位分开，便于单位用黑色、数值走渐变 */
 function tokenValue(tokens: number): string {
   return tokens >= 1_000_000 ? (tokens / 1_000_000).toFixed(2) : (tokens / 1_000).toFixed(2)
 }
@@ -100,7 +97,6 @@ function tokenUnit(tokens: number): string {
     <ErrorState v-if="error" :message="error" @retry="loadData" />
 
     <div class="doc-body">
-      <!-- ① 平台概览：平台运行指标 + 测试用例资产 -->
       <section class="doc-section doc-section--board ch-ops">
         <header class="chapter-head">
           <div class="chapter-head__left">
@@ -223,7 +219,6 @@ function tokenUnit(tokens: number): string {
         </div>
       </section>
 
-      <!-- ② AI 用量 -->
       <section class="doc-section doc-section--board ch-ai">
         <header class="chapter-head">
           <div class="chapter-head__left">
@@ -366,7 +361,6 @@ function tokenUnit(tokens: number): string {
         </div>
       </section>
 
-      <!-- ③ 趋势与动态 -->
       <section class="doc-section doc-section--board ch-trend">
         <header class="chapter-head">
           <div class="chapter-head__left">
@@ -409,7 +403,7 @@ function tokenUnit(tokens: number): string {
 <style scoped>
 .agent-usage-list {
   display: grid;
-  /* Agent-01 / Agent-02 横排；窄屏再回落成单列 */
+
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--app-space-md);
   margin-top: 0;
@@ -428,7 +422,6 @@ function tokenUnit(tokens: number): string {
   }
 }
 
-/* Agent 用量卡只声明布局；外壳（编号 / 色条 / 黄圆 / 分隔线）由 .part-card 提供 */
 .agent-usage-card {
   height: 100%;
 }

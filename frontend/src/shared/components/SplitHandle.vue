@@ -1,23 +1,16 @@
 <script setup lang="ts">
-/**
- * SplitHandle — 分栏台的左右拖动分隔手柄（L3 容器件，跨模块复用）。
- *
- * 组件只负责「拖动 / 键盘 → 新宽度」并 v-model 回传；宽度由调用方持有（写进模块令牌），
- * 持久化 key 也由调用方决定（`commit` 事件在松手 / 键盘操作后触发）。
- * 上限随容器宽度动态收敛，保证右栏不会被挤没。
- */
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 
 const props = withDefaults(
   defineProps<{
     modelValue: number
-    /** 左栏下限（px） */
+
     min?: number
-    /** 左栏上限（px）；实际生效值还会被「容器宽 − minRightWidth」再收敛 */
+
     max?: number
-    /** 双击复位的默认宽度（px） */
+
     defaultWidth?: number
-    /** 右栏最小可用宽度（px） */
+
     minRightWidth?: number
     label?: string
   }>(),
@@ -32,14 +25,13 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   "update:modelValue": [value: number]
-  /** 松手 / 键盘操作后触发，供调用方持久化 */
+
   "commit": [value: number]
 }>()
 
 const isDragging = ref(false)
 const handleRef = ref<HTMLElement | null>(null)
 
-/** 实际上限：容器宽度减去右栏最小可用宽度，再与显式上限取小 */
 const upperBound = computed(() => {
   const container = handleRef.value?.parentElement
   const containerWidth = container ? container.getBoundingClientRect().width : 0
@@ -97,7 +89,7 @@ function onDoubleClick() {
 onMounted(() => {
   window.addEventListener("mousemove", onMouseMove)
   window.addEventListener("mouseup", onMouseUp)
-  // 已存值可能是别的视口下存的，进入时先夹一次
+
   if (props.modelValue > 0) emit("update:modelValue", clamp(props.modelValue))
 })
 
@@ -128,7 +120,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* 8px 命中区 + 居中 2px 分隔线；三态（hover / 拖动 / 聚焦）可见 */
 .split-handle {
   position: relative;
   width: 8px;
@@ -144,7 +135,7 @@ onBeforeUnmount(() => {
   bottom: 0;
   left: 3px;
   width: 2px;
-  /* 常态即给一条暖灰分隔线（与树层级引导线同色），保证手柄"看得见、找得到" */
+
   background: var(--color-orange-76);
   transition: background var(--app-duration-fast) var(--app-ease);
 }

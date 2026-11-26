@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 停用账号：旧令牌作废，受保护请求返回专用拒绝，续期失败 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/auth/api/test_disabled_account.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/accounts、backend/gateway/middleware.py、backend/shared/auth
-🏁
-"""
-
 from __future__ import annotations
 
 import time
@@ -27,7 +18,6 @@ pytestmark = [pytest.mark.django_db, pytest.mark.api]
 
 @pytest.fixture
 def user(db):
-    """被停用的普通账号。"""
     return get_user_model().objects.create_user(username="disabled-probe", password="pass-123456")
 
 
@@ -36,7 +26,6 @@ def _auth(token: str) -> dict:
 
 
 def test_disable_revokes_previously_issued_access(user):
-    """停用前签发的 access 验签失败；启用后新签发的 access 验签成功。"""
     tokens = create_token_pair(str(user.id))
     set_user_active(user.id, False)
     with pytest.raises(Exception):
@@ -51,7 +40,6 @@ def test_disable_revokes_previously_issued_access(user):
 
 
 def test_disabled_account_gets_dedicated_rejection(user):
-    """停用账号携带尚未过期的访问令牌请求受保护端点，得到专用 403。"""
     tokens = create_token_pair(str(user.id))
     user.is_active = False
     user.save(update_fields=["is_active"])
@@ -67,7 +55,6 @@ def test_disabled_account_gets_dedicated_rejection(user):
 
 
 def test_expired_token_of_active_user_stays_401(user):
-    """启用账号的过期令牌仍是 401，不走停用文案。"""
     import jwt
 
     from django.conf import settings
@@ -83,7 +70,6 @@ def test_expired_token_of_active_user_stays_401(user):
 
 
 def test_disabled_refresh_is_rejected(user):
-    """停用后用停用前的 refresh 续期，返回 401 且没有新 access。"""
     tokens = create_token_pair(str(user.id))
     set_user_active(user.id, False)
     response = Client().post(
@@ -96,7 +82,6 @@ def test_disabled_refresh_is_rejected(user):
 
 
 def test_old_refresh_stays_rejected_after_enable(user):
-    """启用后，停用前的 refresh 仍然不能换新 access。"""
     tokens = create_token_pair(str(user.id))
     set_user_active(user.id, False)
     time.sleep(2)

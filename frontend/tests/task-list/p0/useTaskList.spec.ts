@@ -1,7 +1,3 @@
-/**
- * [P0] 必测 — 任务列表加载、按状态分组、删除与清空
- * 目录：tests/ai-assistant/p0/
- */
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { flushPromises } from "@vue/test-utils"
 import * as taskApi from "@/modules/task-list/api/tasks"
@@ -264,7 +260,6 @@ describe("[P0] useTaskList", () => {
     await flushPromises()
     expect(taskApi.listTasks).toHaveBeenCalledTimes(1)
 
-    // keep-alive 缓存：只失活，不卸载
     await deactivate?.()
     await vi.advanceTimersByTimeAsync(30000)
     await flushPromises()

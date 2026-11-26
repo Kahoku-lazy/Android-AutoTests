@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** 运营后台 · 用户管理：服务端分页列表 + 右侧抽屉动作。 */
 import { computed, onMounted, ref } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
@@ -65,10 +64,9 @@ const {
 
 const { isSuperuser } = useAuthUser()
 const columns = OPS_TABLE_COLUMNS
-/** 勾选列的表头是复选框本身，不参与「图标 + 列名」渲染 */
+
 const headerColumns = OPS_TABLE_COLUMNS.filter((column) => column.prop !== "_select")
 
-// 首次进入拉第一页：组合式只提供状态与流程，生命周期归页面
 onMounted(load)
 
 const drawerOpen = ref(false)
@@ -76,7 +74,6 @@ const selected = ref<OpsUser | null>(null)
 const busy = ref(false)
 const oneTimePassword = ref("")
 
-/** 超级管理员与运营都不能被停用或注销；只有普通用户可勾选。 */
 function canManage(user: OpsUser): boolean {
   return user.identity === "user"
 }
@@ -104,7 +101,6 @@ function openDrawer(row: OpsUser): void {
   drawerOpen.value = true
 }
 
-/** 用接口回带的最新行替换列表与抽屉里的同一行。 */
 function applyRow(next: OpsUser): void {
   users.value = users.value.map((item) => (item.id === next.id ? next : item))
   if (selected.value?.id === next.id) selected.value = next
@@ -241,7 +237,6 @@ async function resetPassword(user: OpsUser): Promise<void> {
 
     <div class="doc-body">
       <section class="ops-section" data-testid="ops-users-page">
-        <!-- 行 1：批量动作在左（账号计数已下线："共 N 个账号" 与第二行的总条数重复） -->
         <div class="ops-toolbar">
           <DoodleBtn
             tone="paper"
@@ -262,7 +257,6 @@ async function resetPassword(user: OpsUser): Promise<void> {
           </DoodleBtn>
         </div>
 
-        <!-- 行 2：页码文案 + 状态筛选 + 搜索 + 翻页（常驻，与设备页同序） -->
         <div class="ops-controls">
           <span class="ops-page-info">第 {{ page }} / {{ totalPages }} 页 · 共 {{ total }} 条</span>
           <FilterTabs
@@ -304,7 +298,6 @@ async function resetPassword(user: OpsUser): Promise<void> {
             class="ops-table"
             @row-click="openDrawer"
           >
-            <!-- 勾选列：表头是全选复选框本身 -->
             <template #header-_select>
               <input
                 type="checkbox"
@@ -317,7 +310,6 @@ async function resetPassword(user: OpsUser): Promise<void> {
               />
             </template>
 
-            <!-- 其余列：图标与列名同源（COLUMNS[].icon / .label），只做扫读加速 -->
             <template
               v-for="col in headerColumns"
               :key="`head-${col.prop}`"

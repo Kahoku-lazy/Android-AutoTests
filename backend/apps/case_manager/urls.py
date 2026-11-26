@@ -1,5 +1,3 @@
-"""case-manager URL routing — project sheet APIs."""
-
 from rest_framework.routers import DefaultRouter
 
 from .views_drf import CaseProjectViewSet

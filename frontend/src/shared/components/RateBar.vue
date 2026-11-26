@@ -16,11 +16,10 @@
 import { computed } from "vue"
 
 const props = defineProps({
-  /** 通过率 0-100 */
   rate: { type: Number, required: true },
-  /** 是否显示失败段 */
+
   showFail: { type: Boolean, default: true },
-  /** 是否显示百分比文字 */
+
   showLabel: { type: Boolean, default: true },
 })
 

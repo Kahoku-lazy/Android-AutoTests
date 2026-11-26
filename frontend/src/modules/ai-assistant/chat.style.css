@@ -1,5 +1,4 @@
 .ai-chat {
-  /* 由行内 --assistant-marker 现算：浅底、渐变与描边都跟随该助手的笔色 */
   --assistant-marker-soft: color-mix(in srgb, var(--assistant-marker) 34%, var(--paper));
   --assistant-marker-tint: color-mix(in srgb, var(--assistant-marker) 10%, var(--paper));
   --assistant-marker-gradient: linear-gradient(
@@ -9,7 +8,6 @@
   );
 }
 
-/* 对话页把 L3 容器改成纵向填满：内容短时输入框贴底，内容长时仍由 .doc-body 滚动 */
 .ai-chat .doc-body {
   display: flex;
   flex-direction: column;
@@ -30,7 +28,6 @@
   transition: grid-template-columns var(--app-duration) var(--app-ease);
 }
 
-/* 日志展开：只加宽左栏（对话栏 + 日志卡同列），把聊天气泡右侧那块空白收回来 */
 .ai-chat__body.is-logs-open {
   grid-template-columns: clamp(320px, 30%, 420px) minmax(0, 1fr);
 }
@@ -72,7 +69,6 @@
   justify-content: flex-start;
 }
 
-/* 气泡与其时刻同一列：时刻贴着自己那条气泡的外沿，不按位置猜 */
 .ai-chat__bubble-wrap {
   display: flex;
   flex-direction: column;
@@ -101,7 +97,6 @@
   word-break: break-word;
 }
 
-/* 用户气泡保持纸色，只靠实线分隔；助手气泡用该助手的笔色描边 */
 .ai-chat__row--user .ai-chat__bubble {
   background: var(--paper);
   border: 2px solid var(--ink);
@@ -149,7 +144,6 @@
   outline-offset: 2px;
 }
 
-/* 发送钮：该助手笔色的深到浅（全模块允许渐变的第二处） */
 .ai-chat__send {
   min-height: 36px;
   padding: 0 var(--app-space-lg);

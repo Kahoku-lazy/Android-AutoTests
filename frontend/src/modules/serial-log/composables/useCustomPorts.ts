@@ -1,8 +1,3 @@
-/** useCustomPorts — 自定义端口增删改的 HTTP 编排（提交前校验 + 清表单由弹窗负责）
- *
- * 组件只渲染：这里负责弹窗开合、校验兜底、CRUD 请求与结果提示。
- * 监听失败（enabled && !listening）一律错误提示；成功后刷新列表拿真实状态。
- */
 import { ref } from "vue"
 import type { Ref } from "vue"
 import { ElMessage, ElMessageBox } from "element-plus"
@@ -36,7 +31,6 @@ export function useCustomPorts(ports: Ref<LogPortRow[]>, reload: () => Promise<v
     formError.value = ""
   }
 
-  /** 弹窗已完成本地校验；这里再校验一次兜底，然后发请求。 */
   async function submit(payload: PortFormPayload): Promise<void> {
     if (saving.value) return
     const editing = editRow.value
@@ -84,7 +78,6 @@ export function useCustomPorts(ports: Ref<LogPortRow[]>, reload: () => Promise<v
     }
   }
 
-  /** 删除自定义端口：二次确认（含验收降级警告）→ 停监听删登记 → 刷新。 */
   async function remove(row: LogPortRow): Promise<void> {
     try {
       await ElMessageBox.confirm(PORT_DELETE_WARNING, PORT_DELETE_TITLE, {

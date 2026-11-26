@@ -1,10 +1,4 @@
 <script setup lang="ts">
-/**
- * 项目用例表：一个项目一张表。筛选、排序、分组和隐藏列是个人视图。
- *
- * 表内只读（chip / 等宽编号 / 相对时间），字段编辑走行抽屉：
- * 草稿 → 行级未保存 → 页面级「保存」逐行 PATCH。
- */
 import { computed, onMounted, reactive, ref } from "vue"
 import { useRoute } from "vue-router"
 import { ElMessage, ElMessageBox } from "element-plus"
@@ -46,7 +40,7 @@ const sheet = ref<ProjectSheet | null>(null)
 const draftTitle = ref("")
 const drawerOpen = ref(false)
 const editingRow = ref<CaseRow | null>(null)
-/** 已应用但未写库的用例编号 */
+
 const dirtyIds = reactive(new Set<string>())
 
 const view = computed<SheetView>(() => sheet.value?.view ?? DEFAULT_SHEET_VIEW)
@@ -65,7 +59,6 @@ const crumbs = computed(() => [
   { label: sheet.value?.project.name || "项目" },
 ])
 
-/** 可见列 + 行尾操作列（操作列不参与「显示列」菜单，也不进视图持久化） */
 const columns = computed(() => [
   ...SHEET_COLUMNS.filter((column) => !view.value.hidden_columns.includes(column.key)).map(
     (column) => ({
@@ -154,7 +147,6 @@ function openRow(row: SheetDisplayRow | CaseRow) {
   drawerOpen.value = true
 }
 
-/** 抽屉应用：草稿合并进表格并标记未保存，不写库 */
 function onApply(next: CaseRow) {
   if (!sheet.value) return
   sheet.value = {
@@ -189,7 +181,6 @@ async function onRemove(row: CaseRow) {
   }
 }
 
-/** 逐行提交未保存变更；失败即停并保留标记，便于重试 */
 async function saveAll() {
   if (!dirtyIds.size || saving.value) return
   saving.value = true

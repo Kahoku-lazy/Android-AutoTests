@@ -1,10 +1,4 @@
 <script setup lang="ts">
-/**
- * 测试对话：多栏切换。发送才进入进行中；刷新后轮询；取消只停当前栏。
- *
- * 视觉是该助手的笔色：当前对话栏描边 + 硬影、助手气泡描边、发送钮深到浅渐变。
- * 渐变与描边都从本页行内的 `--assistant-marker` 现算。
- */
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { ElMessage, ElMessageBox } from "element-plus"
@@ -53,7 +47,6 @@ const iconStyle = computed(() => ({
   background: "linear-gradient(135deg, var(--assistant-marker), var(--assistant-marker-soft))",
 }))
 
-/** 轮询：同时把当前栏的状态回写到左栏，避免列表停在旧状态。 */
 async function refresh(): Promise<void> {
   if (!currentId.value) return
   const wasRunning = status.value === "running"
@@ -62,11 +55,10 @@ async function refresh(): Promise<void> {
   status.value = detail.status
   const lane = threads.value.find((item) => item.thread_id === currentId.value)
   if (lane) lane.status = detail.status
-  // 一轮刚跑完：日志面板开着就重取，把「还在写」换成可打开的一条
+
   if (logsOpen.value && wasRunning && detail.status !== "running") await loadLogs()
 }
 
-/** 切栏：消息与日志都属于「当前栏」，换栏必须一起清掉，日志面板开着就顺带取新的。 */
 async function openLane(threadId: string): Promise<void> {
   currentId.value = threadId
   messages.value = []
@@ -90,7 +82,6 @@ async function send(): Promise<void> {
   await refresh()
 }
 
-/** 日志入口：已开再点就收起；打开那一刻才取，取完只换面板内容（不动两栏网格）。 */
 async function toggleLogs(): Promise<void> {
   if (logsOpen.value) {
     logsOpen.value = false
@@ -100,7 +91,6 @@ async function toggleLogs(): Promise<void> {
   await loadLogs()
 }
 
-/** 取本栏日志；进行中的一轮由后端标 writing，列表里只显示「还在写」。 */
 async function loadLogs(): Promise<void> {
   if (!currentId.value) return
   logsLoading.value = true
@@ -127,7 +117,6 @@ async function cancel(): Promise<void> {
   await refresh()
 }
 
-/** 就地改名：只改标题，不动消息与该栏实例。 */
 async function renameLane(id: string, title: string): Promise<void> {
   try {
     const updated = await renameThread(id, title)
@@ -138,7 +127,6 @@ async function renameLane(id: string, title: string): Promise<void> {
   }
 }
 
-/** 删除对话栏：先二次确认；删的是当前栏就切到第一条，没有就新建一栏。 */
 async function removeLane(id: string): Promise<void> {
   const lane = threads.value.find((item) => item.thread_id === id)
   const name = lane?.title || "该对话"
@@ -163,7 +151,6 @@ async function removeLane(id: string): Promise<void> {
   else await addLane()
 }
 
-/* 返回入口现在属于页面正文（页头不再放按钮） */
 function back(): void {
   void router.push({ name: "ai-assistant" })
 }
@@ -208,7 +195,6 @@ onUnmounted(() => window.clearInterval(timer))
           @rename="renameLane"
           @remove="removeLane"
         >
-          <!-- 日志卡住对话栏下面：与「这一栏」同属左栏，展开时只把左栏加宽 -->
           <ThreadLogPanel
             v-if="logsOpen"
             :logs="logs"

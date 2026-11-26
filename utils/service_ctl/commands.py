@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ run.py 的命令实现：服务名解析、启停/重启/状态/日志/检查/setup 与 adb 处理 🏁
-Python 调试：➡️ python -m utils.service_ctl.commands 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. tests/arch/unit/test_run_startup_orchestration.py: 启动编排与数据库预检
-🏁
-"""
-
 from __future__ import annotations
 
 import subprocess
@@ -30,7 +21,6 @@ from .services import start_service, stop_service
 
 
 def resolve_services(names: list[str]) -> list[str]:
-    """解析服务名：空 / `all` 取全部；退役服务提示后剔除；非法服务打印清单并退出 1。"""
     registry = build_registry()
     if not names or "all" in names:
         return list(SERVICE_ORDER)
@@ -47,7 +37,6 @@ def resolve_services(names: list[str]) -> list[str]:
 
 
 def adb_status_line() -> str:
-    """`status` 命令里的 ADB 描述：来源 + 版本；缺失时给出修复命令。"""
     from utils import adb as adb_tools
 
     info = adb_tools.adb_status()
@@ -68,7 +57,6 @@ def adb_status_line() -> str:
 
 
 def ensure_adb() -> None:
-    """启动后端前检查 adb：缺失时提示；`AUTO_SETUP=1` 时自动安装。"""
     from utils import adb as adb_tools
 
     try:
@@ -86,7 +74,6 @@ def ensure_adb() -> None:
 
 
 def cmd_setup(check_only: bool = False, force: bool = False, from_file: str | None = None) -> None:
-    """检测 / 安装项目内 platform-tools；唯一会联网的命令。"""
     from utils import adb as adb_tools
     from utils import platform_tools
 
@@ -104,7 +91,6 @@ def cmd_setup(check_only: bool = False, force: bool = False, from_file: str | No
 
 
 def cmd_start(services: list[str], skip_db: bool = False) -> None:
-    """启动：数据库预检（可跳过）→ adb 检查 → 先停后起 → 成功横幅。"""
     names = resolve_services(services)
     registry = build_registry()
     if "backend" in names and not skip_db and env_flag("DB_CHECK", True):
@@ -119,7 +105,6 @@ def cmd_start(services: list[str], skip_db: bool = False) -> None:
     time.sleep(STOP_SETTLE_SECONDS)
 
     order = [name for name in SERVICE_ORDER if name in names]
-    # 现状语义：任一服务启动失败即停止后续尝试（all() 短路），与拆分前一致
     ok = all(start_service(registry[name]) for name in order)
     if not ok:
         print("\n  Some services failed to start. Check logs/")
@@ -138,7 +123,6 @@ def cmd_start(services: list[str], skip_db: bool = False) -> None:
 
 
 def cmd_stop(services: list[str]) -> None:
-    """停止指定服务（默认全部）。"""
     registry = build_registry()
     for name in resolve_services(services):
         stop_service(registry[name])
@@ -146,7 +130,6 @@ def cmd_stop(services: list[str]) -> None:
 
 
 def cmd_restart(services: list[str], skip_db: bool = False) -> None:
-    """重启：先停全部，稳定等待后再按启动流程走一遍。"""
     registry = build_registry()
     names = resolve_services(services)
     for name in names:
@@ -156,7 +139,6 @@ def cmd_restart(services: list[str], skip_db: bool = False) -> None:
 
 
 def cmd_status() -> None:
-    """状态：前后端可达性、数据库与 ADB 各一行。"""
     registry = build_registry()
 
     def http_ok(url: str) -> str:
@@ -175,7 +157,6 @@ def cmd_status() -> None:
 
 
 def cmd_logs(services: list[str]) -> None:
-    """日志：按服务打印日志文件尾部 20 行。"""
     registry = build_registry()
     for name in resolve_services(services):
         log_name = registry[name].log
@@ -190,6 +171,5 @@ def cmd_logs(services: list[str]) -> None:
 
 
 def cmd_check() -> None:
-    """跑本地质量门禁；检查内容与 CI 一一对应，见 utils/check_gates.py。"""
     result = subprocess.run([sys.executable, str(ROOT / "utils" / "check_gates.py")], cwd=str(ROOT))
     sys.exit(result.returncode)

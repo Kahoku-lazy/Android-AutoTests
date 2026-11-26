@@ -1,10 +1,3 @@
-/**
- * [P0] 必测 — 关键词表单弹窗（spec: device-log-keyword-catalog 表格维护权限）
- *
- * 目录：tests/serial-log/p0/
- * 断言：① 打开清表单 / 编辑回填；② 本地校验拦截非法输入（不 emit submit）；
- * ③ 合法输入 emit 提交载荷。输入经 ElInput 组件 setValue 驱动（teleport 无关）。
- */
 import { describe, expect, it } from "vitest"
 import { mount } from "@vue/test-utils"
 import { nextTick } from "vue"
@@ -27,7 +20,6 @@ const EDIT_ROW: LogKeywordRow = {
   scope: "*",
 }
 
-/** 挂载后由 visible=false → true，触发弹窗的打开回填 watch */
 async function mountDialog(editRow: LogKeywordRow | null = null) {
   const wrapper = mount(KeywordFormDialog, {
     props: { visible: false, editRow, scopeOptions: SCOPE_OPTIONS, saving: false, error: "" },
@@ -40,7 +32,6 @@ async function mountDialog(editRow: LogKeywordRow | null = null) {
   return wrapper
 }
 
-/** 模板顺序的四个 ElInput：keyword / module / feature / feature-id */
 function inputs(wrapper: ReturnType<typeof mount>) {
   return wrapper.findAllComponents({ name: "ElInput" })
 }

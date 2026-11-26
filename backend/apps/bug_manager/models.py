@@ -1,15 +1,7 @@
-"""bug-manager ORM models — bug ticket ledger for task errors.
-
-The ticket keeps a task snapshot (id/title/kind/status) instead of a foreign key:
-task deletion is a debug action, while BUG tickets are audit records and must survive.
-"""
-
 from django.db import models
 
 
 class BugTicket(models.Model):
-    """A classified, traceable BUG ticket produced by a task error."""
-
     CATEGORY_UI_AUTOMATION = "ui_automation"
     CATEGORY_CASE_AUTHORING = "case_authoring"
     CATEGORY_REQUIREMENT_BREAKDOWN = "requirement_breakdown"
@@ -33,14 +25,11 @@ class BugTicket(models.Model):
     task_kind = models.CharField(max_length=32, default="", blank=True)
     task_status = models.CharField(max_length=20, default="", blank=True)
     category = models.CharField(max_length=32, choices=CATEGORY_CHOICES, db_index=True)
-    # Stable idempotency key within a task/category: "task", "import", or "case:<hash>".
     source_ref = models.CharField(max_length=64, default="task")
     title = models.CharField(max_length=500)
-    # 登记时从任务抄来的用例文案与行。任务删除后仍可读；空表示登记时没有身份。
     case_label = models.CharField(max_length=500, default="", blank=True)
     case_rows = models.JSONField(default=list, blank=True)
     detail = models.TextField(default="", blank=True)
-    # 失败步骤快照：{"steps": [...]}。空表示登记时还没有四问。
     failure = models.JSONField(null=True, blank=True)
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_OPEN)
     agent_id = models.PositiveIntegerField(default=0, db_index=True)
@@ -70,5 +59,4 @@ class BugTicket(models.Model):
 
     @property
     def bug_no(self) -> str:
-        """Stable display number derived from the primary key."""
         return f"BUG-{self.id:04d}"

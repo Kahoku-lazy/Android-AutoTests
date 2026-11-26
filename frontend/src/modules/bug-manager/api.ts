@@ -1,4 +1,3 @@
-/** BUG 单管理 API — 唯一 HTTP 出口，统一走 /api/bugs/* */
 import client, { type DjangoResponse } from "@/shared/api-client"
 import type { BugListData, BugStatus, BugSyncResult, BugTicket } from "./types"
 

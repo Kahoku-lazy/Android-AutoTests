@@ -1,5 +1,3 @@
-"""登记数据对外入口。视图和其它 App 只从这里导入。"""
-
 from django.db import IntegrityError, transaction
 
 from backend.apps.ai_assistant.models import (
@@ -158,17 +156,6 @@ __all__ = [
 
 
 def grant_assistant_author(user_id: int) -> AssistantAuthorGrant:
-    """授予助手作者。同一账号重复授予时返回原记录。
-
-    Args:
-        user_id: 被授予账号的主键。调用方负责确认操作者是超级管理员。
-
-    Returns:
-        该账号的授权记录。
-
-    Raises:
-        ValueError: 账号主键不是正整数。
-    """
     if int(user_id) <= 0:
         raise ValueError("账号不存在")
     grant, _ = AssistantAuthorGrant.objects.get_or_create(user_id=int(user_id))
@@ -176,27 +163,17 @@ def grant_assistant_author(user_id: int) -> AssistantAuthorGrant:
 
 
 def revoke_assistant_author(user_id: int) -> bool:
-    """收回助手作者。没有授权时也算成功。
-
-    Args:
-        user_id: 被收回账号的主键。
-
-    Returns:
-        本次是否真的删除了一条授权。
-    """
     deleted, _ = AssistantAuthorGrant.objects.filter(user_id=int(user_id)).delete()
     return deleted > 0
 
 
 def has_assistant_author_grant(user_id: int) -> bool:
-    """该账号是否有单独授予的作者记录。不含超级管理员天然资格。"""
     return AssistantAuthorGrant.objects.filter(user_id=int(user_id)).exists()
 
 
 def create_assistant(
     display_name: str, role_id: str, *, avatar: bytes | None = None, tools: list | None = None
 ):
-    """创建助手名片。写库只在本文件。"""
     latest = (
         AIAssistant.objects.order_by("-created_at", "-id").values_list("marker", flat=True).first()
     )
@@ -215,10 +192,6 @@ def create_assistant(
 
 
 def create_model_config(data: dict):
-    """新增一条模型配置。同一密钥下的同名模型拒绝重复。
-
-    新配置默认只有超级管理员能主动使用。
-    """
     config = AIModelConfig.objects.create(**prepare_model_config(data))
     from django.contrib.auth import get_user_model
 
@@ -228,14 +201,12 @@ def create_model_config(data: dict):
 
 
 def grant_model_use(user_id: int, model_config_id: int) -> ModelUseGrant:
-    """把一个模型加入某人的主动使用名单。重复授予返回原记录。"""
     config = get_model_config(model_config_id)
     grant, _ = ModelUseGrant.objects.get_or_create(user_id=int(user_id), model_config=config)
     return grant
 
 
 def revoke_model_use(user_id: int, model_config_id: int) -> bool:
-    """从某人的主动使用名单移除一个模型。没有记录也算成功。"""
     deleted, _ = ModelUseGrant.objects.filter(
         user_id=int(user_id),
         model_config_id=int(model_config_id),
@@ -244,7 +215,6 @@ def revoke_model_use(user_id: int, model_config_id: int) -> bool:
 
 
 def can_select_model(user_id: int, model_config_id: int) -> bool:
-    """这个人能否主动选择该模型。空名单对任何模型都返回 False。"""
     if not user_id:
         return False
     return ModelUseGrant.objects.filter(
@@ -254,7 +224,6 @@ def can_select_model(user_id: int, model_config_id: int) -> bool:
 
 
 def list_selectable_model_configs(user_id: int):
-    """返回这个人名单内的聊天模型。向量、语音类没有对话入口。"""
     if not user_id:
         return AIModelConfig.objects.none()
     return list_model_configs("chat").filter(use_grants__user_id=int(user_id)).distinct()
@@ -263,10 +232,6 @@ def list_selectable_model_configs(user_id: int):
 def create_role(
     name: str, model_config_id: int, system_prompt: str = "", *, kinds: list[str] | None = None
 ):
-    """创建 Agent 配置。名称冲突时换一个短标识再试一次。
-
-    类型标签与配置同事务写入：配置建不成功，标签也不会留下。
-    """
     for attempt in range(2):
         try:
             with transaction.atomic():
@@ -292,7 +257,6 @@ def create_sop_workflow(
     leader_assistant_id: str = "",
     members: list[dict] | None = None,
 ) -> AISopWorkflow:
-    """创建工作流。写库只在本文件。"""
     workflow = AISopWorkflow.objects.create(
         **prepare_workflow(
             name,
@@ -316,23 +280,6 @@ def update_sop_workflow(
     leader_assistant_id: str = "",
     members: list[dict] | None = None,
 ) -> AISopWorkflow:
-    """编辑 SOP 工作流的名称与两侧名片。
-
-    先算完整字段字典再赋值，校验失败时记录不会有任何字段被改。
-
-    Args:
-        workflow: 已存在的工作流记录。
-        name: 新名称。
-        executor_assistant_id: 新执行助手编号。
-        verifier_assistant_id: 新验收助手编号。
-
-    Returns:
-        回写后的同一条工作流记录。
-
-    Raises:
-        WorkflowNameError: 名称为空。
-        WorkflowAssistantMissingError: 任一侧名片不存在。
-    """
     fields = prepare_workflow(
         name,
         workflow.orchestration,
@@ -349,28 +296,18 @@ def update_sop_workflow(
 
 
 def delete_sop_workflow(workflow: AISopWorkflow) -> None:
-    """删除一条 SOP 工作流。
-
-    只删工作流记录；助手名片、Agent 配置与历史任务都不动。
-
-    Args:
-        workflow: 要删除的工作流记录。调用方负责先取出记录。
-    """
     workflow.delete()
 
 
 def list_sop_workflows() -> list[AISopWorkflow]:
-    """列出全部 SOP 工作流。"""
     return list_workflows()
 
 
 def get_sop_workflow(workflow_id: int) -> AISopWorkflow:
-    """按主键取工作流。不存在时抛 DoesNotExist。"""
     return get_workflow(workflow_id)
 
 
 def resolve_sop_workflow(workflow_id: int) -> dict:
-    """读取该工作流最新已发布版本。没有版本时沿用现读，供旧测试过渡。"""
     release = (
         AssistantRelease.objects.filter(target_kind="workflow", target_id=str(workflow_id))
         .order_by("-version")
@@ -382,7 +319,6 @@ def resolve_sop_workflow(workflow_id: int) -> dict:
 
 
 def resolve_sop_release(workflow_id: int, version: int) -> dict:
-    """按任务记下的版本号读取。版本不存在时失败，不回退到当前名片。"""
     release = AssistantRelease.objects.filter(
         target_kind="workflow",
         target_id=str(workflow_id),
@@ -403,7 +339,6 @@ def _resolved_from_release(release: AssistantRelease) -> dict:
 
 
 def _release_payload_for_assistant(card: AIAssistant) -> dict:
-    """复制助手当前运行内容。只保留密钥环境变量名。"""
     role = AIRole.objects.select_related("model_config").filter(role_id=card.role_id).first()
     config = role.model_config if role is not None else None
     return {
@@ -418,7 +353,6 @@ def _release_payload_for_assistant(card: AIAssistant) -> dict:
 
 
 def _next_release(kind: str, target_id: str, payload: dict) -> AssistantRelease:
-    """追加一个不可变版本。已有版本不改。"""
     latest = (
         AssistantRelease.objects.filter(target_kind=kind, target_id=target_id)
         .order_by("-version")
@@ -442,7 +376,6 @@ def _fingerprint(payload: dict) -> str:
 
 
 def _selected_tool_names(tools: list | None) -> list[str]:
-    """从工具勾选里取出名字。预设为全部时视为包含写操作。"""
     names: list[str] = []
     for item in tools or []:
         if not isinstance(item, dict):
@@ -454,7 +387,6 @@ def _selected_tool_names(tools: list | None) -> list[str]:
 
 
 def start_live_eval(kind: str, target_id: str) -> AssistantLiveRun:
-    """创建一次待运行的评测。目标流和团队流直接拒绝，不落运行。"""
     if kind == "workflow":
         workflow = get_workflow(int(target_id))
         if not workflow_requires_eval(workflow):
@@ -474,7 +406,6 @@ def start_live_eval(kind: str, target_id: str) -> AssistantLiveRun:
 
 
 def evaluate_target(kind: str, target_id: str) -> dict:
-    """对一条助手或工作流草稿跑当前样本。不调用真实模型，也不碰设备。"""
     from backend.apps.ai_assistant.services.eval_rulers import grade
     from backend.apps.ai_assistant.services.eval_samples import load_samples
 
@@ -514,7 +445,6 @@ def evaluate_target(kind: str, target_id: str) -> dict:
 def create_live_run(
     kind: str, target_id: str, payload: dict, sample_ids: list[str]
 ) -> AssistantLiveRun:
-    """创建一次待运行的真模型评测。过程随后逐条追加。"""
     return AssistantLiveRun.objects.create(
         target_kind=kind,
         target_id=str(target_id),
@@ -528,7 +458,6 @@ def create_live_run(
 def append_live_sample(
     run_id: int, sample_id: str, title: str, passed: bool, failures: list[dict], steps: list[dict]
 ) -> AssistantLiveSample:
-    """落一条已结束样本，并把运行推进到进行中。"""
     run = AssistantLiveRun.objects.get(pk=run_id)
     sample = AssistantLiveSample.objects.create(
         run=run,
@@ -548,7 +477,6 @@ def append_live_sample(
 def finish_live_run(
     run_id: int, *, status: str, failures: list[dict] | None = None, error: str = ""
 ) -> None:
-    """收尾一次评测。失败清单只在完成时写入。"""
     run = AssistantLiveRun.objects.get(pk=run_id)
     run.status = status
     run.phase = "done" if status == AssistantLiveRun.STATUS_DONE else "failed"
@@ -559,7 +487,6 @@ def finish_live_run(
 
 
 def live_run_detail(run_id: int) -> dict | None:
-    """一次评测的进度与过程。只出展示字段，不带密钥和图片。"""
     run = get_live_run(run_id)
     if run is None:
         return None
@@ -595,12 +522,10 @@ def live_run_detail(run_id: int) -> dict | None:
 
 
 def get_live_run(run_id: int) -> AssistantLiveRun | None:
-    """按主键取一次评测，带上已落库的样本。"""
     return AssistantLiveRun.objects.filter(pk=run_id).prefetch_related("samples").first()
 
 
 def record_eval(kind: str, target_id: str, payload: dict, failures: list[dict]) -> AssistantEvalRun:
-    """记下一次自测。样本标识取当前启用样本。"""
     from backend.apps.ai_assistant.services.eval_samples import sample_ids
 
     return AssistantEvalRun.objects.create(
@@ -613,7 +538,6 @@ def record_eval(kind: str, target_id: str, payload: dict, failures: list[dict]) 
 
 
 def workflow_eval_payload(workflow: AISopWorkflow) -> dict:
-    """SOP 评测与发布共用的指纹内容。不含名称。"""
     return {
         "orchestration": workflow.orchestration,
         "kind": workflow.kind,
@@ -623,15 +547,10 @@ def workflow_eval_payload(workflow: AISopWorkflow) -> dict:
 
 
 def workflow_requires_eval(workflow: AISopWorkflow) -> bool:
-    """只有 SOP 走本评测。目标流和团队流保持原发布条件。"""
     return workflow.orchestration == ORCHESTRATION_SOP
 
 
 def eval_passed(kind: str, target_id: str, payload: dict) -> bool:
-    """最新一次完成的真模型评测是否对得上当前内容、当前样本集，且失败清单为空。
-
-    旧的 scripted 自测记录不参与判定。
-    """
     from backend.apps.ai_assistant.services.eval_samples import sample_ids
 
     latest = (
@@ -653,7 +572,6 @@ def eval_passed(kind: str, target_id: str, payload: dict) -> bool:
 
 
 def publish_assistant(card: AIAssistant) -> AssistantRelease:
-    """发布助手当前内容。评测门禁在视图层先判，这里只负责冻结。"""
     release = _next_release(
         AssistantRelease.KIND_ASSISTANT, card.assistant_id, _release_payload_for_assistant(card)
     )
@@ -664,7 +582,6 @@ def publish_assistant(card: AIAssistant) -> AssistantRelease:
 
 
 def publish_workflow(workflow: AISopWorkflow) -> AssistantRelease:
-    """发布工作流。两侧名片没有已发布版本时拒绝。"""
     from backend.apps.ai_assistant.services.sop_workflows import WorkflowBindingError
 
     for assistant_id in (workflow.executor_assistant_id, workflow.verifier_assistant_id):
@@ -700,7 +617,6 @@ def publish_workflow(workflow: AISopWorkflow) -> AssistantRelease:
 
 
 def create_thread(assistant_id: str):
-    """新建空对话栏。助手不存在时抛 DoesNotExist。"""
     if not AIAssistant.objects.filter(assistant_id=assistant_id).exists():
         raise AIAssistant.DoesNotExist(assistant_id)
     return AIAssistantThread.objects.create(**new_thread_fields(assistant_id))

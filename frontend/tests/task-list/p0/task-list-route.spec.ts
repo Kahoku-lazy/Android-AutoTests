@@ -1,6 +1,3 @@
-/**
- * [P0] 任务清单路由 — 只有 /tasks；任务详情页已下线，任务行直达测试报告
- */
 import { describe, expect, it } from "vitest"
 import aiRoutes from "@/modules/ai-assistant/routes"
 import taskRoutes from "@/modules/task-list/routes"

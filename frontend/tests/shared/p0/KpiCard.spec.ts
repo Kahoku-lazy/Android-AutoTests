@@ -1,6 +1,3 @@
-/**
- * [P0] KpiCard — doodle 壳 / 双变体 / 点击与键盘
- */
 import { describe, expect, it, vi } from "vitest"
 import { mount } from "@vue/test-utils"
 import KpiCard from "@/shared/components/KpiCard.vue"

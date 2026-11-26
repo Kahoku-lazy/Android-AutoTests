@@ -1,5 +1,3 @@
-"""给 AIAgent 增加任务类型，并种子 Agent-02（家电测试用例编写）。"""
-
 from django.db import migrations, models
 
 AGENT_NAME = "Agent-02"
@@ -7,7 +5,6 @@ CASE_AUTHORING = "case_authoring"
 
 
 def seed_agent_02(apps, schema_editor):
-    """创建 Agent-02；已有同名角色时跳过，保证可重复执行。"""
     AIAgent = apps.get_model("ai_assistant", "AIAgent")
     User = apps.get_model("auth", "User")
     if AIAgent.objects.filter(name=AGENT_NAME).exists():
@@ -29,7 +26,6 @@ def seed_agent_02(apps, schema_editor):
 
 
 def unseed_agent_02(apps, schema_editor):
-    """回滚时删掉迁移创建的 Agent-02；已有任务时保留，避免级联删任务。"""
     AIAgent = apps.get_model("ai_assistant", "AIAgent")
     for agent in AIAgent.objects.filter(name=AGENT_NAME, task_kind=CASE_AUTHORING):
         if not agent.tasks.exists():

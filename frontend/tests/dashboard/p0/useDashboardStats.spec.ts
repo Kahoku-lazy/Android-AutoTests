@@ -1,10 +1,3 @@
-/**
- * [P0] 必测 — 仪表盘数据获取与映射（mock 后端，不断真网络）
- * 目录：tests/dashboard/p0/
- *
- * useDashboardStats：loading/refreshing/error 状态 + 双接口编排。
- * mapStatsResponse：纯映射函数，覆盖完整数据与缺字段回退。
- */
 import { describe, expect, it, beforeEach, vi } from "vitest"
 import { fetchDashboardStats, fetchRecentActivities } from "@/modules/dashboard/api"
 import {
@@ -18,7 +11,6 @@ vi.mock("@/modules/dashboard/api", () => ({
   fetchRecentActivities: vi.fn(),
 }))
 
-/** AI 用量本文件不参与断言：零值补齐 DashboardRawData 的必填字段 */
 const ZERO_METRIC = { today: 0, total: 0 }
 const ZERO_AI_USAGE: DashboardRawData["ai_usage"] = {
   task_count: ZERO_METRIC,
@@ -295,7 +287,6 @@ describe("[P0] mapStatsResponse（纯映射）", () => {
   })
 
   it("部分字段缺失：缺失项回退，存在项保留", () => {
-    // 故意只给两个分区：验证缺失分区回退默认值、已给分区原样保留
     const mapped = mapStatsResponse({
       devices: { online: 2, total: 4 },
       runs: { active: 1 },

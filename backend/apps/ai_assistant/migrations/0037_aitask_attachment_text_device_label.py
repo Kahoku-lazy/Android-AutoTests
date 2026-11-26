@@ -1,10 +1,7 @@
-# Generated manually: attachment CharField→TextField；新增 attachment_filename / device_label
-
 from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("ai_assistant", "0036_aitask_by_role"),
     ]

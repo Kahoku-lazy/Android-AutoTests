@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ 无线端口编排层 —— 把「库里的监听开关」落成「引擎层真正在监听的端口」，并汇总页面数据 🏁
-Python 调试：➡️ python -m backend.apps.serial_log.port_service 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 暂无（经 serial_log 的功能用例间接覆盖，未直接 import 本模块）
-🏁
-"""
-
 from __future__ import annotations
 
 import time
@@ -18,8 +9,6 @@ from django.conf import settings
 from engines.device.logbus import LogSourceSpec
 from engines.device.logfiles import tail_lines
 from engines.uart_log import MAX_PORTS, PortParams, get_port_switch, reset_port_switch
-
-# 公共 available() 不区分失败原因；这里只读复用占用探测细化 note，不改引擎契约。
 from engines.uart_log.detect import _port_in_use
 from utils.logs import backend_log, capture_file_path
 from utils.netinfo import local_lan_ip
@@ -44,42 +33,38 @@ __all__ = [
 
 FALLBACK_TAIL_LINES = 2000
 FALLBACK_TAIL_LINES_MAX = 20000
-LISTEN_WAIT_SECONDS = 1.0  # 开启后等绑定结果的最长时间（绑定在采集线程里异步完成）
+LISTEN_WAIT_SECONDS = 1.0
 
 
 class LogPortUnknown(ValueError):
-    """请求了一个未被平台登记的日志端口。"""
+    pass
 
 
 class LogPortInvalid(ValueError):
-    """端口登记字段校验失败或操作不被允许（可读错误，交调用方改请求）。"""
+    pass
 
 
 class LogPortCapReached(ValueError):
-    """同时监听端口已达上限，拒绝新增 / 开启。"""
+    pass
 
 
 def listen_ip() -> str:
-    """页面展示的本机监听 IP：配置覆盖优先，否则出站探测；取不到返回空串。"""
     configured = str(getattr(settings, "DEVICE_LOG_ADVERTISE_HOST", "") or "").strip()
     return configured or local_lan_ip()
 
 
 def _origin_for(port: int) -> str:
-    """端口来源：custom 行优先（与 sources 合并口径一致），其余为 config。"""
     custom = {int(spec.port) for spec in api.list_custom_port_specs()}
     return "custom" if int(port) in custom else "config"
 
 
 def _listen_failure_note(port: int) -> str:
-    """开启但未监听时的可读失败原因：区分被占用与绑定失败。"""
     host = str(getattr(settings, "DEVICE_LOG_TCP_HOST", "0.0.0.0") or "0.0.0.0")
     reason = "端口已被其它程序占用" if _port_in_use(host, int(port)) else "端口绑定失败"
     return f"端口 {int(port)} 监听失败：{reason}"
 
 
 def _not_listening_note(port: int, switch) -> str:
-    """enabled 但未 listening 的 note：超限保持开关值不监听，其余按绑定失败细化。"""
     if not switch.is_reserved(int(port)) and switch.reserved_count() >= MAX_PORTS:
         return CAP_NOTE
     return _listen_failure_note(port)
@@ -102,7 +87,6 @@ def _tail_max() -> int:
 
 
 def clamp_tail(value: Any) -> int:
-    """读取行数夹紧到 [1, 上限]；未给或非法时取平台默认值。"""
     limit = _tail_max()
     try:
         wanted = int(value)
@@ -114,7 +98,6 @@ def clamp_tail(value: Any) -> int:
 
 
 def spec_for_port(port: int) -> LogSourceSpec | None:
-    """配置里该端口的来源登记；未登记返回 None。"""
     for spec in sources.source_specs():
         if int(spec.port) == int(port):
             return spec
@@ -129,11 +112,6 @@ def _require_spec(port: int) -> LogSourceSpec:
 
 
 def disabled_port_note(port: int = 0) -> str:
-    """端口已登记且监听开关关闭 → 返回可读结论；未登记 / 未关闭 → 空串。
-
-    不传端口时看平台默认来源（现场 7005）：AI 用默认端口查询时同样能拿到关闭态结论。
-    本函数只读开关状态，MUST NOT 启动或恢复任何监听。
-    """
     specs = sources.source_specs()
     if not specs:
         return ""
@@ -156,10 +134,6 @@ def _capture_path(spec: LogSourceSpec):
 
 
 def reconcile() -> list[int]:
-    """按库里的开关状态启停端口。同时实际监听的端口不超过 10 个。
-
-    返回的是本次要求打开的端口。超出上限的端口保持库里的开关值，但不监听。
-    """
     if not getattr(settings, "DEVICE_LOG_ENABLED", True):
         backend_log.info("device log collection disabled by settings; nothing to reconcile")
         reset_port_switch()
@@ -188,7 +162,6 @@ def reconcile() -> list[int]:
 
 
 def list_ports() -> list[dict]:
-    """端口管理页的表格数据：三列取双轨登记，`enabled` 取库，`listening` 取运行时。"""
     specs = sources.source_specs()
     if not specs:
         return []
@@ -219,7 +192,6 @@ def list_ports() -> list[dict]:
 
 
 def set_enabled(port: int, enabled: bool) -> dict:
-    """写开关并立即生效：开启即开始监听，关闭即停止监听并释放端口。"""
     spec = _require_spec(port)
     switch = get_port_switch()
     if enabled and not switch.is_reserved(int(spec.port)) and switch.reserved_count() >= MAX_PORTS:
@@ -251,7 +223,6 @@ def set_enabled(port: int, enabled: bool) -> dict:
 
 
 def _await_listening(port: int, timeout: float = LISTEN_WAIT_SECONDS) -> bool:
-    """短暂等待采集线程完成端口绑定，让开关响应里的 `listening` 是真实结果。"""
     switch = get_port_switch()
     deadline = time.monotonic() + max(0.0, timeout)
     while True:
@@ -265,7 +236,6 @@ def _await_listening(port: int, timeout: float = LISTEN_WAIT_SECONDS) -> bool:
 def _payload(
     spec: LogSourceSpec, *, enabled: bool, listening: bool, note: str, origin: str
 ) -> dict:
-    """端口行统一载荷：三列 + 来源 + 完整监听地址 + 开关 / 运行时状态 + 文件信息。"""
     path = _capture_path(spec)
     ip = listen_ip()
     return {
@@ -283,7 +253,6 @@ def _payload(
 
 
 def _validate_port_fields(port: Any, sku: Any, baud: Any) -> tuple[int, str, int]:
-    """新增端口字段校验：端口 1–65535、SKU 必填 ≤100、波特率正整数。"""
     try:
         port_num = int(port)
     except (TypeError, ValueError) as exc:
@@ -305,12 +274,6 @@ def _validate_port_fields(port: Any, sku: Any, baud: Any) -> tuple[int, str, int
 
 
 def create_port(port: Any, sku: Any, baud: Any) -> dict:
-    """新增自定义端口并立即监听（单端口增量，不触碰其它端口）。
-
-    Raises:
-        LogPortInvalid: 字段非法或端口已登记。
-        LogPortCapReached: 同时监听已达上限。
-    """
     port_num, sku_text, baud_num = _validate_port_fields(port, sku, baud)
     if spec_for_port(port_num) is not None:
         raise LogPortInvalid(f"端口 {port_num} 已登记（配置或自定义），不能重复新增")
@@ -331,12 +294,6 @@ def create_port(port: Any, sku: Any, baud: Any) -> dict:
 
 
 def update_port(port: int, *, sku: Any = None, baud: Any = None) -> dict:
-    """编辑自定义端口（SKU / 波特率）：只重启被编辑的这一个端口。
-
-    Raises:
-        LogPortUnknown: 端口未登记。
-        LogPortInvalid: 配置端口不可编辑、字段非法或无可改字段。
-    """
     spec = _require_spec(port)
     if _origin_for(port) != "custom":
         raise LogPortInvalid(f"端口 {int(port)} 是配置端口，不能编辑")
@@ -364,12 +321,6 @@ def update_port(port: int, *, sku: Any = None, baud: Any = None) -> dict:
 
 
 def delete_port(port: int) -> dict:
-    """删除自定义端口：停监听释放端口、删登记；历史日志文件保留。
-
-    Raises:
-        LogPortUnknown: 端口未登记。
-        LogPortInvalid: 配置端口不可删除。
-    """
     _require_spec(port)
     if _origin_for(port) != "custom":
         raise LogPortInvalid(f"端口 {int(port)} 是配置端口，不能删除")
@@ -385,10 +336,6 @@ def delete_port(port: int) -> dict:
 
 
 def read_lines(port: int, tail: Any = 0) -> dict:
-    """读当前日志文件的尾部若干行（只读当前文件，不碰存档、不启动监听）。
-
-    未登记端口与已关闭监听的端口都返回**可读结论**（不抛错），行数为 0。
-    """
     limit = clamp_tail(tail)
     spec = spec_for_port(port)
     if spec is None:
@@ -435,5 +382,4 @@ def read_lines(port: int, tail: Any = 0) -> dict:
 
 
 def _raw_rows(raw_lines: list[str]) -> list[dict[str, str]]:
-    """按文件顺序返回原文行，不拆时间、不倒序。"""
     return [{"text": raw.rstrip("\r\n")} for raw in raw_lines if raw.strip()]

@@ -1,10 +1,3 @@
-"""
-python -m 调试路径: backend.apps.case_manager.api_import
-
-本模块的业务功能如下：
-1. import_case_rows: 把验收通过的功能用例追加到「AI 生成用例」功能表。
-"""
-
 from __future__ import annotations
 
 import re
@@ -95,7 +88,6 @@ def _result(**kwargs: Any) -> dict[str, Any]:
 
 
 def _project_row_count(project: CaseProject) -> int:
-    """数功能表当前行数。测试可替换这个函数，不替换查询对象。"""
     return FunctionalCase.objects.filter(project=project).count()
 
 
@@ -121,13 +113,6 @@ def import_case_rows(
     task_title: str,
     rows: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    """把一次任务的用例追加到该用户的功能表。
-
-    同一任务重复收口时不重复写入。超过 999 时一条都不写。
-
-    Raises:
-        ValueError: 缺少用户或任务编号。
-    """
     owner = str(user_id or "").strip()
     if not owner:
         raise ValueError("缺少任务发起人，无法写入用例库")

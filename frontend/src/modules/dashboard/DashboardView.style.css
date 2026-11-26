@@ -1,24 +1,15 @@
-/* ═══════════════════════════════════════════
-   仪表盘布局 — 章节钉板（暖纸底 · 墨色实线壳 · 硬色偏移阴影）
-   对齐原型：dashboard-chapter-board-proto.html
-   ═══════════════════════════════════════════ */
-
-/* ── 主体（页根纸面由 L0 壳层透出，不在此画不透明 --paper） ── */
 .dashboard-workbench .doc-body {
   flex: 1;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  /* 顶部留 8px：章节板有 -0.25° 旋转，上沿为零内距时旋转角会被滚动容器裁掉 */
+
   padding: var(--app-space-sm) var(--app-space-lg) var(--app-space-sm);
   display: flex;
   flex-direction: column;
   gap: var(--app-space-xl);
 }
 
-/* 内容不满一屏时，让最后一块章节板与活动卡撑满剩余高度：
-   活动卡边框/阴影一直落到页脚，页尾不再露出裸白
-   （数据多到超过一屏时 flex:1 无剩余空间，不产生额外影响） */
 .dashboard-workbench .doc-body > section:last-child {
   flex: 1;
   display: flex;
@@ -29,15 +20,14 @@
   min-height: 0;
 }
 
-/* ── 章节钉板 ── */
 .doc-section--board {
   --ch-accent: var(--c-dashboard);
   position: relative;
   background: var(--paper);
   border-radius: 2px;
-  /* 章节大卡的投影统一为银灰，不再跟随各章节模块色 */
+
   box-shadow: 4px 4px 0 0 var(--color-ink-79);
-  /* 下内距加大：容纳卡片 12px 的右下阴影，避免阴影压到板块下边缘 */
+
   padding: var(--app-space-md) var(--app-space-md) var(--app-space-lg);
 }
 .doc-section--board.ch-ops {
@@ -66,7 +56,6 @@
   min-width: 0;
 }
 .chapter-mark {
-  /* 高度对齐 20px 标题的行盒（20 × 1.25 = 25px），不再比字高出一头 */
   width: 26px;
   height: 26px;
   border: 2px solid var(--ink);
@@ -163,8 +152,6 @@
   opacity: 0.45;
 }
 
-/* 平台概览：运行指标组与测试用例资产子区之间的纵向间隔。
-   .subhead 自带 4px 上距，这里补到 --app-space-lg，避免指标卡的右下硬阴影压住分隔线。 */
 .overview-assets {
   margin-top: var(--app-space-lg);
 }
@@ -196,7 +183,6 @@
   text-underline-offset: 3px;
 }
 
-/* ── Stats Grid ── */
 .dashboard__stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, 168px);
@@ -204,10 +190,9 @@
   padding-top: 2px;
 }
 
-/* ── AI Usage Layout ── */
 .ch-ai__body {
   display: grid;
-  /* 右列改弹性宽度：Agent 卡横排需要整段剩余空间 */
+
   grid-template-columns: minmax(0, 460px) minmax(0, 860px);
   gap: var(--app-space-md);
   align-items: stretch;
@@ -222,30 +207,26 @@
   }
 }
 
-/* 用量趋势区：账单/智能体卡之后承载四张用量图。
-   .subhead 自带 4px 上距，这里补到 --app-space-lg，把「快照」与「趋势」两层拉开。 */
 .ai-usage-trends {
   margin-top: var(--app-space-lg);
 }
 
-/* ── DeepSeek 账单卡：标题 + 缓存命中率主指标 + 两行双列明细 ── */
-/* ── 零件卡（DeepSeek 账单 / Agent 用量共用）：编号 + 顶边色条 + 右上角黄圆，无阴影无倾斜 ── */
 .part-card {
   position: relative;
   height: 100%;
   overflow: visible;
-  /* 描边与阴影同色（阴影第一层） */
+
   border: 2px solid color-mix(in srgb, var(--part-accent, var(--c-ai)) 42%, var(--paper)) !important;
   border-radius: 2px !important;
   background: color-mix(in srgb, var(--ink) 4%, var(--paper)) !important;
-  /* 只在右下留阴影：三层同色相、逐层变浅，形成浅色渐变带 */
+
   box-shadow:
     4px 4px 0 0 color-mix(in srgb, var(--part-accent, var(--c-ai)) 42%, var(--paper)),
     8px 8px 0 0 color-mix(in srgb, var(--part-accent, var(--c-ai)) 20%, var(--paper)),
     12px 12px 0 0 color-mix(in srgb, var(--part-accent, var(--c-ai)) 8%, var(--paper)) !important;
   transform: none !important;
 }
-/* 顶边居中图钉：与 KPI 卡同款，颜色取本章节 accent */
+
 .part-card::before {
   content: "";
   position: absolute;
@@ -266,9 +247,9 @@
   right: 0;
   width: 40px;
   height: 40px;
-  /* 角标取顶边同色系的淡色：与 --part-accent 同色相，降低饱和度 */
+
   background: color-mix(in srgb, var(--part-accent, var(--c-ai)) 28%, var(--paper));
-  /* 弧线描边与角标填充同色，不再用墨线勾边 */
+
   border-left: 2px solid color-mix(in srgb, var(--part-accent, var(--c-ai)) 28%, var(--paper));
   border-bottom: 2px solid color-mix(in srgb, var(--part-accent, var(--c-ai)) 28%, var(--paper));
   border-bottom-left-radius: 100%;
@@ -288,10 +269,10 @@
 }
 .part-card__head {
   display: flex;
-  /* 编号是 20px 的 SVG 徽标，与标题垂直居中对齐 */
+
   align-items: center;
   gap: var(--app-space-xs);
-  /* 标题栏保留 12px 上下内距，避免压扁标题 */
+
   padding: calc(var(--app-space-sm) + var(--app-space-xs)) var(--app-space-md);
   border-bottom: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
 }
@@ -303,7 +284,7 @@
 }
 .part-card__stamp {
   margin-left: auto;
-  /* 让开右上角 52px 的黄圆，避免副标识被圆压住 */
+
   margin-right: 30px;
   color: var(--app-text-secondary);
   font-size: var(--app-size-sm);
@@ -326,8 +307,7 @@
 }
 .part-card__hero-value {
   color: color-mix(in srgb, var(--part-accent, var(--c-ai)) 30%, var(--ink));
-  /* 数值文字：同色相深→浅渐变（单位另行覆盖为黑色）。
-     与共享 KpiCard 同一口径：accent 与墨色 48% → 30%，不再混纸色（旧版终点只有 1.2:1）。 */
+
   background-image: linear-gradient(
     90deg,
     color-mix(in srgb, var(--part-accent, var(--c-ai)) 48%, var(--ink)) 0%,
@@ -365,7 +345,6 @@
   font-weight: var(--app-font-weight-semibold);
 }
 .part-card__cell b {
-  /* 数值文字：同色相深→浅渐变（单位另行覆盖为黑色），与 KpiCard 数值同一区间 */
   background-image: linear-gradient(
     90deg,
     color-mix(in srgb, var(--part-accent, var(--c-ai)) 48%, var(--ink)) 0%,
@@ -380,7 +359,7 @@
 }
 .part-card :deep(em) {
   margin-left: 2px;
-  /* 单位统一黑色，不吃数值的渐变 */
+
   color: var(--app-text-primary);
   -webkit-text-fill-color: var(--app-text-primary);
   background-image: none;
@@ -389,7 +368,6 @@
   font-weight: var(--app-font-weight-semibold);
 }
 
-/* ── Trends ── */
 .dashboard__trends {
   display: grid;
   grid-template-columns: var(--layout-ratio-chart, 1.4fr 1fr);
@@ -401,7 +379,7 @@
 .dashboard__trends--pair {
   grid-template-columns: 1fr 1fr;
 }
-/* 今日用量折线：独占整行，7 个 4 小时刻度才不挤 */
+
 .dashboard__trends--single {
   grid-template-columns: 1fr;
 }
@@ -450,8 +428,6 @@
   letter-spacing: 0.01em;
 }
 
-/* ── Footer ── */
-/* 页脚移出滚动容器后固定在页面底部（不随 .doc-body 滚动） */
 .dashboard__footer {
   flex: 0 0 auto;
   margin: 0 var(--app-space-lg) var(--app-space-md);
@@ -478,7 +454,6 @@
   stroke: var(--app-text-secondary);
 }
 
-/* ── 模型用量账本 ── */
 .voice-usage-summary {
   display: flex;
   flex-wrap: wrap;

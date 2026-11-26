@@ -1,9 +1,4 @@
 <script setup lang="ts">
-/**
- * 组头条单元：分组视图里合并行的内容。
- *
- * 只在「第一个可见列」的插槽里真正渲染——其余列被 span-method 合并掉。
- */
 defineProps<{
   name: string
   count: number

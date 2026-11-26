@@ -1,9 +1,4 @@
 <script setup>
-/**
- * ErrorState — 通用错误提示条（含可选重试按钮）
- *
- * 替代每个模块手写的 <div v-if="error" class="xxx__error"> 模式。
- */
 defineProps({
   message: { type: String, default: "加载失败" },
 })

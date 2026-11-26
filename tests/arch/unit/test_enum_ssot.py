@@ -1,12 +1,3 @@
-"""
-模块功能：➡️ D4 契约：枚举唯一真相源在 `models/` —— device_pool 不得重复定义设备枚举 🏁
-Python 调试：➡️ python -m pytest -c tests/pytest.ini tests/arch/unit/test_enum_ssot.py 🏁
-时间：➡️ 2026-11-24 🏁
-测试:➡️
-1. 覆盖 backend/apps/device_pool、backend/models
-🏁
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -18,7 +9,6 @@ pytestmark = [pytest.mark.unit]
 
 
 def test_device_status_is_models_ssot_object():
-    """device_pool 的 DeviceStatus 必须**就是** models.constants 的那一个对象。"""
     assert device_contracts.DeviceStatus is models_constants.DeviceStatus
     assert {(m.name, m.value) for m in device_contracts.DeviceStatus} == {
         ("ONLINE", "ONLINE"),
@@ -27,7 +17,6 @@ def test_device_status_is_models_ssot_object():
 
 
 def test_connection_type_is_models_ssot_object():
-    """device_pool 的 ConnectionType 必须**就是** models.constants 的那一个对象。"""
     assert device_contracts.ConnectionType is models_constants.ConnectionType
     assert {(m.name, m.value) for m in device_contracts.ConnectionType} == {
         ("USB", "USB"),
@@ -36,7 +25,6 @@ def test_connection_type_is_models_ssot_object():
 
 
 def test_device_enums_keep_str_semantics():
-    """保持 str, Enum 语义：与字面量比较仍成立（后续收敛字面量依赖此性质）。"""
     assert device_contracts.DeviceStatus.ONLINE == "ONLINE"
     assert device_contracts.DeviceStatus.BUSY == "BUSY"
     assert device_contracts.ConnectionType.WIFI == "WIFI"

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/** 评测页：作者选择一条助手或工作流，跑固定样本并查看失败清单。 */
 import { computed, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"

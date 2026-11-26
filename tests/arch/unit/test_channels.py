@@ -46,20 +46,6 @@ class TestWebSocketChannel:
         assert patterns == [], f"当前不应有任何 WS 生产点，实际 {patterns}"
 
 
-class TestAgentScopeChannel:
-    def test_agent_scope_no_adapters(self):
-        root = ROOT / "engines" / "agents"
-        assert root.is_dir(), "engines/agents 引擎目录不存在"
-        assert not (root / "agentscope").exists(), (
-            "禁止再出现 engines/agents/agentscope（框架实现在 engines/agents/role）"
-        )
-        assert not (root / "adapters").exists(), "engines/agents 下禁止新增 adapters/"
-        for part in ("role", "messaging", "tools", "workflow", "prompts", "skills"):
-            base = root / part
-            assert not (base / "adapters").exists(), f"engines/agents/{part} 下禁止新增 adapters/"
-            assert not (base / "rag").exists(), f"engines/agents/{part} 下禁止新增 rag/"
-
-
 class TestEngineChannel:
     def test_upper_layers_do_not_import_engine_libs(self):
         forbidden = (

@@ -60,12 +60,16 @@ path = "backend.apps.usage_ledger"
 depends_on = ["engines.backend_bridge"]
 
 [[modules]]
+path = "engines.eval"
+depends_on = []
+
+[[modules]]
 path = "engines.ae_harness"
 depends_on = []
 
 [[modules]]
 path = "engines.backend_bridge"
-depends_on = ["engines.ae_harness"]
+depends_on = ["engines.ae_harness", "engines.eval"]
 
 [[modules]]
 path = "engines.device"

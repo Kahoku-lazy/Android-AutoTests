@@ -17,6 +17,7 @@
 - `engines/`：可替换引擎层——设备控制、串口日志、视觉 OCR、智能体（SOP / 角色 / 工具）运行时等。导入边界：零 `apps.*`、零 `django.*`（业务工具经注入）。
 - 一级子包（一句话）：
   - `ae_harness/`：**Agent 原语层**——`create_agent`、工具、事件记录与报告渲染、中间件、SOP 抽象、只读知识检索。不定义角色、不保存提示词、不保存流程；控制台入口已删除。
+  - `eval/`：**评测原语层**——封装 deepeval：裁判模型、评测方法目录、`evaluate()` 与官方看板。不认平台角色、不落库；全仓只有这一层 import deepeval。与 `ae_harness` 同级且互不 import。
   - `backend_bridge/`：**平台侧智能体角色的唯一落点**（后端任务 / 前端卡片用），在 `ae_harness` 原语上装配，并承接**事件落库、运行取消、报告与用量**。详见 [`backend_bridge_role_assembly.md`](../.agents/docs/engines/backend_bridge/backend_bridge_role_assembly.md)。
   - `device/`：设备引擎；对外入口是 `action`。
   - `uart_log/`：串口日志采集与处理。
@@ -74,6 +75,7 @@
 |------|------|--------|
 | backend_bridge | [backend_bridge_role_assembly.md](../.agents/docs/engines/backend_bridge/backend_bridge_role_assembly.md) | 平台角色唯一落点、SOP 与单角色分工、11 条红线、与后端分工、已定事项 |
 | ae_harness | [ae_harness_overview.md](../.agents/docs/engines/ae_harness/ae_harness_overview.md) | 原语层定位、AgentScope 2.0.12、禁止 import 外部功能模块 |
+| eval | [eval_deepeval_wrapper.md](../.agents/docs/engines/eval/eval_deepeval_wrapper.md) | deepeval 封装、官方裁判与看板、延迟导入、不依赖 ae_harness |
 | ae_harness/agents | [ae_harness_agents_agent_creation.md](../.agents/docs/engines/ae_harness_agents/ae_harness_agents_agent_creation.md) | `create_agent` 唯一出口、`AgentBundle`、角色只有三样、观测中间件准入清单 |
 | ae_harness/assistant | [ae_harness_assistant_console_retired.md](../.agents/docs/engines/ae_harness_assistant/ae_harness_assistant_console_retired.md) | 控制台入口已删、6 条红线、相关路径 |
 | ae_harness/event | [ae_harness_event_observation_and_report.md](../.agents/docs/engines/ae_harness_event/ae_harness_event_observation_and_report.md) | 事件记录与 HTML 报告、用量采集口径、全量模式、扩展点 |

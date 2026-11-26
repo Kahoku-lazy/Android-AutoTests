@@ -62,8 +62,9 @@ def _store_attachment(filename: str, content: bytes) -> str:
         return store_flat_upload(filename, content)
     except OSError as exc:
         backend_log.exception("任务附件写入失败: %s", filename)
+        reason = str(exc.strerror or exc).strip().rstrip("。.")
         raise APIException(
-            f"任务配置文件写入失败：{exc.strerror or exc}，请检查运行账号对该目录的写权限"
+            f"任务配置文件写入失败：{reason}，请检查运行账号对该目录的写权限"
         ) from exc
 
 

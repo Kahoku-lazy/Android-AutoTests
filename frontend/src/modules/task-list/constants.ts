@@ -31,12 +31,6 @@ export const REPORT_POLL_MAX_FAILURES = 5
 
 export const DEFAULT_OPEN_CASE_INDEX = 0
 
-export const STEP_LOG_CHECK_TITLE = "日志检查"
-
-export const STEP_LOG_CHECK_HINT = "本步断言需核对设备日志 · 取证窗 5 秒"
-
-export const STEP_LOG_CHECK_NO_SHOT_TEXT = "该次点击后未截图"
-
 export const STEP_EXEC_NO_SHOT_TEXT = "该步未截图"
 
 export const AGENT_ROUTES = [{ value: "device_control", label: "控制设备" }] as const

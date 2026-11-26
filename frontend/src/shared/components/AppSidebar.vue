@@ -1,14 +1,22 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue"
 import { useRouter, useRoute } from "vue-router"
-import { ElMessage } from "element-plus"
+import { ElMessage, ElMessageBox } from "element-plus"
 import { animate } from "animejs"
 import { sidebarNavEnter } from "../animations"
 import { NAV_CATEGORIES, MOD_COLORS } from "./sidebarNavConfig"
 import { useSidebarResize } from "../composables/useSidebarResize"
 import { useAuthUser } from "../composables/useAuthUser"
+import { hasUnsavedChanges } from "../composables/useUnsavedChanges"
 import { clearSession, getUsername } from "@/shared/auth/token-storage"
 import { logout as logoutApi } from "@/shared/api/auth"
+import {
+  LOGOUT_UNSAVED_CANCEL,
+  LOGOUT_UNSAVED_CONFIRM,
+  LOGOUT_UNSAVED_MESSAGE,
+  LOGOUT_UNSAVED_TITLE,
+  runLogout,
+} from "@/shared/helpers/logout"
 import AnimatedMascot from "./AnimatedMascot.vue"
 
 const router = useRouter()
@@ -16,19 +24,36 @@ const route = useRoute()
 
 const activeAccount = getUsername()
 
-async function logout() {
+async function confirmLeaveOnLogout() {
   try {
-    await logoutApi()
-  } catch (e) {
-    const data = e?.response?.data
-
-    if (e?.response?.status === 503 && data?.retry) {
-      ElMessage.warning(data.message || "服务暂时异常，请稍后重试")
-      return
-    }
+    await ElMessageBox.confirm(LOGOUT_UNSAVED_MESSAGE, LOGOUT_UNSAVED_TITLE, {
+      confirmButtonText: LOGOUT_UNSAVED_CONFIRM,
+      cancelButtonText: LOGOUT_UNSAVED_CANCEL,
+      type: "warning",
+    })
+    return true
+  } catch {
+    return false
   }
-  clearSession()
-  router.push("/login")
+}
+
+async function logout() {
+  await runLogout({
+    hasUnsaved: hasUnsavedChanges,
+    confirmDiscard: confirmLeaveOnLogout,
+    revoke: () => logoutApi(),
+    clearSession,
+    goToLogin: () => {
+      void router.push("/login")
+    },
+    onRevokeError: (error) => {
+      const data = error?.response?.data
+
+      if (error?.response?.status === 503 && data?.retry) {
+        ElMessage.warning(data.message || "服务暂时异常，请稍后重试")
+      }
+    },
+  })
 }
 
 const {

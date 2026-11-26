@@ -13,6 +13,7 @@ import SheetTable from "./components/SheetTable.vue"
 import SheetRowDrawer from "./components/SheetRowDrawer.vue"
 import { applySheetView, editablePayload, isGroupHeader } from "./helpers/sheet"
 import type { SheetDisplayRow } from "./helpers/sheet"
+import { useUnsavedGuard } from "./composables/useUnsavedGuard"
 import {
   createRow,
   deleteRow,
@@ -42,12 +43,21 @@ const drawerOpen = ref(false)
 const editingRow = ref<CaseRow | null>(null)
 
 const dirtyIds = reactive(new Set<string>())
+const drawerDirty = ref(false)
 
 const view = computed<SheetView>(() => sheet.value?.view ?? DEFAULT_SHEET_VIEW)
 const rows = computed<CaseRow[]>(() => sheet.value?.rows ?? [])
 const displayRows = computed<SheetDisplayRow[]>(() => applySheetView(rows.value, view.value))
 const groupCount = computed(() => displayRows.value.filter(isGroupHeader).length)
 const dirtyCount = computed(() => dirtyIds.size)
+const hasUnsaved = computed(() => dirtyCount.value > 0 || drawerDirty.value)
+const pagePath = route.fullPath
+
+useUnsavedGuard(
+  () => hasUnsaved.value,
+  () => route.fullPath === pagePath,
+)
+
 const projectName = computed(() => sheet.value?.project.name || "项目用例表")
 const caseLimit = computed(() => sheet.value?.project.case_limit || 999)
 const groupLabel = computed(
@@ -264,7 +274,13 @@ onMounted(load)
       </template>
     </div>
 
-    <SheetRowDrawer v-model="drawerOpen" :row="editingRow" @apply="onApply" @remove="onRemove" />
+    <SheetRowDrawer
+      v-model="drawerOpen"
+      :row="editingRow"
+      @apply="onApply"
+      @remove="onRemove"
+      @dirty-change="drawerDirty = $event"
+    />
   </div>
 </template>
 

@@ -103,7 +103,7 @@ backend_bridge/
 
 观测以 `capture_messages=True` 装配：每轮模型真实收到的 messages 都进 `observations[].messages`，两个角色共用同一个观测中间件、按 agent 名与 `replies[].role` 区分。报告渲染由 `run_bound_sop` 在 `run_sop` 返回后完成（`render_report=False`），因为步骤结论要等编排结束才拿得到。
 
-运行中异常中断（取消与预算中断除外）时，`_SopCapture.abort()` 会用已落盘的 recorder 补齐收尾并渲染同一套 HTML，概览标注「运行中断：原因」，并把报告定位经 `on_abort` 交回调用方；`aligned.json` 的 `summary` 带 `aborted` / `abort_reason`。取消与预算中断不产报告，起跑前失败（事件记录器未建立）也没有报告。
+运行中异常中断（取消与预算中断除外）时，`_SopCapture.abort()` 会用已落盘的 recorder 补齐收尾并渲染同一套 HTML，概览标注「运行中断：原因」，并把报告定位与用量快照（`model` / `tokens` / `usages` / `cost_s`）经 `on_abort(report_path, exc, usage)` 交回调用方；`aligned.json` 的 `summary` 带 `aborted` / `abort_reason`。取消与预算中断不产报告，起跑前失败（事件记录器未建立）也没有报告，此时 `on_abort` 收到空快照。
 
 
 ## 5. 已定事项（曾列为未定，现已拍板）

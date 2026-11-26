@@ -1,12 +1,12 @@
 ## Why
 
-2026-11-25 18:21–18:24，任务 255 / 256 / 259 / 260 在设备动作已经执行、只差交结论时整单失败：执行器同一回复跑满 20 个推理轮次后，框架强制 `tool_choice=GenerateStructuredOutput`，而 `deepseek-flash` 处于思考模式，DeepSeek 接口以 `400 Thinking mode does not support this tool_choice` 拒绝。同一条重发规则目前只包了 openai 网关通道（`govee-thinking-tool-choice`），deepseek 通道没有任何兜底，错误原样抛出后任务被记为「模型拒绝（400）」。同时，失败任务没有回写已发生的模型调用用量：260 实耗约 30.7 万 input tokens，任务记录仍是 0；详情页也因此只能看到一句笼统文案，无法判断失败发生在交卷轮。
+2026-11-25 18:21–18:24，任务 255 / 256 / 259 / 260 在设备动作已经执行、只差交结论时整单失败：执行器同一回复跑满 20 个推理轮次后，框架强制 `tool_choice=GenerateStructuredOutput`，而 `deepseek-flash` 处于思考模式，DeepSeek 接口以 `400 Thinking mode does not support this tool_choice` 拒绝。同一条重发规则目前只包了 openai 网关通道（`govee-thinking-tool-choice`），deepseek 通道没有任何兜底，错误原样抛出后任务被记为「模型拒绝（400）」。同时，失败任务没有回写已发生的模型调用用量：260 实耗约 30.7 万 input tokens，任务记录仍是 0；任务记录与报告里也只能看到一句笼统文案，无法判断失败发生在交卷轮（任务详情页已于 2026-11-26 退役，可观察面是 `Task.result`、报告台账与 BUG 单）。
 
 ## What Changes
 
 - deepseek 通道套用与 openai 网关相同的重发规则：只在收到含 `Thinking mode does not support this tool_choice` 的 400、且本次请求强制了工具时重发；其余 400、超时、连接失败不重发；同一次调用最多重发一次。
 - 强制交卷时先关闭思考并保持强制同一个工具；若关思考后仍是这句 400，再只保留结构化交卷工具并把选择权交回模型（`auto`），请求不再携带设备工具。强制设备工具的轮次只关思考、不改工具名；禁止调用工具的轮次只关思考、继续禁止。
-- 失败收口仍要把本次运行已经发生的模型调用写入逐次账，并按执行 ID 回写任务的 token 与费用列；abort 回调需要把用量快照一并交给任务执行方，不再只交报告路径。
+- SOP 失败收口仍要把本次运行已经发生的模型调用写入逐次账，并按执行 ID 回写任务的 token 与费用列；abort 回调需要把用量快照一并交给任务执行方，不再只交报告路径。`goal` / `team` 编排的用量口径不在本次范围。
 - 交卷轮被思考模式拒绝且重发后仍然失败时，任务失败原因写明「交卷轮被思考模式拒绝（400）」，步骤名与 `actual` 同步改写，不再笼统写「模型拒绝（400）」。
 
 ## 关联文档
@@ -31,4 +31,6 @@
 - 后端：`backend/apps/task_list/task_runner.py`（失败收口写用量与费用、失败文案识别）、`backend/apps/task_list/api.py`（步骤快照名称可覆写）。
 - 数据：`task_tasks` 的 `input_tokens` / `output_tokens` / `cache_input_tokens` / `cost_*` 在失败任务上不再恒为 0；`ai_usage_records` 新增失败运行的调用行。无迁移。
 - 接口：`/api/tasks/{id}/` 响应形状不变，仅 `result` 内的文案与用量取值变化。
+- 前端：任务详情页已于 2026-11-26 退役（`5ddebe95`），本变更不改前端；验收看 `Task.result`、`/api/reports/` 台账与 BUG 单。
+- 文档：`.agents/docs/apps/task_list/task_list_task_lifecycle.md`（失败收口用量口径）、`.agents/docs/engines/backend_bridge/backend_bridge_role_assembly.md`（abort 回调带用量）、`.agents/docs/engines/ae_harness_agents/ae_harness_agents_agent_creation.md`（两条通道共用重发规则）。
 - 测试：扩展 `tests/task/integration/test_task_failure_report.py`；不新增 `tests/**/unit/`（按 `tests/AGENTS.md` 口径），引擎侧重发行为用 `temps/` 脚本实测后丢弃。

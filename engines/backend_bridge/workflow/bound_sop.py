@@ -179,12 +179,13 @@ class _SopCapture:
         AlignedReportRenderer().save(self._aligned.document, record.html_path)
         return aligned_path
 
-    def abort(self, exc: Exception) -> Path | None:
+    def abort(self, exc: Exception) -> tuple[Path | None, dict]:
         recorder = self._recorder
         if recorder is None or self._aligned is None or self._raw is None:
-            return None
+            return None, {}
         reason = str(exc).strip() or type(exc).__name__
         cost_s = round(time.perf_counter() - self._started, 2)
+        snapshot: dict = {}
         try:
             record = recorder.finish(cost_s)
             summary = summarize(record.usages).as_dict()
@@ -193,6 +194,13 @@ class _SopCapture:
                 "output": summary.get("output", 0),
                 "cache_hit": summary.get("cache_hit", 0),
                 "cache_creation": summary.get("cache_creation", 0),
+            }
+            usages = [item.as_dict() for item in record.usages]
+            snapshot = {
+                "model": str(self._run.get("model") or ""),
+                "tokens": tokens,
+                "usages": usages,
+                "cost_s": record.cost_s,
             }
             self._aligned.set_steps([])
             paths = {
@@ -217,7 +225,7 @@ class _SopCapture:
                     "final_text": record.final_text,
                     "phase": "aborted",
                     "tokens": tokens,
-                    "usages": [item.as_dict() for item in record.usages],
+                    "usages": usages,
                     "steps_total": 0,
                     "steps_passed": 0,
                     "aborted": True,
@@ -229,8 +237,8 @@ class _SopCapture:
             AlignedReportRenderer().save(self._aligned.document, record.html_path)
         except Exception:
             agent_event_log.exception("SOP 中断报告生成失败")
-            return None
-        return record.html_path
+            return None, snapshot
+        return record.html_path, snapshot
 
 
 async def run_bound_sop(
@@ -242,7 +250,7 @@ async def run_bound_sop(
     report_root: Path | None = None,
     controls: list | None = None,
     task_id: int = 0,
-    on_abort: Callable[[Path | None, Exception], None] | None = None,
+    on_abort: Callable[[Path | None, Exception, dict], None] | None = None,
 ) -> SopRunResult:
     clean = require_online(serial)
     _with_serial(spec, clean)
@@ -287,10 +295,10 @@ async def run_bound_sop(
     except (RunCancelled, BudgetExceeded):
         raise
     except Exception as exc:
-        report_path = capture.abort(exc)
+        report_path, usage = capture.abort(exc)
         if on_abort is not None:
             try:
-                on_abort(report_path, exc)
+                on_abort(report_path, exc, usage)
             except Exception:
                 agent_event_log.exception("SOP 失败回调执行失败")
         raise

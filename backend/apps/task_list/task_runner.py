@@ -44,6 +44,12 @@ def _failure_kind(exc: Exception) -> str:
     return "platform"
 
 
+def _structured_tool_rejected(exc: Exception) -> bool:
+    from engines.ae_harness.agents.models import is_thinking_tool_choice_rejection
+
+    return is_thinking_tool_choice_rejection(exc)
+
+
 def _failure_payload(
     exc: Exception,
     failed_steps: list | None = None,
@@ -53,7 +59,11 @@ def _failure_payload(
         return {"status": "interrupted", "cause": "budget", "reason": "运行超出预算"}
     kind = _failure_kind(exc)
     code = getattr(exc, "status_code", None)
-    if kind == "provider" and code:
+    step_name = ""
+    if kind == "provider" and code == 400 and _structured_tool_rejected(exc):
+        reason = f"交卷轮被思考模式拒绝（{code}）"
+        step_name = "交卷轮被拒绝"
+    elif kind == "provider" and code:
         reason = f"模型拒绝（{code}）"
     elif kind == "provider":
         reason = "模型网关不可用"
@@ -63,7 +73,7 @@ def _failure_payload(
         reason = str(exc).strip() or f"平台执行错误（{type(exc).__name__}）"
     payload = {"status": "fail", "failure_kind": kind, "reason": reason, "summary": reason}
     payload["failed_steps"] = (
-        list(failed_steps) if failed_steps else [api.category_step(kind, reason)]
+        list(failed_steps) if failed_steps else [api.category_step(kind, reason, name=step_name)]
     )
     payload["failed"] = [item["name"] for item in payload["failed_steps"]]
     payload.update(_report_locator(report_path))
@@ -80,14 +90,14 @@ def _usage_totals(tokens: dict) -> dict:
     }
 
 
-def _record_task_usages(outcome, task_id: int) -> None:
+def _record_task_usages(usages: list, task_id: int, model: str = "") -> None:
     from backend.apps.usage_ledger.api import record_run_usages
 
     try:
         record_run_usages(
-            outcome.usages,
+            usages,
             execution_id=str(task_id),
-            model=str(getattr(outcome, "model", "") or ""),
+            model=model,
             source="task",
         )
     except Exception:
@@ -231,8 +241,9 @@ async def _run_assistant_sop(
     finally:
         path.unlink(missing_ok=True)
 
-    def _remember(report_path, _exc):
+    def _remember(report_path, _exc, usage):
         failure["report_path"] = report_path
+        failure["usage"] = usage
 
     outcome = await run_bound_sop(
         spec,
@@ -444,7 +455,7 @@ def run_task_async(task_id: int, agent_id: int) -> None:
             payload["failed_steps"] = step_rows
         if kind:
             payload["failure_kind"] = kind
-        _record_task_usages(outcome, task_id)
+        _record_task_usages(outcome.usages, task_id, outcome.model)
         costs, notes = api.summarize_ledger_cost(task_id)
         if notes:
             payload["unpriced"] = notes
@@ -473,6 +484,11 @@ def run_task_async(task_id: int, agent_id: int) -> None:
             locals().get("step_rows") or None,
             failure.get("report_path"),
         )
+        usage = failure.get("usage") or {}
+        _record_task_usages(usage.get("usages") or [], task_id, str(usage.get("model") or ""))
+        costs, notes = api.summarize_ledger_cost(task_id)
+        if notes:
+            body["unpriced"] = notes
         if task.status == TaskStatus.PENDING:
             task.status = _failure_status(exc)
             task.result = api.dump_task_run_payload(body)
@@ -484,6 +500,8 @@ def run_task_async(task_id: int, agent_id: int) -> None:
                 task_id,
                 status=_failure_status(exc),
                 result=api.dump_task_run_payload(body),
+                usage=_usage_totals(usage.get("tokens") or {}),
+                costs=costs,
                 release_device=False,
             )
         except Exception:

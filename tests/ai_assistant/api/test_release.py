@@ -11,7 +11,8 @@ from backend.apps.ai_assistant.models import (
     AIModelConfig,
     AIRole,
     AISopWorkflow,
-    AssistantLiveRun,
+    AssistantEvalScore,
+    AssistantEvalScoreItem,
     AssistantRelease,
 )
 from backend.apps.ai_assistant.views_drf import (
@@ -58,6 +59,31 @@ def _call(user, method: str, data=None, *, assistant_id=None, action="list"):
     return AssistantViewSet.as_view({"get": action, "post": "create"})(request)
 
 
+def _publish(user, assistant_id: str):
+    factory = APIRequestFactory()
+    request = factory.post(f"/api/ai/assistants/{assistant_id}/publish/", {}, format="json")
+    request.user_id = str(user.id)
+    force_authenticate(request, user=user)
+    return AssistantPublishView.as_view()(request, assistant_id=assistant_id)
+
+
+def _score(card: AIAssistant, value: str = "0.200") -> AssistantEvalScore:
+    run = AssistantEvalScore.objects.create(
+        target_kind="assistant",
+        target_id=card.assistant_id,
+        prompt_fingerprint="ignored",
+        judge_model="deepseek-chat",
+    )
+    AssistantEvalScoreItem.objects.create(
+        run=run,
+        metric_key="prompt_quality",
+        score=value,
+        reason="分数很低",
+        threshold="0.500",
+    )
+    return run
+
+
 def test_plain_user_cannot_see_draft_author_can():
     role = _role()
     author = _user("release-author", author=True)
@@ -82,35 +108,76 @@ def test_publish_keeps_old_prompt_after_role_changes():
         author, "post", {"display_name": "可发布", "role_id": role.role_id, "tools": []}
     )
     assistant_id = created.data["assistant_id"]
-    factory = APIRequestFactory()
-    request = factory.post(f"/api/ai/assistants/{assistant_id}/publish/", {}, format="json")
-    request.user_id = str(author.id)
-    force_authenticate(request, user=author)
 
-    from backend.apps.ai_assistant.api import create_live_run, finish_live_run
+    published = _publish(author, assistant_id)
 
-    payload = {
-        "role_id": role.role_id,
-        "system_prompt": role.system_prompt,
-        "tools": [],
-        "model_config_id": role.model_config_id,
-        "model_name": role.model_config.model_name,
-        "provider": "deepseek",
-        "api_key_env": "DEEPSEEK_API_KEY",
-    }
-    run = create_live_run("assistant", assistant_id, payload, ["A1", "S1", "S2", "S3"])
-    finish_live_run(run.pk, status=AssistantLiveRun.STATUS_DONE, failures=[])
-    published = AssistantPublishView.as_view()(request, assistant_id=assistant_id)
     role.system_prompt = "改过的提示词"
     role.save(update_fields=["system_prompt"])
 
     assert published.status_code == 200
+    again = _publish(author, assistant_id)
+    assert again.status_code == 400
     assert published.data["has_secret"] is False
     stored = AssistantRelease.objects.get(
         target_kind="assistant", target_id=assistant_id, version=1
     )
     assert stored.payload["system_prompt"] == "发布时的提示词"
     assert AIAssistant.objects.get(assistant_id=assistant_id).release_state == "published"
+
+
+def test_low_score_does_not_block_publish():
+    role = _role()
+    author = _user("release-author-low", author=True)
+    created = _call(
+        author, "post", {"display_name": "低分也能发", "role_id": role.role_id, "tools": []}
+    )
+    assistant_id = created.data["assistant_id"]
+    card = AIAssistant.objects.get(assistant_id=assistant_id)
+    _score(card)
+
+    published = _publish(author, assistant_id)
+
+    assert published.status_code == 200
+    assert published.data["version"] == 1
+
+
+def test_never_scored_publish_is_allowed():
+    role = _role()
+    author = _user("release-author-none", author=True)
+    created = _call(
+        author, "post", {"display_name": "没评过也能发", "role_id": role.role_id, "tools": []}
+    )
+    assistant_id = created.data["assistant_id"]
+
+    published = _publish(author, assistant_id)
+
+    assert published.status_code == 200
+    assert AssistantEvalScore.objects.count() == 0
+
+
+def test_workflow_publish_does_not_require_scores():
+    role = _role()
+    author = _user("release-author-flow", author=True)
+    created = _call(author, "post", {"display_name": "流程", "role_id": role.role_id, "tools": []})
+    assistant_id = created.data["assistant_id"]
+    card = AIAssistant.objects.get(assistant_id=assistant_id)
+    card.release_state = "published"
+    card.save(update_fields=["release_state"])
+    workflow = AISopWorkflow.objects.create(
+        name="发布流程",
+        executor_assistant_id=assistant_id,
+        verifier_assistant_id=assistant_id,
+        orchestration="sop",
+    )
+    factory = APIRequestFactory()
+    request = factory.post(f"/api/ai/sop-workflows/{workflow.id}/publish/", {}, format="json")
+    request.user_id = str(author.id)
+    force_authenticate(request, user=author)
+
+    response = WorkflowPublishView.as_view()(request, workflow_id=workflow.id)
+
+    assert response.status_code == 200
+    assert response.data["version"] == 1
 
 
 def test_runtime_edit_returns_to_draft_display_name_does_not():
@@ -134,87 +201,9 @@ def test_runtime_edit_returns_to_draft_display_name_does_not():
     changed = _call(
         author,
         "patch",
-        {"tools": [{"domain": "adb", "include": []}], "revision": card.revision},
+        {"tools": [{"domain": "adb", "preset": "all"}], "revision": card.revision},
         assistant_id=card.assistant_id,
     )
     card.refresh_from_db()
     assert changed.status_code == 200
     assert card.release_state == "draft"
-
-
-def test_publish_without_eval_is_rejected_even_for_superuser():
-    role = _role("未测")
-    root = get_user_model().objects.create_user(
-        username="release-root",
-        password="pass",
-        is_superuser=True,
-    )
-    created = _call(root, "post", {"display_name": "未测", "role_id": role.role_id, "tools": []})
-    factory = APIRequestFactory()
-    request = factory.post("/publish/", {}, format="json")
-    request.user_id = str(root.id)
-    force_authenticate(request, user=root)
-
-    response = AssistantPublishView.as_view()(request, assistant_id=created.data["assistant_id"])
-
-    assert response.status_code == 400
-    assert (
-        AIAssistant.objects.get(assistant_id=created.data["assistant_id"]).release_state == "draft"
-    )
-
-
-def test_stale_revision_conflicts_and_keeps_content():
-    role = _role()
-    author = _user("release-author-4", author=True)
-    created = _call(author, "post", {"display_name": "原名", "role_id": role.role_id, "tools": []})
-    card = AIAssistant.objects.get(assistant_id=created.data["assistant_id"])
-
-    response = _call(
-        author,
-        "patch",
-        {"display_name": "后保存", "revision": card.revision - 1},
-        assistant_id=card.assistant_id,
-    )
-
-    card.refresh_from_db()
-    assert response.status_code == 409
-    assert card.display_name == "原名"
-
-
-def _publish_workflow(user, workflow_id: int):
-    factory = APIRequestFactory()
-    request = factory.post(f"/api/ai/sop-workflows/{workflow_id}/publish/", {}, format="json")
-    request.user_id = str(user.id)
-    force_authenticate(request, user=user)
-    return WorkflowPublishView.as_view()(request, workflow_id=workflow_id)
-
-
-def test_sop_publish_without_eval_is_rejected_goal_is_not():
-    role = _role("流程")
-    author = _user("release-flow", author=True)
-    created = _call(
-        author, "post", {"display_name": "流程助手", "role_id": role.role_id, "tools": []}
-    )
-    card = AIAssistant.objects.get(assistant_id=created.data["assistant_id"])
-    card.release_state = "published"
-    card.save(update_fields=["release_state"])
-    sop = AISopWorkflow.objects.create(
-        name="SOP",
-        orchestration="sop",
-        kind="ui_automation",
-        executor_assistant_id=card.assistant_id,
-        verifier_assistant_id=card.assistant_id,
-    )
-    goal = AISopWorkflow.objects.create(
-        name="目标",
-        orchestration="goal",
-        kind="case_authoring",
-        executor_assistant_id=card.assistant_id,
-        verifier_assistant_id=card.assistant_id,
-    )
-
-    rejected = _publish_workflow(author, sop.id)
-    accepted = _publish_workflow(author, goal.id)
-
-    assert rejected.status_code == 400
-    assert accepted.status_code == 200

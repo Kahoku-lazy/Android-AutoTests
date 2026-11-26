@@ -437,9 +437,38 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
-  /api/ai/evals/run/:
+  /api/ai/eval-candidates/:
+    get:
+      operationId: ai_eval_candidates_retrieve
+      tags:
+      - ai
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/ai/eval-cases/:
+    get:
+      operationId: ai_eval_cases_retrieve
+      tags:
+      - ai
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
     post:
-      operationId: ai_evals_run_create
+      operationId: ai_eval_cases_create
       tags:
       - ai
       requestBody:
@@ -466,9 +495,74 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
-  /api/ai/evals/runs/{run_id}/:
+  /api/ai/eval-cases/{case_id}/:
+    patch:
+      operationId: ai_eval_cases_partial_update
+      parameters:
+      - in: path
+        name: case_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ai
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    delete:
+      operationId: ai_eval_cases_destroy
+      parameters:
+      - in: path
+        name: case_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - ai
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/ai/eval-methods/:
     get:
-      operationId: ai_evals_runs_retrieve
+      operationId: ai_eval_methods_retrieve
+      tags:
+      - ai
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/ai/eval-reports/{run_id}/:
+    get:
+      operationId: ai_eval_reports_retrieve
       parameters:
       - in: path
         name: run_id
@@ -477,6 +571,135 @@ paths:
         required: true
       tags:
       - ai
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/ai/eval-runs/:
+    get:
+      operationId: ai_eval_runs_retrieve
+      tags:
+      - ai
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    post:
+      operationId: ai_eval_runs_create
+      tags:
+      - ai
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/ai/eval-scores/:
+    get:
+      operationId: ai_eval_scores_retrieve
+      tags:
+      - ai
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    post:
+      operationId: ai_eval_scores_create
+      tags:
+      - ai
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/ai/eval-suite-scores/:
+    get:
+      operationId: ai_eval_suite_scores_retrieve
+      tags:
+      - ai
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+    post:
+      operationId: ai_eval_suite_scores_create
+      tags:
+      - ai
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
       security:
       - jwtAuth: []
       responses:

@@ -31,7 +31,7 @@
 3. **零外部依赖**：不启前后端、不需凭据、不联网，因此必须留在默认套件内。
 4. **按"调用形态"扫描，不按行**：调用与路径字面量分处两行时也必须被扫到。
    按行匹配的版本漏过过真实违规 —— `tests/api/conftest.py` 的登录路径、
-   以及 `frontend/src/modules/ai-assistant/api/toolbox.ts` 的两处调用。
+   以及 `frontend/src/modules/ai-assistant/api/agents.ts` 的 `saveAgent`（路径先赋给 `url` 再传参）。
 5. **例外必须显式**：路径断言中的例外以 `(文件, 字面量, 理由)` 三元组登记在测试内
    （前端自身路由不入断言；`test_api_path_convention.py` 的负向用例另行登记）。
    新增例外必须改测试、进 diff、被 review，不允许静默跳过。
@@ -43,5 +43,5 @@
 **三个面全部参与 resolve 断言**。原第四个面「端点资产目录」（`tools/seed_api_endpoints.py`）
 已随元素定位的 Web/API 两域整体下线而退役（变更 remove-element-locator-web-api）。
 
-之所以放在 Python 侧读源码：前端没有测试运行器（`frontend/src` 下无 spec/test 文件），
-而"这条路径在后端能不能解析"只有后端能回答。
+之所以放在 Python 侧读源码：前端有独立的测试 runner（`frontend/package.json` 的 `vitest run` + `frontend/tests/**/*.spec.ts`），
+但 `frontend/src` 下不放 spec；而"这条路径在后端能不能解析"只有后端能回答。

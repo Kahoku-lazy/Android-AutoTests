@@ -165,12 +165,13 @@ Cors → Security → GZip → Session → Common → JWTAuthenticationMiddlewar
 | 路径 | 职责 | 详细约束 |
 |------|------|----------|
 | `engines/AGENTS.md` | engines 必读入口、红线、何时读 rules/跑检查 | 本文不重复全文 |
-| `engines/agents/` | Agent 运行时与 Harness | `engines/agents/AGENTS.md` |
-| `engines/agents/rag/` | 本地知识检索 | `engines/agents/rag/AGENTS.md` |
-| `engines/agents/realtime_vocie/` | 实时语音引擎（目录名为历史拼写） | `engines/agents/realtime_vocie/AGENTS.md` |
-| `engines/device/` | 设备引擎，`action` 对外 | 尚无独立 AGENTS；遵守上层红线 |
-| `engines/uart_log/` | 串口采集 | 同上 |
-| `engines/vision/` | OCR | 同上 |
+| `engines/ae_harness/` | Agent 原语层：`create_agent`、工具、事件与报告、中间件、SOP 抽象 | `.agents/docs/engines/ae_harness/ae_harness_overview.md` |
+| `engines/backend_bridge/` | 平台侧角色唯一落点：装配、事件落库、取消、报告与用量 | `.agents/docs/engines/backend_bridge/backend_bridge_role_assembly.md` |
+| `engines/eval/` | 评测原语层：deepeval 封装与看板 | `.agents/docs/engines/eval/eval_deepeval_wrapper.md` |
+| `engines/device/` | 设备引擎，`action` 对外 | `.agents/docs/engines/device/device_control_engine.md` |
+| `engines/uart_log/` | 串口采集 | `.agents/docs/engines/uart_log/uart_log_serial_capture.md` |
+| `engines/vision/` | OCR | `.agents/docs/engines/vision/vision_ocr_engine.md` |
+| `engines/agents/`（2026-11-17 退役） | 原 Agent 运行时与 Harness，已拆分到 `ae_harness` + `backend_bridge`；目录不得重建 | `openspec/changes/archive/2026-11-17-retire-engines-agents` |
 
 风格正文：`.agents/rules/engines-code-style.md`。机械化检查：`.agents/skills/engines-agents-style-check/`。
 

@@ -15,7 +15,7 @@
 - [x] 2.3 **收尾已完成**：① 代码侧 `ops_console/views.py` 端点清单 docstring 补齐 5 条（model-grants / grant-author / revoke-author / grant-operator / revoke-operator，共 11 条）、`ops_console/api.py` `__all__` 补 `set_model_use` / `set_assistant_author`；② 文档侧 `.agents/docs/apps/bug_manager/bug_manager_bug_ticket_ledger.md` 依赖方向补 `TaskEvent` 只读（`extract.py:324-327` 读 `StepInterruptedEvent`）。验证：`pytest tests/ops_console tests/bug_ticket -q` → **85 passed**；`ruff check` + `ruff format --check` 通过
 - [x] 2.4 `accounts/apps.py` docstring 改「本应用自有表只有 `acc_token_revocations`（`models.TokenRevocation`，登出吊销记录，落库不依赖 Redis）」；`apps/__init__.py` docstring 改为 12 个业务 app 清单 + 指向 `.agents/docs/apps/` 索引。验证：与 `settings.INSTALLED_APPS` 的 12 条本地模块逐条对照一致；`ruff check` + `ruff format --check` 通过
 - [x] 2.5 新建 `.agents/docs/apps/knowledge_search/knowledge_search_retrieval.md`（四张表 / 七个端点 / 评测批次状态机 / 检索实现 / **View 编排待偿债权 R-4 如实登记**），并从索引「暂无模块文档的目录」中移除 knowledge_search 行、加入「模块 → 文档」表。验证：索引 12 行逐条可解析；无文档目录收敛为 case_manager / dashboard / device_pool 三个
-- [ ] 2.6 A 组关单：`python run.py check` 退出码 0（含 __all__ 改动）；**提交范围必须含 `.agents/docs/**`（48 个新文件）与 `.gitignore` 的 `/docs/` 锚定**——漏了它们，主干上的索引链接全是死链；逐文件暂存 docs(backend) 提交，推特性分支提 PR，CI 两 job 全绿后合并。验证：`git show --stat` 含 `.agents/docs/` 与 `.gitignore`；干净 clone 上索引链接可解析。
+- [x] 2.6 A 组关单（2026-11-26 核验：`.agents/docs` 已跟踪 53 个文件、`.gitignore:114` 有 `/docs/` 锚定、`run check` 阻塞项 30/30 通过）：`python run.py check` 退出码 0（含 __all__ 改动）；**提交范围必须含 `.agents/docs/**`（48 个新文件）与 `.gitignore` 的 `/docs/` 锚定**——漏了它们，主干上的索引链接全是死链；逐文件暂存 docs(backend) 提交，推特性分支提 PR，CI 两 job 全绿后合并。验证：`git show --stat` 含 `.agents/docs/` 与 `.gitignore`；干净 clone 上索引链接可解析。
   **2026-11-23 实测（未通过，非本变更引入）**：`run.py check` 19/28，9 项阻塞失败——`ruff-format` / `ruff-lint` / `openapi-schema` / `openapi-coverage` / `vitest` / `vite-build` / `prettier` / `ruff-engines-format` / `vue-tsc`，均落在并行在途改动（如 `engines/ae_harness/knowledge/models.py` 格式、`frontend/tests/**`）上；本变更触及的 5 个 py 文件 `ruff check` + `ruff format --check` 全绿。待那些变更落地后重跑本项
 
 ## 3. B 组：device_pool AGENTS（待变更④合并后）
@@ -25,7 +25,7 @@
 
 ## 4. 规格收口
 
-- [ ] 4.1 knowledge-assistant-voice REMOVED delta 随本变更 archive 正常收口。验证：`openspec validate "align-backend-docs-with-code"` 通过；archive 后 openspec/specs/knowledge-assistant-voice 不再存在
+- [x] 4.1 knowledge-assistant-voice REMOVED delta 随本变更 archive 正常收口（2026-11-26 已 archive：CLI 要求先在本变更 .openspec.yaml 加 etire_capabilities: true，加后归档成功，openspec/specs/knowledge-assistant-voice/ 已删除）。验证：`openspec validate "align-backend-docs-with-code"` 通过；archive 后 openspec/specs/knowledge-assistant-voice 不再存在
 
 ## 5. 模块文档外置（2026-11-23 需求方追加，已执行）
 

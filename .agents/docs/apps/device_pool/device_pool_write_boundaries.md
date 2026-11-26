@@ -28,19 +28,20 @@
 | POST | `<serial>/lock/` | 加锁占用 |
 | POST | `<serial>/release/` | 释放占用 |
 
-## 写库边界：现状 vs 目标
+## 写库边界：已收敛到 api.py
 
-**⚠️ 现状（2026-11-23，对本仓库代码实测）**：写库**尚未**收敛到 `api.py`。
-`api.py` 目前只有读与占用相关的 7 个函数（`get_online_devices` / `list_devices` / `ensure_device` /
-`acquire_device` / `release_device` / `release_device_locks_for_device` / `use_device`），
-而真正的 ORM 写点在 `manager.py`（20 处 `.save()` / `.delete()` / `objects.create|update`），
-View 经 `manager` 的 `registry` / `state_machine` / `detector` / `serializer` 触达写库。
+**现状（2026-11-26，`converge-device-pool-writes-to-api` 落地后实测）**：写库已收敛到 `api.py`。
+`api.py` 按端点语义提供写原语：`activate_device` / `scan_and_register` / `register_connected_device` /
+`scan_all_devices` / `connect_device` / `disconnect_device` / `release_observe` / `set_device_lock` /
+`release_occupy` / `heartbeat_sync`，另有两个读原语 `list_devices` / `list_connectable_serials` 与
+`sync_device_status` / `get_online_devices`。
 
-**目标态**（`openspec/changes/converge-device-pool-writes-to-api`，**尚未合并**）：
-写库层收敛到 `api.py`，`manager` / `registry` / `state_machine` 降为**内部实现**，View 一律经 `api.py`。
+`manager.py` 的 `registry` / `state_machine` / `detector` / `serializer` 降为**内部实现**，只被 `api.py` 使用；
+`views.py` 只 import `api` / `contracts` / `models` / `pool`，由
+`tests/arch/unit/test_device_pool_view_boundary.py` 做 AST 断言防回潮。`DeviceError` 已从 `manager.py` 移到
+`contracts.py`（`manager` 仍 re-export），使 View 不必 import `manager`。
 
-> 本文件写在收敛**之前**，因此上面「现状」一列会随该变更合并而过期。
-> 合并后请按目标态重写本节，并删掉现状说明——不要两份并存。
+> 历史：本节原登记「写库尚未收敛、`api.py` 只有 7 个读/占用函数、真写在 `manager.py` 20 处」；那部分已随本变更过期并删除。
 
 ## 当前激活指针语义
 

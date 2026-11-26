@@ -4,7 +4,7 @@ from django.db import transaction
 from django.http import HttpResponse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
-from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -54,11 +54,23 @@ def _current_release_version(workflow_id: int) -> int | None:
     )
 
 
+def _store_attachment(filename: str, content: bytes) -> str:
+    from backend.apps.task_list.attachments import store_flat_upload
+    from utils.logs import backend_log
+
+    try:
+        return store_flat_upload(filename, content)
+    except OSError as exc:
+        backend_log.exception("任务附件写入失败: %s", filename)
+        raise APIException(
+            f"任务配置文件写入失败：{exc.strerror or exc}，请检查运行账号对该目录的写权限"
+        ) from exc
+
+
 def _submit_material_workflow(request, workflow, title: str, user_id):
     from backend.apps.task_list.attachments import (
         AttachmentError,
         parse_document_bytes,
-        store_flat_upload,
     )
 
     uploaded = request.FILES.get("material")
@@ -89,7 +101,7 @@ def _submit_material_workflow(request, workflow, title: str, user_id):
             filename=filename,
             body=markdown,
             sort_order=0,
-            stored_path=store_flat_upload(filename, markdown.encode("utf-8")),
+            stored_path=_store_attachment(filename, markdown.encode("utf-8")),
         )
     api.dispatch_case_authoring(task)
     task.refresh_from_db()
@@ -103,7 +115,6 @@ def _submit_assistant_sop(
     from backend.apps.task_list.attachments import (
         AttachmentError,
         collect_milestone_file,
-        store_flat_upload,
     )
 
     raw_id = str(request.data.get("workflow_id") or "").strip()
@@ -149,7 +160,7 @@ def _submit_assistant_sop(
             filename=prepared.filename,
             body=prepared.body,
             sort_order=0,
-            stored_path=store_flat_upload(prepared.filename, prepared.content),
+            stored_path=_store_attachment(prepared.filename, prepared.content),
         )
     api.dispatch_device(device_serial)
     task.refresh_from_db()

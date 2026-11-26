@@ -43,9 +43,9 @@
 
 ## 5. 后续（另开变更，不在本单）
 
-- [ ] 5.1 preview 场景参数化：一条命令完成 `vite build → vite preview → 探针 → 关服`。
-- [ ] 5.2 体积门禁：把 `dist/assets` 的 gzip 上限并入 `utils/check_gates.py`。
-- [ ] 5.3 按本单暴露的体积来源做优化：echarts 全量导入（1.04 MB）、`element-plus/dist/index.css`（397 KB）。
+- [ ] 5.1 **转出本单**（按本节口径另开变更，未开）。原任务：preview 场景参数化：一条命令完成 `vite build → vite preview → 探针 → 关服`。
+- [ ] 5.2 **已由 dd-bundle-size-budget 交付并归档**（2026-11-26 核对：utils/check_gates.py 已含 dist/assets gzip 上限）。原任务：体积门禁：把 `dist/assets` 的 gzip 上限并入 `utils/check_gates.py`。
+- [ ] 5.3 **已由 dd-frontend-bundle-trim + dd-bundle-size-budget 交付并归档**（2026-11-26 核对：echarts 已按需注册、Element Plus 按路由拆分）。原任务：按本单暴露的体积来源做优化：echarts 全量导入（1.04 MB）、`element-plus/dist/index.css`（397 KB）。
   （原第三条「Google Fonts 远端样式」已由 `2026-11-25-switch-ui-font-to-harmonyos-sans` 移除，改为本地同源字体。）
 
 ## 6. 预算重标定（2026-11-26，字体变更后）

@@ -1,11 +1,15 @@
 from dataclasses import dataclass
 from datetime import datetime
 
+from rest_framework.exceptions import APIException
+
 from backend.models.constants import ConnectionType, DeviceStatus, LockReleaseReason, LockStatus
+from utils.logs import backend_log
 
 __all__ = [
     "RUNNER_OCCUPIED_PREFIXES",
     "ConnectionType",
+    "DeviceError",
     "DeviceInfo",
     "DeviceStatus",
     "LockReleaseReason",
@@ -13,6 +17,13 @@ __all__ = [
 ]
 
 RUNNER_OCCUPIED_PREFIXES = ("ai_agent", "runner-", "task-", "run-")
+
+
+class DeviceError(APIException):
+    def __init__(self, message: str, status_code: int = 400):
+        super().__init__(message)
+        self.log = backend_log
+        self.status_code = status_code
 
 
 @dataclass

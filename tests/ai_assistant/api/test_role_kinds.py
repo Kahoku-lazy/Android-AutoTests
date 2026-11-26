@@ -5,7 +5,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIRequestFactory, force_authenticate
 
-from backend.apps.ai_assistant.models import AIModelConfig, AIRole, AIRoleKind
+from backend.apps.ai_assistant.models import AIModelConfig, AIRole, AIRoleKind, ModelUseGrant
 from backend.apps.ai_assistant.views_drf import RoleViewSet
 
 pytestmark = [pytest.mark.django_db, pytest.mark.api]
@@ -18,14 +18,16 @@ def operator(db):
     )
 
 
-def _config():
-    return AIModelConfig.objects.create(
+def _config(user):
+    config = AIModelConfig.objects.create(
         provider="deepseek",
         api_key_env="DEEPSEEK_API_KEY",
         api_protocol="deepseek",
         model_name="deepseek-flash",
         base_url="https://api.deepseek.com",
     )
+    ModelUseGrant.objects.create(user_id=int(user.id), model_config=config)
+    return config
 
 
 def _request(user, method, path, payload=None):
@@ -55,7 +57,7 @@ def _delete(user, role_id):
 
 
 def _create(user, name="页面执行", kinds=("executor",), prompt="你是执行者"):
-    config = _config()
+    config = _config(user)
     response = _post(
         user,
         {
@@ -77,7 +79,7 @@ def test_create_persists_single_kind(operator):
 
 @pytest.mark.parametrize("kinds", [None, []])
 def test_create_without_kind_is_400(operator, kinds):
-    config = _config()
+    config = _config(operator)
     payload = {"name": "缺类型", "model_config_id": config.id}
     if kinds is not None:
         payload["kinds"] = kinds
@@ -87,7 +89,7 @@ def test_create_without_kind_is_400(operator, kinds):
 
 
 def test_create_with_two_kinds_is_400(operator):
-    config = _config()
+    config = _config(operator)
     response = _post(
         operator,
         {"name": "两类型", "model_config_id": config.id, "kinds": ["executor", "verifier"]},
@@ -97,7 +99,7 @@ def test_create_with_two_kinds_is_400(operator):
 
 
 def test_create_with_unknown_kind_is_400(operator):
-    config = _config()
+    config = _config(operator)
     response = _post(
         operator, {"name": "错类型", "model_config_id": config.id, "kinds": ["reviewer"]}
     )
@@ -106,7 +108,7 @@ def test_create_with_unknown_kind_is_400(operator):
 
 
 def test_create_with_duplicate_kind_is_400(operator):
-    config = _config()
+    config = _config(operator)
     response = _post(
         operator,
         {"name": "重复类型", "model_config_id": config.id, "kinds": ["executor", "executor"]},
@@ -142,7 +144,7 @@ def test_patch_with_empty_kinds_clears_to_unclassified(operator):
 
 
 def test_list_carries_kinds_and_legacy_empty_array(operator):
-    config = _config()
+    config = _config(operator)
     created = _post(
         operator, {"name": "有类型", "model_config_id": config.id, "kinds": ["verifier"]}
     )

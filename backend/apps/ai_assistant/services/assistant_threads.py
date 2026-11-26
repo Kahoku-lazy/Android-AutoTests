@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import secrets
 
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
@@ -21,6 +22,7 @@ __all__ = [
     "create_thread",
     "delete_thread",
     "get_thread",
+    "is_safe_report_id",
     "list_messages",
     "list_threads",
     "mark_interrupted_running",
@@ -64,12 +66,17 @@ def thread_log_dir(assistant_id: str, thread_id: str):
     return ASSISTANT_LOG_ROOT / assistant_id / thread_id
 
 
-def resolve_thread_report(thread: AIAssistantThread, report_id: str):
-    from pathlib import Path
-
+def is_safe_report_id(report_id: str) -> bool:
+    if not report_id:
+        return False
     stamp = Path(report_id).name
-    if not stamp or stamp in {".", ".."} or stamp != report_id:
+    return bool(stamp) and stamp not in {".", ".."} and stamp == report_id
+
+
+def resolve_thread_report(thread: AIAssistantThread, report_id: str):
+    if not is_safe_report_id(report_id):
         return None
+    stamp = Path(report_id).name
     root = thread_log_dir(thread.assistant_id, thread.thread_id).resolve()
     folder = (root / stamp).resolve()
     if root not in folder.parents:

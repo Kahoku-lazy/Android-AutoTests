@@ -25,12 +25,12 @@ def _thread(status: str) -> AIAssistantThread:
     )
 
 
-def call(thread_id: str, report_id: str = ""):
+def call(thread_id: str, report_id: str = "", ticket: str = ""):
     user = get_user_model().objects.create_user(
-        username=f"log-{thread_id}-{report_id or 'list'}", password="pass"
+        username=f"log-{thread_id}-{report_id or 'list'}-{ticket[:6] or 'none'}", password="pass"
     )
     factory = APIRequestFactory()
-    request = factory.get("/api/ai/assistants/threads/x/logs/")
+    request = factory.get("/api/ai/assistants/threads/x/logs/", {"ticket": ticket})
     request.user_id = str(user.id)
     force_authenticate(request, user=user)
     return AssistantThreadLogView.as_view()(request, thread_id=thread_id, report_id=report_id)
@@ -41,6 +41,21 @@ def test_unknown_report_is_404():
     response = call(thread.thread_id, "../secret")
     assert response.status_code == 404
     assert "logs" not in str(response.data)
+
+
+def test_bad_report_id_keeps_ticket_usable(tmp_path, monkeypatch):
+    from backend.apps.ai_assistant.services import assistant_threads
+    from backend.apps.ai_assistant.services.log_ticket import issue_log_ticket
+
+    thread = _thread(AIAssistantThread.STATUS_DONE)
+    root = tmp_path / thread.assistant_id / thread.thread_id
+    folder = root / "20261116_180000"
+    folder.mkdir(parents=True)
+    (folder / "report.html").write_text("<html></html>", encoding="utf-8")
+    monkeypatch.setattr(assistant_threads, "thread_log_dir", lambda *_: root)
+    ticket = issue_log_ticket(thread.thread_id, "20261116_180000")
+    assert call(thread.thread_id, "../secret", ticket).status_code == 404
+    assert call(thread.thread_id, "20261116_180000", ticket).status_code == 200
 
 
 def test_running_report_is_409():

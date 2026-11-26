@@ -43,7 +43,7 @@ pytest-django>=4.0
 pytest-asyncio==1.4.0
 allure-pytest>=2.16.2
 jsonschema>=4.0
-pytest-playwright>=0.5.0
+pytest-playwright>=0.10.0
 # 与 CI、本地门禁同一版本。升级 ruff 要单独提交，避免规则变化混进功能提交。
 ruff==0.17.3
 # 依赖方向检查由 utils/linting 承担，配置见仓库根 .linting（不再需要 tach / import-linter）。

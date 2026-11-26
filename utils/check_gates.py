@@ -441,6 +441,12 @@ def build_gates() -> list[Gate]:
         cmd_gate("vitest", "前端单元测试（P0/P1）", [NPM, "test"], blocking=True, cwd=FRONTEND),
         cmd_gate("vite-build", "前端构建", [NPX, "vite", "build"], blocking=True, cwd=FRONTEND),
         cmd_gate(
+            "bundle-budget",
+            "前端体积预算（入口 JS/CSS、最大 chunk、JS 总量 gzip）",
+            [py, "utils/check_bundle_budget.py"],
+            blocking=True,
+        ),
+        cmd_gate(
             "prettier",
             "前端格式（prettier，vue/js/css）",
             [NPX, "prettier", "--check", "src/**/*.{vue,js,css}"],

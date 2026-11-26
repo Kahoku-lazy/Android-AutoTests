@@ -1,0 +1,17 @@
+{
+  "measured_at": "2026-11-25",
+  "gzip_level": 9,
+  "note": "baseline = 2026-11-25 preview 构建实测 gzip KB；budget = baseline × 1.1 向上取整",
+  "baseline": {
+    "entry_js_kb": 44.4,
+    "entry_css_kb": 55.4,
+    "largest_chunk_kb": 194.4,
+    "total_js_kb": 570.3
+  },
+  "budget": {
+    "entry_js_kb": 60,
+    "entry_css_kb": 65,
+    "largest_chunk_kb": 215,
+    "total_js_kb": 640
+  }
+}

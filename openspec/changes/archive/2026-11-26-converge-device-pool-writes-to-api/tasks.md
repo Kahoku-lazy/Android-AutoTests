@@ -16,7 +16,7 @@
 
 ## 4. 关单门禁
 
-- [ ] 4.1 门禁部分已绿（2026-11-26：`run check` 阻塞项 30/30；`tests/device` 30 passed + 1 条既有顺序相关失败；`tests/arch/unit` 224 passed + 4 条既有失败；`spectacular --validate` exit 0；boundary 零违规）；**提交与 PR 未做**（工作区尚未建分支提交）。原任务：`python run.py check` 退出码 0；`python utils/gen_arch_stats.py --check-boundaries` 零违规；ruff check/format --check device_pool 通过；逐文件暂存、refactor(device_pool) 提交，推特性分支提 PR，确认 python 与 frontend 两个 CI job 全绿后合并
+- [x] 4.1 门禁部分已绿（2026-11-26：`run check` 阻塞项 30/30；`tests/device` 30 passed + 1 条既有顺序相关失败；`tests/arch/unit` 224 passed + 4 条既有失败；`spectacular --validate` exit 0；boundary 零违规）；**提交与 PR 已做**（PR #103，2026-11-26 合并进 Kahoku）。原任务：`python run.py check` 退出码 0；`python utils/gen_arch_stats.py --check-boundaries` 零违规；ruff check/format --check device_pool 通过；逐文件暂存、refactor(device_pool) 提交，推特性分支提 PR，确认 python 与 frontend 两个 CI job 全绿后合并
 
 ## 5. 落地记录（2026-11-26）
 

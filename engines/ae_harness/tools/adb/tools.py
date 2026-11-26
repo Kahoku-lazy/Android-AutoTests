@@ -20,9 +20,9 @@ Python 调试：➡️ python -m engines.ae_harness.tools.adb.tools 🏁
 9. adb_screen_off: 熄屏。
 10. adb_unlock: 唤醒并解除锁屏。
 11. adb_screenshot: 截屏，返回图片块与元信息。
-12. adb_screenshot_grid: 以粗估点撒网格，一次给出多个候选点供挑选。
+12. adb_screenshot_grid: 以粗估点撒环点阵，一次给出多个候选点。
 13. adb_dump_ui: 导出当前界面控件（文字、描述、边界）。
-14. adb_app_start: 按包名启动应用。
+14. adb_app_start: 按包名启动应用，可等就绪并同返首屏。
 15. adb_app_stop: 按包名强制停止应用。
 16. adb_app_state: 查看应用在前台、后台还是未运行。
 17. build_adb_tools: 产出工具列表，供创建后挂载。
@@ -104,9 +104,9 @@ _KEYCODES = {
 _ALLOW = PermissionDecision(behavior=PermissionBehavior.ALLOW, message="adb 调试工具，允许执行")
 
 # 交给模型前把长边压到这个值以内，减少视觉误差与 token。
-_SEND_LONG_SIDE = 1568
-# 网格图要放得下多个十字与序号，用更高的上限。
-_GRID_LONG_SIDE = 2048
+_SEND_LONG_SIDE = 1024
+# 网格图要放得下多个圆环与行列号，用更高的上限。
+_GRID_LONG_SIDE = 1024
 
 # 从 dumpsys 的前台行里取包名，形如 com.pkg/.MainActivity。
 _PACKAGE_RE = re.compile(r"([A-Za-z][\w.]*)/([\w.$]+)")
@@ -115,6 +115,9 @@ _PACKAGE_RE = re.compile(r"([A-Za-z][\w.]*)/([\w.$]+)")
 def _render(
     data: bytes,
     marks: list[tuple[float, float]] | None = None,
+    *,
+    style: str = "point",
+    grid_size: int = 0,
 ) -> tuple[bytes, tuple[int, int], tuple[int, int]]:
     """
     缩放截图，可选在图上画出待确认的点。
@@ -122,12 +125,14 @@ def _render(
     Args:
         data: 原始 PNG 字节。
         marks: 归一化坐标列表；为空时只缩放不标注。
+        style: 标记形态，point 画空心圆环加序号，ring 画点阵圆环加行列号。
+        grid_size: 每边点数；ring 时用于定位行列号。
 
     Returns:
         (发送用字节, 发送尺寸, 原始尺寸)；缺 Pillow 时原样返回。
 
     Raises:
-        ValueError: 坐标超出 0~1。
+        ValueError: 坐标超出 0~1，或点数超过该形态上限。
     """
     try:
         from io import BytesIO
@@ -141,7 +146,7 @@ def _render(
         image = opened.copy()
 
     original = image.size
-    # 网格点密集，留更高分辨率，十字与序号才分得开。
+    # 网格点密集，留更高分辨率，圆环与标注才分得开。
     limit = _GRID_LONG_SIDE if marks and len(marks) > 1 else _SEND_LONG_SIDE
     if max(original) > limit:
         scale = limit / max(original)
@@ -154,7 +159,7 @@ def _render(
         size = original
 
     if marks:
-        _annotate(image, marks, ImageDraw, ImageFont)
+        _annotate(image, marks, ImageDraw, ImageFont, style=style, grid_size=grid_size)
 
     buffer = BytesIO()
     # 不开 optimize：实测多花约 300ms 只省 7KB，不划算。
@@ -163,36 +168,48 @@ def _render(
 
 
 def _annotate(
-    image: object, marks: list[tuple[float, float]], draw_mod: object, font_mod: object
+    image: object,
+    marks: list[tuple[float, float]],
+    draw_mod: object,
+    font_mod: object,
+    *,
+    style: str = "point",
+    grid_size: int = 0,
 ) -> None:
     """
     在图上标出每个待确认的点。
 
-    单个点用圆圈加序号，便于判断是否落在控件上；
-    多个点（网格）改用细十字加小序号，避免互相遮挡。
+    所有形态都用空心圆环：单点用大环加中心点，多点用小环加序号；
+    style 为 ring 时改用点阵圆环并用行列号标注，目标可从环心透出。
 
     Args:
         image: 已缩放的 PIL 图像。
         marks: 归一化坐标列表。
         draw_mod: PIL.ImageDraw 模块。
         font_mod: PIL.ImageFont 模块。
+        style: 标记形态，point 或 ring。
+        grid_size: 每边点数；ring 时必填，用于摆放行列号。
 
     Raises:
-        ValueError: 坐标超出 0~1，或点数超过 25 个。
+        ValueError: 坐标超出 0~1，或点数超过该形态上限。
     """
-    if len(marks) > 25:
-        raise ValueError("marks 最多 25 个点")
+    limit = 49 if style == "ring" else 25
+    if len(marks) > limit:
+        raise ValueError(f"marks 最多 {limit} 个点")
+    if style == "ring":
+        _annotate_rings(image, marks, draw_mod, font_mod, grid_size=grid_size)
+        return
     width, height = image.size
     draw = draw_mod.Draw(image)
     dense = len(marks) > 1
     unit = min(width, height)
 
     if dense:
-        arm = max(10, round(unit * 0.012))
+        radius = max(7, round(unit * 0.012))
         line_width = 3
         font_size = max(16, round(unit * 0.018))
     else:
-        arm = max(16, round(unit * 0.022))
+        radius = max(16, round(unit * 0.022))
         line_width = 5
         font_size = max(18, round(unit * 0.022))
 
@@ -206,35 +223,100 @@ def _annotate(
             raise ValueError(f"marks 第 {index} 个点超出 0~1：nx={nx}, ny={ny}")
         x = nx * (width - 1)
         y = ny * (height - 1)
-        if dense:
-            # 十字准星：先白后红，深色背景上也看得见。
-            draw.line([x - arm, y, x + arm, y], fill="white", width=line_width + 2)
-            draw.line([x, y - arm, x, y + arm], fill="white", width=line_width + 2)
-            draw.line([x - arm, y, x + arm, y], fill="red", width=line_width)
-            draw.line([x, y - arm, x, y + arm], fill="red", width=line_width)
-            draw.text(
-                (x + arm + 1, y - arm),
-                str(index),
-                fill="red",
-                font=font,
-                stroke_width=2,
-                stroke_fill="white",
-            )
-        else:
-            draw.ellipse(
-                [x - arm, y - arm, x + arm, y + arm],
-                outline="red",
-                width=line_width,
-            )
+        box = [x - radius, y - radius, x + radius, y + radius]
+        draw.ellipse(box, outline="white", width=line_width + 2)
+        draw.ellipse(box, outline="red", width=line_width)
+        if not dense:
             draw.ellipse([x - 3, y - 3, x + 3, y + 3], fill="red")
-            draw.text(
-                (x + arm + 4, y - arm),
-                str(index),
-                fill="red",
-                font=font,
-                stroke_width=2,
-                stroke_fill="white",
-            )
+        draw.text(
+            (x + radius + 2, y - radius),
+            str(index),
+            fill="red",
+            font=font,
+            stroke_width=2,
+            stroke_fill="white",
+        )
+
+
+def _annotate_rings(
+    image: object,
+    marks: list[tuple[float, float]],
+    draw_mod: object,
+    font_mod: object,
+    *,
+    grid_size: int,
+) -> None:
+    width, height = image.size
+    if grid_size < 2 or grid_size * grid_size != len(marks):
+        raise ValueError(f"环点阵需要 size² 个点，收到 size={grid_size}、{len(marks)} 个点")
+    span_x = abs(marks[grid_size - 1][0] - marks[0][0]) * (width - 1)
+    span_y = abs(marks[-1][1] - marks[0][1]) * (height - 1)
+    gap_x = span_x / (grid_size - 1)
+    gap_y = span_y / (grid_size - 1)
+    radius = max(3, min(9, round(min(gap_x, gap_y) * 0.3)))
+    font = _label_font(font_mod, max(8, min(14, round(gap_x))))
+    draw = draw_mod.Draw(image)
+    for nx, ny in marks:
+        if not (0.0 <= nx <= 1.0 and 0.0 <= ny <= 1.0):
+            raise ValueError(f"marks 超出 0~1：nx={nx}, ny={ny}")
+        x = nx * (width - 1)
+        y = ny * (height - 1)
+        box = [x - radius, y - radius, x + radius, y + radius]
+        draw.ellipse(box, outline="white", width=4)
+        draw.ellipse(box, outline="red", width=2)
+    top = marks[0][1] * (height - 1)
+    left = marks[0][0] * (width - 1)
+    label_gap = radius + 14
+    for col in range(grid_size):
+        _label(
+            draw,
+            font,
+            str(col + 1),
+            marks[col][0] * (width - 1),
+            top - label_gap,
+            width,
+            height,
+            center_x=True,
+        )
+    for row in range(grid_size):
+        label = row * grid_size
+        _label(
+            draw,
+            font,
+            str(row + 1),
+            left - label_gap,
+            marks[label][1] * (height - 1),
+            width,
+            height,
+            center_x=False,
+        )
+
+
+def _label(
+    draw: object,
+    font: object,
+    text: str,
+    x: float,
+    y: float,
+    width: int,
+    height: int,
+    *,
+    center_x: bool,
+) -> None:
+    box = draw.textbbox((0, 0), text, font=font)
+    text_w = box[2] - box[0]
+    text_h = box[3] - box[1]
+    left = x - text_w / 2 if center_x else x - text_w
+    left = min(max(1.0, left), width - text_w - 1)
+    top = min(max(1.0, y), height - text_h - 2)
+    draw.text((left, top), text, fill="red", font=font, stroke_width=1, stroke_fill="white")
+
+
+def _label_font(font_mod: object, size: int) -> object:
+    try:
+        return font_mod.load_default(size=size)
+    except TypeError:
+        return font_mod.load_default()
 
 
 def _stamp() -> str:
@@ -554,18 +636,106 @@ def adb_uninstall(package: str, serial: str = "") -> str:
         return _fail(exc)
 
 
-def adb_app_start(package: str, serial: str = "") -> str:
+_READY_TIMEOUT_S = 12.0
+_READY_SETTLE_MS = 1200
+_READY_POLL_S = 0.2
+
+
+def _wait_app_ready(
+    serial: str,
+    package: str,
+    *,
+    timeout_s: float,
+    settle_ms: int,
+) -> dict:
     """
-    按包名启动应用。
+    等应用进入前台并稳定下来。
+
+    判定要同时满足：前台包名等于目标包名；自最后一次前台变化起连续稳定 settle_ms。
+    首次采样就已在目标前台时，稳定窗口从首次采样算起，不额外要求变化。
+
+    Args:
+        serial: 设备序列号。
+        package: 包名。
+        timeout_s: 等待上限秒数。
+        settle_ms: 稳定窗口毫秒数。
+
+    Returns:
+        ready / timed_out / activity / activity_changes / waited_ms / polls 六个字段。
+    """
+    prefix = f"{package}/"
+    begin = time.perf_counter()
+    changes: list[str] = []
+    polls = 0
+    last = ""
+    last_change = begin
+    while True:
+        component = _resumed_component(serial)
+        polls += 1
+        moment = time.perf_counter()
+        if component != last:
+            last = component
+            last_change = moment
+            if component:
+                changes.append(component)
+        stable_ms = (moment - last_change) * 1000
+        waited_ms = round((moment - begin) * 1000)
+        if component.startswith(prefix) and stable_ms >= settle_ms:
+            return {
+                "ready": True,
+                "timed_out": False,
+                "activity": component,
+                "activity_changes": changes,
+                "waited_ms": waited_ms,
+                "polls": polls,
+            }
+        if (moment - begin) >= timeout_s:
+            return {
+                "ready": False,
+                "timed_out": True,
+                "activity": component,
+                "activity_changes": changes,
+                "waited_ms": waited_ms,
+                "polls": polls,
+            }
+        time.sleep(_READY_POLL_S)
+
+
+def adb_app_start(
+    package: str,
+    serial: str = "",
+    wait_ready: bool = True,
+    with_screen: bool = False,
+    timeout_s: float = _READY_TIMEOUT_S,
+    settle_ms: int = _READY_SETTLE_MS,
+) -> ToolChunk | str:
+    """
+    按包名启动应用，默认等到应用就绪再返回。
 
     用 monkey 拉起 LAUNCHER 入口，不需要知道 Activity 名。
+
+    就绪的判据是「前台包名等于目标包名，且前台 Activity 自最后一次变化起稳定 settle_ms」，
+    不是只看包名：实测有启动页的应用会在启动页阶段就已经满足包名匹配。
+
+    wait_ready=False 时拉起即返回，行为与旧版一致。
+
+    with_screen=True 时，就绪后把首屏截图随结果一起返回（JSON 元信息 + 一张图片块），
+    可以省掉紧接着的一次截图调用；图片不落盘，长边压到 1024 以内。
+
+    稳定窗口默认 1200 ms：主 Activity 挂载后列表往往还在转圈，600 ms 会拿到「转圈中」的首屏，
+    模型仍要补一张截图。
 
     Args:
         package: 包名，如 com.govee.home。
         serial: 设备序列号；只连一台时留空。
+        wait_ready: 是否等到应用就绪；关掉即拉起后立刻返回。
+        with_screen: 就绪后是否把首屏截图一起返回。
+        timeout_s: 等待上限秒数，默认 12。
+        settle_ms: 前台 Activity 的稳定窗口毫秒数，默认 1200。
 
     Returns:
-        JSON 文本，成功后带启动结果摘要。
+        成功时：未开 with_screen 为 JSON 文本，开启时为「JSON 元信息 + PNG 图片块」；
+        失败时为 JSON 文本。
     """
     try:
         target = resolve_serial(serial)
@@ -584,7 +754,30 @@ def adb_app_start(package: str, serial: str = "") -> str:
         )
         if "No activities found" in output:
             return _fail(RuntimeError(f"{package} 没有可启动的 LAUNCHER 入口"))
-        return _ok(action="app_start", serial=target, package=package, output=output[-200:])
+        payload: dict = {
+            "action": "app_start",
+            "serial": target,
+            "package": package,
+            "output": output[-200:],
+        }
+        if wait_ready:
+            payload.update(
+                _wait_app_ready(
+                    target,
+                    package,
+                    timeout_s=float(timeout_s),
+                    settle_ms=int(settle_ms),
+                )
+            )
+        if not with_screen:
+            return _ok(**payload)
+        return _screenshot_with_points(
+            None,
+            serial=target,
+            with_timing=False,
+            action="app_start",
+            extra=payload,
+        )
     except AdbError as exc:
         return _fail(exc)
 
@@ -637,9 +830,9 @@ def adb_app_state(package: str, serial: str = "") -> str:
         return _fail(exc)
 
 
-def _front_package(serial: str) -> str:
+def _resumed_component(serial: str) -> str:
     """
-    读当前前台包名。
+    读当前前台组件。
 
     优先用 mResumedActivity，取不到时退回 mCurrentFocus。
 
@@ -647,7 +840,7 @@ def _front_package(serial: str) -> str:
         serial: 设备序列号。
 
     Returns:
-        包名；解析不出来时返回空串。
+        `包名/Activity` 形式的组件串；解析不出来时返回空串。
     """
     text = run_adb(["shell", "dumpsys", "activity", "activities"], serial=serial, timeout=30)
     for keyword in ("mResumedActivity", "mCurrentFocus"):
@@ -655,8 +848,22 @@ def _front_package(serial: str) -> str:
             if keyword in line:
                 match = _PACKAGE_RE.search(line)
                 if match:
-                    return match.group(1)
+                    return f"{match.group(1)}/{match.group(2)}"
     return ""
+
+
+def _front_package(serial: str) -> str:
+    """
+    读当前前台包名。
+
+    Args:
+        serial: 设备序列号。
+
+    Returns:
+        包名；解析不出来时返回空串。
+    """
+    component = _resumed_component(serial)
+    return component.split("/", 1)[0] if component else ""
 
 
 def _is_running(serial: str, package: str) -> bool:
@@ -714,34 +921,62 @@ def adb_unlock(serial: str = "") -> str:
         return _fail(exc)
 
 
-def _grid_points(nx: float, ny: float, size: int, step: float) -> list[tuple[float, float]]:
+def _grid_points(
+    nx: float,
+    ny: float,
+    size: int,
+    step: float,
+    step_y: float = 0.0,
+) -> list[tuple[float, float]]:
     """
     以一点为中心生成方形网格候选点。
 
     Args:
         nx: 中心横坐标归一化值。
         ny: 中心纵坐标归一化值。
-        size: 每边点数，只能是 3 或 5。
-        step: 相邻点间隔（归一化）。
+        size: 每边点数，只能是 3、5 或 7。
+        step: 相邻点横向间隔（归一化）。
+        step_y: 相邻点纵向间隔；0 表示与 step 相同。
 
     Returns:
         按行优先排列的坐标列表，长度 size²。
 
     Raises:
-        ValueError: size 不是 3 或 5，或 step 不为正。
+        ValueError: size 不是 3/5/7，或步长不为正。
     """
-    if size not in (3, 5):
-        raise ValueError(f"size 只能是 3 或 5，收到 {size}")
+    if size not in (3, 5, 7):
+        raise ValueError(f"size 只能是 3、5 或 7，收到 {size}")
     if step <= 0:
         raise ValueError(f"step 必须为正，收到 {step}")
+    gap_y = step_y if step_y > 0 else step
     half = (size - 1) / 2
     points: list[tuple[float, float]] = []
     for row in range(size):
         for col in range(size):
             px = min(1.0, max(0.0, nx + (col - half) * step))
-            py = min(1.0, max(0.0, ny + (row - half) * step))
+            py = min(1.0, max(0.0, ny + (row - half) * gap_y))
             points.append((round(px, 4), round(py, 4)))
     return points
+
+
+def _marker_style(marker: str) -> str:
+    style = (marker or "ring").strip().lower()
+    if style == "cross":
+        return "ring"
+    if style != "ring":
+        raise ValueError(f"marker 只能是 ring（cross 已废弃），收到 {marker}")
+    return style
+
+
+def _grid_records(points: list[tuple[float, float]], grid_size: int) -> list[dict]:
+    records: list[dict] = []
+    for index, (nx, ny) in enumerate(points, start=1):
+        record: dict = {"index": index, "nx": nx, "ny": ny}
+        if grid_size > 0:
+            record["row"] = (index - 1) // grid_size + 1
+            record["col"] = (index - 1) % grid_size + 1
+        records.append(record)
+    return records
 
 
 def _screenshot_with_points(
@@ -751,6 +986,8 @@ def _screenshot_with_points(
     with_timing: bool,
     action: str,
     extra: dict | None = None,
+    style: str = "point",
+    grid_size: int = 0,
 ) -> ToolChunk | str:
     """
     截屏，可选把待确认的点画上去，再包成图片块。
@@ -761,6 +998,8 @@ def _screenshot_with_points(
         with_timing: 是否附带 cost_ms。
         action: 写进元信息的动作名。
         extra: 追加到元信息的字段。
+        style: 标记形态，point 或 ring。
+        grid_size: 每边点数；大于 0 时返回体补行号与列号。
 
     Returns:
         ToolChunk 或失败 JSON 文本。
@@ -771,7 +1010,7 @@ def _screenshot_with_points(
         data = run_adb_bytes(["exec-out", "screencap", "-p"], serial=target, timeout=60)
         if not data:
             return _fail(RuntimeError("截屏返回空内容"))
-        sent, size, original = _render(data, points or None)
+        sent, image_size, original = _render(data, points or None, style=style, grid_size=grid_size)
         payload: dict = {
             "timestamp": _stamp(),
             "status": True,
@@ -779,17 +1018,14 @@ def _screenshot_with_points(
             "serial": target,
             "bytes": len(sent),
             "original_bytes": len(data),
-            "image": list(size),
+            "image": list(image_size),
             "screen": list(original),
             "media_type": "image/png",
         }
         if extra:
             payload.update(extra)
         if points:
-            payload["marks"] = [
-                {"index": index, "nx": nx, "ny": ny}
-                for index, (nx, ny) in enumerate(points, start=1)
-            ]
+            payload["marks"] = _grid_records(points, grid_size)
         if with_timing:
             payload["cost_ms"] = round((time.perf_counter() - begin) * 1000)
         return ToolChunk(
@@ -816,7 +1052,7 @@ def adb_screenshot(
     """
     截取当前屏幕，把画面作为图片块交给模型直接查看。
 
-    不落盘：图像只以 base64 形式随结果返回，长边压到 1568 以内。
+    不落盘：图像只以 base64 形式随结果返回，长边压到 1024 以内。
 
     传 marks 时会在图上把每个点画成红圈加序号，用于点击前核对点位是否落在目标上。
 
@@ -848,26 +1084,37 @@ def adb_screenshot_grid(
     step: float = 0.03,
     serial: str = "",
     with_timing: bool = True,
+    marker: str = "ring",
+    step_y: float = 0.0,
 ) -> ToolChunk | str:
     """
-    以粗估点为中心撒一张网格，把候选位置一次画在图上。
+    以粗估点为中心撒一张环点阵，把候选位置一次画在图上。
 
-    用于粗估点不够准的时候：模型一次看到全部候选红圈，按序号挑最贴目标的一个。
+    用于粗估点不够准的时候：模型一次看到全部候选点，按行列号挑最贴目标的一个。
+
+    每个候选点画成空心圆环，列号标在首行上方、行号标在首列左侧，目标从环心透出；
+    按「第几行第几列」取坐标即可直接点击。cross 为已废弃别名，按 ring 渲染。
 
     Args:
         nx: 粗估的横坐标归一化值。
         ny: 粗估的纵坐标归一化值。
-        size: 每边点数，3 或 5；先用 3，没覆盖到再用 5。
-        step: 相邻点间隔；3×3 用 0.03，5×5 用 0.02。
+        size: 每边点数，3、5 或 7；先用 3，没覆盖到再用 5 或 7。
+        step: 相邻点横向间隔；3×3 用 0.03，5×5 用 0.02。
         serial: 设备序列号；只连一台时留空。
         with_timing: 是否在元信息里带上本次耗时 cost_ms。
+        marker: 标记形态，只接受 ring（缺省）；cross 已废弃，收到时按 ring 渲染。
+        step_y: 相邻点纵向间隔；0 表示与 step 相同，方形点阵可传 step 的一半。
 
     Returns:
-        成功时为 ToolChunk：元信息含每个候选点的序号与坐标 + 一张带圈图片；
+        成功时为 ToolChunk：元信息含每个候选点的序号、行号、列号与坐标 + 一张标记图；
         失败时为 JSON 文本。
     """
     try:
-        points = _grid_points(float(nx), float(ny), int(size), float(step))
+        style = _marker_style(marker)
+        gap_y = float(step_y)
+        if gap_y <= 0:
+            gap_y = float(step)
+        points = _grid_points(float(nx), float(ny), int(size), float(step), gap_y)
     except (TypeError, ValueError) as exc:
         return _fail(exc)
     return _screenshot_with_points(
@@ -875,7 +1122,18 @@ def adb_screenshot_grid(
         serial=serial,
         with_timing=with_timing,
         action="screenshot_grid",
-        extra={"grid": {"nx": nx, "ny": ny, "size": size, "step": step}},
+        extra={
+            "grid": {
+                "nx": nx,
+                "ny": ny,
+                "size": size,
+                "step": step,
+                "step_y": round(gap_y, 4),
+                "marker": style,
+            }
+        },
+        style=style,
+        grid_size=int(size),
     )
 
 
@@ -982,15 +1240,17 @@ def _parse_ui(xml_text: str, *, limit: int) -> list[dict]:
     return items
 
 
-def build_adb_tools() -> list[FunctionTool]:
+def build_adb_tools(*, include_devices: bool = True) -> list[FunctionTool]:
     """
-    产出 12 个 adb 工具，供创建后逐个挂到 Agent。
+    产出 adb 工具，供创建后逐个挂到 Agent。
+
+    Args:
+        include_devices: 是否包含列出设备的工具；平台已指定设备时应传 False。
 
     Returns:
         FunctionTool 列表，顺序固定。
     """
-    return [
-        FunctionTool(adb_devices, is_read_only=True, permission=_ALLOW),
+    tools = [
         FunctionTool(adb_screenshot, is_read_only=True, permission=_ALLOW),
         FunctionTool(adb_screenshot_grid, is_read_only=True, permission=_ALLOW),
         FunctionTool(adb_dump_ui, is_read_only=True, permission=_ALLOW),
@@ -1007,6 +1267,9 @@ def build_adb_tools() -> list[FunctionTool]:
         FunctionTool(adb_screen_off, is_concurrency_safe=False, permission=_ALLOW),
         FunctionTool(adb_unlock, is_concurrency_safe=False, permission=_ALLOW),
     ]
+    if include_devices:
+        tools.insert(0, FunctionTool(adb_devices, is_read_only=True, permission=_ALLOW))
+    return tools
 
 
 def build_adb_readonly_tools() -> list[FunctionTool]:

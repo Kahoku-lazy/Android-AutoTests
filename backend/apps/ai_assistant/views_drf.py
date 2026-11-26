@@ -435,34 +435,50 @@ def _sop_workflow_or_404(workflow_id: int):
         raise NotFound("工作流不存在") from exc
 
 
-class LiveEvalDetailView(APIView):
-    @extend_schema(responses=OpenApiTypes.OBJECT)
-    def get(self, request, run_id: int):
+class EvalScoreView(APIView):
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    def get(self, request):
         _require_author(request)
-        detail = api.live_run_detail(run_id)
-        if detail is None:
-            raise NotFound("评测运行不存在")
-        return Response(detail)
+        kind = str(request.query_params.get("kind") or "")
+        target_id = str(request.query_params.get("target_id") or "")
+        limit = int(request.query_params.get("limit") or 20)
+        try:
+            rows = api.list_eval_scores(kind, target_id, limit=max(1, min(limit, 100)))
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response({"scores": rows})
 
-
-class EvalRunView(APIView):
     @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
     def post(self, request):
         _require_author(request)
         kind = str(request.data.get("kind") or "")
         target_id = str(request.data.get("target_id") or "")
-        if kind not in {"assistant", "workflow"} or not target_id:
-            raise ValidationError("请选择助手或工作流")
+        source_ref = str(request.data.get("source_ref") or "")
         try:
-            run = api.start_live_eval(kind, target_id)
-            from backend.apps.ai_assistant.services.live_runner import start_live_eval
-
-            start_live_eval(run.pk)
-            return Response({"id": run.pk, "status": run.status})
+            detail = api.score_eval_target(
+                kind,
+                target_id,
+                source_ref=source_ref,
+                created_by=str(getattr(request, "user_id", "") or ""),
+            )
         except LookupError as exc:
             raise NotFound(str(exc)) from exc
         except ValueError as exc:
             raise ValidationError(str(exc)) from exc
+        return Response({"score": detail})
+
+
+class EvalCandidateView(APIView):
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        _require_author(request)
+        kind = str(request.query_params.get("kind") or "")
+        target_id = str(request.query_params.get("target_id") or "")
+        try:
+            rows = api.list_eval_candidates(kind, target_id)
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response({"candidates": rows})
 
 
 class AssistantPublishView(APIView):
@@ -474,10 +490,10 @@ class AssistantPublishView(APIView):
         card = api.get_assistant(assistant_id)
         if card is None:
             return Response({"message": "助手不存在"}, status=status.HTTP_404_NOT_FOUND)
-        payload = api._release_payload_for_assistant(card)
-        if not api.eval_passed("assistant", card.assistant_id, payload):
-            raise ValidationError("自测未通过，不能发布")
-        release = api.publish_assistant(card)
+        try:
+            release = api.publish_assistant(card)
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
         secret = "api_key" in release.payload or "secret" in release.payload
         return Response(
             {"assistant_id": assistant_id, "version": release.version, "has_secret": secret}
@@ -492,16 +508,119 @@ class WorkflowPublishView(APIView):
         _require_author(request)
         try:
             workflow = api.get_sop_workflow(workflow_id)
-            if api.workflow_requires_eval(workflow) and not api.eval_passed(
-                "workflow", str(workflow.id), api.workflow_eval_payload(workflow)
-            ):
-                raise ValidationError("自测未通过，不能发布")
             release = api.publish_workflow(workflow)
         except api.AISopWorkflow.DoesNotExist as exc:
             raise NotFound("工作流不存在") from exc
-        except api.WorkflowBindingError as exc:
+        except (api.WorkflowBindingError, ValueError) as exc:
             raise ValidationError(str(exc)) from exc
         return Response({"id": workflow_id, "version": release.version})
+
+
+class EvalMethodView(APIView):
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        _require_author(request)
+        return Response({"methods": api.list_eval_methods()})
+
+
+class EvalCaseView(APIView):
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        _require_author(request)
+        return Response({"cases": api.list_eval_cases()})
+
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    def post(self, request):
+        _require_author(request)
+        try:
+            row = api.create_eval_case(
+                title=str(request.data.get("title") or ""),
+                note=str(request.data.get("note") or ""),
+                steps=list(request.data.get("steps") or []),
+                created_by=str(getattr(request, "user_id", "") or ""),
+            )
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response({"case": row})
+
+
+class EvalCaseDetailView(APIView):
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    def patch(self, request, case_id: int):
+        _require_author(request)
+        try:
+            row = api.update_eval_case(
+                case_id,
+                title=str(request.data.get("title") or ""),
+                note=request.data.get("note"),
+                enabled=request.data.get("enabled"),
+                steps=request.data.get("steps"),
+            )
+        except LookupError as exc:
+            raise NotFound(str(exc)) from exc
+        return Response({"case": row})
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def delete(self, request, case_id: int):
+        _require_author(request)
+        try:
+            api.delete_eval_case(case_id)
+        except LookupError as exc:
+            raise NotFound(str(exc)) from exc
+        return Response({"deleted": case_id})
+
+
+class EvalReportView(APIView):
+    @extend_schema(responses=OpenApiTypes.BINARY)
+    def get(self, request, run_id: int):
+        _require_author(request)
+        from pathlib import Path
+
+        from django.http import FileResponse
+
+        try:
+            path = Path(api.eval_report_file(run_id))
+        except LookupError as exc:
+            raise NotFound(str(exc)) from exc
+        if not path.is_file():
+            raise NotFound("看板文件不存在")
+        return FileResponse(path.open("rb"), content_type="text/html")
+
+
+class EvalSuiteScoreView(APIView):
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        _require_author(request)
+        target_id = str(request.query_params.get("target_id") or "")
+        limit = int(request.query_params.get("limit") or 20)
+        rows = api.list_suite_scores(target_id, limit=max(1, min(limit, 100)))
+        return Response({"scores": rows})
+
+    @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    def post(self, request):
+        _require_author(request)
+        kind = str(request.data.get("target_kind") or "")
+        target_id = str(request.data.get("target_id") or "")
+        serial = str(request.data.get("serial") or "")
+        case_ids = [str(item) for item in request.data.get("case_ids") or [] if str(item)]
+        if kind not in {"assistant", "workflow"} or not target_id:
+            raise ValidationError("请选择助手或工作流")
+        if not case_ids:
+            raise ValidationError("请至少选择一条真题")
+        try:
+            detail = api.run_suite_eval(
+                kind,
+                target_id,
+                case_ids=case_ids,
+                serial=serial,
+                owner_id="1",
+                created_by=str(getattr(request, "user_id", "") or ""),
+            )
+        except LookupError as exc:
+            raise NotFound(str(exc)) from exc
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response({"score": detail})
 
 
 class AgentReportView(APIView):

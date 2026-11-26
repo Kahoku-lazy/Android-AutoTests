@@ -111,70 +111,6 @@ class ModelUseGrant(models.Model):
         return f"{self.user_id}:{self.model_config_id}"
 
 
-class AssistantLiveRun(models.Model):
-    STATUS_PENDING = "pending"
-    STATUS_RUNNING = "running"
-    STATUS_DONE = "done"
-    STATUS_FAILED = "failed"
-
-    target_kind = models.CharField(max_length=16)
-    target_id = models.CharField(max_length=32)
-    fingerprint = models.CharField(max_length=64)
-    sample_ids = models.JSONField(default=list)
-    status = models.CharField(max_length=16, default=STATUS_PENDING)
-    phase = models.CharField(max_length=32, default="", blank=True)
-    progress_done = models.PositiveIntegerField(default=0)
-    progress_total = models.PositiveIntegerField(default=0)
-    failures = models.JSONField(default=list)
-    error = models.TextField(default="", blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = "ai_assistant_live_runs"
-        verbose_name = "助手评测运行"
-        verbose_name_plural = "助手评测运行"
-
-    def __str__(self):
-        return f"{self.target_kind}:{self.target_id} [{self.status}]"
-
-
-class AssistantLiveSample(models.Model):
-    run = models.ForeignKey(AssistantLiveRun, on_delete=models.CASCADE, related_name="samples")
-    sample_id = models.CharField(max_length=32)
-    title = models.CharField(max_length=200, default="", blank=True)
-    passed = models.BooleanField(default=False)
-    failures = models.JSONField(default=list)
-    steps = models.JSONField(default=list)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "ai_assistant_live_samples"
-        ordering = ["id"]
-        verbose_name = "助手评测样本"
-        verbose_name_plural = "助手评测样本"
-
-    def __str__(self):
-        return f"{self.sample_id} [{'过' if self.passed else '未过'}]"
-
-
-class AssistantEvalRun(models.Model):
-    target_kind = models.CharField(max_length=16)
-    target_id = models.CharField(max_length=32)
-    fingerprint = models.CharField(max_length=64)
-    sample_ids = models.JSONField(default=list)
-    failures = models.JSONField(default=list)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "ai_assistant_eval_runs"
-        verbose_name = "助手自测"
-        verbose_name_plural = "助手自测"
-
-    def __str__(self):
-        return f"{self.target_kind}:{self.target_id}"
-
-
 class AssistantRelease(models.Model):
     KIND_ASSISTANT = "assistant"
     KIND_WORKFLOW = "workflow"
@@ -302,3 +238,104 @@ class AIAssistantMessage(models.Model):
 
     def __str__(self):
         return f"{self.role}:{self.id}"
+
+
+class AssistantEvalCase(models.Model):
+    title = models.CharField(max_length=200)
+    note = models.TextField(default="", blank=True)
+    enabled = models.BooleanField(default=True)
+    sort_order = models.PositiveIntegerField(default=1)
+    created_by = models.CharField(max_length=64, default="", blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "ai_eval_cases"
+        ordering = ["sort_order", "id"]
+        verbose_name = "UI 执行评测题"
+        verbose_name_plural = "UI 执行评测题"
+
+    def __str__(self):
+        return self.title
+
+
+class AssistantEvalCaseStep(models.Model):
+    case = models.ForeignKey(AssistantEvalCase, on_delete=models.CASCADE, related_name="steps")
+    sort_order = models.PositiveIntegerField(default=1)
+    action = models.TextField(default="", blank=True)
+    assertion = models.TextField(default="", blank=True)
+    anchor = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ai_eval_case_steps"
+        ordering = ["sort_order", "id"]
+        verbose_name = "评测题步骤"
+        verbose_name_plural = "评测题步骤"
+
+    def __str__(self):
+        return f"{self.case_id}#{self.sort_order}"
+
+
+class AssistantEvalScore(models.Model):
+    target_kind = models.CharField(max_length=16)
+    target_id = models.CharField(max_length=32)
+    prompt_fingerprint = models.CharField(max_length=64, default="", blank=True)
+    source_ref = models.CharField(max_length=200, default="", blank=True)
+    judge_model = models.CharField(max_length=64, default="", blank=True)
+    method_key = models.CharField(max_length=32, default="", blank=True)
+    report_html = models.CharField(max_length=300, default="", blank=True)
+    test_run_json = models.CharField(max_length=300, default="", blank=True)
+    created_by = models.CharField(max_length=64, default="", blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ai_eval_scores"
+        ordering = ["-id"]
+        verbose_name = "助手评测评分"
+        verbose_name_plural = "助手评测评分"
+
+    def __str__(self):
+        return f"{self.target_kind}:{self.target_id}@{self.id}"
+
+
+class AssistantEvalScoreItem(models.Model):
+    run = models.ForeignKey(AssistantEvalScore, on_delete=models.CASCADE, related_name="items")
+    metric_key = models.CharField(max_length=32)
+    score = models.DecimalField(max_digits=4, decimal_places=3)
+    reason = models.TextField(default="", blank=True)
+    threshold = models.DecimalField(max_digits=4, decimal_places=3, default=0.500)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ai_eval_score_items"
+        ordering = ["id"]
+        verbose_name = "助手评测评分项"
+        verbose_name_plural = "助手评测评分项"
+
+    def __str__(self):
+        return f"{self.metric_key}={self.score}"
+
+
+class AssistantEvalCaseResult(models.Model):
+    run = models.ForeignKey(AssistantEvalScore, on_delete=models.CASCADE, related_name="cases")
+    case_id = models.CharField(max_length=64)
+    case_title = models.CharField(max_length=200, default="", blank=True)
+    steps_total = models.PositiveIntegerField(default=0)
+    steps_passed = models.PositiveIntegerField(default=0)
+    attempts = models.PositiveIntegerField(default=0)
+    cost_s = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    score = models.DecimalField(max_digits=4, decimal_places=3, null=True, blank=True)
+    reason = models.TextField(default="", blank=True)
+    failed_steps = models.JSONField(default=list)
+    source_ref = models.CharField(max_length=200, default="", blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ai_eval_case_results"
+        ordering = ["id"]
+        verbose_name = "助手评测真题结果"
+        verbose_name_plural = "助手评测真题结果"
+
+    def __str__(self):
+        return f"{self.case_id}:{self.steps_passed}/{self.steps_total}"

@@ -145,12 +145,10 @@ def queue_turn(thread: AIAssistantThread) -> None:
 
 
 def _run_turn(thread_id: str) -> None:
-    import asyncio
-
     from django.db import close_old_connections
 
+    from backend.apps.ai_assistant.services.agent_loop import run_in_loop
     from engines.ae_harness.middleware.control import RunCancelled
-    from engines.backend_bridge.agents.thread_run import thread_agent
 
     close_old_connections()
     thread = get_thread(thread_id)
@@ -164,9 +162,13 @@ def _run_turn(thread_id: str) -> None:
         or ""
     )
     try:
-        agent = asyncio.run(thread_agent(thread.thread_id, thread.snapshot))
-        reply, report_id, usages, model = asyncio.run(
-            _reply(agent, user_text, assistant_id=thread.assistant_id, thread_id=thread.thread_id)
+        reply, report_id, usages, model = run_in_loop(
+            _turn(
+                thread.thread_id,
+                user_text,
+                assistant_id=thread.assistant_id,
+                snapshot=thread.snapshot,
+            )
         )
         _record_chat_usages(thread.thread_id, usages, model)
         finish_message(thread, reply, status=AIAssistantThread.STATUS_DONE, report_id=report_id)
@@ -176,6 +178,15 @@ def _run_turn(thread_id: str) -> None:
         finish_message(thread, f"执行异常: {exc}", status=AIAssistantThread.STATUS_INTERRUPTED)
     finally:
         close_old_connections()
+
+
+async def _turn(
+    thread_id: str, user_text: str, *, assistant_id: str, snapshot: dict
+) -> tuple[str, str, list, str]:
+    from engines.backend_bridge.agents.thread_run import thread_agent
+
+    agent = await thread_agent(thread_id, snapshot)
+    return await _reply(agent, user_text, assistant_id=assistant_id, thread_id=thread_id)
 
 
 def _record_chat_usages(thread_id: str, usages: list, model: str) -> None:

@@ -62,9 +62,49 @@ backend_bridge/
 
 ## 4. 与后端的分工
 
-- 本目录**负责**：建角色、跑一次、产 HTML 报告、把 token 用量整理成结构化数据返回、**任务事件落库前的绑定与折叠**、**运行取消**。
-- 后端**负责**：从 DB 取角色配置、调用本目录入口、把用量与事件写库、对外提供报告读取接口、前端契约。
+- 本目录**负责**：建角色、跑一次、产 HTML 报告、把 token 用量整理成结构化数据返回、**任务事件落库前的绑定与折叠**、**运行取消**、**执行前校验平台传入的设备**。
+- 后端**负责**：从 DB 取角色配置、调用本目录入口、把用量与事件写库、对外提供报告读取接口、前端契约、**传入本次要操作的设备序列号**。
 - 本目录**不负责**：DB 读写、Django 依赖、鉴权、HTTP 路由、前端。
+
+### 设备序列号契约（两条执行路径共用）
+
+口径落在 `engines/backend_bridge/device_guard.py`：`require_online(serial)` 校验、`serial_lock(serial)` 全程独占，单角色与 SOP 共用同一份实现，不各写一套。
+
+1. **序列号必须由平台传入**：`run_ui_task(serial=...)` 无默认值；`open_session` 与 `run_bound_sop` 遇到空串直接报错，**禁止**用 `adb devices` 自动探测。
+2. **执行前校验**：adb 可用、序列号存在、状态为 `device`；未连接 / 离线 / 未授权分别给出可读错误，校验发生在任何模型调用之前（SOP 侧在装配角色之前，实测传 `FAKE-SERIAL-123` 时一个运行目录都不会建）。
+3. **禁止模型自选设备**：UI 执行角色不挂 `adb_devices`（模型看不到设备清单）；同时工具层对被锁定的序列号做硬校验，模型传其他设备会被直接拒绝（`resolve_serial` 抛错）。
+4. **全程独占**：`serial_lock` 包住整轮（单角色一轮回复 / SOP 整个流程），`finally` 释放；平台取消路径已有定时释放兜底。
+5. 序列号另以提示注入的形式写进用户消息前两行：`当前设备序列号：<serial>` 与「设备已由平台指定并锁定……不需要枚举或切换设备」，与 `run` 段的 `serial` 字段互为对照；实测这条锁提示把同一任务的轮次从 27 压到 15。
+6. 第三条注入是**截图复用规则**：「点击后截一张图确认结果即可；若下一步仍在同一画面，直接以这张图定位，不要重复截图；画面可能变化（动画、弹窗、跳转）时必须重新截图」。只改提示词、不动工具；实测同任务网格截图 4 → 3 次、轮次 16 → 15、耗时 34.52 s → **30.62 s**，输入 token 128.0k → **118.3k**，任务仍达成。
+
+### 运行参数（建好角色后由调用方设置，不改 `create_agent`）
+
+三个参数抽成 `engines/backend_bridge/agents/run_params.py` 的一组常量 + `apply_run_params(agent)`，单角色执行器与 SOP 的两个角色都调用它——两处各写一份必然漂移，SOP 之前就是这样拿到框架默认值的。
+
+| 参数 | 取值 | 作用 |
+| --- | --- | --- |
+| `ContextConfig.max_image_num` | 2 | 上下文只保留最近 2 张截图，避免每轮重发历史图片（默认 5） |
+| `ContextConfig.tool_result_limit` | 20000 | 工具返回超过 2 万字符截断，控制文本输入膨胀（默认 50000 token） |
+| `ReActConfig.max_iters` | 20 | 兜底上限，防跑飞（默认 50） |
+
+这三个是 `Agent` 的运行参数，不是角色的第四样能力：`create_agent` 保持只收名称/模型/提示词，调用方在建好角色后赋值。同任务实测：44.72 s / 172.7k 输入 → **34.52 s / 128.0k 输入**，输出 4.0k → 2.3k，任务仍达成。
+
+### SOP 运行产物（四类文件同根同前缀）
+
+一次 `run_bound_sop` 在 `logs/agents/backend_bridge/<时间戳>/` 下产出：
+
+```text
+├── <时间戳>_sop_bound.jsonl           过程日志（记录器）
+├── <时间戳>_sop_bound.aligned.json    对齐记录：run / input / replies / observations / steps / summary / events
+├── <时间戳>_sop_bound.raw.jsonl       实时事件流（逐事件 flush）
+├── <时间戳>_sop_bound.html            五页签报告（与单角色同一渲染器）
+└── <时间戳>_sop_bound.{aligned,raw}.media/  事件里的图片按 sha256 落文件
+```
+
+观测以 `capture_messages=True` 装配：每轮模型真实收到的 messages 都进 `observations[].messages`，两个角色共用同一个观测中间件、按 agent 名与 `replies[].role` 区分。报告渲染由 `run_bound_sop` 在 `run_sop` 返回后完成（`render_report=False`），因为步骤结论要等编排结束才拿得到。
+
+运行中异常中断（取消与预算中断除外）时，`_SopCapture.abort()` 会用已落盘的 recorder 补齐收尾并渲染同一套 HTML，概览标注「运行中断：原因」，并把报告定位经 `on_abort` 交回调用方；`aligned.json` 的 `summary` 带 `aborted` / `abort_reason`。取消与预算中断不产报告，起跑前失败（事件记录器未建立）也没有报告。
+
 
 ## 5. 已定事项（曾列为未定，现已拍板）
 

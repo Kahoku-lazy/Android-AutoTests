@@ -26,8 +26,13 @@ async def build_ui_executor(
     base_url: str = "",
     observer: ObservationMiddleware | None = None,
     controls: list | None = None,
+    capture_messages: bool = False,
 ) -> tuple[AgentBundle, ObservationMiddleware]:
-    watcher = observer if observer is not None else ObservationMiddleware()
+    watcher = (
+        observer
+        if observer is not None
+        else ObservationMiddleware(capture_messages=capture_messages)
+    )
     role = UI_EXECUTOR_ROLE
     bundle = create_agent(
         role.role_key,
@@ -38,6 +43,6 @@ async def build_ui_executor(
         base_url=base_url,
         observers=[watcher, *(controls or [])],
     )
-    for tool in build_adb_tools():
+    for tool in build_adb_tools(include_devices=False):
         await bundle.agent.toolkit.add_tool(tool)
     return bundle, watcher

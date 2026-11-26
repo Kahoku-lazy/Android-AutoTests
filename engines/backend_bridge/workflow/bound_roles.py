@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from engines.ae_harness.agents.creator import AgentBundle, create_agent
 from engines.ae_harness.middleware import ObservationMiddleware
 from engines.ae_harness.tools import build_adb_readonly_tools
+from engines.backend_bridge.agents.run_params import apply_run_params
 from engines.backend_bridge.agents.tool_selection import select_tools
 from engines.backend_bridge.workflow.roles import SopRoles
 
@@ -31,6 +32,7 @@ def _readonly_intersection(selections: tuple[dict, ...] | list[dict]) -> list:
 async def _mount(bundle: AgentBundle, tools: list) -> AgentBundle:
     for tool in tools:
         await bundle.agent.toolkit.add_tool(tool)
+    apply_run_params(bundle.agent)
     return bundle
 
 
@@ -41,8 +43,13 @@ async def build_bound_agent(
     controls: list | None = None,
     kind: str = "ui_automation",
     readonly: bool = False,
+    capture_messages: bool = False,
 ) -> tuple[AgentBundle, ObservationMiddleware]:
-    watcher = observer if observer is not None else ObservationMiddleware()
+    watcher = (
+        observer
+        if observer is not None
+        else ObservationMiddleware(capture_messages=capture_messages)
+    )
     bundle = create_agent(
         binding.run_name,
         system_prompt=binding.system_prompt,
@@ -67,11 +74,21 @@ async def build_bound_roles(
     observer: ObservationMiddleware | None = None,
     controls: list | None = None,
     kind: str = "ui_automation",
+    capture_messages: bool = False,
 ) -> SopRoles:
     executor_bundle, watcher = await build_bound_agent(
-        executor, observer=observer, controls=controls, kind=kind
+        executor,
+        observer=observer,
+        controls=controls,
+        kind=kind,
+        capture_messages=capture_messages,
     )
     verifier_bundle, _ = await build_bound_agent(
-        verifier, observer=watcher, controls=controls, kind=kind, readonly=True
+        verifier,
+        observer=watcher,
+        controls=controls,
+        kind=kind,
+        readonly=True,
+        capture_messages=capture_messages,
     )
     return SopRoles(executor=executor_bundle, verifier=verifier_bundle, observer=watcher)

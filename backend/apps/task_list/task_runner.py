@@ -44,7 +44,11 @@ def _failure_kind(exc: Exception) -> str:
     return "platform"
 
 
-def _failure_payload(exc: Exception, failed_steps: list | None = None) -> dict:
+def _failure_payload(
+    exc: Exception,
+    failed_steps: list | None = None,
+    report_path=None,
+) -> dict:
     if isinstance(exc, BudgetExceeded):
         return {"status": "interrupted", "cause": "budget", "reason": "运行超出预算"}
     kind = _failure_kind(exc)
@@ -62,6 +66,7 @@ def _failure_payload(exc: Exception, failed_steps: list | None = None) -> dict:
         list(failed_steps) if failed_steps else [api.category_step(kind, reason)]
     )
     payload["failed"] = [item["name"] for item in payload["failed_steps"]]
+    payload.update(_report_locator(report_path))
     return payload
 
 
@@ -203,7 +208,13 @@ def _resolve_assistant_sop(task: Task) -> tuple[dict, str]:
     return resolved, config.body
 
 
-async def _run_assistant_sop(task: Task, task_id: int, resolved: dict, yaml_text: str):
+async def _run_assistant_sop(
+    task: Task,
+    task_id: int,
+    resolved: dict,
+    yaml_text: str,
+    failure: dict,
+):
     import tempfile
 
     from pathlib import Path
@@ -219,12 +230,17 @@ async def _run_assistant_sop(task: Task, task_id: int, resolved: dict, yaml_text
         spec = load_spec(path)
     finally:
         path.unlink(missing_ok=True)
+
+    def _remember(report_path, _exc):
+        failure["report_path"] = report_path
+
     outcome = await run_bound_sop(
         spec,
         _binding(resolved["executor"]),
         _binding(resolved["verifier"]),
         serial=task.device_serial or "",
         task_id=task_id,
+        on_abort=_remember,
     )
     used = {
         "executor_assistant_id": resolved["executor"]["assistant_id"],
@@ -378,6 +394,7 @@ def run_task_async(task_id: int, agent_id: int) -> None:
     ephemeral = False
     yaml_path = ""
     serial = ""
+    failure: dict = {}
     task = Task.objects.get(id=task_id)
     try:
         serial = task.device_serial or ""
@@ -394,7 +411,7 @@ def run_task_async(task_id: int, agent_id: int) -> None:
         if task.task_kind != "assistant_sop":
             raise RuntimeError("任务没有绑定工作流，旧的固定提示词入口已退役")
         resolved, yaml_text = _resolve_assistant_sop(task)
-        outcome, used = asyncio.run(_run_assistant_sop(task, task_id, resolved, yaml_text))
+        outcome, used = asyncio.run(_run_assistant_sop(task, task_id, resolved, yaml_text, failure))
         passed = bool(outcome.steps) and all(item.passed for item in outcome.steps)
         failed_items = [item for item in outcome.steps if not item.passed]
         empty_steps = not outcome.steps
@@ -451,7 +468,11 @@ def run_task_async(task_id: int, agent_id: int) -> None:
             backend_log.exception("finalize cancelled task failed id=%s", task_id)
     except Exception as exc:
         backend_log.exception("async task failed id=%s", task_id)
-        body = _failure_payload(exc, locals().get("step_rows") or None)
+        body = _failure_payload(
+            exc,
+            locals().get("step_rows") or None,
+            failure.get("report_path"),
+        )
         if task.status == TaskStatus.PENDING:
             task.status = _failure_status(exc)
             task.result = api.dump_task_run_payload(body)

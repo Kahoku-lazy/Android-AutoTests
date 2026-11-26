@@ -1,6 +1,6 @@
 # Tasks: add-bundle-size-budget
 
-- [x] 1.1 `frontend/bundle-budgets.json`：四条 `baseline`（2026-11-25 实测：入口 JS 44.4、入口 CSS 55.4、最大块 194.4、总量 570.3 gzip KB）与四条 `budget`（×1.1 向上取整）。
+- [x] 1.1 `frontend/bundle-budgets.json`：四条 `baseline`（2026-11-26 主干 `82a3e252` CI 构建实测：入口 JS 12.8、入口 CSS 55.6、最大块 368.7、总量 873.2 gzip KB）与四条 `budget`（×1.1 向上取整：15 / 62 / 406 / 961）。原 2026-11-25 数字（44.4 / 55.4 / 194.4 / 570.3）测于带未合并前端改动的工作区，主干不可复现，已作废。
   判据：`python -c "import json;d=json.load(open('frontend/bundle-budgets.json'));print(d['budget'])"` 输出四项。
 - [x] 1.2 `utils/check_bundle_budget.py`：解析 `dist/index.html` 取入口 JS/CSS，遍历 `dist/assets/*.js` 取最大块与总量，`gzip.compress(level=9)` 复算 KB。
   判据：`python utils/check_bundle_budget.py` 输出四行「指标 实测/预算」并以 0 退出。

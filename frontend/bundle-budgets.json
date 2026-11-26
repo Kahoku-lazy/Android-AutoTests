@@ -1,17 +1,17 @@
 {
-  "measured_at": "2026-11-25",
+  "measured_at": "2026-11-26",
   "gzip_level": 9,
-  "note": "baseline = 2026-11-25 preview 构建实测 gzip KB；budget = baseline × 1.1 向上取整",
+  "note": "baseline = 2026-11-26 主干（Kahoku 82a3e252）CI 构建实测 gzip KB；budget = baseline × 1.1 向上取整。原 2026-11-25 数字（44.4 / 55.4 / 194.4 / 570.3）测于带未合并前端改动的工作区，主干不可复现，已作废；待 `redesign-report-views` 等前端变更落地后再提收紧 PR",
   "baseline": {
-    "entry_js_kb": 44.4,
-    "entry_css_kb": 55.4,
-    "largest_chunk_kb": 194.4,
-    "total_js_kb": 570.3
+    "entry_js_kb": 12.8,
+    "entry_css_kb": 55.6,
+    "largest_chunk_kb": 368.7,
+    "total_js_kb": 873.2
   },
   "budget": {
-    "entry_js_kb": 60,
-    "entry_css_kb": 65,
-    "largest_chunk_kb": 215,
-    "total_js_kb": 640
+    "entry_js_kb": 15,
+    "entry_css_kb": 62,
+    "largest_chunk_kb": 406,
+    "total_js_kb": 961
   }
 }

@@ -21,7 +21,7 @@
 
 - [x] 4.1 视觉契约回归：三层分区仍默认收起、子目标序号规则不变、字号仍只有三档、左栏仍默认三成且可拖拽；验证：现有前端规格用例 `python -m pytest -c tests/pytest.ini tests/report -q` 通过 + 人工目检清单逐项打勾。
 - [x] 4.2 更新模块文档 `.agents/docs/engines/ae_harness_event/ae_harness_event_observation_and_report.md`：写明报告数据源为 `replies[].msg`、旧入口为过渡、未知块降级口径；验证：文档与实现逐字段核对，`python -m utils.check_gates --only engines-agents-style` 无新增告警。
-- [ ] 4.3 关单门禁：`python run.py check` 通过；`python -m pytest -c tests/pytest.ini tests/ai_assistant tests/task tests/report -q` 通过（既有 16 项鉴权/授权失败与本变更无关，需在结果里注明）。
+- [x] 4.3 关单门禁（2026-11-26 实跑：`run check` 阻塞项 30/30 通过；`pytest tests/ai_assistant tests/task tests/report -q` 114 passed，原先注明的 16 项鉴权失败已不复现）：`python run.py check` 通过；`python -m pytest -c tests/pytest.ini tests/ai_assistant tests/task tests/report -q` 通过（既有 16 项鉴权/授权失败与本变更无关，需在结果里注明）。
 
 ## 5. 全链路观测与链路视图
 

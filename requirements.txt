@@ -26,7 +26,7 @@ Pillow>=13.0.0
 cnocr>=2.3.1,<3.0
 
 # ── HTTP ──
-requests>=2.30
+requests>=2.34.2
 
 # ── Document parsing ──
 # 任务附件 PRD / Word / PDF：MarkItDown 的 .docx 转换需要 mammoth 可选依赖；

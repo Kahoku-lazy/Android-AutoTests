@@ -9,12 +9,20 @@
 
 门禁 SHALL 从构建产物 `frontend/dist/index.html` 中识别入口脚本与入口样式（`script[src]`、`link[href]`），
 对其 gzip 体积设上限；MUST NOT 依赖文件哈希命名推断入口。
+`entry_js_kb` MUST 同时计入 `<script src>` 与 `rel="modulepreload"` / `rel="preload"` 指向的 JS——
+后者是浏览器首屏一定会预下载的块，漏算会让「把大包拆成预载块」看起来像优化。
 产物不存在时 SHALL 先执行一次构建再用其结果判定；入口引用识别不到时 MUST 失败并说明原因，MUST NOT 静默通过。
 
 #### Scenario: 入口脚本超预算即失败
 
 - **WHEN** 入口 JS 的 gzip 体积超过 `entry_js_kb`
 - **THEN** 门禁失败，信息含指标名、实测 KB、预算 KB 与超出量
+
+#### Scenario: 首屏预载块被计入入口
+
+- **WHEN** 构建产物把某个大块写进 `index.html` 的 `rel="modulepreload"`，而入口 `<script src>` 很小
+- **THEN** `entry_js_kb` 仍把该预载块的 gzip 体积算进去，并输出「脚本 X KB + 首屏预载 Y KB」的构成
+- **AND** 只把大块改成预载、入口脚本本身变小，MUST NOT 被判定为体积下降
 
 #### Scenario: 入口识别不到不静默通过
 

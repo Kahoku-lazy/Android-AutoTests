@@ -49,6 +49,33 @@ vite 打印的 gzip 与服务器实际压缩比可能不同；统一用 `gzip.co
 - [构建产物哈希变化导致文件识别失败] → 只按 `index.html` 的引用识别入口，不依赖哈希命名；缺引用时 gate 报错而不是静默通过
 - [CI 里 dist 不存在] → 脚本自带一次构建兜底
 
+### D5 入口口径修正：预载块必须计入（2026-11-26）
+
+首版实现只读 `<script src>`，而 Vite 会把首屏要用的 chunk 写成 `<link rel="modulepreload">`。
+后果实测：`element-plus` 手工分块产生的 296.7KB（gzip）**一直在首屏被下载**，却从未被 `entry_js_kb` 计过——
+只要把大块「做成预载」，指标立刻显得漂亮。design D1 原文写的是「读 `script[src]` 与 `link[href]`」，
+是实现漏读了预载链接，属实现偏离设计。
+
+修正后同一份产物两种分块策略的实测（Windows 11 / `npx vite build` / 脚本复算 gzip level 9）：
+
+| 分块策略 | entry_js（新口径） | 其中脚本 | 其中预载 | entry_css | largest | total | 首屏请求 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| A 保留 element-plus 手工分块 | **386.3** | 12.9 | 76.3 + 296.7 | 55.4 | 296.7 | 706.1 | 15 |
+| B 去掉该手工分块（本单采纳） | **133.5** | 57.2 | 76.3 | 55.4 | 194.4 | 573.9 | 18 |
+
+B 把 Element Plus 交回按路由拆分：入口脚本变大（12.9 → 57.2），但首屏必载 JS 少 **252.8KB（−65%）**。
+
+时间侧对照（`tests/perf`，preview，冷缓存 3 轮中位数）：
+
+| 页面 | 变体 | LCP | load | transfer_kb | requests |
+|---|---|---:|---:|---:|---:|
+| /login | A | 396 | 574.7 | 25 946 | 15 |
+| /login | B | 360 | 520.6 | 25 699 | 18 |
+| /dashboard | A | 452 | 735.8 | 26 161 | 27 |
+| /dashboard | B | 340 | 685.2 | 25 912 | 29 |
+
+时间与传输都没有被牺牲（transfer 少约 250KB 正是那块预载；总传输仍被 24MB 字体主导）。
+
 ## Migration Plan
 
 1. 落 `bundle-budgets.json` + `utils/check_bundle_budget.py`

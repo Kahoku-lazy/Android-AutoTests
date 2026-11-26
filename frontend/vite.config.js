@@ -66,7 +66,6 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          "element-plus": ["element-plus"],
           "vendor": ["vue", "vue-router", "axios", "animejs"],
         },
       },

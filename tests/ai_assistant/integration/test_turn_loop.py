@@ -28,7 +28,7 @@ def test_two_turns_reuse_one_event_loop(monkeypatch, conversation):
         worker_ids.append(threading.get_ident())
         return object()
 
-    async def fake_reply(agent, content, *, assistant_id, thread_id):
+    async def fake_reply(agent, content, *, assistant_id, thread_id, snapshot=None, observer=None):
         worker_ids.append(threading.get_ident())
         return "好的", "report-loop", [], "fake-model"
 

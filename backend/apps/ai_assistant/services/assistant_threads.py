@@ -161,13 +161,14 @@ def _run_turn(thread_id: str) -> None:
         .first()
         or ""
     )
+    snapshot = thread.snapshot if isinstance(thread.snapshot, dict) else {}
     try:
         reply, report_id, usages, model = run_in_loop(
             _turn(
                 thread.thread_id,
                 user_text,
                 assistant_id=thread.assistant_id,
-                snapshot=thread.snapshot,
+                snapshot=snapshot,
             )
         )
         _record_chat_usages(thread.thread_id, usages, model)
@@ -183,10 +184,17 @@ def _run_turn(thread_id: str) -> None:
 async def _turn(
     thread_id: str, user_text: str, *, assistant_id: str, snapshot: dict
 ) -> tuple[str, str, list, str]:
-    from engines.backend_bridge.agents.thread_run import thread_agent
+    from engines.backend_bridge.agents.thread_run import thread_agent, thread_observer
 
     agent = await thread_agent(thread_id, snapshot)
-    return await _reply(agent, user_text, assistant_id=assistant_id, thread_id=thread_id)
+    return await _reply(
+        agent,
+        user_text,
+        assistant_id=assistant_id,
+        thread_id=thread_id,
+        snapshot=snapshot,
+        observer=thread_observer(thread_id),
+    )
 
 
 def _record_chat_usages(thread_id: str, usages: list, model: str) -> None:
@@ -199,23 +207,122 @@ def _record_chat_usages(thread_id: str, usages: list, model: str) -> None:
         backend_log.exception("chat usage ledger write failed thread=%s", thread_id)
 
 
+async def _dump_meta(
+    agent: object, content: str, *, assistant_id: str, thread_id: str, snapshot: dict
+) -> dict:
+    model = getattr(agent, "model", None)
+    try:
+        schemas = await agent.toolkit.get_tool_schemas()
+    except Exception:  # noqa: BLE001 - 调试清单取不到不影响这一轮对话
+        schemas = []
+    return {
+        "assistant_id": assistant_id,
+        "thread_id": thread_id,
+        "agent": str(getattr(agent, "name", "") or ""),
+        "model": str(getattr(model, "model", "") or ""),
+        "provider": str(snapshot.get("provider") or ""),
+        "base_url": str(snapshot.get("base_url") or ""),
+        "api_key_env": str(snapshot.get("api_key_env") or ""),
+        "system_prompt": str(snapshot.get("system_prompt") or ""),
+        "tool_schemas": schemas,
+        "input": content,
+    }
+
+
+def _dump_end(record: object, raw_path) -> dict:
+    return {
+        "cost_s": record.cost_s,
+        "final_text": record.final_text,
+        "summary": record.summary,
+        "usages": [item.as_dict() for item in record.usages],
+        "log_path": record.log_path.as_posix(),
+        "html_path": record.html_path.as_posix(),
+        "raw_path": raw_path.as_posix(),
+    }
+
+
 async def _reply(
-    agent: object, content: str, *, assistant_id: str, thread_id: str
+    agent: object,
+    content: str,
+    *,
+    assistant_id: str,
+    thread_id: str,
+    snapshot: dict | None = None,
+    observer: object | None = None,
 ) -> tuple[str, str, list, str]:
+    import time
+
     from agentscope.message import UserMsg
 
-    from engines.ae_harness.event import AgentEventRecorder, HtmlReportRenderer
+    from engines.ae_harness.event import (
+        AgentEventRecorder,
+        AlignedReportRenderer,
+        AlignedRun,
+        RawEventDump,
+    )
     from engines.backend_bridge.reports import ASSISTANT_LOG_ROOT
 
+    binding = dict(snapshot or {})
+    role = str(getattr(agent, "name", "assistant") or "assistant")
+    model_name = str(binding.get("model_name") or "")
     root = ASSISTANT_LOG_ROOT / assistant_id / thread_id
-    recorder = AgentEventRecorder(root, str(getattr(agent, "name", "assistant") or "assistant"))
+    recorder = AgentEventRecorder(
+        root,
+        role,
+        api_key_env=str(binding.get("api_key_env") or ""),
+        role_models={role: model_name} if model_name else None,
+    )
     recorder.begin(content)
+    meta = await _dump_meta(
+        agent,
+        content,
+        assistant_id=assistant_id,
+        thread_id=thread_id,
+        snapshot=binding,
+    )
+    raw = RawEventDump(recorder.log_path.with_name(f"{recorder.log_path.stem}.raw.jsonl"))
+    raw.begin(meta)
+    aligned = AlignedRun(recorder.log_path.with_name(f"{recorder.log_path.stem}.aligned.json"))
+    aligned.begin(
+        {
+            "role": role,
+            "agent": meta["agent"],
+            "model": meta["model"],
+            "api_key_env": meta["api_key_env"],
+            "assistant_id": assistant_id,
+            "thread_id": thread_id,
+        },
+        {
+            "system_prompt": meta["system_prompt"],
+            "tool_schemas": meta["tool_schemas"],
+            "user_message": content,
+        },
+    )
+    if observer is not None:
+        observer.attach(aligned.observe)
+    started = time.perf_counter()
     try:
         async for event in agent.reply_stream(UserMsg(name="user", content=content)):
             recorder.on_event(event)
+            raw.feed(event)
+            aligned.feed(event)
     finally:
-        record = recorder.finish(0)
-        HtmlReportRenderer().save(record)
+        record = recorder.finish(round(time.perf_counter() - started, 2))
+        raw.end(_dump_end(record, raw.path))
+        raw.close()
+        aligned.end(
+            {
+                "cost_s": record.cost_s,
+                "final_text": record.final_text,
+                "tokens": record.summary.get("tokens", {}),
+                "usages": [item.as_dict() for item in record.usages],
+                "log_path": record.log_path.as_posix(),
+                "html_path": record.html_path.as_posix(),
+                "raw_path": raw.path.as_posix(),
+                "aligned_path": aligned.path.as_posix(),
+            }
+        )
+        AlignedReportRenderer().save(aligned.document, record.html_path)
     usages = [item.as_dict() for item in record.usages]
     model = str(getattr(getattr(agent, "model", None), "model", "") or "")
     return record.final_text or "", record.html_path.parent.name, usages, model

@@ -1,0 +1,46 @@
+{
+  "measured_at": "2026-11-26",
+  "basis": "Windows 11 / Chrome stable（headless, channel=chrome）/ preview=`vite build`+`vite preview --port 4173`、dev=`vite --host` 未打包 / 冷缓存上下文 1 轮预热 + 3 轮取中位数。2026-11-26 起首屏口径包含需求方指定的 HarmonyOS Sans SC 三档原始 TTF（合计 24.1MB，随服务同源分发），故 transfer_kb 由 1.2/1.4MB 抬到 28.3/28.6MB（preview）与 34.0/34.3MB（dev）；lcp_ms / load_ms / requests 三档沿用原值，实测远低于上限。",
+  "requires_fonts": true,
+  "fonts_note": "字体二进制不入库（见 .gitignore），缺失时服务端返回 404、transfer_kb 只剩约 2MB，预算失去意义；测试在字体未就位时直接 skip 而不是「假绿」。取字体：python -m utils.fetch_fonts。",
+  "baseline": {
+    "preview": {
+      "/login": { "lcp_ms": 340, "load_ms": 443.7, "transfer_kb": 25699, "requests": 18 },
+      "/dashboard": { "lcp_ms": 320, "load_ms": 544.3, "transfer_kb": 25912, "requests": 29 }
+    },
+    "dev": {
+      "/login": { "lcp_ms": 564, "load_ms": 705.2, "transfer_kb": 30853, "requests": 79 },
+      "/dashboard": { "lcp_ms": 560, "load_ms": 672.3, "transfer_kb": 31115, "requests": 107 }
+    }
+  },
+  "profiles": {
+    "dev": {
+      "/login": {
+        "lcp_ms": 2500,
+        "load_ms": 8000,
+        "transfer_kb": 34000,
+        "requests": 90
+      },
+      "/dashboard": {
+        "lcp_ms": 2500,
+        "load_ms": 8000,
+        "transfer_kb": 34300,
+        "requests": 120
+      }
+    },
+    "preview": {
+      "/login": {
+        "lcp_ms": 2500,
+        "load_ms": 8000,
+        "transfer_kb": 28300,
+        "requests": 20
+      },
+      "/dashboard": {
+        "lcp_ms": 2500,
+        "load_ms": 8000,
+        "transfer_kb": 28600,
+        "requests": 30
+      }
+    }
+  }
+}

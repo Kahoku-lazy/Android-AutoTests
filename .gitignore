@@ -187,6 +187,9 @@ _agentscope_launcher.py
 # ── Vite cache ──
 frontend/.vite/
 
+# ── UI 字体二进制（24.1MB，按需下载，不入库；样式表/README/协议仍入库）──
+frontend/public/fonts/harmonyos-sans/*.ttf
+
 
 # ── Superpowers SDD worktree ──
 .worktrees/

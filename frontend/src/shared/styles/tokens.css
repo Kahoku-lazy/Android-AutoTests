@@ -97,9 +97,11 @@
   --color-purple-47: #9741b0;
 
   --font-body:
-    "Cascadia Mono", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", monospace, sans-serif;
-  --font-mono: "Cascadia Mono", "Consolas", monospace;
-  --font-brand: "Ziku FeiYang", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    "HarmonyOS Sans SC", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "Consolas", "Cascadia Mono", ui-monospace, monospace;
+  --font-brand:
+    "Ziku FeiYang", "HarmonyOS Sans SC", "Noto Sans SC", "PingFang SC", "Microsoft YaHei",
+    sans-serif;
 
   --font-size-xs: 12px;
   --font-size-sm: 14px;

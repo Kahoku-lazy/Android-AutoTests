@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "cd .. && python -m utils.fetch_fonts --soft",
     "dev": "vite",
+    "prebuild": "cd .. && python -m utils.fetch_fonts --soft",
     "build": "vite build",
     "build:check": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",

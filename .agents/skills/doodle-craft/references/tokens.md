@@ -95,8 +95,9 @@
 | 按钮/标签 | `--app-font` | 600–800 | `--app-size-xs` 12px |
 | 代码 | `--app-font-mono` Cascadia Mono | 400–700 | `--app-size-xs` 12px |
 
-`--app-font-display` = `--app-font`（同一套字族，没有第二套显示字体）。全局字体：英文 **Cascadia Mono**（等宽，本机已装则零下载，否则 jsDelivr woff2），中文 **思源黑体 Noto Sans SC**（Google Fonts 分片加载）。品牌字例外用 Ziku FeiYang（本地 `/fonts/ziku-feiyang.ttf`，已子集化，仅 Regular）。
-Blockly 等 JS 画布渲染不解析 CSS 变量，字体用字面量——改全局字体时需同步 `TestCaseBlockly.vue` 的 `fontStyle.family`。
+`--app-font-display` = `--app-font`（同一套字族，没有第二套显示字体）。全局 UI 字体 = **鸿蒙黑体 HarmonyOS Sans SC**（本地 `/fonts/harmonyos-sans/` 分片，随服务同源分发、断网可用；只带 Regular 400 / Semibold 600 / Bold 700 三档，500 与 800 由浏览器就近匹配到 400 / 700，见 `frontend/public/fonts/harmonyos-sans/README.md`）。等宽字体 = **Cascadia Mono / Consolas** 系统栈（`--font-mono`），表格编号与代码用它。品牌字例外用 Ziku FeiYang（本地 `/fonts/ziku-feiyang.ttf`，已子集化，仅 Regular），缺字时回落鸿蒙。
+
+> **2026-11-25 字体变更**：UI 中文由「思源黑体 Noto Sans SC（Google Fonts 分片）」改为「鸿蒙黑体 HarmonyOS Sans SC（本地分片）」，对齐需求方指定的米哈游官网字体；品牌手写体、字号 7 档、字重 5 档、行高与间距不变。变更单：`openspec/changes/switch-ui-font-to-harmonyos-sans`。
 
 ## 1.6 圆角 — 几何不对称（**二值写法，禁四值展开**）
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import time
 import urllib.request
 
@@ -14,6 +15,8 @@ DRAIN_REPORT_SECONDS = 10
 
 def start_service(spec: ServiceSpec) -> bool:
     print(f"[{spec.label}] Starting {spec.runtime} on port {spec.port}...")
+    if spec.preflight:
+        subprocess.run(list(spec.preflight), cwd=ROOT, check=False)
     spawn(list(spec.command), spec.log, cwd=spec.cwd, env=make_env(spec.extra_env))
     if wait_http(f"http://127.0.0.1:{spec.port}/", spec.ready_timeout):
         print(f"  {spec.label:<17}ready http://localhost:{spec.port}")

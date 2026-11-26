@@ -1,24 +1,12 @@
-const EMPTY = "—"
+import {
+  formatDateTime as formatDateTimeShared,
+  formatRelativeTime as formatRelativeTimeShared,
+} from "@/shared/helpers/datetime"
 
 export function formatRelativeTime(value: string): string {
-  if (!value) return EMPTY
-  const time = new Date(value).getTime()
-  if (Number.isNaN(time)) return EMPTY
-  const seconds = Math.floor((Date.now() - time) / 1000)
-  if (seconds < 60) return "刚刚"
-  if (seconds < 3600) return `${Math.floor(seconds / 60)} 分钟前`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)} 小时前`
-  const days = Math.floor(seconds / 86400)
-  if (days < 30) return `${days} 天前`
-  const months = Math.floor(days / 30)
-  if (months < 12) return `${months} 个月前`
-  return `${Math.floor(days / 365)} 年前`
+  return formatRelativeTimeShared(value, { granularity: "long" })
 }
 
 export function formatDateTime(value: string): string {
-  if (!value) return EMPTY
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return EMPTY
-  const pad = (n: number): string => String(n).padStart(2, "0")
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+  return formatDateTimeShared(value, { precision: "minute" })
 }

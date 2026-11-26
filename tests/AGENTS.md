@@ -6,19 +6,19 @@
 
 ## 简介
 
-`tests/` 只做三件事：**功能级灰盒**、**浏览器 b2b**、**落库校验**（并入灰盒用例末尾）。
+`tests/` 只做四件事：**功能级灰盒**、**浏览器 b2b**、**落库校验**（并入灰盒用例末尾）、**页面加载性能预算**（`tests/perf/`，默认不跑）。
 
 单元测试不放在这里 —— 写代码时就地测一次，脚本放 `temps/`，不提交、不进 CI、不要求后人维护。
 
 ## 测试口径（红线）
 
-1. **只收三类**：功能灰盒（`tests/<模块>/api/`、`tests/<模块>/integration/`）、浏览器 b2b（`tests/<模块>/e2e/`）、落库校验（写在灰盒用例末尾，不单独建目录）。
+1. **只收四类**：功能灰盒（`tests/<模块>/api/`、`tests/<模块>/integration/`）、浏览器 b2b（`tests/<模块>/e2e/`）、落库校验（写在灰盒用例末尾，不单独建目录）、页面加载性能预算（`tests/perf/`，只收 `perf` marker，未设置 `PERF_RUN=1` / `PERF_BASE_URL` 时一律跳过）。
 2. **禁止新增单元测试**：`tests/<模块>/unit/` 已整体迁出（2026-11-24），不得再建。按函数 / 分支 / 边界值写的用例一律不进 `tests/`。
 3. **颗粒度 = 功能**：一个功能一条用例，断言"调用方或用户能观察到的结果"。禁止把同一个功能拆成多条按函数或按分支的用例，对照见下节。
 4. **落库校验并入灰盒**：写类功能必须在同一条用例末尾用 ORM 读回，断言"前端改过的数据确实进了库"；不另建 `db/` 层。
 5. **唯一例外：`tests/arch/unit/` 契约守护** —— 零 I/O、只读源码断言前后端两侧一致（API 路径、鉴权姿态、表单校验、响应形状）。它不测业务函数实现，不受第 2 条约束；新增只允许这一类"一致性守护"。
 
-## 三类测试怎么落地
+## 四类测试怎么落地
 
 | 类型 | 落位 | 一条用例长什么样 | 例子 |
 |---|---|---|---|
@@ -26,12 +26,22 @@
 | 浏览器 b2b | `tests/<模块>/e2e/` | Playwright 真实浏览器点交互，断言用户可见的提示词 / 弹窗 / 列表变化 | 工作流新建后是否弹出"新建已完成" |
 | 落库校验 | 灰盒用例末尾（不单独建目录） | 前端触发写操作后 ORM 读回该行，断言字段值已同步 | 前端改完助手名后，`AIAssistant.name` 已是新值 |
 | 契约守护（例外） | `tests/arch/unit/` | 读源码 / 路由表做一致性断言，不启服务、不连库 | 前端调用路径与后端路由表一致 |
+| 页面加载性能 | `tests/perf/` | Playwright 冷缓存上下文跑 N 轮，取中位数与 `budgets.json` 逐项比较；空壳页判失败 | `/login` 的 LCP 与首屏传输是否超预算 |
 
 ### 颗粒度对照（写用例前先确认这条）
 
 - ✅ 一个功能一条用例：`test_platform_assistant_create_and_delete` —— 新建 → 列表可见 → 删除 → 列表消失 → 库里无残留。
 - ❌ 按函数拆：`test_create_serializer_validate`、`test_delete_view_status_code`、`test_model_str`。
 - ❌ 按分支拆：`test_login_empty_password`、`test_login_too_long`、`test_login_unicode`（除非这些分支本身就是需求方点名的功能）。
+
+### 性能预算怎么跑（`tests/perf/`）
+
+1. 阈值真相源：`tests/perf/budgets.json`，按 `dev`（5173，未打包）/ `preview`（4173，生产构建）两档登记 `lcp_ms` / `load_ms` / `transfer_kb` / `requests`；同文件顶部 `basis` 记实测口径与「为什么是这个数」，`baseline` 记当次中位数。
+2. 默认不跑；显式开启：`PERF_RUN=1 python -m pytest -c tests/pytest.ini -m perf`，需要前端已启动（`python -m run status` 确认）。本机 `deepeval 4.3.5` 的插件在收尾打印 skip 报告时会被 `[/login]` 触发 `rich` 标签错误，实测加 `-p no:deepeval` 规避（缺陷细节见 `openspec/changes/add-page-load-perf-budget/tasks.md` §7）。
+3. 生产口径：`$env:PERF_BASE_URL="http://localhost:4173"; $env:PERF_PROFILE="preview"`（先 `npx vite build` + `npx vite preview --port 4173`）。
+4. 明细落 `tests/reports/perf/page-load-*.json`（不入库）；空壳页（`renderedChars == 0`）一律判失败，不算"加载很快"。
+5. 阈值调整必须写清依据（哪台机、什么构建、几轮中位数），不许为了让红变绿而放宽。
+6. **字体前置**：`transfer_kb` 预算按「含 24.1MB 本地中文字体」标定（`requires_fonts: true`）。字体二进制不入库，缺失时用例**带原因 skip**，不许把 2MB 传输当通过；补齐方式见 `tests/perf/budgets.json` 的 `fonts_note`。
 
 ## 单元测试怎么办
 
@@ -70,3 +80,11 @@
   回退：`git checkout 41dbdc71 -- tests/<模块>/unit tests/engines`（副本同时保留在 `temps/tests-unit-archive/tests/` 下，路径与仓库内一致）。
 - **2026-11-24（续）**：`engines/` 56 个模块头的「测试」字段清理完毕 —— 删掉指向已迁出用例的条目并重排编号，无剩余条目的写 `1. 暂无`，`时间` 同步为 2026-11-24；模块 docstring 之外的 AST 零变化（`temps/verify_docstring_only.py` 校验 56/56）。
   规格侧口径变更单：`openspec/changes/align-spec-guards-with-test-policy/`（把 4 个规格里「由 `tests/graybox/unit` 的单元测试断言」改为「由 `tests/arch/unit` 的契约守护断言」）。
+- **2026-11-24（续二）**：新增第四类「页面加载性能预算」——`tests/perf/`（采集引擎 + 会话夹具 + 两份预算 + 2 条用例），
+  `pytest.ini` 注册 `perf` marker。默认不跑（`PERF_RUN=1` / `PERF_BASE_URL` 才执行），收集数 541 → 543。
+  口径依据：`openspec/changes/add-page-load-perf-budget/`。
+  回退：删 `tests/perf/`、回退 `pytest.ini` 的 `perf` marker 与本文件第 1 条。
+- **2026-11-26**：`tests/perf` 的 `transfer_kb` 预算重标定 —— UI 字体改为 24.1MB 本地原始 TTF 后，首屏传输从 1.2/1.4MB 变为 25.7/25.9MB（preview）与 30.9/31.1MB（dev），
+  预算抬到 28.3/28.6MB 与 34.0/34.3MB（实测中位数 × 1.1）；`lcp_ms` / `load_ms` / `requests` 不动。
+  同时新增「字体未就位带原因 skip」的前置判定，避免字体缺失时用 2MB 传输假绿。
+  依据：`openspec/changes/add-page-load-perf-budget/` D7 与 `budgets.json` 的 `basis`。

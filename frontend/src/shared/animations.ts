@@ -92,37 +92,3 @@ export function staggerReveal(
     ease: "outBack(1.5)",
   })
 }
-
-export function selectPop(el: HTMLElement): ReturnType<typeof animate> | undefined {
-  if (!el) return
-  el.classList.add("wb-select-ring")
-  return runMotion(el, {
-    scale: [1, 1.03, 1],
-    duration: 380,
-    ease: "outBack(1.6)",
-    onComplete: () => {
-      setTimeout(() => el.classList.remove("wb-select-ring"), 280)
-    },
-  })
-}
-
-export function iconBounce(el: HTMLElement): ReturnType<typeof animate> | undefined {
-  if (!el) return
-  return runMotion(el, {
-    scale: [1, 1.18, 0.92, 1.06, 1],
-    rotate: [0, -8, 6, -3, 0],
-    duration: 520,
-    ease: "outCubic",
-  })
-}
-
-export function loadingDots(targets: string | HTMLElement | NodeList): ReturnType<typeof animate> {
-  return runMotion(targets, {
-    scale: [1, 1.35, 1],
-    opacity: [0.55, 1, 0.55],
-    delay: stagger(120),
-    duration: 720,
-    loop: true,
-    ease: "inOutSine",
-  })
-}

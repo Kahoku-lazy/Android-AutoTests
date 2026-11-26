@@ -63,7 +63,7 @@ Doodle Craft 是本平台前端的**默认设计方案**：极简几何 · 粗�
 
 **违规判定**：`grep -rn "dashed" frontend/src` 的结果里，只有 `AssistantCard.vue`、`AssistantLanePanel.vue`、`ThreadLogPanel.vue`、`AgentRouteCard.vue`、`SectionDivider.vue` 与 `shared/styles/sketched-kit.css` 可以出现 `dashed`（与门禁 `check-dashed-whitelist.mjs` 的 OWNERS 一一对应）；其它文件（含全局 `workbench-theme.css` / `style.css` / `tokens.css`）出现即违规。
 
-**存量待迁移**（规则已生效、代码尚未改完；动到下列文件时顺手改实线，不要新写虚线）：`workbench-theme.css` 的 `.wb-shell .ac-card` 全局虚线（连带 11 个 AppCard 实例）、`style.css` 的 `.el-dialog` / `.el-drawer`、`tokens.css` 的 `--comp-sheet-border` / `--comp-dialog-border`、`SketchCard`、`TaskMediaThumb`、`StepLogCheck`、`StepLogEvidence`、`TaskAttemptCard`、`CaseStepList`、`CaseImportCard`、`WorkflowDirTree`、`PageFlowNode`、`DashboardView`、`ActivityTimeline`、`DisconnectDialog`、`VoiceConsole`、`TranscriptPanel`、`CaseFileSheet`、`WifiPortPanel`、`LoginView` 内的本地 `dashed`。
+**存量待迁移**（规则已生效、代码尚未改完；动到下列文件时顺手改实线，不要新写虚线）：`workbench-theme.css` 的 `.wb-shell .ac-card` 全局虚线（连带 11 个 AppCard 实例）、`style.css` 的 `.el-dialog` / `.el-drawer`、`tokens.css` 的 `--comp-sheet-border` / `--comp-dialog-border`、`SketchCard`、`StepLogCheck`、`StepLogEvidence`、`TaskAttemptCard`、`CaseStepList`、`WorkflowDirTree`、`PageFlowNode`、`DashboardView`、`ActivityTimeline`、`DisconnectDialog`、`VoiceConsole`、`TranscriptPanel`、`CaseFileSheet`、`WifiPortPanel`、`LoginView` 内的本地 `dashed`。
 
 ## 先选场景
 

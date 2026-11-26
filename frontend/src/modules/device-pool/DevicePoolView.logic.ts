@@ -22,14 +22,8 @@ import {
   TABLE_MIN_WIDTH_PX,
   DEFAULT_PAGE_SIZE,
 } from "./constants"
-import {
-  displayModel,
-  connectionLabel,
-  deviceAddress,
-  formatDateTime,
-  formatRelativeTime,
-  statusTag,
-} from "./helpers"
+import { displayModel, connectionLabel, deviceAddress, statusTag } from "./helpers"
+import { formatDateTime, formatRelativeTime } from "@/shared/helpers/datetime"
 import { useTableDragScroll } from "@/shared/composables/useTableDragScroll"
 
 export interface DevicePoolViewState {

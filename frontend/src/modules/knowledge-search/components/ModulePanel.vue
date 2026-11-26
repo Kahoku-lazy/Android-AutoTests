@@ -6,10 +6,10 @@ import ConfirmButton from "@/shared/components/patterns/ConfirmButton.vue"
 import EmptyState from "@/shared/components/patterns/EmptyState.vue"
 import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
-import { KS_DELETE_MESSAGE, KS_MANAGE_HINT } from "../constants"
+import { KS_DELETE_MESSAGE, KS_MANAGE_HINT, KS_RETRIEVAL_ENTRY } from "../constants"
 import type { KnowledgeModuleRow, ModulePayload } from "../types"
 import ModuleFormDialog from "./ModuleFormDialog.vue"
-import RetrievalSettingsCard from "./RetrievalSettingsCard.vue"
+import RetrievalSettingsDialog from "./RetrievalSettingsDialog.vue"
 
 defineProps<{
   modules: KnowledgeModuleRow[]
@@ -29,6 +29,7 @@ const emit = defineEmits<{
 }>()
 
 const dialogOpen = ref(false)
+const settingsOpen = ref(false)
 const editing = ref<KnowledgeModuleRow | null>(null)
 
 function openCreate() {
@@ -49,17 +50,23 @@ function closeDialog() {
   dialogOpen.value = false
 }
 
+function openSettings() {
+  settingsOpen.value = true
+}
+
 defineExpose({ closeDialog })
 </script>
 
 <template>
   <div class="ks-module-column">
-    <RetrievalSettingsCard v-if="canManage" />
     <AppCard tone="var(--c-case)" :pin="false" :tilt="0.3" class="ks-module-panel">
       <template #header>
         <div class="ks-module-panel__head">
           <span class="ks-module-panel__title">知识模块</span>
-          <DoodleBtn v-if="canManage" tone="teal" @click="openCreate">新增</DoodleBtn>
+          <div v-if="canManage" class="ks-module-panel__actions">
+            <DoodleBtn @click="openSettings">{{ KS_RETRIEVAL_ENTRY }}</DoodleBtn>
+            <DoodleBtn tone="teal" @click="openCreate">新增</DoodleBtn>
+          </div>
         </div>
       </template>
 
@@ -103,6 +110,7 @@ defineExpose({ closeDialog })
     </AppCard>
 
     <ModuleFormDialog v-model="dialogOpen" :editing="editing" @save="onSave" />
+    <RetrievalSettingsDialog v-if="canManage" v-model="settingsOpen" />
   </div>
 </template>
 
@@ -118,6 +126,12 @@ defineExpose({ closeDialog })
   font-size: var(--app-size-md);
   font-weight: var(--app-font-weight-heavy);
   color: var(--app-text-primary);
+}
+
+.ks-module-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
 }
 
 .ks-module-panel__list {

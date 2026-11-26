@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from decimal import Decimal
+
 from django.db import IntegrityError, transaction
 
 from backend.apps.ai_assistant.models import (
@@ -7,9 +11,10 @@ from backend.apps.ai_assistant.models import (
     AIRole,
     AISopWorkflow,
     AssistantAuthorGrant,
-    AssistantEvalRun,
-    AssistantLiveRun,
-    AssistantLiveSample,
+    AssistantEvalCase,
+    AssistantEvalCaseStep,
+    AssistantEvalScore,
+    AssistantEvalScoreItem,
     AssistantRelease,
     ModelUseGrant,
 )
@@ -82,16 +87,9 @@ __all__ = [
     "AssistantInUseError",
     "AssistantRevisionConflict",
     "publish_assistant",
-    "record_eval",
-    "create_live_run",
-    "append_live_sample",
-    "finish_live_run",
-    "live_run_detail",
-    "get_live_run",
-    "workflow_requires_eval",
-    "eval_passed",
-    "start_live_eval",
-    "evaluate_target",
+    "score_eval_target",
+    "list_eval_scores",
+    "list_eval_candidates",
     "publish_workflow",
     "AssistantRoleMissingError",
     "AvatarRejectedError",
@@ -342,6 +340,8 @@ def _release_payload_for_assistant(card: AIAssistant) -> dict:
     role = AIRole.objects.select_related("model_config").filter(role_id=card.role_id).first()
     config = role.model_config if role is not None else None
     return {
+        "assistant_id": card.assistant_id,
+        "run_name": card.display_name,
         "role_id": card.role_id,
         "system_prompt": role.system_prompt if role is not None else "",
         "tools": list(card.tools or []),
@@ -349,6 +349,7 @@ def _release_payload_for_assistant(card: AIAssistant) -> dict:
         "model_name": config.model_name if config is not None else "",
         "provider": config.provider if config is not None else "",
         "api_key_env": config.api_key_env if config is not None else "",
+        "base_url": config.base_url if config is not None else "",
     }
 
 
@@ -375,166 +376,201 @@ def _fingerprint(payload: dict) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
 
-def _selected_tool_names(tools: list | None) -> list[str]:
-    names: list[str] = []
-    for item in tools or []:
-        if not isinstance(item, dict):
-            continue
-        names.extend(str(name) for name in item.get("add") or [])
-        if item.get("preset") == "all":
-            names.append("adb_tap")
-    return names
+def score_eval_target(
+    kind: str, target_id: str, *, source_ref: str = "", created_by: str = ""
+) -> dict:
+    from backend.apps.ai_assistant.services.eval_scores import run_scoring
+
+    if kind not in {"assistant", "workflow"} or not str(target_id).strip():
+        raise ValueError("请选择助手或工作流")
+    return run_scoring(kind, str(target_id), source_ref=source_ref, created_by=created_by)
 
 
-def start_live_eval(kind: str, target_id: str) -> AssistantLiveRun:
-    if kind == "workflow":
-        workflow = get_workflow(int(target_id))
-        if not workflow_requires_eval(workflow):
-            raise ValueError("该组合还没有可观察的运行过程，不能评测")
-        payload = workflow_eval_payload(workflow)
-    elif kind == "assistant":
-        card = get_assistant(target_id)
-        if card is None:
-            raise LookupError("助手不存在")
-        payload = _release_payload_for_assistant(card)
-    else:
+def list_eval_scores(kind: str, target_id: str = "", limit: int = 20) -> list[dict]:
+    from backend.apps.ai_assistant.services.eval_scores import list_scores
+
+    if kind not in {"assistant", "workflow"}:
         raise ValueError("评测对象不正确")
-    from backend.apps.ai_assistant.services.eval_samples import sample_ids
-
-    ids = [item for item in sample_ids() if item.startswith("A" if kind == "assistant" else "S")]
-    return create_live_run(kind, str(target_id), payload, ids)
+    return list_scores(kind, str(target_id or ""), limit=limit)
 
 
-def evaluate_target(kind: str, target_id: str) -> dict:
-    from backend.apps.ai_assistant.services.eval_rulers import grade
-    from backend.apps.ai_assistant.services.eval_samples import load_samples
+def list_eval_candidates(kind: str, target_id: str = "") -> list[dict]:
+    from backend.apps.ai_assistant.services.eval_scores import list_candidates
 
-    if kind == "assistant":
-        card = get_assistant(target_id)
-        if card is None:
-            raise LookupError("助手不存在")
-        payload = _release_payload_for_assistant(card)
-        names = _selected_tool_names(card.tools)
-    elif kind == "workflow":
-        workflow = get_workflow(int(target_id))
-        if not workflow_requires_eval(workflow):
-            raise ValueError("该组合还没有可观察的运行过程，不能评测")
-        payload = {
-            "executor_assistant_id": workflow.executor_assistant_id,
-            "verifier_assistant_id": workflow.verifier_assistant_id,
-            "orchestration": workflow.orchestration,
-            "kind": workflow.kind,
-        }
-        verifier = AIAssistant.objects.filter(assistant_id=workflow.verifier_assistant_id).first()
-        names = _selected_tool_names(verifier.tools if verifier else [])
-    else:
+    if kind not in {"assistant", "workflow"}:
         raise ValueError("评测对象不正确")
-    failures: list[dict] = []
-    for sample in load_samples():
-        if sample.get("kind") != kind:
-            continue
-        result = dict(sample.get("scripted") or {})
-        if kind == "assistant":
-            result["tools"] = names
-        for item in grade(result, sample["expect"]):
-            failures.append({**item, "sample": sample["id"]})
-    record_eval(kind, str(target_id), payload, failures)
-    return {"passed": not failures, "failures": failures}
+    return list_candidates(kind, str(target_id or ""))
 
 
-def create_live_run(
-    kind: str, target_id: str, payload: dict, sample_ids: list[str]
-) -> AssistantLiveRun:
-    return AssistantLiveRun.objects.create(
+def create_eval_score(
+    *,
+    kind: str,
+    target_id: str,
+    prompt_fingerprint: str,
+    source_ref: str,
+    judge_model: str,
+    created_by: str,
+    items: list[dict],
+    method_key: str = "",
+    report_html: str = "",
+    test_run_json: str = "",
+) -> AssistantEvalScore:
+    score = AssistantEvalScore.objects.create(
         target_kind=kind,
-        target_id=str(target_id),
-        fingerprint=_fingerprint(payload),
-        sample_ids=list(sample_ids),
-        status=AssistantLiveRun.STATUS_PENDING,
-        progress_total=len(sample_ids),
+        target_id=target_id,
+        prompt_fingerprint=prompt_fingerprint,
+        source_ref=source_ref,
+        judge_model=judge_model,
+        method_key=method_key,
+        report_html=report_html,
+        test_run_json=test_run_json,
+        created_by=created_by,
+    )
+    rows = [
+        AssistantEvalScoreItem(
+            run=score,
+            metric_key=str(item["metric_key"]),
+            score=Decimal(str(item["score"])),
+            reason=str(item.get("reason") or ""),
+            threshold=Decimal(str(item.get("threshold") or 0)),
+        )
+        for item in items
+    ]
+    if rows:
+        AssistantEvalScoreItem.objects.bulk_create(rows)
+    return score
+
+
+def run_suite_eval(
+    target_kind: str,
+    target_id: str,
+    *,
+    case_ids: list[str],
+    serial: str,
+    owner_id: str = "",
+    created_by: str = "",
+) -> dict:
+    from backend.apps.ai_assistant.services.eval_suite import run_suite
+
+    return run_suite(
+        target_kind,
+        target_id,
+        case_ids=case_ids,
+        serial=serial,
+        owner_id=owner_id,
+        created_by=created_by,
     )
 
 
-def append_live_sample(
-    run_id: int, sample_id: str, title: str, passed: bool, failures: list[dict], steps: list[dict]
-) -> AssistantLiveSample:
-    run = AssistantLiveRun.objects.get(pk=run_id)
-    sample = AssistantLiveSample.objects.create(
-        run=run,
-        sample_id=sample_id,
-        title=title,
-        passed=passed,
-        failures=failures,
-        steps=steps,
-    )
-    run.status = AssistantLiveRun.STATUS_RUNNING
-    run.phase = "running"
-    run.progress_done = run.samples.count()
-    run.save(update_fields=["status", "phase", "progress_done", "updated_at"])
-    return sample
+def list_eval_methods() -> list[dict]:
+    from engines.backend_bridge.eval import list_methods
+
+    return list_methods()
 
 
-def finish_live_run(
-    run_id: int, *, status: str, failures: list[dict] | None = None, error: str = ""
-) -> None:
-    run = AssistantLiveRun.objects.get(pk=run_id)
-    run.status = status
-    run.phase = "done" if status == AssistantLiveRun.STATUS_DONE else "failed"
-    run.failures = list(failures or [])
-    run.error = error
-    run.progress_done = run.samples.count()
-    run.save(update_fields=["status", "phase", "failures", "error", "progress_done", "updated_at"])
+def list_eval_cases() -> list[dict]:
+    rows = []
+    for case in AssistantEvalCase.objects.prefetch_related("steps").all():
+        rows.append(_eval_case_row(case))
+    return rows
 
 
-def live_run_detail(run_id: int) -> dict | None:
-    run = get_live_run(run_id)
-    if run is None:
-        return None
+def _eval_case_row(case: AssistantEvalCase) -> dict:
     return {
-        "id": run.pk,
-        "status": run.status,
-        "phase": run.phase,
-        "progress_done": run.progress_done,
-        "progress_total": run.progress_total,
-        "error": run.error,
-        "samples": [
+        "id": case.pk,
+        "title": case.title,
+        "note": case.note,
+        "enabled": case.enabled,
+        "sort_order": case.sort_order,
+        "steps": [
             {
-                "sample": sample.sample_id,
-                "title": sample.title,
-                "passed": sample.passed,
-                "failures": [
-                    {"ruler": item.get("ruler", ""), "text": item.get("text", "")}
-                    for item in sample.failures
-                ],
-                "steps": [
-                    {
-                        "role": step.get("role", ""),
-                        "text": step.get("text", ""),
-                        "tool": step.get("tool", ""),
-                        "input": step.get("input", {}),
-                    }
-                    for step in sample.steps
-                ],
+                "id": step.pk,
+                "sort_order": step.sort_order,
+                "action": step.action,
+                "assertion": step.assertion,
+                "anchor": step.anchor or {},
             }
-            for sample in run.samples.all()
+            for step in case.steps.all()
         ],
     }
 
 
-def get_live_run(run_id: int) -> AssistantLiveRun | None:
-    return AssistantLiveRun.objects.filter(pk=run_id).prefetch_related("samples").first()
-
-
-def record_eval(kind: str, target_id: str, payload: dict, failures: list[dict]) -> AssistantEvalRun:
-    from backend.apps.ai_assistant.services.eval_samples import sample_ids
-
-    return AssistantEvalRun.objects.create(
-        target_kind=kind,
-        target_id=target_id,
-        fingerprint=_fingerprint(payload),
-        sample_ids=sample_ids(),
-        failures=failures,
+def _replace_case_steps(case: AssistantEvalCase, steps: list[dict]) -> None:
+    case.steps.all().delete()
+    AssistantEvalCaseStep.objects.bulk_create(
+        [
+            AssistantEvalCaseStep(
+                case=case,
+                sort_order=index,
+                action=str(item.get("action") or ""),
+                assertion=str(item.get("assertion") or ""),
+                anchor=item.get("anchor") or {},
+            )
+            for index, item in enumerate(steps, start=1)
+        ]
     )
+
+
+def create_eval_case(
+    *, title: str, note: str = "", steps: list[dict] | None = None, created_by: str = ""
+) -> dict:
+    if not str(title).strip():
+        raise ValueError("题目不能为空")
+    case = AssistantEvalCase.objects.create(
+        title=str(title).strip(), note=note, created_by=created_by
+    )
+    _replace_case_steps(case, steps or [])
+    return _eval_case_row(case)
+
+
+def update_eval_case(
+    case_id: int,
+    *,
+    title: str = "",
+    note: str | None = None,
+    enabled: bool | None = None,
+    steps: list[dict] | None = None,
+) -> dict:
+    case = AssistantEvalCase.objects.filter(pk=int(case_id)).first()
+    if case is None:
+        raise LookupError("评测题不存在")
+    if title:
+        case.title = str(title).strip()
+    if note is not None:
+        case.note = note
+    if enabled is not None:
+        case.enabled = bool(enabled)
+    case.save()
+    if steps is not None:
+        _replace_case_steps(case, steps)
+    return _eval_case_row(case)
+
+
+def delete_eval_case(case_id: int) -> None:
+    deleted, _ = AssistantEvalCase.objects.filter(pk=int(case_id)).delete()
+    if not deleted:
+        raise LookupError("评测题不存在")
+
+
+def eval_report_file(run_id: int) -> str:
+    run = AssistantEvalScore.objects.filter(pk=int(run_id)).first()
+    if run is None or not run.report_html:
+        raise LookupError("看板不存在")
+    return run.report_html
+
+
+def list_suite_scores(target_id: str = "", limit: int = 20) -> list[dict]:
+    from backend.apps.ai_assistant.services.eval_suite import suite_detail
+
+    queryset = AssistantEvalScore.objects.filter(target_kind="suite").order_by("-id")
+    if target_id:
+        queryset = queryset.filter(target_id=str(target_id))
+    rows = []
+    for run in queryset[:limit]:
+        detail = suite_detail(run.pk)
+        if detail is not None:
+            rows.append(detail)
+    return rows
 
 
 def workflow_eval_payload(workflow: AISopWorkflow) -> dict:
@@ -546,32 +582,9 @@ def workflow_eval_payload(workflow: AISopWorkflow) -> dict:
     }
 
 
-def workflow_requires_eval(workflow: AISopWorkflow) -> bool:
-    return workflow.orchestration == ORCHESTRATION_SOP
-
-
-def eval_passed(kind: str, target_id: str, payload: dict) -> bool:
-    from backend.apps.ai_assistant.services.eval_samples import sample_ids
-
-    latest = (
-        AssistantLiveRun.objects.filter(
-            target_kind=kind,
-            target_id=target_id,
-            status=AssistantLiveRun.STATUS_DONE,
-        )
-        .order_by("-id")
-        .first()
-    )
-    if latest is None:
-        return False
-    return (
-        latest.fingerprint == _fingerprint(payload)
-        and latest.sample_ids == sample_ids()
-        and latest.failures == []
-    )
-
-
 def publish_assistant(card: AIAssistant) -> AssistantRelease:
+    if card.release_state == "published":
+        raise ValueError("已经发布，请先改一版再发")
     release = _next_release(
         AssistantRelease.KIND_ASSISTANT, card.assistant_id, _release_payload_for_assistant(card)
     )
@@ -582,8 +595,13 @@ def publish_assistant(card: AIAssistant) -> AssistantRelease:
 
 
 def publish_workflow(workflow: AISopWorkflow) -> AssistantRelease:
-    from backend.apps.ai_assistant.services.sop_workflows import WorkflowBindingError
+    from backend.apps.ai_assistant.services.sop_workflows import (
+        WorkflowBindingError,
+        align_run_names,
+    )
 
+    if workflow.release_state == "published":
+        raise ValueError("已经发布，请先改一版再发")
     for assistant_id in (workflow.executor_assistant_id, workflow.verifier_assistant_id):
         if not assistant_id:
             continue
@@ -609,6 +627,7 @@ def publish_workflow(workflow: AISopWorkflow) -> AssistantRelease:
         if workflow.verifier_assistant_id
         else {},
     }
+    align_run_names(payload["executor"], payload["verifier"])
     release = _next_release(AssistantRelease.KIND_WORKFLOW, str(workflow.id), payload)
     workflow.release_state = "published"
     workflow.revision += 1

@@ -1,119 +1,165 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from backend.apps.ai_assistant.api import grant_assistant_author
-from backend.apps.ai_assistant.models import AIAssistant, AIModelConfig, AIRole, AISopWorkflow
-from backend.apps.ai_assistant.views_drf import EvalRunView, LiveEvalDetailView
+from backend.apps.ai_assistant.models import (
+    AIAssistant,
+    AIModelConfig,
+    AIRole,
+    AssistantEvalScore,
+)
+from backend.apps.ai_assistant.services import eval_scores
+from backend.apps.ai_assistant.views_drf import EvalScoreView
 
 pytestmark = [pytest.mark.django_db, pytest.mark.api]
 
 
-def _card() -> AIAssistant:
+def _card(prompt: str = "你是执行者。") -> AIAssistant:
     config = AIModelConfig.objects.create(
         provider="deepseek",
         api_key_env="DEEPSEEK_API_KEY",
-        model_name="deepseek-eval",
+        model_name="deepseek-flash",
     )
-    role = AIRole.objects.create(role_id="20261118ev1", name="评测配置", model_config=config)
+    role = AIRole.objects.create(
+        role_id="20261125sc1",
+        name="评分配置",
+        model_config=config,
+        system_prompt=prompt,
+    )
     return AIAssistant.objects.create(
-        assistant_id="20261118_EV1",
-        display_name="评测助手",
+        assistant_id="20261125_SC1",
+        display_name="评分助手",
         marker="teal",
         role_id=role.role_id,
         tools=[],
     )
 
 
-def _call(user, payload: dict):
+def _author(name: str):
+    user = get_user_model().objects.create_user(username=name, password="pass")
+    grant_assistant_author(user.id)
+    return user
+
+
+def _fake_judge(monkeypatch) -> None:
+    def _run_single(**kwargs):
+        scores = [
+            {
+                "metric_key": "prompt_quality",
+                "score": 0.75,
+                "reason": f"评了 {len(kwargs['prompt_body'])} 字",
+            }
+        ]
+        if str(kwargs.get("handover_body") or "").strip():
+            scores.append(
+                {
+                    "metric_key": "handover_quality",
+                    "score": 0.75,
+                    "reason": f"评了 {len(kwargs['handover_body'])} 字",
+                }
+            )
+        return {
+            "scores": scores,
+            "dashboard_html": "",
+            "test_run_json": "",
+            "judge_model": "deepseek-chat",
+            "judge_usage": [{"model": "deepseek-chat", "input_tokens": 10, "output_tokens": 2}],
+        }
+
+    monkeypatch.setattr(eval_scores, "run_single", _run_single)
+    monkeypatch.setattr(eval_scores, "_bill", lambda usages, run_id: None)
+
+
+def _post(user, payload: dict):
     factory = APIRequestFactory()
-    request = factory.post("/api/ai/evals/run/", payload, format="json")
+    request = factory.post("/api/ai/eval-scores/", payload, format="json")
     request.user_id = str(user.id)
     force_authenticate(request, user=user)
-    return EvalRunView.as_view()(request)
+    return EvalScoreView.as_view()(request)
 
 
-def test_author_can_evaluate_selected_assistant_and_workflow():
-    author = get_user_model().objects.create_user(username="eval-author", password="pass")
-    grant_assistant_author(author.id)
-    card = _card()
-    workflow = AISopWorkflow.objects.create(
-        name="评测流程",
-        executor_assistant_id=card.assistant_id,
-        verifier_assistant_id=card.assistant_id,
-    )
-
-    assistant_result = _call(author, {"kind": "assistant", "target_id": card.assistant_id})
-    workflow_result = _call(author, {"kind": "workflow", "target_id": workflow.id})
-
-    assert assistant_result.status_code == 200
-    assert assistant_result.data["id"]
-    assert workflow_result.status_code == 200
-    assert workflow_result.data["status"] == "pending"
-
-
-def test_live_detail_hides_secrets_and_reports_progress():
-    author = get_user_model().objects.create_user(username="eval-detail", password="pass")
-    grant_assistant_author(author.id)
-    plain = get_user_model().objects.create_user(username="eval-detail-plain", password="pass")
-    from backend.apps.ai_assistant import api
-
-    run = api.create_live_run("assistant", "20261118_EV1", {"api_key_env": "SECRET"}, ["A1"])
-    api.append_live_sample(
-        run.pk,
-        "A1",
-        "同栏",
-        True,
-        [],
-        [{"role": "assistant", "text": "你好", "tool": "", "input": {}, "image": "secret-bytes"}],
-    )
-
+def _get(user, params: str):
     factory = APIRequestFactory()
-    denied = factory.get(f"/api/ai/evals/runs/{run.pk}/")
-    denied.user_id = str(plain.id)
-    force_authenticate(denied, user=plain)
-    blocked = LiveEvalDetailView.as_view()(denied, run_id=run.pk)
-
-    allowed = factory.get(f"/api/ai/evals/runs/{run.pk}/")
-    allowed.user_id = str(author.id)
-    force_authenticate(allowed, user=author)
-    response = LiveEvalDetailView.as_view()(allowed, run_id=run.pk)
-
-    assert blocked.status_code == 403
-    assert response.status_code == 200
-    assert response.data["progress_done"] == 1
-    assert response.data["progress_total"] == 1
-    body = str(response.data)
-    assert "SECRET" not in body
-    assert "secret-bytes" not in body
-    assert response.data["samples"][0]["steps"][0]["text"] == "你好"
+    request = factory.get(f"/api/ai/eval-scores/?{params}")
+    request.user_id = str(user.id)
+    force_authenticate(request, user=user)
+    return EvalScoreView.as_view()(request)
 
 
-def test_goal_and_team_are_rejected_without_a_run():
-    author = get_user_model().objects.create_user(username="eval-goal", password="pass")
-    grant_assistant_author(author.id)
+def test_author_gets_scores_and_history(monkeypatch, tmp_path):
+    _fake_judge(monkeypatch)
     card = _card()
-    goal = AISopWorkflow.objects.create(
-        name="目标",
-        orchestration="goal",
-        kind="case_authoring",
-        executor_assistant_id=card.assistant_id,
-        verifier_assistant_id=card.assistant_id,
+    run_file = tmp_path / "20261125_120000_x.aligned.json"
+    run_file.write_text(
+        json.dumps(
+            {
+                "input": {"user_message": "打开设置"},
+                "summary": {"final_text": "已停在设置页", "phase": "completed"},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
     )
+    monkeypatch.setattr(
+        eval_scores, "_runs", lambda kind, target_id, limit=30: [(1.0, "task:r1:f", run_file)]
+    )
+    author = _author("score-author")
 
-    response = _call(author, {"kind": "workflow", "target_id": goal.id})
+    first = _post(author, {"kind": "assistant", "target_id": card.assistant_id})
+    second = _post(author, {"kind": "assistant", "target_id": card.assistant_id})
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    detail = first.data["score"]
+    keys = sorted(item["metric_key"] for item in detail["items"])
+    assert keys == ["handover_quality", "prompt_quality"]
+    assert detail["judge_model"]
+    assert AssistantEvalScore.objects.count() == 2
+
+    listed = _get(author, f"kind=assistant&target_id={card.assistant_id}")
+    assert listed.status_code == 200
+    rows = listed.data["scores"]
+    assert len(rows) == 2
+    assert rows[0]["id"] > rows[1]["id"]
+    assert len(rows[0]["items"]) == 2
+
+
+def test_missing_handover_is_reported_not_invented(monkeypatch):
+    _fake_judge(monkeypatch)
+    card = _card()
+    monkeypatch.setattr(eval_scores, "_runs", lambda kind, target_id, limit=30: [])
+    author = _author("score-author-2")
+
+    response = _post(author, {"kind": "assistant", "target_id": card.assistant_id})
+
+    assert response.status_code == 200
+    detail = response.data["score"]
+    assert [item["metric_key"] for item in detail["items"]] == ["prompt_quality"]
+    assert detail["missing"][0]["metric_key"] == "handover_quality"
+    assert "没有可用的运行产物" in detail["missing"][0]["reason"]
+
+
+def test_blank_prompt_is_rejected(monkeypatch):
+    _fake_judge(monkeypatch)
+    card = _card(prompt="   ")
+    author = _author("score-author-3")
+
+    response = _post(author, {"kind": "assistant", "target_id": card.assistant_id})
 
     assert response.status_code == 400
-    assert "不能评测" in str(response.data)
-    from backend.apps.ai_assistant.models import AssistantLiveRun
-
-    assert AssistantLiveRun.objects.filter(target_id=str(goal.id)).count() == 0
+    assert AssistantEvalScore.objects.count() == 0
 
 
-def test_plain_user_cannot_run_eval():
-    plain = get_user_model().objects.create_user(username="eval-plain", password="pass")
-    response = _call(plain, {"kind": "assistant", "target_id": "20261118_EV1"})
-    assert response.status_code == 403
+def test_unknown_target_returns_404(monkeypatch):
+    _fake_judge(monkeypatch)
+    author = _author("score-author-4")
+
+    response = _post(author, {"kind": "assistant", "target_id": "20260101_XX"})
+
+    assert response.status_code == 404

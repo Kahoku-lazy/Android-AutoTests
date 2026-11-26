@@ -50,6 +50,6 @@ python -m http.server 8899 --directory <看板目录>   # 必须用 HTTP 打开
 
 ## 模板没有的东西
 
-- **AGENTS.md 弹层**：需要时把 `markdown.js` 一起带上，生成器读 md 进快照，节点上加 `AGENTS` 入口（见 `dev_docs/project-viz/ae-harness.js` 的实现）
+- **AGENTS.md 弹层**：需要时把 `markdown.js` 一起带上，生成器读 md 进快照，节点上加 `AGENTS` 入口（实现方式见生成产物里的 `ae-harness.js`）
 - **历史趋势折线**：模板只保留"最近三次对比"，更长的趋势图需要额外 option 函数
 - **业务域对照表**：领域/覆盖率这类需要人工判断的映射，模板不提供，属于目标仓库自己的口径

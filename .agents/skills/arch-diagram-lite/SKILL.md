@@ -11,7 +11,7 @@ metadata:
 
 一句话：**把 archify 的架构图「语言」抽出来，用平台自己的令牌和一次自绘 SVG 画出来**——不搬它的 viewer。
 
-参考实现：`dev_docs/project-viz/index.html` 第 1 节（`dev_docs/project-viz/overview.js` 的 `DIAGRAM_LAYOUT` / `edgeRoutes()`）。拆解过程见 [references/decomposition.md](references/decomposition.md)。
+语法与取舍的拆解过程见 [references/decomposition.md](references/decomposition.md)。
 
 ## 什么时候用 / 不用
 

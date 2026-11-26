@@ -58,7 +58,6 @@ section-order = ["future", "standard-library", "third-party", "first-party", "lo
 ".agents/skills/django-61-docs/scripts/*.py" = ["T201"]
 ".agents/skills/agentscope-docs/scripts/*.py" = ["T201"]
 ".agents/skills/repo-viz-board/assets/template/gen_data.template.py" = ["T201"]
-"dev_docs/project-viz/tools/sync_sidebar.py" = ["T201"]
 "engines/agents/realtime_vocie_agent.py" = ["T201"]
 "engines/agents/realtime_vocie/demo.py" = ["T201"]
 "engines/ae_harness/assistant/_bootstrap.py" = ["T201"]

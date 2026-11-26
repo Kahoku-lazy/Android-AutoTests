@@ -209,7 +209,7 @@ SCOPE_CASES: list[tuple[str, bool, str]] = [
     ("manage.py", False, "Django 固定脚手架"),
     (".agents/skills/x/scripts/a.py", False, "顶层目录"),
     ("temps/measure.py", False, "顶层目录"),
-    ("dev_docs/project-viz/tools/a.py", False, "顶层目录"),
+    ("dev_docs/ARCH_PRD/a.py", False, "顶层目录"),
     ("frontend/src/x.py", False, "顶层目录"),
 ]
 

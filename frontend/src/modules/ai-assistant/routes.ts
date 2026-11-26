@@ -14,6 +14,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: "评测" },
   },
   {
+    path: "/ai-assistant/eval-cases",
+    name: "ai-assistant-eval-cases",
+    component: () => import("@/modules/ai-assistant/eval-cases.vue"),
+    meta: { title: "评测题库" },
+  },
+  {
     path: "/ai-assistant/:assistantId/chat",
     name: "ai-assistant-chat",
     component: () => import("@/modules/ai-assistant/chat.vue"),

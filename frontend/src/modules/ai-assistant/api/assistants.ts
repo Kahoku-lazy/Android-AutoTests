@@ -81,52 +81,207 @@ export async function avatarUrl(assistantId: string): Promise<string> {
   return raw ? `data:image/jpeg;base64,${raw}` : ""
 }
 
-export interface EvalFailure {
-  sample: string
-  ruler: string
-  text: string
+export interface EvalScoreItem {
+  metric_key: string
+  score: number
+  threshold: number
+  reason: string
 }
 
-export interface EvalStep {
-  role: string
-  text: string
-  tool: string
-  input: Record<string, unknown>
+export interface EvalScoreMissing {
+  metric_key: string
+  reason: string
 }
 
-export interface EvalSample {
-  sample: string
-  title: string
-  passed: boolean
-  failures: EvalFailure[]
-  steps: EvalStep[]
-}
-
-export interface EvalRunDetail {
+export interface EvalScore {
   id: number
-  status: string
+  target_kind: string
+  target_id: string
+  prompt_fingerprint: string
+  source_ref: string
+  judge_model: string
+  created_at: string
+  items: EvalScoreItem[]
+  missing?: EvalScoreMissing[]
+}
+
+export interface EvalCandidate {
+  source_ref: string
+  dir: string
+  file: string
+  task: string
+  handover: string
+  handover_chars: number
   phase: string
-  progress_done: number
-  progress_total: number
-  error: string
-  samples: EvalSample[]
+  cost_s: number | null
+  modified_at: string
 }
 
 export async function runEval(
   kind: "assistant" | "workflow",
   targetId: string,
-): Promise<{ id: number }> {
-  const { data } = await djangoClient.post<DjangoResponse<{ id: number }>>("/ai/evals/run/", {
-    kind,
-    target_id: targetId,
-  })
-  return data.data || { id: 0 }
+  sourceRef = "",
+): Promise<EvalScore> {
+  const { data } = await djangoClient.post<DjangoResponse<{ score: EvalScore }>>(
+    "/ai/eval-scores/",
+    { kind, target_id: targetId, source_ref: sourceRef },
+  )
+  if (!data.data) throw data
+  return data.data.score
 }
 
-export async function fetchEvalRun(id: number): Promise<EvalRunDetail> {
-  const { data } = await djangoClient.get<DjangoResponse<EvalRunDetail>>(`/ai/evals/runs/${id}/`)
+export async function fetchEvalScores(
+  kind: "assistant" | "workflow",
+  targetId: string,
+  limit = 20,
+): Promise<EvalScore[]> {
+  const { data } = await djangoClient.get<DjangoResponse<{ scores: EvalScore[] }>>(
+    "/ai/eval-scores/",
+    { params: { kind, target_id: targetId, limit } },
+  )
+  return data.data?.scores || []
+}
+
+export interface EvalMethod {
+  key: string
+  name: string
+  target: string
+  description: string
+  criteria: string
+  threshold: number
+}
+
+export interface EvalCaseStep {
+  id?: number
+  sort_order?: number
+  action: string
+  assertion: string
+  anchor: Record<string, string>
+}
+
+export interface EvalCase {
+  id: number
+  title: string
+  note: string
+  enabled: boolean
+  step_count?: number
+  steps: EvalCaseStep[]
+}
+
+export interface EvalSuiteRun {
+  id: number
+  target_id: string
+  created_at: string
+  judge_model: string
+  method_key: string
+  report_html: string
+  items: { metric_key: string; score: number; reason: string }[]
+  cases: {
+    case_id: string
+    case_title: string
+    steps_total: number
+    steps_passed: number
+    cost_s: number
+    score: number | null
+    reason: string
+  }[]
+}
+
+export async function fetchEvalMethods(): Promise<EvalMethod[]> {
+  const { data } =
+    await djangoClient.get<DjangoResponse<{ methods: EvalMethod[] }>>("/ai/eval-methods/")
+  return data.data?.methods || []
+}
+
+export async function fetchEvalCases(): Promise<EvalCase[]> {
+  const { data } = await djangoClient.get<DjangoResponse<{ cases: EvalCase[] }>>("/ai/eval-cases/")
+  return data.data?.cases || []
+}
+
+export async function createEvalCase(payload: {
+  title: string
+  note?: string
+  steps: EvalCaseStep[]
+}): Promise<EvalCase> {
+  const { data } = await djangoClient.post<DjangoResponse<{ case: EvalCase }>>(
+    "/ai/eval-cases/",
+    payload,
+  )
+  if (!data.data) throw data
+  return data.data.case
+}
+
+export async function updateEvalCase(
+  caseId: number,
+  payload: { title?: string; note?: string; enabled?: boolean; steps?: EvalCaseStep[] },
+): Promise<EvalCase> {
+  const { data } = await djangoClient.patch<DjangoResponse<{ case: EvalCase }>>(
+    `/ai/eval-cases/${caseId}/`,
+    payload,
+  )
+  if (!data.data) throw data
+  return data.data.case
+}
+
+export async function deleteEvalCase(caseId: number): Promise<void> {
+  await djangoClient.delete(`/ai/eval-cases/${caseId}/`)
+}
+
+export async function runSuiteEval(payload: {
+  target_kind: "assistant" | "workflow"
+  target_id: string
+  case_ids: string[]
+  serial: string
+}): Promise<EvalSuiteRun> {
+  const { data } = await djangoClient.post<DjangoResponse<{ score: EvalSuiteRun }>>(
+    "/ai/eval-runs/",
+    payload,
+  )
+  if (!data.data) throw data
+  return data.data.score
+}
+
+export async function fetchSuiteRuns(targetId = ""): Promise<EvalSuiteRun[]> {
+  const { data } = await djangoClient.get<DjangoResponse<{ scores: EvalSuiteRun[] }>>(
+    "/ai/eval-runs/",
+    { params: { target_id: targetId } },
+  )
+  return data.data?.scores || []
+}
+
+export async function fetchEvalReport(runId: number): Promise<string> {
+  const { data } = await djangoClient.get<string>(`/ai/eval-reports/${runId}/`, {
+    responseType: "text",
+    transformResponse: [(body) => body],
+  })
+  return data
+}
+
+export async function publishAssistant(assistantId: string): Promise<{ version: number }> {
+  const { data } = await djangoClient.post<DjangoResponse<{ version: number }>>(
+    `/ai/assistants/${assistantId}/publish/`,
+  )
   if (!data.data) throw data
   return data.data
+}
+
+export async function publishWorkflow(workflowId: number): Promise<{ version: number }> {
+  const { data } = await djangoClient.post<DjangoResponse<{ version: number }>>(
+    `/ai/sop-workflows/${workflowId}/publish/`,
+  )
+  if (!data.data) throw data
+  return data.data
+}
+
+export async function fetchEvalCandidates(
+  kind: "assistant" | "workflow",
+  targetId: string,
+): Promise<EvalCandidate[]> {
+  const { data } = await djangoClient.get<DjangoResponse<{ candidates: EvalCandidate[] }>>(
+    "/ai/eval-candidates/",
+    { params: { kind, target_id: targetId } },
+  )
+  return data.data?.candidates || []
 }
 
 export async function listSopWorkflows(): Promise<SopWorkflow[]> {

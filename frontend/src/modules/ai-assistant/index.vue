@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue"
+import { ElMessage } from "element-plus"
 import { useRouter } from "vue-router"
 import DoodleBtn from "@/shared/components/DoodleBtn.vue"
 import WorkbenchHeader from "@/shared/components/WorkbenchHeader.vue"
@@ -13,7 +14,7 @@ import SectionBar from "./components/SectionBar.vue"
 import SopWorkflowSection from "./components/SopWorkflowSection.vue"
 import AssistantEditor from "./components/AssistantEditor.vue"
 import { useAuthUser } from "@/shared/composables/useAuthUser"
-import { listAssistants } from "./api/assistants"
+import { listAssistants, publishAssistant } from "./api/assistants"
 import type { AssistantCard, SopWorkflow } from "./types"
 import "./tokens.css"
 import "./editor-form.css"
@@ -27,6 +28,7 @@ const error = ref("")
 const editorOpen = ref(false)
 const editing = ref<AssistantCard | null>(null)
 const workflows = ref<SopWorkflow[]>([])
+const publishError = ref<Record<string, string>>({})
 
 async function load(): Promise<void> {
   loading.value = true
@@ -59,6 +61,21 @@ function closeEditor(): void {
 async function onSaved(): Promise<void> {
   closeEditor()
   await load()
+}
+
+async function publish(card: AssistantCard): Promise<void> {
+  publishError.value = { ...publishError.value, [card.assistant_id]: "" }
+  try {
+    await publishAssistant(card.assistant_id)
+    cards.value = cards.value.map((item) =>
+      item.assistant_id === card.assistant_id ? { ...item, release_state: "published" } : item,
+    )
+    ElMessage.success("已发布")
+  } catch (cause) {
+    const message = formatApiError(cause as never, "发布失败")
+    publishError.value = { ...publishError.value, [card.assistant_id]: message }
+    ElMessage.error(message)
+  }
 }
 
 function openChat(card: AssistantCard): void {
@@ -108,8 +125,11 @@ onMounted(load)
             :item="{ kind: 'assistant', card }"
             :index="index"
             :can-edit="isAssistantAuthor"
+            :can-publish="isAssistantAuthor"
+            :error="publishError[card.assistant_id] || ''"
             @edit="openEdit(card)"
             @activate="openChat(card)"
+            @publish="publish(card)"
           />
         </div>
         <SectionDivider class="ai-assistant-page__divider" />

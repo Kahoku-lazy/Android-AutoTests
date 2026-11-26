@@ -8,7 +8,7 @@ import ErrorState from "@/shared/components/patterns/ErrorState.vue"
 import SkeletonCard from "@/shared/components/patterns/SkeletonCard.vue"
 import { formatApiError } from "@/shared/api-client"
 import { useAuthUser } from "@/shared/composables/useAuthUser"
-import { listSopWorkflows } from "../api/assistants"
+import { listSopWorkflows, publishWorkflow } from "../api/assistants"
 import { workflowCards } from "../helpers/sop-card"
 import { sopSubmittedMessage } from "../helpers/sop-form"
 import AssistantCardView from "./AssistantCard.vue"
@@ -31,6 +31,7 @@ const editorOpen = ref(false)
 const editing = ref<SopWorkflow | null>(null)
 const runOpen = ref(false)
 const running = ref<SopWorkflow | null>(null)
+const publishError = ref<Record<string, string>>({})
 
 const tiles = computed<SopWorkflowCard[]>(() => workflowCards(workflows.value, props.cards))
 const runTitle = computed(() => (running.value ? `任务 · ${running.value.name}` : "任务"))
@@ -97,6 +98,22 @@ function onSubmitted(taskId: number): void {
   })
 }
 
+async function publish(tile: SopWorkflowCard): Promise<void> {
+  const key = String(tile.id)
+  publishError.value = { ...publishError.value, [key]: "" }
+  try {
+    await publishWorkflow(tile.id)
+    workflows.value = workflows.value.map((item) =>
+      item.id === tile.id ? { ...item, release_state: "published" } : item,
+    )
+    ElMessage.success("已发布")
+  } catch (cause) {
+    const message = formatApiError(cause as never, "发布失败")
+    publishError.value = { ...publishError.value, [key]: message }
+    ElMessage.error(message)
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -123,9 +140,12 @@ onMounted(load)
           :key="tile.id"
           :item="{ kind: 'workflow', card: tile }"
           :can-edit="isAssistantAuthor"
+          :can-publish="isAssistantAuthor"
+          :error="publishError[String(tile.id)] || ''"
           :index="index"
           @edit="openEdit(tile)"
           @activate="openRun(tile)"
+          @publish="publish(tile)"
         />
       </div>
     </template>

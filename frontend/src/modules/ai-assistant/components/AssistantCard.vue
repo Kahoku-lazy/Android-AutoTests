@@ -4,10 +4,21 @@ import { avatarUrl } from "../api/assistants"
 import { markerVars } from "../helpers/marker"
 import type { MarkerTile } from "../types"
 
-const props = withDefaults(defineProps<{ item: MarkerTile; index: number; canEdit?: boolean }>(), {
-  canEdit: true,
-})
-const emit = defineEmits<{ edit: []; activate: [] }>()
+const props = withDefaults(
+  defineProps<{
+    item: MarkerTile
+    index: number
+    canEdit?: boolean
+    canPublish?: boolean
+    error?: string
+  }>(),
+  {
+    canEdit: true,
+    canPublish: false,
+    error: "",
+  },
+)
+const emit = defineEmits<{ edit: []; activate: []; publish: [] }>()
 
 const src = ref("")
 
@@ -37,6 +48,10 @@ const secondaryLabel = computed(() => (props.item.kind === "assistant" ? "对话
 
 const avatar = computed(() => (props.item.kind === "assistant" ? src.value : ""))
 
+const isDraft = computed(() => props.item.card.release_state === "draft")
+
+const showPublish = computed(() => isDraft.value && props.canPublish)
+
 onMounted(async () => {
   if (props.item.kind === "assistant" && props.item.card.has_avatar) {
     src.value = await avatarUrl(props.item.card.assistant_id)
@@ -52,12 +67,10 @@ onMounted(async () => {
     :data-tilt="index % 3"
   >
     <span class="assistant-card__pin" aria-hidden="true" />
+    <span v-if="isDraft" class="assistant-card__chip">草稿</span>
     <img v-if="avatar" class="assistant-card__avatar" :src="avatar" alt="" />
     <span v-else class="assistant-card__swatch" aria-hidden="true" />
-    <h3 class="assistant-card__name" :title="title">
-      {{ title }}
-      <span v-if="item.kind === 'assistant' && item.card.release_state === 'draft'">草稿</span>
-    </h3>
+    <h3 class="assistant-card__name" :title="title">{{ title }}</h3>
     <p class="assistant-card__role" :title="detail">{{ detail }}</p>
     <div class="assistant-card__actions">
       <button
@@ -75,15 +88,22 @@ onMounted(async () => {
       >
         {{ secondaryLabel }}
       </button>
+      <button
+        v-if="showPublish"
+        type="button"
+        class="assistant-card__action assistant-card__action--publish"
+        @click="emit('publish')"
+      >
+        发布
+      </button>
     </div>
+    <p v-if="error" class="assistant-card__error">{{ error }}</p>
   </article>
 
   <article v-else class="sop-card" :style="markerVars(item.card.marker)" :data-tilt="index % 3">
     <span class="sop-card__tape" aria-hidden="true" />
-    <h3 class="sop-card__name" :title="title">
-      {{ title }}
-      <span v-if="item.card.release_state === 'draft'">草稿</span>
-    </h3>
+    <span v-if="isDraft" class="sop-card__chip">草稿</span>
+    <h3 class="sop-card__name" :title="title">{{ title }}</h3>
     <p class="sop-card__line" :title="executorLine">{{ executorLine }}</p>
     <p class="sop-card__line" :title="verifierLine">{{ verifierLine }}</p>
     <div class="sop-card__trail">
@@ -102,8 +122,17 @@ onMounted(async () => {
       >
         任务
       </button>
-      <span class="sop-card__block" aria-hidden="true" />
+      <button
+        v-if="showPublish"
+        type="button"
+        class="sop-card__action sop-card__action--publish"
+        @click="emit('publish')"
+      >
+        发布
+      </button>
+      <span v-else class="sop-card__block" aria-hidden="true" />
     </div>
+    <p v-if="error" class="sop-card__error">{{ error }}</p>
   </article>
 </template>
 
@@ -203,13 +232,15 @@ onMounted(async () => {
 
 .assistant-card__actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: var(--app-space-sm);
   margin-top: var(--app-space-xs);
 }
 
 .assistant-card__action {
   min-height: 30px;
-  padding: 0 var(--app-space-md);
+  padding: 0 var(--app-space-sm);
   border: 1.5px dashed var(--ink);
   border-radius: 2px;
   background: transparent;
@@ -386,6 +417,41 @@ onMounted(async () => {
   border-color: transparent;
   background: color-mix(in srgb, var(--assistant-marker) 30%, var(--paper));
   pointer-events: none;
+}
+
+.assistant-card__chip,
+.sop-card__chip {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 1px var(--app-space-xs);
+  border: 1.5px dashed var(--ink);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--c-dashboard) 32%, var(--paper));
+  color: var(--ink);
+  font-size: var(--app-size-xs);
+  font-weight: var(--app-font-weight-heavy);
+  line-height: var(--app-line-height-tight);
+}
+
+.assistant-card__action--publish,
+.sop-card__action--publish {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--c-case) 20%, var(--paper)),
+    color-mix(in srgb, var(--c-case) 5%, var(--paper))
+  );
+}
+
+.assistant-card__error,
+.sop-card__error {
+  margin: 0;
+  max-width: 100%;
+  color: var(--app-marker-red);
+  font-size: var(--app-size-xs);
+  font-weight: var(--app-font-weight-bold);
+  line-height: var(--app-line-height-snug);
+  text-align: center;
 }
 
 @media (prefers-reduced-motion: reduce) {

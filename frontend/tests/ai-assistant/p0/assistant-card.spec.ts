@@ -71,6 +71,76 @@ describe("助手颜料片", () => {
     ])
     expect(wrapper.find(".sop-card__tape").exists()).toBe(false)
   })
+
+  it("草稿卡的发布在卡内第三位，已发布卡没有发布", () => {
+    const draft = mount(AssistantCard, {
+      props: {
+        item: { kind: "assistant", card: { ...card, release_state: "draft" } },
+        index: 0,
+        canPublish: true,
+      },
+    })
+    const actions = draft.find(".assistant-card__actions")
+    expect(actions.findAll(".assistant-card__action").map((node) => node.text())).toEqual([
+      "配置",
+      "对话",
+      "发布",
+    ])
+    expect(draft.findAll(".assistant-card__actions")).toHaveLength(1)
+    expect(actions.find(".assistant-card__action--publish").exists()).toBe(true)
+
+    const published = mount(AssistantCard, {
+      props: {
+        item: { kind: "assistant", card: { ...card, release_state: "published" } },
+        index: 0,
+        canPublish: true,
+      },
+    })
+    expect(published.findAll(".assistant-card__action").map((node) => node.text())).toEqual([
+      "配置",
+      "对话",
+    ])
+  })
+
+  it("草稿标识是独立胶囊，不写进名称", () => {
+    const draft = mount(AssistantCard, {
+      props: {
+        item: { kind: "assistant", card: { ...card, release_state: "draft" } },
+        index: 0,
+        canPublish: true,
+      },
+    })
+    expect(draft.find(".assistant-card__name").text()).toBe("小助")
+    expect(draft.find(".assistant-card__chip").text()).toBe("草稿")
+  })
+
+  it("点发布只抛 publish", async () => {
+    const draft = mount(AssistantCard, {
+      props: {
+        item: { kind: "assistant", card: { ...card, release_state: "draft" } },
+        index: 0,
+        canPublish: true,
+      },
+    })
+    await draft.find(".assistant-card__action--publish").trigger("click")
+    expect(draft.emitted("publish")).toHaveLength(1)
+    expect(draft.emitted("edit")).toBeUndefined()
+    expect(draft.emitted("activate")).toBeUndefined()
+  })
+
+  it("发布失败只在该卡显示原因，卡片其余内容还在", () => {
+    const draft = mount(AssistantCard, {
+      props: {
+        item: { kind: "assistant", card: { ...card, release_state: "draft" } },
+        index: 0,
+        canPublish: true,
+        error: "发布被拒：两侧名片都要先发布",
+      },
+    })
+    expect(draft.find(".assistant-card__error").text()).toContain("两侧名片都要先发布")
+    expect(draft.find(".assistant-card__name").text()).toBe("小助")
+    expect(draft.find(".assistant-card__action--publish").exists()).toBe(true)
+  })
 })
 
 describe("工作流便签卡", () => {
@@ -131,5 +201,38 @@ describe("工作流便签卡", () => {
     await wrapper.find(".sop-card__action--task").trigger("click")
     expect(wrapper.emitted("activate")).toHaveLength(1)
     expect(wrapper.emitted("edit")).toBeUndefined()
+  })
+
+  it("草稿工作流卡的发布替换占位块，已发布卡仍留占位块", async () => {
+    const draft = mount(AssistantCard, {
+      props: {
+        item: { kind: "workflow", card: { ...workflow, release_state: "draft" } },
+        index: 0,
+        canPublish: true,
+      },
+    })
+    const trail = draft.find(".sop-card__trail")
+    expect(trail.element.children).toHaveLength(3)
+    expect(Array.from(trail.element.children).map((node) => node.textContent?.trim())).toEqual([
+      "配置",
+      "任务",
+      "发布",
+    ])
+    expect(trail.find(".sop-card__block").exists()).toBe(false)
+    expect(draft.find(".sop-card__chip").text()).toBe("草稿")
+
+    await draft.find(".sop-card__action--publish").trigger("click")
+    expect(draft.emitted("publish")).toHaveLength(1)
+
+    const published = mount(AssistantCard, {
+      props: {
+        item: { kind: "workflow", card: { ...workflow, release_state: "published" } },
+        index: 0,
+        canPublish: true,
+      },
+    })
+    expect(published.find(".sop-card__action--publish").exists()).toBe(false)
+    expect(published.find(".sop-card__block").exists()).toBe(true)
+    expect(published.find(".sop-card__chip").exists()).toBe(false)
   })
 })

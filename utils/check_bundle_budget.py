@@ -16,6 +16,25 @@ NPX = "npx.cmd" if sys.platform == "win32" else "npx"
 
 SCRIPT_RX = re.compile(r'src="(/assets/[^"]+\.js)"')
 STYLE_RX = re.compile(r'href="(/assets/[^"]+\.css)"')
+LINK_RX = re.compile(r"<link\b[^>]*>", re.IGNORECASE)
+HREF_RX = re.compile(r'href="([^"]+)"')
+REL_RX = re.compile(r'rel="([^"]+)"')
+
+
+def preload_scripts(html: str) -> list[str]:
+    found: list[str] = []
+    for tag in LINK_RX.findall(html):
+        rel = REL_RX.search(tag)
+        href = HREF_RX.search(tag)
+        if rel is None or href is None:
+            continue
+        kinds = set(rel.group(1).split())
+        if not kinds & {"modulepreload", "preload"}:
+            continue
+        target = href.group(1)
+        if target.startswith("/assets/") and target.endswith(".js"):
+            found.append(target)
+    return found
 
 
 def gzip_kb(path: Path, level: int) -> float:
@@ -37,6 +56,7 @@ def collect(level: int) -> dict:
     html = (DIST / "index.html").read_text(encoding="utf-8")
     scripts = SCRIPT_RX.findall(html)
     styles = STYLE_RX.findall(html)
+    preloads = [rel for rel in preload_scripts(html) if rel not in scripts]
     if not scripts and not styles:
         raise SystemExit("在 dist/index.html 中找不到任何入口脚本或样式，检查构建产物")
     js_files = sorted(DIST.glob("assets/*.js"))
@@ -45,7 +65,9 @@ def collect(level: int) -> dict:
     sizes = [(gzip_kb(path, level), path.name) for path in js_files]
     largest_kb, largest_name = max(sizes)
     total_kb = round(sum(size for size, _ in sizes), 1)
-    entry_js = round(sum(gzip_kb(DIST / rel.lstrip("/"), level) for rel in scripts), 1)
+    script_kb = round(sum(gzip_kb(DIST / rel.lstrip("/"), level) for rel in scripts), 1)
+    preload_kb = round(sum(gzip_kb(DIST / rel.lstrip("/"), level) for rel in preloads), 1)
+    entry_js = round(script_kb + preload_kb, 1)
     entry_css = round(sum(gzip_kb(DIST / rel.lstrip("/"), level) for rel in styles), 1)
     return {
         "entry_js_kb": entry_js,
@@ -54,6 +76,9 @@ def collect(level: int) -> dict:
         "total_js_kb": total_kb,
         "largest_chunk": largest_name,
         "js_files": len(js_files),
+        "entry_script_kb": script_kb,
+        "entry_preload_kb": preload_kb,
+        "entry_preload_files": len(preloads),
     }
 
 
@@ -75,6 +100,10 @@ def main() -> int:
         print(f"{key:<20}{value:>10}{limit:>10}   {'FAIL' if value > limit else 'ok'}")
     print(
         f"最大块：{actual['largest_chunk']}（{actual['largest_chunk_kb']} KB，共 {actual['js_files']} 个 JS 产物）"
+    )
+    print(
+        f"入口 JS 构成：脚本 {actual['entry_script_kb']} KB + 首屏预载 {actual['entry_preload_kb']} KB"
+        f"（{actual['entry_preload_files']} 个 modulepreload/preload）"
     )
 
     if failures:

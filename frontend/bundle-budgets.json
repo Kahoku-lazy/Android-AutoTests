@@ -1,17 +1,17 @@
 {
   "measured_at": "2026-11-26",
   "gzip_level": 9,
-  "note": "baseline = 2026-11-26 主干（Kahoku 82a3e252）CI 构建实测 gzip KB；budget = baseline × 1.1 向上取整。原 2026-11-25 数字（44.4 / 55.4 / 194.4 / 570.3）测于带未合并前端改动的工作区，主干不可复现，已作废；待 `redesign-report-views` 等前端变更落地后再提收紧 PR",
+  "note": "口径（2026-11-26 起）：entry_js_kb = dist/index.html 里 <script src> 的 JS + rel=modulepreload/preload 的 JS —— 后者是首屏一定会被预下载的块，旧实现只算前者，把 element-plus 的 296.7KB 预载漏在门外（详见 openspec/changes/add-bundle-size-budget/design.md D5）。baseline = 本机同一构建实测（npx vite build + 本脚本复算 gzip level 9），budget = baseline × 1.1 向上取整。同口径下旧分块策略实测 386.3（会红），现行 133.5。",
   "baseline": {
-    "entry_js_kb": 12.8,
-    "entry_css_kb": 55.6,
-    "largest_chunk_kb": 368.7,
-    "total_js_kb": 873.2
+    "entry_js_kb": 133.5,
+    "entry_css_kb": 55.4,
+    "largest_chunk_kb": 194.4,
+    "total_js_kb": 573.9
   },
   "budget": {
-    "entry_js_kb": 15,
-    "entry_css_kb": 62,
-    "largest_chunk_kb": 406,
-    "total_js_kb": 961
+    "entry_js_kb": 147,
+    "entry_css_kb": 61,
+    "largest_chunk_kb": 214,
+    "total_js_kb": 632
   }
 }

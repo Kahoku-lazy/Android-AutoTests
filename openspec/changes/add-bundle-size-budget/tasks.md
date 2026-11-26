@@ -16,3 +16,16 @@
   判据：命令退出码 0。
 - [x] 4.2 全量门禁不受影响：`python -m run check` 的 `pytest-collect` 仍绿（本单只加一条前端 gate）。
   判据：该 gate 通过。
+
+## 5. 入口口径修正（2026-11-26）
+
+- [x] 5.1 修正 `entry_js_kb` 口径：把 `rel="modulepreload"` / `rel="preload"` 指向的 JS 计入入口 JS，并在输出里给出「脚本 X + 首屏预载 Y」构成。
+  原因：旧实现只读 `<script src>`，而 Vite 会把首屏要用的块写成预载——`element-plus` 手工分块那 296.7KB（gzip）一直在首屏被下载却没被计过。
+  判据：同一份产物在旧口径下 `entry_js_kb` 为 12.9、新口径下为 386.3（A 分块）与 133.5（B 分块）。
+- [x] 5.2 `frontend/vite.config.js` 去掉 `"element-plus": ["element-plus"]` 手工分块，让 Element Plus 按路由拆分。
+  判据：首屏必载 JS 386.3 → 133.5（−65%）、JS 总量 706.1 → 573.9、最大块 296.7 → 194.4。
+- [x] 5.3 按新口径重标定 `frontend/bundle-budgets.json`（baseline 133.5 / 55.4 / 194.4 / 573.9；budget ×1.1 = 147 / 61 / 214 / 632）。
+  判据：`python utils/check_bundle_budget.py` 四项 ok；把 5.2 的分块改回去后该项立刻 FAIL（实测 386.3 > 147）。
+- [x] 5.4 用 `tests/perf` 对两种分块做一次运行对照，确认没有把时间换成体积。
+  判据：preview 3 轮中位数——A（旧）`/login` LCP 396ms / load 574.7ms / transfer 25 946KB / 15 请求；
+  B（新）`/login` LCP 360ms / load 520.6ms / transfer 25 699KB / 18 请求。三项时间指标均不退化。

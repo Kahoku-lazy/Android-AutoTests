@@ -196,11 +196,19 @@ frontend/public/fonts/harmonyos-sans/*.ttf
 
 # ── 本地缓存 / 调试截图 / 临时文件 ──
 .npm-cache/
+.archify/
 govee_report/
 .tmp_*
 
 # ── 实验脚本（不入库）──
 mobile_agent/
+
+# ── archify 架构图校验回执（工具产物不入库；已在库的历史回执不受影响）──
+dev_docs/ARCH_PRD/*.browser-check.json
+dev_docs/ARCH_PRD/*.delivery.json
+dev_docs/ARCH_PRD/*.finalize.json
+dev_docs/ARCH_PRD/*.finalize-summary.json
+dev_docs/ARCH_PRD/*.visual-check.json
 
 # ── OpenSpec 本地工作流（自动生成，不入库）──
 # openspec/

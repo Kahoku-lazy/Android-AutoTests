@@ -136,3 +136,49 @@ def test_run_input_template_only_uses_device_serial():
         api.build_sop_run_input(task)
         == "本次要操作的设备 serial 是：R5CT62RH88F。每一步的设备动作都必须带上它。"
     )
+
+
+def test_release_version_is_recorded_only_for_sop(admin_user, monkeypatch):
+    from backend.apps.ai_assistant.models import AssistantRelease
+
+    AssistantRelease.objects.create(
+        target_kind="workflow",
+        target_id="7",
+        version=4,
+        payload={},
+    )
+
+    def _workflow(orchestration: str):
+        return type(
+            "Workflow",
+            (),
+            {
+                "id": 7,
+                "name": "回归工作流",
+                "release_state": "published",
+                "kind": "ui_automation",
+                "orchestration": orchestration,
+            },
+        )()
+
+    monkeypatch.setattr(
+        "backend.apps.ai_assistant.api.get_sop_workflow", lambda workflow_id: _workflow("sop")
+    )
+    sop = _submit(
+        admin_user,
+        data={"title": "SOP 任务", "workflow_id": 7, "device_serial": "R5CT62RH88F"},
+        files={"config": _yaml_file()},
+    )
+    assert sop.status_code == 200
+    assert Task.objects.get(id=sop.data["id"]).release_version == 4
+
+    monkeypatch.setattr(
+        "backend.apps.ai_assistant.api.get_sop_workflow", lambda workflow_id: _workflow("goal")
+    )
+    goal = _submit(
+        admin_user,
+        data={"title": "目标任务", "workflow_id": 7, "device_serial": "R5CT62RH88F"},
+        files={"config": _yaml_file()},
+    )
+    assert goal.status_code == 200
+    assert Task.objects.get(id=goal.data["id"]).release_version is None

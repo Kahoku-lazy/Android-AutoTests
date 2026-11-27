@@ -55,6 +55,12 @@ def _current_release_version(workflow_id: int) -> int | None:
     )
 
 
+def _pinned_release_version(workflow) -> int | None:
+    if workflow.orchestration != "sop":
+        return None
+    return _current_release_version(workflow.id)
+
+
 def _store_attachment(filename: str, content: bytes) -> str:
     from backend.apps.task_list.attachments import store_flat_upload
     from utils.logs import backend_log
@@ -91,7 +97,7 @@ def _submit_material_workflow(request, workflow, title: str, user_id):
             task_kind=TaskKind.ASSISTANT_SOP,
             created_by=str(user_id or ""),
             workflow_id=workflow.id,
-            release_version=_current_release_version(workflow.id),
+            release_version=_pinned_release_version(workflow),
             orchestration=workflow.orchestration,
             kind=workflow.kind,
         )
@@ -149,7 +155,7 @@ def _submit_assistant_sop(
             task_kind=TaskKind.ASSISTANT_SOP,
             created_by=str(user_id or ""),
             workflow_id=workflow.id,
-            release_version=_current_release_version(workflow.id),
+            release_version=_pinned_release_version(workflow),
             orchestration=workflow.orchestration,
             kind=workflow.kind,
         )

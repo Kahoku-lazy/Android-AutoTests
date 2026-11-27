@@ -141,7 +141,7 @@ def queue_turn(thread: AIAssistantThread) -> None:
     import sys
     import threading
 
-    if "pytest" in sys.modules:
+    if getattr(settings, "TESTING", False) or "pytest" in sys.modules:
         return
     threading.Thread(
         target=_run_turn,

@@ -162,3 +162,79 @@ def test_delete_removes_only_workflow():
     assert response.status_code == 200
     assert not AISopWorkflow.objects.filter(pk=workflow.pk).exists()
     assert AIAssistant.objects.filter(pk=card.pk).exists()
+
+
+def test_editing_published_workflow_returns_to_draft_and_republishes():
+    from backend.apps.ai_assistant.api import publish_workflow
+
+    executor = _card("20261117_ED1", "编辑执行")
+    verifier = _card("20261117_ED2", "编辑验收")
+    for card in (executor, verifier):
+        card.release_state = "published"
+        card.save(update_fields=["release_state"])
+    workflow = AISopWorkflow.objects.create(
+        name="可编辑",
+        executor_assistant_id=executor.assistant_id,
+        verifier_assistant_id=verifier.assistant_id,
+        orchestration="sop",
+        kind="ui_automation",
+    )
+    first = publish_workflow(workflow)
+    workflow.refresh_from_db()
+    assert workflow.release_state == "published"
+
+    patched = _call(
+        "patch",
+        workflow.id,
+        {
+            "name": "可编辑",
+            "executor_assistant_id": verifier.assistant_id,
+            "verifier_assistant_id": executor.assistant_id,
+        },
+    )
+
+    assert patched.status_code == 200
+    workflow.refresh_from_db()
+    assert workflow.release_state == "draft"
+    second = publish_workflow(workflow)
+    assert second.version == first.version + 1
+
+
+def test_team_publish_requires_published_members():
+    from backend.apps.ai_assistant.views_drf import WorkflowPublishView
+
+    leader = _card("20261117_TL1", "队长")
+    member = _card("20261117_TM1", "成员甲")
+    other = _card("20261117_TM2", "成员乙")
+    for card in (leader, other):
+        card.release_state = "published"
+        card.save(update_fields=["release_state"])
+    workflow = AISopWorkflow.objects.create(
+        name="团队流程",
+        orchestration="team",
+        kind="requirement_breakdown",
+        leader_assistant_id=leader.assistant_id,
+        members=[
+            {"assistant_id": member.assistant_id, "description": "拆需求"},
+            {"assistant_id": other.assistant_id, "description": "写用例"},
+        ],
+    )
+    user = get_user_model().objects.create_user(username="wf-team-publish", password="pass")
+    grant_assistant_author(user.id)
+
+    def _publish():
+        factory = APIRequestFactory()
+        request = factory.post(f"/api/ai/sop-workflows/{workflow.id}/publish/")
+        request.user_id = str(user.id)
+        force_authenticate(request, user=user)
+        return WorkflowPublishView.as_view()(request, workflow_id=workflow.id)
+
+    blocked = _publish()
+    assert blocked.status_code == 400
+    assert "队长与成员" in str(blocked.data)
+
+    member.release_state = "published"
+    member.save(update_fields=["release_state"])
+    allowed = _publish()
+    assert allowed.status_code == 200
+    assert allowed.data["version"] == 1

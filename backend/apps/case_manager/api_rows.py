@@ -462,14 +462,15 @@ def compile_automation_cases(*, case_ids: list[str], user_id: str) -> str:
     steps = []
     for row in _automation_rows(case_ids, user_id):
         for index, step in enumerate(row.steps.all(), start=1):
-            description = f"动作：{step.action}\n断言：{step.assertion}"
+            subject = " ".join(str(step.action or "").split()) or f"第 {index} 步"
+            description = f"用例：{row.title}\n动作：{step.action}\n断言：{step.assertion}"
             if step.anchor:
                 description += f"\n页面锚点：{step.anchor}"
             if step.log:
                 description += f"\n日志证据：{step.log}"
             steps.append(
                 {
-                    "subject": f"{row.title} · 第 {index} 步",
+                    "subject": subject,
                     "description": description,
                     "max_attempts": 3,
                 }

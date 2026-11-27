@@ -111,6 +111,14 @@ def _disabled_account_response(user_id) -> JsonResponse | None:
     except DatabaseError as exc:
         logger.error("停用判定失败，放行请求: %s", exc)
         return None
+    if active is None:
+        return JsonResponse(
+            {
+                "status": False,
+                "message": "登录已过期或令牌无效",
+            },
+            status=401,
+        )
     if active is True:
         return None
     return JsonResponse(

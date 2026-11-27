@@ -70,6 +70,7 @@ def _run_meta(
     inputs: list[dict],
     serial: str,
     spec: SopSpec,
+    report_title: str = "",
 ) -> dict:
     roles = [
         {
@@ -90,6 +91,7 @@ def _run_meta(
         "serial": serial,
         "sop_name": spec.name,
         "sop_description": spec.description,
+        "report_title": report_title,
         "roles": roles,
     }
 
@@ -250,6 +252,7 @@ async def run_bound_sop(
     report_root: Path | None = None,
     controls: list | None = None,
     task_id: int = 0,
+    report_title: str = "",
     on_abort: Callable[[Path | None, Exception, dict], None] | None = None,
 ) -> SopRunResult:
     clean = require_online(serial)
@@ -262,7 +265,7 @@ async def run_bound_sop(
         roles.verifier.agent.name: verifier.model_name,
     }
     inputs = await _role_inputs(roles, executor, verifier)
-    run_meta = _run_meta(executor, verifier, inputs, clean, spec)
+    run_meta = _run_meta(executor, verifier, inputs, clean, spec, report_title)
     capture = _SopCapture(
         run_meta,
         {

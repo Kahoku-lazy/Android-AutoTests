@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
+
 import pytest
+import yaml
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -136,6 +139,50 @@ def test_run_input_template_only_uses_device_serial():
         api.build_sop_run_input(task)
         == "本次要操作的设备 serial 是：R5CT62RH88F。每一步的设备动作都必须带上它。"
     )
+
+
+def test_platform_cases_compile_subject_from_action(admin_user):
+    from backend.apps.case_manager.models import (
+        LIBRARY_AUTOMATION,
+        AutomationCase,
+        AutomationStep,
+        CaseProject,
+    )
+
+    project = CaseProject.objects.create(
+        name="灯光项目", library_kind=LIBRARY_AUTOMATION, created_by=str(admin_user.id)
+    )
+    case = AutomationCase.objects.create(
+        id="case-music",
+        project=project,
+        title="H705F 音乐功能测试（UI 验证）",
+        business_type="lighting",
+        created_by=str(admin_user.id),
+    )
+    AutomationStep.objects.create(
+        case=case, sort_order=1, action="启动应用并进入详情页", assertion="停在详情页"
+    )
+    AutomationStep.objects.create(case=case, sort_order=2, action="删除快照", assertion="列表为空")
+
+    response = _submit(
+        admin_user,
+        data={
+            "title": "任务",
+            "workflow_id": 7,
+            "device_serial": "R5CT62RH88F",
+            "case_source": "platform",
+            "case_ids": json.dumps(["case-music"]),
+        },
+    )
+
+    assert response.status_code == 200
+    task = Task.objects.get(id=response.data["id"])
+    steps = yaml.safe_load(task.file_attachments.get(kind="config").body)["steps"]
+    assert [step["subject"] for step in steps] == ["启动应用并进入详情页", "删除快照"]
+    assert all("第 " not in step["subject"] for step in steps)
+    assert steps[0]["description"].startswith("用例：H705F 音乐功能测试（UI 验证）")
+    assert "动作：启动应用并进入详情页" in steps[0]["description"]
+    assert "断言：停在详情页" in steps[0]["description"]
 
 
 def test_release_version_is_recorded_only_for_sop(admin_user, monkeypatch):

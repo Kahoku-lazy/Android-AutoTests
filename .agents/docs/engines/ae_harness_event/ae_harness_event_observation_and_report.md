@@ -95,6 +95,12 @@ logs/20261113_143234/
 
 阶段边界：单角色取自观测里的 `reply` / `reasoning`，**不依赖文本里的 `### 目标`**（模型不写标记也不会错位）；SOP 取自运行期步骤事件（见下节「SOP 的增量字段」），缺 `steps` 段时自动退回按轮。角色块用卡片样式 + 折叠箭头旋转，避免“看不出能展开”；SOP 的步骤卡在标题右侧带「通过 / 未通过」状态牌，未通过时卡内列出验收者给的失败说明与期望结果。
 
+### 页头与步骤标题
+
+页头是两段式：12px 品牌小标签 `AGENT 执行报告` + 24px 主标题，主标题取 `run.report_title`。取值为空时（例如本地调试直接渲染一份记录）只显示品牌标签，不显示空标题行。主标题单行省略、悬停可看全文，标题文本按 HTML 转义。任务侧的标题来自任务标题，助手侧来自会话标题（空则助手名），都由产出方在生成报告时写进记录，渲染层不查库。
+
+报告区分组标题就是该步目标（`subject`），前面只有手绘序号，不再拼「第 N 步 ·」；正文文本块里作为导航标记的 `### 目标：…` 行会被剥掉，避免与分组标题重复。历史记录里 `subject` 若仍带「· 第 N 步」后缀，渲染时改用该步 `description` 里的「动作：」行作标题，保证同一序号只出现一次，也避免同一用例的多个步骤被同名合并成一个分组。分组按「第几步」而不是按标题文字归并。阶段页保持「第 N 步 · 目标」。
+
 ## 观测覆盖范围（对齐框架全部可观测位置）
 
 `ObservationMiddleware` 接的是框架中间件提供的全部位置，只读、原样透传。`aligned.json` 的 `observations` 段按发生顺序记录：
@@ -154,9 +160,10 @@ SOP 一份记录里有两个角色、多个步骤，因此在对齐记录上**�
 | 键 | 内容 |
 | --- | --- |
 | `run.roles[]` | `{name, role, model, api_key_env}`，`role` 取 `executor` / `verifier` |
+| `run.report_title` | 报告页头主标题；任务侧写任务标题，助手侧写会话标题（空则助手名），缺省空串 |
 | `input.roles[]` | 每个角色的 `system_prompt` 与 `tool_schemas`；`input.system_prompt` / `input.tool_schemas` 保留为单角色兼容位 |
 | `replies[].role` | 该回复属于哪个角色，渲染器优先用它判断「执行者 / 验收者」，不再靠名字里有没有 `verif` 猜 |
-| `steps[]` | `{index, subject, description, passed, attempts, message, expected, reply_ids}`；`reply_ids` 把回复挂到步骤上 |
+| `steps[]` | `{index, subject, description, passed, attempts, message, expected, reply_ids}`；`subject` 是该步目标（动作），不带用例标题与序号；`reply_ids` 把回复挂到步骤上 |
 
 步骤边界来自运行期的 `CustomEvent`（`SOP_STEP_STARTED` / `SOP_STEP_ENDED`），由 `bound_sop` 在事件流里计数并用 `AlignedRun.bind_step_reply()` 绑定回复；报告不再从回复文本里猜阶段。步骤结论（`passed` / `attempts` / `message`）只有 `run_sop` 返回后才知道，所以由调用方在 `run_sop` 结束后调 `AlignedRun.set_steps()` 再落盘——这也是 `run_sop` 只透出事件、把渲染权交回调用方的原因。
 

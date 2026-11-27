@@ -92,6 +92,30 @@ class TestSopReportContract:
         assert "按轮次分阶段" in content
 
 
+class TestReportTitleContract:
+    def test_heading_reads_report_title(self):
+        content = RENDER.read_text(encoding="utf-8")
+        assert '["run"].get("report_title")' in content
+        assert "_report_heading" in content
+
+    def test_brand_label_and_title_share_one_heading(self):
+        content = (ENGINES / "ae_harness" / "event" / "render.py").read_text(encoding="utf-8")
+        assert "def _report_heading(" in content
+        assert "wb-brand" in content
+        assert "text-overflow: ellipsis" in content
+
+    def test_step_title_is_the_goal_without_index_prefix(self):
+        content = RENDER.read_text(encoding="utf-8")
+        assert "_step_goal" in content
+        assert "_stage_step_title(" in content
+        assert "第 {position} 步 · {step.get" not in content
+
+    def test_goal_marker_line_is_stripped(self):
+        content = RENDER.read_text(encoding="utf-8")
+        assert "_GOAL_LINE" in content
+        assert "_GOAL_LINE.sub(" in content
+
+
 class TestFailureReportContract:
     def test_bound_sop_renders_abort_report(self):
         content = BOUND_SOP.read_text(encoding="utf-8")

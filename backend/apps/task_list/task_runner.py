@@ -252,6 +252,7 @@ async def _run_assistant_sop(
         _binding(resolved["verifier"]),
         serial=task.device_serial or "",
         task_id=task_id,
+        report_title=task.title or "",
         on_abort=_remember,
     )
     used = {

@@ -33,6 +33,20 @@ def _brand_font_src(fallback: str) -> str:
     return f"data:font/ttf;base64,{encoded}"
 
 
+def _report_heading(title: str = "") -> str:
+    clean = str(title or "").strip()
+    if not clean:
+        return '<h1 class="wb-title"><span class="brand-accent">AGENT</span> 执行报告</h1>'
+    brand = '<span class="wb-brand"><span class="brand-accent">AGENT</span> 执行报告</span>'
+    return (
+        '<div class="wb-heading">'
+        f"{brand}"
+        f'<h1 class="wb-title" title="{html.escape(clean, quote=True)}">'
+        f"{html.escape(clean)}</h1>"
+        "</div>"
+    )
+
+
 _EVENT_KIND = {
     "reply_start": ("log-start", "开始"),
     "ReplyStartEvent": ("log-start", "开始"),
@@ -273,6 +287,17 @@ body {
   font-family: "Ziku FeiYang", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: var(--app-size-xl); font-weight: 400; margin: 0; letter-spacing: 0;
   white-space: nowrap; color: var(--ink);
+}
+.wb-heading { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.wb-brand {
+  font-family: "Ziku FeiYang", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: var(--app-size-xs); font-weight: 400; letter-spacing: 0;
+  color: var(--app-text-secondary); white-space: nowrap;
+}
+.wb-heading .wb-title { max-width: min(46vw, 720px); overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 720px) {
+  .wb-heading { width: 100%; }
+  .wb-heading .wb-title { max-width: 100%; }
 }
 .pill {
   font-size: var(--app-size-xs); padding: 2px 10px; border: 2px solid var(--ink);
@@ -1013,7 +1038,7 @@ class HtmlReportRenderer:
     </div>
     <div class="main__body">
       <header class="wb-header">
-        <h1 class="wb-title"><span class="brand-accent">AGENT</span> 执行报告</h1>
+        {_report_heading()}
         <span class="pill" style="background:{pill_bg};color:{pill_fg}">{html.escape(verdict)}</span>
         <div class="tabs">
           <button class="btn active" data-view="report">报告</button>

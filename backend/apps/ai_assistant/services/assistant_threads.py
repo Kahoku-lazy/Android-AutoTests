@@ -169,6 +169,14 @@ def _run_turn(thread_id: str) -> None:
         or ""
     )
     snapshot = thread.snapshot if isinstance(thread.snapshot, dict) else {}
+    report_title = (thread.title or "").strip()
+    if not report_title:
+        report_title = (
+            AIAssistant.objects.filter(assistant_id=thread.assistant_id)
+            .values_list("display_name", flat=True)
+            .first()
+            or ""
+        )
     try:
         reply, report_id, usages, model = run_in_loop(
             _turn(
@@ -176,6 +184,7 @@ def _run_turn(thread_id: str) -> None:
                 user_text,
                 assistant_id=thread.assistant_id,
                 snapshot=snapshot,
+                report_title=report_title,
             )
         )
         _record_chat_usages(thread.thread_id, usages, model)
@@ -189,7 +198,12 @@ def _run_turn(thread_id: str) -> None:
 
 
 async def _turn(
-    thread_id: str, user_text: str, *, assistant_id: str, snapshot: dict
+    thread_id: str,
+    user_text: str,
+    *,
+    assistant_id: str,
+    snapshot: dict,
+    report_title: str = "",
 ) -> tuple[str, str, list, str]:
     from engines.backend_bridge.agents.thread_run import thread_agent, thread_observer
 
@@ -201,6 +215,7 @@ async def _turn(
         thread_id=thread_id,
         snapshot=snapshot,
         observer=thread_observer(thread_id),
+        report_title=report_title,
     )
 
 
@@ -256,6 +271,7 @@ async def _reply(
     thread_id: str,
     snapshot: dict | None = None,
     observer: object | None = None,
+    report_title: str = "",
 ) -> tuple[str, str, list, str]:
     import time
 
@@ -298,6 +314,7 @@ async def _reply(
             "api_key_env": meta["api_key_env"],
             "assistant_id": assistant_id,
             "thread_id": thread_id,
+            "report_title": report_title,
         },
         {
             "system_prompt": meta["system_prompt"],

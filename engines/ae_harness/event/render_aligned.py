@@ -22,6 +22,7 @@ from .render import (
     _brand_font_src,
     _ordinal_svg,
     _relpath,
+    _report_heading,
     _thumb_base64,
 )
 from .render_blocks import clock, facts, json_block, json_value, markdown, pre_text
@@ -39,6 +40,8 @@ _DEFAULT_SECTIONS = {
     "events": list,
 }
 _PHASE_RE = re.compile(r"###\s*目标[：:]\s*([^\n]{1,24})")
+_GOAL_LINE = re.compile(r"^[ \t]*###\s*目标[：:][^\n]*(?:\n+|$)", re.MULTILINE)
+_STEP_SUFFIX = re.compile(r"\s*·\s*第\s*\d+\s*步\s*$")
 _MEDIA_LIMIT = 4 * 1024 * 1024
 _THINKING_ACCENT = "--c-element"
 _TEXT_ACCENT = "--c-case"
@@ -352,6 +355,29 @@ def _phase_of(text: str) -> tuple[str, str]:
     return match.group(1).strip(), remainder
 
 
+def _action_of(step: dict) -> str:
+    for line in str(step.get("description") or "").splitlines():
+        text = line.strip()
+        if text.startswith("动作："):
+            return text[len("动作：") :].strip()
+    return ""
+
+
+def _step_goal(step: dict) -> str:
+    subject = str(step.get("subject") or "").strip()
+    if subject and not _STEP_SUFFIX.search(subject):
+        return subject
+    action = _action_of(step)
+    if action:
+        return action
+    return _STEP_SUFFIX.sub("", subject).strip()
+
+
+def _stage_step_title(step: dict, position: int) -> str:
+    goal = _step_goal(step)
+    return f"第 {position} 步 · {goal}" if goal else f"第 {position} 步"
+
+
 def _block_items(block: dict) -> list[dict]:
     output = block.get("output")
     if isinstance(output, list):
@@ -409,6 +435,10 @@ class AlignedReportRenderer:
         target.write_text(self.render(document), encoding="utf-8")
         return target
 
+    def _heading(self, document: dict) -> str:
+        title = str(sections(document)["run"].get("report_title") or "").strip()
+        return _report_heading(title)
+
     def _page(
         self,
         *,
@@ -457,7 +487,7 @@ class AlignedReportRenderer:
   <div class="main">
     <div class="main__body">
       <header class="wb-header">
-        <h1 class="wb-title"><span class="brand-accent">AGENT</span> 执行报告</h1>
+        {self._heading(document)}
         <span class="pill" style="background:{pill_bg};color:{pill_fg}">{html.escape(verdict)}</span>
         <div class="tabs">
           <button class="btn active" data-view="report">报告</button>
@@ -585,19 +615,20 @@ class AlignedReportRenderer:
                     counts[name] = counts.get(name, 0) + 1
         return counts
 
-    def _step_names(self, document: dict) -> dict[str, str]:
-        rows: dict[str, str] = {}
+    def _step_names(self, document: dict) -> dict[str, tuple[str, str]]:
+        rows: dict[str, tuple[str, str]] = {}
         for position, step in enumerate(sections(document)["steps"], start=1):
-            name = f"第 {position} 步 · {step.get('subject') or ''}"
+            label = _step_goal(step) or f"第 {position} 步"
+            key = f"step:{position}"
             for reply_id in step.get("reply_ids") or []:
-                rows[str(reply_id)] = name
+                rows[str(reply_id)] = (key, label)
         return rows
 
-    def _report(self, replies: list, step_of: dict[str, str] | None = None) -> str:
+    def _report(self, replies: list, step_of: dict[str, tuple[str, str]] | None = None) -> str:
         step_of = step_of or {}
         results: dict[str, dict] = {}
-        items: list[tuple[str, str, dict]] = []
-        current = ""
+        items: list[tuple[str, str, str, dict]] = []
+        key, label = "", ""
         for reply in replies:
             agent = str(reply.get("agent") or "")
             reply_id = str(reply.get("reply_id") or "")
@@ -606,28 +637,33 @@ class AlignedReportRenderer:
                     results[str(block.get("id"))] = block
                     continue
                 if reply_id in step_of:
-                    current = step_of[reply_id]
-                    items.append((current, agent, block))
+                    key, label = step_of[reply_id]
+                    if block.get("type") == "text":
+                        remainder = _GOAL_LINE.sub("", _text_of(block), count=1).strip()
+                        if not remainder:
+                            continue
+                        block = {**block, "text": remainder}
+                    items.append((key, label, agent, block))
                     continue
                 if block.get("type") == "text":
                     phase, remainder = _phase_of(_text_of(block))
                     if phase:
-                        current = phase
+                        key = label = phase
                     block = {**block, "text": remainder} if phase else block
-                items.append((current or "未分阶段", agent, block))
+                items.append((key or "未分阶段", label or "未分阶段", agent, block))
 
-        groups: list[tuple[str, list[tuple[str, list[dict]]]]] = []
-        for group, agent, block in items:
-            if not groups or groups[-1][0] != group:
-                groups.append((group, []))
-            roles = groups[-1][1]
+        groups: list[tuple[str, str, list[tuple[str, list[dict]]]]] = []
+        for group_key, group_label, agent, block in items:
+            if not groups or groups[-1][0] != group_key:
+                groups.append((group_key, group_label, []))
+            roles = groups[-1][2]
             if not roles or roles[-1][0] != agent:
                 roles.append((agent, []))
             roles[-1][1].append(block)
 
         body: list[str] = []
         role_of = {str(reply.get("agent") or ""): str(reply.get("role") or "") for reply in replies}
-        for ordinal, (name, roles) in enumerate(groups, start=1):
+        for ordinal, (_key, name, roles) in enumerate(groups, start=1):
             calls = sum(
                 1 for _, blocks in roles for block in blocks if block.get("type") == "tool_call"
             )
@@ -1054,7 +1090,7 @@ class AlignedReportRenderer:
             blocks.append(
                 self._phase(
                     ordinal=ordinal,
-                    title=f"第 {position} 步 · {step.get('subject') or ''}",
+                    title=_stage_step_title(step, position),
                     meta=f"尝试 {int(step.get('attempts') or 0)} 次 · 工具 {calls} 次",
                     body=body,
                     note=pill,

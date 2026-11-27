@@ -17,7 +17,11 @@ __all__ = ["compile_case_yaml", "run_case"]
 def compile_case_yaml(case: dict) -> str:
     steps = []
     for index, step in enumerate(case.get("steps") or [], start=1):
-        description = f"动作：{step.get('action', '')}\n断言：{step.get('assertion', '')}"
+        action = " ".join(str(step.get("action", "") or "").split())
+        description = (
+            f"用例：{case.get('title', '')}\n"
+            f"动作：{step.get('action', '')}\n断言：{step.get('assertion', '')}"
+        )
         anchor = step.get("anchor") or {}
         if isinstance(anchor, dict) and anchor:
             description += (
@@ -26,7 +30,7 @@ def compile_case_yaml(case: dict) -> str:
             )
         steps.append(
             {
-                "subject": f"{case.get('title', '')} · 第 {index} 步",
+                "subject": action or f"第 {index} 步",
                 "description": description,
                 "max_attempts": 3,
             }

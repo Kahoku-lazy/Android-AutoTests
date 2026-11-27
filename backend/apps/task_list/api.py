@@ -26,6 +26,8 @@ __all__ = [
     "cancel_running_task",
     "delete_task",
     "clear_agent_tasks",
+    "clear_tasks",
+    "save_task_run_payload",
     "task_stats",
     "task_stats_by_agent",
     "recover_orphaned_tasks",
@@ -569,6 +571,11 @@ def clear_agent_tasks(agent=None) -> int:
     return deleted
 
 
+def clear_tasks() -> int:
+    deleted, _ = Task.objects.all().delete()
+    return deleted
+
+
 def merge_task_result(current: str, incoming: str) -> str:
     base = parse_task_result(current)
     extra = parse_task_result(incoming)
@@ -822,6 +829,12 @@ def category_step(kind: str, actual: str, *, name: str = "") -> dict:
 
 def dump_task_run_payload(payload: dict) -> str:
     return json.dumps(payload, ensure_ascii=False)
+
+
+def save_task_run_payload(task: Task, payload: dict) -> Task:
+    task.result = dump_task_run_payload(payload)
+    task.save(update_fields=["result"])
+    return task
 
 
 def insert_task_events(task_id: int, rows: list[dict]) -> None:

@@ -94,8 +94,7 @@ def _submit_material_workflow(request, workflow, title: str, user_id):
             orchestration=workflow.orchestration,
             kind=workflow.kind,
         )
-        task.result = api.dump_task_run_payload({"workflow_id": workflow.id})
-        task.save(update_fields=["result"])
+        api.save_task_run_payload(task, {"workflow_id": workflow.id})
         api.add_task_attachment(
             task,
             kind="document",
@@ -153,8 +152,7 @@ def _submit_assistant_sop(
             orchestration=workflow.orchestration,
             kind=workflow.kind,
         )
-        task.result = api.dump_task_run_payload({"workflow_id": workflow.id})
-        task.save(update_fields=["result"])
+        api.save_task_run_payload(task, {"workflow_id": workflow.id})
         api.add_task_attachment(
             task,
             kind=prepared.kind,
@@ -278,7 +276,7 @@ class AgentTaskClearAPIView(APIView):
     def post(self, request):
         if not getattr(request, "user_id", None):
             return Response({"deleted": 0})
-        deleted, _ = Task.objects.all().delete()
+        deleted = api.clear_tasks()
         return Response({"deleted": deleted})
 
 

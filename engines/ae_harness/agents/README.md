@@ -131,7 +131,7 @@ for tool in build_adb_tools():
 | `adb_tap` | 按归一化坐标点击 | 否 |
 | `adb_swipe` | 按归一化坐标从一点滑到另一点 | 否 |
 | `adb_long_press` | 按归一化坐标长按 | 否 |
-| `adb_input_text` | 输入 ASCII 文本 | 否 |
+| `adb_input_text` | 输入文本（ASCII 直接键入，中文等经设备输入法） | 否 |
 | `adb_press_key` | 按 home / back / power 等 | 否 |
 | `adb_install` | 安装或覆盖安装 APK | 否 |
 | `adb_uninstall` | 卸载应用 | 否 |
@@ -204,7 +204,7 @@ print(adb_binary())  # D:\...\tools\platform-tools\adb.exe
 ### 已知限制
 
 - `adb_dump_ui` 依赖 `uiautomator dump`。部分设备（实测三星 Android 11）会以 137 退出且不生成文件，此时返回 `available: false` 并附当前焦点窗口，请改用 `adb_screenshot`。
-- `adb_input_text` 只支持 ASCII；中文要在设备上装 ADBKeyboard 等输入法。
+- `adb_input_text` 对 ASCII 直接键入；含非 ASCII 时经 ADBKeyboard 提交并恢复原输入法。工具层不下载安装包：设备未装时返回失败并给出 `python -m utils.adb_keyboard install --serial <serial>`；平台在 SOP 任务开始前自动预装。APK 不入库（GPL-2.0），离线环境设 `ADB_KEYBOARD_APK`。少数 App 可能拒绝第三方输入法。
 - 截图存到系统临时目录 `ae_harness_adb_shots/`，返回的是路径，模型看不到图。
 
 ## 注意事项

@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 import shlex
 import subprocess
-import time
 
 from dataclasses import dataclass
 
@@ -11,6 +10,7 @@ import uiautomator2 as u2
 
 from engines.device.action import DeviceConnection, DeviceControl, DeviceInfo, EngineConnectError
 from utils.adb import adb_binary
+from utils.adb_keyboard import input_text as _ime_input_text
 from utils.logs import device_log
 
 U2_OP_TIMEOUT = 20
@@ -304,8 +304,9 @@ class AdbControl(DeviceControl):
 
     def input_text(self, text: str, clear_first: bool = True) -> None:
         value = str(text or "")
-        if any(ord(char) > 0x7F for char in value):
-            raise ValueError("adb input text 只支持 ASCII；中文需改用 IME 方案")
+        if not value.isascii():
+            _ime_input_text(self.adb.serial, value, clear_first=clear_first)
+            return
         if clear_first:
             self.adb.shell(["input", "keyevent", "KEYCODE_MOVE_END"])
             self.adb.shell(["input", "keyevent", "KEYCODE_CLEAR"])
@@ -429,17 +430,3 @@ class AndroidControl(AdbControl):
             x, y = _bounds_center(str(attrib.get("bounds") or ""))
             found.append({"text": str(attrib.get("text") or ""), "x": x, "y": y})
         return found
-
-    def input_text(self, text: str, clear_first: bool = True) -> None:
-        device = self.device
-        if clear_first:
-            try:
-                device.shell("input keyevent KEYCODE_MOVE_END")
-                device.shell("input keyevent KEYCODE_CLEAR")
-                time.sleep(0.1)
-            except Exception:
-                self.log.debug("Shell keyevent failed, continuing")
-        try:
-            device.send_keys(text)
-        except Exception:
-            device.shell(f"input text {_quoted_input_text(text)}")

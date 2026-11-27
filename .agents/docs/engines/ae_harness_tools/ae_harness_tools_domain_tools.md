@@ -63,6 +63,7 @@ for tool in build_adb_tools():
 5. **只读与并发标记** —— 只读工具标 `is_read_only=True`，有副作用的标 `is_concurrency_safe=False`。
 6. **坐标一律归一化** —— 0~1，左上角 `(0,0)`，右下角 `(1,1)`，执行时按 `wm size` 换算。
 7. **截图不落盘** —— 只以 base64 随结果返回，长边压到 1024 以内（截屏与网格图同口径），不写任何文件。
+8. **文本输入支持 Unicode** —— `adb_input_text` 对 ASCII 走原 `input text`；含非 ASCII 时经设备输入法（ADBKeyboard）提交并恢复原输入法。工具层不下载、不写文件：设备未装时返回失败并给出 `python -m utils.adb_keyboard install --serial <serial>`；平台在 SOP 任务开始前经 `utils.adb_keyboard.ensure_ready()` 自动预装。APK 不入库（GPL-2.0）；少数 App 可能拒绝第三方输入法。
 
 ## 已知限制
 

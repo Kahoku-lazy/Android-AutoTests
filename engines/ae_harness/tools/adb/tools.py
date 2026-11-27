@@ -13,7 +13,7 @@ Python 调试：➡️ python -m engines.ae_harness.tools.adb.tools 🏁
 2. adb_tap: 点击屏幕坐标。
 3. adb_swipe: 从一点滑到另一点。
 4. adb_long_press: 在一点长按。
-5. adb_input_text: 向当前输入框输入 ASCII 文本。
+5. adb_input_text: 向当前输入框输入文本（ASCII 直接键入，中文等走设备输入法）。
 6. adb_press_key: 按一个按键（名字或 keycode）。
 7. adb_install: 安装 APK。
 8. adb_uninstall: 卸载应用。
@@ -59,6 +59,7 @@ from .core import (
     run_adb_bytes,
     screen_size,
 )
+from .ime import input_unicode
 
 __all__ = [
     "adb_app_start",
@@ -543,24 +544,23 @@ def _shell_quote(text: str) -> str:
 
 def adb_input_text(text: str, serial: str = "") -> str:
     """
-    向当前聚焦的输入框输入文本。
-
-    只支持 ASCII；中文需要设备安装 ADBKeyboard 等输入法。
+    向当前聚焦的输入框输入文本；ASCII 直接键入，含中文等 Unicode 时经设备输入法提交。
 
     Args:
         text: 要输入的文本。
         serial: 设备序列号；只连一台时留空。
 
     Returns:
-        JSON 文本，成功后带输入内容。
+        JSON 文本，成功后带输入内容；失败时 status=false 并带原因。
     """
     try:
-        if not text.isascii():
-            return _fail(ValueError("input text 只支持 ASCII；中文请用设备输入法"))
         target = resolve_serial(serial)
-        # 空格换成 %s 是 input text 的转义；再加单引号，避免被设备 shell 当成命令。
-        payload = _shell_quote(text.replace(" ", "%s"))
-        run_adb(["shell", "input", "text", payload], serial=target)
+        value = str(text or "")
+        if value.isascii():
+            payload = _shell_quote(value.replace(" ", "%s"))
+            run_adb(["shell", "input", "text", payload], serial=target)
+        else:
+            input_unicode(target, value)
         return _ok(action="input_text", serial=target, text=text)
     except AdbError as exc:
         return _fail(exc)

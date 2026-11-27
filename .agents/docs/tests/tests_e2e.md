@@ -13,6 +13,12 @@
 - 颗粒度与灰盒一致：**一个交互功能一条用例**（点一次完整链路），不按按钮 / 组件拆。
 
 > 运行指令： `python -m pytest tests/<模块>/e2e -q`（共享设施：`tests/e2e/`）
+>
+> **本机报 `EPERM: operation not permitted, mkdtemp ...playwright-artifacts-` 时**：说明当前进程树只能写工作区，
+> Playwright 的驱动进程建不了临时目录。改用 `python -m utils.run_e2e` 跑：它把 `TEMP` / `TMP` / `TMPDIR`
+> 指到 `temps/pw-tmp`，并把 `PLAYWRIGHT_BROWSERS_PATH` 指到 `temps/pw-browsers`（首次先
+> `python -m utils.run_e2e --install` 装一份 chromium 到该目录，约 740MB，已被 `.gitignore` 忽略）。
+> CI 上直接跑 `pytest`，不受影响。
 
 ## 断言什么
 

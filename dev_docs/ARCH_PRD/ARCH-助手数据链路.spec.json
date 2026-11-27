@@ -1,0 +1,270 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "新建助手到跑起来：数据链路与运行逻辑",
+    "locale": "zh-CN",
+    "output": "dev_docs/ARCH_PRD/ARCH-助手数据链路.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Kahoku-lazy/Android-AutoTests",
+      "provider": "github",
+      "revision": "d0a8a7fbe493083b3ec6eeb4951a14595be3434d"
+    }
+  },
+  "components": [
+    {
+      "id": "fe-page",
+      "type": "frontend",
+      "label": "助手网格 + 编辑弹窗",
+      "sublabel": "index.vue / AssistantEditor.vue",
+      "tag": "作者入口",
+      "pos": [40, 60],
+      "size": [180, 64],
+      "sources": [
+        { "path": "frontend/src/modules/ai-assistant/index.vue", "line": 105, "end_line": 110 },
+        { "path": "frontend/src/modules/ai-assistant/components/AssistantEditor.vue", "line": 103, "end_line": 138 }
+      ]
+    },
+    {
+      "id": "fe-chat",
+      "type": "frontend",
+      "label": "对话页",
+      "sublabel": "chat.vue · 2 秒轮询",
+      "tag": "未发布不可发",
+      "pos": [40, 210],
+      "size": [180, 64],
+      "sources": [
+        { "path": "frontend/src/modules/ai-assistant/chat.vue", "line": 166, "end_line": 173 },
+        { "path": "frontend/src/modules/ai-assistant/api/assistants.ts", "line": 400, "end_line": 411 }
+      ]
+    },
+    {
+      "id": "fe-task",
+      "type": "frontend",
+      "label": "工作流卡片",
+      "sublabel": "SopRunForm · 设备 + 用例",
+      "tag": "POST /tasks/submit/",
+      "pos": [40, 360],
+      "size": [180, 64],
+      "sources": [
+        { "path": "frontend/src/modules/ai-assistant/components/SopRunForm.vue", "line": 108, "end_line": 118 },
+        { "path": "frontend/src/modules/ai-assistant/api/assistants.ts", "line": 340, "end_line": 363 }
+      ]
+    },
+    {
+      "id": "svc-write",
+      "type": "backend",
+      "label": "助手写入链",
+      "sublabel": "View → api.create_assistant",
+      "tag": "发布：冻结快照",
+      "pos": [320, 60],
+      "size": [220, 64],
+      "sources": [
+        { "path": "backend/apps/ai_assistant/views_drf.py", "line": 208, "end_line": 232 },
+        { "path": "backend/apps/ai_assistant/services/assistant_cards.py", "line": 61, "end_line": 82 },
+        { "path": "backend/apps/ai_assistant/api.py", "line": 174, "end_line": 191 }
+      ]
+    },
+    {
+      "id": "svc-thread",
+      "type": "backend",
+      "label": "回合服务",
+      "sublabel": "snapshot → 线程 + 事件循环",
+      "tag": "assistant_threads",
+      "pos": [320, 210],
+      "size": [220, 64],
+      "sources": [
+        { "path": "backend/apps/ai_assistant/services/assistant_threads.py", "line": 338, "end_line": 348 },
+        { "path": "backend/apps/ai_assistant/services/agent_loop.py", "line": 44, "end_line": 46 }
+      ]
+    },
+    {
+      "id": "runner",
+      "type": "backend",
+      "label": "任务运行器",
+      "sublabel": "task_runner → run_bound_sop",
+      "tag": "daemon + 心跳",
+      "pos": [320, 360],
+      "size": [220, 64],
+      "sources": [
+        { "path": "backend/apps/task_list/task_runner.py", "line": 401, "end_line": 425 },
+        { "path": "backend/apps/task_list/api.py", "line": 375, "end_line": 412 }
+      ]
+    },
+    {
+      "id": "engine",
+      "type": "backend",
+      "label": "角色装配 → ReAct",
+      "sublabel": "backend_bridge → ae_harness",
+      "tag": "create_agent + 工具",
+      "pos": [680, 225],
+      "size": [200, 190],
+      "sources": [
+        { "path": "engines/backend_bridge/workflow/bound_sop.py", "line": 244, "end_line": 258 },
+        { "path": "engines/backend_bridge/agents/card_agent.py", "line": 9, "end_line": 31 }
+      ]
+    },
+    {
+      "id": "db-assistant",
+      "type": "database",
+      "label": "助手库 ai_*",
+      "sublabel": "assistants / releases / threads",
+      "tag": "15 张表",
+      "pos": [990, 60],
+      "size": [190, 130],
+      "sources": [
+        { "path": "backend/apps/ai_assistant/models.py", "line": 152, "end_line": 170 },
+        { "path": "backend/apps/ai_assistant/models.py", "line": 114, "end_line": 137 }
+      ]
+    },
+    {
+      "id": "files",
+      "type": "database",
+      "label": "运行产物",
+      "sublabel": "logs/agents/**",
+      "tag": "jsonl + html",
+      "pos": [990, 265],
+      "size": [190, 110],
+      "sources": [
+        { "path": "engines/backend_bridge/reports/paths.py", "line": 9, "end_line": 11 },
+        { "path": "backend/apps/ai_assistant/services/assistant_threads.py", "line": 270, "end_line": 280 }
+      ]
+    },
+    {
+      "id": "db-task",
+      "type": "database",
+      "label": "任务库 task_*",
+      "sublabel": "task_tasks / ai_usage_records",
+      "tag": "result + 用量",
+      "pos": [320, 490],
+      "size": [220, 90],
+      "sources": [
+        { "path": "backend/apps/task_list/models.py", "line": 4, "end_line": 42 },
+        { "path": "backend/apps/usage_ledger/models.py", "line": 6, "end_line": 32 }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Django 后端：JWT → View → api（写库只走 api.py）",
+      "wraps": ["svc-write", "svc-thread", "runner"]
+    },
+    {
+      "kind": "region",
+      "label": "engines/：零 Django 依赖",
+      "wraps": ["engine"],
+      "pad": 14
+    }
+  ],
+  "connections": [
+    {
+      "id": "create-card",
+      "from": "fe-page",
+      "to": "svc-write",
+      "label": "POST 创建",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "send-message",
+      "from": "fe-chat",
+      "to": "svc-thread",
+      "label": "发消息",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "submit-task",
+      "from": "fe-task",
+      "to": "runner",
+      "label": "POST 提交",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "write-assistant",
+      "from": "svc-write",
+      "to": "db-assistant",
+      "label": "INSERT 名片 · 发布快照",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "run-turn",
+      "from": "svc-thread",
+      "to": "engine",
+      "label": "跑一轮",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "run-sop",
+      "from": "runner",
+      "to": "engine",
+      "label": "两侧绑定",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "write-report",
+      "from": "engine",
+      "to": "files",
+      "label": "报告落盘",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "close-task",
+      "from": "runner",
+      "to": "db-task",
+      "label": "claim_terminal",
+      "labelAt": [430, 470],
+      "fromSide": "bottom",
+      "toSide": "top"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "建卡只写一行",
+      "items": [
+        "ai_assistants：编号 YYYYMMDD_XXX、名称、头像 base64、笔色、role_id、工具勾选",
+        "revision=1、release_state=draft；role_id 是字符串引用，不是外键",
+        "头像压到 ≤12KB，笔色按上一张卡轮转 5 色（teal→ink→amber→rose→moss）"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "发布才冻快照",
+      "items": [
+        "publish 把 role 的 system_prompt、工具与模型元数据写进 ai_assistant_releases",
+        "对话在首次发送冻结快照；只有新建的对话栏才跟随提示词变化",
+        "SOP 任务钉住发布版本；goal / team 跟随最新发布",
+        "已发布再点发布会 400；只有改 role_id / tools 才回 draft"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "两条运行路径",
+      "items": [
+        "对话：首次发送冻 snapshot → 后台线程 + 专用事件循环 → reply_stream 流式消费",
+        "任务：Task 记 release_version → run_bound_sop（执行者动手 + 验收者逐条判）",
+        "两者都写 HTML 报告与 ai_usage_records；报告按助手/对话栏分目录"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "四处容易踩",
+      "items": [
+        "前端编辑从不发 revision，409 乐观锁实际未启用",
+        "role_id 悬空时列表 role_name 为空串，删除 Agent 配置不会级联",
+        "进程重启把遗留 running 改 interrupted（apps.py ready 里做）",
+        "删除被工作流绑定的名片会被拦，并列出占用它的工作流名"
+      ]
+    }
+  ]
+}

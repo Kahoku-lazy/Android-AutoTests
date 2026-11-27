@@ -67,6 +67,16 @@ def replace_kinds(role: AIRole, kinds: list[str]) -> None:
 
 
 def delete_role(role: AIRole) -> None:
+    from backend.apps.ai_assistant.models import AIAssistant
+
+    names = list(
+        AIAssistant.objects.filter(role_id=role.role_id)
+        .order_by("id")
+        .values_list("display_name", flat=True)
+    )
+    if names:
+        quoted = "、".join(f"「{name}」" for name in names)
+        raise RoleConflictError(f"该 Agent 配置仍被助手{quoted}使用，请先解除引用再删除")
     role.delete()
 
 

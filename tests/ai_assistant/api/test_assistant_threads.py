@@ -26,6 +26,7 @@ def _card() -> AIAssistant:
         marker="teal",
         role_id="20261116abc",
         tools=[],
+        release_state="published",
     )
 
 
@@ -178,3 +179,56 @@ def test_delete_unknown_thread_is_404():
         thread_id="missing",
     )
     assert response.status_code == 404
+
+
+def test_draft_thread_surfaces_are_hidden_from_plain_user():
+    from backend.apps.ai_assistant.api import grant_assistant_author
+
+    card = _card()
+    card.release_state = "draft"
+    card.save(update_fields=["release_state"])
+    thread = AIAssistantThread.objects.create(
+        thread_id="draft-thread-1",
+        assistant_id=card.assistant_id,
+        title="草稿栏",
+    )
+    thread.messages.create(role=AIAssistantMessage.ROLE_USER, content="私密")
+    plain = _user("draft-plain")
+
+    created = call(
+        AssistantThreadView.as_view(),
+        plain,
+        "post",
+        "/api/ai/assistants/x/threads/",
+        assistant_id=card.assistant_id,
+    )
+    listed = call(
+        AssistantThreadView.as_view(),
+        plain,
+        "get",
+        "/api/ai/assistants/x/threads/",
+        assistant_id=card.assistant_id,
+    )
+    read = call(
+        AssistantThreadDetailView.as_view(),
+        plain,
+        "get",
+        "/api/ai/assistants/threads/x/",
+        thread_id=thread.thread_id,
+    )
+    assert created.status_code == 404
+    assert listed.status_code == 404
+    assert read.status_code == 404
+    assert not AIAssistantThread.objects.exclude(pk=thread.pk).exists()
+
+    author = _user("draft-author")
+    grant_assistant_author(author.id)
+    allowed = call(
+        AssistantThreadDetailView.as_view(),
+        author,
+        "get",
+        "/api/ai/assistants/threads/x/",
+        thread_id=thread.thread_id,
+    )
+    assert allowed.status_code == 200
+    assert allowed.data["messages"][0]["content"] == "私密"

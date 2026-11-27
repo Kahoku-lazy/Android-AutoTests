@@ -17,6 +17,7 @@ def _thread(status: str) -> AIAssistantThread:
         display_name="小助",
         marker="teal",
         role_id="20261116abc",
+        release_state="published",
     )
     return AIAssistantThread.objects.create(
         thread_id="lane1",

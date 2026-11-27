@@ -244,3 +244,22 @@ def test_model_outside_grant_is_rejected(operator):
     )
     assert response.status_code == 403
     assert AIRole.objects.count() == 0
+
+
+def test_delete_role_in_use_is_rejected(operator):
+    from backend.apps.ai_assistant.models import AIAssistant
+
+    data, _config_row = _created(operator, name="被引用的配置")
+    AIAssistant.objects.create(
+        assistant_id="20261120_RL1",
+        display_name="引用配置的名片",
+        marker="teal",
+        role_id=data["role_id"],
+        tools=[],
+    )
+
+    deleted = call(operator, "delete", f"/api/ai/roles/{data['role_id']}/", role_id=data["role_id"])
+
+    assert deleted.status_code == 400
+    assert "引用配置的名片" in str(deleted.data)
+    assert AIRole.objects.filter(role_id=data["role_id"]).exists()

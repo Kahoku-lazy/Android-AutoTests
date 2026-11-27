@@ -54,6 +54,7 @@ export async function updateAssistant(
     display_name: string
     role_id: string
     tools: ToolSelection[]
+    revision?: number
     avatar?: File | null
     clearAvatar?: boolean
   },
@@ -62,6 +63,7 @@ export async function updateAssistant(
   body.set("display_name", payload.display_name)
   body.set("role_id", payload.role_id)
   body.set("tools", JSON.stringify(payload.tools))
+  if (payload.revision !== undefined) body.set("revision", String(payload.revision))
   if (payload.avatar) body.set("avatar", payload.avatar)
   if (payload.clearAvatar) body.set("clear_avatar", "1")
   const { data } = await djangoClient.patch<DjangoResponse<AssistantCard>>(

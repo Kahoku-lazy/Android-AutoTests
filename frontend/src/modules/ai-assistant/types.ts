@@ -7,6 +7,7 @@ export interface AssistantCard {
   role_name: string
   tools: ToolSelection[]
   release_state?: string
+  revision?: number
 }
 
 export interface ToolSelection {

@@ -121,6 +121,7 @@ async function save(): Promise<void> {
     if (props.card) {
       await updateAssistant(props.card.assistant_id, {
         ...base,
+        revision: props.card.revision,
         avatar: avatar.value,
         clearAvatar: clearAvatar.value,
       })

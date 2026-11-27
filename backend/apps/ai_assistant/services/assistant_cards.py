@@ -134,7 +134,7 @@ def delete_assistant(assistant: AIAssistant) -> None:
 
 
 def list_assistants():
-    return AIAssistant.objects.order_by("-created_at", "-id")
+    return AIAssistant.objects.defer("avatar").order_by("-created_at", "-id")
 
 
 def get_assistant(assistant_id: str) -> AIAssistant | None:

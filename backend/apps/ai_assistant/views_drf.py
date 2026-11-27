@@ -31,6 +31,23 @@ def _user_id(request) -> str:
     return ""
 
 
+def _visible_card(assistant_id: str, user_id: str):
+    card = api.get_assistant(assistant_id)
+    if card is None:
+        raise NotFound("助手不存在")
+    if is_assistant_author(user_id) or card.release_state == "published":
+        return card
+    raise NotFound("助手不存在")
+
+
+def _visible_thread(thread_id: str, user_id: str):
+    thread = api.get_thread(thread_id)
+    if thread is None:
+        return None
+    _visible_card(thread.assistant_id, user_id)
+    return thread
+
+
 class ModelConfigDiscoverView(APIView):
     @extend_schema(request=ModelConfigSerializer, responses=OpenApiTypes.OBJECT)
     def post(self, request):
@@ -171,7 +188,10 @@ class RoleViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("Forbidden")
         role = self.get_object()
         role_id = role.role_id
-        api.delete_role(role)
+        try:
+            api.delete_role(role)
+        except api.RoleConflictError as exc:
+            raise ValidationError(str(exc)) from exc
         return Response({"role_id": role_id})
 
 
@@ -274,6 +294,7 @@ class AssistantViewSet(viewsets.ModelViewSet):
 class AssistantThreadView(APIView):
     @extend_schema(operation_id="ai_assistant_threads_list", responses=OpenApiTypes.OBJECT)
     def get(self, request, assistant_id: str):
+        card = _visible_card(assistant_id, _user_id(request))
         return Response(
             [
                 {
@@ -281,7 +302,7 @@ class AssistantThreadView(APIView):
                     "status": item.status,
                     "title": item.title,
                 }
-                for item in api.list_threads(assistant_id)
+                for item in api.list_threads(card.assistant_id)
             ]
         )
 
@@ -289,10 +310,8 @@ class AssistantThreadView(APIView):
         operation_id="ai_assistant_threads_create", request=None, responses=OpenApiTypes.OBJECT
     )
     def post(self, request, assistant_id: str):
-        try:
-            thread = api.create_thread(assistant_id)
-        except AIAssistant.DoesNotExist:
-            return Response({"message": "助手不存在"}, status=status.HTTP_404_NOT_FOUND)
+        card = _visible_card(assistant_id, _user_id(request))
+        thread = api.create_thread(card.assistant_id)
         return Response(
             {"thread_id": thread.thread_id, "status": thread.status}, status=status.HTTP_201_CREATED
         )
@@ -308,7 +327,7 @@ class AssistantThreadLogView(APIView):
     def get(self, request, thread_id: str, report_id: str = ""):
         if report_id:
             return AssistantThreadLogFileView().get(request, thread_id, report_id)
-        thread = api.get_thread(thread_id)
+        thread = _visible_thread(thread_id, _user_id(request))
         if thread is None:
             return Response({"message": "对话栏不存在"}, status=status.HTTP_404_NOT_FOUND)
         return Response(api.list_thread_logs(thread))
@@ -363,7 +382,7 @@ class AssistantThreadLogFileView(APIView):
 class AssistantThreadDetailView(APIView):
     @extend_schema(operation_id="ai_assistant_thread_detail", responses=OpenApiTypes.OBJECT)
     def get(self, request, thread_id: str):
-        thread = api.get_thread(thread_id)
+        thread = _visible_thread(thread_id, _user_id(request))
         if thread is None:
             return Response({"message": "对话栏不存在"}, status=status.HTTP_404_NOT_FOUND)
         return Response(
@@ -376,7 +395,7 @@ class AssistantThreadDetailView(APIView):
 
     @extend_schema(request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
     def patch(self, request, thread_id: str):
-        thread = api.get_thread(thread_id)
+        thread = _visible_thread(thread_id, _user_id(request))
         if thread is None:
             return Response({"message": "对话栏不存在"}, status=status.HTTP_404_NOT_FOUND)
         title = str(request.data.get("title") or "").strip()
@@ -389,7 +408,7 @@ class AssistantThreadDetailView(APIView):
         responses=OpenApiTypes.OBJECT,
     )
     def post(self, request, thread_id: str):
-        thread = api.get_thread(thread_id)
+        thread = _visible_thread(thread_id, _user_id(request))
         if thread is None:
             return Response({"message": "对话栏不存在"}, status=status.HTTP_404_NOT_FOUND)
         content = str(request.data.get("content") or "").strip()
@@ -407,7 +426,7 @@ class AssistantThreadDetailView(APIView):
 
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def delete(self, request, thread_id: str):
-        thread = api.get_thread(thread_id)
+        thread = _visible_thread(thread_id, _user_id(request))
         if thread is None:
             return Response({"message": "对话栏不存在"}, status=status.HTTP_404_NOT_FOUND)
         from engines.backend_bridge.agents.thread_run import request_thread_cancel
@@ -420,7 +439,7 @@ class AssistantThreadDetailView(APIView):
 class AssistantThreadDeleteView(APIView):
     @extend_schema(request=None, responses=OpenApiTypes.OBJECT)
     def post(self, request, thread_id: str):
-        thread = api.get_thread(thread_id)
+        thread = _visible_thread(thread_id, _user_id(request))
         if thread is None:
             return Response({"message": "对话栏不存在"}, status=status.HTTP_404_NOT_FOUND)
         from engines.backend_bridge.agents.thread_run import request_thread_cancel
@@ -720,9 +739,7 @@ class ToolCatalogView(APIView):
 class AssistantAvatarView(APIView):
     @extend_schema(responses=OpenApiTypes.OBJECT)
     def get(self, request, assistant_id: str):
-        card = api.get_assistant(assistant_id)
-        if card is None:
-            return Response({"message": "助手不存在"}, status=status.HTTP_404_NOT_FOUND)
+        card = _visible_card(assistant_id, _user_id(request))
         return Response({"assistant_id": card.assistant_id, "avatar": card.avatar})
 
 

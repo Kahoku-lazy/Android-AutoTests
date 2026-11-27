@@ -49,6 +49,7 @@ from backend.apps.ai_assistant.services.assistant_threads import (
     list_messages,
     list_thread_logs,
     list_threads,
+    mark_interrupted_running,
     message_rows,
     new_thread_fields,
     rename_thread,
@@ -160,6 +161,10 @@ def grant_assistant_author(user_id: int) -> AssistantAuthorGrant:
         raise ValueError("账号不存在")
     grant, _ = AssistantAuthorGrant.objects.get_or_create(user_id=int(user_id))
     return grant
+
+
+def mark_interrupted_threads() -> int:
+    return mark_interrupted_running()
 
 
 def revoke_assistant_author(user_id: int) -> bool:
@@ -289,9 +294,13 @@ def update_sop_workflow(
         leader_assistant_id,
         members,
     )
+    changed = any(getattr(workflow, key) != value for key, value in fields.items())
     for key, value in fields.items():
         setattr(workflow, key, value)
-    workflow.save(update_fields=[*fields, "updated_at"])
+    if changed and workflow.release_state == "published":
+        workflow.release_state = "draft"
+    workflow.revision += 1
+    workflow.save(update_fields=[*fields, "release_state", "revision", "updated_at"])
     return workflow
 
 
@@ -331,11 +340,27 @@ def resolve_sop_release(workflow_id: int, version: int) -> dict:
 
 def _resolved_from_release(release: AssistantRelease) -> dict:
     payload = release.payload
-    return {
-        "executor": payload.get("executor") or {},
-        "verifier": payload.get("verifier") or {},
-        "version": release.version,
-    }
+    executor = dict(payload.get("executor") or {})
+    verifier = dict(payload.get("verifier") or {})
+    _refresh_run_names(executor, verifier)
+    return {"executor": executor, "verifier": verifier, "version": release.version}
+
+
+def _refresh_run_names(executor: dict, verifier: dict) -> None:
+    from backend.apps.ai_assistant.services.sop_workflows import align_run_names
+
+    ids = [str(side.get("assistant_id") or "") for side in (executor, verifier)]
+    names = dict(
+        AIAssistant.objects.filter(assistant_id__in=[item for item in ids if item]).values_list(
+            "assistant_id", "display_name"
+        )
+    )
+    for side in (executor, verifier):
+        assistant_id = str(side.get("assistant_id") or "")
+        current = names.get(assistant_id)
+        if assistant_id and current:
+            side["run_name"] = current
+    align_run_names(executor, verifier)
 
 
 def _release_payload_for_assistant(card: AIAssistant) -> dict:
@@ -587,6 +612,8 @@ def workflow_eval_payload(workflow: AISopWorkflow) -> dict:
 def publish_assistant(card: AIAssistant) -> AssistantRelease:
     if card.release_state == "published":
         raise ValueError("已经发布，请先改一版再发")
+    if not AIRole.objects.filter(role_id=card.role_id).exists():
+        raise ValueError("Agent 配置不存在，无法发布")
     release = _next_release(
         AssistantRelease.KIND_ASSISTANT, card.assistant_id, _release_payload_for_assistant(card)
     )
@@ -596,22 +623,30 @@ def publish_assistant(card: AIAssistant) -> AssistantRelease:
     return release
 
 
+def _published_card(assistant_id: str, message: str) -> AIAssistant:
+    card = AIAssistant.objects.filter(assistant_id=assistant_id, release_state="published").first()
+    if card is None:
+        raise WorkflowBindingError(message)
+    if not AIRole.objects.filter(role_id=card.role_id).exists():
+        raise WorkflowBindingError(f"助手「{card.display_name}」引用的 Agent 配置不存在")
+    return card
+
+
 def publish_workflow(workflow: AISopWorkflow) -> AssistantRelease:
-    from backend.apps.ai_assistant.services.sop_workflows import (
-        WorkflowBindingError,
-        align_run_names,
-    )
+    from backend.apps.ai_assistant.services.sop_workflows import align_run_names
 
     if workflow.release_state == "published":
         raise ValueError("已经发布，请先改一版再发")
-    for assistant_id in (workflow.executor_assistant_id, workflow.verifier_assistant_id):
-        if not assistant_id:
-            continue
-        card = AIAssistant.objects.filter(
-            assistant_id=assistant_id, release_state="published"
-        ).first()
-        if card is None:
-            raise WorkflowBindingError("两侧名片都要先发布")
+    if workflow.orchestration == ORCHESTRATION_TEAM:
+        team_ids = [workflow.leader_assistant_id]
+        team_ids.extend(str(item.get("assistant_id") or "") for item in workflow.members or [])
+        for assistant_id in team_ids:
+            if assistant_id:
+                _published_card(assistant_id, "队长与成员名片都要先发布")
+    else:
+        for assistant_id in (workflow.executor_assistant_id, workflow.verifier_assistant_id):
+            if assistant_id:
+                _published_card(assistant_id, "两侧名片都要先发布")
     payload = {
         "name": workflow.name,
         "orchestration": workflow.orchestration,

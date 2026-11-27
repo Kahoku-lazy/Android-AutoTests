@@ -11,9 +11,9 @@ class AiAssistantConfig(AppConfig):
 
         if getattr(settings, "TESTING", False) or "pytest" in __import__("sys").modules:
             return
-        from backend.apps.ai_assistant.services.assistant_threads import mark_interrupted_running
+        from backend.apps.ai_assistant import api
 
         try:
-            mark_interrupted_running()
+            api.mark_interrupted_threads()
         except (OperationalError, ProgrammingError):
             return

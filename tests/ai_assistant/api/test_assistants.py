@@ -151,22 +151,51 @@ def test_delete_removes_unbound_assistant():
     assert not AIAssistant.objects.filter(assistant_id=assistant_id).exists()
 
 
+def _avatar(user, assistant_id: str):
+    factory = APIRequestFactory()
+    request = factory.get(f"/api/ai/assistants/{assistant_id}/avatar/")
+    request.user_id = str(user.id)
+    force_authenticate(request, user=user)
+    return AssistantAvatarView.as_view()(request, assistant_id=assistant_id)
+
+
 def test_avatar_endpoint_returns_body():
     role = _role()
+    author = _author()
     created = call(
-        _author(),
+        author,
         "post",
         {"display_name": "小助", "role_id": role.role_id},
         files={"avatar": io.BytesIO(_png())},
     )
     assert created.status_code == 201
-    user = _user()
-    factory = APIRequestFactory()
-    request = factory.get("/api/ai/assistants/x/avatar/")
-    request.user_id = str(user.id)
-    force_authenticate(request, user=user)
-    response = AssistantAvatarView.as_view()(request, assistant_id=created.data["assistant_id"])
+    response = _avatar(author, created.data["assistant_id"])
     assert response.status_code == 200
     assert response.data["avatar"]
     listed = call(_author("author-assistant-list"), "get")
     assert "avatar" not in listed.data[0]
+
+
+def test_draft_avatar_is_hidden_from_plain_user():
+    from backend.apps.ai_assistant.models import AIAssistant
+
+    role = _role()
+    created = call(
+        _author("author-draft-avatar"),
+        "post",
+        {"display_name": "草稿头像", "role_id": role.role_id},
+        files={"avatar": io.BytesIO(_png())},
+    )
+    plain = _user()
+
+    hidden = _avatar(plain, created.data["assistant_id"])
+    assert hidden.status_code == 404
+    assert "avatar" not in hidden.data
+
+    card = AIAssistant.objects.get(assistant_id=created.data["assistant_id"])
+    card.release_state = "published"
+    card.save(update_fields=["release_state"])
+
+    visible = _avatar(plain, created.data["assistant_id"])
+    assert visible.status_code == 200
+    assert visible.data["avatar"]

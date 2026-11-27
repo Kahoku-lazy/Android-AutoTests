@@ -180,6 +180,64 @@ def test_workflow_publish_does_not_require_scores():
     assert response.data["version"] == 1
 
 
+def test_publish_requires_existing_agent_config():
+    role = _role()
+    author = _user("release-author-norole", author=True)
+    created = _call(
+        author, "post", {"display_name": "没配置", "role_id": role.role_id, "tools": []}
+    )
+    assistant_id = created.data["assistant_id"]
+    role.delete()
+
+    published = _publish(author, assistant_id)
+
+    assert published.status_code == 400
+    assert "Agent 配置" in str(published.data)
+    assert not AssistantRelease.objects.filter(
+        target_kind="assistant", target_id=assistant_id
+    ).exists()
+
+
+def test_workflow_run_name_follows_rename_but_version_keeps_history():
+    from backend.apps.ai_assistant import api as assistant_api
+
+    role = _role()
+    executor = AIAssistant.objects.create(
+        assistant_id="20261118EX1",
+        display_name="旧执行名",
+        marker="teal",
+        role_id=role.role_id,
+        tools=[],
+        release_state="published",
+    )
+    verifier = AIAssistant.objects.create(
+        assistant_id="20261118VE1",
+        display_name="验收名",
+        marker="ink",
+        role_id=role.role_id,
+        tools=[],
+        release_state="published",
+    )
+    workflow = AISopWorkflow.objects.create(
+        name="改名流程",
+        executor_assistant_id=executor.assistant_id,
+        verifier_assistant_id=verifier.assistant_id,
+        orchestration="sop",
+        kind="ui_automation",
+    )
+
+    release = assistant_api.publish_workflow(workflow)
+    assert release.payload["executor"]["run_name"] == "旧执行名"
+
+    executor.display_name = "新执行名"
+    executor.save(update_fields=["display_name"])
+
+    resolved = assistant_api.resolve_sop_release(workflow.id, release.version)
+    assert resolved["executor"]["run_name"] == "新执行名"
+    release.refresh_from_db()
+    assert release.payload["executor"]["run_name"] == "旧执行名"
+
+
 def test_runtime_edit_returns_to_draft_display_name_does_not():
     role = _role()
     author = _user("release-author-3", author=True)

@@ -152,6 +152,49 @@ def test_same_display_name_keeps_snapshot_and_live_names_aligned():
     assert live["verifier"]["run_name"] == release.payload["verifier"]["run_name"]
 
 
+def test_task_without_version_follows_latest_release():
+    user = _user()
+    config = _config()
+    executor = _card(_role(config, "20261118ad1", "发布时提示词"), "exec-card", "执行名片")
+    verifier = _card(_role(config, "20261118ad2", "验收提示词"), "verif-card", "验收名片")
+    workflow = _workflow(executor, verifier)
+    assistant_api.publish_workflow(workflow)
+
+    role = AIRole.objects.get(role_id=executor.role_id)
+    role.system_prompt = "改过但未发布的提示词"
+    role.save(update_fields=["system_prompt"])
+
+    def _unpinned(target) -> Task:
+        task = task_api.create_task(
+            title="无版本任务",
+            goal="目标编排",
+            device_serial="R5CT62RH88F",
+            task_kind="assistant_sop",
+            created_by=str(user.id),
+            workflow_id=target.id,
+            orchestration="goal",
+            kind="ui_automation",
+        )
+        task_api.add_task_attachment(
+            task, kind="config", filename="case.yaml", body=MILESTONE, sort_order=0
+        )
+        task_api.save_task_run_payload(task, {"workflow_id": target.id})
+        return task
+
+    resolved, _yaml = task_runner._resolve_assistant_sop(_unpinned(workflow))
+    assert resolved["executor"]["system_prompt"] == "发布时提示词"
+
+    never_published = AISopWorkflow.objects.create(
+        name="从未发布",
+        executor_assistant_id=executor.assistant_id,
+        verifier_assistant_id=verifier.assistant_id,
+        orchestration="sop",
+        kind="ui_automation",
+    )
+    live, _yaml = task_runner._resolve_assistant_sop(_unpinned(never_published))
+    assert live["executor"]["system_prompt"] == "改过但未发布的提示词"
+
+
 def test_legacy_release_payload_is_backfilled_for_run():
     config = _config()
     executor = _card(_role(config, "20261118ac1", "旧执行提示词"), "exec-card", "旧执行名片")

@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from backend.models.constants import TaskStatus
 from engines.ae_harness.middleware.control import BudgetExceeded, RunCancelled
+from utils.adb_keyboard import ensure_ready
 from utils.logs import backend_log
 
 from . import api
@@ -421,6 +422,10 @@ def run_task_async(task_id: int, agent_id: int) -> None:
             return
         if task.task_kind != "assistant_sop":
             raise RuntimeError("任务没有绑定工作流，旧的固定提示词入口已退役")
+        if serial:
+            warning = ensure_ready(serial)
+            if warning:
+                backend_log.warning("ADBKeyboard 预装失败 device=%s: %s", serial, warning)
         resolved, yaml_text = _resolve_assistant_sop(task)
         outcome, used = asyncio.run(_run_assistant_sop(task, task_id, resolved, yaml_text, failure))
         passed = bool(outcome.steps) and all(item.passed for item in outcome.steps)

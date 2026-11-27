@@ -19,6 +19,16 @@ Android 设备控制引擎：连接、只读信息、点击/长按/滑动/拖动
 
 Harness 侧经 `engines/ae_harness/tools/adb/` 暴露给调用方，不由 Django View 直调底层。
 
+## 文本输入
+
+`input_text` 按内容分流：纯 ASCII 走 `adb shell input text`（不切输入法）；含非 ASCII 时经设备输入法提交，协议实现在 `utils/adb_keyboard.py`。
+
+1. 设备未装 ADBKeyboard 时，首次使用按固定版本下载到 `tools/.cache/adbkeyboard/`，校验大小与 SHA-256 后安装；离线环境用 `ADB_KEYBOARD_APK` 指向本地安装包。也可 `python -m utils.adb_keyboard install --serial <serial|all>` 预装，SOP 任务开始前会自动调用 `ensure_ready()`。
+2. 切换前记录 `default_input_method`，提交结束（含异常）恢复；清空走 `ADB_CLEAR_TEXT`，不依赖 `KEYCODE_CLEAR`。
+3. 安装失败、广播失败、切换超时一律抛 `RuntimeError`，不退回 `input text` 造成静默截断。
+4. APK 不入库：上游 ADBKeyboard 为 GPL-2.0，仓库只保留下载地址与校验值；目标 App 能否接受第三方输入法需按 App 实测。
+
+
 ## 红线（禁止）
 
 1. **禁止**跳过本文件与上层流程直接改本包对外契约（尤其 `action` 动作名与语义）。

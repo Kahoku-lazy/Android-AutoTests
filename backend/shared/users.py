@@ -17,6 +17,24 @@ def resolve_username(user_id):
         return s
 
 
+def usernames_by_id(user_ids) -> dict[str, str]:
+    ids: set[int] = set()
+    for item in user_ids or ():
+        text = str(item or "").strip()
+        if text.isdigit():
+            ids.add(int(text))
+    if not ids:
+        return {}
+    try:
+        from django.contrib.auth import get_user_model
+
+        rows = get_user_model().objects.filter(pk__in=ids).values_list("pk", "username")
+        return {str(pk): str(name) for pk, name in rows}
+    except Exception:
+        logger.warning("批量解析账号名失败", exc_info=True)
+        return {}
+
+
 def is_superuser(user_id) -> bool:
     if not user_id:
         return False

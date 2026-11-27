@@ -63,6 +63,9 @@ export interface TaskRecord {
   attachment_filename?: string
 
   attachment_names?: string[]
+  created_by?: string
+
+  created_by_name?: string
   created_at?: string
   started_at?: string
   finished_at?: string

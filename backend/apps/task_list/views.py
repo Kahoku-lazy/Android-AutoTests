@@ -13,6 +13,7 @@ from backend.apps.task_list import api
 from backend.apps.task_list.models import Task
 from backend.apps.task_list.serializers import TaskSubmitInputSerializer
 from backend.models.constants import TaskKind, TaskStatus
+from backend.shared.users import usernames_by_id
 
 
 def _case_ids(request) -> list[str]:
@@ -206,9 +207,15 @@ class AgentTaskListAPIView(APIView):
             .prefetch_related("file_attachments")
             .order_by("-id")[:100]
         )
+        creator_names = usernames_by_id(row.created_by for row in rows)
         return Response(
             {
-                "tasks": [api.serialize_agent_task_row(task) for task in rows],
+                "tasks": [
+                    api.serialize_agent_task_row(
+                        task, created_by_name=creator_names.get(task.created_by, "")
+                    )
+                    for task in rows
+                ],
                 "workflows": api.workflow_filter_options(),
             },
         )

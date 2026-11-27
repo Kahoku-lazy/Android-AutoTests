@@ -18,7 +18,12 @@ import {
   taskStatusTone,
 } from "../constants"
 import { caseHover } from "../helpers/case-identity"
-import { formatTaskCost, formatTaskDuration } from "../helpers/task-card"
+import {
+  creatorPenVars,
+  formatTaskCost,
+  formatTaskCreator,
+  formatTaskDuration,
+} from "../helpers/task-card"
 import { fetchTaskReport } from "../api/tasks"
 import { useTaskList } from "../composables/useTaskList"
 import TaskStatsStrip from "./TaskStatsStrip.vue"
@@ -34,6 +39,7 @@ const COLUMNS = [
   { dataIndex: "status", title: "执行状态", icon: "●", minWidth: 120, align: "center" },
   { dataIndex: "device", title: "设备", icon: "▣", minWidth: 150, align: "center" },
   { dataIndex: "attachment", title: "附件", icon: "▤", minWidth: 160, align: "left" },
+  { dataIndex: "created_by_name", title: "创建人", icon: "☺", minWidth: 110, align: "center" },
   { dataIndex: "created_at", title: "创建", icon: "◷", minWidth: 160, align: "center" },
   { dataIndex: "duration", title: "耗时", icon: "⏱", minWidth: 100, align: "center" },
   { dataIndex: "cost", title: "平台费用", icon: "¥", minWidth: 100, align: "right" },
@@ -189,6 +195,18 @@ async function openReport(task: TaskRecord) {
       </template>
       <template #cell-device="{ record }">{{ deviceDisplay(record) }}</template>
       <template #cell-attachment="{ record }">{{ record.attachment_filename || "—" }}</template>
+      <template #cell-created_by_name="{ record }">
+        <span
+          v-if="record.created_by_name"
+          class="creator-tag"
+          :style="creatorPenVars(record.created_by_name)"
+          :title="record.created_by_name"
+        >
+          <i class="creator-tag__dot" aria-hidden="true" />
+          <span class="creator-tag__name">{{ record.created_by_name }}</span>
+        </span>
+        <span v-else>{{ formatTaskCreator(record.created_by_name) }}</span>
+      </template>
       <template #cell-duration="{ record }">{{
         formatTaskDuration(record.started_at, record.finished_at)
       }}</template>
@@ -320,5 +338,40 @@ async function openReport(task: TaskRecord) {
 }
 .status-pill.is-cancelled {
   --sp-color: var(--c-report);
+}
+
+.creator-tag {
+  --cp-color: var(--app-border-strong);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-xs);
+  max-width: 100%;
+  padding: 0 var(--app-space-sm);
+  border: 1.5px solid color-mix(in srgb, var(--cp-color) 70%, var(--ink));
+  border-radius: var(--app-radius-sm);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--cp-color) 52%, var(--app-bg-card)) 0%,
+    color-mix(in srgb, var(--cp-color) 12%, var(--app-bg-card)) 58%,
+    color-mix(in srgb, var(--cp-color) 32%, var(--app-bg-card)) 100%
+  );
+  color: var(--ink);
+  font-size: var(--app-size-xs);
+  font-weight: var(--app-font-weight-bold);
+}
+
+.creator-tag__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border: 1px solid color-mix(in srgb, var(--ink) 55%, transparent);
+  border-radius: 50%;
+  background: var(--cp-color);
+}
+
+.creator-tag__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

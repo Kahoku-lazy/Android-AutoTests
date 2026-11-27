@@ -634,6 +634,7 @@ TASK_LIST_FIELDS = (
     "device_label",
     "case_title",
     "attachment_filename",
+    "created_by",
     "created_at",
     "started_at",
     "finished_at",
@@ -686,7 +687,9 @@ def workflow_filter_options() -> list[dict]:
     ]
 
 
-def serialize_agent_task_row(task: Task, *, assistant_name: str | None = None) -> dict:
+def serialize_agent_task_row(
+    task: Task, *, assistant_name: str | None = None, created_by_name: str = ""
+) -> dict:
     names = _attachment_names(task)
     payload = parse_task_result(task.result)
     workflow_name = _workflow_name(payload)
@@ -712,6 +715,8 @@ def serialize_agent_task_row(task: Task, *, assistant_name: str | None = None) -
         "assistant_name": assistant_name,
         "workflow_id": payload.get("workflow_id") or None,
         "workflow_name": workflow_name,
+        "created_by": task.created_by or "",
+        "created_by_name": created_by_name or "",
         "created_at": str(task.created_at) if task.created_at else "",
         "started_at": str(task.started_at) if task.started_at else "",
         "finished_at": str(task.finished_at) if task.finished_at else "",

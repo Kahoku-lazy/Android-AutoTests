@@ -28,8 +28,7 @@ export function setOpsUserOperator(
   userId: number,
   enabled: boolean,
 ): Promise<{ data: DjangoResponse<{ user: OpsUser }> }> {
-  const action = enabled ? "grant-operator" : "revoke-operator"
-  return client.post(`/ops/users/${userId}/${action}/`)
+  return client.post(`/ops/users/${userId}/${enabled ? "grant-operator" : "revoke-operator"}/`)
 }
 
 export function listOpsAgents(): Promise<{ data: DjangoResponse<OpsAgent[]> }> {

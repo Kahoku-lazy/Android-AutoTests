@@ -240,6 +240,7 @@ SPECTACULAR_SETTINGS = {
         "ApiProtocolEnum": ["deepseek", "dashscope", "openai"],
     },
     "SWAGGER_UI_DIST": "SIDECAR",
+    "POSTPROCESSING_HOOKS": ["backend.shared.api_docs.describe_operations"],
     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
     "TAGS": [
         {"name": "dashboard", "description": "仪表盘：全平台只读聚合统计"},

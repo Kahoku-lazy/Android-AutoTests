@@ -30,6 +30,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 智能体报告详情
   /api/ai/assistants/:
     get:
       operationId: ai_assistants_list
@@ -46,6 +47,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/AssistantOutput'
           description: ''
+      summary: 助手列表
     post:
       operationId: ai_assistants_create
       tags:
@@ -70,6 +72,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssistantInput'
           description: ''
+      summary: 创建助手
   /api/ai/assistants/{assistant_id}/:
     get:
       operationId: ai_assistants_retrieve
@@ -90,6 +93,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssistantOutput'
           description: ''
+      summary: 助手详情
     patch:
       operationId: ai_assistants_partial_update
       parameters:
@@ -120,6 +124,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssistantInput'
           description: ''
+      summary: 更新助手
     delete:
       operationId: ai_assistants_destroy
       parameters:
@@ -135,6 +140,7 @@ paths:
       responses:
         '204':
           description: No response body
+      summary: 删除助手
   /api/ai/assistants/{assistant_id}/avatar/:
     get:
       operationId: ai_assistants_avatar_retrieve
@@ -156,6 +162,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 读取助手头像
   /api/ai/assistants/{assistant_id}/publish/:
     post:
       operationId: ai_assistants_publish_create
@@ -177,6 +184,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 发布
   /api/ai/assistants/{assistant_id}/threads/:
     get:
       operationId: ai_assistant_threads_list
@@ -198,6 +206,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 助手列表
     post:
       operationId: ai_assistant_threads_create
       parameters:
@@ -218,6 +227,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 创建助手
   /api/ai/assistants/threads/{thread_id}/:
     get:
       operationId: ai_assistant_thread_detail
@@ -239,6 +249,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 对话栏详情
     post:
       operationId: ai_assistant_thread_send
       parameters:
@@ -273,6 +284,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 创建对话栏
     patch:
       operationId: ai_assistants_threads_partial_update
       parameters:
@@ -307,6 +319,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 更新对话栏
     delete:
       operationId: ai_assistants_threads_destroy
       parameters:
@@ -322,6 +335,7 @@ paths:
       responses:
         '204':
           description: No response body
+      summary: 删除对话栏
   /api/ai/assistants/threads/{thread_id}/delete/:
     post:
       operationId: ai_assistants_threads_delete_create
@@ -343,6 +357,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 删除任务
   /api/ai/assistants/threads/{thread_id}/logs/:
     get:
       operationId: ai_assistant_thread_logs_list
@@ -364,6 +379,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 运行日志
     post:
       operationId: ai_assistant_thread_log_ticket
       parameters:
@@ -384,6 +400,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 运行日志
   /api/ai/assistants/threads/{thread_id}/logs/{report_id}/:
     get:
       operationId: ai_assistant_thread_log_file
@@ -411,6 +428,7 @@ paths:
                 type: string
                 format: binary
           description: ''
+      summary: 对话栏详情
     post:
       operationId: ai_assistants_threads_logs_create
       parameters:
@@ -437,6 +455,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 创建对话栏
   /api/ai/eval-candidates/:
     get:
       operationId: ai_eval_candidates_retrieve
@@ -452,6 +471,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 评测候选列表
   /api/ai/eval-cases/:
     get:
       operationId: ai_eval_cases_retrieve
@@ -467,6 +487,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 题库列表
     post:
       operationId: ai_eval_cases_create
       tags:
@@ -495,6 +516,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 创建题库
   /api/ai/eval-cases/{case_id}/:
     patch:
       operationId: ai_eval_cases_partial_update
@@ -530,6 +552,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 更新题库
     delete:
       operationId: ai_eval_cases_destroy
       parameters:
@@ -545,6 +568,7 @@ paths:
       responses:
         '204':
           description: No response body
+      summary: 删除题库
   /api/ai/eval-methods/:
     get:
       operationId: ai_eval_methods_retrieve
@@ -560,6 +584,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 评测方法列表
   /api/ai/eval-reports/{run_id}/:
     get:
       operationId: ai_eval_reports_retrieve
@@ -581,6 +606,7 @@ paths:
                 type: string
                 format: binary
           description: ''
+      summary: 评测报告详情
   /api/ai/eval-runs/:
     get:
       operationId: ai_eval_runs_retrieve
@@ -596,6 +622,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 评测运行列表
     post:
       operationId: ai_eval_runs_create
       tags:
@@ -624,6 +651,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 创建评测运行
   /api/ai/eval-scores/:
     get:
       operationId: ai_eval_scores_retrieve
@@ -639,6 +667,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 评分列表
     post:
       operationId: ai_eval_scores_create
       tags:
@@ -667,6 +696,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 创建评分
   /api/ai/eval-suite-scores/:
     get:
       operationId: ai_eval_suite_scores_retrieve
@@ -682,6 +712,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 套件评分列表
     post:
       operationId: ai_eval_suite_scores_create
       tags:
@@ -710,6 +741,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 创建套件评分
   /api/ai/model-configs/:
     get:
       operationId: ai_model_configs_list
@@ -726,6 +758,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/ModelConfig'
           description: ''
+      summary: 模型配置列表
     post:
       operationId: ai_model_configs_create
       tags:
@@ -751,6 +784,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ModelConfig'
           description: ''
+      summary: 创建模型配置
   /api/ai/model-configs/{id}/:
     get:
       operationId: ai_model_configs_retrieve
@@ -772,6 +806,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ModelConfig'
           description: ''
+      summary: 模型配置详情
     patch:
       operationId: ai_model_configs_partial_update
       parameters:
@@ -803,6 +838,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ModelConfig'
           description: ''
+      summary: 更新模型配置
     delete:
       operationId: ai_model_configs_destroy
       parameters:
@@ -819,6 +855,7 @@ paths:
       responses:
         '204':
           description: No response body
+      summary: 删除模型配置
   /api/ai/model-configs/discover/:
     post:
       operationId: ai_model_configs_discover_create
@@ -846,6 +883,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 发现可用模型
   /api/ai/roles/:
     get:
       operationId: ai_roles_list
@@ -862,6 +900,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/RoleOutput'
           description: ''
+      summary: 角色列表
     post:
       operationId: ai_roles_create
       tags:
@@ -886,6 +925,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RoleInput'
           description: ''
+      summary: 创建角色
   /api/ai/roles/{role_id}/:
     get:
       operationId: ai_roles_retrieve
@@ -906,6 +946,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RoleOutput'
           description: ''
+      summary: 角色详情
     patch:
       operationId: ai_roles_partial_update
       parameters:
@@ -936,6 +977,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RoleInput'
           description: ''
+      summary: 更新角色
     delete:
       operationId: ai_roles_destroy
       parameters:
@@ -951,6 +993,7 @@ paths:
       responses:
         '204':
           description: No response body
+      summary: 删除角色
   /api/ai/sop-workflows/:
     get:
       operationId: ai_sop_workflows_list
@@ -967,6 +1010,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/SopWorkflowOutput'
           description: ''
+      summary: 工作流列表
     post:
       operationId: ai_sop_workflows_create
       tags:
@@ -992,6 +1036,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SopWorkflowOutput'
           description: ''
+      summary: 创建工作流
   /api/ai/sop-workflows/{workflow_id}/:
     patch:
       operationId: ai_sop_workflows_partial_update
@@ -1023,6 +1068,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SopWorkflowOutput'
           description: ''
+      summary: 更新工作流
     delete:
       operationId: ai_sop_workflows_destroy
       parameters:
@@ -1038,6 +1084,7 @@ paths:
       responses:
         '204':
           description: No response body
+      summary: 删除工作流
   /api/ai/sop-workflows/{workflow_id}/publish/:
     post:
       operationId: ai_sop_workflows_publish_create
@@ -1059,6 +1106,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 发布
   /api/ai/tool-catalog/:
     get:
       operationId: ai_tool_catalog_retrieve
@@ -1074,6 +1122,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 工具目录列表
   /api/auth/login/:
     post:
       operationId: auth_login_create
@@ -1100,6 +1149,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 登录
   /api/auth/logout/:
     post:
       operationId: auth_logout_create
@@ -1115,6 +1165,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 登出
   /api/auth/me/:
     get:
       operationId: auth_me_retrieve
@@ -1130,6 +1181,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 读取当前用户
   /api/auth/refresh/:
     post:
       operationId: auth_refresh_create
@@ -1156,6 +1208,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 刷新令牌
   /api/auth/register/:
     post:
       operationId: auth_register_create
@@ -1182,6 +1235,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 注册账号
   /api/bugs/:
     get:
       operationId: bug_ticket_list
@@ -1210,6 +1264,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: bug 单列表
   /api/bugs/{bug_id}/:
     get:
       operationId: bug_ticket_detail
@@ -1231,6 +1286,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: bug 单详情
     patch:
       operationId: bug_ticket_update_status
       parameters:
@@ -1262,6 +1318,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 更新bug 单
   /api/bugs/sync/:
     post:
       operationId: bug_ticket_sync
@@ -1277,6 +1334,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 同步 bug 单
   /api/cases/projects/:
     get:
       operationId: cases_projects_list
@@ -1290,6 +1348,7 @@ paths:
             application/json:
               schema: {}
           description: ''
+      summary: 用例项目列表
     post:
       operationId: cases_projects_create
       tags:
@@ -1318,6 +1377,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 创建用例项目
   /api/cases/projects/{id}/:
     get:
       operationId: cases_projects_retrieve
@@ -1340,6 +1400,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 用例项目详情
     patch:
       operationId: cases_projects_partial_update
       parameters:
@@ -1375,6 +1436,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 更新用例项目
     delete:
       operationId: cases_projects_destroy
       parameters:
@@ -1391,6 +1453,7 @@ paths:
       responses:
         '204':
           description: No response body
+      summary: 删除用例项目
   /api/cases/projects/{id}/import-yaml/:
     post:
       operationId: cases_projects_import_yaml_create
@@ -1427,6 +1490,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 导入 YAML 用例
   /api/cases/projects/{id}/rows/:
     post:
       operationId: cases_projects_rows_create
@@ -1463,6 +1527,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 维护用例行
   /api/cases/projects/{id}/rows/{case_id}/:
     patch:
       operationId: cases_projects_rows_partial_update
@@ -1504,6 +1569,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 更新用例项目
     delete:
       operationId: cases_projects_rows_destroy
       parameters:
@@ -1525,6 +1591,7 @@ paths:
       responses:
         '204':
           description: No response body
+      summary: 删除用例项目
   /api/cases/projects/{id}/view/:
     put:
       operationId: cases_projects_view_update
@@ -1561,6 +1628,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 保存用例视图
   /api/cases/projects/automation/:
     get:
       operationId: cases_projects_automation_retrieve
@@ -1574,6 +1642,7 @@ paths:
             application/json:
               schema: {}
           description: ''
+      summary: 用例项目列表
   /api/cases/stats/:
     get:
       operationId: cases_stats_retrieve
@@ -1589,6 +1658,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 统计
   /api/dashboard/activities/:
     get:
       operationId: dashboard_activities_retrieve
@@ -1602,6 +1672,7 @@ paths:
             application/json:
               schema: {}
           description: ''
+      summary: 仪表盘动态列表
   /api/dashboard/stats/:
     get:
       operationId: dashboard_stats_retrieve
@@ -1617,6 +1688,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 统计
   /api/devices/:
     get:
       operationId: devices_retrieve
@@ -1632,6 +1704,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 设备列表
   /api/devices/{serial}/:
     post:
       operationId: devices_create
@@ -1667,6 +1740,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 创建设备
   /api/devices/{serial}/activate/:
     post:
       operationId: devices_activate_create
@@ -1702,6 +1776,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 激活设备
   /api/devices/{serial}/disconnect/:
     post:
       operationId: devices_disconnect_create
@@ -1737,6 +1812,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 断开设备
   /api/devices/{serial}/disconnect-observe/:
     post:
       operationId: devices_disconnect_observe_create
@@ -1772,6 +1848,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 断开观察占用
   /api/devices/{serial}/lock/:
     post:
       operationId: devices_lock_create
@@ -1807,6 +1884,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 加锁设备
   /api/devices/{serial}/release/:
     post:
       operationId: devices_release_create
@@ -1842,6 +1920,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 释放设备占用
   /api/devices/current/:
     get:
       operationId: devices_current_retrieve
@@ -1857,6 +1936,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 读取当前设备
   /api/devices/heartbeat/:
     get:
       operationId: devices_heartbeat_retrieve
@@ -1872,6 +1952,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 设备心跳
   /api/devices/scan/:
     post:
       operationId: devices_scan_create
@@ -1901,6 +1982,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 扫描设备
   /api/devices/stats/:
     get:
       operationId: devices_stats_retrieve
@@ -1916,6 +1998,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 统计
   /api/knowledge-search/evaluations/:
     get:
       operationId: knowledge_search_evaluations_list
@@ -1931,6 +2014,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 知识库评测列表
     post:
       operationId: knowledge_search_evaluations_create
       tags:
@@ -1957,6 +2041,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 创建知识库评测
   /api/knowledge-search/evaluations/{id}/:
     get:
       operationId: knowledge_search_evaluations_detail
@@ -1978,6 +2063,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 知识库评测详情
   /api/knowledge-search/modules/:
     get:
       operationId: knowledge_search_modules_retrieve
@@ -1993,6 +2079,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 知识库模块列表
     post:
       operationId: knowledge_search_modules_create
       tags:
@@ -2019,6 +2106,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 创建知识库模块
   /api/knowledge-search/modules/{id}/:
     patch:
       operationId: knowledge_search_modules_partial_update
@@ -2051,6 +2139,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 更新知识库模块
     delete:
       operationId: knowledge_search_modules_destroy
       parameters:
@@ -2066,6 +2155,7 @@ paths:
       responses:
         '204':
           description: No response body
+      summary: 删除知识库模块
   /api/knowledge-search/modules/{id}/index/:
     post:
       operationId: knowledge_search_modules_index_create
@@ -2101,6 +2191,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 重建知识库索引
   /api/knowledge-search/query/:
     post:
       operationId: knowledge_search_query_create
@@ -2128,6 +2219,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 知识库检索
   /api/knowledge-search/settings/:
     get:
       operationId: knowledge_search_settings_retrieve
@@ -2143,6 +2235,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 读取或保存检索设置
     put:
       operationId: knowledge_search_settings_update
       tags:
@@ -2169,6 +2262,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 读取或保存检索设置
   /api/ops/users/:
     get:
       operationId: ops_users_retrieve
@@ -2184,6 +2278,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 运营账号列表
   /api/ops/users/{user_id}/disable/:
     post:
       operationId: ops_users_disable_create
@@ -2205,6 +2300,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 停用账号
   /api/ops/users/{user_id}/enable/:
     post:
       operationId: ops_users_enable_create
@@ -2226,6 +2322,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 启用账号
   /api/ops/users/{user_id}/grant-author/:
     post:
       operationId: ops_users_grant_author_create
@@ -2247,6 +2344,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 授予作者权限
   /api/ops/users/{user_id}/grant-operator/:
     post:
       operationId: ops_users_grant_operator_create
@@ -2268,6 +2366,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 授予运营权限
   /api/ops/users/{user_id}/model-grants/:
     post:
       operationId: ops_users_model_grants_create
@@ -2303,6 +2402,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 维护模型使用名单
   /api/ops/users/{user_id}/reset-password/:
     post:
       operationId: ops_users_reset_password_create
@@ -2324,6 +2424,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 重置账号密码
   /api/ops/users/{user_id}/revoke-author/:
     post:
       operationId: ops_users_revoke_author_create
@@ -2345,6 +2446,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 撤销作者权限
   /api/ops/users/{user_id}/revoke-operator/:
     post:
       operationId: ops_users_revoke_operator_create
@@ -2366,6 +2468,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 撤销运营权限
   /api/ops/users/disable/:
     post:
       operationId: ops_users_batch_disable
@@ -2395,6 +2498,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 停用账号
   /api/ops/users/purge/:
     post:
       operationId: ops_users_purge
@@ -2424,6 +2528,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 注销账号
   /api/reports/:
     get:
       operationId: report_list
@@ -2462,6 +2567,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 测试报告列表
   /api/schema/:
     get:
       operationId: schema_retrieve
@@ -2623,6 +2729,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 串口关键词列表
     post:
       operationId: serial_log_keywords_create
       tags:
@@ -2651,6 +2758,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 创建串口关键词
   /api/serial-log/keywords/{row_id}/:
     patch:
       operationId: serial_log_keywords_partial_update
@@ -2686,6 +2794,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 更新串口关键词
     delete:
       operationId: serial_log_keywords_destroy
       parameters:
@@ -2701,6 +2810,7 @@ paths:
       responses:
         '204':
           description: No response body
+      summary: 删除串口关键词
   /api/serial-log/ports/:
     get:
       operationId: serial_log_ports_retrieve
@@ -2716,6 +2826,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 串口端口列表
     post:
       operationId: serial_log_ports_create
       tags:
@@ -2744,6 +2855,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 创建串口端口
   /api/serial-log/ports/{port}/:
     patch:
       operationId: serial_log_ports_partial_update
@@ -2779,6 +2891,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 更新串口端口
     delete:
       operationId: serial_log_ports_destroy
       parameters:
@@ -2794,6 +2907,7 @@ paths:
       responses:
         '204':
           description: No response body
+      summary: 删除串口端口
   /api/serial-log/ports/{port}/lines/:
     get:
       operationId: serial_log_ports_lines_retrieve
@@ -2815,6 +2929,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 读取串口日志行
   /api/serial-log/ports/toggle/:
     post:
       operationId: serial_log_ports_toggle_create
@@ -2844,6 +2959,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 切换端口开关
   /api/system/drain/:
     get:
       operationId: task_drain_status
@@ -2860,6 +2976,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 系统排空
     post:
       operationId: task_drain_begin
       tags:
@@ -2875,6 +2992,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 系统排空
   /api/tasks/:
     get:
       operationId: tasks_retrieve
@@ -2890,6 +3008,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 任务列表
   /api/tasks/{task_id}/:
     get:
       operationId: ai_agent_task_detail
@@ -2911,6 +3030,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 任务详情
   /api/tasks/{task_id}/cancel/:
     post:
       operationId: tasks_cancel_create
@@ -2932,6 +3052,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 取消任务
   /api/tasks/{task_id}/delete/:
     post:
       operationId: tasks_delete_create
@@ -2953,6 +3074,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 删除任务
   /api/tasks/{task_id}/media/{media_id}/:
     get:
       operationId: task_media
@@ -2979,6 +3101,7 @@ paths:
                 type: string
                 format: binary
           description: ''
+      summary: 任务详情
   /api/tasks/{task_id}/media/{media_id}/link/:
     post:
       operationId: task_media_link
@@ -3005,6 +3128,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 关联任务媒体
   /api/tasks/{task_id}/rerun/:
     post:
       operationId: tasks_rerun_create
@@ -3026,6 +3150,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 重跑任务
   /api/tasks/clear/:
     post:
       operationId: tasks_clear_create
@@ -3041,6 +3166,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 清空任务
   /api/tasks/stats/:
     get:
       operationId: tasks_stats_retrieve
@@ -3056,6 +3182,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 统计
   /api/tasks/submit/:
     post:
       operationId: tasks_submit_create
@@ -3083,6 +3210,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 提交任务
   /api/tasks/upload-file/:
     post:
       operationId: tasks_upload_file_create
@@ -3112,6 +3240,7 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+      summary: 上传任务文件
   /media/signed/{task_id}/{media_id}/{expires}/{signature}/:
     get:
       operationId: task_media_signed
@@ -3149,28 +3278,9 @@ paths:
                 type: string
                 format: binary
           description: ''
+      summary: 任务媒体详情
 components:
   schemas:
-    ApiKeyEnvEnum:
-      enum:
-      - DEEPSEEK_API_KEY
-      - DASHSCOPE_API_KEY
-      - OPENAI_API_KEY
-      type: string
-      description: |-
-        * `DEEPSEEK_API_KEY` - DEEPSEEK_API_KEY
-        * `DASHSCOPE_API_KEY` - DASHSCOPE_API_KEY
-        * `OPENAI_API_KEY` - OPENAI_API_KEY
-    ApiProtocolEnum:
-      enum:
-      - deepseek
-      - dashscope
-      - openai
-      type: string
-      description: |-
-        * `deepseek` - deepseek
-        * `dashscope` - dashscope
-        * `openai` - openai
     AssistantInput:
       type: object
       properties:
@@ -3223,14 +3333,6 @@ components:
       - role_id
       - role_name
       - tools
-    CaseSourceEnum:
-      enum:
-      - yaml
-      - platform
-      type: string
-      description: |-
-        * `yaml` - yaml
-        * `platform` - platform
     EvalTrigger:
       type: object
       properties:
@@ -3251,16 +3353,6 @@ components:
       required:
       - model_config_id
       - module_id
-    KindsEnum:
-      enum:
-      - executor
-      - verifier
-      - planner
-      type: string
-      description: |-
-        * `executor` - executor
-        * `verifier` - verifier
-        * `planner` - planner
     Login:
       type: object
       properties:
@@ -3277,12 +3369,40 @@ components:
           type: integer
           readOnly: true
         provider:
-          $ref: '#/components/schemas/ApiProtocolEnum'
+          enum:
+          - deepseek
+          - dashscope
+          - openai
+          type: string
+          description: |-
+            * `deepseek` - deepseek
+            * `dashscope` - dashscope
+            * `openai` - openai
+          x-spec-enum-id: cfcea91165e4fdd7
         api_protocol:
-          $ref: '#/components/schemas/ApiProtocolEnum'
+          enum:
+          - deepseek
+          - dashscope
+          - openai
+          type: string
+          description: |-
+            * `deepseek` - deepseek
+            * `dashscope` - dashscope
+            * `openai` - openai
+          x-spec-enum-id: cfcea91165e4fdd7
         model_kind:
-          allOf:
-          - $ref: '#/components/schemas/ModelKindEnum'
+          enum:
+          - chat
+          - tts
+          - realtime
+          - embedding
+          type: string
+          description: |-
+            * `chat` - chat
+            * `tts` - tts
+            * `realtime` - realtime
+            * `embedding` - embedding
+          x-spec-enum-id: e4076937d1b6d2c0
           default: chat
         voice:
           type: string
@@ -3292,7 +3412,16 @@ components:
           minimum: 1
           nullable: true
         api_key_env:
-          $ref: '#/components/schemas/ApiKeyEnvEnum'
+          enum:
+          - DEEPSEEK_API_KEY
+          - DASHSCOPE_API_KEY
+          - OPENAI_API_KEY
+          type: string
+          description: |-
+            * `DEEPSEEK_API_KEY` - DEEPSEEK_API_KEY
+            * `DASHSCOPE_API_KEY` - DASHSCOPE_API_KEY
+            * `OPENAI_API_KEY` - OPENAI_API_KEY
+          x-spec-enum-id: c02e047662665b3d
         base_url:
           type: string
           maxLength: 500
@@ -3304,18 +3433,6 @@ components:
       - api_protocol
       - id
       - provider
-    ModelKindEnum:
-      enum:
-      - chat
-      - tts
-      - realtime
-      - embedding
-      type: string
-      description: |-
-        * `chat` - chat
-        * `tts` - tts
-        * `realtime` - realtime
-        * `embedding` - embedding
     ModuleWrite:
       type: object
       properties:
@@ -3355,7 +3472,16 @@ components:
       type: object
       properties:
         status:
-          $ref: '#/components/schemas/StatusEnum'
+          enum:
+          - open
+          - resolved
+          - ignored
+          type: string
+          description: |-
+            * `open` - open
+            * `resolved` - resolved
+            * `ignored` - ignored
+          x-spec-enum-id: 4f1e5cf622b4b8df
     PatchedModelConfig:
       type: object
       properties:
@@ -3363,12 +3489,40 @@ components:
           type: integer
           readOnly: true
         provider:
-          $ref: '#/components/schemas/ApiProtocolEnum'
+          enum:
+          - deepseek
+          - dashscope
+          - openai
+          type: string
+          description: |-
+            * `deepseek` - deepseek
+            * `dashscope` - dashscope
+            * `openai` - openai
+          x-spec-enum-id: cfcea91165e4fdd7
         api_protocol:
-          $ref: '#/components/schemas/ApiProtocolEnum'
+          enum:
+          - deepseek
+          - dashscope
+          - openai
+          type: string
+          description: |-
+            * `deepseek` - deepseek
+            * `dashscope` - dashscope
+            * `openai` - openai
+          x-spec-enum-id: cfcea91165e4fdd7
         model_kind:
-          allOf:
-          - $ref: '#/components/schemas/ModelKindEnum'
+          enum:
+          - chat
+          - tts
+          - realtime
+          - embedding
+          type: string
+          description: |-
+            * `chat` - chat
+            * `tts` - tts
+            * `realtime` - realtime
+            * `embedding` - embedding
+          x-spec-enum-id: e4076937d1b6d2c0
           default: chat
         voice:
           type: string
@@ -3378,7 +3532,16 @@ components:
           minimum: 1
           nullable: true
         api_key_env:
-          $ref: '#/components/schemas/ApiKeyEnvEnum'
+          enum:
+          - DEEPSEEK_API_KEY
+          - DASHSCOPE_API_KEY
+          - OPENAI_API_KEY
+          type: string
+          description: |-
+            * `DEEPSEEK_API_KEY` - DEEPSEEK_API_KEY
+            * `DASHSCOPE_API_KEY` - DASHSCOPE_API_KEY
+            * `OPENAI_API_KEY` - OPENAI_API_KEY
+          x-spec-enum-id: c02e047662665b3d
         base_url:
           type: string
           maxLength: 500
@@ -3413,7 +3576,16 @@ components:
         kinds:
           type: array
           items:
-            $ref: '#/components/schemas/KindsEnum'
+            enum:
+            - executor
+            - verifier
+            - planner
+            type: string
+            description: |-
+              * `executor` - executor
+              * `verifier` - verifier
+              * `planner` - planner
+            x-spec-enum-id: c65c89c330579f9a
     PatchedSopWorkflowInput:
       type: object
       properties:
@@ -3526,7 +3698,16 @@ components:
         kinds:
           type: array
           items:
-            $ref: '#/components/schemas/KindsEnum'
+            enum:
+            - executor
+            - verifier
+            - planner
+            type: string
+            description: |-
+              * `executor` - executor
+              * `verifier` - verifier
+              * `planner` - planner
+            x-spec-enum-id: c65c89c330579f9a
     RoleOutput:
       type: object
       properties:
@@ -3644,16 +3825,6 @@ components:
       - revision
       - updated_at
       - verifier_assistant_id
-    StatusEnum:
-      enum:
-      - open
-      - resolved
-      - ignored
-      type: string
-      description: |-
-        * `open` - open
-        * `resolved` - resolved
-        * `ignored` - ignored
     TaskSubmitInput:
       type: object
       properties:
@@ -3672,8 +3843,14 @@ components:
           type: string
           default: ''
         case_source:
-          allOf:
-          - $ref: '#/components/schemas/CaseSourceEnum'
+          enum:
+          - yaml
+          - platform
+          type: string
+          description: |-
+            * `yaml` - yaml
+            * `platform` - platform
+          x-spec-enum-id: e114db390a0f14bc
           default: yaml
         case_ids:
           type: string
